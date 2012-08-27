@@ -1,0 +1,46 @@
+unit_id,unit_title,lesson_id,lesson_title,lesson_activity,lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives
+1,Introduction,1,Introduction,,,https://docs.google.com/document/d/1RUQMo2N71za2H-W2FnsZWYk8wSP4Q1bytThstskqEyQ/edit,1ppwmxidyIE,
+1,Introduction,2,Filter image results by color,yes,Lesson 1.2 Activity,https://docs.google.com/document/d/1XOGvXQiiSD2NP8_jEzfRPLJGYd_ysQpcGCXbY6_6oYo/edit,K-0RqQWFubM,- Apply the strategy of color filtering to find information quickly.
+1,Introduction,3,How search works,yes,Lesson 1.3 Activity,https://docs.google.com/document/d/1TPodv4evzkWtFNsFUJ7EwK-vpYWOzZq0OuFAR4-cxlQ/edit,5_rIR0cT468,"- Recognize ads on a search engine results page.
+- Describe how the order of results on a page is determined."
+1,Introduction,4,The art of keyword choices,yes,Lesson 1.4 Activity,https://docs.google.com/document/d/1dsh1z9N2viGZfoOZXnqd-D0uzLX4egdMWgj0vQaw5Wo/edit,34ygpSN4u4c,"- Select effective keywords: words you predict will be in your results, important words, and synonyms when appropriate."
+1,Introduction,5,Word order matters,yes,Lesson 1.5 Activity,https://docs.google.com/document/d/1q8MM3FWxpE2IF5wUVogHCs_dnY9FmUqeAfRZHVDk1KU/edit,wUZ9lw-Z6hk,- Identify the factors that have an effect on search queries.
+1,Introduction,6,Finding text on a web page,yes,Lesson 1.6 Activity,https://docs.google.com/document/d/1UxME8JydmJjGj-WjibRRIfM_xQpzmRYqrkVXZ8ZIGI4/edit,VyhNTtNDfcM,- Use Control-F to quickly find text on a page.
+2,Interpreting results,1,When search results suggest something new,yes,Lesson 2.1 Activity,https://docs.google.com/document/d/12y-JV_FNVxU3PIrFBr2Ec2w0qyzo9btDFFzuki_bQj0/edit,R3n-_LC_wWc,"- Utilize information in Knowledge Graph panels, Instant results, Suggestions, and Related Searches when they appear."
+2,Interpreting results,2,Thinking more deeply about your search,yes,Lesson 2.2 Activity,https://docs.google.com/document/d/1iP-7uNB9toU__6nyWL83WbfqV1Ygr7jXdTy5bs89el0/edit,d-U6Dwj7jdc,"- Recognize when search results are offering information that suggests a better/additional search. 
+- Use ""define"" to identify the meaning of words.
+- Use dictionary mode to define words that do not appear in traditional dictionaries."
+2,Interpreting results,3,Understand options for different media,yes,Lesson 2.3 Activity,https://docs.google.com/document/d/1ay_HY5wNO9rkxjl6QNjN_mjK-KFk5xxgnR_8KPznk0E/edit,4TcrHV1kums,"- Use image search when it appears in search results, and use related image search to refine results.
+- Refine results by using different media types like videos and news."
+2,Interpreting results,4,Reading the Search Engine Results Page (SERP),yes,Lesson 2.4 Activity,https://docs.google.com/document/d/1HPP6NEZknVcOaoebNTjLQlZeYzALGZGrEDdwH-VDkbw/edit,RpT4uPfRH0E,"- Use the page preview tool to preview results pages.
+- Identify the parts of a search engine result: title, web address, and snippet/abstract.
+- Use links within the search engine results to go directly to a sub-page of the site.
+- Use the site: operator to restrict results to a domain, website, or directory.
+- Interpret a search engine results page."
+2,Interpreting results,5,Different kinds of content,yes,Lesson 2.5 Activity,https://docs.google.com/document/d/1yURF6jwcH0fJCup4m28bh2oPl-ApZwvr_GL-ndyLWKA/edit,hNrzmvPA1Zo,"- Find different kinds of content efficiently: blogs, discussions, recipes, patents, books, 3D models, scholarly sources, and legal documents."
+3,Advanced techniques,1,Web organization,yes,Lesson 3.1 Activity,https://docs.google.com/document/d/1LWcoRYILDKyPGq7_tLZVLMm0Jd5iuQu56vzNo-7bMIU/edit,DndOoEVCWfI,"- Describe how operators filter results.
+- Use the site: operator at the top-level domain and website levels.
+- Use a word you expect to appear on the target page to refine results.
+- Use the site: operator within images and news results."
+3,Advanced techniques,2,Filetype,yes,Lesson 3.2 Activity,https://docs.google.com/document/d/1AGtX9F2yXj-0rSSvsEP7tUFPNSVfOYwRmxXoT1PoI5g/edit,v5Z9603QPHQ,"- Use the filetype: operator to find and download different kinds of documents.
+- Combine operators to refine searches."
+3,Advanced techniques,3,Removing invasive results,yes,Lesson 3.3 Activity,https://docs.google.com/document/d/1jiHm-JMWzH7w164OzC2AvlLrAgFMQgCD_8aOPu_-v8I/edit,HWbO_ahgrIY,- Use the minus sign to eliminate irrelevant results.
+3,Advanced techniques,4,OR and quotes,yes,Lesson 3.4 Activity,https://docs.google.com/document/d/1loso0KnKc35mDUQO9rsO-lGKh9EmArwDf2-0idLUTXY/edit,5JEtMAsUAgY,"- Use quotes to search for a phrase.
+- Use OR to include more than one way of expressing an idea."
+3,Advanced techniques,5,intext: and Advanced Search,,,https://docs.google.com/document/d/1oD19kdZSxdSTsZDBd52zPoOFPdmFMzdmyYxr_JYaKw4/edit,IXnNHPDSsoc,"- Use the intext: operator to ensure the word you want is actually on the page you find.
+- Use the Advanced Search user interface when appropriate."
+4,Find facts faster,1,Search-by-image,yes,Lesson 4.1 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/17DzTwTjwDfOkjmD_Pauo63oPJbz2sGbi1iSRE8P26Ic/edit,2OYAXu2mxhU,- Identify an image with Search by Image.
+4,Find facts faster,2,Search features,yes,Lesson 4.2 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/161JR2U3qYh7cWDNyXq8HA7AWnADJMIPfH0Y1OE40lRY/edit,Q6GK2vyDJcQ,- Find facts quickly with shortcuts (search features).
+4,Find facts faster,3,Conversions and Calculator,yes,Lesson 4.3 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1QT2NM9D1qy8ChT5BUOFFMb4vUKIRNoC3Fk1jpsMl1yk/edit,PP4Oe7ner2Q,- Calculate math expressions and conversions from the search box.
+4,Find facts faster,4,Left hand panel and Date range limiting,yes,Lesson 4.4 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1_qctVz1ifvdiKHvTxGKPeQM9YOpyN3NCK1gb-16yW9w/edit,OJJkB1_jYdM,- Limit results to sources from a specific time period.
+4,Find facts faster,5,Translation and search,yes,Lesson 4.5 Activity,https://docs.google.com/document/pub?id=17_yATsDjZ_eYGqOX1EwkJUW9zG-Ib59rsHsy9VLZM4U,00-WwBbjJGg,"- Translate words, sentences, and pages.
+- Search pages in foreign languages using English."
+5,Checking your facts,1,Credibility,yes,Lesson 5.1 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/19f6oznUmIZgz_gB-_g0bYX9kaWXeg5sldAX3iLsvhlg/edit,ayXSthUdT8c,- Verify the credibility of information you find.
+5,Checking your facts,2,Variant data,yes,Lesson 5.2 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1VK_boNWk28OCuoT6uX4IpH59xIn6k46nnQlcBjdl004/edit,IvH44TMmzl8,- Avoid confirmation bias when conducting searches.
+5,Checking your facts,3,Using Books to verify a quote,yes,Lesson 5.3 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/108Eg_uap5HDz_OSphMSM7H2klCZ-Z5R_mN7sEnPfd0A/edit,YRAIdmQ1mqg,- Search appropriate sources that offer authoritative information for the type of information you are trying to find.
+5,Checking your facts,4,Using WHOIS and looking for other site information,yes,Lesson 5.4 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1QODzCFzm8kN3PDGSvoOSJy9Et-XXDtNWU5UvnIrpWdw/edit,Jd8PFXoDltE,- Use WHOIS to identify who owns a particular website.
+5,Checking your facts,5,Occasional misconceptions,,,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1R-rL6Gp2Q7OE8eIky2M5WjspyvZc02cSlwtOgUOS4nY/edit,A7YmDqwZSV0,- Distinguish between the Google products that indicate credibility and those that do not.
+6,Putting it all together,1,Combining methods,yes,Lesson 6.1 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1b6k6ld4v0FbE24tMGsuQ4nfwTUwEOTUDUDort8VYn9Y/edit,dO2vuIkFio4,- Combine operators for stronger searches.
+6,Putting it all together,2,Think broadly,yes,Lesson 6.2 Activity,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1phq0jgZSgKErI8osFWcnqQO1AA2j9RwG0mE1ZVdmWhs/edit,s7QZd1hEjS4,"- Combine methods and approaches to find information efficiently.
+- Conduct research effectively with tools that are not traditionally used for research."
+6,Putting it all together,3,Summary,yes,,https://docs.google.com/a/powersearchingwithgoogle.com/document/d/1NV6HPPGJexF8G-5Ax8HsSzEYqPRhTjxvfwCkyK72mxU/edit,XsGpoNOVOo4,- Identify ways to continue learning how to be an effective searcher.

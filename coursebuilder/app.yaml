@@ -1,0 +1,27 @@
+application: mycourse  # FIXME: Replace this with your application id
+version: 3
+runtime: python27
+api_version: 1
+threadsafe: false
+
+builtins:
+- remote_api: on
+
+libraries:
+- name: webapp2
+  version: latest
+- name: jinja2
+  version: latest
+
+handlers:
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+- url: /favicon.ico
+  static_files: assets/img/favicon.ico
+  upload: assets/img/favicon.ico
+- url: /assets
+  static_dir: assets
+- url: /.*
+  script: main.app
+  login: required

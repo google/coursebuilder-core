@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html class="google" lang="en">
+  <head>
+    <script>
+      (function(H){H.className=H.className.replace(/\bgoogle\b/,'google-js')})(document.documentElement)
+    </script>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <!-- FIXME: the title below should be changed to your course name. -->
+    <title>Power Searching with Google</title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <link href="/assets/css/main.css" rel="stylesheet" type="text/css">
+
+    <!-- jQuery should be imported first -->
+    <script src="/assets/js/jquery-1.7.2.min.js"></script>
+    <script src="/assets/js/activity-generic.js"></script> 
+
+    <script type="text/javascript">
+      window.___gcfg = {lang: 'en'};
+      (function() 
+        {var po = document.createElement("script");
+        po.type = "text/javascript"; po.async = true;po.src = "https://apis.google.com/js/plusone.js";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(po, s);
+      })();
+    </script>
+
+    <!--
+        [FIXME: If you want to include any analytics code that covers all your
+        course webpages, do so here (between the comment tags). See
+        https://code.google.com/p/course-builder/wiki/ReachAndEngagementMetrics.]
+    -->
+
+    <link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&amp;subset=latin" rel="stylesheet">
+
+  </head>
+  <body>
+  
+    <!-- logo bar -->
+    <div class="gcb-header" id="gcb-header">
+      <div class="gcb-aux">
+        <h1>
+          <!-- FIXME: add a link to your course/institution webpage and logo here. -->
+          <a href="[LINK_TO_YOUR_INSTITUTION_HERE]"><img src="/assets/img/your_logo_here.png"></a>
+        </h1>
+        <h2>
+          <!-- FIXME: add a header phrase of your choice here. -->
+          <a href="/">Search Education</a>
+        </h2>
+        <span class="plusone-button" id="plusone-3" style="height: 15px; width: 70px; display: inline-block; text-indent: 0px; margin: 0px; padding: 0px; background-color: transparent; border-style: none; float: none; line-height: normal; font-size: 1px; vertical-align: baseline; background-position: initial initial; background-repeat: initial initial; ">
+          <g:plusone size="medium"></g:plusone>
+        </span>
+      </div>
+    </div>  
+
+    <!-- nav bar -->
+    <div class="gcb-nav gcb-complex" id="gcb-nav-x">
+      <div class="gcb-aux">
+        <ul>
+          <li {% if navbar.course %}class='active'{% endif %}>
+            <a href="/course">Course</a>
+          </li>
+          <li {% if navbar.forum %}class='active'{% endif %}>
+            <a href="/forum">Forum</a>
+          </li>
+          {% if logoutUrl %}
+          <li class="pull-right">
+	    <span style="font-weight: normal;">{{ email }} | </span>
+	    <a href="{{ logoutUrl }}">Logout</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- top section -->
+    <div class="is-wrapper">
+      <div class="gcb-aux">
+    {% block top_content %}{% endblock %}
+
+    <!-- main section -->
+    {% block main_content %}{% endblock %}
+      </div>
+    </div>
+
+    <!-- footer section -->
+    <div style="margin-top: 50px;" id="gcb-signature"></div>
+    <div class="gcb-footer" id="gcb-footer">
+      <div id="gcb-footer-local">
+        <div class="gcb-aux">
+        </div>
+      </div>
+      <div id="gcb-footer-global">
+        <div class="gcb-aux">
+          <ul>
+            <li>
+              <!-- FIXME: add a link and the name of your institution here. -->
+              <a href="[LINK_TO_YOUR_INSTITUTION_HERE]">Add Your Institution Here</a>
+            </li>
+            <li>
+              <!-- FIXME: add a link to the privacy policy and terms of service of your course here. -->
+              <a href="[PRIVACY_POLICY_AND_TERMS_OF_SERVICE]">Privacy &amp; Terms</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+ </body>
+</html>

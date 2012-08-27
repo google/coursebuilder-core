@@ -1,0 +1,30 @@
+{% extends 'base_registration.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="gcb-main">
+  <div class="gcb-article tab-content">
+    <div class="gcb-aside">
+      <!--FIXME: You can edit the questions that you ask on the pre-course registration form by changing the HTML below.-->
+      <p style="margin: 20px 0px;">
+	Welcome!  Please answer the following question, and you will be enrolled in the course.
+      </p>
+      <form action='/register' method='post'>
+        <fieldset>
+          <ol>
+            <li>
+              <label for="form01">What is your name?</label>
+              <input name="form01" type="text">
+            </li>
+          </ol>
+        </fieldset>
+        </fieldset><button class="gcb-button" type="submit">Enroll</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

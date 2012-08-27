@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-cols">
+  <div class="gcb-col-1">
+  </div>
+  <div class="gcb-col-7 gcb-aside gcb-button-box">
+
+    <!--FIXME: The following messages are shown to students when they complete
+    an assessment, and you may wish to replace them with your own. -->
+
+    {% if assessment == "postcourse_pass" %}
+
+      <p class="top_content">Thank you for completing the post-course assessment. Your score is {{ score }}%. Based on your overall course score (which includes the mid-course and post-course assessments), you have passed the course. Congratulations!
+      <!--FIXME: You can optionally add code to load or generate a Certificate of Completion image. -->
+      </p>
+
+    {% elif assessment == "postcourse_fail" %}
+
+      <p class="top_content">Thank you for taking the post-course assessment. Your score is {{ score }}%. Unfortunately, based on your overall course score (which includes the mid-course and post-course assessments), you did not receive a sufficiently high score to obtain a certificate of completion.  We encourage you to review the lessons noted and to attempt the assessment again before it closes.  Certificate or not, we hope you enjoyed taking the course and learned new skills!</p>
+
+    {% elif assessment == "midcourse" %}
+
+      <p class="top_content">
+      Thank you for taking the mid-course assessment. You may return and take this assessment again, or continue on to the next unit.
+      </p>
+
+    {% elif assessment == "precourse" %}
+
+      <p class="top_content">
+      Thank you for taking the pre-assessment. Please begin the course with Unit 1.
+      </p>
+
+    {% endif %}
+
+    <p><a class="gcb-button" href="/course"> Back to Course page </a></p>
+
+  </div>
+</div>
+
+{% endblock %}
+

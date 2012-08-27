@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-main">
+  <ul class="gcb-breadcrumb">
+    <li><a href="/course">Course</a></li>
+    <li><a href="/unit?unit={{ units.unit_id }}">Unit {{ units.unit_id }}</a></li>
+    <li>Lesson {{ lesson_id }}</li>
+  </ul>
+  <div>
+    <h1 class="class_header">Unit {{ units.unit_id }} - {{ units.title }}</h1>
+  </div>
+
+  <div class="gcb-nav" id="gcb-nav-y">
+    <ul>
+      {% for lesson in lessons %}
+        <li
+        {% if lesson.id == lesson_id %}
+          class="active"> Lesson {{ lesson.id }}<br>{{ lesson.title }}
+        {% else %}
+          ><a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >Lesson {{ lesson.id }}<br>{{ lesson.title }}</a>
+        {% endif %}
+
+        {% if lesson.activity %}
+          <ul><li><a href="/activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
+        {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="gcb-article tab-content">
+    {% for lesson in lessons %}
+      {% if lesson.id == lesson_id %}
+
+        <div style="padding-bottom: 20px;">
+          <div class="gcb-aside gcb-button-box">
+            <div class="gcb-cols">
+              <div class="gcb-col-7">
+                <p class="lesson_title">
+                  {{ lesson.title }}
+                </p>
+                {% if lesson.objectives %}
+                  <div class="lesson_objective">
+                    {{ lesson.objectives }}
+                  </div>
+                {% endif %}
+                </div>
+              <div class="gcb-col-3">
+                <p style="float:right; margin-top: 0px;">
+                  <a class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">Text Version</a>
+                </p>
+              </div>
+            </div><!-- /gcb-cols -->
+            {% if lesson.video %}
+              <p class="video-container">
+                <iframe width="650px" height="400px" src="http://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0" frameborder="0" allowfullscreen></iframe>
+              </p>
+            {% endif %}
+          </div><!-- /gcb-aside -->
+
+          <div class="gcb-button-box">
+            <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+              {% if back_button_url %}
+                <a href="{{ back_button_url }}"> Back </a>
+              {% endif %}
+            </div>
+            <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+              {% if next_button_url %}
+                <a href="{{ next_button_url }}"> Next </a>
+              {% else %}
+                <a href="/course"> End </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

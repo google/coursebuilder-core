@@ -1,0 +1,39 @@
+{% extends 'base_registration.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+      <div class="gcb-cols">
+        <div class="gcb-col-1">
+        </div>
+        <div class="gcb-col-7 gcb-aside gcb-button-box">
+  
+  {% if course_status == "full" %}
+
+          <p class="top_content">Thank you for registering for <!--FIXME: Replace the following with the name of your course.-->My Course<!--END FIXME-->. Unfortunately, the course is now full, and you have been added into the waiting list.  We will notify you when your enrollment status changes.</p>
+
+  {% else %}
+          <p class="top_content">Thank you for registering for <!--FIXME: Replace the following with the name of your course.-->My Course<!--END FIXME-->. Stay tuned for more information about the course which will start on <!--FIXME: Replace the following with the start date of your course.-->July 10, 2012<!--END FIXME-->.</p>
+
+          <div style="text-align:left;">
+            <!--FIXME: If you want students to register for a discussion group,
+            include instructions such as the following: -->
+            <ul><li>To participate in community discussions about this course, register for the web forum at <a href="http://groups.google.com/group/<!--FIXME-->My-Course<!--END FIXME-->">http://groups.google.com/group/<!--FIXME-->My-Course<!--END FIXME--></a>. On that page, click on <b>Join Group</b>.</li>
+            <!-- For details, see
+            http://code.google.com/p/course-builder/wiki/WebForums. END FIXME -->
+  	
+            <!--FIXME: If you want students to register for a mailing list to
+            receive course announcements, include instructions such as the
+            following: -->
+            <li>To receive announcements about this course, register for the announcements-only email list at <a href="http://groups.google.com/group/<!--FIXME-->My-Course-Announce<!--END FIXME--">http://groups.google.com/group/<!--FIXME-->My-Course-Announce<!--END FIXME--></a>. On that page, click on <b>Join Group</b>. In the dialog box that appears, under <b>How do you want to read this group?</b>, choose <b>Email</b>.</li></ul>
+            <!-- For details, see
+            http://code.google.com/p/course-builder/wiki/CreateEmailList END FIXME -->
+          </div>
+  {% endif %}
+
+        </div>
+      </div>
+{% endblock %}
+

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+
+  <div>
+    <div class="gcb-aux">
+      <div class="gcb-cols">
+        <div class="gcb-col-6">
+          <iframe id="forum_embed"
+            src="javascript:void(0)"
+            scrolling="no"
+            frameborder="0"
+            width="900"
+            height="700">
+	  </iframe>
+
+          <script type="text/javascript">
+            document.getElementById("forum_embed").src = "[FIXME: Insert a link to the course forum here]";
+          </script>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block main_content %}
+  
+{% endblock %}
