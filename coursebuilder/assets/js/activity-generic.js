@@ -327,7 +327,7 @@ function renderAssessment(assessment, domRoot) {
   });
 
 
-  if (!assessment.disableCheckAnswers) {
+  if (assessment.checkAnswers) {
     domRoot.append('<a class="gcb-button gcb-button-primary" id="checkAnswersBtn">Check your Answers</a><p/>');
     domRoot.append('<p/><textarea style="width: 600px; height: 120px;" readonly="true" id="answerOutput"></textarea>');
   }

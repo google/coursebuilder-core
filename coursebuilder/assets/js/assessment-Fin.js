@@ -74,8 +74,8 @@ var assessment = {
   ],
 
   assessmentName: 'postcourse', // unique name submitted along with all of the answers
+  checkAnswers: true,           // render a "Check your Answers" button to allow students to check answers prior to submitting?
 
   // formScript: '/answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to '/answer'
-  // disableCheckAnswers: true, // OPTIONAL: if this is true, then don't let the student check their answers; only let them submit their responses
 }
 
