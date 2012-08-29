@@ -34,7 +34,7 @@ class Unit(db.Model):
   unit_id = db.StringProperty()
   title = db.StringProperty()
   release_date = db.StringProperty()
-  now_available = db.StringProperty()
+  now_available = db.BooleanProperty()
 
 class Lesson(db.Model):
   """Lesson metadata."""
