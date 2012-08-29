@@ -48,7 +48,7 @@ SCHEMA = {
     "assessment": {
         "assessmentName": STRING,
         "preamble": STRING,
-        "disableCheckAnswers": BOOLEAN,
+        "checkAnswers": BOOLEAN,
         "questionsList": [{
             "questionHTML": STRING,
             "lesson": STRING,
