@@ -582,6 +582,13 @@ def IsInteger(s):
     return False
 
 
+def IsBoolean(s):
+  try:
+    return s == "True" or s == "False"
+  except ValueError:
+    return False
+
+
 def IsNumber(s):
   try:
     float(s)
@@ -618,8 +625,11 @@ def SetObjectAttributes(target_object, names, values):
   for i in range(0, len(names)):
     if IsInteger(values[i]):
       setattr(target_object, names[i], int(values[i]))
-    else:
-      setattr(target_object, names[i], values[i])
+      continue
+    if IsBoolean(values[i]):
+      setattr(target_object, names[i], bool(values[i]))
+      continue
+    setattr(target_object, names[i], values[i])
 
 
 def ReadObjectsFromCsvFile(fname, header, new_object):
@@ -744,8 +754,13 @@ class Verifier(object):
 
   def VerifyUnitFields(self, units):
     for unit in units:
+      if not IsOneOf(unit.now_available, [True, False]):
+        self.error("Bad now_available '%s' for unit id %s; expected 'True' or 'False'" % (
+            unit.now_available, unit.id))
+
       if not IsOneOf(unit.type, ["U", "A", "O"]):
-        self.error("Bad type '%s' for unit id %s" % (unit.type, unit.id))
+        self.error("Bad type '%s' for unit id %s; expected 'U', 'A', or 'O'" % (
+            unit.type, unit.id))
 
       if unit.type == "A":
         if not IsOneOf(unit.unit_id, ("Pre", "Mid", "Fin")):
