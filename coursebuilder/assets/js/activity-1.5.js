@@ -48,6 +48,7 @@ var activity = [
 
   '<br>Open two new tabs with Google search in each, so you can compare the following searches. If the results are different, check the box.<br>',
 
+  // This is a custom user-defined activity type where the user can select multiple checkboxes:
   '<form name="activity"><span id="correct1"><input type=\'checkbox\' name=\'q15\' onClick="clearTextarea1()" value=\'correct\'>&nbsp;[flower spider] [spider flower] <\/span><br>\n<input  type=\'checkbox\' onClick="clearTextarea1()" name=\'q15\' value=\'wrong\'>&nbsp;[Adobe Acrobat] [adobe acrobat] <br>\n<span id="correct2"><input  type=\'checkbox\' onClick="clearTextarea1()" name=\'q15\' value=\'correct\'>&nbsp;[who] [the who] [a who]  <\/span><br>\n<span id="correct3"><input type=\'checkbox\' onClick="clearTextarea1()" name=\'q15\' value=\'correct\'>&nbsp;[150 computer] [$150 computer]<\/span><br>\n<input  type=\'checkbox\' name=\'q15\' onClick="clearTextarea1()" value=\'wrong\'>&nbsp;[% students paying off college loans] [students paying off college loans]<br><br><a class=\'gcb-button gcb-button-primary\' onClick="check15()">Check your answers</a><br/><textarea style="width: 600px; height: 50px;" readonly="true"  name="output"></textarea></form>'
 
 ];
@@ -62,17 +63,19 @@ var activity = [
 
 //<gcb-no-verify>
 
+// Custom checker code for a multiple checkbox activity. Note that you can write any custom activity
+// in HTML and JavaScript.
+
 function check15() {
-  // see if correct checkboxs are checked
-  numCorrect = 0;
-  numCorrect = checkQuestionCheckBox1(document.activity.q15);
+  // see if the correct checkboxes are checked
+  var numCorrect = checkQuestionCheckBox1(document.activity.q15);
   if (numCorrect == 3) {   // highlight correct answer
     highlightCorrectButton('correct1');
     highlightCorrectButton('correct2');
     highlightCorrectButton('correct3');
   }
 
-  // provide feedback
+  // provide feedback based on how many checkboxes were correctly checked:
   if (numCorrect >= 3) {
     document.activity.output.value = 'Good job! You have found the searches that differ. They are marked above.';
     numClicked = checkQuestionCheckClicked(document.activity.q15);
