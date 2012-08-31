@@ -39,7 +39,7 @@ transformers:
       external_name: release_date
     - property: now_available
       external_name: now_available
-      import_transform: 'lambda x: "True" if x == "True" else False'
+      import_transform: 'lambda x: True if x == "True" else False'
 - kind: Lesson
   connector: csv
   property_map:
