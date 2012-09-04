@@ -25,7 +25,7 @@ class Student(db.Model):
   midterm_score = db.IntegerProperty()
   final_score = db.IntegerProperty()
   overall_score = db.IntegerProperty()
-  cert_name = db.StringProperty()
+  name = db.StringProperty()
 
 class Unit(db.Model):
   """Unit metadata."""
