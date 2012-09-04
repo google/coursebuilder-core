@@ -63,7 +63,34 @@ transformers:
       external_name: lesson_notes
 - kind: Student
   connector: csv
+  # FIXME: remove fields that you don't need from the property_map below. This
+  # is likely to speed up the data export process, especially if the datastore
+  # contains a large number of Student entities.
   property_map:
     - property: __key__
       external_name: email
       export_transform: datastore.Key.name
+    - property: name
+      external_name: name
+    - property: enrolled_date
+      external_name: enrolled_date
+      import_transform: transform.import_date_time('%Y-%m-%d %H:%M:%S')
+      export_transform: transform.export_date_time('%Y-%m-%d %H:%M:%S')
+    - property: overall_score
+      external_name: overall_score
+      import_transform: transform.none_if_empty(int)
+    - property: final_answer
+      external_name: final_answer
+    - property: final_score
+      external_name: final_score
+      import_transform: transform.none_if_empty(int)
+    - property: midterm_answer
+      external_name: midterm_answer
+    - property: midterm_score
+      external_name: midterm_score
+      import_transform: transform.none_if_empty(int)
+    - property: precourse_answer
+      external_name: precourse_answer
+    - property: precourse_score
+      external_name: precourse_score
+      import_transform: transform.none_if_empty(int)
