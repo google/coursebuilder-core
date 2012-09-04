@@ -253,7 +253,9 @@ class AnswerHandler(StudentHandler):
       # If you would like to have different types of assessments or
       # different score weights/thresholds, edit the code below ...
       if assessment_type == 'precourse':
+        score = self.request.get('score')
         student.precourse_answer = answer
+        student.precourse_score = int(float(score))
       elif assessment_type == 'midcourse':
         score = self.request.get('score')
         student.midterm_answer = answer
