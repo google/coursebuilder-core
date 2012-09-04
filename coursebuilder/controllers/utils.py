@@ -102,7 +102,7 @@ class RegisterHandler(BaseHandler):
 
     # Create student record
     name = self.request.get('form01')
-    student = Student(key_name=user.email(), cert_name=name)
+    student = Student(key_name=user.email(), name=name)
     student.put()
 
     # Render registration confirmation page
