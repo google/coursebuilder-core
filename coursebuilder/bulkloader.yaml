@@ -57,10 +57,13 @@ transformers:
       external_name: lesson_activity_name
     - property: video
       external_name: lesson_video_id
+      import_transform: db.Text
     - property: objectives
       external_name: lesson_objectives
+      import_transform: db.Text
     - property: notes
       external_name: lesson_notes
+      import_transform: db.Text
 - kind: Student
   connector: csv
   # FIXME: remove fields that you don't need from the property_map below. This
