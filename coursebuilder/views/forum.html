@@ -15,7 +15,10 @@
 	  </iframe>
 
           <script type="text/javascript">
-            document.getElementById("forum_embed").src = "[FIXME: Insert a link to the course forum here]";
+            document.getElementById("forum_embed").src =
+              "https://groups.google.com/forum/embed/?place=forum/[FIXME: insert course forum name here]"
+              + "&showsearch=true&showpopout=true&showtabs=false"
+              + "&parenturl=" + encodeURIComponent(window.location.href);
           </script>
         </div>
       </div>
