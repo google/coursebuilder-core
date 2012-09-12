@@ -124,4 +124,3 @@ class ForumHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url('/')
     self.render('forum.html')
-
