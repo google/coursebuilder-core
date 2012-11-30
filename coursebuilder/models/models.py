@@ -64,6 +64,7 @@ class Student(db.Model):
     else:
       return None
 
+
 class Unit(db.Model):
   """Unit metadata."""
   id = db.IntegerProperty()
@@ -89,6 +90,7 @@ class Unit(db.Model):
       memcache.set('lessons' + str(unit_id), lessons, DEFAULT_CACHE_TTL_SECS)
     return lessons
 
+
 class Lesson(db.Model):
   """Lesson metadata."""
   unit_id = db.IntegerProperty()
@@ -102,24 +104,6 @@ class Lesson(db.Model):
   activity = db.StringProperty()
   activity_title = db.StringProperty()
 
-class PageCache(db.Model):
-  content = db.TextProperty()
-
-  @classmethod
-  def get_page(cls, page_name, content_lambda):
-    """Get page from cache or datastore, or create page on demand."""
-    content = memcache.get(page_name)
-    if not content:
-      logging.info('cache miss: ' + page_name)
-      content = content_lambda()
-      page = PageCache.get_by_key_name(page_name)
-      if page:
-        page.content = content
-      else:
-        page = PageCache(key_name=page_name, content=content)
-      page.put()
-      memcache.set(page_name, content, DEFAULT_CACHE_TTL_SECS)
-    return content
 
 class Email(db.Model):
   """Email metadata"""

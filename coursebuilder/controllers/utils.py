@@ -15,8 +15,8 @@
 import os, logging
 import webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
-from models.models import Student, Unit, PageCache, Email
-from google.appengine.api import users, mail, taskqueue
+from models.models import Student, Unit, Email, DEFAULT_CACHE_TTL_SECS
+from google.appengine.api import users, mail, taskqueue, memcache
 from google.appengine.ext import db, deferred
 from models.utils import getAllScores
 
@@ -99,10 +99,19 @@ Student Handler
 """
 class StudentHandler(ApplicationHandler):
 
+  def get_page(cls, page_name, content_lambda):
+    """Get page from cache or create page on demand."""
+    content = memcache.get(page_name)
+    if not content:
+      logging.info('Cache miss: ' + page_name)
+      content = content_lambda()
+      memcache.set(page_name, content, DEFAULT_CACHE_TTL_SECS)
+    return content
+
   def getOrCreatePage(self, page_name, handler):
     def content_lambda():
       return self.delegateTo(handler)
-    return PageCache.get_page(page_name, content_lambda)
+    return self.get_page(page_name, content_lambda)
 
   def delegateTo(self, handler):
     """"Run another handler using system identity.
