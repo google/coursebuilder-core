@@ -22,7 +22,8 @@ from controllers.sites import AssertFails
 from actions import *
 
 
-class StudentRegistrationTest(TestBase):
+class StudentAspectTest(TestBase):
+  """Tests the site from the Student perspective."""
 
   def testRegistration(self):
     """Test student registration."""
@@ -59,27 +60,31 @@ class StudentRegistrationTest(TestBase):
     Permissions.assert_enrolled(self)
 
 
-class RewriteRulesTest(StudentRegistrationTest):
+class CourseUrlRewritingTest(StudentAspectTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
   def setUp(self):
-    """Setup rewrite rules."""
     self.base = '/courses/pswg'
     self.namespace = 'gcb-courses-pswg-tests-ns'
 
-    rewrite_rules  ='course:%s::%s' % (self.base, self.namespace)
-    os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME] = rewrite_rules
+    config  ='course:%s:/:%s' % (self.base, self.namespace)
+    os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = config
 
-    super(RewriteRulesTest, self).setUp()
+    super(CourseUrlRewritingTest, self).setUp()
 
   def tearDown(self):
-    """Remove rewrite rules."""
-    super(RewriteRulesTest, self).tearDown()
-    del os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME]
+    super(CourseUrlRewritingTest, self).tearDown()
+    del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
   def canonicalize(self, href, response=None):
-    """Force self.base on to all URL's."""
-    if not href.startswith('/'):
-      href = '/%s' % href
-    href = '%s%s' % (self.base, href)
-    return href
+    """Force self.base on to all URL's, but only if no current response exists."""
+    if response:
+      # look for <base> tag in the response to compute the canonical URL 
+      return super(CourseUrlRewritingTest, self).canonicalize(href, response)
+    else:
+      # prepend self.base to compute the canonical URL 
+      if not href.startswith('/'):
+        href = '/%s' % href
+      href = '%s%s' % (self.base, href)
+      return href
+      

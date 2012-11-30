@@ -42,8 +42,20 @@ def sendWelcomeEmail(email):
 
 """A handler that is aware of the application context."""
 class ApplicationHandler(webapp2.RequestHandler):
+  def __init__(self):
+    super(ApplicationHandler, self).__init__()
+    self.templateValue = {}
+    
+  def appendBase(self):
+    """Append current course <base> to template variables."""
+    slug = self.app_context.getSlug()
+    if not slug.endswith('/'):
+      slug = '%s/' % slug
+    self.templateValue['gcb_course_base'] = slug 
+
   def getTemplate(self, templateFile):
     """Computes the location of template files for the current namespace."""
+    self.appendBase()
     template_dir = self.app_context.getTemplateHome()
     jinja_environment = jinja2.Environment(
         loader=jinja2.FileSystemLoader(template_dir))
@@ -56,42 +68,10 @@ class ApplicationHandler(webapp2.RequestHandler):
     super(ApplicationHandler, self).redirect(location)
 
 
-"""A class that handles simple static templates."""
-class TemplateHandler(ApplicationHandler):
-  def __init__(self, filename):
-    super(TemplateHandler, self).__init__()
-    self.filename = filename
-
-  def get(self):
-    templateValue = {}
-    templateValue['navbar'] = {}
-
-    user = users.get_current_user()
-    if user:
-      templateValue['email'] = user.email()
-      templateValue['logoutUrl'] = users.create_logout_url('/')
-
-    try:
-      template = self.getTemplate(self.filename)
-    except TemplateNotFound:
-      self.error(404)
-      return
-    except Exception as e:
-      raise Exception('Failed to render template \'%s\' in location \'%s\'.' % (
-          self.filename, self.app_context.getTemplateHome()), e)
-
-    page = template.render(templateValue)
-    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
-
-
 """
 Base handler
 """
 class BaseHandler(ApplicationHandler):
-  def __init__(self):
-    super(BaseHandler, self).__init__()
-    self.templateValue = {}
-
   def getUser(self):
     """Validate user exists."""
     user = users.get_current_user()

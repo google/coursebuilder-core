@@ -15,23 +15,17 @@
 # @author: psimakov@google.com (Pavel Simakov)
 
 
-"""Enables hosting of multiple courses and pages in one application instance."""
+"""Enables hosting of multiple courses in one application instance."""
 
 import appengine_config, logging, mimetypes, os, threading, webapp2
-from controllers.utils import TemplateHandler
 from google.appengine.api import namespace_manager
 
-# the name of environment variable that holds rewrite rule definitions
-GCB_REWRITE_RULES_ENV_VAR_NAME = 'GCB_ROUTING_RULES'
 
-# name of the default file for static site
-DEFAULT_STATIC_FILE_NAME = 'index.html'
+# the name of environment variable that holds rewrite rule definitions
+GCB_COURSES_CONFIG_ENV_VAR_NAME = 'GCB_COURSES_CONFIG'
 
 # base name for all course namespaces
 GCB_BASE_COURSE_NAMESPACE = 'gcb-course'
-
-# a common name for static namespaces
-GCB_STATIC_NAMESPACE = 'gcb-static'
 
 # these folder names are reserved
 GCB_ASSETS_FOLDER_NAME = '/assets'
@@ -39,8 +33,6 @@ GCB_VIEWS_FOLDER_NAME = '/views'
 
 # supported site types
 SITE_TYPE_COURSE = 'course'
-SITE_TYPE_STATIC = 'static'
-SUPPORTED_SITE_TYPES = [SITE_TYPE_COURSE, SITE_TYPE_STATIC]
 
 # enable debug output
 DEBUG_INFO = False
@@ -76,15 +68,15 @@ def debug(message):
 
 def makeDefaultRule():
   """By default, we support one course in the root folder in the None namespace."""
-  return ApplicationContext('course', '/', '', None)
+  return ApplicationContext('course', '/', '/', None)
 
 def getAllRules():
   """Reads all rewrite rule definitions from environment variable."""
   default = makeDefaultRule()
 
-  if not GCB_REWRITE_RULES_ENV_VAR_NAME in os.environ:
+  if not GCB_COURSES_CONFIG_ENV_VAR_NAME in os.environ:
     return [default]
-  var_string = os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME]
+  var_string = os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
   if not var_string:
     return [default]
 
@@ -96,14 +88,15 @@ def getAllRules():
     if len(rule) == 0:
       continue
     parts = rule.split(':')
+    
+    # validate length
     if len(parts) < 3:
       raise Exception(
           'Expected rule definition in a form of \'type:slug:folder[:ns]\', got %s: ' % rule)
 
     # validate type
-    if parts[0] not in SUPPORTED_SITE_TYPES:
-      raise Exception(
-          'Expected [%s], found: \'%s\'.' % (', '.join(SUPPORTED_SITE_TYPES), type))
+    if parts[0] != SITE_TYPE_COURSE:
+      raise Exception('Expected \'%s\', found: \'%s\'.' % (SITE_TYPE_COURSE, parts[0]))
     type = parts[0]
 
     # validate slug
@@ -120,11 +113,10 @@ def getAllRules():
     if len(parts) == 4:
       namespace = parts[3]
     else:
-      if type == SITE_TYPE_COURSE:
-        if folder == '/':
-          namespace = GCB_BASE_COURSE_NAMESPACE
-        else:
-          namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE, folder.replace('/', '-'))
+      if folder == '/':
+        namespace = GCB_BASE_COURSE_NAMESPACE
+      else:
+        namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE, folder.replace('/', '-'))
       if namespace in namespaces:
         raise Exception('Namespace already defined: %s.' % namespace)
     namespaces[namespace] = True
@@ -175,7 +167,7 @@ def namespace_manager_default_namespace_for_request():
 """A class that handles serving of static resources located on the file system."""
 class AssetHandler(webapp2.RequestHandler):
   def __init__(self, filename):
-    filename = os.path.abspath(filename)
+    filename = os.path.abspath(filename).replace('//', '/')
     if not filename.startswith('/'):
       raise Exception('Expected absolute path.')
     filename = filename[1:]
@@ -204,10 +196,7 @@ class ApplicationContext(object):
     """A name of the namespace (NDB, memcache, etc.) to use for this request."""
     rule = getRuleForCurrentRequest()
     if rule:
-      if rule.getType() == SITE_TYPE_COURSE:
-        return rule.namespace
-      else:
-        return GCB_STATIC_NAMESPACE
+      return rule.namespace
     return None
 
   def __init__(self, type, slug, homefolder, namespace):
@@ -223,10 +212,6 @@ class ApplicationContext(object):
   def getSlug(self):
     """A common context path for all URLs in this context ('/courses/mycourse')."""
     return self.slug
-
-  def getType(self):
-    """A type of the site to run in this context (course | static)."""
-    return self.type
 
   def getTemplateHome(self):
     if self.getHomeFolder() == '/':
@@ -254,47 +239,19 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     ApplicationRequestHandler.urls_map = urls_map
 
   def getHandler(self):
-    """Finds a static or dynamic handler suitable for this request."""
-    context = getRuleForCurrentRequest()
-    if not context:
+    """Finds a routing rule suitable for this request."""
+    rule = getRuleForCurrentRequest()
+    if not rule:
       return None
 
     path = getPathInfo()
     if not path:
       return None
 
-    if context.getType() == 'static':
-      return self.getHandlerForStaticType(context, unprefix(path, context.getSlug()))
-    if context.getType() == 'course':
-      return self.getHandlerForCourseType(context, unprefix(path, context.getSlug()))
-    raise Exception('Unknown site type: %s.' % type)
-
-  def getHandlerForStaticType(self, context, path):
-    absolute_path = os.path.abspath(path)
-
-    # handle static assets here
-    if absolute_path.startswith('%s/' % GCB_ASSETS_FOLDER_NAME):
-      handler = AssetHandler('%s%s' % (context.getHomeFolder(), absolute_path))
-      handler.request = self.request
-      handler.response = self.response
-      handler.app_context = context
-
-      debug('Static asset: %s' % absolute_path)
-      return handler
-
-    # handle templates here
-    if absolute_path == '/':
-      absolute_path = DEFAULT_STATIC_FILE_NAME
-    handler = TemplateHandler(absolute_path)
-    handler.request = self.request
-    handler.response = self.response
-    handler.app_context = context
-
-    debug('Template: %s%s' % (context.getHomeFolder(), absolute_path))
-    return handler
+    return self.getHandlerForCourseType(rule, unprefix(path, rule.getSlug()))
 
   def getHandlerForCourseType(self, context, path):
-    # handle static assets here
+    # handle static assets here    
     absolute_path = os.path.abspath(path)
     if absolute_path.startswith('%s/' % GCB_ASSETS_FOLDER_NAME):
       handler = AssetHandler('%s%s' % (context.getHomeFolder(), absolute_path))
@@ -388,37 +345,33 @@ def TestRuleDefinitions():
   assert len(getAllRules()) == 1
 
   # test empty definition is ok
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = ''
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = ''
   assert len(getAllRules()) == 1
 
   # test one rule parsing
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/google/pswg:/sites/pswg'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/google/pswg:/sites/pswg'
   rules = getAllRules()
   assert len(getAllRules()) == 1
   rule = rules[0]
-  assert rule.getType() == 'course'
   assert rule.getSlug() == '/google/pswg'
   assert rule.getHomeFolder() == '/sites/pswg'
 
   # test two rule parsing
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/a/b:/c/d, static:/e/f:/g/h'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/a/b:/c/d, course:/e/f:/g/h'
   assert len(getAllRules()) == 2
 
   # test two of the same slugs are not allowed
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/a/b:/c/d'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/a/b:/c/d'
   AssertFails(getAllRules)
 
   # test only course|static is supported
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/e/f:/g/h'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/e/f:/g/h'
   AssertFails(getAllRules)
 
   # test namespaces
   setPathInfo('/')
 
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'static:/:/c/d'
-  assert ApplicationContext.getNamespaceName() == 'gcb-static'
-
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/:/c/d'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
   assert ApplicationContext.getNamespaceName() == 'gcb-course-c-d'
 
   unsetPathInfo()
@@ -432,7 +385,7 @@ def TestUrlToRuleMapping():
   AssertMapped('/assets/img/foo.png', '/')
 
   # explicit mapping
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/a/b:/c/d, static:/e/f:/g/h'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/a/b:/c/d, course:/e/f:/g/h'
 
   AssertMapped('/a/b', '/a/b')
   AssertMapped('/a/b/', '/a/b')
@@ -451,7 +404,7 @@ def TestUrlToHandlerMappingForCourseType():
   os.environ = {}
 
   # setup rules
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/a/b:/c/d, static:/e/f:/g/h'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/a/b:/c/d, course:/e/f:/g/h'
 
   # setup helper classes
   class FakeHandler0():
@@ -520,61 +473,11 @@ def TestUrlToHandlerMappingForCourseType():
   # clean up
   ApplicationRequestHandler.bind([])
 
-def TestUrlToHandlerMappingForStaticType():
-  """Tests mapping of a URL to a handler for static type."""
-  os.environ = {}
-
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'static:/e/f:/g/h'
-
-  AssertHandled('/e/f/index.html', TemplateHandler)
-
-  handler = AssertHandled('/e/f/assets/js/foo.js', AssetHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/g/h/views')
-  assert handler.filename.endswith(
-      'experimental/coursebuilder/g/h/assets/js/foo.js')
-
-  handler = AssertHandled('/e/f/views/index.html', TemplateHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/g/h/views')
-  assert handler.filename == '/views/index.html'
-
-  handler = AssertHandled('/e/f/foo.html', TemplateHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/g/h/views')
-  assert handler.filename == '/foo.html'
-
-  # sandbox relative paths
-  handler = AssertHandled('/e/f/../models/models.py', TemplateHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/g/h/views')
-  assert handler.filename == '/models/models.py'
-
-def TestUrlToHandlerMappingPrecedence():
-  os.environ = {}
-
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:/e/f:/g/h, static:/:/c/d'
-
-  AssertHandled('/', TemplateHandler)
-
-  AssertHandled('/blah.html', TemplateHandler)
-
-  # this should have worked, but we did not call bind() so it does not
-  AssertHandled('/e/f', None)
-
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'static:/:/c/d, course:/e/f:/g/h'
-  AssertHandled('/', TemplateHandler)
-
-  # TODO(psimakov): wrong; this is handled as 'static', but was intended for the
-  # 'course'; we look for the first match in order of declaration, but should look
-  # for the best match
-  AssertHandled('/e/f', TemplateHandler)
-
 def TestSpecialChars():
   os.environ = {}
 
   # test namespace collisions are detected and is not allowed
-  os.environ[GCB_REWRITE_RULES_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/a/b:/c-d'
+  os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/a/b:/c-d'
   AssertFails(getAllRules)
 
 def RunAllUnitTests():
@@ -583,8 +486,6 @@ def RunAllUnitTests():
   TestRuleDefinitions()
   TestUrlToRuleMapping()
   TestUrlToHandlerMappingForCourseType()
-  TestUrlToHandlerMappingForStaticType()
-  TestUrlToHandlerMappingPrecedence()
 
 if __name__ == '__main__':
   DEBUG_INFO = True
