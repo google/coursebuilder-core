@@ -339,12 +339,10 @@ class StudentEditStudentHandler(BaseHandler):
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
-      page = self.getTemplate('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
       self.templateValue['student'] = student
-      page = self.getTemplate('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+
+    self.render('student_profile.html')
 
   def post(self):
     user = users.get_current_user()
