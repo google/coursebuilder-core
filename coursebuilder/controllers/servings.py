@@ -13,6 +13,7 @@
  # limitations under the License.
 
 import logging, json
+import lessons, utils
 from models.models import Student, PageCache
 from utils import StudentHandler
 from google.appengine.api import memcache
@@ -35,7 +36,12 @@ class CourseHandler(StudentHandler):
         if page:
           memcache.add(page_name, page.content)
           cached_page = page.content
-        #TODO: add error handling
+        else:
+          provider = lessons.CourseHandler()
+          provider.response = self.response
+          provider.get()
+          return
+          
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -169,7 +175,12 @@ class ForumHandler(StudentHandler):
         if page:
           memcache.add(page_name, page.content)
           cached_page = page.content
-        #TODO: add error handling
+        else:
+          provider = utils.ForumHandler()
+          provider.response = self.response
+          provider.get()
+          return
+          
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
