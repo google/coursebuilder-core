@@ -22,28 +22,25 @@ Handler for generating course page
 """
 class CourseHandler(BaseHandler):
   def get(self):
-    user = self.getUser()
+    user = self.personalizePageAndGetUser()
     if user:
-      # Get unit data and set template values
-      units = Unit.get_units()
-      self.templateValue['units'] = units
-
-      # Set template values for nav bar
+      self.templateValue['units'] = Unit.get_units()
       self.templateValue['navbar'] = {'course': True}
-
-      # Set template values for user
-      user = users.get_current_user()
-      if user:
-        self.templateValue['email'] = user.email()
-        self.templateValue['logoutUrl'] = users.create_logout_url('/')
-
       self.render('course.html')
+    else:
+      self.redirect('preview.html')
 
 """
 Handler for generating class page
 """
 class UnitHandler(BaseHandler):
   def get(self):
+    # Set template values for user
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+
     # Extract incoming args
     c = self.request.get('unit')
     if not c:
@@ -85,12 +82,6 @@ class UnitHandler(BaseHandler):
     else:
       self.templateValue['next_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id + 1)
 
-    # Set template values for user
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url('/')
-
     self.render('unit.html')
 
 
@@ -99,6 +90,12 @@ Handler for generating activity page.
 """
 class ActivityHandler(BaseHandler):
   def get(self):
+    # Set template values for user
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+
     # Extract incoming args
     c = self.request.get('unit')
     if not c:
@@ -132,12 +129,6 @@ class ActivityHandler(BaseHandler):
     else:
       self.templateValue['next_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id + 1)
 
-    # Set template values for user
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url('/')
-
     self.render('activity.html')
 
 
@@ -146,19 +137,17 @@ Handler for generating assessment page
 """
 class AssessmentHandler(BaseHandler):
   def get(self):
+    # Set template values for user
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+
     # Extract incoming args
     n = self.request.get('name')
     if not n:
       n = 'Pre'
     self.templateValue['name'] = n
-
-    # Set template values for nav-x bar
     self.templateValue['navbar'] = {'course': True}
-
-    # Set template values for user
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url('/')
-
     self.render('assessment.html')
+

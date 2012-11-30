@@ -46,8 +46,12 @@
           </li>
           {% if logoutUrl %}
           <li class="pull-right">
-	    <span style="font-weight: normal;">{{ email }} | </span>
-	    <a href="{{ logoutUrl }}">Logout</a>
+            <span style="font-weight: normal;">{{ email }} | </span>
+            <a href="{{ logoutUrl }}">Logout</a>
+          </li>
+          {% elif loginUrl %}
+          <li class="pull-right">
+            <a href="{{ loginUrl }}">Login</a>
           </li>
           {% endif %}
         </ul>

@@ -26,4 +26,4 @@ handlers:
   upload: assets/img/favicon.ico
 - url: /.*
   script: main.app
-  login: required
+

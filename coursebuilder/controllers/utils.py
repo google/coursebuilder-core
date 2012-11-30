@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os, logging
 import webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
@@ -79,6 +79,14 @@ class BaseHandler(ApplicationHandler):
       self.redirect(users.create_login_url(self.request.uri))
     else:
       return user
+
+  def personalizePageAndGetUser(self):
+    """If the user exists, add email and logoutUrl fields to the navbar template."""
+    user = self.getUser()
+    if user:
+      self.templateValue['email'] = user.email()
+      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    return user
 
   def render(self, templateFile):
     template = self.getTemplate(templateFile)
@@ -159,20 +167,19 @@ class StudentHandler(ApplicationHandler):
 Handler for viewing course preview
 """
 class CoursePreviewHandler(BaseHandler):
-
   def get(self):
     user = users.get_current_user()
-    if user:
+    if not user:
+      self.templateValue['loginUrl'] = users.create_login_url('/')
+    else:
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
-    # Check for existing registration -> redirect to course page
-    student = Student.get_enrolled_student_by_email(user.email())
-    if student:
+    self.templateValue['navbar'] = {'course': True}
+    self.templateValue['units'] = Unit.get_units()
+    if user and Student.get_enrolled_student_by_email(user.email()):
       self.redirect('/course')
     else:
-      self.templateValue['navbar'] = {'course': True}
-      self.templateValue['units'] = Unit.get_units()
       self.render('preview.html')
 
 
@@ -180,12 +187,11 @@ class CoursePreviewHandler(BaseHandler):
 Handler for course registration closed
 """
 class RegisterClosedHandler(BaseHandler):
-
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     self.templateValue['navbar'] = {'registration': True}
     self.render('registration_close.html')
@@ -196,13 +202,12 @@ Handler for course registration
 """
 class RegisterHandler(BaseHandler):
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
-    navbar = {'registration': True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'registration': True}
     # Check for existing registration -> redirect to course page
     student = Student.get_enrolled_student_by_email(user.email())
     if student:
@@ -211,11 +216,10 @@ class RegisterHandler(BaseHandler):
       self.render('register.html')
 
   def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url('/')
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     # Restrict the maximum course size to 250000 people
     # FIXME: you can change this number if you wish.
@@ -256,13 +260,13 @@ class RegisterHandler(BaseHandler):
 Handler for forum page
 """
 class ForumHandler(BaseHandler):
-
   def get(self):
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+
     self.templateValue['navbar'] = {'forum': True}
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url('/')
     self.render('forum.html')
 
 
@@ -275,14 +279,14 @@ class AnswerHandler(BaseHandler):
     self.type = type
 
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      self.templateValue['navbar'] = {'course': True}
-      self.templateValue['assessment'] = self.type
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
-      self.render('test_confirmation.html')
+    self.templateValue['navbar'] = {'course': True}
+    self.templateValue['assessment'] = self.type
+    self.render('test_confirmation.html')
 
 
 class AddTaskHandler(ApplicationHandler):
@@ -302,11 +306,12 @@ This function handles the click to 'My Profile' link in the nav bar
 """
 class StudentProfileHandler(BaseHandler):
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      self.templateValue['navbar'] = {}
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+
+    self.templateValue['navbar'] = {}
     #check for existing registration -> redirect to course page
     e = user.email()
     student = Student.get_by_email(e)
@@ -324,13 +329,13 @@ This function handles edits to student records by students
 """
 class StudentEditStudentHandler(BaseHandler):
   def get(self):
-    e = self.request.get('email')
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     self.templateValue['navbar'] = {}
+    e = self.request.get('email')
     # Check for existing registration -> redirect to course page
     student = Student.get_by_email(e)
     if student == None:
@@ -342,11 +347,10 @@ class StudentEditStudentHandler(BaseHandler):
     self.render('student_profile.html')
 
   def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     # Update student record
     e = self.request.get('email')
@@ -365,10 +369,10 @@ Handler for Announcements
 """
 class AnnouncementsHandler(BaseHandler):
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     self.templateValue['navbar'] = {'announcements': True}
     self.render('announcements.html')
@@ -379,28 +383,28 @@ Handler for students to unenroll themselves
 """
 class StudentUnenrollHandler(BaseHandler):
   def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      student = Student.get_enrolled_student_by_email(user.email())
-      if student:
-        self.templateValue['student'] = student
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
+    student = Student.get_enrolled_student_by_email(user.email())
+    if student:
+      self.templateValue['student'] = student
     self.templateValue['navbar'] = {'registration': True}
     self.render('unenroll_confirmation_check.html')
 
   def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      self.templateValue['navbar'] = {'registration': True}
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
 
     # Update student record
-    student = Student.get_by_email(email)
+    student = Student.get_by_email(user.email())
     if student and student.is_enrolled:
       student.is_enrolled = False
       student.put()
+    self.templateValue['navbar'] = {'registration': True}
     self.render('unenroll_confirmation.html')
+
