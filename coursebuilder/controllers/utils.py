@@ -14,30 +14,13 @@
 
 import os, logging, urlparse, webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
-from models.models import Student, Unit, Email, DEFAULT_CACHE_TTL_SECS
+from models.models import Student, Unit, DEFAULT_CACHE_TTL_SECS
 from google.appengine.api import users, mail, taskqueue, memcache
 from google.appengine.ext import db, deferred
 from models.utils import getAllScores
 
 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
-
-
-def sendWelcomeEmail(email):
-  # FIXME: To automatically send welcome emails, edit this welcome message
-  # and see the welcome email FIXME in RegisterHandler
-  message = mail.EmailMessage(sender="COURSE STAFF NAME <COURSE_EMAIL_ADDRESS@YOURDOMAIN>",
-    subject="Welcome to COURSE NAME!")
-  message.to = email
-  message.body = """
-    Thank you for registering for COURSE NAME.
-    YOUR WELCOME MESSAGE HERE
-  """
-  message.html = """
-    <p>Thank you for registering for COURSE NAME.</p>
-    <p>YOUR WELCOME MESSAGE HERE</p>
-  """
-  message.send()
 
 
 """A handler that is aware of the application context."""
@@ -244,13 +227,6 @@ class RegisterHandler(BaseHandler):
       student = Student(key_name=user.email(), name=name, is_enrolled=True)
     student.put()
 
-    # FIXME: Uncomment the following 2 lines, edit the message in the sendWelcomeEmail
-    # function and create a queue.yaml file if you want to automatically send a
-    # welcome email message.
-
-    # # Send welcome email
-    # deferred.defer(sendWelcomeEmail, email)
-
     # Render registration confirmation page
     self.templateValue['navbar'] = {'registration': True}
     self.render('confirmation.html')
@@ -287,18 +263,6 @@ class AnswerConfirmationHandler(BaseHandler):
     self.templateValue['navbar'] = {'course': True}
     self.templateValue['assessment'] = self.type
     self.render('test_confirmation.html')
-
-
-class AddTaskHandler(ApplicationHandler):
-  def get(self):
-    log = ''
-    emails = EmailList.all().fetch(1000)
-    if emails:
-      for email in emails:
-        log = log + email.email + "\n"
-        taskqueue.add(url='/admin/reminderemail', params={'to': email.email})
-      db.delete(emails)
-      self.response.out.write(log)
 
 
 """

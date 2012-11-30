@@ -101,12 +101,3 @@ class Lesson(db.Model):
   activity = db.StringProperty()
   activity_title = db.StringProperty()
 
-
-class Email(db.Model):
-  """Email metadata"""
-  id = db.IntegerProperty()
-  email_name = db.StringProperty()
-  sent_from = db.StringProperty()
-  subject = db.TextProperty()
-  body = db.TextProperty()
-  due_date = db.StringProperty()
