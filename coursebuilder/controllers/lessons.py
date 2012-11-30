@@ -21,9 +21,7 @@ from google.appengine.api import users, memcache
 Handler for generating course page
 """
 class CourseHandler(BaseHandler):
-
   def get(self):
-
     # Set template values for user
     user = self.getUser()
     if user:
@@ -37,14 +35,13 @@ class CourseHandler(BaseHandler):
         self.templateValue['units'] = units
 
         # Set template values for nav bar
-        navbar = {'course': True}
-        self.templateValue['navbar'] = navbar
+        self.templateValue['navbar'] = {'course': True}
 
         # Set template values for user
         user = users.get_current_user()
         if user:
           self.templateValue['email'] = user.email()
-          self.templateValue['logoutUrl'] = users.create_logout_url("/")
+          self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
         # Render course page
         self.renderToDatastore('course_page', 'course.html')
@@ -53,18 +50,17 @@ class CourseHandler(BaseHandler):
 """
 Handler for generating class page
 """
-class ClassHandler(BaseHandler):
-
+class UnitHandler(BaseHandler):
   def get(self):
     # Extract incoming args
-    c = self.request.get("unit")
+    c = self.request.get('unit')
     if not c:
       unit_id = 1
     else:
       unit_id = int(c)
     self.templateValue['unit_id'] = unit_id
 
-    l = self.request.get("lesson")
+    l = self.request.get('lesson')
     if not l:
       lesson_id = 1
     else:
@@ -87,8 +83,7 @@ class ClassHandler(BaseHandler):
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav bar
-    navbar = {'course':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'course': True}
 
     # Set template values for back and next nav buttons
     if lesson_id == 1:
@@ -109,7 +104,7 @@ class ClassHandler(BaseHandler):
     user = users.get_current_user()
     if user:
       self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
     # Render
     self.renderToDatastore('lesson%s%s_page' % (unit_id, lesson_id), 'unit.html')
@@ -121,7 +116,7 @@ Handler for generating activity page.
 class ActivityHandler(BaseHandler):
   def get(self):
     # Extract incoming args
-    c = self.request.get("unit")
+    c = self.request.get('unit')
     if not c:
       unit_id = 1
     else:
@@ -151,8 +146,7 @@ class ActivityHandler(BaseHandler):
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav-x bar
-    navbar = {'course':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'course': True}
 
     # Set template values for back and next nav buttons
     self.templateValue['back_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id)
@@ -165,7 +159,7 @@ class ActivityHandler(BaseHandler):
     user = users.get_current_user()
     if user:
       self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
     # Render
     self.renderToDatastore('activity%s%s_page' % (unit_id, lesson_id), 'activity.html')
@@ -175,23 +169,21 @@ class ActivityHandler(BaseHandler):
 Handler for generating assessment page
 """
 class AssessmentHandler(BaseHandler):
-
   def get(self):
     # Extract incoming args
-    n = self.request.get("name")
+    n = self.request.get('name')
     if not n:
       n = 'Pre'
     self.templateValue['name'] = n
 
     # Set template values for nav-x bar
-    navbar = {'course':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'course': True}
 
     # Set template values for user
     user = users.get_current_user()
     if user:
       self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
     # Render
     self.renderToDatastore('assessment%s_page' % n, 'assessment.html')

@@ -14,13 +14,13 @@
 
 import os, logging
 import webapp2, jinja2
-from models.models import Student, Unit, Lesson, PageCache, Email, UnenrolledStudents
+from models.models import Student, Unit, PageCache, Email, UnenrolledStudents
 from google.appengine.api import users, mail, memcache, taskqueue
 from google.appengine.ext import db, deferred
 
 template_dir = os.path.join(os.path.dirname(__file__), '../views')
 jinja_environment = jinja2.Environment(
-  loader=jinja2.FileSystemLoader(template_dir))
+    loader=jinja2.FileSystemLoader(template_dir))
 
 
 def sendWelcomeEmail(email):
@@ -30,27 +30,14 @@ def sendWelcomeEmail(email):
     subject="Welcome to COURSE NAME!")
   message.to = email
   message.body = """
-Thank you for registering for COURSE NAME.
-
-YOUR WELCOME MESSAGE HERE
-
-"""
-
+    Thank you for registering for COURSE NAME.
+    YOUR WELCOME MESSAGE HERE
+  """
   message.html = """
-<p>Thank you for registering for COURSE NAME.</p>
-<p>YOUR WELCOME MESSAGE HERE</p>
-
-
-"""
+    <p>Thank you for registering for COURSE NAME.</p>
+    <p>YOUR WELCOME MESSAGE HERE</p>
+  """
   message.send()
-
-
-"""
-/_ah/warmup handler
-"""
-class WarmupHandler(webapp2.RequestHandler):
-  def get(self):
-    pass
 
 
 """
@@ -125,8 +112,7 @@ class RegisterClosedHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
-    navbar = {'registration':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'registration': True}
     page = jinja_environment.get_template('registration_close.html').render(self.templateValue)
     self.response.out.write(page.replace('test@example.com',user.email()))
 
@@ -135,7 +121,6 @@ class RegisterClosedHandler(BaseHandler):
 Handler for course registration
 """
 class RegisterHandler(BaseHandler):
-
   def get(self):
     user = users.get_current_user()
     if user:
@@ -181,8 +166,7 @@ class RegisterHandler(BaseHandler):
     # deferred.defer(sendWelcomeEmail, email)
 
     # Render registration confirmation page
-    navbar = {'registration': True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'registration': True}
     self.render('confirmation.html')
 
 
@@ -192,8 +176,7 @@ Handler for forum page
 class ForumHandler(BaseHandler):
 
   def get(self):
-    navbar = {'forum':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'forum': True}
     user = users.get_current_user()
     if user:
       self.templateValue['email'] = user.email()
@@ -205,21 +188,20 @@ class ForumHandler(BaseHandler):
 Handler for saving assessment answers
 """
 class AnswerHandler(BaseHandler):
-
   def get(self):
     user = users.get_current_user()
     if user:
-        # Set template values
-        self.templateValue['email'] = user.email()
-        self.templateValue['logoutUrl'] = users.create_logout_url("/")
-        navbar = {'course':True}
-        self.templateValue['navbar'] = navbar
+      # Set template values
+      self.templateValue['email'] = user.email()
+      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      self.templateValue['navbar'] = {'course': True}
 
-        types = ['precourse', 'midcourse', 'postcourse_fail', 'postcourse_pass']
-        # Render confirmation page
-        for type in types:
-          self.templateValue['assessment'] = type
-          self.renderToDatastore(type + 'confirmation_page', 'test_confirmation.html')
+      types = ['precourse', 'midcourse', 'postcourse_fail', 'postcourse_pass']
+      # Render confirmation page
+      for type in types:
+        self.templateValue['assessment'] = type
+        self.renderToDatastore(
+            type + 'confirmation_page', 'test_confirmation.html')
 
 
 class AddTaskHandler(webapp2.RequestHandler):
@@ -233,185 +215,17 @@ class AddTaskHandler(webapp2.RequestHandler):
       db.delete(emails)
       self.response.out.write(log)
 
-class AdminHomeHandler(BaseHandler):
-  def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      navbar = {'admin':True}
-      self.templateValue['navbar'] = navbar
-      page = jinja_environment.get_template('admin_home.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
-
-
-class AdminEditStudentHandler(BaseHandler):
-  def get(self):
-    e = self.request.get('email')
-    logging.info('Admin Edit Student')
-    logging.info(e)
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    navbar = {'admin':True}
-    self.templateValue['navbar'] = navbar
-    # Check for existing registration -> redirect to course page
-    student = Student.get_by_key_name(e)
-    if student == None:
-      self.templateValue['student'] = None
-      self.templateValue['errormsg'] = 'Error: Student with email %s can not be found on the roster.' % e
-      page = jinja_environment.get_template('admin_home.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
-    else:
-      #logging.info(student.name)
-      self.templateValue['student'] = student
-      page = jinja_environment.get_template('admin_editstudent.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',e))
-
-  def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    # Update student record
-    e = self.request.get('email')
-    n = self.request.get('name')
-    if n:
-      student = Student.get_by_key_name(e)
-      if student:
-        student.name = n
-        student.put()
-    self.redirect('/admin/editstudent?email=' + e)
-
-
-class AdminEditCourseHandler(BaseHandler):
-  def get(self):
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    navbar = {'admin':True}
-    self.templateValue['navbar'] = navbar
-
-    classes = Class.all().order('id')
-    if classes:
-      self.templateValue['classes'] = classes
-      page = jinja_environment.get_template('admin_editcourse.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
-
-  def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    args = dict()
-    for field in self.request.arguments():
-      args[field] = self.request.get(field)
-    #TODO validate inputs
-    logging.info(args['class_id'])
-    c = Class.get_by_key_name(args['class_id'])
-    if c:
-      if args['request_type'] == 'deleteclass':
-        # delete
-        logging.info('Deleting...')
-        db.delete(c)
-      else:
-        # update
-        logging.info('Updating...')
-        logging.info(c.id)
-        logging.info(c.title)
-        c.title = args['class_title']
-        c.release_date = args['class_release_date']
-        c.now_available = args['class_now_available']
-        c.put()
-    else:
-      # create
-      c = Class(key_name=args['class_id'],id=int(args['class_id']), title=args['class_title'], release_date=args['class_release_date'], now_available=args['class_now_available'])
-      c.put()
-    self.redirect('/admin/editcourse')
-
-
-class AdminEditClassHandler(BaseHandler):
-  def get(self):
-
-    # Extract incoming args
-    c = self.request.get("class")
-    if not c:
-      class_id = 1
-    else:
-      class_id = int(c)
-    self.templateValue['class_id'] = class_id
-
-    user = users.get_current_user()
-    if user:
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    navbar = {'admin':True}
-    self.templateValue['navbar'] = navbar
-
-    lessons = Lesson.all().filter('class_id =', class_id).order('id')
-    logging.info(lessons)
-    for i in lessons:
-      logging.info(i.title)
-    if lessons:
-      self.templateValue['lessons'] = lessons
-      page = jinja_environment.get_template('admin_editclass.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
-
-  def post(self):
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-      self.templateValue['email'] = email
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    args = dict()
-    for field in self.request.arguments():
-      args[field] = self.request.get(field)
-    #TODO validate inputs
-    logging.info(args['class_id'])
-    c = Class.get_by_key_name(args['class_id'])
-    if c:
-      if args['request_type'] == 'deleteclass':
-        # delete
-        logging.info('Deleting...')
-        db.delete(c)
-      else:
-        # update
-        logging.info('Updating...')
-        logging.info(c.id)
-        logging.info(c.title)
-        c.title = args['class_title']
-        c.release_date = args['class_release_date']
-        c.now_available = args['class_now_available']
-        c.put()
-    else:
-      # create
-      c = Class(key_name=args['class_id'],id=int(args['class_id']), title=args['class_title'], release_date=args['class_release_date'], now_available=args['class_now_available'])
-      c.put()
-    self.redirect('/admin/editcourse')
-
 
 """
 This function handles the click to 'My Profile' link in the nav bar
 """
-
 class StudentProfileHandler(BaseHandler):
   def get(self):
     user = users.get_current_user()
-    navbar = {'admin':False}
     if user:
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
-      self.templateValue['navbar'] = navbar
+      self.templateValue['navbar'] = {}
     #check for existing registration -> redirect to course page
     e = user.email()
     student = Student.get_by_key_name(e)
@@ -438,15 +252,14 @@ class StudentEditStudentHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
-    navbar = {'admin':False}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {}
     # Check for existing registration -> redirect to course page
     student = Student.get_by_key_name(e)
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
       page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
+      self.response.out.write(page.replace('test@example.com', user.email()))
     else:
       logging.info(student)
       self.templateValue['student'] = student
@@ -471,42 +284,35 @@ class StudentEditStudentHandler(BaseHandler):
       student.put()
     self.redirect('/student/editstudent?email='+e)
 
+
 """
 Handler for Announcements
 """
 class AnnouncementsHandler(BaseHandler):
-
   def get(self):
     user = users.get_current_user()
     if user:
-      logging.info(user.email())
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
-    navbar = {'announcements':True}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'announcements': True}
     page = jinja_environment.get_template('announcements.html').render(self.templateValue)
     self.response.out.write(page.replace('test@example.com',user.email()))
-
 
 
 """
 Handler for students to unenroll themselves
 """
 class StudentUnenrollHandler(BaseHandler):
-
   def get(self):
     user = users.get_current_user()
     email = user.email()
     student = Student.get_by_key_name(email)
     if user:
-      logging.info(user.email())
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
-    navbar = {'registration':True}
-    navbar = {'admin':False}
-    self.templateValue['navbar'] = navbar
+    self.templateValue['navbar'] = {'registration': True}
     page = jinja_environment.get_template('unenroll_confirmation_check.html').render(self.templateValue)
     self.response.out.write(page.replace('test@example.com',user.email()))
 
@@ -519,12 +325,10 @@ class StudentUnenrollHandler(BaseHandler):
 
     # Update student record
     student = Student.get_by_key_name(email)
-    logging.info('student cert')
-    logging.info(student.name)
     dict = {}
     if student:
       db.to_dict(student, dict)
-      un_student = UnenrolledStudents(key_name=email,**dict)
+      un_student = UnenrolledStudents(key_name=email, **dict)
       un_student.put()
       db.delete(student)
       memcache.delete(email)
@@ -532,46 +336,3 @@ class StudentUnenrollHandler(BaseHandler):
     page = jinja_environment.get_template('unenroll_confirmation.html').render(self.templateValue)
     self.response.out.write(page)
 
-"""
-Handler for admins to unenroll students
-"""
-class AdminUnenrollHandler(BaseHandler):
-
-  def get(self):
-    e = self.request.get('email')
-    user = users.get_current_user()
-    if user:
-      logging.info(user.email())
-      self.templateValue['email'] = user.email()
-      self.templateValue['logoutUrl'] = users.create_logout_url("/")
-
-    navbar = {'registration':True}
-    navbar = {'admin':False}
-    self.templateValue['navbar'] = navbar
-    page = jinja_environment.get_template('unenroll_confirmation_check.html').render(self.templateValue)
-    self.response.out.write(page.replace('test@example.com',user.email()))
-
-  def post(self):
-
-    user = users.get_current_user()
-    if user:
-      email = user.email()
-
-    # Update student record
-    e = self.request.get('email')
-    logging.info('STUDENT INFORMATION ')
-    logging.info(e)
-    student = Student.get_by_key_name(e)
-    #student = Student.get_by_key_name('email')
-    dict = {}
-    if student:
-      db.to_dict(student, dict)
-      un_student = UnenrolledStudents(key_name=e,**dict)
-      un_student.put()
-      db.delete(student)
-      memcache.delete(e)
-    else:
-      logging.info('No student found')
-    #self.redirect('/student/register')
-    page = jinja_environment.get_template('admin_unenroll_confirmation.html').render(self.templateValue)
-    self.response.out.write(page)

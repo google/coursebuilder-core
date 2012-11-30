@@ -50,7 +50,7 @@ class CourseHandler(StudentHandler):
 """
 Handler for serving class page
 """
-class ClassHandler(StudentHandler):
+class UnitHandler(StudentHandler):
 
   def get(self):
     # Extract incoming args

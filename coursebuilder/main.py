@@ -23,25 +23,15 @@ urls = [
   ('/', servings.CourseHandler),
   ('/register', utils.RegisterHandler),
   ('/course', servings.CourseHandler),
-  ('/unit', servings.ClassHandler),
+  ('/unit', servings.UnitHandler),
   ('/activity', servings.ActivityHandler),
   ('/assessment', servings.AssessmentHandler),
   ('/forum', servings.ForumHandler),
   ('/answer', servings.AnswerHandler),
   ('/announcements', utils.AnnouncementsHandler),
-  ('/admin/home', utils.AdminHomeHandler),
   ('/student/home', utils.StudentProfileHandler),
   ('/student/editstudent', utils.StudentEditStudentHandler),
-  ('/student/unenroll', utils.StudentUnenrollHandler),
-  ('/admin/unenrollstudent', utils.AdminUnenrollHandler),
-  ('/admin/editstudent', utils.AdminEditStudentHandler),
-  ('/admin/coursepage', lessons.CourseHandler),
-  ('/admin/unitpage', lessons.ClassHandler),
-  ('/admin/activitypage', lessons.ActivityHandler),
-  ('/admin/assessmentpage', lessons.AssessmentHandler),
-  ('/admin/forumpage', utils.ForumHandler),
-  ('/admin/answerpage', utils.AnswerHandler),
-  ('/_ah/warmup', utils.WarmupHandler)
+  ('/student/unenroll', utils.StudentUnenrollHandler)
   ]
 
 app = webapp2.WSGIApplication(urls, debug=True)
