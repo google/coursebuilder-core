@@ -249,7 +249,7 @@ def change_name(browser, new_name):
   check_profile(browser, new_name)
 
 
-def un_register(browser):
+def unregister(browser):
   response = browser.get('student/home')
   response = browser.click(response, 'Unenroll')
 
@@ -303,13 +303,13 @@ class Permissions():
 
   @classmethod
   def assert_enrolled(cls, browser):
-    """Check that current user can see only what is allowed to enrolled student."""
+    """Check that current user can see only what is allowed to an enrolled student."""
     AssertNoneFail(browser, Permissions.get_enrolled_student_allowed_pages())
     AssertAllFail(browser, Permissions.get_enrolled_student_denied_pages())
 
   @classmethod
   def assert_unenrolled(cls, browser):
-    """Check that current user can see only what is allowed to un-enrolled student."""
+    """Check that current user can see only what is allowed to an unenrolled student."""
     AssertNoneFail(browser, Permissions.get_unenrolled_student_allowed_pages())
     AssertAllFail(browser, Permissions.get_unenrolled_student_denied_pages())
 

@@ -40,7 +40,7 @@ class StudentAspectTest(TestBase):
     check_profile(self, name1)
 
     change_name(self, name2)
-    un_register(self)
+    unregister(self)
 
     register(self, name3)
     check_profile(self, name3)
@@ -84,7 +84,7 @@ class StudentAspectTest(TestBase):
     register(self, name)
     Permissions.assert_enrolled(self)
 
-    un_register(self)
+    unregister(self)
     Permissions.assert_unenrolled(self)
 
     register(self, name)
