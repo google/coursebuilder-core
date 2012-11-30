@@ -17,7 +17,37 @@
 """A collection of actions for testing Course Builder pages."""
 
 import os
-from suite import *
+
+
+def AssertEquals(expected, actual):
+  if not expected == actual:
+    raise Exception('Expected \'%s\', does not match actual \'%s\'.' % (expected, actual))
+
+
+def AssertContains(needle, haystack):
+  if not needle in haystack:
+    raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
+
+
+def AssertNoneFail(browser, callbacks):
+  """Invokes all callbacks and expects each one not to fail."""
+  for callback in callbacks:
+    callback(browser)
+
+
+def AssertAllFail(browser, callbacks):
+  """Invokes all callbacks and expects each one to fail."""
+  class MustFail(Exception):
+    pass
+
+  for callback in callbacks:
+    try:
+      callback(browser)
+      raise MustFail('Expected to fail: %s().' % callback.__name__)
+    except MustFail as e:
+      raise e
+    except Exception:
+      pass
 
 
 def login(email):

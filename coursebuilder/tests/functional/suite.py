@@ -34,37 +34,6 @@ def EmptyEnviron():
   os.environ['USER_ID'] = ''
 
 
-def AssertEquals(expected, actual):
-  if not expected == actual:
-    raise Exception('Expected \'%s\', does not match actual \'%s\'.' % (expected, actual))
-
-
-def AssertContains(needle, haystack):
-  if not needle in haystack:
-    raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
-
-
-def AssertNoneFail(browser, callbacks):
-  """Invokes all callbacks and expects each one not to fail."""
-  for callback in callbacks:
-    callback(browser)
-
-
-def AssertAllFail(browser, callbacks):
-  """Invokes all callbacks and expects each one to fail."""
-  class MustFail(Exception):
-    pass
-
-  for callback in callbacks:
-    try:
-      callback(browser)
-      raise MustFail('Expected to fail: %s().' % callback.__name__)
-    except MustFail as e:
-      raise e
-    except Exception:
-      pass
-
-
 class BaseTestClass(unittest.TestCase):
   """Base class for setting up and tearing down test cases."""
 
@@ -115,7 +84,11 @@ def main():
   """Starts in-process server and runs all test cases in this module."""
   dev_appserver.fix_sys_path()
   suite = unittest.TestLoader().loadTestsFromModule(tests)
-  unittest.TextTestRunner(verbosity=2).run(suite)
+  result = unittest.TextTestRunner(verbosity=2).run(suite)
+  if len(result.errors) != 0 or len(result.failures) != 0:
+    raise Exception(
+        "Functional test suite failed: %s errors, %s failures of %s tests run." % (
+            len(result.errors), len(result.failures), result.testsRun))
 
 
 if __name__ == '__main__':
