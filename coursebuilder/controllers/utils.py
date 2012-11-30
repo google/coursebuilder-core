@@ -126,14 +126,13 @@ class StudentHandler(ApplicationHandler):
   def delegateTo(self, handler):
     """"Run another handler using system identity.
 
-
-    This method is called when a dynamic page template can't be found neither in
-    the cache nor the database. We now need to create this page using a handler
+    This method is called when a dynamic page template cannot be found in either
+    memcache or the datastore. We now need to create this page using a handler
     passed to this method. The handler must run with the exact same request
     parameters as self, but we need to replace current user and the response."""
 
     # create custom function for replacing the current user
-    def get_current_user_ex():
+    def get_placeholder_user():
       return users.User(email = USER_EMAIL_PLACE_HOLDER)
 
     # create custom response.out to intercept output
@@ -159,7 +158,7 @@ class StudentHandler(ApplicationHandler):
     # substitute current user with the system account and run the handler
     get_current_user_old = users.get_current_user
     try:
-      users.get_current_user = get_current_user_ex
+      users.get_current_user = get_placeholder_user
       handler.get()
     finally:
       users.get_current_user = get_current_user_old
@@ -185,11 +184,11 @@ class StudentHandler(ApplicationHandler):
     # Search and substitute placeholders for current user email and
     # overall_score (if applicable) in the cached page before serving them to
     # users.
+    html = page
+    html = html.replace(USER_EMAIL_PLACE_HOLDER, email)
     if overall_score:
-      html = page.replace(USER_EMAIL_PLACE_HOLDER, email).replace('XX', overall_score)
-      self.response.out.write(html)
-    else:
-      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, email))
+      html = html.replace('XX', overall_score)
+    self.response.out.write(html)
 
 
 """
