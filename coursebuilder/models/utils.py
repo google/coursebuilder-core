@@ -12,72 +12,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# @author: psimakov@google.com (Pavel Simakov)
+# @author: sll@google.com (Sean Lip)
 
 
-"""Helped functions to work with various models."""
+"""Helper functions to work with various models."""
 
-# TODO: perhaps refactor everything below into a JSON format stored in a
-# single StringProperty rather than using a StringListProperty
+import json, logging
 
 # returns a dict where the key is the assessment/summary name,
 # and the value is the assessment/summary score (if available)
 def getAllScores(student):
-  ret = {}
-  for e in student.scores:
-    k, v = getKvPair(e)
-    ret[k] = v
-  return ret
-
-def getKvPair(kv_string):
-  assert '=' in kv_string
-  ind = kv_string.index('=')
-  key = kv_string[:ind]
-  value = kv_string[ind+1:]
-  return (key, value)
-
-def makeKvPair(key, value):
-  assert '=' not in key
-  return key + '=' + str(value)
-
-def getEltWithKey(lst, my_key):
-  for e in lst:
-    key, value = getKvPair(e)
-    if key == my_key:
-      return e
-  return None
-
-def listGet(lst, my_key):
-  elt = getEltWithKey(lst, my_key)
-  if elt:
-    key, value = getKvPair(elt)
-    assert key == my_key
-    return value
+  if not student.scores:
+    return {}
   else:
+    return json.loads(student.scores)
+
+def dictGet(dict_as_string, my_key):
+  if not dict_as_string:
     return None
-
-def listSet(lst, my_key, my_value):
-  # don't insert duplicates
-  existing_elt = getEltWithKey(lst, my_key)
-  if existing_elt:
-    lst.remove(existing_elt)
-  lst.append(makeKvPair(my_key, my_value))
+  else:
+    return json.loads(dict_as_string).get(my_key)
 
 
-# returns answer as a string or None if not found
+# returns the answer array corresponding to the given assessment, or None if
+# not found
 def getAnswer(student, assessment_name):
-  return listGet(student.answers, assessment_name)
+  return dictGet(student.answers, assessment_name)
 
 # (caller must call student.put() to commit)
+# NB: this does not do any type-checking on 'answer'; it just stores whatever
+#     is passed in.
 def setAnswer(student, assessment_name, answer):
-  listSet(student.answers, assessment_name, answer)
+  if not student.answers:
+    score_dict = {}
+  else:
+    score_dict = json.loads(student.answers)
+  score_dict[assessment_name] = answer
+  student.answers = json.dumps(score_dict)
 
-# returns score as a string or None if not found
+# returns the score corresponding to the given assessment, or None if not found
 # (caller must cast appropriately)
 def getScore(student, assessment_name):
-  return listGet(student.scores, assessment_name)
+  return dictGet(student.scores, assessment_name)
 
 # (caller must call student.put() to commit)
+# NB: this does not do any type-checking on 'score'; it just stores whatever
+#     is passed in.
 def setScore(student, assessment_name, score):
-  listSet(student.scores, assessment_name, score)
+  if not student.scores:
+    score_dict = {}
+  else:
+    score_dict = json.loads(student.scores)
+  score_dict[assessment_name] = score
+  student.scores = json.dumps(score_dict)
 

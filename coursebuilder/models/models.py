@@ -31,11 +31,9 @@ class Student(db.Model):
   name = db.StringProperty()
   is_enrolled = db.BooleanProperty()
 
-  # each element of these lists is a key/value pair in this string format:
-  #   "<key>=<value>"
-  # where <key> should not contain an '=' character
-  answers = db.StringListProperty()
-  scores = db.StringListProperty()
+  # each of the following is a string representation of a JSON dict
+  answers = db.TextProperty()
+  scores = db.TextProperty()
 
   def put(self):
     """Do the normal put() and also add the object to memcache."""
