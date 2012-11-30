@@ -25,10 +25,10 @@ import os
 BUNDLE_ROOT = os.path.dirname(__file__)
 
 
-from controllers import sites
 from google.appengine.api import namespace_manager
 
 
 def namespace_manager_default_namespace_for_request():
   """Set a namespace appropriate for this request."""
+  from controllers import sites
   return sites.ApplicationContext.getNamespaceName()

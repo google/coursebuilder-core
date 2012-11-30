@@ -96,9 +96,9 @@ def getAllRules():
     if len(rule) == 0:
       continue
     parts = rule.split(':')
-    if len(parts) != 3:
+    if len(parts) < 3:
       raise Exception(
-          'Expected rule definition in a form of \'type:slug:folder\', got %s: ' % rule)
+          'Expected rule definition in a form of \'type:slug:folder[:ns]\', got %s: ' % rule)
 
     # validate type
     if parts[0] not in SUPPORTED_SITE_TYPES:
@@ -115,15 +115,18 @@ def getAllRules():
     # validate folder name
     folder = parts[2]
 
-    # validate slug
+    # validate or derive namespace
     namespace = None
-    if type == SITE_TYPE_COURSE:
-      if folder == '/':
-        namespace = GCB_BASE_COURSE_NAMESPACE
-      else:
-        namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE, folder.replace('/', '-'))
-    if namespace in namespaces:
-      raise Exception('Namespace already defined: %s.' % namespace)
+    if len(parts) == 4:
+      namespace = parts[3]
+    else:
+      if type == SITE_TYPE_COURSE:
+        if folder == '/':
+          namespace = GCB_BASE_COURSE_NAMESPACE
+        else:
+          namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE, folder.replace('/', '-'))
+      if namespace in namespaces:
+        raise Exception('Namespace already defined: %s.' % namespace)
     namespaces[namespace] = True
 
     all.append(ApplicationContext(type, slug, folder, namespace))

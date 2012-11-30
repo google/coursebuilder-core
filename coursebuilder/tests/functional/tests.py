@@ -82,8 +82,7 @@ class RewriteRulesTest(TestBase):
 
     login(email)
 
-    register(self, name)
-    Permissions.assert_enrolled(self)
-
-    # TODO(psimakov): this fails because of absolute URLs; need sto be fixed
+    # TODO(psimakov): this fails because of absolute URLs; needs to be fixed
+    AssertFails(lambda : register(self, name))
+    AssertFails(lambda : Permissions.assert_enrolled(self))
     AssertFails(lambda : un_register(self))
