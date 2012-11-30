@@ -21,6 +21,7 @@ from controllers import sites
 from models import models
 from controllers.sites import AssertFails
 from actions import *
+from controllers.assessments import getAssessmentScore, getAllScores, getMetric
 
 
 class StudentAspectTest(TestBase):
@@ -127,16 +128,59 @@ class AssesementTest(TestBase):
     # check no scores exist right now
     student = models.Student.get_enrolled_student_by_email(email)
     assert student != None
+    assert len(getAllScores(student)) == 0
 
-    # submit assessments
+    # submit assessments and check numbers of scores recorded
     self.submitAssessment('Pre', pre)
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert len(getAllScores(student)) == 1
+
     self.submitAssessment('Mid', mid)
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert len(getAllScores(student)) == 2
+
     self.submitAssessment('Post', post)
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert len(getAllScores(student)) == 4 # also includes overall_score
 
     # check scores are recorded properly
     student = models.Student.get_enrolled_student_by_email(email)
     assert student != None
+    assert int(getAssessmentScore(student, 'precourse')) == 1
+    assert int(getAssessmentScore(student, 'midcourse')) == 2
+    assert int(getAssessmentScore(student, 'postcourse')) == 3
+    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
 
+    # try posting a new midcourse exam with a lower score;
+    # nothing should change
+    second_mid = {'assessment_type': 'midcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '1.00'}
+
+    self.submitAssessment('Mid', second_mid)
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert student != None
+    assert int(getAssessmentScore(student, 'precourse')) == 1
+    assert int(getAssessmentScore(student, 'midcourse')) == 2
+    assert int(getAssessmentScore(student, 'postcourse')) == 3
+    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
+
+    # now try posting a postcourse exam with a higher score and note changes
+    second_post = {'assessment_type': 'postcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '100000'}
+    self.submitAssessment('Post', second_post)
+
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert student != None
+    assert int(getAssessmentScore(student, 'precourse')) == 1
+    assert int(getAssessmentScore(student, 'midcourse')) == 2
+    assert int(getAssessmentScore(student, 'postcourse')) == 100000
+    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*100000))
 
 class CourseUrlRewritingTest(StudentAspectTest, AssesementTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
