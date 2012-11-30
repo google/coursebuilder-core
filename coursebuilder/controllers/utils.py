@@ -277,7 +277,7 @@ class StudentProfileHandler(BaseHandler):
     #check for existing registration -> redirect to registration page
     student = Student.get_enrolled_student_by_email(user.email())
     if not student:
-      self.redirect('preview.html')
+      self.redirect('/preview')
       return
 
     self.templateValue['navbar'] = {}
@@ -338,7 +338,7 @@ class AnnouncementsHandler(BaseHandler):
 
     student = Student.get_enrolled_student_by_email(user.email())
     if not student:
-      self.redirect('preview.html')
+      self.redirect('/preview')
       return
 
     self.templateValue['navbar'] = {'announcements': True}

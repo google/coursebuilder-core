@@ -28,7 +28,7 @@ class CourseHandler(BaseHandler):
       self.templateValue['navbar'] = {'course': True}
       self.render('course.html')
     else:
-      self.redirect('preview.html')
+      self.redirect('/preview')
 
 """
 Handler for generating class page
