@@ -198,20 +198,6 @@ class CoursePreviewHandler(BaseHandler):
 
 
 """
-Handler for course registration closed
-"""
-class RegisterClosedHandler(BaseHandler):
-  def get(self):
-    user = self.personalizePageAndGetUser()
-    if not user:
-      self.redirect(users.create_login_url(self.request.uri))
-      return
-
-    self.templateValue['navbar'] = {'registration': True}
-    self.render('registration_close.html')
-
-
-"""
 Handler for course registration
 """
 class RegisterHandler(BaseHandler):
