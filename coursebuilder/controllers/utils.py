@@ -272,11 +272,11 @@ class ForumHandler(BaseHandler):
 
 
 """
-Handler for saving assessment answers
+Handler for rendering answer submission confirmation page 
 """
-class AnswerHandler(BaseHandler):
+class AnswerConfirmationHandler(BaseHandler):
   def __init__(self, type):
-    super(AnswerHandler, self).__init__()
+    super(AnswerConfirmationHandler, self).__init__()
     self.type = type
 
   def get(self):

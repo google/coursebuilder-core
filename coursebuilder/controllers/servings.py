@@ -158,7 +158,8 @@ class AnswerHandler(StudentHandler):
       # Serve the confirmation page
       # TODO: using assessment_type as part of the filename seems ugly ...
       page = self.getOrCreatePage(
-          assessment_type + 'confirmation_page', utils.AnswerHandler(assessment_type)) 
+          assessment_type + 'confirmation_page', utils.AnswerConfirmationHandler(
+              assessment_type)) 
       self.serve(page, student.key().name(), getMetric(student, 'overall_score'))
     else:
       self.redirect('/register')
