@@ -36,7 +36,6 @@ class Student(db.Model):
   # where <key> should not contain an '=' character
   answers = db.StringListProperty()
   scores = db.StringListProperty()
-  metrics = db.StringListProperty()
 
   def put(self):
     """Do the normal put() and also add the object to memcache."""

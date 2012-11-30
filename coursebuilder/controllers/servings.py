@@ -18,8 +18,10 @@
 """All handlers here either serve the cached pages or delegate to real handlers."""
 
 import logging, json
-import lessons, utils
+
 from models.models import Student
+
+import lessons, utils
 from utils import StudentHandler
 from google.appengine.api import users
 
@@ -149,3 +151,4 @@ class PreviewHandler(StudentHandler):
     else:
       page = self.getOrCreatePage('anonymous_preview_page', utils.CoursePreviewHandler())
       self.serve(page)
+

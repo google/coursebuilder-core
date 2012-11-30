@@ -37,15 +37,15 @@ def storeAssessmentData(student, assessment_type, score, answer):
   # but scores are only saved if they're higher than the previous
   # attempt.  This can lead to unexpected analytics behavior, so we
   # should resolve this somehow.
-  setAssessmentAnswer(student, assessment_type, answer)
-  existing_score = getAssessmentScore(student, assessment_type)
+  setAnswer(student, assessment_type, answer)
+  existing_score = getScore(student, assessment_type)
   # remember to cast to int for comparison
   if (existing_score is None) or (score > int(existing_score)):
-    setAssessmentScore(student, assessment_type, score)
+    setScore(student, assessment_type, score)
 
   # special handling for computing final score:
   if assessment_type == 'postcourse':
-    midcourse_score = getAssessmentScore(student, 'midcourse')
+    midcourse_score = getScore(student, 'midcourse')
     if midcourse_score is None:
       midcourse_score = 0
     else:
@@ -66,7 +66,7 @@ def storeAssessmentData(student, assessment_type, score, answer):
       assessment_type = 'postcourse_pass'
     else:
       assessment_type = 'postcourse_fail'
-    setMetric(student, 'overall_score', overall_score)
+    setScore(student, 'overall_score', overall_score)
 
   return assessment_type
 
@@ -100,10 +100,11 @@ class AnswerHandler(BaseHandler):
       assessment_type = storeAssessmentData(student, original_type, score, answer)
       student.put()
 
-      # Serve the confirmation page  
+      # Serve the confirmation page
       self.templateValue['navbar'] = {'course': True}
       self.templateValue['assessment'] = assessment_type
-      self.templateValue['student_score'] = getMetric(student, 'overall_score')
+      self.templateValue['student_score'] = getScore(student, 'overall_score')
       self.render('test_confirmation.html')
     else:
       self.redirect('/register')
+

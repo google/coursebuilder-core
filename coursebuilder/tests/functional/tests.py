@@ -21,7 +21,7 @@ from controllers import sites
 from models import models
 from controllers.sites import AssertFails
 from actions import *
-from controllers.assessments import getAssessmentScore, getAllScores, getMetric
+from controllers.assessments import getScore, getAllScores
 
 
 class StudentAspectTest(TestBase):
@@ -190,26 +190,26 @@ class AssessmentTest(TestBase):
 
     # check scores are recorded properly
     student = models.Student.get_enrolled_student_by_email(email)
-    assert int(getAssessmentScore(student, 'precourse')) == 1
-    assert int(getAssessmentScore(student, 'midcourse')) == 2
-    assert int(getAssessmentScore(student, 'postcourse')) == 3
-    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
+    assert int(getScore(student, 'precourse')) == 1
+    assert int(getScore(student, 'midcourse')) == 2
+    assert int(getScore(student, 'postcourse')) == 3
+    assert int(getScore(student, 'overall_score')) == int((0.30*2) + (0.70*3))
 
     # try posting a new midcourse exam with a lower score; nothing should change
     self.submitAssessment('Mid', second_mid)
     student = models.Student.get_enrolled_student_by_email(email)
-    assert int(getAssessmentScore(student, 'precourse')) == 1
-    assert int(getAssessmentScore(student, 'midcourse')) == 2
-    assert int(getAssessmentScore(student, 'postcourse')) == 3
-    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
+    assert int(getScore(student, 'precourse')) == 1
+    assert int(getScore(student, 'midcourse')) == 2
+    assert int(getScore(student, 'postcourse')) == 3
+    assert int(getScore(student, 'overall_score')) == int((0.30*2) + (0.70*3))
 
     # now try posting a postcourse exam with a higher score and note changes
     self.submitAssessment('Post', second_post)
     student = models.Student.get_enrolled_student_by_email(email)
-    assert int(getAssessmentScore(student, 'precourse')) == 1
-    assert int(getAssessmentScore(student, 'midcourse')) == 2
-    assert int(getAssessmentScore(student, 'postcourse')) == 100000
-    assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*100000))
+    assert int(getScore(student, 'precourse')) == 1
+    assert int(getScore(student, 'midcourse')) == 2
+    assert int(getScore(student, 'postcourse')) == 100000
+    assert int(getScore(student, 'overall_score')) == int((0.30*2) + (0.70*100000))
 
 
 class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):

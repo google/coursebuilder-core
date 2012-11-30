@@ -24,7 +24,7 @@
 # and the value is the assessment/summary score (if available)
 def getAllScores(student):
   ret = {}
-  for e in student.scores + student.metrics:
+  for e in student.scores:
     k, v = getKvPair(e)
     ret[k] = v
   return ret
@@ -65,28 +65,19 @@ def listSet(lst, my_key, my_value):
 
 
 # returns answer as a string or None if not found
-def getAssessmentAnswer(student, assessment_name):
+def getAnswer(student, assessment_name):
   return listGet(student.answers, assessment_name)
 
 # (caller must call student.put() to commit)
-def setAssessmentAnswer(student, assessment_name, answer):
+def setAnswer(student, assessment_name, answer):
   listSet(student.answers, assessment_name, answer)
 
 # returns score as a string or None if not found
 # (caller must cast appropriately)
-def getAssessmentScore(student, assessment_name):
+def getScore(student, assessment_name):
   return listGet(student.scores, assessment_name)
 
 # (caller must call student.put() to commit)
-def setAssessmentScore(student, assessment_name, score):
+def setScore(student, assessment_name, score):
   listSet(student.scores, assessment_name, score)
 
-# returns value as a string or None if not found
-# (caller must cast appropriately)
-def getMetric(student, metric_name):
-  return listGet(student.metrics, metric_name)
-
-# (caller must call student.put() to commit)
-def setMetric(student, metric_name, data):
-  listSet(student.metrics, metric_name, data)
-  
