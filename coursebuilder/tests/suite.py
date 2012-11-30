@@ -62,8 +62,8 @@ class BaseTestClass(unittest.TestCase):
 
 def createTestSuite():
   """Loads all tests classes from appropriate modules."""
-  import tests
-  return unittest.TestLoader().loadTestsFromModule(tests)
+  import tests.functional.tests as functional
+  return unittest.TestLoader().loadTestsFromModule(functional)
 
 
 def fix_sys_path():
