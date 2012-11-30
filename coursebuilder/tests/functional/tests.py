@@ -16,93 +16,42 @@
 
 __author__ = 'Sean Lip'
 
-import os
-import unittest
-
-import webapp2
-import webtest
-
-from google.appengine.ext import testbed
+from suite import *
+from actions import *
 
 
-def FakeLogin(email):
-  os.environ['USER_EMAIL'] = email
-  os.environ['USER_ID'] = 'user1'
+class StudentRegistrationTest(BaseTestClass):
 
+  def testRegistration(self):
+    """Test student registration."""
+    email = 'test_registration@example.com'
+    name1 = 'Test Student'
+    name2 = 'John Smith'
+    name3 = 'Pavel Simakov'
 
-def EmptyEnviron():
-  os.environ['AUTH_DOMAIN'] = 'example.com'
-  os.environ['SERVER_NAME'] = 'localhost'
-  os.environ['SERVER_PORT'] = '8080'
-  os.environ['USER_EMAIL'] = ''
-  os.environ['USER_ID'] = ''
+    login(email)
 
+    register(self, name1)
+    check_profile(self, name1)
 
-class BaseTestClass(unittest.TestCase):
-  """Base class for setting up and tearing down test cases."""
+    change_name(self, name2)
+    un_register(self)
 
-  def setUp(self):
-    EmptyEnviron()
-    import main
-    main.debug = True
-    app = main.app
-    self.testapp = webtest.TestApp(app)
-    self.testbed = testbed.Testbed()
-    self.testbed.activate()
+    register(self, name3)
+    check_profile(self, name3)
 
-    # Declare any relevant App Engine service stubs here.
-    self.testbed.init_user_stub()
-    self.testbed.init_memcache_stub()
-    self.testbed.init_datastore_v3_stub()
+  def testPermissions(self):
+    """Test student permissions to pages."""
+    email = 'test_permissions@example.com'
+    name = 'Test Permissions'
 
-  def tearDown(self):
-    self.testbed.deactivate()
+    login(email)
 
+    register(self, name)
+    Permissions.assert_enrolled(self)
 
-class GetRequestTest(BaseTestClass):
-  """A class for testing GET requests."""
+    un_register(self)
+    Permissions.assert_unenrolled(self)
 
-  def testGetRequests(self):
-    """Test GET requests on individual pages."""
-    FakeLogin('test@example.com')
-    response = self.testapp.get('/')
-    self.assertEqual(response.status_int, 302)
-    self.assertEqual(
-        response.location, 'http://%s/register' % os.environ['SERVER_NAME'])
-
-    response = self.testapp.get('/register')
-    assert len(response.forms) == 1
-    response.form.set('form01', 'Student1')
-    response = response.form.submit()
-    assert 'Thank you for registering for' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/announcements')
-    assert 'Example Announcement' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/course')
-    assert 'Google Search makes it amazingly easy to find information' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/forum')
-    assert 'forum_embed' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/student/home')
-    assert 'Course progress related information' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    # Test assessment pages
-    response = self.testapp.get('/assessment?name=Pre')
-    assert '/assets/js/assessment-Pre.js' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/assessment?name=Mid')
-    assert '/assets/js/assessment-Mid.js' in response.body
-    self.assertEqual(response.status_int, 200)
-
-    response = self.testapp.get('/assessment?name=Fin')
-    assert '/assets/js/assessment-Fin.js' in response.body
-    self.assertEqual(response.status_int, 200)
-
+    register(self, name)
+    Permissions.assert_enrolled(self)

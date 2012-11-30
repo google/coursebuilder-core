@@ -12,7 +12,8 @@
       </p>
       {% if student %}
       <table>
-       <tr><td>Enrolled Date: </td><td>{{ student.enrolled_date }}</td></tr>
+      <tr><td>Currently Enrolled: </td><td>{{ student.is_enrolled }}</td></tr>
+      <tr><td>Last Enrolled Date: </td><td>{{ student.enrolled_date }}</td></tr>
       <tr><td>Email: </td><td>{{ student.key().name() }}</td></tr>
       <tr><td>Certificate Name: </td><td>{{ student.name }}</td></tr>
       <tr><td>Pre-class Assessment: </td><td>
@@ -34,13 +35,13 @@
       </table>
 
         <form action='/student/editstudent' method='post'>
+        <input type="hidden" name="email" value="{{ student.key().name() }}">        
         <fieldset>
           <ul>
             <li>
               <label for="name">New Name (for the certificate upon passing the course)</label>
               <input name="name" type="text">
             </li>
-            <input type="hidden" name="email" value="{{ student.key().name() }}">
           </ul>
         </fieldset>
         <button class="gcb-button" type="submit">Save Changes</button>
@@ -48,12 +49,6 @@
       </form>
 
       <a href="/student/unenroll" class="gcb-button" type="submit">Unenroll</a>
-      <!--
-      <form action='/student/unenroll' method='post'>
-        <input type="hidden" name="email" value="{{ student.key().name() }}">
-        <button class="gcb-button" type="submit">Unenroll</button>
-      </form>
-      -->
 
       {% else %}
       <p>Student profile not found ...</p>
