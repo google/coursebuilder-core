@@ -14,8 +14,7 @@
       <tr><td><b>Currently enrolled</b></td><td>{{ student.is_enrolled }}</td></tr>
       <tr><td><b>Date enrolled</b></td><td>{{ student.enrolled_date }}</td></tr>
       <tr><td><b>Email</b></td><td>{{ student.key().name() }}</td></tr>
-      <!-- FIXME: If you do not send out a certificate at the end of your course, remove this row. -->
-      <tr><td><b>Name for certificate</b></td><td>{{ student.name }}</td></tr>
+      <tr><td><b>Name</b></td><td>{{ student.name }}</td></tr>
       <tr><td colspan=2><b>Assessment scores</b></td></tr>
       <tr><td>&nbsp;&nbsp;&nbsp;<b>Pre-class</b></td><td>
         {% if scores.has_key('precourse') %}
@@ -35,9 +34,8 @@
         {% endif %}
       </table>
 
-      <!-- FIXME: If you do not send out a certificate at the end of your course, remove this form. -->
       <form action='student/editstudent' method='post'>
-        <h2><label for="name">New Name (for the certificate upon passing the course)</label></h2>
+        <h2><label for="name">New Name</label></h2>
         <fieldset style="border: none;">
           <p><input name="name" type="text" size="40">
             <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
@@ -58,3 +56,4 @@
 </div>
 
 {% endblock %}
+

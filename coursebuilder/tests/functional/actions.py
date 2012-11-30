@@ -219,7 +219,7 @@ def view_announcements(browser):
 
 def view_my_profile(browser):
   response = browser.get('student/home')
-  AssertContains('Name for certificate', response.body)
+  AssertContains('Date enrolled', response.body)
   AssertContains(get_current_user_email(), response.body)
   return response
 
