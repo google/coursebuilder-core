@@ -40,7 +40,7 @@ class StudentAspectTest(TestBase):
     check_profile(self, name1)
 
     change_name(self, name2)
-    unregister(self)
+    un_register(self)
 
     register(self, name3)
     check_profile(self, name3)
@@ -55,7 +55,7 @@ class StudentAspectTest(TestBase):
     register(self, name)
     Permissions.assert_enrolled(self)
 
-    unregister(self)
+    un_register(self)
     Permissions.assert_unenrolled(self)
 
     register(self, name)
@@ -64,10 +64,8 @@ class StudentAspectTest(TestBase):
   def testLoginAndLogout(self):
     """Test if login and logout behave as expected."""
     email = 'test_login_logout@example.com'
-    name = 'Test Login and Logout'
 
     Permissions.assert_logged_out(self)
-
     login(email)
 
     logout()
@@ -110,6 +108,30 @@ class AssessmentTest(TestBase):
     AssertEquals(response.status_int, 200)
     return response
 
+  def testCoursePass(self):
+    """Tests student passing final exam."""
+    email = 'test_pass@google.com'
+    name = 'Test Pass'
+
+    post = {'assessment_type': 'postcourse',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '100.00'}
+
+    # register
+    login(email)
+    register(self, name)
+
+    # submit answer
+    response = self.submitAssessment('Post', post)
+    AssertEquals(response.status_int, 200)
+    AssertContains('Your score is 70%', response.body)
+    AssertContains('you have passed the course', response.body)
+
+    # scheck pass
+    response = check_profile(self, name)
+    AssertContains('70', response.body)
+    AssertContains('100', response.body)
+
   def testAssessments(self):
     """Tests assessment scores are properly submitted and summarized."""
     email = 'test_assessments@google.com'
@@ -133,13 +155,24 @@ class AssessmentTest(TestBase):
         'num_correct': '0', 'num_questions': '4',
         'score': '3.00'}
 
+    second_mid = {'assessment_type': 'midcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '1.00'}
+
+    second_post = {'assessment_type': 'postcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '100000'}
+
     # register
     login(email)
     register(self, name)
 
     # check no scores exist right now
     student = models.Student.get_enrolled_student_by_email(email)
-    assert student != None
     assert len(getAllScores(student)) == 0
 
     # submit assessments and check numbers of scores recorded
@@ -157,45 +190,29 @@ class AssessmentTest(TestBase):
 
     # check scores are recorded properly
     student = models.Student.get_enrolled_student_by_email(email)
-    assert student != None
     assert int(getAssessmentScore(student, 'precourse')) == 1
     assert int(getAssessmentScore(student, 'midcourse')) == 2
     assert int(getAssessmentScore(student, 'postcourse')) == 3
     assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
 
-    # try posting a new midcourse exam with a lower score;
-    # nothing should change
-    second_mid = {'assessment_type': 'midcourse',
-        '0': 'false', '1': 'false',
-        '2': 'false', '3': 'false',
-        'num_correct': '0', 'num_questions': '4',
-        'score': '1.00'}
-
+    # try posting a new midcourse exam with a lower score; nothing should change
     self.submitAssessment('Mid', second_mid)
     student = models.Student.get_enrolled_student_by_email(email)
-    assert student != None
     assert int(getAssessmentScore(student, 'precourse')) == 1
     assert int(getAssessmentScore(student, 'midcourse')) == 2
     assert int(getAssessmentScore(student, 'postcourse')) == 3
     assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*3))
 
     # now try posting a postcourse exam with a higher score and note changes
-    second_post = {'assessment_type': 'postcourse',
-        '0': 'false', '1': 'false',
-        '2': 'false', '3': 'false',
-        'num_correct': '0', 'num_questions': '4',
-        'score': '100000'}
     self.submitAssessment('Post', second_post)
-
     student = models.Student.get_enrolled_student_by_email(email)
-    assert student != None
     assert int(getAssessmentScore(student, 'precourse')) == 1
     assert int(getAssessmentScore(student, 'midcourse')) == 2
     assert int(getAssessmentScore(student, 'postcourse')) == 100000
     assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*100000))
 
 
-class CourseUrlRewritingTest(StudentAspectTest, AssessmentTest):
+class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
   def setUp(self):

@@ -15,15 +15,17 @@
 # @author: psimakov@google.com (Pavel Simakov)
 
 
+"""All handlers here either serve the cached pages or delegate to real handlers."""
+
 import logging, json
 import lessons, utils
 from models.models import Student
 from utils import StudentHandler
-from assessments import storeAssessmentData, getMetric
+from google.appengine.api import users
 
 
 """
-Handler for serving course page
+Handler for serving course page.
 """
 class CourseHandler(StudentHandler):
 
@@ -31,13 +33,13 @@ class CourseHandler(StudentHandler):
     student = self.getEnrolledStudent()
     if student:
       page = self.getOrCreatePage('course_page', lessons.CourseHandler())
-      self.serve(page, student.key().name(), None)
+      self.serve(page, student.key().name())
     else:
       self.redirect('/preview')
 
 
 """
-Handler for serving class page
+Handler for serving class page.
 """
 class UnitHandler(StudentHandler):
 
@@ -60,13 +62,13 @@ class UnitHandler(StudentHandler):
     if student:
       page = self.getOrCreatePage(
           'lesson%s%s_page' % (class_id, lesson_id), lessons.UnitHandler())
-      self.serve(page, student.key().name(), None)
+      self.serve(page, student.key().name())
     else:
       self.redirect('/register')
 
 
 """
-Handler for serving activity page
+Handler for serving activity page.
 """
 class ActivityHandler(StudentHandler):
 
@@ -88,14 +90,14 @@ class ActivityHandler(StudentHandler):
     student = self.getEnrolledStudent()
     if student:
       page = self.getOrCreatePage(
-          'activity' + str(class_id) + str(lesson_id) + '_page', lessons.ActivityHandler()) 
-      self.serve(page, student.key().name(), None)
+          'activity' + str(class_id) + str(lesson_id) + '_page', lessons.ActivityHandler())
+      self.serve(page, student.key().name())
     else:
       self.redirect('/register')
 
 
 """
-Handler for serving assessment page
+Handler for serving assessment page.
 """
 class AssessmentHandler(StudentHandler):
 
@@ -111,13 +113,13 @@ class AssessmentHandler(StudentHandler):
     if student:
       page = self.getOrCreatePage(
           'assessment' + name + '_page', lessons.AssessmentHandler())
-      self.serve(page, student.key().name(), None)
+      self.serve(page, student.key().name())
     else:
       self.redirect('/register')
 
 
 """
-Handler for serving forum page
+Handler for serving forum page.
 """
 class ForumHandler(StudentHandler):
 
@@ -125,41 +127,22 @@ class ForumHandler(StudentHandler):
     # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      page = self.getOrCreatePage('forum_page', utils.ForumHandler()) 
-      self.serve(page, student.key().name(), None)
+      page = self.getOrCreatePage('forum_page', utils.ForumHandler())
+      self.serve(page, student.key().name())
     else:
       self.redirect('/register')
 
 
 """
-Handler for saving assessment answers
+Handler for serving preview page.
 """
-class AnswerHandler(StudentHandler):
+class PreviewHandler(StudentHandler):
 
-  def post(self):
-    # Read in answers
-    answer = json.dumps(self.request.POST.items())
-    original_type = self.request.get('assessment_type')
-
-    # Check for enrollment status
-    student = self.getEnrolledStudent()
-    if student:
-      # Log answer submission
-      logging.info(student.key().name() + ':' + answer)
-
-      # Find student entity and save answers
-      student = Student.get_by_email(student.key().name())
-
-      # TODO: considering storing as float for better precision
-      score = int(round(float(self.request.get('score'))))
-      assessment_type = storeAssessmentData(student, original_type, score, answer)
-      student.put()
-
-      # Serve the confirmation page
-      # TODO: using assessment_type as part of the filename seems ugly ...
-      page = self.getOrCreatePage(
-          assessment_type + 'confirmation_page', utils.AnswerConfirmationHandler(
-              assessment_type)) 
-      self.serve(page, student.key().name(), getMetric(student, 'overall_score'))
+  def get(self):
+    user = users.get_current_user()
+    if user:
+      page = self.getOrCreatePage('loggedin_preview_page', utils.CoursePreviewHandler())
+      self.serve(page, user.email())
     else:
-      self.redirect('/register')
+      page = self.getOrCreatePage('anonymous_preview_page', utils.CoursePreviewHandler())
+      self.serve(page)

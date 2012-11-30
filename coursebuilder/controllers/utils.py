@@ -18,7 +18,7 @@ from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
 from google.appengine.api import users, mail, taskqueue
 from google.appengine.ext import db, deferred
-from assessments import getAllScores
+from models.utils import getAllScores
 
 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
@@ -139,7 +139,9 @@ class StudentHandler(ApplicationHandler):
     # substitute current user with the system account and run the handler
     get_current_user_old = users.get_current_user
     try:
-      users.get_current_user = get_placeholder_user
+      user = users.get_current_user()
+      if user:
+        users.get_current_user = get_placeholder_user
       handler.get()
     finally:
       users.get_current_user = get_current_user_old
@@ -153,14 +155,13 @@ class StudentHandler(ApplicationHandler):
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
-  def serve(self, page, email, overall_score):
+  def serve(self, page, email=None):
     # Search and substitute placeholders for current user email and
     # overall_score (if applicable) in the cached page before serving them to
     # users.
     html = page
-    html = html.replace(USER_EMAIL_PLACE_HOLDER, email)
-    if overall_score:
-      html = html.replace('XX', overall_score)
+    if email:
+      html = html.replace(USER_EMAIL_PLACE_HOLDER, email)
     self.response.out.write(html)
 
 
@@ -272,7 +273,7 @@ class ForumHandler(BaseHandler):
 
 
 """
-Handler for rendering answer submission confirmation page 
+Handler for rendering answer submission confirmation page
 """
 class AnswerConfirmationHandler(BaseHandler):
   def __init__(self, type):

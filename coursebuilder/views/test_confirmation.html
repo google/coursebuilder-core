@@ -15,13 +15,13 @@
 
     {% if assessment == "postcourse_pass" %}
 
-      <p class="top_content">Thank you for completing the post-course assessment. Your score is XX%. Based on your overall course score (which includes the mid-course and post-course assessments), you have passed the course. Congratulations!
+      <p class="top_content">Thank you for completing the post-course assessment. Your score is {{ student_score }}%. Based on your overall course score (which includes the mid-course and post-course assessments), you have passed the course. Congratulations!
       <!--FIXME: You can optionally add code to load or generate a Certificate of Completion image. -->
       </p>
 
     {% elif assessment == "postcourse_fail" %}
 
-      <p class="top_content">Thank you for taking the post-course assessment. Your score is XX%. Unfortunately, based on your overall course score (which includes the mid-course and post-course assessments), you did not receive a sufficiently high score to obtain a certificate of completion.  We encourage you to review the lessons noted and to attempt the assessment again before it closes.  Certificate or not, we hope you enjoyed taking the course and learned new skills!</p>
+      <p class="top_content">Thank you for taking the post-course assessment. Your score is {{ student_score }}%. Unfortunately, based on your overall course score (which includes the mid-course and post-course assessments), you did not receive a sufficiently high score to obtain a certificate of completion.  We encourage you to review the lessons noted and to attempt the assessment again before it closes.  Certificate or not, we hope you enjoyed taking the course and learned new skills!</p>
 
     {% elif assessment == "midcourse" %}
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import appengine_config, webapp2
-from controllers import servings, sites, utils
+from controllers import servings, sites, utils, assessments
 
 # FIXME: set to 'False' before going live
 debug = True
@@ -22,11 +22,11 @@ urls = [
   ('/', servings.CourseHandler),
   ('/activity', servings.ActivityHandler),
   ('/announcements', utils.AnnouncementsHandler),
-  ('/answer', servings.AnswerHandler),
+  ('/answer', assessments.AnswerHandler),
   ('/assessment', servings.AssessmentHandler),
   ('/course', servings.CourseHandler),
   ('/forum', servings.ForumHandler),
-  ('/preview', utils.CoursePreviewHandler),
+  ('/preview', servings.PreviewHandler),
   ('/register', utils.RegisterHandler),
   ('/student/editstudent', utils.StudentEditStudentHandler),
   ('/student/home', utils.StudentProfileHandler),

@@ -15,6 +15,15 @@
 # @author: pgbovine@google.com (Philip Guo)
 
 
+"""Classes and methods to manage all aspects of student assessments."""
+
+import json, logging
+from models.models import Student
+from models.utils import *
+from utils import BaseHandler
+from google.appengine.api import users
+
+
 # Stores the assessment data in the student database entry
 # and returns the (possibly-modified) assessment type,
 # which the caller can use to render an appropriate response page.
@@ -61,75 +70,40 @@ def storeAssessmentData(student, assessment_type, score, answer):
 
   return assessment_type
 
-# TODO: perhaps refactor everything below into a JSON format stored in a
-# single StringProperty rather than using a StringListProperty
 
-# returns a dict where the key is the assessment/summary name,
-# and the value is the assessment/summary score (if available)
-def getAllScores(student):
-  ret = {}
-  for e in student.scores + student.metrics:
-    k, v = getKvPair(e)
-    ret[k] = v
-  return ret 
+"""
+Handler for saving assessment answers
+"""
+class AnswerHandler(BaseHandler):
 
-def getKvPair(kv_string):
-  assert '=' in kv_string
-  ind = kv_string.index('=')
-  key = kv_string[:ind]
-  value = kv_string[ind+1:]
-  return (key, value)
+  def post(self):
+    user = self.personalizePageAndGetUser()
+    if not user:
+      self.redirect(users.create_login_url(self.request.uri))
+      return
+    
+    # Read in answers
+    answer = json.dumps(self.request.POST.items())
+    original_type = self.request.get('assessment_type')
 
-def makeKvPair(key, value):
-  assert '=' not in key
-  return key + '=' + str(value)
+    # Check for enrollment status
+    student = Student.get_by_email(user.email())
+    if student and student.is_enrolled:
+      # Log answer submission
+      logging.info(student.key().name() + ':' + answer)
 
-def getEltWithKey(lst, my_key):
-  for e in lst:
-    key, value = getKvPair(e)
-    if key == my_key:
-      return e
-  return None
+      # Find student entity and save answers
+      student = Student.get_by_email(student.key().name())
 
-def listGet(lst, my_key):
-  elt = getEltWithKey(lst, my_key)
-  if elt:
-    key, value = getKvPair(elt)
-    assert key == my_key
-    return value
-  else:
-    return None
+      # TODO: considering storing as float for better precision
+      score = int(round(float(self.request.get('score'))))
+      assessment_type = storeAssessmentData(student, original_type, score, answer)
+      student.put()
 
-def listSet(lst, my_key, my_value):
-  # don't insert duplicates
-  existing_elt = getEltWithKey(lst, my_key)
-  if existing_elt:
-    lst.remove(existing_elt)
-  lst.append(makeKvPair(my_key, my_value))
-
-
-# returns answer as a string or None if not found
-def getAssessmentAnswer(student, assessment_name):
-  return listGet(student.answers, assessment_name)
-
-# (caller must call student.put() to commit)
-def setAssessmentAnswer(student, assessment_name, answer):
-  listSet(student.answers, assessment_name, answer)
-
-# returns score as a string or None if not found
-# (caller must cast appropriately)
-def getAssessmentScore(student, assessment_name):
-  return listGet(student.scores, assessment_name)
-
-# (caller must call student.put() to commit)
-def setAssessmentScore(student, assessment_name, score):
-  listSet(student.scores, assessment_name, score)
-
-# returns value as a string or None if not found
-# (caller must cast appropriately)
-def getMetric(student, metric_name):
-  return listGet(student.metrics, metric_name)
-
-# (caller must call student.put() to commit)
-def setMetric(student, metric_name, data):
-  listSet(student.metrics, metric_name, data)
+      # Serve the confirmation page  
+      self.templateValue['navbar'] = {'course': True}
+      self.templateValue['assessment'] = assessment_type
+      self.templateValue['student_score'] = getMetric(student, 'overall_score')
+      self.render('test_confirmation.html')
+    else:
+      self.redirect('/register')
