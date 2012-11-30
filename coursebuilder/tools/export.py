@@ -39,7 +39,7 @@ if __name__ == "__main__":
   print "Export started using %s" % os.path.realpath(__file__)
 
   verifier = verify.Verifier()
-  erros = verifier.LoadAndVerifyModel(Echo)
+  errors = verifier.LoadAndVerifyModel(Echo)
   if erros and len(errors) != 0:
     raise Exception(
         "Please fix all errors reported by tools/verify.py before continuing!")
