@@ -59,30 +59,27 @@ class StudentRegistrationTest(TestBase):
     Permissions.assert_enrolled(self)
 
 
-class RewriteRulesTest(TestBase):
+class RewriteRulesTest(StudentRegistrationTest):
+  """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
   def setUp(self):
+    """Setup rewrite rules."""
     self.base = '/courses/pswg'
     self.namespace = 'gcb-courses-pswg-tests-ns'
-    os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:%s:/:%s' % (
-        self.base, self.namespace)
+
+    rewrite_rules  ='course:%s::%s' % (self.base, self.namespace)
+    os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME] = rewrite_rules
+
     super(RewriteRulesTest, self).setUp()
 
   def tearDown(self):
+    """Remove rewrite rules."""
     super(RewriteRulesTest, self).tearDown()
     del os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME]
 
-  def get(self, url):
-    return super(RewriteRulesTest, self).get('%s%s' % (self.base, url))
-
-  def testAll(self):
-    """Test URL rewriting using '/courses/pswg' base URL."""
-    email = 'rewrite_rules_test@example.com'
-    name = 'Rewrite Rules Test'
-
-    login(email)
-
-    # TODO(psimakov): this fails because of absolute URLs; needs to be fixed
-    AssertFails(lambda : register(self, name))
-    AssertFails(lambda : Permissions.assert_enrolled(self))
-    AssertFails(lambda : un_register(self))
+  def canonize(self, href, response=None):
+    """Force self.base on to all URL's."""
+    if not href.startswith('/'):
+      href = '/%s' % href
+    href = '%s%s' % (self.base, href)
+    return href

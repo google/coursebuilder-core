@@ -34,7 +34,7 @@
         {% endif %}
       </table>
 
-        <form action='/student/editstudent' method='post'>
+        <form action="student/editstudent" method='post'>
         <input type="hidden" name="email" value="{{ student.key().name() }}">        
         <fieldset>
           <ul>
@@ -45,10 +45,10 @@
           </ul>
         </fieldset>
         <button class="gcb-button" type="submit">Save Changes</button>
-        <a href="/student/home" class="gcb-button" type="submit">Cancel</a>
+        <a href="student/home" class="gcb-button" type="submit">Cancel</a>
       </form>
 
-      <a href="/student/unenroll" class="gcb-button" type="submit">Unenroll</a>
+      <a href="student/unenroll" class="gcb-button" type="submit">Unenroll</a>
 
       {% else %}
       <p>Student profile not found ...</p>

@@ -14,7 +14,7 @@
         </div>
         <div class="gcb-col-5">
           <!--FIXME: Add an introduction video or banner picture for your course here.-->
-          <!--<img height="300" src="/assets/img/banner1.png">-->
+          <!--<img height="300" src="assets/img/banner1.png">-->
           <iframe width="460" height="300" src="http://www.youtube.com/embed/Kdg2drcUjYI?rel=0"
             frameborder="0" allowfullscreen></iframe>
         </div>
@@ -33,9 +33,9 @@
 	      {% for unit in units %}
 	        {% if unit.now_available %}
                   {% if unit.type == 'A' %}
-                    <li><p class="top_content"><a href="/assessment?name={{ unit.unit_id }}">{{ unit.title }}</a></p></li>
+                    <li><p class="top_content"><a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a></p></li>
                   {% elif unit.type == 'U' %}
-                    <li><p class="top_content"><a href="/unit?unit={{ unit.unit_id }}">Unit {{ unit.unit_id }} - {{ unit.title }} </a></p></li>
+                    <li><p class="top_content"><a href="unit?unit={{ unit.unit_id }}">Unit {{ unit.unit_id }} - {{ unit.title }} </a></p></li>
                   {% elif unit.type == 'O' %}
                     <li><p class="top_content"><a href="{{ unit.unit_id }}"> {{ unit.title }} </a></p></li>
                   {% else %}

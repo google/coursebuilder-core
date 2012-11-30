@@ -11,11 +11,11 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <link href="/assets/css/main.css" rel="stylesheet" type="text/css">
+    <link href="assets/css/main.css" rel="stylesheet" type="text/css">
 
     <!-- jQuery should be imported first -->
-    <script src="/assets/js/jquery-1.7.2.min.js"></script>
-    <script src="/assets/js/activity-generic.js"></script>
+    <script src="assets/js/jquery-1.7.2.min.js"></script>
+    <script src="assets/js/activity-generic.js"></script>
 
     <script type="text/javascript">
       window.___gcfg = {lang: 'en'};
@@ -43,7 +43,7 @@
       <div class="gcb-aux">
         <h1>
           <!-- FIXME: add a link to your course/institution webpage and logo here. -->
-          <a href="[LINK_TO_YOUR_INSTITUTION_HERE]"><img src="/assets/img/your_logo_here.png"></a>
+          <a href="[LINK_TO_YOUR_INSTITUTION_HERE]"><img src="assets/img/your_logo_here.png"></a>
         </h1>
         <h2>
           <!-- FIXME: add a header phrase of your choice here. -->
@@ -60,16 +60,16 @@
       <div class="gcb-aux">
         <ul>
           <li {% if navbar.announcements %}class='active'{% endif %}>
-            <a href="/announcements">Announcements</a>
+            <a href="announcements">Announcements</a>
           </li>
           <li {% if navbar.course %}class='active'{% endif %}>
-            <a href="/course">Course</a>
+            <a href="course">Course</a>
           </li>
           <li {% if navbar.forum %}class='active'{% endif %}>
-            <a href="/forum">Forum</a>
+            <a href="forum">Forum</a>
           </li>
           <li {% if navbar.myprofile %}class='active'{% endif %}>
-            <a href="/student/home">My Profile</a>
+            <a href="student/home">My Profile</a>
           </li>
 
           {% if logoutUrl %}

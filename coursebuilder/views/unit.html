@@ -7,8 +7,8 @@
 
 <div class="gcb-main">
   <ul class="gcb-breadcrumb">
-    <li><a href="/course">Course</a></li>
-    <li><a href="/unit?unit={{ units.unit_id }}">Unit {{ units.unit_id }}</a></li>
+    <li><a href="course">Course</a></li>
+    <li><a href="unit?unit={{ units.unit_id }}">Unit {{ units.unit_id }}</a></li>
     <li>Lesson {{ lesson_id }}</li>
   </ul>
   <div>
@@ -22,11 +22,11 @@
         {% if lesson.id == lesson_id %}
         class="active"> {{ unit_id }}.{{ lesson.id }}<br>{{ lesson.title }}
         {% else %}
-        ><a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >{{ unit_id }}.{{ lesson.id }} {{ lesson.title }}</a>
+        ><a href="unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >{{ unit_id }}.{{ lesson.id }} {{ lesson.title }}</a>
         {% endif %}
 
         {% if lesson.activity %}
-          <ul><li><a href="/activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
+          <ul><li><a href="activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
         {% endif %}
         </li>
       {% endfor %}
@@ -73,7 +73,7 @@
               {% if next_button_url %}
                 <a href="{{ next_button_url }}"> Next </a>
               {% else %}
-                <a href="/course"> End </a>
+                <a href="course"> End </a>
               {% endif %}
             </div>
           </div>
