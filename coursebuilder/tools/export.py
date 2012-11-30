@@ -69,6 +69,7 @@ def ExportToPython(fname, lines, date):
 
 def ExportToPHP(fname, lines, date):
   file = open("%s.php" % fname, 'w')
+  file.write("<?php")
   file.write("// Course Builder %s PHP Export on %s\n" % (RELEASE_TAG, date))
   file.write("// begin\n")
   code = []
@@ -81,6 +82,7 @@ def ExportToPHP(fname, lines, date):
   code.append("}")
   file.write("\n".join(code))
   file.write("\n// end");
+  file.write("?>")
   file.close()
 
 
