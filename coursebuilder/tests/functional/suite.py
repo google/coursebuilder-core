@@ -22,6 +22,7 @@ import dev_appserver
 import os
 import tests
 import webtest
+from tools import verify
 from models.models import Unit, Lesson
 from google.appengine.ext import testbed
 
@@ -57,20 +58,20 @@ class BaseTestClass(unittest.TestCase):
     """Generate dummy tests data."""
     logging.info('')
     logging.info('Initializing datastore')
-    for i in range(0, 3):
-      unit = Unit(key_name='unit-%s' % i)
-      unit.unit_id = str(i)
-      unit.title = "Test Unit %s" % i
+
+    # load and parse data from CSV file
+    unit_file = os.path.join(os.path.dirname(__file__), "../../data/unit.csv")
+    lesson_file = os.path.join(os.path.dirname(__file__), "../../data/lesson.csv")
+    units = verify.ReadObjectsFromCsvFile(unit_file, verify.UNITS_HEADER, Unit)
+    lessons = verify.ReadObjectsFromCsvFile(lesson_file, verify.LESSONS_HEADER, Lesson)
+
+    # store all units and lessons
+    for unit in units:
       unit.put()
-
-      for j in range(0, 5):
-        lesson = Lesson(key_name='lesson-%s-%s' % (i, j))
-        lesson.unit_id = i
-        lesson.title = 'Test Lesson %s for Test Unit %s' % (j, i)
-        lesson.put()
-
-    assert Unit.all().count() == 3
-    assert Lesson.all().count() == 15
+    for lesson in lessons:
+      lesson.put()
+    assert Unit.all().count() == 11
+    assert Lesson.all().count() == 29
 
   def tearDown(self):
     self.testbed.deactivate()

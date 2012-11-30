@@ -533,12 +533,13 @@ def escapeQuote(value):
 class Unit(object):
   """A class to represent a Unit."""
 
-  id = 0
-  type = ""
-  unit_id = ""
-  title = ""
-  release_date = ""
-  now_available = False
+  def __init__(self):
+    self.id = 0
+    self.type = ""
+    self.unit_id = ""
+    self.title = ""
+    self.release_date = ""
+    self.now_available = False
 
   def ListProperties(self, name, output):
     output.append("%s['id'] = %s;" % (name, self.id))
@@ -552,15 +553,16 @@ class Unit(object):
 class Lesson(object):
   """A class to represent a Lesson."""
 
-  unit_id = 0
-  unit_title = ""
-  lesson_id = 0
-  lesson_title = ""
-  lesson_activity = ""
-  lesson_activity_name = ""
-  lesson_notes = ""
-  lesson_video_id = ""
-  lesson_objectives = ""
+  def __init__(self):
+    self.unit_id = 0
+    self.unit_title = ""
+    self.lesson_id = 0
+    self.lesson_title = ""
+    self.lesson_activity = ""
+    self.lesson_activity_name = ""
+    self.lesson_notes = ""
+    self.lesson_video_id = ""
+    self.lesson_objectives = ""
 
   def ListProperties(self, name, output):
     activity = "false"
@@ -654,13 +656,21 @@ def SetObjectAttributes(target_object, names, values):
         "The number of elements must match: %s and %s" % (names, values))
   for i in range(0, len(names)):
     if IsInteger(values[i]):
-      setattr(target_object, names[i], int(values[i]))
+      # if we are setting an attribute of an object that support metadata, try
+      # to infer the target type and convert 'int' into 'str' here
+      target_type = None
+      if hasattr(target_object.__class__, names[i]):
+        target_type = getattr(target_object.__class__, names[i]).data_type.__name__
+
+      if target_type and (target_type == 'str' or target_type == 'basestring'):
+        setattr(target_object, names[i], str(values[i]))
+      else:
+        setattr(target_object, names[i], int(values[i]))
       continue
     if IsBoolean(values[i]):
       setattr(target_object, names[i], bool(values[i]))
       continue
     setattr(target_object, names[i], values[i])
-
 
 def ReadObjectsFromCsvFile(fname, header, new_object):
   return ReadObjectsFromCsv(csv.reader(open(fname)), header, new_object)
