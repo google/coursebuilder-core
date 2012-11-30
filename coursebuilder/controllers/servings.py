@@ -17,9 +17,8 @@
 
 import logging, json
 import lessons, utils
-from models.models import Student, PageCache
+from models.models import Student
 from utils import StudentHandler
-from google.appengine.api import memcache
 
 
 """
@@ -28,22 +27,10 @@ Handler for serving course page
 class CourseHandler(StudentHandler):
 
   def get(self):
-    # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      # Serve the course page from memcache if possible, other from datastore
-      page_name = 'course_page'
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(lessons.CourseHandler())
-
-      self.serve(cached_page, student.key().name(), None)
+      page = self.getOrCreatePage('course_page', lessons.CourseHandler())
+      self.serve(page, student.key().name(), None)
     else:
       self.redirect('/register')
 
@@ -70,19 +57,9 @@ class UnitHandler(StudentHandler):
     # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      # Serve the lesson page from memcache if possible, other from datastore
-      page_name = 'lesson%s%s_page' % (class_id, lesson_id)
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(lessons.UnitHandler())
-
-      self.serve(cached_page, student.key().name(), None)
+      page = self.getOrCreatePage(
+          'lesson%s%s_page' % (class_id, lesson_id), lessons.UnitHandler())
+      self.serve(page, student.key().name(), None)
     else:
       self.redirect('/register')
 
@@ -109,19 +86,9 @@ class ActivityHandler(StudentHandler):
     # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      # Serve the activity page from memcache if possible, other from datastore
-      page_name = 'activity' + str(class_id) + str(lesson_id) + '_page'
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(lessons.ActivityHandler())
-
-      self.serve(cached_page, student.key().name(), None)
+      page = self.getOrCreatePage(
+          'activity' + str(class_id) + str(lesson_id) + '_page', lessons.ActivityHandler()) 
+      self.serve(page, student.key().name(), None)
     else:
       self.redirect('/register')
 
@@ -141,19 +108,9 @@ class AssessmentHandler(StudentHandler):
     # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      # Serve the assessment page from memcache if possible, other from datastore
-      page_name = 'assessment' + name + '_page'
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(lessons.AssessmentHandler())
-
-      self.serve(cached_page, student.key().name(), None)
+      page = self.getOrCreatePage(
+          'assessment' + name + '_page', lessons.AssessmentHandler())
+      self.serve(page, student.key().name(), None)
     else:
       self.redirect('/register')
 
@@ -167,19 +124,8 @@ class ForumHandler(StudentHandler):
     # Check for enrollment status
     student = self.getEnrolledStudent()
     if student:
-      # Serve the forum page from memcache if possible, other from datastore
-      page_name = 'forum_page'
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(utils.ForumHandler())
-
-      self.serve(cached_page, student.key().name(), None)
+      page = self.getOrCreatePage('forum_page', utils.ForumHandler()) 
+      self.serve(page, student.key().name(), None)
     else:
       self.redirect('/register')
 
@@ -201,7 +147,7 @@ class AnswerHandler(StudentHandler):
       logging.info(student.key().name() + ':' + answer)
 
       # Find student entity and save answers
-      student = Student.get_by_key_name(student.key().name().encode('utf8'))
+      student = Student.get_by_email(student.key().name())
 
       score = self.request.get('score')
       score = round(float(score))
@@ -234,21 +180,10 @@ class AnswerHandler(StudentHandler):
           type = 'postcourse_fail'
         student.final_answer = answer
       student.put()
-      memcache.set(student.key().name(), student)
 
-      # Serve the confirmation page from memcache if possible, otherwise
-      # from datastore
-      page_name = type + 'confirmation_page'
-      cached_page = memcache.get(page_name)
-      if not cached_page:
-        logging.info('cache miss: ' + page_name)
-        page = PageCache.get_by_key_name(page_name)
-        if page:
-          memcache.add(page_name, page.content)
-          cached_page = page.content
-        else:
-          cached_page = self.delegateTo(utils.AnswerHandler(type))
-
-      self.serve(cached_page, student.key().name(), str(student.overall_score))
+      # Serve the confirmation page
+      page = self.getOrCreatePage(
+          type + 'confirmation_page', utils.AnswerHandler(type)) 
+      self.serve(page, student.key().name(), str(student.overall_score))
     else:
       self.redirect('/register')

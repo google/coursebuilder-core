@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from models.models import Unit, Lesson
+from models.models import Unit
 from utils import BaseHandler
 from google.appengine.api import users
 
@@ -25,7 +25,7 @@ class CourseHandler(BaseHandler):
     user = self.getUser()
     if user:
       # Get unit data and set template values
-      units = Unit.getUnits()
+      units = Unit.get_units()
       self.templateValue['units'] = units
 
       # Set template values for nav bar
@@ -37,8 +37,7 @@ class CourseHandler(BaseHandler):
         self.templateValue['email'] = user.email()
         self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
-      # Render course page
-      self.renderToDatastore('course_page', 'course.html')
+      self.render('course.html')
 
 """
 Handler for generating class page
@@ -61,11 +60,11 @@ class UnitHandler(BaseHandler):
     self.templateValue['lesson_id'] = lesson_id
 
     # Set template values for a unit and its lesson entities
-    for unit in Unit.getUnits():
+    for unit in Unit.get_units():
       if unit.unit_id == str(unit_id):
         self.templateValue['units'] = unit
 
-    lessons = Unit.getLessons(unit_id)
+    lessons = Unit.get_lessons(unit_id)
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav bar
@@ -92,8 +91,7 @@ class UnitHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
-    # Render
-    self.renderToDatastore('lesson%s%s_page' % (unit_id, lesson_id), 'unit.html')
+    self.render('unit.html')
 
 
 """
@@ -117,11 +115,11 @@ class ActivityHandler(BaseHandler):
     self.templateValue['lesson_id'] = lesson_id
 
     # Set template values for a unit and its lesson entities
-    for unit in Unit.getUnits():
+    for unit in Unit.get_units():
       if unit.unit_id == str(unit_id):
         self.templateValue['units'] = unit
 
-    lessons = Unit.getLessons(unit_id)
+    lessons = Unit.get_lessons(unit_id)
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav-x bar
@@ -140,8 +138,7 @@ class ActivityHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
-    # Render
-    self.renderToDatastore('activity%s%s_page' % (unit_id, lesson_id), 'activity.html')
+    self.render('activity.html')
 
 
 """
@@ -164,5 +161,4 @@ class AssessmentHandler(BaseHandler):
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
-    # Render
-    self.renderToDatastore('assessment%s_page' % n, 'assessment.html')
+    self.render('assessment.html')

@@ -16,7 +16,7 @@ import os, logging
 import webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
-from google.appengine.api import users, mail, memcache, taskqueue
+from google.appengine.api import users, mail, taskqueue
 from google.appengine.ext import db, deferred
 
 
@@ -104,25 +104,17 @@ class BaseHandler(ApplicationHandler):
     template = self.getTemplate(templateFile)
     self.response.out.write(template.render(self.templateValue))
 
-  # Evaluate page template, store result in datastore, and update memcache
-  def renderToDatastore(self, name, templateFile):
-    template = self.getTemplate(templateFile)
-    page_cache = PageCache.get_by_key_name(name)
-    if page_cache:
-      page_cache.content = template.render(self.templateValue)
-    else:
-      page_cache = PageCache(key_name=name, content=template.render(self.templateValue))
-    page_cache.put()
-    logging.info('pagecache put: ' + name)
-    memcache.set(name, page_cache.content)
-    logging.info('cache set: ' + name)
-    self.response.out.write(page_cache.content)
-
 
 """
 Student Handler
 """
 class StudentHandler(ApplicationHandler):
+
+  def getOrCreatePage(self, page_name, handler):
+    def content_lambda():
+      return self.delegateTo(handler)
+    return PageCache.get_page(page_name, content_lambda)
+
   def delegateTo(self, handler):
     """"Run another handler using system identity.
 
@@ -165,18 +157,10 @@ class StudentHandler(ApplicationHandler):
 
     return handler.response.out.getText()
 
-
   def getEnrolledStudent(self):
     user = users.get_current_user()
-
     if user:
-      email = user.email()
-      student = memcache.get(email)
-      if not student:
-        student = Student.get_enrolled_student_by_email(email)
-        if student:
-          memcache.set(email, student)
-      return student
+      return Student.get_enrolled_student_by_email(user.email())
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
@@ -246,14 +230,14 @@ class RegisterHandler(BaseHandler):
     # Create student record
     name = self.request.get('form01')
 
-    # If a student un-enrolls and then tries to re-enroll, then DELETE the
-    # old entry first or else the system gets confused ...
-    existing_student = Student.get_by_key_name(user.email())
-    if existing_student:
-      db.delete(existing_student)
-      memcache.delete(user.email())
-
-    student = Student(key_name=user.email(), name=name, is_enrolled=True)
+    # create new or re-enroll old student
+    student = Student.get_by_email(user.email())
+    if student:
+      if not student.is_enrolled:
+        student.is_enrolled = True
+        student.name = name
+    else:
+      student = Student(key_name=user.email(), name=name, is_enrolled=True)  
     student.put()
 
     # FIXME: Uncomment the following 2 lines, edit the message in the sendWelcomeEmail
@@ -279,7 +263,7 @@ class ForumHandler(BaseHandler):
     if user:
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url('/')
-    self.renderToDatastore('forum_page', 'forum.html')
+    self.render('forum.html')
 
 
 """
@@ -293,15 +277,12 @@ class AnswerHandler(BaseHandler):
   def get(self):
     user = users.get_current_user()
     if user:
-
-      # Set template values
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
       self.templateValue['navbar'] = {'course': True}
       self.templateValue['assessment'] = self.type
 
-      # Render confirmation page
-      self.renderToDatastore(self.type + 'confirmation_page', 'test_confirmation.html')
+      self.render('test_confirmation.html')
 
 
 class AddTaskHandler(ApplicationHandler):
@@ -328,7 +309,7 @@ class StudentProfileHandler(BaseHandler):
       self.templateValue['navbar'] = {}
     #check for existing registration -> redirect to course page
     e = user.email()
-    student = Student.get_by_key_name(e)
+    student = Student.get_by_email(e)
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
@@ -354,7 +335,7 @@ class StudentEditStudentHandler(BaseHandler):
 
     self.templateValue['navbar'] = {}
     # Check for existing registration -> redirect to course page
-    student = Student.get_by_key_name(e)
+    student = Student.get_by_email(e)
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
@@ -377,7 +358,7 @@ class StudentEditStudentHandler(BaseHandler):
     e = self.request.get('email')
     n = self.request.get('name')
 
-    student = Student.get_by_key_name(e)
+    student = Student.get_by_email(e)
     if student:
       if (n != ''):
         student.name = n
@@ -409,6 +390,9 @@ class StudentUnenrollHandler(BaseHandler):
     if user:
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      student = Student.get_enrolled_student_by_email(user.email())
+      if student:
+        self.templateValue['student'] = student
 
     self.templateValue['navbar'] = {'registration': True}
     page = self.getTemplate('unenroll_confirmation_check.html').render(self.templateValue)
@@ -420,12 +404,13 @@ class StudentUnenrollHandler(BaseHandler):
       email = user.email()
       self.templateValue['email'] = email
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
+      self.templateValue['navbar'] = {'registration': True}
+
 
     # Update student record
-    student = Student.get_enrolled_student_by_email(email)
-    if student:
+    student = Student.get_by_email(email)
+    if student and student.is_enrolled:
       student.is_enrolled = False
       student.put()
-      memcache.delete(email)
     page = self.getTemplate('unenroll_confirmation.html').render(self.templateValue)
     self.response.out.write(page)
