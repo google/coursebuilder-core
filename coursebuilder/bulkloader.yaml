@@ -83,5 +83,4 @@ transformers:
       external_name: answers
     - property: scores
       external_name: scores
-    - property: metrics
-      external_name: metrics
+
