@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-// When the activity page loads, activity-generic.js will render the contents
-// of 'activity' into the enclosing HTML webpage.
+// When the assessment page loads, activity-generic.js will render the contents
+// of the 'assessment' variable into the enclosing HTML webpage.
 
 // For information on modifying this page, see 
 // https://code.google.com/p/course-builder/wiki/CreateAssessments.
