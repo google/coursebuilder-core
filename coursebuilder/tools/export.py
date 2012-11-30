@@ -26,11 +26,19 @@ def Echo(x):
   pass
 
 
-def ExportToJavaScript(fname, text, date):
+def ExportToJavaScript(fname, lines, date):
   file = open("%s.js" % fname, 'w')
   file.write("// Course Builder %s JavaScript Export on %s\n" % (RELEASE_TAG, date))
   file.write("// begin\n")
-  file.write("\n".join(text))
+  code = []
+  code.append("function gcb_import(){")
+  for line in lines:
+    if len(line) != 0: code.append("  %s" % line)
+    else: code.append("")
+  code.append("")
+  code.append("  return units;")
+  code.append("}")
+  file.write("\n".join(code))
   file.write("\n// end");
   file.close()
 
@@ -43,13 +51,14 @@ def ExportToPython(fname, lines, date):
   code.append("true = True")
   code.append("false = False")
   code.append("")
-  code.append("def init():")
+  code.append("def gcb_import():")
   for line in lines:
     code.append("  %s" % line)
+  code.append("  return units")
   code.append("")
   code.append("if __name__ == \"__main__\":")
-  code.append("  init()")    
-    
+  code.append("  init()")
+
   file = open("%s.py" % fname, 'w')
   file.write("# Course Builder %s Python Export on %s\n" % (RELEASE_TAG, date))
   file.write("# begin\n")
@@ -58,11 +67,29 @@ def ExportToPython(fname, lines, date):
   file.close()
 
 
-def ExportToFile(fname, text):
+def ExportToPHP(fname, lines, date):
+  file = open("%s.php" % fname, 'w')
+  file.write("// Course Builder %s PHP Export on %s\n" % (RELEASE_TAG, date))
+  file.write("// begin\n")
+  code = []
+  code.append("function gcb_import(){")
+  for line in lines:
+    if len(line) != 0: code.append("  $%s" % line)
+    else: code.append("")
+  code.append("")
+  code.append("  return $units;")
+  code.append("}")
+  file.write("\n".join(code))
+  file.write("\n// end");
+  file.close()
+
+
+def ExportToFile(fname, lines):
   date = datetime.utcnow()
-  ExportToJavaScript(fname, text, date)
-  ExportToPython(fname, text, date)
-  
+  ExportToJavaScript(fname, lines, date)
+  ExportToPython(fname, lines, date)
+  ExportToPHP(fname, lines, date)
+
 
 if __name__ == "__main__":
   print "Export started using %s" % os.path.realpath(__file__)

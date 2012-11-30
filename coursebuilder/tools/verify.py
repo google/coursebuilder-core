@@ -805,23 +805,21 @@ class Verifier(object):
               unit.unit_id, unit.id))
 
       self.export.append("")
-      self.export.append("unit = Array();")
-      self.export.append("unit.lessons = Array();")
-      unit.ListProperties("unit", self.export)
-      self.export.append("units[%s] = unit;" % unit.id)
+      self.export.append("units[%s] = Array();" % unit.id)
+      self.export.append("units[%s]['lessons'] = Array();" % unit.id)
+      unit.ListProperties("units[%s]" % unit.id, self.export)
 
   def VerifyLessonFields(self, lessons):
-    self.export.append("lessons = Array();")
     for lesson in lessons:
       if not IsOneOf(lesson.lesson_activity, ["yes", ""]):
         self.error("Bad lesson_activity '%s' for lesson_id %s" %
                    (lesson.lesson_activity, lesson.lesson_id))
 
       self.export.append("")
-      self.export.append("lesson = Array();")
-      lesson.ListProperties("lesson", self.export)
-      self.export.append("units[%s].lessons[%s] = lesson;" % (
+      self.export.append("units[%s]['lessons'][%s] = Array();" % (
           lesson.unit_id, lesson.lesson_id))
+      lesson.ListProperties("units[%s]['lessons'][%s]" % (
+          lesson.unit_id, lesson.lesson_id), self.export)
 
   def VerifyUnitLessonRelationships(self, units, lessons):
     """Checks how units relate to lessons and otherwise."""
