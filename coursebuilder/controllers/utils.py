@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, logging, urlparse, webapp2, jinja2
-from jinja2.exceptions import TemplateNotFound
-from models.models import Student, Unit, DEFAULT_CACHE_TTL_SECS
-from google.appengine.api import users, mail, taskqueue, memcache
-from google.appengine.ext import db, deferred
+import logging, urlparse, webapp2, jinja2
+from models.models import Student, Unit, MemcacheManager
+from google.appengine.api import users
+from google.appengine.ext import db
 from models.utils import getAllScores
 
 
-# FIXME: set MAX_CLASS_SIZE to a positive integer if you want
-# to restrict the course size to a maximum of N students.
-# Note, though, that counting the students in this way uses a lot of database
-# calls that may cost you quota and money.
+# FIXME: Set MAX_CLASS_SIZE to a positive integer if you want to restrict the
+# course size to a maximum of N students. Note, though, that counting the students
+# in this way uses a lot of database calls that may cost you quota and money.
+# TODO(psimakov): we must use sharded counter and not Student.all().count()
 MAX_CLASS_SIZE = None
-# MAX_CLASS_SIZE = 250000
 
+# a template place holder for the student email 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
 
 
@@ -94,11 +93,11 @@ class StudentHandler(ApplicationHandler):
 
   def get_page(cls, page_name, content_lambda):
     """Get page from cache or create page on demand."""
-    content = memcache.get(page_name)
+    content = MemcacheManager.get(page_name)
     if not content:
       logging.info('Cache miss: ' + page_name)
       content = content_lambda()
-      memcache.set(page_name, content, DEFAULT_CACHE_TTL_SECS)
+      MemcacheManager.set(page_name, content)
     return content
 
   def getOrCreatePage(self, page_name, handler):
