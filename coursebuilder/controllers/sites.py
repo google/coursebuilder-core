@@ -15,7 +15,105 @@
 # @author: psimakov@google.com (Pavel Simakov)
 
 
-"""Enables hosting of multiple courses in one application instance."""
+"""Enables hosting of multiple courses in one application instance.
+
+We used to allow hosting of only one course in one Google App Engine instance. Now
+we allow hosting of many courses simultaneously. To configure multiple courses one
+must set an environment variable in app.yaml file, for example:
+
+  ...
+  env_variables:
+    GCB_COURSES_CONFIG: 'course:/coursea:/courses/a, course:/courseb:/courses/b'
+  ...
+
+This variable holds a ',' separated list of rewrite rules. Each rewrite rule has
+three ':' separated parts: the word 'course', the URL prefix, and the file system
+location for the site files. The fourth, optional part, is a course namespace name.
+
+The URL prefix specifies, how will the course URL appear in the browser. In the
+example above, the courses will be mapped to http://www.example.com[/coursea] and 
+http://www.example.com[/courseb].
+
+The file system location of the files specifies, which files to serve for the course.
+For each course we expect three sub-folders: 'assets', 'views', and 'data'. The 
+'data' folder must contain the CSV files that define the course layout, the 'assets'
+and 'views' should contain the course specific files and jinja2 templates respectively.
+In the example above, the course files are expected to be placed into folders
+'/courses/a' and '/courses/b' of your Google App Engine installation respectively.
+
+By default Course Builder handles static '/assets' files using a custom handler.
+You may choose to handle '/assets' files of your course as 'static' files using
+Google App Engine handler. You can do so by creating a new static file handler
+entry in your app.yaml and placing it before our main course handler. 
+
+If you have an existing course developed using Course Builder and do NOT want to
+host multiple courses, there is nothing for you to do. A following default rule is
+silently created for you:
+
+  ...
+  env_variables:
+    GCB_COURSES_CONFIG: 'course:/:/'
+  ...
+
+It sets the '/' as the base URL for the course, uses root folder of your Google App
+Engine installation to look for course /assets/..., /data/..., and /views/... and
+uses blank datastore and memcache namespace. All in all, everything behaves just as
+it did in the prior version of Course Builder when only one course was supported.
+
+If you have existing course developed using Course Builder and DO want to start
+hosting multiple courses here are the steps. First, define the courses configuration
+environment variable as described above. Second, copy existing 'assets', 'data' and
+'views' folders of your course into the new location, for example '/courses/mycourse'.
+Third, change your bulkloader commands to use the new CSV data file locations and 
+add a 'namespace' parameter, here is an example:
+
+  ...
+  echo Uploading units.csv
+  $GOOGLE_APP_ENGINE_HOME/appcfg.py upload_data \
+  --url=http://localhost:8080/_ah/remote_api \
+  --config_file=experimental/coursebuilder/bulkloader.yaml \
+  --filename=experimental/coursebuilder/courses/a/data/unit.csv \
+  --kind=Unit \
+  --namespace=gcb-courses-a
+  
+  echo Uploading lessons.csv
+  $GOOGLE_APP_ENGINE_HOME/appcfg.py upload_data \
+  --url=http://localhost:8080/_ah/remote_api \
+  --config_file=experimental/coursebuilder/bulkloader.yaml \
+  --filename=experimental/coursebuilder/courses/a/data/lesson.csv \
+  --kind=Lesson \
+  --namespace=gcb-courses-a
+  ...
+
+If you have an existing course built on a previous version of Course Builder and you
+now decided to use new URL prefix, which is not '/', you will need to update your
+old course html template and JavaScript files. You typically would have to make two
+modifications. First, replace all absolute URLs with the relative URLs. For example,
+if you had <a href='/forum'>..</a>, you will need to replace it with <a href='forum'>..</a>.
+Second, you need to add <base> tag at the top of you course 'base.html' and
+'base_registration.html' files, like this:
+
+  ...
+  <head>
+    <base href="{{ gcb_course_base }}" />
+  ...
+
+Current Course Builder release already has all these modifications. 
+
+Note, that each 'course' runs in a separate Google App Engine namespace. The name
+of the namespace is derived from the course files location. In the example above,
+the course files are stored in the folder '/courses/a', which be mapped to the
+namespace name 'gcb-courses-a'. The namespaces can't contain '/', so we replace them
+with '-' and prefix the namespace with the project abbreviation 'gcb'. Remember these
+namespace names, you will need to use them if/when accessing server administration
+panel, viewing objects in the datastore, etc. Don't move the files to another folder
+after your course starts as a new folder name will create a new namespace name and
+old data will no longer be used. You are free to rename the course URL prefix at any
+time. Once again, if you are not hosting multiple courses, your course will run in
+a default namespace (None).
+
+Good luck!
+"""
 
 import appengine_config, logging, mimetypes, os, threading, webapp2
 from google.appengine.api import namespace_manager
@@ -113,8 +211,8 @@ def getAllRules():
     if len(parts) == 4:
       namespace = parts[3]
     else:
-      if folder == '/':
-        namespace = GCB_BASE_COURSE_NAMESPACE
+      if folder == '/' or folder == '':
+        namespace = None
       else:
         namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE, folder.replace('/', '-'))
       if namespace in namespaces:
