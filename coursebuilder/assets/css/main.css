@@ -356,6 +356,14 @@ th, td {
 
 }
 
+.gcb-button-large {
+  width: 200px;
+  height: 48px;
+  line-height: 48px;
+  font-size: 150%;
+  margin: 12px;
+}
+
 a.gcb-button {
   color: #fff !important;
   text-decoration: none;
