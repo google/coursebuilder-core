@@ -60,6 +60,33 @@ class StudentAspectTest(TestBase):
     Permissions.assert_enrolled(self)
 
 
+class PageCacheTest(TestBase):
+  """Checks if pages cached for one user are properly render for another."""
+
+  def testPageCache(self):
+    """Test a user can't see other user pages."""
+    email1 = 'user1@foo.com'
+    name1 = 'User 1'
+    email2 = 'user2@foo.com'
+    name2 = 'User 2'
+
+    # login as one user and view 'unit' and other pages, which are not cached
+    login(email1)
+    register(self, name1)
+    Permissions.assert_enrolled(self)
+    response = view_unit(self)
+    AssertContains(email1, response.body)
+    logout()
+
+    # login as another user and check 'unit' and other pages show correct new email
+    login(email2)
+    register(self, name2)
+    Permissions.assert_enrolled(self)
+    response = view_unit(self)
+    AssertContains(email2, response.body)
+    logout()
+
+
 class CourseUrlRewritingTest(StudentAspectTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
@@ -79,10 +106,10 @@ class CourseUrlRewritingTest(StudentAspectTest):
   def canonicalize(self, href, response=None):
     """Force self.base on to all URL's, but only if no current response exists."""
     if response:
-      # look for <base> tag in the response to compute the canonical URL 
+      # look for <base> tag in the response to compute the canonical URL
       return super(CourseUrlRewritingTest, self).canonicalize(href, response)
     else:
-      # prepend self.base to compute the canonical URL 
+      # prepend self.base to compute the canonical URL
       if not href.startswith('/'):
         href = '/%s' % href
       href = '%s%s' % (self.base, href)

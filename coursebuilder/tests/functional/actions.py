@@ -144,8 +144,8 @@ def get_current_user_email():
 
 
 def logout():
-  os.environ['USER_EMAIL'] = None
-  os.environ['USER_ID'] = None
+  del os.environ['USER_EMAIL']
+  del os.environ['USER_ID']
 
 
 def register(browser, name):
@@ -177,36 +177,42 @@ def view_registration(browser):
 def view_course(browser):
   response = browser.get('course')
   AssertContains(' the stakes are high.', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
 def view_unit(browser):
   response = browser.get('unit?unit=1&lesson=1')
   AssertContains('Unit 1 - Introduction', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
 def view_activity(browser):
   response = browser.get('activity?unit=1&lesson=2')
   AssertContains('<script src="assets/js/activity-1.2.js"></script>', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
 def view_announcements(browser):
   response = browser.get('announcements')
   AssertContains('Example Announcement', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
 def view_my_profile(browser):
   response = browser.get('student/home')
   AssertContains('Certificate Name:', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
 def view_forum(browser):
   response = browser.get('forum')
   AssertContains('document.getElementById("forum_embed").src =', response.body)
+  AssertContains(get_current_user_email(), response.body)
   return response
 
 
@@ -215,6 +221,7 @@ def view_assesements(browser):
     response = browser.get('assessment?name=%s' % name)
     assert 'assets/js/assessment-%s.js' % name in response.body
     AssertEquals(response.status_int, 200)
+    AssertContains(get_current_user_email(), response.body)
 
 
 def change_name(browser, new_name):
