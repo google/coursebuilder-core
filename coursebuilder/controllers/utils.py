@@ -18,6 +18,7 @@ from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
 from google.appengine.api import users, mail, taskqueue
 from google.appengine.ext import db, deferred
+from assessments import getAllScores
 
 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
@@ -321,8 +322,8 @@ class StudentProfileHandler(BaseHandler):
       self.render('register.html')
     else:
       self.templateValue['student'] = student
+      self.templateValue['scores'] = getAllScores(student)
       self.render('student_profile.html')
-
 
 """
 This function handles edits to student records by students
@@ -343,7 +344,7 @@ class StudentEditStudentHandler(BaseHandler):
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
     else:
       self.templateValue['student'] = student
-
+      self.templateValue['scores'] = getAllScores(student)
     self.render('student_profile.html')
 
   def post(self):

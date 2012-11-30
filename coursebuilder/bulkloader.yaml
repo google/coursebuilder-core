@@ -79,21 +79,9 @@ transformers:
       external_name: enrolled_date
       import_transform: transform.import_date_time('%Y-%m-%d %H:%M:%S')
       export_transform: transform.export_date_time('%Y-%m-%d %H:%M:%S')
-    - property: overall_score
-      external_name: overall_score
-      import_transform: transform.none_if_empty(int)
-    - property: final_answer
-      external_name: final_answer
-    - property: final_score
-      external_name: final_score
-      import_transform: transform.none_if_empty(int)
-    - property: midterm_answer
-      external_name: midterm_answer
-    - property: midterm_score
-      external_name: midterm_score
-      import_transform: transform.none_if_empty(int)
-    - property: precourse_answer
-      external_name: precourse_answer
-    - property: precourse_score
-      external_name: precourse_score
-      import_transform: transform.none_if_empty(int)
+    - property: answers
+      external_name: answers
+    - property: scores
+      external_name: scores
+    - property: metrics
+      external_name: metrics

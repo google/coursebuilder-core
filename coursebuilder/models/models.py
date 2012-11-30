@@ -27,15 +27,16 @@ DEFAULT_CACHE_TTL_SECS = 60 * 60
 class Student(db.Model):
   """Student profile."""
   enrolled_date = db.DateTimeProperty(auto_now_add=True)
-  precourse_answer = db.TextProperty()
-  midterm_answer = db.TextProperty()
-  final_answer = db.TextProperty()
-  precourse_score = db.IntegerProperty()
-  midterm_score = db.IntegerProperty()
-  final_score = db.IntegerProperty()
-  overall_score = db.IntegerProperty()
+
   name = db.StringProperty()
   is_enrolled = db.BooleanProperty()
+
+  # each element of these lists is a key/value pair in this string format:
+  #   "<key>=<value>"
+  # where <key> should not contain an '=' character
+  answers = db.StringListProperty()
+  scores = db.StringListProperty()
+  metrics = db.StringListProperty()
 
   def put(self):
     """Do the normal put() and also add the object to memcache."""

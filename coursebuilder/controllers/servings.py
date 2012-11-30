@@ -19,6 +19,7 @@ import logging, json
 import lessons, utils
 from models.models import Student
 from utils import StudentHandler
+from assessments import storeAssessmentData, getMetric
 
 
 """
@@ -138,7 +139,7 @@ class AnswerHandler(StudentHandler):
   def post(self):
     # Read in answers
     answer = json.dumps(self.request.POST.items())
-    type = self.request.get('assessment_type')
+    original_type = self.request.get('assessment_type')
 
     # Check for enrollment status
     student = self.getEnrolledStudent()
@@ -149,41 +150,15 @@ class AnswerHandler(StudentHandler):
       # Find student entity and save answers
       student = Student.get_by_email(student.key().name())
 
-      score = self.request.get('score')
-      score = round(float(score))
-
-      if type == 'precourse':
-        # Save precourse_score, if it's higher than existing precourse_score
-        if not student.precourse_score or int(score) > student.precourse_score:
-          student.precourse_score = int(score)
-        student.precourse_answer = answer
-      elif type == 'midcourse':
-        # Save midterm_score, if it's higher than existing midterm_score
-        if not student.midterm_score or int(score) > student.midterm_score:
-          student.midterm_score = int(score)
-        student.midterm_answer = answer
-      elif type == 'postcourse':
-        student.final_answer = answer
-        # Save final_score, if it's higher than existing final_score
-        if not student.final_score or int(score) > student.final_score:
-          student.final_score = int(float(score))
-          if not student.midterm_score:
-            student.midterm_score = 0
-
-          # Calculate overall score based on a formula
-          student.overall_score = int((0.30*student.midterm_score) +
-                                      (0.70*student.final_score))
-
-        if student.overall_score >= 70:
-          type = 'postcourse_pass'
-        else:
-          type = 'postcourse_fail'
-        student.final_answer = answer
+      # TODO: considering storing as float for better precision
+      score = int(round(float(self.request.get('score'))))
+      assessment_type = storeAssessmentData(student, original_type, score, answer)
       student.put()
 
       # Serve the confirmation page
+      # TODO: using assessment_type as part of the filename seems ugly ...
       page = self.getOrCreatePage(
-          type + 'confirmation_page', utils.AnswerHandler(type)) 
-      self.serve(page, student.key().name(), str(student.overall_score))
+          assessment_type + 'confirmation_page', utils.AnswerHandler(assessment_type)) 
+      self.serve(page, student.key().name(), getMetric(student, 'overall_score'))
     else:
       self.redirect('/register')

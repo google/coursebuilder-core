@@ -169,7 +169,7 @@ def register(browser, name):
 
 def check_profile(browser, name):
   response = view_my_profile(browser)
-  AssertContains('Email:', response.body)
+  AssertContains('Email', response.body)
   AssertContains(name, response.body)
   AssertContains(get_current_user_email(), response.body)
 
@@ -210,7 +210,7 @@ def view_announcements(browser):
 
 def view_my_profile(browser):
   response = browser.get('student/home')
-  AssertContains('Certificate Name:', response.body)
+  AssertContains('Name for certificate', response.body)
   AssertContains(get_current_user_email(), response.body)
   return response
 

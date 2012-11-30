@@ -7,48 +7,48 @@
 <div class="gcb-main">
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
-      <p style="margin: 20px 0px;">
-        <b>Course progress related information : </b>
-      </p>
+      <h2>Student Profile for {{ student.key().name() }}</h2>
+
       {% if student %}
-      <table>
-      <tr><td>Currently Enrolled: </td><td>{{ student.is_enrolled }}</td></tr>
-      <tr><td>Last Enrolled Date: </td><td>{{ student.enrolled_date }}</td></tr>
-      <tr><td>Email: </td><td>{{ student.key().name() }}</td></tr>
-      <tr><td>Certificate Name: </td><td>{{ student.name }}</td></tr>
-      <tr><td>Pre-class Assessment: </td><td>
-        {% if student.preclass_answer %}
+      <table style="border-collapse:collapse;">
+      <tr><td><b>Currently enrolled</b></td><td>{{ student.is_enrolled }}</td></tr>
+      <tr><td><b>Date enrolled</b></td><td>{{ student.enrolled_date }}</td></tr>
+      <tr><td><b>Email</b></td><td>{{ student.key().name() }}</td></tr>
+      <!-- FIXME: If you do not send out a certificate at the end of your course, remove this row. -->
+      <tr><td><b>Name for certificate</b></td><td>{{ student.name }}</td></tr>
+      <tr><td colspan=2><b>Assessment scores</b></td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>Pre-class</b></td><td>
+        {% if scores.has_key('precourse') %}
           Completed</td></tr>
         {% endif %}
-      <tr><td>Mid-class Assessment Score: </td><td>
-        {% if student.midterm_score %}
-          {{ student.midterm_score}}</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>Mid-class</b></td><td>
+        {% if scores.has_key('midcourse') %}
+          {{ scores['midcourse'] }}</td></tr>
         {% endif %}
-      <tr><td>Post-class Assessment Score: </td><td>
-        {% if student.final_score %}
-          {{ student.final_score}}</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>Post-class</b></td><td>
+        {% if scores.has_key('postcourse') %}
+          {{ scores['postcourse'] }}</td></tr>
         {% endif %}
-      <tr><td>Overall Score: </td><td>
-        {% if student.overall_score %}
-          {{ student.overall_score}}</td></tr>
+      <tr><td><b>Overall course score</b></td><td>
+        {% if scores.has_key('overall_score') %}
+          {{ scores['overall_score'] }}</td></tr>
         {% endif %}
       </table>
 
-        <form action="student/editstudent" method='post'>
-        <input type="hidden" name="email" value="{{ student.key().name() }}">        
-        <fieldset>
-          <ul>
-            <li>
-              <label for="name">New Name (for the certificate upon passing the course)</label>
-              <input name="name" type="text">
-            </li>
-          </ul>
+      <!-- FIXME: If you do not send out a certificate at the end of your course, remove this form. -->
+      <form action='student/editstudent' method='post'>
+        <h2><label for="name">New Name (for the certificate upon passing the course)</label></h2>
+        <fieldset style="border: none;">
+          <p><input name="name" type="text" size="40">
+            <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
         </fieldset>
-        <button class="gcb-button" type="submit">Save Changes</button>
-        <a href="student/home" class="gcb-button" type="submit">Cancel</a>
+        <p><button class="gcb-button" type="submit">Save Changes</button> &nbsp;&nbsp;&nbsp;
+          <a href="student/home" class="gcb-button" type="submit">Cancel</a></p>
       </form>
 
-      <a href="student/unenroll" class="gcb-button" type="submit">Unenroll</a>
+      <h2>To leave the course permanently, click on Unenroll</h2>
+
+      <p><a href="student/unenroll" class="gcb-button" type="submit">Unenroll</a></p>
 
       {% else %}
       <p>Student profile not found ...</p>
