@@ -63,7 +63,7 @@ class TestBase(suite.BaseTestClass):
     assert Unit.all().count() == 11
     assert Lesson.all().count() == 29
 
-  def canonize(self, href, response=None):
+  def canonicalize(self, href, response=None):
     """Create absolute URL using <base> if defined, '/' otherwise."""
     if href.startswith('/'):
       return href
@@ -78,13 +78,13 @@ class TestBase(suite.BaseTestClass):
     """Modify response.goto() to properly compute URL using <base> if defined."""
     gotox = response.goto
     def newGoto(href, method='get', **args):
-      return gotox(self.canonize(href), method, **args)
+      return gotox(self.canonicalize(href), method, **args)
 
     response.goto = newGoto
     return response
 
   def get(self, url):
-    url = self.canonize(url)
+    url = self.canonicalize(url)
     logging.info('Goto: %s' % url)
     response = self.testapp.get(url)
     return self.hookResponse(response)

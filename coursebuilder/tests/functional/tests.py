@@ -77,7 +77,7 @@ class RewriteRulesTest(StudentRegistrationTest):
     super(RewriteRulesTest, self).tearDown()
     del os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME]
 
-  def canonize(self, href, response=None):
+  def canonicalize(self, href, response=None):
     """Force self.base on to all URL's."""
     if not href.startswith('/'):
       href = '/%s' % href
