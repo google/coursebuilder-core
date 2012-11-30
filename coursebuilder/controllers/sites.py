@@ -132,6 +132,9 @@ GCB_VIEWS_FOLDER_NAME = '/views'
 # supported site types
 SITE_TYPE_COURSE = 'course'
 
+# default 'Cache-Control' HTTP header for static files
+DEFAULT_CACHE_CONTROL_HEADER_VALUE = 'public, max-age=600'
+
 # enable debug output
 DEBUG_INFO = False
 
@@ -283,6 +286,7 @@ class AssetHandler(webapp2.RequestHandler):
     if not os.path.isfile(self.filename):
       self.error(404)
 
+    self.response.headers['Cache-Control'] = DEFAULT_CACHE_CONTROL_HEADER_VALUE
     self.response.headers['Content-Type'] = self.getMimeType(self.filename)
     self.response.write(open(self.filename, 'r').read())
 
