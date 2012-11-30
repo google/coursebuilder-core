@@ -45,13 +45,13 @@ class ApplicationHandler(webapp2.RequestHandler):
   def __init__(self):
     super(ApplicationHandler, self).__init__()
     self.templateValue = {}
-    
+
   def appendBase(self):
     """Append current course <base> to template variables."""
     slug = self.app_context.getSlug()
     if not slug.endswith('/'):
       slug = '%s/' % slug
-    self.templateValue['gcb_course_base'] = slug 
+    self.templateValue['gcb_course_base'] = slug
 
   def getTemplate(self, templateFile):
     """Computes the location of template files for the current namespace."""
@@ -188,8 +188,7 @@ class RegisterClosedHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     self.templateValue['navbar'] = {'registration': True}
-    page = self.getTemplate('registration_close.html').render(self.templateValue)
-    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+    self.render('registration_close.html')
 
 
 """
@@ -238,7 +237,7 @@ class RegisterHandler(BaseHandler):
         student.is_enrolled = True
         student.name = name
     else:
-      student = Student(key_name=user.email(), name=name, is_enrolled=True)  
+      student = Student(key_name=user.email(), name=name, is_enrolled=True)
     student.put()
 
     # FIXME: Uncomment the following 2 lines, edit the message in the sendWelcomeEmail
@@ -314,12 +313,10 @@ class StudentProfileHandler(BaseHandler):
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
-      page = self.getTemplate('register.html').render(self.templateValue)
-      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+      self.render('register.html')
     else:
       self.templateValue['student'] = student
-      page = self.getTemplate('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+      self.render('student_profile.html')
 
 
 """
@@ -374,8 +371,7 @@ class AnnouncementsHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     self.templateValue['navbar'] = {'announcements': True}
-    page = self.getTemplate('announcements.html').render(self.templateValue)
-    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+    self.render('announcements.html')
 
 
 """
@@ -392,8 +388,7 @@ class StudentUnenrollHandler(BaseHandler):
         self.templateValue['student'] = student
 
     self.templateValue['navbar'] = {'registration': True}
-    page = self.getTemplate('unenroll_confirmation_check.html').render(self.templateValue)
-    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+    self.render('unenroll_confirmation_check.html')
 
   def post(self):
     user = users.get_current_user()
@@ -403,11 +398,9 @@ class StudentUnenrollHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
       self.templateValue['navbar'] = {'registration': True}
 
-
     # Update student record
     student = Student.get_by_email(email)
     if student and student.is_enrolled:
       student.is_enrolled = False
       student.put()
-    page = self.getTemplate('unenroll_confirmation.html').render(self.templateValue)
-    self.response.out.write(page)
+    self.render('unenroll_confirmation.html')
