@@ -26,6 +26,7 @@ urls = [
   ('/assessment', servings.AssessmentHandler),
   ('/course', servings.CourseHandler),
   ('/forum', servings.ForumHandler),
+  ('/preview', utils.CoursePreviewHandler),
   ('/register', utils.RegisterHandler),
   ('/student/editstudent', utils.StudentEditStudentHandler),
   ('/student/home', utils.StudentProfileHandler),

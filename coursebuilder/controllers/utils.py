@@ -176,6 +176,27 @@ class StudentHandler(ApplicationHandler):
 
 
 """
+Handler for viewing course preview
+"""
+class CoursePreviewHandler(BaseHandler):
+
+  def get(self):
+    user = users.get_current_user()
+    if user:
+      self.templateValue['email'] = user.email()
+      self.templateValue['logoutUrl'] = users.create_logout_url("/")
+
+    # Check for existing registration -> redirect to course page
+    student = Student.get_enrolled_student_by_email(user.email())
+    if student:
+      self.redirect('/course')
+    else:
+      self.templateValue['navbar'] = {'course': True}
+      self.templateValue['units'] = Unit.get_units()
+      self.render('preview.html')
+
+
+"""
 Handler for course registration closed
 """
 class RegisterClosedHandler(BaseHandler):

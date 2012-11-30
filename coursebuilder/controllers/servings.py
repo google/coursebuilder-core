@@ -32,7 +32,7 @@ class CourseHandler(StudentHandler):
       page = self.getOrCreatePage('course_page', lessons.CourseHandler())
       self.serve(page, student.key().name(), None)
     else:
-      self.redirect('/register')
+      self.redirect('/preview')
 
 
 """
