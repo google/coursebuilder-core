@@ -70,7 +70,7 @@ def view_course(browser):
 
 def view_unit(browser):
   response = browser.get('/unit?unit=1&lesson=1')
-  AssertContains('Unit 1 - Introduction', response.body)
+  AssertContains('Unit 1 - Test Unit 1', response.body)
   return response
 
 
@@ -128,7 +128,7 @@ class Permissions():
   def get_enrolled_student_allowed_pages(cls):
     """Returns all pages that enrolled student can see."""
     return [view_announcements, view_forum, view_course,
-        view_assesements, view_my_profile]
+        view_assesements, view_unit, view_activity, view_my_profile]
 
   @classmethod
   def get_enrolled_student_denied_pages(cls):

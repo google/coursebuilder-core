@@ -16,11 +16,13 @@
 
 __author__ = 'Sean Lip'
 
+import logging
 import unittest
 import dev_appserver
 import os
 import tests
 import webtest
+from models.models import Unit, Lesson
 from google.appengine.ext import testbed
 
 
@@ -80,10 +82,32 @@ class BaseTestClass(unittest.TestCase):
     self.testbed.init_memcache_stub()
     self.testbed.init_datastore_v3_stub()
 
+    self.initDatastore()
+
+  def initDatastore(self):
+    """Generate dummy tests data."""
+    logging.info('')
+    logging.info('Initializing datastore')
+    for i in range(0, 3):
+      unit = Unit(key_name='unit-%s' % i)
+      unit.unit_id = str(i)
+      unit.title = "Test Unit %s" % i
+      unit.put()
+
+      for j in range(0, 5):
+        lesson = Lesson(key_name='lesson-%s-%s' % (i, j))
+        lesson.unit_id = i
+        lesson.title = 'Test Lesson %s for Test Unit %s' % (j, i)
+        lesson.put()
+
+    assert Unit.all().count() == 3
+    assert Lesson.all().count() == 15
+
   def tearDown(self):
     self.testbed.deactivate()
 
   def get(self, url):
+    logging.info('Visiting: %s' % url)
     return self.testapp.get(url)
 
 

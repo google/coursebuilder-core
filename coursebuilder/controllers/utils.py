@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, logging
+import os
 import webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
@@ -316,7 +316,6 @@ class StudentProfileHandler(BaseHandler):
       page = self.getTemplate('register.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
-      logging.info(student)
       self.templateValue['student'] = student
       page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
@@ -342,7 +341,6 @@ class StudentEditStudentHandler(BaseHandler):
       page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
-      logging.info(student)
       self.templateValue['student'] = student
       page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
