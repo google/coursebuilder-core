@@ -42,7 +42,7 @@ var activity = [
 
   '<br><br>Can you find the name of the sandwich in the results below?<br>',
 
-  '<br><img src="/assets/img/Image10.1.png"<p>',
+  '<br><img src="assets/img/Image10.1.png"<p>',
 
   '<br>What\'s the name of the sandwich?<br>',
 

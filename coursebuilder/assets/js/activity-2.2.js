@@ -33,7 +33,7 @@ var activity = [
 
   '<table border="2"><tr><td> <b>Search Tips:</b><p> <ul><li>Sometimes search results offer information that suggests a better or additional search.<li>Use [define] in the search box to identify the meaning of words.<li>Click on Search Tools in the left panel, then Dictionary to define words that do not appear in traditional dictionaries.</ul> </tr></td></table>',
 
-  '<b>1.</b> You are a cosmetologist and business owner, and have been asked by a few clients if you are going to offer those fish that clean people\'s feet. To learn more, you search for [fish clean feet]. <p><a href="/assets/img/Image2.2.1.png" target="_blank"><img src="/assets/img/Image2.2.1.png" width="618" height="504" alt="search results for [fish clean feet]" title="search results for [fish clean feet]"></a><p> Do these results look helpful for making business decisions?',
+  '<b>1.</b> You are a cosmetologist and business owner, and have been asked by a few clients if you are going to offer those fish that clean people\'s feet. To learn more, you search for [fish clean feet]. <p><a href="assets/img/Image2.2.1.png" target="_blank"><img src="assets/img/Image2.2.1.png" width="618" height="504" alt="search results for [fish clean feet]" title="search results for [fish clean feet]"></a><p> Do these results look helpful for making business decisions?',
 
   { questionType: 'multiple choice',
     choices: [['Yes', false, 'Your answer is incorrect. Please try again.'],

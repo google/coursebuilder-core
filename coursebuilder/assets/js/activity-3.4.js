@@ -32,7 +32,7 @@
 var activity = [
   '<table border="2"><tr><td> <b>Search Tips:</b><p> <ul><li>Use quotes to search for a phrase.</li><li>Quotes glue words together; there can be additional words before or after the phrase, but the phrase will always stay together in the results.</li><li>Use OR to include more than one way of expressing an idea.</li><li>If an idea on one side of the OR is more than one word, it needs quotes around it (for example [handkerchief OR "facial tissue"])</li></ul> </tr></td></table>',
 
-  '<p><b>1.</b> Your friend has been complaining about her ex a lot; he is still hanging around even though they broke up. This reminded you of a line from a poem: Like black tape he is stuck to me. You search for it and see the results below. <p><img src="/assets/img/Image3.4.2.png"><br><br>How could you modify the query to find the poem?</p>',
+  '<p><b>1.</b> Your friend has been complaining about her ex a lot; he is still hanging around even though they broke up. This reminded you of a line from a poem: Like black tape he is stuck to me. You search for it and see the results below. <p><img src="assets/img/Image3.4.2.png"><br><br>How could you modify the query to find the poem?</p>',
 
   { questionType: 'multiple choice',
     choices: [['[“like black tape he is stuck to me”]', true, 'Correct! Putting quotes around a set of words keeps them together in a phrase.'],

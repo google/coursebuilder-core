@@ -42,7 +42,7 @@ var activity = [
 
   'Here are the results for two searches, [cars] on the left, and [the cars] on the right. Are the results the same or different?<p>',
 
-  '<img src="/assets/img/Image1.5.3.png" width="785" height="461" alt="search results for [cars] and [the cars]" title="search results for [cars] and [the cars]" >',
+  '<img src="assets/img/Image1.5.3.png" width="785" height="461" alt="search results for [cars] and [the cars]" title="search results for [cars] and [the cars]" >',
 
   '<p>Compare the results for two variations of a query. If the <b>non-ad</b> results for two variations differ from each other, check the box in front of those two queries. For example:<br><br><input type=checkbox checked>[cars][the cars]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;These two searches produce different non-ad results.<br>',
 

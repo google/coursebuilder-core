@@ -398,8 +398,8 @@ function renderAssessment(assessment, domRoot) {
       var myForm = document.createElement("form");
       myForm.method = "post";
 
-      // defaults to '/answer', which invokes AnswerHandler in ../../controllers/lessons.py
-      myForm.action = assessment.formScript ? assessment.formScript : "/answer";
+      // defaults to 'answer', which invokes AnswerHandler in ../../controllers/lessons.py
+      myForm.action = assessment.formScript ? assessment.formScript : "answer";
 
       var assessmentType = assessment.assessmentName ? assessment.assessmentName : "unnamed assessment";
 

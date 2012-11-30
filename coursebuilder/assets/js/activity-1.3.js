@@ -51,7 +51,7 @@ var activity = [
     allCorrectOutput: 'Please scroll down for another activity.',
     someIncorrectOutput: 'Please try again.'},
 
-  '<br><br><br>In the image below, identify the area(s) that are ads.<br><br><img src="/assets/img/Image1.5.png" width="785" height="500" usemap="#Image1" border="0"><p>Where are the ads?<p>',
+  '<br><br><br>In the image below, identify the area(s) that are ads.<br><br><img src="assets/img/Image1.5.png" width="785" height="500" usemap="#Image1" border="0"><p>Where are the ads?<p>',
 
   { questionType: 'multiple choice',
     choices: [['A', false, 'Your answer is incorrect. Can you identify the two places where there are ads? Please try again.'],

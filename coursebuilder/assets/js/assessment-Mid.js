@@ -31,7 +31,7 @@ var assessment = {
   //   correctAnswerNumeric - freetext numeric match
   questionsList: [
 
-    {questionHTML: 'You want to search exclusively within the Humane Society website (humanesociety.org) to find pages about puppy training.<br/><img src="/assets/img/Image8.7.png" height="300" width="450" alt="search results for test question" title="search results for test question"><p>What would be the best query to type into the search box to see results like these?',
+    {questionHTML: 'You want to search exclusively within the Humane Society website (humanesociety.org) to find pages about puppy training.<br/><img src="assets/img/Image8.7.png" height="300" width="450" alt="search results for test question" title="search results for test question"><p>What would be the best query to type into the search box to see results like these?',
      choices: [correct('[site:humanesociety.org puppy training]'),
                '[humane society puppy training]',
                '[puppy training pages in humansociety.org website]',
@@ -67,6 +67,6 @@ var assessment = {
   assessmentName: 'midcourse', // unique name submitted along with all of the answers
   checkAnswers: true,          // render a "Check your Answers" button to allow students to check answers prior to submitting?
 
-  // formScript: '/answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to '/answer'
+  // formScript: 'answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to 'answer'
 }
 

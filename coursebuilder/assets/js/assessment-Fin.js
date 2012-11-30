@@ -64,7 +64,7 @@ var assessment = {
      correctAnswerNumeric: 7.9,
      lesson: '99.99'},
 
-    {questionHTML: 'You recall that in past years, the Olympics have included some sports that were popular in the host country. Although medals awarded in these events were not official, they were often fun to watch. You try searching for the topic, and get these results:<p><img src="/assets/img/Image7.7.png" width="500" height="500" alt="search results for test question" title="search results for test question"><br/>What term do these results suggest that would give you a more focused query on this topic?',
+    {questionHTML: 'You recall that in past years, the Olympics have included some sports that were popular in the host country. Although medals awarded in these events were not official, they were often fun to watch. You try searching for the topic, and get these results:<p><img src="assets/img/Image7.7.png" width="500" height="500" alt="search results for test question" title="search results for test question"><br/>What term do these results suggest that would give you a more focused query on this topic?',
      choices: [correct('Demonstration sport'),
                'Masters Athletics',
                'Olympic Sports',
@@ -76,6 +76,6 @@ var assessment = {
   assessmentName: 'postcourse', // unique name submitted along with all of the answers
   checkAnswers: true,           // render a "Check your Answers" button to allow students to check answers prior to submitting?
 
-  // formScript: '/answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to '/answer'
+  // formScript: 'answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to 'answer'
 }
 

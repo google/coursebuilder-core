@@ -36,7 +36,7 @@ var activity = [
   // Note: the entire question should be encapsulated into one string.
 
   // This is a custom activity type where the user clicks on an image map, and feedback is displayed in a textarea:
-  '<form name="quiz"><b>1.</b> Click on the following in the result block below: <ol style="list-style-type:lower-alpha"><li>web address</li><li>web page title</li><li>snippet</li></ol><img src="/assets/img/Image2.3.1.png" width="785" height="131" usemap="#Image2.3" border="0"><map name="Image2.3">\n<area shape="rect" coords="15,14,733,41" onClick="check24(1)" ><area shape="rect" coords="15,44,716,64" onClick="check24(2)"><area shape="rect" coords="14,67,776,112" onClick="check24(3)" ><\/map><p><p><textarea style="width: 600px; height: 30px;" readonly="true" name="output"></textarea></form>',
+  '<form name="quiz"><b>1.</b> Click on the following in the result block below: <ol style="list-style-type:lower-alpha"><li>web address</li><li>web page title</li><li>snippet</li></ol><img src="assets/img/Image2.3.1.png" width="785" height="131" usemap="#Image2.3" border="0"><map name="Image2.3">\n<area shape="rect" coords="15,14,733,41" onClick="check24(1)" ><area shape="rect" coords="15,44,716,64" onClick="check24(2)"><area shape="rect" coords="14,67,776,112" onClick="check24(3)" ><\/map><p><p><textarea style="width: 600px; height: 30px;" readonly="true" name="output"></textarea></form>',
 
   '<p><b>2.</b> Do you think the page associated with the result above would contain the sentence "Quality standards for pharmaceuticals have historically been an area of focus for USP"?</p>',
 
