@@ -18,6 +18,7 @@ __author__ = 'Sean Lip'
 
 import os
 from controllers import sites
+from models import models
 from controllers.sites import AssertFails
 from actions import *
 
@@ -87,7 +88,57 @@ class PageCacheTest(TestBase):
     logout()
 
 
-class CourseUrlRewritingTest(StudentAspectTest):
+class AssesementTest(TestBase):
+
+  def submitAssessment(self, name, args):
+    response = self.get('assessment?name=%s' % name)
+    AssertContains('<script src="assets/js/assessment-%s.js"></script>' % name, response.body)
+    response = self.post('answer', args)
+    AssertEquals(response.status_int, 200)
+    return response
+
+  def testAssesements(self):
+    """Tests assessment scores are properly submitted and summarized."""
+    email = 'test_assesements@google.com'
+    name = 'Test Assessments'
+
+    pre = {'assessment_type': 'precourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '1.00'}
+
+    mid = {'assessment_type': 'midcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '2.00'}
+
+    post = {'assessment_type': 'postcourse',
+        '0': 'false', '1': 'false',
+        '2': 'false', '3': 'false',
+        'num_correct': '0', 'num_questions': '4',
+        'score': '3.00'}
+
+    # register
+    login(email)
+    register(self, name)
+
+    # check no scores exist right now
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert student != None
+
+    # submit assessments
+    self.submitAssessment('Pre', pre)
+    self.submitAssessment('Mid', mid)
+    self.submitAssessment('Post', post)
+
+    # check scores are recorded properly
+    student = models.Student.get_enrolled_student_by_email(email)
+    assert student != None
+
+
+class CourseUrlRewritingTest(StudentAspectTest, AssesementTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
   def setUp(self):
@@ -114,4 +165,3 @@ class CourseUrlRewritingTest(StudentAspectTest):
         href = '/%s' % href
       href = '%s%s' % (self.base, href)
       return href
-      

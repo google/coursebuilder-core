@@ -85,17 +85,23 @@ class TestBase(suite.BaseTestClass):
 
   def get(self, url):
     url = self.canonicalize(url)
-    logging.info('Goto: %s' % url)
+    logging.info('HTTP Get: %s' % url)
     response = self.testapp.get(url)
     return self.hookResponse(response)
 
+  def post(self, url, params):
+    url = self.canonicalize(url)
+    logging.info('HTTP Post: %s' % url)
+    response = self.testapp.post(url, params)
+    return self.hookResponse(response)
+
   def click(self, response, name):
-    logging.info('Click: %s' % name)
+    logging.info('Link click: %s' % name)
     response = response.click(name)
     return self.hookResponse(response)
 
   def submit(self, form):
-    logging.info('Submit: %s' % form)
+    logging.info('Form submit: %s' % form)
     response = form.submit()
     return self.hookResponse(response)
 
