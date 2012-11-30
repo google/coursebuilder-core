@@ -16,18 +16,16 @@
 
 __author__ = 'Sean Lip'
 
+
 import logging
-import unittest
-import dev_appserver
 import os
-import tests
+import sys
+import unittest
 import webtest
-from tools import verify
-from models.models import Unit, Lesson
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 2
+EXPECTED_TEST_COUNT = 3
 
 
 def EmptyEnviron():
@@ -41,59 +39,52 @@ def EmptyEnviron():
 class BaseTestClass(unittest.TestCase):
   """Base class for setting up and tearing down test cases."""
 
+  def getApp(self):
+    """Returns the main application to be tested."""
+    raise Exception('Not implemented.')
+
   def setUp(self):
     EmptyEnviron()
-    import main
-    main.debug = True
-    app = main.app
-    self.testapp = webtest.TestApp(app)
+
+    # setup an app to be tested
+    self.testapp = webtest.TestApp(self.getApp())
     self.testbed = testbed.Testbed()
     self.testbed.activate()
 
-    # Declare any relevant App Engine service stubs here.
+    # declare any relevant App Engine service stubs here
     self.testbed.init_user_stub()
     self.testbed.init_memcache_stub()
     self.testbed.init_datastore_v3_stub()
 
-    self.initDatastore()
-
-  def initDatastore(self):
-    """Generate dummy tests data."""
-    logging.info('')
-    logging.info('Initializing datastore')
-
-    # load and parse data from CSV file
-    unit_file = os.path.join(os.path.dirname(__file__), "../../data/unit.csv")
-    lesson_file = os.path.join(os.path.dirname(__file__), "../../data/lesson.csv")
-    units = verify.ReadObjectsFromCsvFile(unit_file, verify.UNITS_HEADER, Unit)
-    lessons = verify.ReadObjectsFromCsvFile(lesson_file, verify.LESSONS_HEADER, Lesson)
-
-    # store all units and lessons
-    for unit in units:
-      unit.put()
-    for lesson in lessons:
-      lesson.put()
-    assert Unit.all().count() == 11
-    assert Lesson.all().count() == 29
-
   def tearDown(self):
     self.testbed.deactivate()
 
-  def get(self, url):
-    logging.info('Visiting: %s' % url)
-    return self.testapp.get(url)
+
+def createTestSuite():
+  """Loads all tests classes from appropriate modules."""
+  import tests
+  return unittest.TestLoader().loadTestsFromModule(tests)
+
+
+def fix_sys_path():
+  """Fix the sys.path to include GAE extra paths."""
+  import dev_appserver
+
+  # dev_appserver.fix_sys_path() prepends GAE paths to sys.path and hides
+  # our classes like 'tests' behind other modules that have 'tests'
+  # here, unlike dev_appserver, we append, not prepend path so our classes are first
+  sys.path = sys.path + dev_appserver.EXTRA_PATHS[:]
 
 
 def main():
   """Starts in-process server and runs all test cases in this module."""
-  dev_appserver.fix_sys_path()
-  suite = unittest.TestLoader().loadTestsFromModule(tests)
-  result = unittest.TextTestRunner(verbosity=2).run(suite)
+  fix_sys_path()
+  result = unittest.TextTestRunner(verbosity=2).run(createTestSuite())
 
   if result.testsRun != EXPECTED_TEST_COUNT:
     raise Exception(
         'Expected %s tests to be run, not %s.' % (EXPECTED_TEST_COUNT, result.testsRun))
-  
+
   if len(result.errors) != 0 or len(result.failures) != 0:
     raise Exception(
         "Functional test suite failed: %s errors, %s failures of %s tests run." % (
@@ -101,5 +92,5 @@ def main():
 
 
 if __name__ == '__main__':
+  logging.basicConfig(level=3)
   main()
-

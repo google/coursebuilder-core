@@ -16,11 +16,13 @@
 
 __author__ = 'Sean Lip'
 
-from suite import *
+import os
+from controllers import sites
+from controllers.sites import AssertFails
 from actions import *
 
 
-class StudentRegistrationTest(BaseTestClass):
+class StudentRegistrationTest(TestBase):
 
   def testRegistration(self):
     """Test student registration."""
@@ -55,3 +57,33 @@ class StudentRegistrationTest(BaseTestClass):
 
     register(self, name)
     Permissions.assert_enrolled(self)
+
+
+class RewriteRulesTest(TestBase):
+
+  def setUp(self):
+    self.base = '/courses/pswg'
+    self.namespace = 'gcb-courses-pswg-tests-ns'
+    os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME] = 'course:%s:/:%s' % (
+        self.base, self.namespace)
+    super(RewriteRulesTest, self).setUp()
+
+  def tearDown(self):
+    super(RewriteRulesTest, self).tearDown()
+    del os.environ[sites.GCB_REWRITE_RULES_ENV_VAR_NAME]
+
+  def get(self, url):
+    return super(RewriteRulesTest, self).get('%s%s' % (self.base, url))
+
+  def testAll(self):
+    """Test URL rewriting using '/courses/pswg' base URL."""
+    email = 'rewrite_rules_test@example.com'
+    name = 'Rewrite Rules Test'
+
+    login(email)
+
+    register(self, name)
+    Permissions.assert_enrolled(self)
+
+    # TODO(psimakov): this fails because of absolute URLs; need sto be fixed
+    AssertFails(lambda : un_register(self))

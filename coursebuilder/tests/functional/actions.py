@@ -16,7 +16,56 @@
 
 """A collection of actions for testing Course Builder pages."""
 
+import logging
 import os
+import main
+import suite
+from models.models import Unit, Lesson
+from tools import verify
+from google.appengine.api import namespace_manager
+
+
+class TestBase(suite.BaseTestClass):
+  def getApp(self):
+    main.debug = True
+    return main.app
+
+  def setUp(self):
+    super(TestBase, self).setUp()
+
+    # set desired namespace and inits data
+    namespace = namespace_manager.get_namespace()
+    try:
+      if hasattr(self, 'namespace'):
+        namespace_manager.set_namespace(self.namespace)
+      self.initDatastore()
+    finally:
+      if namespace == '':
+        namespace_manager.set_namespace(None)
+
+  def initDatastore(self):
+    """Loads course data from the CSV files."""
+    logging.info('')
+    logging.info('Initializing datastore')
+
+    # load and parse data from CSV file
+    unit_file = os.path.join(os.path.dirname(__file__), "../../data/unit.csv")
+    lesson_file = os.path.join(os.path.dirname(__file__), "../../data/lesson.csv")
+    units = verify.ReadObjectsFromCsvFile(unit_file, verify.UNITS_HEADER, Unit)
+    lessons = verify.ReadObjectsFromCsvFile(lesson_file, verify.LESSONS_HEADER, Lesson)
+
+    # store all units and lessons
+    for unit in units:
+      unit.put()
+    for lesson in lessons:
+      lesson.put()
+    assert Unit.all().count() == 11
+    assert Lesson.all().count() == 29
+
+  def get(self, url):
+    """Helper method to invoke get() on the application without exposing testapp."""
+    logging.info('Visiting: %s' % url)
+    return self.testapp.get(url)
 
 
 def AssertEquals(expected, actual):
