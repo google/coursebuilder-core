@@ -17,7 +17,7 @@
 __author__ = 'Sean Lip'
 
 import os
-from controllers import sites
+from controllers import sites, utils
 from models import models
 from controllers.sites import AssertFails
 from actions import *
@@ -44,6 +44,45 @@ class StudentAspectTest(TestBase):
 
     register(self, name3)
     check_profile(self, name3)
+
+  def testLimitedClassSizeRegistration(self):
+    """Test student registration with CLASS_SIZE_RESTRICTION."""
+    utils.CLASS_SIZE_RESTRICTION = 2
+
+    email1 = '111@example.com'
+    name1 = 'student1'
+    email2 = '222@example.com'
+    name2 = 'student2'
+    email3 = '333@example.com'
+    name3 = 'student3'
+
+    login(email1)
+    register(self, name1)
+    logout()
+
+    login(email2)
+    register(self, name2)
+    logout()
+
+    login(email3)
+
+    # registration should fail for the third user
+    class MustFail(Exception):
+      pass
+    try:
+      register(self, name3)
+      raise MustFail("Registration should fail for " + name3 + " but didn't")
+    except MustFail as e:
+      raise e
+    except Exception:
+      pass
+    logout()
+
+    # now unset the limit, and registration should succeed
+    utils.CLASS_SIZE_RESTRICTION = None
+    login(email3)
+    register(self, name3)
+    logout()
 
   def testPermissions(self):
     """Test student permissions to pages."""

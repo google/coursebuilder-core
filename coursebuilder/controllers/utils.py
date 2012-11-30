@@ -20,6 +20,13 @@ from google.appengine.ext import db, deferred
 from models.utils import getAllScores
 
 
+# FIXME: set CLASS_SIZE_RESTRICTION to a positive integer if you want
+# to restrict the course size to a maximum of N students.
+# Note, though, that counting the students in this way uses a lot of database
+# calls that may cost you quota and money.
+CLASS_SIZE_RESTRICTION = None
+#CLASS_SIZE_RESTRICTION = 250000
+
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
 
 
@@ -204,28 +211,22 @@ class RegisterHandler(BaseHandler):
       self.redirect(users.create_login_url(self.request.uri))
       return
 
-    # Restrict the maximum course size to 250000 people
-    # FIXME: you can change this number if you wish.
-    # Uncomment the following 3 lines if you want to restrict the course size.
-    # Note, though, that counting the students in this way uses a lot of database
-    # calls that may cost you quota and money.
-
-    # students = Student.all(keys_only=True)
-    # if (students.count() > 249999):
-    #   self.templateValue['course_status'] = 'full'
-
-    # Create student record
-    name = self.request.get('form01')
-
-    # create new or re-enroll old student
-    student = Student.get_by_email(user.email())
-    if student:
-      if not student.is_enrolled:
-        student.is_enrolled = True
-        student.name = name
+    students = Student.all(keys_only=True)
+    if (CLASS_SIZE_RESTRICTION and students.count() >= CLASS_SIZE_RESTRICTION):
+      self.templateValue['course_status'] = 'full'
     else:
-      student = Student(key_name=user.email(), name=name, is_enrolled=True)
-    student.put()
+      # Create student record
+      name = self.request.get('form01')
+
+      # create new or re-enroll old student
+      student = Student.get_by_email(user.email())
+      if student:
+        if not student.is_enrolled:
+          student.is_enrolled = True
+          student.name = name
+      else:
+        student = Student(key_name=user.email(), name=name, is_enrolled=True)
+      student.put()
 
     # Render registration confirmation page
     self.templateValue['navbar'] = {'registration': True}
