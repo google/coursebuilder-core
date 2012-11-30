@@ -12,26 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 import webapp2
-import jinja2
-
-from controllers import servings, lessons, utils
+from controllers import servings, utils
 
 urls = [
   ('/', servings.CourseHandler),
-  ('/register', utils.RegisterHandler),
-  ('/course', servings.CourseHandler),
-  ('/unit', servings.UnitHandler),
   ('/activity', servings.ActivityHandler),
-  ('/assessment', servings.AssessmentHandler),
-  ('/forum', servings.ForumHandler),
-  ('/answer', servings.AnswerHandler),
   ('/announcements', utils.AnnouncementsHandler),
-  ('/student/home', utils.StudentProfileHandler),
+  ('/answer', servings.AnswerHandler),
+  ('/assessment', servings.AssessmentHandler),
+  ('/course', servings.CourseHandler),
+  ('/forum', servings.ForumHandler),
+  ('/register', utils.RegisterHandler),
   ('/student/editstudent', utils.StudentEditStudentHandler),
-  ('/student/unenroll', utils.StudentUnenrollHandler)
-  ]
+  ('/student/home', utils.StudentProfileHandler),
+  ('/student/unenroll', utils.StudentUnenrollHandler),
+  ('/unit', servings.UnitHandler)]
 
 app = webapp2.WSGIApplication(urls, debug=True)

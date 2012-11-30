@@ -1,22 +1,26 @@
- # Copyright 2012 Google Inc. All Rights Reserved.
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #      http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS-IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
+# Copyright 2012 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author: psimakov@google.com (Pavel Simakov)
+
 
 import logging, json
 import lessons, utils
 from models.models import Student, PageCache
 from utils import StudentHandler
 from google.appengine.api import memcache
+
 
 """
 Handler for serving course page
@@ -37,11 +41,8 @@ class CourseHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          provider = lessons.CourseHandler()
-          provider.response = self.response
-          provider.get()
-          return
-          
+          cached_page = self.delegateTo(lessons.CourseHandler())
+
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -79,8 +80,8 @@ class UnitHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          self.redirect('/course')
-          return
+          cached_page = self.delegateTo(lessons.UnitHandler())
+
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -118,8 +119,8 @@ class ActivityHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          self.redirect('/course')
-          return
+          cached_page = self.delegateTo(lessons.ActivityHandler())
+
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -150,8 +151,8 @@ class AssessmentHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          self.redirect('/course')
-          return
+          cached_page = self.delegateTo(lessons.AssessmentHandler())
+
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -176,11 +177,8 @@ class ForumHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          provider = utils.ForumHandler()
-          provider.response = self.response
-          provider.get()
-          return
-          
+          cached_page = self.delegateTo(utils.ForumHandler())
+
       self.serve(cached_page, student.key().name(), None)
     else:
       self.redirect('/register')
@@ -249,7 +247,8 @@ class AnswerHandler(StudentHandler):
           memcache.add(page_name, page.content)
           cached_page = page.content
         else:
-          self.redirect('/course')
+          cached_page = self.delegateTo(utils.AnswerHandler(type))
+
       self.serve(cached_page, student.key().name(), str(student.overall_score))
     else:
       self.redirect('/register')

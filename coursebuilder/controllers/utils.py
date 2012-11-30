@@ -22,6 +22,8 @@ template_dir = os.path.join(os.path.dirname(__file__), '../views')
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(template_dir))
 
+USER_EMAIL_PLACE_HOLDER = "{{ email }}"
+
 
 def sendWelcomeEmail(email):
   # FIXME: To automatically send welcome emails, edit this welcome message
@@ -79,6 +81,49 @@ class BaseHandler(webapp2.RequestHandler):
 Student Handler
 """
 class StudentHandler(webapp2.RequestHandler):
+  def delegateTo(self, handler):
+    """"Run another handler using system identity.
+
+
+    This method is called when a dynamic page template can't be found neither in
+    the cache nor the database. We now need to create this page using a handler
+    passed to this method. The handler must run with the exact same request
+    parameters as self, but we need to replace current user and the response."""
+
+    # create custom function for replacing the current user
+    def get_current_user_ex():
+      return users.User(email = USER_EMAIL_PLACE_HOLDER)
+
+    # create custom response.out to intercept output
+    class StringWriter:
+      def __init__(self):
+        self.buffer = []
+
+      def write(self, text):
+        self.buffer.append(text)
+
+      def getText(self):
+        return "".join(self.buffer)
+
+    class BufferedResponse:
+      def __init__(self):
+        self.out = StringWriter()
+
+    # configure handler request and response
+    handler.request = self.request
+    handler.response = BufferedResponse()
+
+    # substitute current user with the system account and run the handler
+    get_current_user_old = users.get_current_user
+    try:
+      users.get_current_user = get_current_user_ex
+      handler.get()
+    finally:
+      users.get_current_user = get_current_user_old
+
+    return handler.response.out.getText()
+
+
   def getStudent(self):
     user = users.get_current_user()
     if user:
@@ -95,10 +140,10 @@ class StudentHandler(webapp2.RequestHandler):
     # overall_score (if applicable) in the cached page before serving them to
     # users.
     if overall_score:
-      html = page.replace('test@example.com',email).replace('XX', overall_score)
+      html = page.replace(USER_EMAIL_PLACE_HOLDER, email).replace('XX', overall_score)
       self.response.out.write(html)
     else:
-      self.response.out.write(page.replace('test@example.com',email))
+      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, email))
 
 
 """
@@ -114,7 +159,7 @@ class RegisterClosedHandler(BaseHandler):
 
     self.templateValue['navbar'] = {'registration': True}
     page = jinja_environment.get_template('registration_close.html').render(self.templateValue)
-    self.response.out.write(page.replace('test@example.com',user.email()))
+    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
 """
@@ -188,20 +233,21 @@ class ForumHandler(BaseHandler):
 Handler for saving assessment answers
 """
 class AnswerHandler(BaseHandler):
+  def __init__(self, type):
+    self.type = type
+
   def get(self):
     user = users.get_current_user()
     if user:
+
       # Set template values
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
       self.templateValue['navbar'] = {'course': True}
+      self.templateValue['assessment'] = self.type
 
-      types = ['precourse', 'midcourse', 'postcourse_fail', 'postcourse_pass']
       # Render confirmation page
-      for type in types:
-        self.templateValue['assessment'] = type
-        self.renderToDatastore(
-            type + 'confirmation_page', 'test_confirmation.html')
+      self.renderToDatastore(self.type + 'confirmation_page', 'test_confirmation.html')
 
 
 class AddTaskHandler(webapp2.RequestHandler):
@@ -233,12 +279,12 @@ class StudentProfileHandler(BaseHandler):
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
       page = jinja_environment.get_template('register.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
+      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
       logging.info(student)
       self.templateValue['student'] = student
       page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
+      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
 """
@@ -259,12 +305,12 @@ class StudentEditStudentHandler(BaseHandler):
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
       page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com', user.email()))
+      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
       logging.info(student)
       self.templateValue['student'] = student
       page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
-      self.response.out.write(page.replace('test@example.com',user.email()))
+      self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
   def post(self):
     user = users.get_current_user()
@@ -297,7 +343,7 @@ class AnnouncementsHandler(BaseHandler):
 
     self.templateValue['navbar'] = {'announcements': True}
     page = jinja_environment.get_template('announcements.html').render(self.templateValue)
-    self.response.out.write(page.replace('test@example.com',user.email()))
+    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
 """
@@ -314,7 +360,7 @@ class StudentUnenrollHandler(BaseHandler):
 
     self.templateValue['navbar'] = {'registration': True}
     page = jinja_environment.get_template('unenroll_confirmation_check.html').render(self.templateValue)
-    self.response.out.write(page.replace('test@example.com',user.email()))
+    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
   def post(self):
     user = users.get_current_user()

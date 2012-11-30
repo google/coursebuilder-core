@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from models.models import Student, Unit, Lesson
+from models.models import Unit, Lesson
 from utils import BaseHandler
 from google.appengine.api import users, memcache
 
@@ -22,30 +22,26 @@ Handler for generating course page
 """
 class CourseHandler(BaseHandler):
   def get(self):
-    # Set template values for user
     user = self.getUser()
     if user:
-      student = Student.get_by_key_name(user.email().encode('utf8'))
-      if student:
-        # Get unit data and set template values
-        units = memcache.get('units')
-        if units is None:
-          units = Unit.all().order('id')
-          memcache.add('units', units)
-        self.templateValue['units'] = units
+      # Get unit data and set template values
+      units = memcache.get('units')
+      if units is None:
+        units = Unit.all().order('id')
+        memcache.add('units', units)
+      self.templateValue['units'] = units
 
-        # Set template values for nav bar
-        self.templateValue['navbar'] = {'course': True}
+      # Set template values for nav bar
+      self.templateValue['navbar'] = {'course': True}
 
-        # Set template values for user
-        user = users.get_current_user()
-        if user:
-          self.templateValue['email'] = user.email()
-          self.templateValue['logoutUrl'] = users.create_logout_url('/')
+      # Set template values for user
+      user = users.get_current_user()
+      if user:
+        self.templateValue['email'] = user.email()
+        self.templateValue['logoutUrl'] = users.create_logout_url('/')
 
-        # Render course page
-        self.renderToDatastore('course_page', 'course.html')
-
+      # Render course page
+      self.renderToDatastore('course_page', 'course.html')
 
 """
 Handler for generating class page
