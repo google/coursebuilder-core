@@ -22,6 +22,7 @@ from models.models import Student
 from models.utils import *
 from utils import BaseHandler
 from google.appengine.api import users
+from google.appengine.ext import db
 
 
 # Stores the assessment data in the student database entry
@@ -76,6 +77,17 @@ Handler for saving assessment answers
 """
 class AnswerHandler(BaseHandler):
 
+  # Find student entity and save answers
+  @db.transactional
+  def storeAssessmentTransaction(self, email, original_type, answer):
+    student = Student.get_by_email(email)
+
+    # TODO: considering storing as float for better precision
+    score = int(round(float(self.request.get('score'))))
+    assessment_type = storeAssessmentData(student, original_type, score, answer)
+    student.put()
+    return (student, assessment_type)
+
   def post(self):
     user = self.personalizePageAndGetUser()
     if not user:
@@ -92,13 +104,7 @@ class AnswerHandler(BaseHandler):
       # Log answer submission
       logging.info(student.key().name() + ':' + answer)
 
-      # Find student entity and save answers
-      student = Student.get_by_email(student.key().name())
-
-      # TODO: considering storing as float for better precision
-      score = int(round(float(self.request.get('score'))))
-      assessment_type = storeAssessmentData(student, original_type, score, answer)
-      student.put()
+      (student, assessment_type) = self.storeAssessmentTransaction(student.key().name(), original_type, answer)
 
       # Serve the confirmation page
       self.templateValue['navbar'] = {'course': True}
