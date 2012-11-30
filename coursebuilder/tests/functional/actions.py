@@ -100,7 +100,7 @@ def view_course(browser):
 
 def view_unit(browser):
   response = browser.get('/unit?unit=1&lesson=1')
-  AssertContains('Unit 1 - Test Unit 1', response.body)
+  AssertContains('Unit 1 - Introduction', response.body)
   return response
 
 
