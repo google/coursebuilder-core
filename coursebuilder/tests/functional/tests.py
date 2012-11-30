@@ -107,6 +107,8 @@ class StudentAspectTest(TestBase):
     Permissions.assert_logged_out(self)
     login(email)
 
+    Permissions.assert_unenrolled(self)
+
     logout()
     Permissions.assert_logged_out(self)
 

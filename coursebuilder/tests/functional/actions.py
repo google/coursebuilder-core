@@ -284,7 +284,7 @@ class Permissions():
   @classmethod
   def get_unenrolled_student_allowed_pages(cls):
     """Returns all pages that a logged-in, unenrolled student can see."""
-    return [view_registration, view_my_profile, view_announcements, view_preview]
+    return [view_registration, view_preview]
 
   @classmethod
   def get_unenrolled_student_denied_pages(cls):

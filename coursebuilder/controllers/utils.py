@@ -276,18 +276,17 @@ class StudentProfileHandler(BaseHandler):
       self.redirect(users.create_login_url(self.request.uri))
       return
 
+    #check for existing registration -> redirect to registration page
+    student = Student.get_enrolled_student_by_email(user.email())
+    if not student:
+      self.redirect('preview.html')
+      return
+
     self.templateValue['navbar'] = {}
-    #check for existing registration -> redirect to course page
-    e = user.email()
-    student = Student.get_by_email(e)
-    if student == None:
-      self.templateValue['student'] = None
-      self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
-      self.render('register.html')
-    else:
-      self.templateValue['student'] = student
-      self.templateValue['scores'] = getAllScores(student)
-      self.render('student_profile.html')
+    self.templateValue['student'] = student
+    self.templateValue['scores'] = getAllScores(student)
+    self.render('student_profile.html')
+
 
 """
 This function handles edits to student records by students
@@ -337,6 +336,11 @@ class AnnouncementsHandler(BaseHandler):
     user = self.personalizePageAndGetUser()
     if not user:
       self.redirect(users.create_login_url(self.request.uri))
+      return
+
+    student = Student.get_enrolled_student_by_email(user.email())
+    if not student:
+      self.redirect('preview.html')
       return
 
     self.templateValue['navbar'] = {'announcements': True}
