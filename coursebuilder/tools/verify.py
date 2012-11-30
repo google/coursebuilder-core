@@ -526,6 +526,10 @@ class SchemaHelper(object):
         "Expected an array or a dictionary.", None, path=context.FormatPath())
 
 
+def escapeQuote(value):
+  return str(value).replace("'", r"\'")
+
+
 class Unit(object):
   """A class to represent a Unit."""
 
@@ -535,6 +539,14 @@ class Unit(object):
   title = ""
   release_date = ""
   now_available = False
+
+  def ListProperties(self, name, output):
+    output.append("%s['id'] = %s;" % (name, self.id))
+    output.append("%s['type'] = '%s';" % (name, escapeQuote(self.type)))
+    output.append("%s['unit_id'] = '%s';" % (name, escapeQuote(self.unit_id)))
+    output.append("%s['title'] = '%s';" % (name, escapeQuote(self.title)))
+    output.append("%s['release_date'] = '%s';" % (name, escapeQuote(self.release_date)))
+    output.append("%s['now_available'] = %s;" % (name, str(self.now_available).lower()))
 
 
 class Lesson(object):
@@ -549,6 +561,23 @@ class Lesson(object):
   lesson_notes = ""
   lesson_video_id = ""
   lesson_objectives = ""
+
+  def ListProperties(self, name, output):
+    activity = "false"
+    if self.lesson_activity == "yes":
+      activity = "true"
+
+    output.append("%s['unit_id'] = %s;" % (name, self.unit_id))
+    output.append("%s['unit_title'] = '%s';" % (name, escapeQuote(self.unit_title)))
+
+    output.append("%s['lesson_id'] = %s;" % (name, self.lesson_id))
+    output.append("%s['lesson_title'] = '%s';" % (name, escapeQuote(self.lesson_title)))
+    output.append("%s['lesson_activity'] = %s;" % (name, activity))
+    output.append("%s['lesson_activity_name'] = '%s';" % (name, escapeQuote(self.lesson_activity_name)))
+    output.append("%s['lesson_notes'] = '%s';" % (name, escapeQuote(self.lesson_notes)))
+    output.append("%s['lesson_video_id'] = '%s';" % (name, escapeQuote(self.lesson_video_id)))
+    output.append("%s['lesson_objectives'] = '%s';" % (name, escapeQuote(self.lesson_objectives)))
+
 
   def ToIdString(self):
     return "%s.%s.%s" % (self.unit_id, self.lesson_id, self.lesson_title)
@@ -754,6 +783,7 @@ class Verifier(object):
     self.warnings = 0
 
   def VerifyUnitFields(self, units):
+    self.export.append("$units = Array();")
     for unit in units:
       if not IsOneOf(unit.now_available, [True, False]):
         self.error("Bad now_available '%s' for unit id %s; expected 'True' or 'False'" % (
@@ -774,11 +804,22 @@ class Verifier(object):
           self.error("Expected integer unit_id, found %s in unit id %s" % (
               unit.unit_id, unit.id))
 
+      self.export.append("\n$unit = Array();")
+      self.export.append("$unit.$lessons = Array();")
+      unit.ListProperties("$unit", self.export)
+      self.export.append("$units['%s'] = $unit;" % unit.id)
+
   def VerifyLessonFields(self, lessons):
+    self.export.append("$lessons = Array();")
     for lesson in lessons:
       if not IsOneOf(lesson.lesson_activity, ["yes", ""]):
         self.error("Bad lesson_activity '%s' for lesson_id %s" %
                    (lesson.lesson_activity, lesson.lesson_id))
+
+      self.export.append("\n$lesson = Array();")
+      lesson.ListProperties("$lesson", self.export)
+      self.export.append("$units['%s'].$lessons['%s'] = $lesson;" % (
+          lesson.unit_id, lesson.lesson_id))
 
   def VerifyUnitLessonRelationships(self, units, lessons):
     """Checks how units relate to lessons and otherwise."""
@@ -931,8 +972,10 @@ class Verifier(object):
     """Loads, parses and verifies all content for a course."""
 
     self.echo_func = echo_func
+    self.export = [];
 
     self.info("Started verification in: %s" % __file__)
+    self.export.append("// Course Builder Export Begin")
 
     unit_file = os.path.join(os.path.dirname(__file__), "../data/unit.csv")
     lesson_file = os.path.join(os.path.dirname(__file__), "../data/lesson.csv")
@@ -958,6 +1001,7 @@ class Verifier(object):
     self.info("Schema usage statistics: %s" % self.schema_helper.type_stats)
     self.info("Completed verification: %s warnings, %s errors." %
               (self.warnings, self.errors))
+    self.export.append("\n// Course Builder Export End");
 
     return self.errors
 
@@ -1150,5 +1194,5 @@ def RunAllUnitTests():
 
 
 RunAllUnitTests()
-Verifier().LoadAndVerifyModel(Echo)
-
+if __name__ == "__main__":
+  Verifier().LoadAndVerifyModel(Echo)
