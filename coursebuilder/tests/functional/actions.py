@@ -180,9 +180,17 @@ def view_registration(browser):
   return response
 
 
+def view_preview(browser):
+  response = browser.get('preview')
+  AssertContains(' the stakes are high.', response.body)
+  AssertContains('<li><p class="top_content">Pre-course assessment</p></li>', response.body)
+  return response
+
+
 def view_course(browser):
   response = browser.get('course')
   AssertContains(' the stakes are high.', response.body)
+  AssertContains('<a href="assessment?name=Pre">Pre-course assessment</a>', response.body)
   AssertContains(get_current_user_email(), response.body)
   return response
 
@@ -222,7 +230,7 @@ def view_forum(browser):
   return response
 
 
-def view_assesements(browser):
+def view_assessments(browser):
   for name in ['Pre', 'Mid', 'Fin']:
     response = browser.get('assessment?name=%s' % name)
     assert 'assets/js/assessment-%s.js' % name in response.body
@@ -240,7 +248,7 @@ def change_name(browser, new_name):
   check_profile(browser, new_name)
 
 
-def un_register(browser):
+def unregister(browser):
   response = browser.get('student/home')
   response = browser.click(response, 'Unenroll')
 
@@ -250,31 +258,47 @@ def un_register(browser):
 
 class Permissions():
   """Defines who can see what."""
+  @classmethod
+  def get_logged_out_allowed_pages(cls):
+    """Returns all pages that a logged-out user can see."""
+    return [view_preview]
+
+  @classmethod
+  def get_logged_out_denied_pages(cls):
+    """Returns all pages that a logged-out user can't see."""
+    return [view_announcements, view_forum, view_course, view_assessments,
+            view_unit, view_activity, view_my_profile, view_registration]
 
   @classmethod
   def get_enrolled_student_allowed_pages(cls):
-    """Returns all pages that enrolled student can see."""
+    """Returns all pages that a logged-in, enrolled student can see."""
     return [view_announcements, view_forum, view_course,
-        view_assesements, view_unit, view_activity, view_my_profile]
+        view_assessments, view_unit, view_activity, view_my_profile]
 
   @classmethod
   def get_enrolled_student_denied_pages(cls):
-    """Returns all pages that enrolled student can't see."""
-    return [view_registration]
+    """Returns all pages that a logged-in, enrolled student can't see."""
+    return [view_registration, view_preview]
 
   @classmethod
   def get_unenrolled_student_allowed_pages(cls):
-    """Returns all pages that un-enrolled student can see."""
-    return [view_registration, view_my_profile, view_announcements]
+    """Returns all pages that a logged-in, unenrolled student can see."""
+    return [view_registration, view_my_profile, view_announcements, view_preview]
 
   @classmethod
   def get_unenrolled_student_denied_pages(cls):
-    """Returns all pages that un-enrolled student can't see."""
+    """Returns all pages that a logged-in, unenrolled student can't see."""
     all = Permissions.get_enrolled_student_allowed_pages()
     for allowed in Permissions.get_unenrolled_student_allowed_pages():
       if allowed in all:
         all.remove(allowed)
     return all
+
+  @classmethod
+  def assert_logged_out(cls, browser):
+    """Check that current user can see only what is allowed to a logged-out user."""
+    AssertNoneFail(browser, Permissions.get_logged_out_allowed_pages())
+    AssertAllFail(browser, Permissions.get_logged_out_denied_pages())
 
   @classmethod
   def assert_enrolled(cls, browser):
@@ -287,3 +311,4 @@ class Permissions():
     """Check that current user can see only what is allowed to un-enrolled student."""
     AssertNoneFail(browser, Permissions.get_unenrolled_student_allowed_pages())
     AssertAllFail(browser, Permissions.get_unenrolled_student_denied_pages())
+

@@ -40,7 +40,7 @@ class StudentAspectTest(TestBase):
     check_profile(self, name1)
 
     change_name(self, name2)
-    un_register(self)
+    unregister(self)
 
     register(self, name3)
     check_profile(self, name3)
@@ -55,11 +55,23 @@ class StudentAspectTest(TestBase):
     register(self, name)
     Permissions.assert_enrolled(self)
 
-    un_register(self)
+    unregister(self)
     Permissions.assert_unenrolled(self)
 
     register(self, name)
     Permissions.assert_enrolled(self)
+
+  def testLoginAndLogout(self):
+    """Test if login and logout behave as expected."""
+    email = 'test_login_logout@example.com'
+    name = 'Test Login and Logout'
+
+    Permissions.assert_logged_out(self)
+
+    login(email)
+
+    logout()
+    Permissions.assert_logged_out(self)
 
 
 class PageCacheTest(TestBase):
@@ -89,7 +101,7 @@ class PageCacheTest(TestBase):
     logout()
 
 
-class AssesementTest(TestBase):
+class AssessmentTest(TestBase):
 
   def submitAssessment(self, name, args):
     response = self.get('assessment?name=%s' % name)
@@ -98,9 +110,9 @@ class AssesementTest(TestBase):
     AssertEquals(response.status_int, 200)
     return response
 
-  def testAssesements(self):
+  def testAssessments(self):
     """Tests assessment scores are properly submitted and summarized."""
-    email = 'test_assesements@google.com'
+    email = 'test_assessments@google.com'
     name = 'Test Assessments'
 
     pre = {'assessment_type': 'precourse',
@@ -182,7 +194,8 @@ class AssesementTest(TestBase):
     assert int(getAssessmentScore(student, 'postcourse')) == 100000
     assert int(getMetric(student, 'overall_score')) == int((0.30*2) + (0.70*100000))
 
-class CourseUrlRewritingTest(StudentAspectTest, AssesementTest):
+
+class CourseUrlRewritingTest(StudentAspectTest, AssessmentTest):
   """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
   def setUp(self):
@@ -209,3 +222,4 @@ class CourseUrlRewritingTest(StudentAspectTest, AssesementTest):
         href = '/%s' % href
       href = '%s%s' % (self.base, href)
       return href
+
