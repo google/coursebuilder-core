@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, logging
-import webapp2, jinja2
+import os, logging, urlparse, webapp2, jinja2
 from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, Email, DEFAULT_CACHE_TTL_SECS
 from google.appengine.api import users, mail, taskqueue, memcache
@@ -62,10 +61,14 @@ class ApplicationHandler(webapp2.RequestHandler):
         loader=jinja2.FileSystemLoader(template_dir))
     return jinja_environment.get_template(templateFile)
 
+  def is_absolute(self, url):
+    return bool(urlparse.urlparse(url).scheme)
+
   def redirect(self, location):
     """Takes relative 'location' and adds current namespace URL prefix to it."""
-    if self.app_context.getSlug() and self.app_context.getSlug() != '/':
-      location = '%s%s' % (self.app_context.getSlug(), location)
+    if not self.is_absolute(location):
+      if self.app_context.getSlug() and self.app_context.getSlug() != '/':
+        location = '%s%s' % (self.app_context.getSlug(), location)
     super(ApplicationHandler, self).redirect(location)
 
 
