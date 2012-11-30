@@ -783,7 +783,7 @@ class Verifier(object):
     self.warnings = 0
 
   def VerifyUnitFields(self, units):
-    self.export.append("$units = Array();")
+    self.export.append("units = Array();")
     for unit in units:
       if not IsOneOf(unit.now_available, [True, False]):
         self.error("Bad now_available '%s' for unit id %s; expected 'True' or 'False'" % (
@@ -804,21 +804,21 @@ class Verifier(object):
           self.error("Expected integer unit_id, found %s in unit id %s" % (
               unit.unit_id, unit.id))
 
-      self.export.append("\n$unit = Array();")
-      self.export.append("$unit.$lessons = Array();")
-      unit.ListProperties("$unit", self.export)
-      self.export.append("$units['%s'] = $unit;" % unit.id)
+      self.export.append("\nunit = Array();")
+      self.export.append("unit.lessons = Array();")
+      unit.ListProperties("unit", self.export)
+      self.export.append("units[%s] = unit;" % unit.id)
 
   def VerifyLessonFields(self, lessons):
-    self.export.append("$lessons = Array();")
+    self.export.append("lessons = Array();")
     for lesson in lessons:
       if not IsOneOf(lesson.lesson_activity, ["yes", ""]):
         self.error("Bad lesson_activity '%s' for lesson_id %s" %
                    (lesson.lesson_activity, lesson.lesson_id))
 
-      self.export.append("\n$lesson = Array();")
-      lesson.ListProperties("$lesson", self.export)
-      self.export.append("$units['%s'].$lessons['%s'] = $lesson;" % (
+      self.export.append("\nlesson = Array();")
+      lesson.ListProperties("lesson", self.export)
+      self.export.append("units[%s].lessons[%s] = lesson;" % (
           lesson.unit_id, lesson.lesson_id))
 
   def VerifyUnitLessonRelationships(self, units, lessons):

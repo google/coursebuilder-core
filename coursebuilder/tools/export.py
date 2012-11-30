@@ -14,7 +14,7 @@
 #
 # @author: psimakov@google.com (Pavel Simakov)
 
-"""Allows export of Lessons and Units to other JavaScript or PHP systems."""
+"""Allows export of Lessons and Units to other systems via JavaScript code."""
 
 import verify, os
 from datetime import datetime
@@ -40,11 +40,11 @@ if __name__ == "__main__":
 
   verifier = verify.Verifier()
   errors = verifier.LoadAndVerifyModel(Echo)
-  if erros and len(errors) != 0:
+  if errors and len(errors) != 0:
     raise Exception(
         "Please fix all errors reported by tools/verify.py before continuing!")
 
-  fname = os.path.join(os.getcwd(), "coursebuilder-manifest.js")
+  fname = os.path.join(os.getcwd(), "coursebuilder_course.js")
   ExportToFile(fname, "\n".join(verifier.export))
   print "Export complete to %s" % fname
 
