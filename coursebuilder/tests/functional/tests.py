@@ -46,8 +46,8 @@ class StudentAspectTest(TestBase):
     check_profile(self, name3)
 
   def testLimitedClassSizeRegistration(self):
-    """Test student registration with CLASS_SIZE_RESTRICTION."""
-    utils.CLASS_SIZE_RESTRICTION = 2
+    """Test student registration with MAX_CLASS_SIZE."""
+    utils.MAX_CLASS_SIZE = 2
 
     email1 = '111@example.com'
     name1 = 'student1'
@@ -65,21 +65,11 @@ class StudentAspectTest(TestBase):
     logout()
 
     login(email3)
-
-    # registration should fail for the third user
-    class MustFail(Exception):
-      pass
-    try:
-      register(self, name3)
-      raise MustFail("Registration should fail for " + name3 + " but didn't")
-    except MustFail as e:
-      raise e
-    except Exception:
-      pass
+    AssertFails(lambda: register(self, name3))
     logout()
 
     # now unset the limit, and registration should succeed
-    utils.CLASS_SIZE_RESTRICTION = None
+    utils.MAX_CLASS_SIZE = None
     login(email3)
     register(self, name3)
     logout()

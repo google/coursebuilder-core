@@ -20,12 +20,12 @@ from google.appengine.ext import db, deferred
 from models.utils import getAllScores
 
 
-# FIXME: set CLASS_SIZE_RESTRICTION to a positive integer if you want
+# FIXME: set MAX_CLASS_SIZE to a positive integer if you want
 # to restrict the course size to a maximum of N students.
 # Note, though, that counting the students in this way uses a lot of database
 # calls that may cost you quota and money.
-CLASS_SIZE_RESTRICTION = None
-#CLASS_SIZE_RESTRICTION = 250000
+MAX_CLASS_SIZE = None
+# MAX_CLASS_SIZE = 250000
 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
 
@@ -211,8 +211,7 @@ class RegisterHandler(BaseHandler):
       self.redirect(users.create_login_url(self.request.uri))
       return
 
-    students = Student.all(keys_only=True)
-    if (CLASS_SIZE_RESTRICTION and students.count() >= CLASS_SIZE_RESTRICTION):
+    if (MAX_CLASS_SIZE and Student.all(keys_only=True).count() >= MAX_CLASS_SIZE):
       self.templateValue['course_status'] = 'full'
     else:
       # Create student record
