@@ -804,7 +804,8 @@ class Verifier(object):
           self.error("Expected integer unit_id, found %s in unit id %s" % (
               unit.unit_id, unit.id))
 
-      self.export.append("\nunit = Array();")
+      self.export.append("")
+      self.export.append("unit = Array();")
       self.export.append("unit.lessons = Array();")
       unit.ListProperties("unit", self.export)
       self.export.append("units[%s] = unit;" % unit.id)
@@ -816,7 +817,8 @@ class Verifier(object):
         self.error("Bad lesson_activity '%s' for lesson_id %s" %
                    (lesson.lesson_activity, lesson.lesson_id))
 
-      self.export.append("\nlesson = Array();")
+      self.export.append("")
+      self.export.append("lesson = Array();")
       lesson.ListProperties("lesson", self.export)
       self.export.append("units[%s].lessons[%s] = lesson;" % (
           lesson.unit_id, lesson.lesson_id))

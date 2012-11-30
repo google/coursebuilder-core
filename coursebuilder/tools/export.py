@@ -14,7 +14,7 @@
 #
 # @author: psimakov@google.com (Pavel Simakov)
 
-"""Allows export of Lessons and Units to other systems via JavaScript code."""
+"""Allows export of Lessons and Units to other systems."""
 
 import verify, os
 from datetime import datetime
@@ -26,14 +26,43 @@ def Echo(x):
   pass
 
 
-def ExportToFile(fname, text):
-  file = open(fname, 'w')
-  file.write("// Course Builder %s Export on %s\n" % (RELEASE_TAG, datetime.utcnow()))
+def ExportToJavaScript(fname, text, date):
+  file = open("%s.js" % fname, 'w')
+  file.write("// Course Builder %s JavaScript Export on %s\n" % (RELEASE_TAG, date))
   file.write("// begin\n")
-  file.write(text)
+  file.write("\n".join(text))
   file.write("\n// end");
   file.close()
 
+
+def ExportToPython(fname, lines, date):
+  code = []
+  code.append("class Array(dict):")
+  code.append("  pass")
+  code.append("")
+  code.append("true = True")
+  code.append("false = False")
+  code.append("")
+  code.append("def init():")
+  for line in lines:
+    code.append("  %s" % line)
+  code.append("")
+  code.append("if __name__ == \"__main__\":")
+  code.append("  init()")    
+    
+  file = open("%s.py" % fname, 'w')
+  file.write("# Course Builder %s Python Export on %s\n" % (RELEASE_TAG, date))
+  file.write("# begin\n")
+  file.write("\n".join(code))
+  file.write("\n# end");
+  file.close()
+
+
+def ExportToFile(fname, text):
+  date = datetime.utcnow()
+  ExportToJavaScript(fname, text, date)
+  ExportToPython(fname, text, date)
+  
 
 if __name__ == "__main__":
   print "Export started using %s" % os.path.realpath(__file__)
@@ -44,7 +73,7 @@ if __name__ == "__main__":
     raise Exception(
         "Please fix all errors reported by tools/verify.py before continuing!")
 
-  fname = os.path.join(os.getcwd(), "coursebuilder_course.js")
-  ExportToFile(fname, "\n".join(verifier.export))
+  fname = os.path.join(os.getcwd(), "coursebuilder_course")
+  ExportToFile(fname, verifier.export)
   print "Export complete to %s" % fname
 
