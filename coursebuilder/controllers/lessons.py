@@ -15,7 +15,7 @@
 
 from models.models import Unit, Lesson
 from utils import BaseHandler
-from google.appengine.api import users, memcache
+from google.appengine.api import users
 
 """
 Handler for generating course page
@@ -25,10 +25,7 @@ class CourseHandler(BaseHandler):
     user = self.getUser()
     if user:
       # Get unit data and set template values
-      units = memcache.get('units')
-      if units is None:
-        units = Unit.all().order('id')
-        memcache.add('units', units)
+      units = Unit.getUnits()
       self.templateValue['units'] = units
 
       # Set template values for nav bar
@@ -64,18 +61,11 @@ class UnitHandler(BaseHandler):
     self.templateValue['lesson_id'] = lesson_id
 
     # Set template values for a unit and its lesson entities
-    units = memcache.get('units')
-    if units is None:
-      units = Unit.all().order('id')
-      memcache.add('units', units)
-    for unit in units:
+    for unit in Unit.getUnits():
       if unit.unit_id == str(unit_id):
         self.templateValue['units'] = unit
 
-    lessons = memcache.get('lessons' + str(unit_id))
-    if lessons is None:
-      lessons = Lesson.all().filter('unit_id =', unit_id).order('id')
-      memcache.add('lessons' + str(unit_id), lessons)
+    lessons = Unit.getLessons(unit_id)
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav bar
@@ -127,18 +117,11 @@ class ActivityHandler(BaseHandler):
     self.templateValue['lesson_id'] = lesson_id
 
     # Set template values for a unit and its lesson entities
-    units = memcache.get('units')
-    if units is None:
-      units = Unit.all().order('id')
-      memcache.add('units', units)
-    for unit in units:
+    for unit in Unit.getUnits():
       if unit.unit_id == str(unit_id):
         self.templateValue['units'] = unit
 
-    lessons = memcache.get('lessons' + str(unit_id))
-    if lessons is None:
-      lessons = Lesson.all().filter('unit_id =', unit_id).order('id')
-      memcache.add('lessons' + str(unit_id), lessons)
+    lessons = Unit.getLessons(unit_id)
     self.templateValue['lessons'] = lessons
 
     # Set template values for nav-x bar

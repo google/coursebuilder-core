@@ -14,6 +14,8 @@
 
 import datetime
 from google.appengine.ext import db
+from google.appengine.api import users, memcache
+
 
 class Student(db.Model):
   """Student profile."""
@@ -45,6 +47,22 @@ class Unit(db.Model):
   title = db.StringProperty()
   release_date = db.StringProperty()
   now_available = db.BooleanProperty()
+  
+  @classmethod
+  def getUnits(cls):
+    units = memcache.get('units')
+    if units is None:
+      units = Unit.all().order('id')
+      memcache.add('units', units)
+    return units
+    
+  @classmethod
+  def getLessons(cls, unit_id):
+    lessons = memcache.get('lessons' + str(unit_id))
+    if lessons is None:
+      lessons = Lesson.all().filter('unit_id =', unit_id).order('id')
+      memcache.add('lessons' + str(unit_id), lessons)
+    return lessons
 
 class Lesson(db.Model):
   """Lesson metadata."""
