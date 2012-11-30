@@ -172,6 +172,7 @@ def check_profile(browser, name):
   AssertContains('Email', response.body)
   AssertContains(name, response.body)
   AssertContains(get_current_user_email(), response.body)
+  return response
 
 
 def view_registration(browser):
@@ -248,7 +249,7 @@ def change_name(browser, new_name):
   check_profile(browser, new_name)
 
 
-def unregister(browser):
+def un_register(browser):
   response = browser.get('student/home')
   response = browser.click(response, 'Unenroll')
 

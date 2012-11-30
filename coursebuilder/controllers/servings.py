@@ -141,8 +141,11 @@ class PreviewHandler(StudentHandler):
   def get(self):
     user = users.get_current_user()
     if user:
-      page = self.getOrCreatePage('loggedin_preview_page', utils.CoursePreviewHandler())
-      self.serve(page, user.email())
+      if Student.get_enrolled_student_by_email(user.email()):
+        self.redirect('/course')
+      else:
+        page = self.getOrCreatePage('loggedin_preview_page', utils.CoursePreviewHandler())
+        self.serve(page, user.email())
     else:
       page = self.getOrCreatePage('anonymous_preview_page', utils.CoursePreviewHandler())
       self.serve(page)
