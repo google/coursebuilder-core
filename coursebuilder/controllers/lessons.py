@@ -98,28 +98,17 @@ class UnitHandler(StudentHandler):
         # Set template values for back and next nav buttons
         if lesson_id == 1:
           self.templateValue['back_button_url'] = ''
-          if lessons[lesson_id - 1].activity:
-            self.templateValue['next_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id)
-          else:
-            self.templateValue['next_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id + 1)
-        elif lesson_id == lessons.count():
-          if lessons[lesson_id - 2].activity:
-            self.templateValue['back_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
-          else:
-            self.templateValue['back_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
-          if lessons[lesson_id - 1].activity:
-            self.templateValue['next_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id)
-          else:
-            self.templateValue['next_button_url'] = ''
+        elif lessons[lesson_id - 2].activity:
+          self.templateValue['back_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
         else:
-          if lessons[lesson_id - 2].activity:
-            self.templateValue['back_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
-          else:
-            self.templateValue['back_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
-          if lessons[lesson_id - 1].activity:
-            self.templateValue['next_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id)
-          else:
-            self.templateValue['next_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id + 1)
+          self.templateValue['back_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id - 1)
+
+        if lessons[lesson_id - 1].activity:
+          self.templateValue['next_button_url'] = '/activity?unit=' + str(unit_id) + '&lesson=' + str(lesson_id)
+        elif lesson_id == lessons.count():
+          self.templateValue['next_button_url'] = ''
+        else:
+          self.templateValue['next_button_url'] = '/unit?unit=' + str(unit_id) + '&lesson=' + str(lesson_id + 1)
 
         # Set template values for user
         user = users.get_current_user()
