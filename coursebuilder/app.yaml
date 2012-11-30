@@ -27,8 +27,6 @@ handlers:
 - url: /favicon.ico
   static_files: assets/img/favicon.ico
   upload: assets/img/favicon.ico
-- url: /assets
-  static_dir: assets
 - url: /.*
   script: main.app
   login: required

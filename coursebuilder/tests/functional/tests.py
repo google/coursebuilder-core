@@ -44,7 +44,8 @@ class BaseTestClass(unittest.TestCase):
   def setUp(self):
     EmptyEnviron()
     import main
-    app = webapp2.WSGIApplication(main.urls, debug=True)
+    main.debug = True
+    app = main.app
     self.testapp = webtest.TestApp(app)
     self.testbed = testbed.Testbed()
     self.testbed.activate()
@@ -72,3 +73,18 @@ class RegistrationTest(BaseTestClass):
     response = response.forms[0].submit()
     self.assertEqual(response.status_int, 200)
 
+    response = self.testapp.get('/announcements')
+    assert 'Example Announcement' in response.body
+    self.assertEqual(response.status_int, 200)
+
+    response = self.testapp.get('/course')
+    assert 'Google Search makes it amazingly easy to find information' in response.body
+    self.assertEqual(response.status_int, 200)
+
+    response = self.testapp.get('/forum')
+    assert 'forum_embed' in response.body
+    self.assertEqual(response.status_int, 200)
+
+    response = self.testapp.get('/student/home')
+    assert 'Course progress related information' in response.body
+    self.assertEqual(response.status_int, 200)

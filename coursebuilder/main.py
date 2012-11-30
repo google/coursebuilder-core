@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import webapp2
-from controllers import servings, utils
+import appengine_config, webapp2
+from controllers import servings, sites, utils
+
+# FIXME: set to 'False' before going live
+debug = True
 
 urls = [
   ('/', servings.CourseHandler),
@@ -29,4 +32,7 @@ urls = [
   ('/student/unenroll', utils.StudentUnenrollHandler),
   ('/unit', servings.UnitHandler)]
 
-app = webapp2.WSGIApplication(urls, debug=True)
+sites.ApplicationRequestHandler.bind(urls)
+
+app = webapp2.WSGIApplication(
+    [(r'(.*)', sites.ApplicationRequestHandler)], debug=debug)

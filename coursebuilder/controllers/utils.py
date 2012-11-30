@@ -14,14 +14,11 @@
 
 import os, logging
 import webapp2, jinja2
-
+from jinja2.exceptions import TemplateNotFound
 from models.models import Student, Unit, PageCache, Email
 from google.appengine.api import users, mail, memcache, taskqueue
 from google.appengine.ext import db, deferred
 
-template_dir = os.path.join(os.path.dirname(__file__), '../views')
-jinja_environment = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(template_dir))
 
 USER_EMAIL_PLACE_HOLDER = "{{ email }}"
 
@@ -43,13 +40,57 @@ def sendWelcomeEmail(email):
   message.send()
 
 
+"""A handler that is aware of the application context."""
+class ApplicationHandler(webapp2.RequestHandler):
+  def getTemplate(self, templateFile):
+    """Computes the location of template files for the current namespace."""
+    template_dir = self.app_context.getTemplateHome()
+    jinja_environment = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(template_dir))
+    return jinja_environment.get_template(templateFile)
+
+  def redirect(self, location):
+    """Takes relative 'location' and adds current namespace URL prefix to it."""
+    if self.app_context.getSlug() and self.app_context.getSlug() != '/':
+      location = '%s%s' % (self.app_context.getSlug(), location)
+    super(ApplicationHandler, self).redirect(location)
+
+
+"""A class that handles simple static templates."""
+class TemplateHandler(ApplicationHandler):
+  def __init__(self, filename):
+    super(TemplateHandler, self).__init__()
+    self.filename = filename
+
+  def get(self):
+    templateValue = {}
+    templateValue['navbar'] = {}
+
+    user = users.get_current_user()
+    if user:
+      templateValue['email'] = user.email()
+      templateValue['logoutUrl'] = users.create_logout_url('/')
+
+    try:
+      template = self.getTemplate(self.filename)
+    except TemplateNotFound:
+      self.error(404)
+      return
+    except Exception as e:
+      raise Exception('Failed to render template \'%s\' in location \'%s\'.' % (
+          self.filename, self.app_context.getTemplateHome()), e)
+
+    page = template.render(templateValue)
+    self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
+
+
 """
 Base handler
 """
-class BaseHandler(webapp2.RequestHandler):
-  templateValue = {}
-  user = users.get_current_user()
-  logging.info(user)
+class BaseHandler(ApplicationHandler):
+  def __init__(self):
+    super(BaseHandler, self).__init__()
+    self.templateValue = {}
 
   def getUser(self):
     """Validate user exists."""
@@ -60,12 +101,12 @@ class BaseHandler(webapp2.RequestHandler):
       return user
 
   def render(self, templateFile):
-    template = jinja_environment.get_template(templateFile)
+    template = self.getTemplate(templateFile)
     self.response.out.write(template.render(self.templateValue))
 
   # Evaluate page template, store result in datastore, and update memcache
   def renderToDatastore(self, name, templateFile):
-    template = jinja_environment.get_template(templateFile)
+    template = self.getTemplate(templateFile)
     page_cache = PageCache.get_by_key_name(name)
     if page_cache:
       page_cache.content = template.render(self.templateValue)
@@ -81,7 +122,7 @@ class BaseHandler(webapp2.RequestHandler):
 """
 Student Handler
 """
-class StudentHandler(webapp2.RequestHandler):
+class StudentHandler(ApplicationHandler):
   def delegateTo(self, handler):
     """"Run another handler using system identity.
 
@@ -111,6 +152,7 @@ class StudentHandler(webapp2.RequestHandler):
         self.out = StringWriter()
 
     # configure handler request and response
+    handler.app_context = self.app_context
     handler.request = self.request
     handler.response = BufferedResponse()
 
@@ -162,7 +204,7 @@ class RegisterClosedHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     self.templateValue['navbar'] = {'registration': True}
-    page = jinja_environment.get_template('registration_close.html').render(self.templateValue)
+    page = self.getTemplate('registration_close.html').render(self.templateValue)
     self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
@@ -246,6 +288,7 @@ Handler for saving assessment answers
 """
 class AnswerHandler(BaseHandler):
   def __init__(self, type):
+    super(AnswerHandler, self).__init__()
     self.type = type
 
   def get(self):
@@ -262,7 +305,7 @@ class AnswerHandler(BaseHandler):
       self.renderToDatastore(self.type + 'confirmation_page', 'test_confirmation.html')
 
 
-class AddTaskHandler(webapp2.RequestHandler):
+class AddTaskHandler(ApplicationHandler):
   def get(self):
     log = ''
     emails = EmailList.all().fetch(1000)
@@ -290,12 +333,12 @@ class StudentProfileHandler(BaseHandler):
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
-      page = jinja_environment.get_template('register.html').render(self.templateValue)
+      page = self.getTemplate('register.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
       logging.info(student)
       self.templateValue['student'] = student
-      page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
+      page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
@@ -316,12 +359,12 @@ class StudentEditStudentHandler(BaseHandler):
     if student == None:
       self.templateValue['student'] = None
       self.templateValue['errormsg'] = 'Error: Student with email ' + e + ' can not be found on the roster.'
-      page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
+      page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
     else:
       logging.info(student)
       self.templateValue['student'] = student
-      page = jinja_environment.get_template('student_profile.html').render(self.templateValue)
+      page = self.getTemplate('student_profile.html').render(self.templateValue)
       self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
   def post(self):
@@ -354,7 +397,7 @@ class AnnouncementsHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     self.templateValue['navbar'] = {'announcements': True}
-    page = jinja_environment.get_template('announcements.html').render(self.templateValue)
+    page = self.getTemplate('announcements.html').render(self.templateValue)
     self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
 
@@ -369,7 +412,7 @@ class StudentUnenrollHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     self.templateValue['navbar'] = {'registration': True}
-    page = jinja_environment.get_template('unenroll_confirmation_check.html').render(self.templateValue)
+    page = self.getTemplate('unenroll_confirmation_check.html').render(self.templateValue)
     self.response.out.write(page.replace(USER_EMAIL_PLACE_HOLDER, user.email()))
 
   def post(self):
@@ -385,5 +428,5 @@ class StudentUnenrollHandler(BaseHandler):
       student.is_enrolled = False
       student.put()
       memcache.delete(email)
-    page = jinja_environment.get_template('unenroll_confirmation.html').render(self.templateValue)
+    page = self.getTemplate('unenroll_confirmation.html').render(self.templateValue)
     self.response.out.write(page)
