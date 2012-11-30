@@ -26,6 +26,15 @@ class Student(db.Model):
   final_score = db.IntegerProperty()
   overall_score = db.IntegerProperty()
   name = db.StringProperty()
+  is_enrolled = db.BooleanProperty()
+
+  @classmethod
+  def get_enrolled_student_by_email(cls, email):
+    student = Student.get_by_key_name(email.encode('utf8'))
+    if student and student.is_enrolled:
+      return student
+    else:
+      return None
 
 
 class Unit(db.Model):
@@ -61,15 +70,3 @@ class Email(db.Model):
   subject = db.TextProperty()
   body = db.TextProperty()
   due_date = db.StringProperty()
-
-class UnenrolledStudents(db.Model):
-  """Unenrolled Student profile."""
-  enrolled_date = db.DateTimeProperty(auto_now_add=True)
-  precourse_answer = db.TextProperty()
-  precourse_score = db.IntegerProperty()
-  midterm_answer = db.TextProperty()
-  final_answer = db.TextProperty()
-  midterm_score = db.IntegerProperty()
-  final_score = db.IntegerProperty()
-  overall_score = db.IntegerProperty()
-  name = db.StringProperty()

@@ -14,7 +14,8 @@
 
 import os, logging
 import webapp2, jinja2
-from models.models import Student, Unit, PageCache, Email, UnenrolledStudents
+
+from models.models import Student, Unit, PageCache, Email
 from google.appengine.api import users, mail, memcache, taskqueue
 from google.appengine.ext import db, deferred
 
@@ -124,13 +125,16 @@ class StudentHandler(webapp2.RequestHandler):
     return handler.response.out.getText()
 
 
-  def getStudent(self):
+  def getEnrolledStudent(self):
     user = users.get_current_user()
+
     if user:
-      student = memcache.get(user.email())
+      email = user.email()
+      student = memcache.get(email)
       if not student:
-        student = Student.get_by_key_name(user.email())
-        memcache.set(user.email(), student)
+        student = Student.get_enrolled_student_by_email(email)
+        if student:
+          memcache.set(email, student)
       return student
     else:
       self.redirect(users.create_login_url(self.request.uri))
@@ -175,11 +179,11 @@ class RegisterHandler(BaseHandler):
     navbar = {'registration': True}
     self.templateValue['navbar'] = navbar
     # Check for existing registration -> redirect to course page
-    student = Student.get_by_key_name(user.email())
-    if student is None:
-      self.render('register.html')
-    else:
+    student = Student.get_enrolled_student_by_email(user.email())
+    if student:
       self.redirect('/course')
+    else:
+      self.render('register.html')
 
   def post(self):
     user = users.get_current_user()
@@ -200,7 +204,15 @@ class RegisterHandler(BaseHandler):
 
     # Create student record
     name = self.request.get('form01')
-    student = Student(key_name=user.email(),name=name)
+
+    # If a student un-enrolls and then tries to re-enroll, then DELETE the
+    # old entry first or else the system gets confused ...
+    existing_student = Student.get_by_key_name(user.email())
+    if existing_student:
+      db.delete(existing_student)
+      memcache.delete(user.email())
+
+    student = Student(key_name=user.email(), name=name, is_enrolled=True)
     student.put()
 
     # FIXME: Uncomment the following 2 lines, edit the message in the sendWelcomeEmail
@@ -352,8 +364,6 @@ Handler for students to unenroll themselves
 class StudentUnenrollHandler(BaseHandler):
   def get(self):
     user = users.get_current_user()
-    email = user.email()
-    student = Student.get_by_key_name(email)
     if user:
       self.templateValue['email'] = user.email()
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
@@ -370,15 +380,10 @@ class StudentUnenrollHandler(BaseHandler):
       self.templateValue['logoutUrl'] = users.create_logout_url("/")
 
     # Update student record
-    student = Student.get_by_key_name(email)
-    dict = {}
+    student = Student.get_enrolled_student_by_email(email)
     if student:
-      db.to_dict(student, dict)
-      un_student = UnenrolledStudents(key_name=email, **dict)
-      un_student.put()
-      db.delete(student)
+      student.is_enrolled = False
+      student.put()
       memcache.delete(email)
-    #self.redirect('/student/register')
     page = jinja_environment.get_template('unenroll_confirmation.html').render(self.templateValue)
     self.response.out.write(page)
-

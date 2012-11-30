@@ -29,7 +29,7 @@ class CourseHandler(StudentHandler):
 
   def get(self):
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Serve the course page from memcache if possible, other from datastore
       page_name = 'course_page'
@@ -68,7 +68,7 @@ class UnitHandler(StudentHandler):
       lesson_id = int(l)
 
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Serve the lesson page from memcache if possible, other from datastore
       page_name = 'lesson%s%s_page' % (class_id, lesson_id)
@@ -107,7 +107,7 @@ class ActivityHandler(StudentHandler):
       lesson_id = int(l)
 
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Serve the activity page from memcache if possible, other from datastore
       page_name = 'activity' + str(class_id) + str(lesson_id) + '_page'
@@ -139,7 +139,7 @@ class AssessmentHandler(StudentHandler):
     name = n
 
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Serve the assessment page from memcache if possible, other from datastore
       page_name = 'assessment' + name + '_page'
@@ -165,7 +165,7 @@ class ForumHandler(StudentHandler):
 
   def get(self):
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Serve the forum page from memcache if possible, other from datastore
       page_name = 'forum_page'
@@ -195,7 +195,7 @@ class AnswerHandler(StudentHandler):
     type = self.request.get('assessment_type')
 
     # Check for enrollment status
-    student = self.getStudent()
+    student = self.getEnrolledStudent()
     if student:
       # Log answer submission
       logging.info(student.key().name() + ':' + answer)
