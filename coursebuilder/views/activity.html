@@ -35,7 +35,6 @@
       {% endfor %}
         <!-- FIXME: create a link to you Google+ page by inserting its id below.  -->
         <li><g:plus href="https://plus.google.com/[GOOGLE+_PAGE_ID_HERE]" rel="publisher" width="131" height="131" theme="light"></g:plus></li>
--->
     </ul>
   </div>
 
@@ -44,6 +43,7 @@
       {% if lesson.id == lesson_id %}
 
         <div style="padding-bottom: 20px;">
+
           <div class="gcb-aside">
             <div class="gcb-cols">
               <div class="gcb-col-7">
@@ -58,24 +58,26 @@
                 </p>
               </div>
             </div><!-- /gcb-cols -->
-              <!-- <script>{{ lesson.activity }}</script> -->
-        <div style="width: 785px;" id="activityContents"></div>
+
+            <!-- <script>{{ lesson.activity }}</script> -->
+            <div style="width: 785px;" id="activityContents">
+            </div>
 
           </div><!-- /gcb-aside -->
 
           <div class="gcb-button-box">
-          <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
-            {% if back_button_url %}
-              <a href="{{ back_button_url }}"> Back </a>
-            {% endif %}
-          </div>
-          <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
-            {% if next_button_url %}
-              <a href="{{ next_button_url }}"> Next </a>
-            {% else %}
-              <a href="course"> End </a>
-            {% endif %}
-          </div>
+            <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+              {% if back_button_url %}
+                <a href="{{ back_button_url }}"> Back </a>
+              {% endif %}
+            </div>
+            <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+              {% if next_button_url %}
+                <a href="{{ next_button_url }}"> Next </a>
+              {% else %}
+                <a href="course"> End </a>
+              {% endif %}
+            </div>
           </div>
 
         </div>
