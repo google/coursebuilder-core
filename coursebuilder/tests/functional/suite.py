@@ -27,6 +27,9 @@ from models.models import Unit, Lesson
 from google.appengine.ext import testbed
 
 
+EXPECTED_TEST_COUNT = 2
+
+
 def EmptyEnviron():
   os.environ['AUTH_DOMAIN'] = 'example.com'
   os.environ['SERVER_NAME'] = 'localhost'
@@ -86,6 +89,11 @@ def main():
   dev_appserver.fix_sys_path()
   suite = unittest.TestLoader().loadTestsFromModule(tests)
   result = unittest.TextTestRunner(verbosity=2).run(suite)
+
+  if result.testsRun != EXPECTED_TEST_COUNT:
+    raise Exception(
+        'Expected %s tests to be run, not %s.' % (EXPECTED_TEST_COUNT, result.testsRun))
+  
   if len(result.errors) != 0 or len(result.failures) != 0:
     raise Exception(
         "Functional test suite failed: %s errors, %s failures of %s tests run." % (
