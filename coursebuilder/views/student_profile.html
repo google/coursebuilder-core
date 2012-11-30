@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="gcb-main">
+  <div class="gcb-article tab-content">
+    <div class="gcb-aside">
+      <p style="margin: 20px 0px;">
+        <b>Course progress related information : </b>
+      </p>
+      {% if student %}
+      <table>
+       <tr><td>Enrolled Date: </td><td>{{ student.enrolled_date }}</td></tr>
+      <tr><td>Email: </td><td>{{ student.key().name() }}</td></tr>
+      <tr><td>Certificate Name: </td><td>{{ student.name }}</td></tr>
+      <tr><td>Pre-class Assessment: </td><td>
+        {% if student.preclass_answer %}
+          Completed</td></tr>
+        {% endif %}
+      <tr><td>Mid-class Assessment Score: </td><td>
+        {% if student.midterm_score %}
+          {{ student.midterm_score}}</td></tr>
+        {% endif %}
+      <tr><td>Post-class Assessment Score: </td><td>
+        {% if student.final_score %}
+          {{ student.final_score}}</td></tr>
+        {% endif %}
+      <tr><td>Overall Score: </td><td>
+        {% if student.overall_score %}
+          {{ student.overall_score}}</td></tr>
+        {% endif %}
+      </table>
+
+        <form action='/student/editstudent' method='post'>
+        <fieldset>
+          <ul>
+            <li>
+              <label for="name">New Name (for the certificate upon passing the course)</label>
+              <input name="name" type="text">
+            </li>
+            <input type="hidden" name="email" value="{{ student.key().name() }}">
+          </ul>
+        </fieldset>
+        <button class="gcb-button" type="submit">Save Changes</button>
+        <a href="/student/home" class="gcb-button" type="submit">Cancel</a>
+      </form>
+
+      <a href="/student/unenroll" class="gcb-button" type="submit">Unenroll</a>
+      <!--
+      <form action='/student/unenroll' method='post'>
+        <input type="hidden" name="email" value="{{ student.key().name() }}">
+        <button class="gcb-button" type="submit">Unenroll</button>
+      </form>
+      -->
+
+      {% else %}
+      <p>Student profile not found ...</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -17,6 +17,13 @@ handlers:
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
+- url: /admin/.*
+  script: main.app
+  login: admin
+- url: /_ah/dev_admin(/.*)?  # provides interactive console
+  script: $PYTHON_LIB/google/appengine/ext/admin
+  login: admin
+  secure: always
 - url: /favicon.ico
   static_files: assets/img/favicon.ico
   upload: assets/img/favicon.ico

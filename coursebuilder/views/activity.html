@@ -21,18 +21,21 @@
     <ul>
       {% for lesson in lessons %}
         <li>
-	  <a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >Lesson {{ lesson.id }}<br>{{ lesson.title }}</a>
+          <a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >{{ unit_id}}.{{ lesson.id }} {{ lesson.title }}</a>
           {% if lesson.activity %}
-	    <ul><li
-	      {% if lesson.id == lesson_id %}
-	        class="active"
-	    > Activity </li></ul>
-	      {% else %}
-	    ><a href="/activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
-	      {% endif %}
-	  {% endif %}
-	</li>
+            <ul><li
+              {% if lesson.id == lesson_id %}
+                class="active"
+            > Activity </li></ul>
+              {% else %}
+            ><a href="/activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
+              {% endif %}
+          {% endif %}
+        </li>
       {% endfor %}
+        <!-- FIXME: create a link to you Google+ page by inserting its id below.  -->
+        <li><g:plus href="https://plus.google.com/[GOOGLE+_PAGE_ID_HERE]" rel="publisher" width="131" height="131" theme="light"></g:plus></li>
+-->
     </ul>
   </div>
 
@@ -41,18 +44,21 @@
       {% if lesson.id == lesson_id %}
 
         <div style="padding-bottom: 20px;">
-	  <div class="gcb-aside">
-	    <div class="gcb-cols">
-	      <div class="gcb-col-7">
+          <div class="gcb-aside">
+            <div class="gcb-cols">
+              <div class="gcb-col-7">
                 <p class="lesson_title">{{ lesson.activity_title }}</p>
-	      </div>
-	      <div class="gcb-col-3">
-	        <p style="float:right; margin-top: 0px;">
-	          <a class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">Text Version</a>
-	        </p>
-	      </div>
-	    </div><!-- /gcb-cols -->
-	      <!-- <script>{{ lesson.activity }}</script> -->
+              </div>
+              <div class="gcb-col-3">
+                <p style="float:right; margin-top: 0px; margin-left: 10px;">
+                  <a class="gcb-button maia-button-primary" href="{{ lesson.slides }}" target="_blank">Slides</a>
+                </p>
+                <p style="float:right; margin-top: 0px;">
+                  <a class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">Text Version</a>
+                </p>
+              </div>
+            </div><!-- /gcb-cols -->
+              <!-- <script>{{ lesson.activity }}</script> -->
         <div style="width: 785px;" id="activityContents"></div>
 
           </div><!-- /gcb-aside -->
@@ -66,13 +72,13 @@
           <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
             {% if next_button_url %}
               <a href="{{ next_button_url }}"> Next </a>
-	    {% else %}
+            {% else %}
               <a href="/course"> End </a>
             {% endif %}
           </div>
           </div>
 
-	</div>
+        </div>
       {% endif %}
     {% endfor %}
   </div>

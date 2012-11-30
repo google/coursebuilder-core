@@ -20,9 +20,9 @@
       {% for lesson in lessons %}
         <li
         {% if lesson.id == lesson_id %}
-          class="active"> Lesson {{ lesson.id }}<br>{{ lesson.title }}
+        class="active"> {{ unit_id }}.{{ lesson.id }}<br>{{ lesson.title }}
         {% else %}
-          ><a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >Lesson {{ lesson.id }}<br>{{ lesson.title }}</a>
+        ><a href="/unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >{{ unit_id }}.{{ lesson.id }} {{ lesson.title }}</a>
         {% endif %}
 
         {% if lesson.activity %}

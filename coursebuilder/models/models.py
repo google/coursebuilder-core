@@ -27,6 +27,7 @@ class Student(db.Model):
   overall_score = db.IntegerProperty()
   name = db.StringProperty()
 
+
 class Unit(db.Model):
   """Unit metadata."""
   id = db.IntegerProperty()
@@ -44,5 +45,31 @@ class Lesson(db.Model):
   objectives = db.TextProperty()
   video = db.TextProperty()
   notes = db.TextProperty()
+  slides = db.TextProperty()
+  duration = db.StringProperty()
   activity = db.StringProperty()
   activity_title = db.StringProperty()
+
+class PageCache(db.Model):
+  content = db.TextProperty()
+
+class Email(db.Model):
+  """Email metadata"""
+  id = db.IntegerProperty()
+  email_name = db.StringProperty()
+  sent_from = db.StringProperty()
+  subject = db.TextProperty()
+  body = db.TextProperty()
+  due_date = db.StringProperty()
+
+class UnenrolledStudents(db.Model):
+  """Unenrolled Student profile."""
+  enrolled_date = db.DateTimeProperty(auto_now_add=True)
+  precourse_answer = db.TextProperty()
+  precourse_score = db.IntegerProperty()
+  midterm_answer = db.TextProperty()
+  final_answer = db.TextProperty()
+  midterm_score = db.IntegerProperty()
+  final_score = db.IntegerProperty()
+  overall_score = db.IntegerProperty()
+  name = db.StringProperty()

@@ -15,11 +15,11 @@
 
     <!-- jQuery should be imported first -->
     <script src="/assets/js/jquery-1.7.2.min.js"></script>
-    <script src="/assets/js/activity-generic.js"></script> 
+    <script src="/assets/js/activity-generic.js"></script>
 
     <script type="text/javascript">
       window.___gcfg = {lang: 'en'};
-      (function() 
+      (function()
         {var po = document.createElement("script");
         po.type = "text/javascript"; po.async = true;po.src = "https://apis.google.com/js/plusone.js";
         var s = document.getElementsByTagName("script")[0];
@@ -37,7 +37,7 @@
 
   </head>
   <body>
-  
+
     <!-- logo bar -->
     <div class="gcb-header" id="gcb-header">
       <div class="gcb-aux">
@@ -53,24 +53,37 @@
           <g:plusone size="medium"></g:plusone>
         </span>
       </div>
-    </div>  
+    </div>
 
     <!-- nav bar -->
     <div class="gcb-nav gcb-complex" id="gcb-nav-x">
       <div class="gcb-aux">
         <ul>
+          <li {% if navbar.announcements %}class='active'{% endif %}>
+            <a href="/announcements">Announcements</a>
+          </li>
           <li {% if navbar.course %}class='active'{% endif %}>
             <a href="/course">Course</a>
           </li>
           <li {% if navbar.forum %}class='active'{% endif %}>
             <a href="/forum">Forum</a>
           </li>
-          {% if logoutUrl %}
-          <li class="pull-right">
-	    <span style="font-weight: normal;">{{ email }} | </span>
-	    <a href="{{ logoutUrl }}">Logout</a>
+          <li {% if navbar.myprofile %}class='active'{% endif %}>
+            <a href="/student/home">My Profile</a>
+          </li>
+
+          {% if navbar.admin %}
+          <li class='active'>
+            <a href="/admin/home">Admin</a>
           </li>
           {% endif %}
+          {% if logoutUrl %}
+          <li class="pull-right">
+            <span style="font-weight: normal;">test@example.com | </span>
+            <a href="{{ logoutUrl }}">Logout</a>
+          </li>
+          {% endif %}
+
         </ul>
       </div>
     </div>
@@ -107,6 +120,6 @@
         </div>
       </div>
     </div>
-    
+
  </body>
 </html>

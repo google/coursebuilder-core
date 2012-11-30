@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="gcb-main">
+  <div class="gcb-article tab-content">
+    <div class="gcb-aside">
+      <h2 style="margin: 20px 0px;">
+        Find student's profile.
+      </h2>
+      {% if errormsg %}
+      <p style="color:red;">{{ errormsg }}</p>
+      {% endif %}
+      <form action='/admin/editstudent' method='get'>
+        <fieldset>
+          <ul>
+            <li>
+              <label for="email">Student's email: </label>
+              <input name="email" type="text">
+            </li>
+          </ul>
+        </fieldset>
+        </fieldset><button class="gcb-button" type="submit">Search</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

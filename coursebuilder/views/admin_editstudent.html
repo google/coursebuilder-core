@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="maia-main">
+  <div class="maia-article tab-content">
+    <div class="maia-aside">
+      <p style="margin: 20px 0px;">
+        Information about the enrolled student:
+      </p>
+      {% if student %}
+      <table>
+      <tr><td>Email: </td><td>{{ student.key().name() }}</td></tr>
+      <tr><td>Certificate Name: </td><td>{{ student.name }}</td></tr>
+      <tr><td>Pre-class Assessment: </td><td>
+        {% if student.preclass_answer %}
+          Completed</td></tr>
+        {% endif %}
+      <tr><td>Mid-class Assessment: </td><td>
+        {% if student.midterm_answer %}
+          Completed</td></tr>
+        {% endif %}
+      <tr><td>Post-class Assessment: </td><td>
+        {% if student.final_answer %}
+          Completed</td></tr>
+        {% endif %}
+      </table>
+
+      <form action='/admin/editstudent' method='post'>
+        <fieldset>
+          <ul>
+            <li>
+              <label for="name">New Name (for the certificate upon passing the course)</label>
+              <input name="name" type="text">
+            </li>
+            <input type="hidden" name="email" value="{{ student.key().name() }}">
+          </ul>
+        </fieldset>
+        <button class="maia-button" type="submit">Save Changes</button>
+        <a href="/admin/home" class="maia-button" type="submit">Cancel</a>
+      </form>
+      <form action='/admin/unenrollstudent' method='post'>
+        <input type="hidden" name="email" value="{{ student.key().name() }}">
+        <button class="maia-button" type="submit">Unenroll</button>
+      </form>
+
+      {% else %}
+      <p>not found ...</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base_registration.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+<div class="gcb-main">
+  <div class="gcb-article tab-content">
+    <div class="gcb-aside">
+        <!-- FIXME: the title below should be changed to your course name. -->
+        <h3>Are you sure you want to unenroll from the Power Searching with Google course?</h3>
+        <p>(Warning: This will delete your assessment scores and profile.)</p>
+        <br>
+        <form action='/student/unenroll' method='post'>
+          <!--<input type="hidden" name="email" value="{{ student.key().name() }}">-->
+          <button class="gcb-button" type="submit">Yes</button>
+          <a href="/student/home" class="gcb-button" type="submit">No</a>
+        </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -17,17 +17,31 @@ import os
 import webapp2
 import jinja2
 
-from controllers import lessons, utils
+from controllers import servings, lessons, utils
 
 urls = [
-  ('/', lessons.CourseHandler),
+  ('/', servings.CourseHandler),
   ('/register', utils.RegisterHandler),
-  ('/course', lessons.CourseHandler),
-  ('/unit', lessons.UnitHandler),
-  ('/activity', lessons.ActivityHandler),
-  ('/assessment', lessons.AssessmentHandler),
-  ('/answer', lessons.AnswerHandler),
-  ('/forum', utils.ForumHandler)
+  ('/course', servings.CourseHandler),
+  ('/unit', servings.ClassHandler),
+  ('/activity', servings.ActivityHandler),
+  ('/assessment', servings.AssessmentHandler),
+  ('/forum', servings.ForumHandler),
+  ('/answer', servings.AnswerHandler),
+  ('/announcements', utils.AnnouncementsHandler),
+  ('/admin/home', utils.AdminHomeHandler),
+  ('/student/home', utils.StudentProfileHandler),
+  ('/student/editstudent', utils.StudentEditStudentHandler),
+  ('/student/unenroll', utils.StudentUnenrollHandler),
+  ('/admin/unenrollstudent', utils.AdminUnenrollHandler),
+  ('/admin/editstudent', utils.AdminEditStudentHandler),
+  ('/admin/coursepage', lessons.CourseHandler),
+  ('/admin/unitpage', lessons.ClassHandler),
+  ('/admin/activitypage', lessons.ActivityHandler),
+  ('/admin/assessmentpage', lessons.AssessmentHandler),
+  ('/admin/forumpage', utils.ForumHandler),
+  ('/admin/answerpage', utils.AnswerHandler),
+  ('/_ah/warmup', utils.WarmupHandler)
   ]
 
 app = webapp2.WSGIApplication(urls, debug=True)
