@@ -17,6 +17,9 @@
 """Allows export of Lessons and Units to other JavaScript or PHP systems."""
 
 import verify, os
+from datetime import datetime
+
+RELEASE_TAG = "1.0"
 
 
 def Echo(x):
@@ -25,7 +28,10 @@ def Echo(x):
 
 def ExportToFile(fname, text):
   file = open(fname, 'w')
+  file.write("// Course Builder %s Export on %s\n" % (RELEASE_TAG, datetime.utcnow()))
+  file.write("// begin\n")
   file.write(text)
+  file.write("\n// end");
   file.close()
 
 
@@ -38,7 +44,7 @@ if __name__ == "__main__":
     raise Exception(
         "Please fix all errors reported by tools/verify.py before continuing!")
 
-  fname = os.path.join(os.getcwd(), "export.js")
+  fname = os.path.join(os.getcwd(), "coursebuilder-manifest.js")
   ExportToFile(fname, "\n".join(verifier.export))
   print "Export complete to %s" % fname
-  
+

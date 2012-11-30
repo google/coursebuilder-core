@@ -975,7 +975,6 @@ class Verifier(object):
     self.export = [];
 
     self.info("Started verification in: %s" % __file__)
-    self.export.append("// Course Builder Export Begin")
 
     unit_file = os.path.join(os.path.dirname(__file__), "../data/unit.csv")
     lesson_file = os.path.join(os.path.dirname(__file__), "../data/lesson.csv")
@@ -1001,7 +1000,6 @@ class Verifier(object):
     self.info("Schema usage statistics: %s" % self.schema_helper.type_stats)
     self.info("Completed verification: %s warnings, %s errors." %
               (self.warnings, self.errors))
-    self.export.append("\n// Course Builder Export End");
 
     return self.errors
 
