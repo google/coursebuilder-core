@@ -49,6 +49,7 @@ class BaseTestClass(unittest.TestCase):
     self.testapp = webtest.TestApp(app)
     self.testbed = testbed.Testbed()
     self.testbed.activate()
+
     # Declare any relevant App Engine service stubs here.
     self.testbed.init_user_stub()
     self.testbed.init_memcache_stub()
@@ -58,11 +59,11 @@ class BaseTestClass(unittest.TestCase):
     self.testbed.deactivate()
 
 
-class RegistrationTest(BaseTestClass):
-  """A class for testing the registration process."""
+class GetRequestTest(BaseTestClass):
+  """A class for testing GET requests."""
 
-  def testFirstTimeUserResponse(self):
-    """Tests the user registration process."""
+  def testGetRequests(self):
+    """Test GET requests on individual pages."""
     FakeLogin('test@example.com')
     response = self.testapp.get('/')
     self.assertEqual(response.status_int, 302)
@@ -70,7 +71,10 @@ class RegistrationTest(BaseTestClass):
         response.location, 'http://%s/register' % os.environ['SERVER_NAME'])
 
     response = self.testapp.get('/register')
-    response = response.forms[0].submit()
+    assert len(response.forms) == 1
+    response.form.set('form01', 'Student1')
+    response = response.form.submit()
+    assert 'Thank you for registering for' in response.body
     self.assertEqual(response.status_int, 200)
 
     response = self.testapp.get('/announcements')
@@ -88,3 +92,17 @@ class RegistrationTest(BaseTestClass):
     response = self.testapp.get('/student/home')
     assert 'Course progress related information' in response.body
     self.assertEqual(response.status_int, 200)
+
+    # Test assessment pages
+    response = self.testapp.get('/assessment?name=Pre')
+    assert '/assets/js/assessment-Pre.js' in response.body
+    self.assertEqual(response.status_int, 200)
+
+    response = self.testapp.get('/assessment?name=Mid')
+    assert '/assets/js/assessment-Mid.js' in response.body
+    self.assertEqual(response.status_int, 200)
+
+    response = self.testapp.get('/assessment?name=Fin')
+    assert '/assets/js/assessment-Fin.js' in response.body
+    self.assertEqual(response.status_int, 200)
+

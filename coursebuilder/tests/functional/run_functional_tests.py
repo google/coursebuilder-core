@@ -24,7 +24,7 @@ import tests
 
 def main():
   dev_appserver.fix_sys_path()
-  suite = unittest.TestLoader().loadTestsFromTestCase(tests.RegistrationTest)
+  suite = unittest.TestLoader().loadTestsFromTestCase(tests.GetRequestTest)
   unittest.TextTestRunner(verbosity=2).run(suite)
 
 
