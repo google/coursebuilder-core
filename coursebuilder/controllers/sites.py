@@ -31,11 +31,11 @@ three ':' separated parts: the word 'course', the URL prefix, and the file syste
 location for the site files. The fourth, optional part, is a course namespace name.
 
 The URL prefix specifies, how will the course URL appear in the browser. In the
-example above, the courses will be mapped to http://www.example.com[/coursea] and 
+example above, the courses will be mapped to http://www.example.com[/coursea] and
 http://www.example.com[/courseb].
 
 The file system location of the files specifies, which files to serve for the course.
-For each course we expect three sub-folders: 'assets', 'views', and 'data'. The 
+For each course we expect three sub-folders: 'assets', 'views', and 'data'. The
 'data' folder must contain the CSV files that define the course layout, the 'assets'
 and 'views' should contain the course specific files and jinja2 templates respectively.
 In the example above, the course files are expected to be placed into folders
@@ -44,7 +44,7 @@ In the example above, the course files are expected to be placed into folders
 By default Course Builder handles static '/assets' files using a custom handler.
 You may choose to handle '/assets' files of your course as 'static' files using
 Google App Engine handler. You can do so by creating a new static file handler
-entry in your app.yaml and placing it before our main course handler. 
+entry in your app.yaml and placing it before our main course handler.
 
 If you have an existing course developed using Course Builder and do NOT want to
 host multiple courses, there is nothing for you to do. A following default rule is
@@ -64,7 +64,7 @@ If you have existing course developed using Course Builder and DO want to start
 hosting multiple courses here are the steps. First, define the courses configuration
 environment variable as described above. Second, copy existing 'assets', 'data' and
 'views' folders of your course into the new location, for example '/courses/mycourse'.
-Third, change your bulkloader commands to use the new CSV data file locations and 
+Third, change your bulkloader commands to use the new CSV data file locations and
 add a 'namespace' parameter, here is an example:
 
   ...
@@ -75,7 +75,7 @@ add a 'namespace' parameter, here is an example:
   --filename=experimental/coursebuilder/courses/a/data/unit.csv \
   --kind=Unit \
   --namespace=gcb-courses-a
-  
+
   echo Uploading lessons.csv
   $GOOGLE_APP_ENGINE_HOME/appcfg.py upload_data \
   --url=http://localhost:8080/_ah/remote_api \
@@ -98,7 +98,7 @@ Second, you need to add <base> tag at the top of you course 'base.html' and
     <base href="{{ gcb_course_base }}" />
   ...
 
-Current Course Builder release already has all these modifications. 
+Current Course Builder release already has all these modifications.
 
 Note, that each 'course' runs in a separate Google App Engine namespace. The name
 of the namespace is derived from the course files location. In the example above,
@@ -126,8 +126,8 @@ GCB_COURSES_CONFIG_ENV_VAR_NAME = 'GCB_COURSES_CONFIG'
 GCB_BASE_COURSE_NAMESPACE = 'gcb-course'
 
 # these folder names are reserved
-GCB_ASSETS_FOLDER_NAME = '/assets'
-GCB_VIEWS_FOLDER_NAME = '/views'
+GCB_ASSETS_FOLDER_NAME = os.path.normpath('/assets/')
+GCB_VIEWS_FOLDER_NAME = os.path.normpath('/views/')
 
 # supported site types
 SITE_TYPE_COURSE = 'course'
@@ -189,7 +189,7 @@ def getAllRules():
     if len(rule) == 0:
       continue
     parts = rule.split(':')
-    
+
     # validate length
     if len(parts) < 3:
       raise Exception(
@@ -248,6 +248,22 @@ def getRuleForCurrentRequest():
   return None
 
 
+def pathJoin(base, path):
+  """Just like the os.path.join(), but interprets a second path element as relative.
+  Thus if os.path.join('/a/b', '/c') yields '/c', this function yields '/a/b/c'."""
+  if os.path.isabs(path):
+    # remove drive letter(if we are on Windows)
+    drive, path_no_drive = os.path.splitdrive(path)
+    # remove leading path separator
+    path = path_no_drive[1:]
+  return os.path.join(base, path)
+
+
+def abspath(home_folder, filename):
+  """Creates an absolute URL for a filename in a home folder."""
+  return pathJoin(appengine_config.BUNDLE_ROOT, pathJoin(home_folder, filename))
+
+
 def unprefix(path, prefix):
   """Removed the prefix from path, appends '/' if empty string results."""
   if not path.startswith(prefix):
@@ -268,11 +284,7 @@ def namespace_manager_default_namespace_for_request():
 """A class that handles serving of static resources located on the file system."""
 class AssetHandler(webapp2.RequestHandler):
   def __init__(self, filename):
-    filename = os.path.abspath(filename).replace('//', '/')
-    if not filename.startswith('/'):
-      raise Exception('Expected absolute path.')
-    filename = filename[1:]
-    self.filename = os.path.join(appengine_config.BUNDLE_ROOT, filename)
+    self.filename = filename
 
   def getMimeType(self, filename, default='application/octet-stream'):
     guess = mimetypes.guess_type(filename)[0]
@@ -316,17 +328,9 @@ class ApplicationContext(object):
     return self.slug
 
   def getTemplateHome(self):
-    if self.getHomeFolder() == '/':
-      template_home = GCB_VIEWS_FOLDER_NAME
-    else:
-      template_home = '%s%s' % (self.getHomeFolder(), GCB_VIEWS_FOLDER_NAME)
-    template_home = os.path.abspath(template_home)
-    if not template_home.startswith('/'):
-      raise Exception('Expected absolute path.')
-    template_home = template_home[1:]
-
-    debug('Template home: %s' % template_home)
-    return os.path.join(appengine_config.BUNDLE_ROOT, template_home)
+    path = abspath(self.getHomeFolder(), GCB_VIEWS_FOLDER_NAME)
+    debug('Template home: %s' % path)
+    return path
 
 
 """A class that handles dispatching of all URL's to proper handlers."""
@@ -353,15 +357,18 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     return self.getHandlerForCourseType(rule, unprefix(path, rule.getSlug()))
 
   def getHandlerForCourseType(self, context, path):
-    # handle static assets here    
-    absolute_path = os.path.abspath(path)
-    if absolute_path.startswith('%s/' % GCB_ASSETS_FOLDER_NAME):
-      handler = AssetHandler('%s%s' % (context.getHomeFolder(), absolute_path))
+    norm_path = os.path.normpath(path)
+
+    # handle static assets here
+    if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
+      abs_file = abspath(context.getHomeFolder(), norm_path)
+      debug('Course asset: %s' % abs_file)
+
+      handler = AssetHandler(abs_file)
       handler.request = self.request
       handler.response = self.response
       handler.app_context = context
 
-      debug('Course asset: %s' % absolute_path)
       return handler
 
     # handle all dynamic handlers here
@@ -536,13 +543,13 @@ def TestUrlToHandlerMappingForCourseType():
 
   # test assets mapping
   handler = AssertHandled('/a/b/assets/img/foo.png', AssetHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/c/d/views')
+  assert os.path.normpath(handler.app_context.getTemplateHome()).endswith(
+      os.path.normpath('/coursebuilder/c/d/views'))
 
   # this is allowed as we don't go out of /assets/...
   handler = AssertHandled('/a/b/assets/foo/../models/models.py', AssetHandler)
-  assert handler.filename.endswith(
-      'experimental/coursebuilder/c/d/assets/models/models.py')
+  assert os.path.normpath(handler.filename).endswith(
+      os.path.normpath('/coursebuilder/c/d/assets/models/models.py'))
 
   # this is not allowed as we do go out of /assets/...
   AssertHandled('/a/b/assets/foo/../../models/models.py', None)
@@ -564,8 +571,8 @@ def TestUrlToHandlerMappingForCourseType():
   AssertHandled('/foo', FakeHandler1)
   AssertHandled('/bar', FakeHandler2)
   handler = AssertHandled('/assets/js/main.js', AssetHandler)
-  assert handler.app_context.getTemplateHome().endswith(
-      'experimental/coursebuilder/views')
+  assert os.path.normpath(handler.app_context.getTemplateHome()).endswith(
+      os.path.normpath('/coursebuilder/views'))
 
   # negative cases
   AssertHandled('/favicon.ico', None)
@@ -582,12 +589,26 @@ def TestSpecialChars():
   os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'foo:/a/b:/c/d, bar:/a/b:/c-d'
   AssertFails(getAllRules)
 
+def TestPathContruction():
+  # test cases common to all platforms
+  assert os.path.normpath(pathJoin('/a/b', '/c')) == os.path.normpath('/a/b/c')
+  assert os.path.normpath(pathJoin('/a/b/', '/c')) == os.path.normpath('/a/b/c')
+  assert os.path.normpath(pathJoin('/a/b', 'c')) == os.path.normpath('/a/b/c')
+  assert os.path.normpath(pathJoin('/a/b/', 'c')) == os.path.normpath('/a/b/c')
+
+  # Windows-specific test cases
+  drive, path = os.path.splitdrive('c:\\windows')
+  if drive != '':
+    assert os.path.normpath(pathJoin('/a/b', 'c:/d')) == os.path.normpath('/a/b/d')
+    assert os.path.normpath(pathJoin('/a/b/', 'c:/d')) == os.path.normpath('/a/b/d')
+
 def RunAllUnitTests():
   TestSpecialChars()
   TestUnprefix()
   TestRuleDefinitions()
   TestUrlToRuleMapping()
   TestUrlToHandlerMappingForCourseType()
+  TestPathContruction()
 
 if __name__ == '__main__':
   DEBUG_INFO = True
