@@ -33,9 +33,9 @@ PRODUCTION_MODE = not os.environ.get(
 DEFAULT_CACHE_TTL_SECS = 60 * 60
 
 # Whether memcache caching is enabled.
-GCB_IS_PAGE_CACHE_ENABLED = ConfigProperty(
-    'gcb_is_page_cache_enabled', bool, (
-        'A flag that controls whether page caching is enabled. By default, '
+GCB_IS_MEMCACHE_ENABLED = ConfigProperty(
+    'gcb_is_memcache_enabled', bool, (
+        'A flag that controls whether memcache is enabled. By default, '
         'it\'s "off" for development and "on" for production servers.'),
     PRODUCTION_MODE)
 
@@ -59,7 +59,7 @@ class MemcacheManager(object):
 
     @classmethod
     def enabled(cls):
-        return GCB_IS_PAGE_CACHE_ENABLED.value
+        return GCB_IS_MEMCACHE_ENABLED.value
 
     @classmethod
     def get(cls, key):
