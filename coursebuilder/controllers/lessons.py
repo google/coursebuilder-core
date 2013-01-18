@@ -16,10 +16,12 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import json
 from models import models
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from utils import BaseHandler
+from utils import BaseRESTHandler
 from utils import XsrfTokenManager
 
 # Whether to record events in a database.
@@ -161,7 +163,7 @@ class ActivityHandler(BaseHandler):
 
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event'))
+            XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('activity.html')
 
@@ -182,14 +184,14 @@ class AssessmentHandler(BaseHandler):
         self.template_value['navbar'] = {'course': True}
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('assessment'))
+            XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event'))
+            XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('assessment.html')
 
 
-class EventsRESTHandler(BaseHandler):
+class EventsRESTHandler(BaseRESTHandler):
     """Provides REST API for an Event."""
 
     def post(self):
@@ -199,7 +201,8 @@ class EventsRESTHandler(BaseHandler):
         if not CAN_PERSIST_ACTIVITY_EVENTS.value:
             return
 
-        if not self.assert_xsrf_token_or_fail('event'):
+        request = json.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(request, 'event-post', {}):
             return
 
         user = self.get_user()
@@ -211,5 +214,5 @@ class EventsRESTHandler(BaseHandler):
             return
 
         models.EventEntity.record(
-            self.request.get('source'), user, self.request.get('request'))
+            request.get('source'), user, request.get('payload'))
         COURSE_EVENTS_RECORDED.inc()

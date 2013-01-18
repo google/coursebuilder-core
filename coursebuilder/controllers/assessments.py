@@ -106,7 +106,7 @@ class AnswerHandler(BaseHandler):
         if not student:
             return
 
-        if not self.assert_xsrf_token_or_fail('assessment'):
+        if not self.assert_xsrf_token_or_fail(self.request, 'assessment-post'):
             return
 
         assessment_type = self.request.get('assessment_type')

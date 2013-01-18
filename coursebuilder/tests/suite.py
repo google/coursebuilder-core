@@ -45,7 +45,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 45
+EXPECTED_TEST_COUNT = 47
 
 
 def empty_environ():
@@ -72,7 +72,9 @@ class BaseTestClass(unittest.TestCase):
         self.testbed = testbed.Testbed()
         self.testbed.activate()
 
-        # configure datastore policy to emulate globally consistent HRD
+        # configure datastore policy to emulate instantaneously and globally
+        # consistent HRD; we also patch dev_appserver in main.py to run under
+        # the same policy
         policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
             probability=1)
 
@@ -103,7 +105,7 @@ def create_test_suite():
 
     # Here is how to test just one test case:
     #    tests = unittest.TestLoader().loadTestsFromTestCase(
-    #        functional_tests.TwoCoursesTest)
+    #        functional_tests.MultipleCoursesTest)
 
     return unittest.TestLoader().suiteClass(tests)
 

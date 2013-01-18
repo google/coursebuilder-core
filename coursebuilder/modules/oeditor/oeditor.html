@@ -1,13 +1,13 @@
 <!-- TODO(psimakov): use local YUI library -->
-<link rel="stylesheet" type="text/css" 
+<link rel="stylesheet" type="text/css"
     href="http://yui.yahooapis.com/3.6.0/build/cssreset-context/cssreset-context-min.css">
-<script 
+<script
     src="http://yui.yahooapis.com/3.6.0/build/yui/yui.js"></script>
 <link rel="stylesheet" type="text/css"
     href="/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css">
-<script 
+<script
     src="/static/inputex-3.1.0/src/loader.js" type='text/javascript'></script>
-<script 
+<script
     src="/static/inputex-3.1.0/lib/jsonPretty.js" type='text/javascript'></script>
 
 <!-- TODO(psimakov): take styles out into a separate file -->
@@ -171,6 +171,13 @@
             // format request
             var request_save = {{ post_args }};
             request_save.payload = JSON.stringify(lastSavedFormValue);
+
+            // append xsrf_token if provided
+            if (cb_global.xsrf_token) {
+                request_save.xsrf_token = cb_global.xsrf_token;
+            }
+
+            // format request
             request_data = {"request": JSON.stringify(request_save)};
 
             // async post data to the server
@@ -253,6 +260,13 @@
               // push payload into form
               payload = JSON.parse(json.payload);
               cb_global.form.setValue(payload);
+
+              // record xsrf token if provided
+              if (json.xsrf_token) {
+                cb_global.xsrf_token = json.xsrf_token;
+              } else {
+                cb_global.xsrf_token = null;
+              }
 
               // save lastSavedFormValue
               cb_global.original = payload;

@@ -20,7 +20,9 @@ import datetime
 import json
 import urllib
 from controllers.utils import BaseHandler
+from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
+from controllers.utils import XsrfTokenManager
 from models import entities
 from models import roles
 from models.models import MemcacheManager
@@ -110,7 +112,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
-        return [('/rest/announcements/item', ItemRESTHandler)]
+        return [('/rest/announcements/item', AnnouncementsItemRESTHandler)]
 
     def get_action_url(self, action, key=None):
         args = {'action': action}
@@ -216,7 +218,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         self.redirect(self.get_action_url('edit', entity.key()))
 
 
-class ItemRESTHandler(BaseHandler):
+class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
 
     def get(self):
@@ -242,12 +244,20 @@ class ItemRESTHandler(BaseHandler):
 
         json_payload = transforms.dict_to_json(transforms.entity_to_dict(
             entity), SCHEMA_DICT)
-        transforms.send_json_response(self, 200, 'Success.', json_payload)
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict=json_payload,
+            xsrf_token=XsrfTokenManager.create_xsrf_token(
+                'announcement-put'))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
         request = json.loads(self.request.get('request'))
         key = request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'announcement-put', {'key': key}):
+            return
 
         if not AnnouncementsRights.can_edit(self):
             transforms.send_json_response(

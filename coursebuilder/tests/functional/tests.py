@@ -25,9 +25,11 @@ import re
 import shutil
 import urllib
 import appengine_config
+from controllers import lessons
 from controllers import sites
 from controllers import utils
 from controllers.sites import assert_fails
+from controllers.utils import XsrfTokenManager
 from models import config
 from models import models
 from models.utils import get_all_scores
@@ -149,7 +151,7 @@ class AdminAspectTest(actions.TestBase):
             '/admin?action=config_reset&name=gcb_admin_user_emails')
         assert_equals(response.status_int, 302)
 
-        # Check user has no access to GET REST verb.
+        # Check user has no rights to GET verb.
         response = self.testapp.get(
             '/rest/config/item?key=gcb_config_update_interval_sec')
         assert_equals(response.status_int, 200)
@@ -157,13 +159,24 @@ class AdminAspectTest(actions.TestBase):
         assert json_dict['status'] == 401
         assert json_dict['message'] == 'Access denied.'
 
-        # Check user has no access to GET PUT verb.
+        # Check user has no rights to PUT verb.
         payload_dict = {}
         payload_dict['value'] = '666'
         payload_dict['is_draft'] = False
         request = {}
         request['key'] = 'gcb_config_update_interval_sec'
         request['payload'] = json.dumps(payload_dict)
+
+        # Check XSRF token is required.
+        response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
+            {'request': json.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        assert_contains('"status": 403', response.body)
+
+        # Check user still has no rights to PUT verb even if he somehow
+        # obtained a valid XSRF token.
+        request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+            'config-property-put')
         response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
             {'request': json.dumps(request)}), {})
         assert_equals(response.status_int, 200)
@@ -435,10 +448,21 @@ class CourseAuthorAspectTest(actions.TestBase):
             request = {}
             request['key'] = str(item.key())
             request['payload'] = json.dumps(payload_dict)
+
+            # Check XSRF is required.
             response = self.put('rest/announcements/item?%s' % urllib.urlencode(
                 {'request': json.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            assert_contains('"status": 403', response.body)
 
-            # confirm change is visible
+            # Check PUT works.
+            request['xsrf_token'] = json_dict['xsrf_token']
+            response = self.put('rest/announcements/item?%s' % urllib.urlencode(
+                {'request': json.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            assert_contains('"status": 200', response.body)
+
+            # Confirm change is visible on the page.
             response = self.get('announcements')
             assert_contains('My Test Title (Draft)', response.body)
 
@@ -585,6 +609,41 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('Previous Page', response.body)
         assert_does_not_contain('Next Page', response.body)
         assert_contains('End', response.body)
+
+    def test_attempt_activity_event(self):
+        """Test activity attempt generates event."""
+
+        email = 'test_attempt_activity_event@example.com'
+        name = 'Test Attempt Activity Event'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        # Enable event recording.
+        config.Registry.db_overrides[
+            lessons.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+
+        # Prepare event.
+        request = {}
+        request['source'] = 'test-source'
+        request['payload'] = json.dumps({'Alice': 'Bob'})
+
+        # Check XSRF token is required.
+        response = self.post('rest/events?%s' % urllib.urlencode(
+            {'request': json.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        assert_contains('"status": 403', response.body)
+
+        # Check PUT works.
+        request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+            'event-post')
+        response = self.post('rest/events?%s' % urllib.urlencode(
+            {'request': json.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        assert not response.body
+
+        # Clean up.
+        config.Registry.db_overrides = {}
 
     def test_two_students_dont_see_each_other_pages(self):
         """Test a user can't see another user pages."""

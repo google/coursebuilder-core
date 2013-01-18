@@ -21,6 +21,7 @@ import hmac
 import time
 import urlparse
 import jinja2
+from models import transforms
 from models.config import ConfigProperty
 from models.courses import Course
 from models.models import MemcacheManager
@@ -135,8 +136,8 @@ class ApplicationHandler(webapp2.RequestHandler):
                 (parts.scheme, parts.netloc, base, None, None, None))
         return base
 
-    def __init__(self):
-        super(ApplicationHandler, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(ApplicationHandler, self).__init__(*args, **kwargs)
         self.template_value = {}
 
     def get_template(self, template_file, additional_dir=None):
@@ -177,8 +178,8 @@ class ApplicationHandler(webapp2.RequestHandler):
 class BaseHandler(ApplicationHandler):
     """Base handler."""
 
-    def __init__(self):
-        super(BaseHandler, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(BaseHandler, self).__init__(*args, **kwargs)
         self.course = None
 
     def get_course(self):
@@ -224,10 +225,10 @@ class BaseHandler(ApplicationHandler):
 
         return student
 
-    def assert_xsrf_token_or_fail(self, action):
+    def assert_xsrf_token_or_fail(self, request, action):
         """Asserts the current request has proper XSRF token or fails."""
-        xsrf_token = self.request.get('xsrf_token')
-        if not XsrfTokenManager.is_xsrf_token_valid(xsrf_token, action):
+        token = request.get('xsrf_token')
+        if not token or not XsrfTokenManager.is_xsrf_token_valid(token, action):
             self.error(403)
             return False
         return True
@@ -235,6 +236,23 @@ class BaseHandler(ApplicationHandler):
     def render(self, template_file):
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
+
+
+class BaseRESTHandler(BaseHandler):
+    """Base REST handler."""
+
+    def assert_xsrf_token_or_fail(self, token_dict, action, args_dict):
+        """Asserts that current request has proper XSRF token or fails."""
+        token = None
+        if 'xsrf_token' in token_dict:
+            token = token_dict['xsrf_token']
+        if not token or not XsrfTokenManager.is_xsrf_token_valid(token, action):
+            transforms.send_json_response(
+                self, 403,
+                'Bad XSRF token. Please reload a page and try again',
+                args_dict)
+            return False
+        return True
 
 
 class PreviewHandler(BaseHandler):
@@ -274,7 +292,7 @@ class RegisterHandler(BaseHandler):
 
         self.template_value['navbar'] = {'registration': True}
         self.template_value['register_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('register'))
+            XsrfTokenManager.create_xsrf_token('register-post'))
         self.render('register.html')
 
     def post(self):
@@ -284,7 +302,7 @@ class RegisterHandler(BaseHandler):
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        if not self.assert_xsrf_token_or_fail('register'):
+        if not self.assert_xsrf_token_or_fail(self.request, 'register-post'):
             return
 
         if (MAX_CLASS_SIZE and
@@ -333,7 +351,7 @@ class StudentProfileHandler(BaseHandler):
         self.template_value['student'] = student
         self.template_value['scores'] = get_all_scores(student)
         self.template_value['student_edit_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('student_edit'))
+            XsrfTokenManager.create_xsrf_token('student-edit'))
         self.render('student_profile.html')
 
 
@@ -346,7 +364,7 @@ class StudentEditStudentHandler(BaseHandler):
         if not student:
             return
 
-        if not self.assert_xsrf_token_or_fail('student_edit'):
+        if not self.assert_xsrf_token_or_fail(self.request, 'student-edit'):
             return
 
         Student.rename_current(self.request.get('name'))
@@ -366,7 +384,7 @@ class StudentUnenrollHandler(BaseHandler):
         self.template_value['student'] = student
         self.template_value['navbar'] = {'registration': True}
         self.template_value['student_unenroll_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('student_unenroll'))
+            XsrfTokenManager.create_xsrf_token('student-unenroll'))
         self.render('unenroll_confirmation_check.html')
 
     def post(self):
@@ -375,7 +393,7 @@ class StudentUnenrollHandler(BaseHandler):
         if not student:
             return
 
-        if not self.assert_xsrf_token_or_fail('student_unenroll'):
+        if not self.assert_xsrf_token_or_fail(self.request, 'student-unenroll'):
             return
 
         Student.set_enrollment_status_for_current(False)

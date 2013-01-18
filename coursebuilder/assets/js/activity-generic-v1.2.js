@@ -46,13 +46,14 @@ function gcbAssessmentAudit(dict) {
 function gcbAudit(dict, source) {
   if (gcbCanPostEvents) {
     dict['location'] = '' + window.location;
+    request = {
+        'source': source,
+        'payload': JSON.stringify(dict),
+        'xsrf_token': eventXsrfToken}
     $.ajax({
         url: 'rest/events',
         type: 'POST',
-        data: {
-            'source': source, 
-            'request': JSON.stringify(dict),
-            'xsrf_token': eventXsrfToken},
+        data: {'request': JSON.stringify(request)},
         success: function(){},
         error:function(){}
     });
@@ -62,7 +63,7 @@ function gcbAudit(dict, source) {
 // 'choices' is a list of choices, where each element is:
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
-// 'index' is the index of this activity in the containing list  
+// 'index' is the index of this activity in the containing list
 function generateMultipleChoiceQuestion(choices, domRoot, index) {
   var tag = getFreshTag();
   var radioButtonGroupName = 'q' + tag;
@@ -246,12 +247,12 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
           if (isCorrect) {
              numCorrect++;
           }
-          
+
           userInputRecorded = true;
           answers.push({'index': ind, 'value': i, 'correct': isCorrect});
         }
       }
-      
+
       if (!userInputRecorded) {
         answers.push({'index': ind, 'value': null, 'correct': isCorrect});
       }

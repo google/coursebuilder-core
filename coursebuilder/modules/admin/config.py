@@ -19,12 +19,13 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import cgi
 import json
 import urllib
+from controllers.utils import BaseRESTHandler
+from controllers.utils import XsrfTokenManager
 from models import config
 from models import models
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
-import webapp2
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -187,7 +188,7 @@ class ConfigPropertyEditor(object):
         self.redirect('/admin?action=settings')
 
 
-class ItemRESTHandler(webapp2.RequestHandler):
+class ConfigPropertyItemRESTHandler(BaseRESTHandler):
     """Provides REST API for a configuration property."""
 
     def get(self):
@@ -219,12 +220,20 @@ class ItemRESTHandler(webapp2.RequestHandler):
             json_payload = transforms.dict_to_json(
                 entity_dict,
                 json.loads(ConfigPropertyEditor.get_schema_json(item)))
-            transforms.send_json_response(self, 200, 'Success.', json_payload)
+            transforms.send_json_response(
+                self, 200, 'Success.',
+                payload_dict=json_payload,
+                xsrf_token=XsrfTokenManager.create_xsrf_token(
+                    'config-property-put'))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
         request = json.loads(self.request.get('request'))
         key = request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'config-property-put', {'key': key}):
+            return
 
         if not ConfigPropertyRights.can_edit():
             transforms.send_json_response(

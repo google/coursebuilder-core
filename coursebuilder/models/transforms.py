@@ -130,13 +130,16 @@ def value_to_string(value, value_type):
         raise ValueError('Unknown type: %s' % value_type)
 
 
-def send_json_response(handler, status_code, message, payload_dict=None):
+def send_json_response(
+    handler, status_code, message, payload_dict=None, xsrf_token=None):
     """Formats and sends out a JSON REST response envelope and body."""
     response = {}
     response['status'] = status_code
     response['message'] = message
     if payload_dict:
         response['payload'] = json.dumps(payload_dict)
+    if xsrf_token:
+        response['xsrf_token'] = xsrf_token
     handler.response.write(json.dumps(response))
 
 
