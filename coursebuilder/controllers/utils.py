@@ -87,13 +87,17 @@ class ApplicationHandler(webapp2.RequestHandler):
     def is_absolute(self, url):
         return bool(urlparse.urlparse(url).scheme)
 
-    def redirect(self, location):
+    def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""
         if not self.is_absolute(location):
             if (self.app_context.get_slug() and
                 self.app_context.get_slug() != '/'):
                 location = '%s%s' % (self.app_context.get_slug(), location)
-        super(ApplicationHandler, self).redirect(location)
+        return location
+
+    def redirect(self, location):
+        super(ApplicationHandler, self).redirect(
+            self.canonicalize_url(location))
 
 
 class BaseHandler(ApplicationHandler):
