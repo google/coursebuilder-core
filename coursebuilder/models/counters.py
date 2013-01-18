@@ -27,9 +27,9 @@ class PerfCounter(object):
 
         Registry.registered[self.name] = self
 
-    def inc(self):
-        """Increments value by one."""
-        self._value += 1
+    def inc(self, increment=1):
+        """Increments value by a given increment."""
+        self._value += increment
 
     @property
     def name(self):

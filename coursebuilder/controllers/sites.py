@@ -157,7 +157,6 @@ DEBUG_INFO = False
 # thread local storage for current request PATH_INFO
 PATH_INFO_THREAD_LOCAL = threading.local()
 
-
 # performance counters
 STATIC_HANDLER_COUNT = PerfCounter(
     'gcb-sites-handler-static',
@@ -168,15 +167,54 @@ DYNAMIC_HANDLER_COUNT = PerfCounter(
 NO_HANDLER_COUNT = PerfCounter(
     'gcb-sites-handler-none',
     'A number of times request was not matched to any handler.')
+
+HTTP_BYTES_IN = PerfCounter(
+    'gcb-sites-bytes-in',
+    'A number of bytes received from clients by the handler.')
+HTTP_BYTES_OUT = PerfCounter(
+    'gcb-sites-bytes-out',
+    'A number of bytes sent out from the handler to clients.')
+
 HTTP_STATUS_200 = PerfCounter(
-    'gcb-sites-http-200',
-    'A number of times HTTP status code 200 was returned.')
-HTTP_STATUS_404 = PerfCounter(
-    'gcb-sites-http-404',
-    'A number of times HTTP status code 404 was returned.')
+    'gcb-sites-http-20x',
+    'A number of times HTTP status code 20x was returned.')
+HTTP_STATUS_300 = PerfCounter(
+    'gcb-sites-http-30x',
+    'A number of times HTTP status code 30x was returned.')
+HTTP_STATUS_400 = PerfCounter(
+    'gcb-sites-http-40x',
+    'A number of times HTTP status code 40x was returned.')
 HTTP_STATUS_500 = PerfCounter(
-    'gcb-sites-http-500',
-    'A number of times HTTP status code 500 was returned.')
+    'gcb-sites-http-50x',
+    'A number of times HTTP status code 50x was returned.')
+COUNTER_BY_HTTP_CODE = {
+    200: HTTP_STATUS_200, 300: HTTP_STATUS_300, 400: HTTP_STATUS_400,
+    500: HTTP_STATUS_500}
+
+
+def count_stats(handler):
+    """Records statistics about the request and the response."""
+    try:
+        # Record request bytes in.
+        if handler.request and handler.request.content_length:
+            HTTP_BYTES_IN.inc(handler.request.content_length)
+
+        # Record response HTTP status code.
+        if handler.response and handler.response.status_int:
+            rounded_status_code = (handler.response.status_int / 100) * 100
+            counter = COUNTER_BY_HTTP_CODE[rounded_status_code]
+            if not counter:
+                logging.error(
+                    'Unknown HTTP status code: %s.',
+                    handler.response.status_code)
+            else:
+                counter.inc()
+
+        # Record response bytes out.
+        if handler.response and handler.response.content_length:
+            HTTP_BYTES_OUT.inc(handler.response.content_length)
+    except Exception as e:  # pylint: disable-msg=broad-except
+        logging.error('Failed to count_stats(): %s.', str(e))
 
 
 def has_path_info():
@@ -355,7 +393,6 @@ class AssetHandler(webapp2.RequestHandler):
         debug('File: %s' % self.filename)
 
         if not os.path.isfile(self.filename):
-            HTTP_STATUS_404.inc()
             self.error(404)
             return
 
@@ -501,15 +538,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
-                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.get()
-                HTTP_STATUS_200.inc()
-        except Exception as e:
-            HTTP_STATUS_500.inc()
-            raise e
         finally:
+            count_stats(self)
             unset_path_info()
 
     def post(self, path):
@@ -518,15 +551,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
-                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.post()
-                HTTP_STATUS_200.inc()
-        except Exception as e:
-            HTTP_STATUS_500.inc()
-            raise e
         finally:
+            count_stats(self)
             unset_path_info()
 
     def put(self, path):
@@ -535,15 +564,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
-                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.put()
-                HTTP_STATUS_200.inc()
-        except Exception as e:
-            HTTP_STATUS_500.inc()
-            raise e
         finally:
+            count_stats(self)
             unset_path_info()
 
     def delete(self, path):
@@ -552,15 +577,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
-                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.delete()
-                HTTP_STATUS_200.inc()
-        except Exception as e:
-            HTTP_STATUS_500.inc()
-            raise e
         finally:
+            count_stats(self)
             unset_path_info()
 
 
