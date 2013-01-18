@@ -74,10 +74,10 @@
               {% trans %} My Profile {% endtrans %}
             </a>
           </li>
-          {% if is_super_admin %}
+          {% if is_manager %}
           <li>
-            <a href="/admin">
-              {% trans %} Admin {% endtrans %}
+            <a href="dashboard">
+              {% trans %} Dashboard {% endtrans %}
             </a>
           </li>
           {% endif %}

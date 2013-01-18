@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Handlers that manages Announcements."""
+"""Classes and methods to create and manage Announcements."""
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 

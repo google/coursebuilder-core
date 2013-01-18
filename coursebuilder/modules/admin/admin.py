@@ -84,12 +84,12 @@ class AdminHandler(
             console_link = """
                 <a target="_blank"
                   href="https://appengine.google.com/dashboard?app_id=s~%s">
-                  Production Dashboard
+                  Google App Engine
                 </a>
                 """ % app_id
         else:
             console_link = """
-                <a target="_blank" href="/_ah/admin">Development Console</a>
+                <a target="_blank" href="/_ah/admin">Google App Engine</a>
                 """
 
         template_values['top_nav'] = """
@@ -105,7 +105,7 @@ class AdminHandler(
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
 
         self.response.write(
-            self.get_template('admin.html', []).render(template_values))
+            self.get_template('view.html', []).render(template_values))
 
     def render_dict(self, source_dict, title):
         """Renders a dictionary ordered by keys."""
@@ -125,7 +125,7 @@ class AdminHandler(
 
     def format_title(self, text):
         """Formats standard title."""
-        return 'Course Builder Admin - %s' % text
+        return 'Course Builder &gt; Admin &gt; %s' % text
 
     def get_perf(self):
         """Shows server performance counters page."""
@@ -163,13 +163,13 @@ class AdminHandler(
 
         # Yaml file content.
         yaml_content = []
-        yaml_content.append('<h3>Application <code>app.yaml</code></h3>')
-        yaml_content.append('<ul><pre>')
+        yaml_content.append('<h3>Contents of <code>app.yaml</code></h3>')
+        yaml_content.append('<ol>')
         yaml_lines = open(os.path.join(os.path.dirname(
             __file__), '../../app.yaml'), 'r').readlines()
         for line in yaml_lines:
-            yaml_content.append('%s<br/>' % cgi.escape(line))
-        yaml_content.append('</pre></ul>')
+            yaml_content.append('<li>%s</li>' % cgi.escape(line))
+        yaml_content.append('</ol>')
         yaml_content = ''.join(yaml_content)
 
         # Application identity.
@@ -179,7 +179,8 @@ class AdminHandler(
         app_dict['default_ver_hostname'] = app.get_default_version_hostname()
 
         template_values['main_content'] = self.render_dict(
-            app_dict, 'Application Identity') + yaml_content + self.render_dict(
+            app_dict,
+            'About the Application') + yaml_content + self.render_dict(
                 os.environ, 'Server Environment Variables')
 
         self.render_page(template_values)
@@ -342,7 +343,11 @@ class AdminHandler(
             except Exception as e:  # pylint: disable-msg=broad-except
                 name = 'Error in course.yaml:<br/>%s' % cgi.escape(str(e))
 
-            link = '<a href="%s">%s</a>' % (slug, name)
+            if slug == '/':
+                link = '/dashboard'
+            else:
+                link = '%s/dashboard' % slug
+            link = '<a href="%s">%s</a>' % (link, name)
 
             content.append("""
                 <tr>

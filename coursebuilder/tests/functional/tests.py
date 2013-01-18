@@ -157,7 +157,7 @@ class AdminAspectTest(actions.TestBase):
 
         response = self.testapp.get('/admin?action=deployment')
         assert_contains('application_id: testbed-test', response.body)
-        assert_contains('Application Identity', response.body)
+        assert_contains('About the Application', response.body)
 
         actions.unregister(self)
         actions.logout()
@@ -178,10 +178,10 @@ class AdminAspectTest(actions.TestBase):
 
         actions.login(email, True)
         response = self.testapp.get('/admin')
-        assert_contains('Course Builder Admin - Courses', response.body)
-        assert_contains('<a href="/foo">', response.body)
+        assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
+        assert_contains('<a href="/foo/dashboard">', response.body)
         assert_contains('/foo-data', response.body)
-        assert_contains('<a href="/bar">', response.body)
+        assert_contains('<a href="/bar/dashboard">', response.body)
         assert_contains('/bar-data', response.body)
         assert_contains('Total: 2 item(s)', response.body)
 
@@ -190,6 +190,53 @@ class AdminAspectTest(actions.TestBase):
 
 class CourseAuthorAspectTest(actions.TestBase):
     """Tests the site from the Course Author perspective."""
+
+    def test_dashboard(self):
+        """Tests course dashboard."""
+
+        email = 'test_dashboard@google.com'
+        name = 'Test Dashboard'
+
+        # Non-admin does't have access.
+        actions.login(email)
+        response = self.get('dashboard')
+        assert_equals(response.status_int, 302)
+
+        actions.register(self, name)
+        assert_equals(response.status_int, 302)
+        actions.logout()
+
+        # Admin has access.
+        actions.login(email, True)
+        response = self.get('dashboard')
+        assert_contains('Google</a> &gt; Dashboard &gt; Outline', response.body)
+
+        # Tests outline view.
+        response = self.get('dashboard')
+        assert_contains('Unit 3 - Advanced techniques', response.body)
+
+        # Test assets view.
+        response = self.get('dashboard?action=assets')
+        assert_contains('Google</a> &gt; Dashboard &gt; Assets', response.body)
+        assert_contains('data/lesson.csv', response.body)
+        assert_contains('assets/css/main.css', response.body)
+        assert_contains('assets/img/Image1.5.png', response.body)
+        assert_contains('assets/js/activity-3.2.js', response.body)
+
+        # Test settings view.
+        response = self.get('dashboard?action=settings')
+        assert_contains(
+            'Google</a> &gt; Dashboard &gt; Settings', response.body)
+        assert_contains('course.yaml', response.body)
+        assert_contains('title: \'Power Searching with Google\'', response.body)
+        assert_contains('locale: \'en_US\'', response.body)
+
+        # Tests student statistics view.
+        response = self.get('dashboard?action=students')
+        assert_contains(
+            'Google</a> &gt; Dashboard &gt; Students', response.body)
+        assert_contains('Registered and enrolled: 1', response.body)
+        assert_contains('Total: 1', response.body)
 
     def test_trigger_sample_announcements(self):
         """Test course author can trigger adding sample announcements."""
