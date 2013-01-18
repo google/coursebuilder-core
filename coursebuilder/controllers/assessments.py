@@ -16,7 +16,6 @@
 
 __author__ = 'pgbovine@google.com (Philip Guo)'
 
-import json
 import logging
 
 from models import utils
@@ -103,14 +102,17 @@ class AnswerHandler(BaseHandler):
             return
 
         # Read in answers
-        answer = json.dumps(self.request.POST.items())
+        # TODO(sll): Add error-handling for when self.request.POST.items() is
+        # empty or mis-formatted.
+        answer = [[str(item[0]), str(item[1])] for item in
+                  self.request.POST.items()]
         original_type = self.request.get('assessment_type')
 
         # Check for enrollment status
         student = Student.get_by_email(user.email())
         if student and student.is_enrolled:
             # Log answer submission
-            logging.info('%s:%s', student.key().name(), answer)
+            logging.info('%s: %s', student.key().name(), answer)
 
             (student, assessment_type) = self.store_assessment_transaction(
                 student.key().name(), original_type, answer)

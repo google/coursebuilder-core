@@ -81,8 +81,5 @@ transformers:
       export_transform: transform.export_date_time('%Y-%m-%d %H:%M:%S')
     - property: answers
       external_name: answers
-      # Removes extra backslash characters in the 'answers' string.
-      export_transform: 'lambda x: x.replace("\\", "") if x else ""'
     - property: scores
       external_name: scores
-

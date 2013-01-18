@@ -23,6 +23,7 @@ from controllers import utils
 from controllers.sites import assert_fails
 from models import models
 from models.utils import get_all_scores
+from models.utils import get_answer
 from models.utils import get_score
 
 import actions
@@ -237,6 +238,10 @@ class AssessmentTest(actions.TestBase):
         self.submit_assessment('Post', post)
         student = models.Student.get_enrolled_student_by_email(email)
         assert len(get_all_scores(student)) == 4  # also includes overall_score
+
+        assert isinstance(get_answer(student, 'precourse'), list)
+        assert isinstance(get_answer(student, 'midcourse'), list)
+        assert isinstance(get_answer(student, 'postcourse'), list)
 
         # Check that scores are recorded properly.
         student = models.Student.get_enrolled_student_by_email(email)
