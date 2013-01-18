@@ -59,7 +59,8 @@ class ObjectEditor(object):
 
     @classmethod
     def get_html_for(
-        cls, handler, schema_json, annotations, object_key, rest_url, exit_url):
+        cls, handler, schema_json, annotations, object_key, rest_url, exit_url,
+        delete_url=None):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -72,6 +73,7 @@ class ObjectEditor(object):
             object_key: a key of an object being edited
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
+            delete_url: optional URL for delete POST operation
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
@@ -92,20 +94,27 @@ class ObjectEditor(object):
             'schema': schema_json,
             'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
-            'post_url': post_url,
-            'post_args': json.dumps(post_args),
+            'save_url': post_url,
+            'save_args': json.dumps(post_args),
             'exit_url': exit_url,
             'required_modules': REQUIRED_MODULES,
             'schema_annotations': cls.format_annotations(annotations)
-        }
+            }
+
+        if delete_url:
+            template_values['delete_url'] = delete_url
 
         return handler.get_template(
             'oeditor.html', [os.path.dirname(__file__)]).render(template_values)
 
 
-def create_bool_select_annotation(keys_list, label, true_label, false_label):
+def create_bool_select_annotation(
+    keys_list, label, true_label, false_label, description=None):
     """Creates inputex annotation to display bool type as a select."""
-    return (keys_list, {'type': 'select', '_inputex': {
+    properties = {
         'label': label, 'choices': [
             {'value': True, 'label': true_label},
-            {'value': False, 'label': false_label}]}})
+            {'value': False, 'label': false_label}]}
+    if description:
+        properties['description'] = description
+    return (keys_list, {'type': 'select', '_inputex': properties})

@@ -50,7 +50,10 @@ SCHEMA_ANNOTATIONS_TEMPLATE = [
     (['properties', 'name', '_inputex'], {
         'label': 'Name', '_type': 'uneditable'}),
     oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+        ['properties', 'is_draft'], 'Status', 'Pending', 'Active',
+        description='<strong>Active</strong>: This value is active and '
+        'overrides all other defaults.<br/><strong>Pending</strong>: This '
+        'value is not active yet, and the default settings still apply.')]
 
 
 class ConfigPropertyRights(object):
@@ -124,10 +127,15 @@ class ConfigPropertyEditor(object):
 
         exit_url = '/admin?action=settings#%s' % cgi.escape(key)
         rest_url = '/rest/config/item'
+        delete_url = '/admin?%s' % urllib.urlencode({
+            'action': 'config_reset',
+            'name': key,
+            'xsrf_token': cgi.escape(self.create_xsrf_token('config_reset'))})
+
         template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, ConfigPropertyEditor.get_schema_json(item),
             ConfigPropertyEditor.get_schema_annotations(item),
-            key, rest_url, exit_url)
+            key, rest_url, exit_url, delete_url)
 
         self.render_page(template_values)
 

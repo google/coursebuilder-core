@@ -106,6 +106,10 @@
     font-weight: bold;
     text-decoration: none;
   }
+
+  .pull-right {
+    float: right;
+  }
 </style>
 
 <div class='status-message' id='formStatusMessage' style='display: none;'>&nbsp;</div>
@@ -138,6 +142,15 @@
   // keep all our global objects here
   cb_global = {};
 
+  // various URL's needed by the form
+  cb_global.get_url = '{{ get_url }}';
+  cb_global.save_url = '{{ save_url }}';
+  cb_global.save_args = {{ save_args }};
+  cb_global.exit_url = '{{ exit_url }}';
+
+  // If this value is '', deletions are not allowed
+  cb_global.delete_url = '{{ delete_url }}';
+
   // set home folder
   YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
 
@@ -169,7 +182,7 @@
             var lastSavedFormValue = cb_global.form.getValue();
 
             // format request
-            var request_save = {{ post_args }};
+            var request_save = cb_global.save_args;
             request_save.payload = JSON.stringify(lastSavedFormValue);
 
             // append xsrf_token if provided
@@ -181,7 +194,7 @@
             request_data = {"request": JSON.stringify(request_save)};
 
             // async post data to the server
-            var url = '{{ post_url }}';
+            var url = cb_global.save_url;
 
             Y.io(url, {
               method: 'PUT',
@@ -220,18 +233,35 @@
           lastSavedFormValue = cb_global.lastSavedFormValue.toPrettyJSONString(true);
           now = cb_global.form.getValue().toPrettyJSONString(true);
           if (lastSavedFormValue == now || confirm("Abandon all changes?")) {
-            window.location = '{{ exit_url }}';
+            window.location = cb_global.exit_url;
           }
 
         }}
       ];
+
+      // optional delete button
+      if (cb_global.delete_url != '') {
+           delete_button = {type: 'link', value: 'Delete',
+              className: 'inputEx-Button inputEx-Button-Link pull-right',
+              onClick:function(e) {
+                  if (confirm("Are you sure you want to delete this object?")) {
+                      var form = document.createElement('form');
+                      form.method = 'post';
+                      form.action = cb_global.delete_url;
+                      document.body.appendChild(form);
+                      form.submit();
+                  }
+              }
+           };
+           inputExDefinition.buttons.push(delete_button)
+      }
 
       // create form and bind it to DOM
       inputExDefinition.parentEl = 'formContainer';
       cb_global.form = new Y.inputEx.Form(inputExDefinition);
 
       // async get data from the sever and push it into the form when ready
-      var url = '{{ get_url }}';
+      var url = cb_global.get_url;
 
       // request data for object being edited
       Y.io(url, {

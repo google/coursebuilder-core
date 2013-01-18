@@ -261,18 +261,6 @@ class AdminHandler(
             if override:
                 actions.append(get_action_html('Edit', {
                     'action': 'config_edit', 'name': name}))
-                actions.append("""
-                    <form action='/admin?%s' method='POST'>
-                    <input type="hidden" name="xsrf_token" value="%s">
-                    <button class="gcb-button" type="submit"
-                      onclick='return confirm("Delete an override for %s?");'>
-                      Reset
-                    </button></form>""" % (
-                        urllib.urlencode(
-                            {'action': 'config_reset', 'name': name}),
-                        cgi.escape(self.create_xsrf_token('config_reset')),
-                        cgi.escape(name)
-                    ))
             else:
                 actions.append("""
                     <form action='/admin?%s' method='POST'>
@@ -339,12 +327,14 @@ class AdminHandler(
 
         content.append('</table>')
         content.append("""
-            <p>Legend:
-            <span class='gcb-env-diff'>
-                &nbsp;environment variable override&nbsp;</span>,
+            <p><strong>Legend</strong>:
+            For each property, the value shown corresponds to, in
+            descending order of priority:
             <span class='gcb-db-diff'>
-                &nbsp;datastore override&nbsp;</span>.</p>
-            """)
+                &nbsp;[ the value set via this page ]&nbsp;</span>,
+            <span class='gcb-env-diff'>
+                &nbsp;[ the environment value in app.yaml ]&nbsp;</span>,
+            and the [ default value ] in the Course Builder codebase.""")
 
         template_values['main_content'] = ''.join(content)
 
