@@ -18,6 +18,7 @@
 
   {% if course_info.course.main_video %}
     <iframe class="youtube-player" type="text/html" width="460"
+     title="{% trans %} YouTube Video Player {% endtrans %}"
      height="300" src="{{course_info.course.main_video.url}}"
      frameborder="0" allowfullscreen></iframe>
   {% else %}

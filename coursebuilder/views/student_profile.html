@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block subtitle %}
+  {% trans %} My Profile {% endtrans %}
+{% endblock subtitle %}
+
 {% block top_content %}
 {% endblock %}
 
@@ -14,27 +18,62 @@
 
       {% if student %}
       <table style="border-collapse:collapse;">
-      <tr><td><b>{% trans %} Currently enrolled {% endtrans %}</b></td><td>{{ student.is_enrolled }}</td></tr>
-      <tr><td><b>{% trans %} Date enrolled {% endtrans %}</b></td><td>{{ student.enrolled_date }}</td></tr>
-      <tr><td><b>{% trans %} Email {% endtrans %}</b></td><td>{{ student.key().name() }}</td></tr>
-      <tr><td><b>{% trans %} Name {% endtrans %}</b></td><td>{{ student.name }}</td></tr>
-      <tr><td colspan=2><b>{% trans %} Assessment scores {% endtrans %}</b></td></tr>
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Pre-class {% endtrans %}</b></td><td>
-        {% if scores.has_key('precourse') %}
-          {% trans %} Completed {% endtrans %}</td></tr>
-        {% endif %}
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Mid-class {% endtrans %}</b></td><td>
-        {% if scores.has_key('midcourse') %}
-          {{ scores['midcourse'] }}</td></tr>
-        {% endif %}
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Post-class {% endtrans %}</b></td><td>
-        {% if scores.has_key('postcourse') %}
-          {{ scores['postcourse'] }}</td></tr>
-        {% endif %}
-      <tr><td><b>{% trans %} Overall course score {% endtrans %}</b></td><td>
-        {% if scores.has_key('overall_score') %}
-          {{ scores['overall_score'] }}</td></tr>
-        {% endif %}
+        <colgroup>
+          <col style="width: 10%">
+          <col>
+        </colgroup>
+        <tr>
+          <th align="left">{% trans %} Currently enrolled {% endtrans %}</th>
+          <td>{{ student.is_enrolled }}</td>
+        </tr>
+        <tr>
+          <th align="left">{% trans %} Date enrolled {% endtrans %}</th>
+          <td>{{ student.enrolled_date }}</td>
+        </tr>
+        <tr>
+          <th align="left">{% trans %} Email {% endtrans %}</th>
+          <td>{{ student.key().name() }}</td>
+        </tr>
+        <tr>
+          <th align="left">{% trans %} Name {% endtrans %}</th>
+          <td>{{ student.name }}</td>
+        </tr>
+
+        <tr>
+          <th align="left" colspan=2>{% trans %} Assessment scores {% endtrans %}</th>
+        </tr>
+        <tr>
+          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Pre-class {% endtrans %}</th>
+          <td>
+            {% if scores.has_key('precourse') %}
+              {% trans %} Completed {% endtrans %}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Mid-class {% endtrans %}</th>
+          <td>
+            {% if scores.has_key('midcourse') %}
+              {{ scores['midcourse'] }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Post-class {% endtrans %}</th>
+          <td>
+            {% if scores.has_key('postcourse') %}
+              {{ scores['postcourse'] }}
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th align="left">{% trans %} Overall course score {% endtrans %}</th>
+          <td>
+            {% if scores.has_key('overall_score') %}
+              {{ scores['overall_score'] }}
+            {% endif %}
+          </td>
+        </tr>
       </table>
 
       <form action='student/editstudent' method='post'>

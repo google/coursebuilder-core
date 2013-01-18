@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block subtitle %}
+  {% trans %} Forum {% endtrans %}
+{% endblock subtitle %}
+
 {% block top_content %}
 
   <div>
@@ -9,10 +13,11 @@
           <iframe id="forum_embed"
             src="javascript:void(0)"
             scrolling="no"
+            title="Forum"
             frameborder="0"
             width="900"
             height="700">
-       	  </iframe>
+          </iframe>
 
           {% if course_info.course.forum_embed_url %}
             <script type="text/javascript">
@@ -30,5 +35,5 @@
 {% endblock %}
 
 {% block main_content %}
-  
+
 {% endblock %}

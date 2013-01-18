@@ -9,7 +9,12 @@
     </script>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>{{course_info.course.title}}</title>
+    <title>
+      {{course_info.course.title}} -
+      {% block subtitle %}
+        {% trans %} Course {% endtrans %}
+      {% endblock subtitle %}
+    </title>
 
     <link rel="icon" href="assets/img/favicon.ico" />
 
@@ -99,7 +104,7 @@
           {% if is_manager %}
           <li>
             <a href="dashboard">
-              {% trans %} Dashboard {% endtrans %}
+              Dashboard
             </a>
           </li>
           {% endif %}
