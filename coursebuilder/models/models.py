@@ -97,8 +97,8 @@ class Student(BaseEntity):
     is_enrolled = db.BooleanProperty()
 
     # Each of the following is a string representation of a JSON dict.
-    answers = db.TextProperty()
-    scores = db.TextProperty()
+    answers = db.TextProperty(indexed=False)
+    scores = db.TextProperty(indexed=False)
 
     def put(self):
         """Do the normal put() and also add the object to memcache."""
