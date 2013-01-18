@@ -139,9 +139,10 @@ GCB_COURSES_CONFIG_ENV_VAR_NAME = 'GCB_COURSES_CONFIG'
 # base name for all course namespaces
 GCB_BASE_COURSE_NAMESPACE = 'gcb-course'
 
-# these folder names are reserved
+# these folder and file names are reserved
 GCB_ASSETS_FOLDER_NAME = os.path.normpath('/assets/')
 GCB_VIEWS_FOLDER_NAME = os.path.normpath('/views/')
+GCB_CONFIG_FILENAME = os.path.normpath('/course.yaml')
 
 # supported site types
 SITE_TYPE_COURSE = 'course'
@@ -375,7 +376,14 @@ class ApplicationContext(object):
     def get_slug(self):
         return self.slug
 
+    def get_config_filename(self):
+        """Returns absolute location of a course configuration file."""
+        filename = abspath(self.get_home_folder(), GCB_CONFIG_FILENAME)
+        debug('Config file: %s' % filename)
+        return filename
+
     def get_template_home(self):
+        """Returns absolute location of a course template folder."""
         path = abspath(self.get_home_folder(), GCB_VIEWS_FOLDER_NAME)
         debug('Template home: %s' % path)
         return path
