@@ -16,16 +16,12 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-import logging
-import os
 import urlparse
 import jinja2
-from models.models import Lesson
+from models.courses import Course
 from models.models import Student
-from models.models import Unit
 from models.roles import Roles
 from models.utils import get_all_scores
-from tools import verify
 import webapp2
 from webapp2_extras import i18n
 from google.appengine.api import users
@@ -157,12 +153,22 @@ class ApplicationHandler(webapp2.RequestHandler):
 class BaseHandler(ApplicationHandler):
     """Base handler."""
 
+    def __init__(self):
+        super(BaseHandler, self).__init__()
+        self.course = None
+
+    def get_course(self):
+        if not self.course:
+            self.course = Course(self)
+        return self.course
+
     def get_units(self):
-        """Gets a list of units in a course. Loads data from CSV if None."""
-        units = Unit.get_units()
-        if not units:
-            units = put_course_into_datastore(self.app_context.get_data_home())
-        return units
+        """Gets all units in the course."""
+        return self.get_course().get_units()
+
+    def get_lessons(self, unit_id):
+        """Gets all lessons (in order) in the specific course unit."""
+        return self.get_course().get_lessons(unit_id)
 
     def get_user(self):
         """Validate user exists."""
@@ -197,52 +203,6 @@ class BaseHandler(ApplicationHandler):
     def render(self, template_file):
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
-
-
-def copy_attributes(source, target, converter):
-    """Copies source object attributes into a target using a converter."""
-    for source_name, value in converter.items():
-        if value:
-            target_name = value[0]
-            target_type = value[1]
-            setattr(
-                target, target_name, target_type(getattr(source, source_name)))
-
-
-def put_course_into_datastore(data_folder):
-    """Loads course data from the CSV files."""
-    logging.info('Initializing datastore from CSV files')
-
-    unit_file = os.path.join(data_folder, 'unit.csv')
-    lesson_file = os.path.join(data_folder, 'lesson.csv')
-
-    # Load and validate data from CSV files.
-    units = verify.read_objects_from_csv_file(
-        unit_file, verify.UNITS_HEADER, verify.Unit)
-    lessons = verify.read_objects_from_csv_file(
-        lesson_file, verify.LESSONS_HEADER, verify.Lesson)
-    verifier = verify.Verifier()
-    verifier.verify_unit_fields(units)
-    verifier.verify_lesson_fields(lessons)
-    verifier.verify_unit_lesson_relationships(units, lessons)
-    assert verifier.errors == 0
-    assert verifier.warnings == 0
-
-    # Load data from CSV files into a datastore.
-    units = verify.read_objects_from_csv_file(
-        unit_file, verify.UNITS_HEADER, Unit)
-    lessons = verify.read_objects_from_csv_file(
-        lesson_file, verify.LESSONS_HEADER, Lesson)
-    for unit in units:
-        entity = Unit()
-        copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)
-        entity.put()
-    for lesson in lessons:
-        entity = Lesson()
-        copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
-        entity.put()
-
-    return Unit.get_units(False)
 
 
 class PreviewHandler(BaseHandler):

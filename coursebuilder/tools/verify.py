@@ -749,8 +749,9 @@ def set_object_attributes(target_object, names, values):
             # 'str' here
             target_type = None
             if hasattr(target_object.__class__, names[i]):
-                target_type = getattr(
-                    target_object.__class__, names[i]).data_type.__name__
+                attribute = getattr(target_object.__class__, names[i])
+                if hasattr(attribute, 'data_type'):
+                    target_type = attribute.data_type.__name__
 
             if target_type and (target_type == 'str' or
                                 target_type == 'basestring'):

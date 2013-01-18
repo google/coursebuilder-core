@@ -272,7 +272,7 @@ class AnnouncementEntity(entities.BaseEntity):
     html = db.TextProperty()
     is_draft = db.BooleanProperty()
 
-    memcache_key = 'AnnouncementEntity.get_announcements'
+    memcache_key = 'announcements'
 
     @classmethod
     def get_announcements(cls, allow_cached=True):

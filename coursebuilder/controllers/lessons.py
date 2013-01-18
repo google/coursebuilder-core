@@ -17,7 +17,6 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 
-from models.models import Unit
 from utils import BaseHandler
 
 
@@ -74,7 +73,7 @@ class UnitHandler(BaseHandler):
             if unit.unit_id == str(unit_id):
                 self.template_value['units'] = unit
 
-        lessons = Unit.get_lessons(unit_id)
+        lessons = self.get_lessons(unit_id)
         self.template_value['lessons'] = lessons
 
         # Set template values for nav bar
@@ -93,7 +92,7 @@ class UnitHandler(BaseHandler):
         if lessons[lesson_id - 1].activity:
             self.template_value['next_button_url'] = (
                 'activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
-        elif lesson_id == lessons.count():
+        elif lesson_id == len(lessons):
             self.template_value['next_button_url'] = ''
         else:
             self.template_value['next_button_url'] = (
@@ -120,7 +119,7 @@ class ActivityHandler(BaseHandler):
             if unit.unit_id == str(unit_id):
                 self.template_value['units'] = unit
 
-        lessons = Unit.get_lessons(unit_id)
+        lessons = self.get_lessons(unit_id)
         self.template_value['lessons'] = lessons
 
         # Set template values for nav-x bar
@@ -129,7 +128,7 @@ class ActivityHandler(BaseHandler):
         # Set template values for back and next nav buttons
         self.template_value['back_button_url'] = (
             'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
-        if lesson_id == lessons.count():
+        if lesson_id == len(lessons):
             self.template_value['next_button_url'] = ''
         else:
             self.template_value['next_button_url'] = (
