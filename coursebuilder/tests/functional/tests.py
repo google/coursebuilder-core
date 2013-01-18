@@ -59,7 +59,7 @@ class AdminAspectTest(actions.TestBase):
 
         # add new
         response = actions.view_announcements(self)
-        add_form = response.forms['add-announcement']
+        add_form = response.forms['gcb-add-announcement']
         response = self.submit(add_form)
         assert_equals(response.status_int, 302)
 
@@ -69,7 +69,7 @@ class AdminAspectTest(actions.TestBase):
 
         # delete draft
         response = actions.view_announcements(self)
-        delete_form = response.forms['delete-announcement-1']
+        delete_form = response.forms['gcb-delete-announcement-1']
         response = self.submit(delete_form)
         assert_equals(response.status_int, 302)
 

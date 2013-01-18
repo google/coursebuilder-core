@@ -9,7 +9,7 @@
     <div class="gcb-aside">
       {% if announcements %}
         {% if announcements.add_action %}
-          <form id='add-announcement' action='{{ announcements.add_action }}' method='POST'>
+          <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
             <button class="gcb-button gcb-button-action" type="submit">Add New</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
@@ -17,7 +17,7 @@
         {% for item in announcements.children %}
           <hr>
           {% if item.delete_action %}
-          <form id='delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
+          <form id='gcb-delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
             <button class="gcb-button gcb-button-action" type="submit"
               onclick='return confirm("Delete this item?");'>
               Delete
@@ -25,9 +25,9 @@
           </form>
           {% endif %}
           {% if item.edit_action %}
-            <a href='{{ item.edit_action }}'>
-              <button class="gcb-button gcb-button-action">Edit</button>
-            </a>
+          <button class="gcb-button gcb-button-action" onclick="javascript:location.href = '{{ item.edit_action }}';">
+            Edit
+          </button>
           {% endif %}
           <h2><a name='{{ item.key }}'></a>{{ item.title }}{% if item.is_draft %} (Draft){% endif %}</h2>
           <p>{{ item.date }}</p>

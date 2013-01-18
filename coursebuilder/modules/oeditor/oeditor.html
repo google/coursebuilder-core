@@ -15,9 +15,9 @@
     left:50%;
     margin-left: -200px;  /* half of the width */
     position:fixed;
-    background-color: rgb(255, 0, 0);
-    background-color: rgba(255, 255, 0, 0.5);
-    xtransparency: 50%;
+    background-color: rgb(255, 255, 128);
+    background-color: rgba(255, 255, 128, 0.5);
+    transparency: 50%;
     text-align: center;
     padding: 16px;
     z-index: 999;
@@ -113,7 +113,8 @@
 <script type='text/javascript'>
   function cbShowMsg(text){
     elem = document.getElementById("formStatusMessage");
-    elem.textContent = text;
+    elem.textContent = text;  // FF, Chrome
+    elem.innerText = text;    // IE
     elem.style.display = "block";
   }
 
