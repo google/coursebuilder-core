@@ -175,7 +175,7 @@ class AdminAspectTest(actions.TestBase):
 
         actions.login(email, True)
         response = self.testapp.get('/admin')
-        assert_contains('Course Builder - Courses', response.body)
+        assert_contains('Course Builder Admin - Courses', response.body)
         assert_contains('<a href="/foo">', response.body)
         assert_contains('/foo-data', response.body)
         assert_contains('<a href="/bar">', response.body)

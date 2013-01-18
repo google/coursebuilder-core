@@ -123,10 +123,14 @@ class AdminHandler(
         content.append('</ol>')
         return '\n'.join(content)
 
+    def format_title(self, text):
+        """Formats standard title."""
+        return 'Course Builder Admin - %s' % text
+
     def get_perf(self):
         """Shows server performance counters page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Metrics'
+        template_values['page_title'] = self.format_title('Metrics')
 
         perf_counters = {}
 
@@ -135,6 +139,8 @@ class AdminHandler(
             time.time() - BEGINNING_OF_TIME)
 
         # config counters
+        perf_counters['gcb-config-overrides'] = len(
+            config.Registry.get_overrides())
         perf_counters['gcb-config-age-sec'] = (
             long(time.time()) - config.Registry.last_update_time)
         perf_counters['gcb-config-update-time-sec'] = (
@@ -153,7 +159,7 @@ class AdminHandler(
     def get_deployment(self):
         """Shows server environment and deployment information page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Deployment'
+        template_values['page_title'] = self.format_title('Deployment')
 
         # Yaml file content.
         yaml_content = []
@@ -181,7 +187,7 @@ class AdminHandler(
     def get_settings(self):
         """Shows configuration properties information page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Settings'
+        template_values['page_title'] = self.format_title('Settings')
 
         content = []
         content.append("""
@@ -312,7 +318,7 @@ class AdminHandler(
     def get_courses(self):
         """Shows a list of all courses available on this site."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Courses'
+        template_values['page_title'] = self.format_title('Courses')
 
         content = []
         content.append('<h3>All Courses</h3>')
