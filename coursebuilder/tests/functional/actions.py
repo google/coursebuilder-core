@@ -19,6 +19,7 @@
 import logging
 import os
 import re
+from controllers import sites
 from controllers import utils
 import main
 import suite
@@ -30,6 +31,7 @@ class TestBase(suite.BaseTestClass):
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
         main.debug = True
+        sites.ApplicationRequestHandler.bind(main.urls)
         return main.app
 
     def setUp(self):  # pylint: disable-msg=g-bad-name

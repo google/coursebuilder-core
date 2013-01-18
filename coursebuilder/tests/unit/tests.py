@@ -17,8 +17,9 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import unittest
-import models
-import tools
+from controllers import sites
+from models import config
+from tools import verify
 
 
 class InvokeExistingUnitTest(unittest.TestCase):
@@ -26,5 +27,11 @@ class InvokeExistingUnitTest(unittest.TestCase):
 
     def test_existing_unit_tests(self):
         """Run all units tests declared elsewhere."""
-        models.config.run_all_unit_tests()
-        tools.verify.run_all_unit_tests()
+        sites.run_all_unit_tests()
+        config.run_all_unit_tests()
+        verify.run_all_unit_tests()
+
+
+if __name__ == '__main__':
+    unittest.TextTestRunner().run(
+        unittest.TestLoader().loadTestsFromTestCase(InvokeExistingUnitTest))

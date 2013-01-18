@@ -564,7 +564,6 @@ def test_unprefix():
 
 def test_rule_definitions():
     """Test various rewrite rule definitions."""
-    os.environ = {}
 
     # Check that the default site is created when no rules are specified.
     assert len(get_all_courses()) == 1
@@ -599,16 +598,18 @@ def test_rule_definitions():
 
     # Test namespaces.
     set_path_info('/')
+    try:
+        os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
+        assert ApplicationContext.get_namespace_name() == 'gcb-course-c-d'
+    finally:
+        unset_path_info()
 
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
-    assert ApplicationContext.get_namespace_name() == 'gcb-course-c-d'
-
-    unset_path_info()
+    # Cleanup.
+    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
 
 def test_url_to_rule_mapping():
     """Tests mapping of a URL to a rule."""
-    os.environ = {}
 
     # default mapping
     assert_mapped('/favicon.ico', '/')
@@ -630,10 +631,12 @@ def test_url_to_rule_mapping():
     assert_mapped('e/f', None)
     assert_mapped('foo', None)
 
+    # Cleanup.
+    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+
 
 def test_url_to_handler_mapping_for_course_type():
     """Tests mapping of a URL to a handler for course type."""
-    os.environ = {}
 
     # setup rules
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
@@ -688,7 +691,7 @@ def test_url_to_handler_mapping_for_course_type():
     assert_handled('/a/b/data/units.csv', None)
 
     # Default mapping
-    os.environ = {}
+    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
     urls = [('/', handler0), ('/foo', handler1), ('/bar', handler2)]
 
     # Positive cases
@@ -704,21 +707,25 @@ def test_url_to_handler_mapping_for_course_type():
     assert_handled('/e/f/index.html', None)
     assert_handled('/foo/foo.css', None)
 
-    # Clean up
+    # Clean up.
     ApplicationRequestHandler.bind([])
 
 
 def test_special_chars():
-    os.environ = {}
+    """Test special character encoding."""
 
     # Test that namespace collisions are detected and are not allowed.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/a/b:/c-d')
     assert_fails(get_all_courses)
 
+    # Cleanup.
+    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+
 
 def test_path_construction():
     """Checks that path_join() works correctly."""
+
     # Test cases common to all platforms.
     assert (os.path.normpath(path_join('/a/b', '/c')) ==
             os.path.normpath('/a/b/c'))
