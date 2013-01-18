@@ -7,12 +7,15 @@
 
 <div class="gcb-main">
   <ul class="gcb-breadcrumb">
-    <li><a href="course">Course</a></li>
-    <li><a href="unit?unit={{ units.unit_id }}">Unit {{ units.unit_id }}</a></li>
-    <li>Lesson {{ lesson_id }}</li>
+    <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
+    <li><a href="unit?unit={{ units.unit_id }}">
+      {% trans %} Unit {% endtrans %} {{ units.unit_id }}</a></li>
+    <li>{% trans %} Lesson {% endtrans %} {{ lesson_id }}</li>
   </ul>
   <div>
-    <h1 class="class_header">Unit {{ units.unit_id }} - {{ units.title }}</h1>
+    <h1 class="class_header">
+      {{ gettext('Unit %(id)s - %(title)s', id=units.unit_id, title=units.title) }}
+    </h1>
   </div>
 
   <div class="gcb-nav" id="gcb-nav-y">
@@ -26,7 +29,9 @@
         {% endif %}
 
         {% if lesson.activity %}
-          <ul><li><a href="activity?unit={{ unit_id }}&lesson={{ lesson.id }}"> Activity </a></li></ul>
+          <ul><li><a href="activity?unit={{ unit_id }}&lesson={{ lesson.id }}">
+            {% trans %} Activity {% endtrans %}
+          </a></li></ul>
         {% endif %}
         </li>
       {% endfor %}
@@ -52,7 +57,9 @@
                 </div>
               <div class="gcb-col-3">
                 <p style="float:right; margin-top: 0px;">
-                  <a class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">Text Version</a>
+                  <a class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
+                    {% trans %} Text Version {% endtrans %}
+                  </a>
                 </p>
               </div>
             </div><!-- /gcb-cols -->
@@ -67,14 +74,20 @@
           <div class="gcb-button-box">
             <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
               {% if back_button_url %}
-                <a href="{{ back_button_url }}"> Back </a>
+                <a href="{{ back_button_url }}">
+                  {% trans %} Back {% endtrans %}
+                </a>
               {% endif %}
             </div>
             <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
               {% if next_button_url %}
-                <a href="{{ next_button_url }}"> Next </a>
+                <a href="{{ next_button_url }}">
+                  {% trans %} Next {% endtrans %}
+                </a>
               {% else %}
-                <a href="course"> End </a>
+                <a href="course">
+                  {% trans %} End {% endtrans %}
+                </a>
               {% endif %}
             </div>
           </div>

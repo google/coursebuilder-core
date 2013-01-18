@@ -12,41 +12,33 @@
     <div class="gcb-col-7 gcb-aside gcb-button-box">
       {% if course_status == "full" %}
         <p class="top_content">
-          Thank you for registering for {{course_info.course.title}}.
-          Unfortunately, the course is now full, so registration has
-          closed.
+          {{ gettext('Thank you for registering for %(course_title)s. Unfortunately, the course is now full, so registration has closed.', course_title=course_info.course.title) }}
         </p>
 
       {% else %}
         <p class="top_content">
-          Thank you for registering for {{course_info.course.title}}.
-          Stay tuned for more information about the course which will
-          start on {{course_info.course.start_date}}.
+          {{ gettext('Thank you for registering for %(course_title)s. Stay tuned for more information about the course which will start on %(start_date)s.', course_title=course_info.course.title, start_date=course_info.course.start_date) }}
         </p>
 
         <div style="text-align:left;">
           <ul>
             {% if course_info.course.forum_url %}
               <li>
-                To participate in community discussions about this
-                course, register for the web forum at
+                {% trans %} To participate in community discussions about this course, register for the web forum at {% endtrans %}
                 <a href="{{course_info.course.forum_url}}">
                   {{course_info.course.forum_url}}
                 </a>.
-                On that page, click on <b>Join Group</b>.
+                {% trans %} On that page, click on <b>Join Group</b> {% endtrans %}.
               </li>
             {% endif %}
 
             {% if course_info.course.announcement_list_url %}
               <li>
-                To receive announcements about this course, register for the
-                announcements-only email list at
+                {% trans %} To receive announcements about this course, register for the announcements-only email list at {% endtrans %}
                 <a href="{{course_info.course.announcement_list_url}}">
                   {{course_info.course.announcement_list_url}}
                 </a>.
-                On that page, click on <b>Join Group</b>. In the dialog box
-                that appears, under <b>How do you want to read this group?</b>,
-                choose <b>Email</b>.
+                {% trans %} On that page, click on <b>Join Group</b>. In the dialog box that appears, under <b>How do you want to read this group?</b>, choose <b>Email</b>. {% endtrans %}
               </li>
             {% endif %}
           </ul>

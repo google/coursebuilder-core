@@ -85,7 +85,7 @@ class AdminAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = actions.view_announcements(self)
-        assert_does_not_contain('My Test Title!!!', response.body)
+        assert_does_not_contain('My Test Title', response.body)
 
         # REST GET existing item
         items = AnnouncementEntity.all().fetch(1)
@@ -101,7 +101,7 @@ class AdminAspectTest(actions.TestBase):
             assert 'date' in payload_dict
 
             # REST PUT item
-            payload_dict['title'] = 'My Test Title!!!'
+            payload_dict['title'] = 'My Test Title'
             payload_dict['date'] = '2012/12/31'
             payload_dict['is_draft'] = True
             request = {}
@@ -112,7 +112,7 @@ class AdminAspectTest(actions.TestBase):
 
             # confirm change is visible
             response = self.get('announcements')
-            assert_contains('My Test Title!!! (Draft)', response.body)
+            assert_contains('My Test Title (Draft)', response.body)
 
         # REST GET not-existing item
         response = self.get('rest/announcements/item?key=not_existent_key')

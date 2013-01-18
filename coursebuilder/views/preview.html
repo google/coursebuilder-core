@@ -9,7 +9,7 @@
         <div class="gcb-col-55">
           <center>
             <a class="gcb-button gcb-button-large" href="register">
-              Register
+              {% trans %} Register {% endtrans %}
             </a>
           </center>
         </div>
@@ -21,7 +21,9 @@
       </div>
       <div class="gcb-col-9">
 
-        <h1 class="schedule-headers">Schedule</h1>
+        <h1 class="schedule-headers">
+          {% trans %} Schedule {% endtrans %}
+        </h1>
 
         <div class="gcb-main">
           <div style="width: 100%;" class="gcb-nav" id="gcb-nav-y">
@@ -30,11 +32,16 @@
                 {% if unit.type == 'A' %}
                   <li><p class="top_content">{{ unit.title }}</p></li>
                 {% elif unit.type == 'U' %}
-                  <li><p class="top_content">Unit {{ unit.unit_id }} - {{ unit.title }} <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">{{ unit.release_date }}</span></p></li>
+                  <li><p class="top_content">
+                    {{ gettext('Unit %(id)s - %(title)s', id=unit.unit_id, title=unit.title) }}
+                    <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">{{ unit.release_date }}</span>
+                  </p></li>
                 {% elif unit.type == 'O' %}
                   <li><p class="top_content"> {{ unit.title }} </p></li>
                 {% else %}
-                  <li><p class="top_content">Error: unit type not recognized.</p></li>
+                  <li><p class="top_content">
+                    Error: unit type not recognized.
+                  </p></li>
                 {% endif %}
               {% endfor %}
             </ul>

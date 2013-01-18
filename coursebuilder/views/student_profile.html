@@ -7,46 +7,57 @@
 <div class="gcb-main">
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
-      <h2>Student Profile for {{ student.key().name() }}</h2>
+      <h2>
+        {% trans %} Student Profile for {% endtrans %}
+        {{ student.key().name() }}
+      </h2>
 
       {% if student %}
       <table style="border-collapse:collapse;">
-      <tr><td><b>Currently enrolled</b></td><td>{{ student.is_enrolled }}</td></tr>
-      <tr><td><b>Date enrolled</b></td><td>{{ student.enrolled_date }}</td></tr>
-      <tr><td><b>Email</b></td><td>{{ student.key().name() }}</td></tr>
-      <tr><td><b>Name</b></td><td>{{ student.name }}</td></tr>
-      <tr><td colspan=2><b>Assessment scores</b></td></tr>
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>Pre-class</b></td><td>
+      <tr><td><b>{% trans %} Currently enrolled {% endtrans %}</b></td><td>{{ student.is_enrolled }}</td></tr>
+      <tr><td><b>{% trans %} Date enrolled {% endtrans %}</b></td><td>{{ student.enrolled_date }}</td></tr>
+      <tr><td><b>{% trans %} Email {% endtrans %}</b></td><td>{{ student.key().name() }}</td></tr>
+      <tr><td><b>{% trans %} Name {% endtrans %}</b></td><td>{{ student.name }}</td></tr>
+      <tr><td colspan=2><b>{% trans %} Assessment scores {% endtrans %}</b></td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Pre-class {% endtrans %}</b></td><td>
         {% if scores.has_key('precourse') %}
-          Completed</td></tr>
+          {% trans %} Completed {% endtrans %}</td></tr>
         {% endif %}
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>Mid-class</b></td><td>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Mid-class {% endtrans %}</b></td><td>
         {% if scores.has_key('midcourse') %}
           {{ scores['midcourse'] }}</td></tr>
         {% endif %}
-      <tr><td>&nbsp;&nbsp;&nbsp;<b>Post-class</b></td><td>
+      <tr><td>&nbsp;&nbsp;&nbsp;<b>{% trans %} Post-class {% endtrans %}</b></td><td>
         {% if scores.has_key('postcourse') %}
           {{ scores['postcourse'] }}</td></tr>
         {% endif %}
-      <tr><td><b>Overall course score</b></td><td>
+      <tr><td><b>{% trans %} Overall course score {% endtrans %}</b></td><td>
         {% if scores.has_key('overall_score') %}
           {{ scores['overall_score'] }}</td></tr>
         {% endif %}
       </table>
 
       <form action='student/editstudent' method='post'>
-        <h2><label for="name">New Name</label></h2>
+        <h2><label for="name">{% trans %} New Name {% endtrans %}</label></h2>
         <fieldset style="border: none;">
           <p><input name="name" id="name" type="text" size="40">
             <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
         </fieldset>
-        <p><button class="gcb-button" type="submit">Save Changes</button> &nbsp;&nbsp;&nbsp;
-          <a href="student/home" class="gcb-button">Cancel</a></p>
+
+        <p><button class="gcb-button" type="submit">
+          {% trans %} Save Changes {% endtrans %}
+        </button> &nbsp;&nbsp;&nbsp;
+          <a href="student/home" class="gcb-button" role="button">
+            {% trans %} Cancel {% endtrans %}
+          </a>
+        </p>
       </form>
 
-      <h2>To leave the course permanently, click on Unenroll</h2>
+      <h2>{% trans %} To leave the course permanently, click on Unenroll {% endtrans %}</h2>
 
-      <p><a href="student/unenroll" class="gcb-button">Unenroll</a></p>
+      <p><a href="student/unenroll" class="gcb-button" type="submit">
+        {% trans %} Unenroll {% endtrans %}
+      </a></p>
 
       {% else %}
       <p>Student profile not found ...</p>

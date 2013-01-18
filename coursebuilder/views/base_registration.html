@@ -6,20 +6,20 @@
   <div class="gcb-aux">
     <ul>
       <li {% if navbar.course %}class='active'{% endif %}>
-        <a href="course">Course</a>
+        <a href="course">{% trans %} Course {% endtrans %}</a>
       </li>
       <li {% if navbar.registration %}class='active'{% endif %}>
-        <a href="register">Registration</a>
+        <a href="register">{% trans %} Registration {% endtrans %}</a>
       </li>
 
       {% if logoutUrl %}
       <li class="pull-right">
         <span style="font-weight: normal;">{{ email }} | </span>
-        <a href="{{ logoutUrl }}">Logout</a>
+        <a href="{{ logoutUrl }}">{% trans %} Logout {% endtrans %}</a>
       </li>
       {% elif loginUrl %}
       <li class="pull-right">
-        <a href="{{ loginUrl }}">Login</a>
+        <a href="{{ loginUrl }}">{% trans %} Login {% endtrans %}</a>
       </li>
       {% endif %}
     </ul>

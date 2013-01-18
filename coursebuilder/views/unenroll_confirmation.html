@@ -8,10 +8,15 @@
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
 
-        <h3>You have been unenrolled from {{course_info.course.title}}</h3>
-        <form action="preview" method='get'>
-         <button class="gcb-button" type="submit">OK</button>
-        </form>
+      <h3>
+        {% trans %} You have been unenrolled from {% endtrans %}
+        {{course_info.course.title}}
+      </h3>
+      <form action="preview" method='get'>
+        <button class="gcb-button" type="submit">
+          {% trans %} OK {% endtrans %}
+        </button>
+      </form>
 
     </div>
   </div>

@@ -17,14 +17,18 @@
         <fieldset>
           <ol>
             <li>
-              <label class="form-label" for="form01">What is your name?</label>
+              <label class="form-label" for="form01">
+               {% trans %} What is your name? {% endtrans %}
+              </label>
               <input name="form01" type="text">
             </li>
             {{course_info.reg_form.additional_fields}}
           </ol>
         </fieldset>
 
-        <button class="gcb-button" type="submit">Enroll</button>
+        <button class="gcb-button" type="submit">
+          {% trans %} Enroll {% endtrans %}
+        </button>
       </form>
 
     </div>

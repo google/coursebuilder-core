@@ -8,11 +8,18 @@
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
 
-      <h3>Are you sure you want to unenroll from the {{course_info.course.title}} course?</h3>
+      <h3>
+        {% trans %} Are you sure you want to unenroll from {% endtrans %}
+        {{course_info.course.title}}?
+      </h3>
       <br>
       <form action="student/unenroll" method='post'>
-        <button class="gcb-button" type="submit">Yes</button>
-        <a href="student/home" class="gcb-button">No</a>
+        <button class="gcb-button" type="submit">
+          {% trans %} Yes {% endtrans %}
+        </button>
+        <a href="student/home" class="gcb-button" type="submit">
+          {% trans %} No {% endtrans %}
+        </a>
       </form>
 
     </div>

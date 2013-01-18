@@ -54,22 +54,22 @@
         <ul>
           <li {% if navbar.announcements %}class='active'{% endif %}>
             <a href="announcements">
-              {% trans %}Announcements{% endtrans %}
+              {% trans %} Announcements {% endtrans %}
             </a>
           </li>
           <li {% if navbar.course %}class='active'{% endif %}>
             <a href="course">
-              {% trans %}Course{% endtrans %}
+              {% trans %} Course {% endtrans %}
             </a>
           </li>
           <li {% if navbar.forum %}class='active'{% endif %}>
             <a href="forum">
-              {% trans %}Forum{% endtrans %}
+              {% trans %} Forum {% endtrans %}
             </a>
           </li>
           <li {% if navbar.myprofile %}class='active'{% endif %}>
             <a href="student/home">
-              {% trans %}My Profile{% endtrans %}
+              {% trans %} My Profile {% endtrans %}
             </a>
           </li>
 
@@ -77,7 +77,7 @@
           <li class="pull-right">
             <span style="font-weight: normal;">{{ email }} | </span>
             <a href="{{ logoutUrl }}">
-              {% trans %}Logout{% endtrans %}
+              {% trans %} Logout {% endtrans %}
             </a>
           </li>
           {% endif %}
@@ -111,7 +111,7 @@
             </li>
             <li>
               <a href="{{course_info.base.privacy_terms_url}}">
-                {% trans %}Privacy &amp; Terms{% endtrans %}
+                {% trans %} Privacy &amp; Terms {% endtrans %}
               </a>
             </li>
           </ul>
