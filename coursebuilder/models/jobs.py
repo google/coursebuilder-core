@@ -20,6 +20,7 @@ from datetime import datetime
 import json
 import logging
 import time
+import traceback
 import entities
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
@@ -59,9 +60,11 @@ class DurableJob(object):
                     long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
             except Exception as e:
+                logging.error(traceback.format_exc())
                 logging.error('Job failed: %s\n%s', self._job_name, e)
                 DurableJobEntity.fail_job(
-                    self._job_name, str(e), long(time.time() - time_started))
+                    self._job_name, traceback.format_exc(),
+                    long(time.time() - time_started))
                 raise deferred.PermanentTaskFailure(e)
         finally:
             namespace_manager.set_namespace(old_namespace)

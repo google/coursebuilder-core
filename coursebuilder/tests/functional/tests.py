@@ -51,7 +51,7 @@ class InfrastructureTest(actions.TestBase):
         warnings, errors = verify.Verifier().load_and_verify_model(echo)
         assert not errors and not warnings
 
-    def test_config_visble_from_any_namespace(self):
+    def test_config_visible_from_any_namespace(self):
         """Test that ConfigProperty is visible from any namespace."""
 
         assert (
@@ -74,7 +74,7 @@ class InfrastructureTest(actions.TestBase):
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(
-                'ns-test_config_visble_from_any_namespace')
+                'ns-test_config_visible_from_any_namespace')
 
             config.Registry.last_update_time = 0
             assert config.UPDATE_INTERVAL_SEC.value == new_value
@@ -321,7 +321,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         response = self.get('dashboard?action=students')
         assert_contains(
             'Google</a> &gt; Dashboard &gt; Students', response.body)
-        assert_contains('weren\'t calculated yet', response.body)
+        assert_contains('have not been calculated yet', response.body)
 
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
@@ -334,9 +334,32 @@ class CourseAuthorAspectTest(actions.TestBase):
         self.execute_all_deferred_tasks()
 
         response = self.get('dashboard?action=students')
-        assert_contains('was updated on', response.body)
-        assert_contains('Currently enrolled: 1', response.body)
-        assert_contains('Total: 1', response.body)
+        assert_contains('were last updated on', response.body)
+        assert_contains('currently enrolled: 1', response.body)
+        assert_contains('total: 1', response.body)
+
+        # Tests assessment statistics.
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.namespace)
+        try:
+            for i in range(5):
+                student = models.Student(key_name='key-%s' % i)
+                student.is_enrolled = True
+                student.scores = json.dumps({'test-assessment': i})
+                student.put()
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        response = self.get('dashboard?action=students')
+        compute_form = response.forms['gcb-compute-student-stats']
+        response = self.submit(compute_form)
+
+        self.execute_all_deferred_tasks()
+
+        response = self.get('dashboard?action=students')
+        assert_contains('currently enrolled: 6', response.body)
+        assert_contains(
+            'test-assessment: completed 5, average score 2.0', response.body)
 
     def test_trigger_sample_announcements(self):
         """Test course author can trigger adding sample announcements."""

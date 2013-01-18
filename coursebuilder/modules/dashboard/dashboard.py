@@ -237,7 +237,13 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Students')
 
-        stats = '<li>no data</li>'
+        details = """
+            <h3>Enrollment Statistics</h3>
+            <ul><li>pending</li></ul>
+            <h3>Assessment Statistics</h3>
+            <ul><li>pending</li></ul>
+            """
+
         update_message = ''
         update_action = """
             <form
@@ -256,68 +262,137 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         job = ComputeStudentStats(self.app_context).load()
         if not job:
             update_message = """
-                Enrollment statistics weren't calculated yet."""
+                Student statistics have not been calculated yet."""
         else:
-            if job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = """
-                    There was an error updating enrollment statistics.
-                    Please review log file messages and try again."""
-            elif job.status_code == jobs.STATUS_CODE_COMPLETED:
+            if job.status_code == jobs.STATUS_CODE_COMPLETED:
                 stats = json.loads(job.output)
-                enrolled = stats['enrolled']
-                unenrolled = stats['unenrolled']
+                enrolled = stats['enrollment']['enrolled']
+                unenrolled = stats['enrollment']['unenrolled']
 
-                lines = []
-                lines.append('<li>Previously enrolled: %s</li>' % unenrolled)
-                lines.append('<li>Currently enrolled: %s</li>' % enrolled)
-                lines.append('<li>Total: %s</li>' % (unenrolled + enrolled))
-                stats = ''.join(lines)
+                enrollment = []
+                enrollment.append(
+                    '<li>previously enrolled: %s</li>' % unenrolled)
+                enrollment.append(
+                    '<li>currently enrolled: %s</li>' % enrolled)
+                enrollment.append(
+                    '<li>total: %s</li>' % (unenrolled + enrolled))
+                enrollment = ''.join(enrollment)
+
+                assessment = []
+                total = 0
+                for key, value in stats['scores'].items():
+                    total += value[0]
+                    avg_score = 0
+                    if value[0]:
+                        avg_score = round(value[1] / value[0], 1)
+                    assessment.append("""
+                        <li>%s: completed %s, average score %s
+                        """ % (key, value[0], avg_score))
+                assessment.append('<li>total: %s</li>' % total)
+                assessment = ''.join(assessment)
+
+                details = """
+                    <h3>Enrollment Statistics</h3>
+                    <ul>%s</ul>
+                    <h3>Assessment Statistics</h3>
+                    <ul>%s</ul>
+                    """ % (enrollment, assessment)
 
                 update_message = """
-                    Enrollment statistics was updated on
+                    Student statistics were last updated on
                     %s in about %s second(s).""" % (
                         job.updated_on, job.execution_time_sec)
+            elif job.status_code == jobs.STATUS_CODE_FAILED:
+                update_message = """
+                    There was an error updating student statistics.
+                    Here is the message:<br>
+                    <blockquote>
+                      <pre>\n%s</pre>
+                    </blockquote>
+                    """ % cgi.escape(job.output)
             else:
                 update_action = ''
                 update_message = """
-                    Enrollment statistics update started on %s and is running
+                    Student statistics update started on %s and is running
                     now. Please come back shortly.""" % job.updated_on
 
         lines = []
-
-        lines.append("""
-            <h3>Enrollment Statistics</h3>
-            <ul>%s</ul>
-            %s
-            %s
-            """ % (stats, update_message, update_action))
-
+        lines.append(details)
+        lines.append(update_message)
+        lines.append(update_action)
         lines = ''.join(lines)
 
         template_values['main_content'] = lines
         self.render_page(template_values)
 
     def post_compute_student_stats(self):
-        """Submits student enrollment statistics calculation task."""
+        """Submits a new student statistics calculation task."""
         job = ComputeStudentStats(self.app_context)
         job.submit()
         self.redirect('/dashboard?action=students')
 
 
+class ScoresAggregator(object):
+    """Aggregates scores statistics."""
+
+    def __init__(self):
+        # We store all data as tuples keyed by the assessment type name. Each
+        # tuple keeps:
+        #     (student_count, sum(score))
+        self.name_to_tuple = {}
+
+    def visit(self, student):
+        if student.scores:
+            scores = json.loads(student.scores)
+            for key in scores.keys():
+                if key in self.name_to_tuple:
+                    count = self.name_to_tuple[key][0]
+                    score_sum = self.name_to_tuple[key][1]
+                else:
+                    count = 0
+                    score_sum = 0
+                self.name_to_tuple[key] = (
+                    count + 1, score_sum + float(scores[key]))
+
+
+class EnrollmentAggregator(object):
+    """Aggregates enrollment statistics."""
+
+    def __init__(self):
+        self.enrolled = 0
+        self.unenrolled = 0
+
+    def visit(self, student):
+        if student.is_enrolled:
+            self.enrolled += 1
+        else:
+            self.unenrolled += 1
+
+
 class ComputeStudentStats(jobs.DurableJob):
-    """A job that computes student enrollment statistics."""
+    """A job that computes student statistics."""
 
     def run(self):
-        """Computes student enrollment statistics."""
-        enrolled = 0
-        unenrolled = 0
+        """Computes student statistics."""
+
+        # TODO(psimakov): we should not fetch entire Students; unfortunately
+        # we can't use projection queries here because they require indexed
+        # attributes, while 'scores' is not indexed; we may create separate
+        # jobs and iterate concurrently; not sure what else we can do...
+
+        enrollment = EnrollmentAggregator()
+        scores = ScoresAggregator()
         query = db.GqlQuery(
-            'SELECT is_enrolled FROM %s' % Student().__class__.__name__,
+            'SELECT * FROM %s' % Student().__class__.__name__,
             batch_size=10000)
         for student in query.run():
-            if student.is_enrolled:
-                enrolled += 1
-            else:
-                unenrolled += 1
+            enrollment.visit(student)
+            scores.visit(student)
 
-        return {'enrolled': enrolled, 'unenrolled': unenrolled}
+        data = {
+            'enrollment': {
+                'enrolled': enrollment.enrolled,
+                'unenrolled': enrollment.unenrolled},
+            'scores': scores.name_to_tuple}
+
+        return data
