@@ -16,7 +16,9 @@
 
 __author__ = 'pgbovine@google.com (Philip Guo)'
 
+import datetime
 import json
+from models import models
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
@@ -91,12 +93,21 @@ class AnswerHandler(BaseHandler):
         answers = StudentAnswersEntity.get_by_key_name(student.user_id)
         if not answers:
             answers = StudentAnswersEntity(key_name=student.user_id)
+        answers.updated_on = datetime.datetime.now()
+
         utils.set_answer(answers, assessment_type, new_answers)
 
         assessment_type = store_score(student, assessment_type, score)
 
         student.put()
         answers.put()
+
+        # Also record the event, which is useful for tracking multiple
+        # submissions and history.
+        models.EventEntity.record(
+            'submit-assessment', self.get_user(), json.dumps({
+                'type': 'assessment-%s' % assessment_type,
+                'values': new_answers, 'location': 'AnswerHandler'}))
 
         return (student, assessment_type)
 

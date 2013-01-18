@@ -85,7 +85,7 @@ class InfrastructureTest(actions.TestBase):
         self.assert_queriable(AnnouncementEntity, 'date', datetime.date)
         self.assert_queriable(models.EventEntity, 'recorded_on')
         self.assert_queriable(models.Student, 'enrolled_on')
-        self.assert_queriable(models.StudentAnswersEntity, 'recorded_on')
+        self.assert_queriable(models.StudentAnswersEntity, 'updated_on')
         self.assert_queriable(jobs.DurableJobEntity, 'updated_on')
 
     def test_assets_and_date(self):

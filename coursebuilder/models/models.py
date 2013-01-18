@@ -155,7 +155,7 @@ class EventEntity(BaseEntity):
 class StudentAnswersEntity(BaseEntity):
     """Student answers to the assessments."""
 
-    recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
+    updated_on = db.DateTimeProperty(indexed=True)
 
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)

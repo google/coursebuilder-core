@@ -552,7 +552,7 @@ function renderAssessment(assessment, domRoot) {
 
     var score = ((numCorrect / numQuestions) * 100).toFixed(2);
 
-
+    var assessmentType = assessment.assessmentName || 'unnamed assessment';
     if (submitAnswers) {
       // create a new hidden form, submit it via POST, and then delete it
 
@@ -561,8 +561,6 @@ function renderAssessment(assessment, domRoot) {
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/assessments.py
       myForm.action = assessment.formScript || 'answer';
-
-      var assessmentType = assessment.assessmentName || 'unnamed assessment';
 
       var myInput = null;
 
@@ -592,7 +590,7 @@ function renderAssessment(assessment, domRoot) {
     } else {
       // send event to the server
       gcbAssessmentAudit({
-            'type': 'assessment', 'values': userInput,
+            'type': 'assessment-' + assessmentType, 'values': userInput,
             'num_expected': numQuestions, 'num_submitted': userInput.length,
             'num_correct': numCorrect});
 
