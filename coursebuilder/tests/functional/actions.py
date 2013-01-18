@@ -20,10 +20,8 @@ import logging
 import os
 import re
 from controllers import sites
-from controllers import utils
 import main
 import suite
-from google.appengine.api import namespace_manager
 
 
 class TestBase(suite.BaseTestClass):
@@ -36,18 +34,6 @@ class TestBase(suite.BaseTestClass):
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
-
-        # set desired namespace and inits data
-        namespace = namespace_manager.get_namespace()
-        try:
-            if hasattr(self, 'namespace'):
-                namespace_manager.set_namespace(self.namespace)
-
-            data_folder = os.path.join(os.path.dirname(__file__), '../../data/')
-            utils.put_course_into_datastore(data_folder)
-        finally:
-            if not namespace:
-                namespace_manager.set_namespace(None)
 
     def canonicalize(self, href, response=None):
         """Create absolute URL using <base> if defined, '/' otherwise."""

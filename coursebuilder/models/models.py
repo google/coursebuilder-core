@@ -61,6 +61,11 @@ class MemcacheManager(object):
         return GCB_IS_PAGE_CACHE_ENABLED.value
 
     @classmethod
+    def flush_all(cls):
+        """Deletes all entries from memcache."""
+        memcache.flush_all()
+
+    @classmethod
     def get(cls, key):
         """Gets an item from memcache if memcache is enabled."""
         if MemcacheManager.enabled():

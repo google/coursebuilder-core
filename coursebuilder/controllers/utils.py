@@ -157,6 +157,7 @@ class BaseHandler(ApplicationHandler):
         units = Unit.get_units()
         if not units:
             units = put_course_into_datastore(self.app_context.get_data_home())
+            MemcacheManager.flush_all()
         return units
 
     def get_user(self):
@@ -197,7 +198,7 @@ def put_course_into_datastore(data_folder):
     unit_file = os.path.join(data_folder, 'unit.csv')
     lesson_file = os.path.join(data_folder, 'lesson.csv')
 
-    # load and validate data from CSV files
+    # Load and validate data from CSV files.
     units = verify.read_objects_from_csv_file(
         unit_file, verify.UNITS_HEADER, verify.Unit)
     lessons = verify.read_objects_from_csv_file(
@@ -209,7 +210,7 @@ def put_course_into_datastore(data_folder):
     assert verifier.errors == 0
     assert verifier.warnings == 0
 
-    # load data from CSV files and store in a datastore
+    # Load data from CSV files into a datastore.
     units = verify.read_objects_from_csv_file(
         unit_file, verify.UNITS_HEADER, Unit)
     lessons = verify.read_objects_from_csv_file(
