@@ -45,12 +45,10 @@ var assessment = {
 
     {questionHTML: 'What would you type into the search box to get a top result that looks like this? If you do not know, enter "I don\'t know".<p><p><img src="assets/img/Image0.9.png" alt="search results for test question" height=100 width=300 title="search results for test question">',
      correctAnswerRegex: /354\s*[+]\s*651/
-    },
+    }
   ],
 
   assessmentName: 'precourse', // unique name submitted along with all of the answers
-  checkAnswers: false,         // render a "Check your Answers" button to allow students to check answers prior to submitting?
-
-  // formScript: 'answer',  // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to 'answer'
+  checkAnswers: false          // render a "Check your Answers" button to allow students to check answers prior to submitting?
 }
 

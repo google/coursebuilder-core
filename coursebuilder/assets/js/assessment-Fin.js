@@ -70,12 +70,10 @@ var assessment = {
                'Olympic Sports',
                'Olympic Games',
                "I don't know"],
-     lesson: '2.2'},
+     lesson: '2.2'}
   ],
 
   assessmentName: 'postcourse', // unique name submitted along with all of the answers
-  checkAnswers: true,           // render a "Check your Answers" button to allow students to check answers prior to submitting?
-
-  // formScript: 'answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to 'answer'
+  checkAnswers: true            // render a "Check your Answers" button to allow students to check answers prior to submitting?
 }
 

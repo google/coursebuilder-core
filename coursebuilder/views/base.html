@@ -22,11 +22,18 @@
     <link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&amp;subset=latin" rel="stylesheet">
 
     <!-- jQuery should be imported first -->
-    <script src="assets/js/jquery-1.7.2.min.js"></script>
+    <script src="assets/lib/jquery-1.7.2.min.js"></script>
 
     <!-- The following translated strings are used in activity-generic.js and should be
     declared before that file is imported. -->
     <script>
+      // import JSON for older browsers like IE 7
+      if (typeof JSON == 'undefined') {
+        document.write(
+            '<script src="assets/lib/json2-2012.10.08.min.js"></' + 'script>');
+      }
+
+      // inline translations
       var trans = {};
       trans.CHECK_ANSWER_TEXT = '{% trans %} Check Answer {% endtrans %}';
       trans.CHECK_ANSWERS_TEXT = '{% trans %} Check Answers {% endtrans %}';
@@ -42,7 +49,7 @@
       trans.GENERIC_SAVE_TEXT =
           '{% trans %} Press the \'Save Answers\' button below to save your scores. You can also edit your answers above before clicking \'Save Answers\'. {% endtrans %}';
     </script>
-    <script src="assets/js/activity-generic-v1.2.js"></script>
+    <script src="assets/lib/activity-generic-1.2.js"></script>
 
     {% if course_info.base.show_gplus_button %}
       <script type="text/javascript" src="https://apis.google.com/js/plusone.js"></script>

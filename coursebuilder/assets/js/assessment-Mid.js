@@ -61,12 +61,10 @@ var assessment = {
                'Google Blog Search',
                correct('Google Images'),
                "I don't know"],
-     lesson: '2.3'},
+     lesson: '2.3'}
   ],
 
   assessmentName: 'midcourse', // unique name submitted along with all of the answers
-  checkAnswers: true,          // render a "Check your Answers" button to allow students to check answers prior to submitting?
-
-  // formScript: 'answer',     // OPTIONAL: the Google App Engine Python script to run to submit answers, defaults to 'answer'
+  checkAnswers: true           // render a "Check your Answers" button to allow students to check answers prior to submitting?
 }
 
