@@ -36,10 +36,21 @@ DEFAULT_UPDATE_INTERVAL = 15
 MAX_UPDATE_INTERVAL = 60 * 5
 
 
+# Allowed property types.
+TYPE_INT = int
+TYPE_STR = str
+TYPE_BOOL = bool
+ALLOWED_TYPES = frozenset([TYPE_INT, TYPE_STR, TYPE_BOOL])
+
+
 class ConfigProperty(object):
     """A property with name, type, doc_string and a default value."""
 
     def __init__(self, name, value_type, doc_string, default_value=None):
+
+        if not value_type in ALLOWED_TYPES:
+            raise Exception('Bad value type: %s' % value_type)
+
         self._name = name
         self._type = value_type
         self._doc_string = doc_string
@@ -64,27 +75,33 @@ class ConfigProperty(object):
     def default_value(self):
         return self._default_value
 
-    @property
-    def value(self):
-        """Get the latest value from datastore, environment or use default."""
-
-        # Try datastore override.
-        overrides = Registry.get_overrides()
-        if overrides and self.name in overrides:
-            return overrides[self.name]
-
-        # Try environment variable override.
+    def get_environ_value(self):
+        """Tries to get value from the environment variables."""
         if self._name in os.environ:
             try:
-                return self._type(os.environ[self._name])
+                return True, self._type(os.environ[self._name])
             except Exception:  # pylint: disable-msg=broad-except
                 logging.error(
                     'Property %s failed to cast to type %s; removing.',
                     self._name, self._type)
                 del os.environ[self._name]
-                return self._default_value
+        return False, None
 
-        # Default value.
+    @property
+    def value(self):
+        """Get the latest value from datastore, environment or use default."""
+
+        # Try datastore overrides first.
+        overrides = Registry.get_overrides()
+        if overrides and self.name in overrides:
+            return overrides[self.name]
+
+        # Try environment variable overrides second.
+        has_value, environ_value = self.get_environ_value()
+        if has_value:
+            return environ_value
+
+        # Use default value last.
         return self._default_value
 
 
@@ -99,6 +116,14 @@ class Registry(object):
     @classmethod
     def get_overrides(cls, force_update=False):
         """Returns current property overrides, maybe cached."""
+
+        # Check if datastore property overrides are enabled at all.
+        has_value, environ_value = UPDATE_INTERVAL_SEC.get_environ_value()
+        if (has_value and environ_value == 0) or (
+                UPDATE_INTERVAL_SEC.default_value == 0):
+            return
+
+        # Check if cached values are still fresh.
         now = long(time.time())
         age = now - cls.last_update_time
         if force_update or age < 0 or age >= cls.update_interval:
@@ -106,7 +131,7 @@ class Registry(object):
                 cls.load_from_db()
             except Exception as e:  # pylint: disable-msg=broad-except
                 logging.error(
-                    'Failed to load properties from database: %s.', str(e))
+                    'Failed to load properties from a database: %s.', str(e))
             finally:
                 # Avoid overload and update timestamp even if we failed.
                 cls.last_update_time = now
@@ -127,15 +152,17 @@ class Registry(object):
 
             target = cls.registered[item.name]
             if target and not item.is_draft:
+                # Enforce value type.
                 try:
                     value = target.value_type(item.value)
                 except Exception:  # pylint: disable-msg=broad-except
                     logging.error(
                         'Property %s failed to cast to a type %s; removing.',
-                        target.name, target.type)
+                        target.name, target.value_type)
+                    continue
 
                 # Don't allow disabling of update interval from a database.
-                if item.name == GCB_CONFIG_UPDATE_INTERVAL_SEC.name:
+                if item.name == UPDATE_INTERVAL_SEC.name:
                     if value == 0 or value < 0 or value > MAX_UPDATE_INTERVAL:
                         logging.error(
                             'Bad value %s for %s; discarded.', item.name, value)
@@ -188,7 +215,7 @@ def run_all_unit_tests():
     assert int_prop.value == int_prop.default_value
 
 
-GCB_CONFIG_UPDATE_INTERVAL_SEC = ConfigProperty(
+UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties from '
         'a datastore. A value of "0" completely disables loading of properties '
