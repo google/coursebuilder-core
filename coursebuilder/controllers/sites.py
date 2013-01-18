@@ -340,7 +340,7 @@ class AssetHandler(webapp2.RequestHandler):
             DEFAULT_CACHE_CONTROL_HEADER_VALUE)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
-        self.response.write(open(self.filename, 'r').read())
+        self.response.write(open(self.filename, 'rb').read())
 
 
 class ApplicationContext(object):
