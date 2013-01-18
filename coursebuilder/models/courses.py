@@ -59,7 +59,7 @@ class Course(object):
 
     def _save_to_memcache(self):
         """Saves course representation into memcache."""
-        envelope = SerializableCourseEnvelope
+        envelope = SerializableCourseEnvelope()
         envelope.units = self._units
         envelope.lessons = self._lessons
         MemcacheManager.set(self.memcache_key, envelope)
