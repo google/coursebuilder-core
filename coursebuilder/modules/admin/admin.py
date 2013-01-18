@@ -128,7 +128,6 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             time.time() - BEGINNING_OF_TIME)
 
         # config counters
-        config.Registry.get_overrides()
         perf_counters['gcb-config-age-sec'] = (
             long(time.time()) - config.Registry.last_update_time)
         perf_counters['gcb-config-update-time-sec'] = (
@@ -180,8 +179,11 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content = []
         content.append("""
             <style>
-              table.gcb-config td.gcb-diff {
+              span.gcb-db-diff, td.gcb-db-diff {
                   background-color: #A0FFA0;
+              }
+              span.gcb-env-diff, td.gcb-env-diff {
+                  background-color: #A0A0FF;
               }
             </style>
             """)
@@ -190,7 +192,6 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content.append("""
             <tr>
             <th>Name</th>
-            <th>Default Value</th>
             <th>Current Value</th>
             <th>Actions</th>
             <th>Description</th>
@@ -209,28 +210,9 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                 style = 'style="text-align: center;"'
             return style
 
-        config.Registry.get_overrides(True)
-        registered = config.Registry.registered.copy()
-
-        count = 0
-        for name in sorted(registered.keys()):
-            count += 1
-            item = registered[name]
+        def get_actions(name, override):
+            """Creates actions appropriate to an item."""
             actions = []
-
-            doc_string = item.doc_string
-            if doc_string:
-                doc_string = cgi.escape(doc_string)
-
-            default_value = item.default_value
-            value = item.value
-            override = default_value != value
-
-            if default_value:
-                default_value = cgi.escape(str(default_value))
-            if value:
-                value = cgi.escape(str(value))
-
             if override:
                 actions.append(get_action_html('Edit', {
                     'action': 'config_edit', 'name': name}))
@@ -239,31 +221,67 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             else:
                 actions.append(get_action_html('Override', {
                     'action': 'config_override', 'name': name}))
+            return ''.join(actions)
 
-            style_default = get_style_for(item.default_value, item.value_type)
+        def get_doc_string(item, default_value):
+            """Formats an item documentation string for display."""
+            doc_string = item.doc_string
+            if doc_string:
+                doc_string = cgi.escape(doc_string)
+            else:
+                doc_string = 'No documentation available.'
+            doc_string = ' %s Default: "%s".' % (doc_string, default_value)
+            return doc_string
+
+        overrides = config.Registry.get_overrides(True)
+        registered = config.Registry.registered.copy()
+
+        count = 0
+        for name in sorted(registered.keys()):
+            count += 1
+            item = registered[name]
+
+            default_value = item.default_value
+            has_environ_value, environ_value = item.get_environ_value()
+            value = item.value
+
+            class_current = 'class="gcb-db-diff"'
+            if value == default_value:
+                class_current = ''
+            if has_environ_value and value == environ_value:
+                class_current = 'class="gcb-env-diff"'
+
+            if default_value:
+                default_value = cgi.escape(str(default_value))
+            if value:
+                value = cgi.escape(str(value))
+
             style_current = get_style_for(value, item.value_type)
-            class_current = ''
-            if item.value != item.default_value:
-                class_current = 'class="gcb-diff"'
 
             content.append("""
                 <tr>
                 <td style='white-space: nowrap;'>%s</td>
-                <td %s>%s</td>
                 <td %s %s>%s</td>
                 <td align='center'>%s</td>
                 <td>%s</td>
                 </tr>
                 """ % (
-                    item.name, style_default, item.default_value,
-                    class_current, style_current, value, ''.join(actions),
-                    item.doc_string))
+                    item.name, class_current, style_current, value,
+                    get_actions(name, name in overrides),
+                    get_doc_string(item, default_value)))
 
         content.append("""
-            <tr><td colspan="5" align="right">Total: %s item(s)</td></tr>
+            <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
             """ % count)
 
         content.append('</table>')
+        content.append("""
+            <p>Legend:
+            <span class='gcb-env-diff'>
+                &nbsp;environment variable override&nbsp;</span>,
+            <span class='gcb-db-diff'>
+                &nbsp;datastore override&nbsp;</span>.</p>
+            """)
 
         template_values['main_content'] = ''.join(content)
 

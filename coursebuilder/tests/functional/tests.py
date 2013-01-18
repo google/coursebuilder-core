@@ -23,6 +23,7 @@ import urllib
 from controllers import sites
 from controllers import utils
 from controllers.sites import assert_fails
+from models import config
 from models import models
 from models.utils import get_all_scores
 from models.utils import get_answer
@@ -48,18 +49,31 @@ class AdminAspectTest(actions.TestBase):
         response = self.testapp.get('/admin?action=settings')
         assert_equals(response.status_int, 302)
 
-        # Add override.
+        # Add environment variable override.
         os.environ['gcb_admin_list'] = email
+
+        # Add datastore override.
+        prop = config.ConfigPropertyEntity()
+        prop.name = 'gcb_config_update_interval_sec'
+        prop.value = '5'
+        prop.is_draft = False
+        prop.put()
 
         # Check user has access now.
         response = self.testapp.get('/admin?action=settings')
         assert_equals(response.status_int, 200)
+
+        # Check overrides are active and have proper management actions.
         assert_contains('gcb_admin_list', response.body)
         assert_contains('test_admin_list@google.com', response.body)
         assert_contains(
-            '/admin?action=config_edit&name=gcb_admin_list', response.body)
+            '/admin?action=config_override&name=gcb_admin_list', response.body)
         assert_contains(
-            '/admin?action=config_reset&name=gcb_admin_list', response.body)
+            '/admin?action=config_edit&name=gcb_config_update_interval_sec',
+            response.body)
+        assert_contains(
+            '/admin?action=config_reset&name=gcb_config_update_interval_sec',
+            response.body)
 
         # Remove override.
         del os.environ['gcb_admin_list']
@@ -111,8 +125,8 @@ class AdminAspectTest(actions.TestBase):
     def test_multiple_courses(self):
         """Tests courses admin page with two courses configured."""
 
-        config = 'course:/foo:/foo-data, course:/bar:/bar-data'
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = config
+        courses = 'course:/foo:/foo-data, course:/bar:/bar-data'
+        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
 
         email = 'test_multiple_courses@google.com'
 
@@ -461,8 +475,8 @@ class CourseUrlRewritingTest(
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
 
-        config = 'course:%s:/:%s' % (self.base, self.namespace)
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = config
+        courses = 'course:%s:/:%s' % (self.base, self.namespace)
+        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
 
         super(CourseUrlRewritingTest, self).setUp()
 
