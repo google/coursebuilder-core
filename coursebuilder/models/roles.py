@@ -32,11 +32,17 @@ class Roles(object):
     """A class that provides information about user roles."""
 
     @classmethod
+    def is_direct_super_admin(cls):
+        """Checks if current user is a super admin, without delegation."""
+        return users.is_current_user_admin()
+
+    @classmethod
     def is_super_admin(cls):
-        """Checks if current user is a super admin."""
-        user = users.get_current_user()
-        if user and users.is_current_user_admin():
+        """Checks if current user is a super admin, possibly via delegation."""
+        if cls.is_direct_super_admin():
             return True
+
+        user = users.get_current_user()
         if user and user.email() in GCB_ADMIN_LIST.value:
             return True
         return False

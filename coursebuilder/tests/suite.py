@@ -28,7 +28,7 @@ import webtest
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 36
+EXPECTED_TEST_COUNT = 38
 
 
 def empty_environ():

@@ -17,8 +17,10 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
+import cStringIO
 import datetime
 import os
+import sys
 import time
 import urllib
 from controllers import sites
@@ -38,6 +40,30 @@ import google.appengine.api.app_identity as app
 # A time this module was initialized.
 BEGINNING_OF_TIME = time.time()
 
+DELEGATED_ACCESS_IS_NOT_ALLOWED = """
+You must be an actual admin user to continue.
+Users with the delegated admin rights are not allowed."""
+
+
+def evaluate_python_code(code):
+    """Compiles and evaluates a Python script in a restricted environment."""
+
+    code = code.replace('\r\n', '\n')
+
+    save_stdout = sys.stdout
+    results_io = cStringIO.StringIO()
+    try:
+        sys.stdout = results_io
+        try:
+            compiled_code = compile(code, '<string>', 'exec')
+            exec(compiled_code, globals())  # pylint: disable-msg=exec-statement
+        except Exception as e:              # pylint: disable-msg=broad-except
+            results_io.write('Error: %s' % e)
+            return results_io.getvalue(), False
+    finally:
+        sys.stdout = save_stdout
+    return results_io.getvalue(), True
+
 
 class AdminHandler(
     webapp2.RequestHandler, ReflectiveRequestHandler, ConfigPropertyEditor):
@@ -45,8 +71,9 @@ class AdminHandler(
 
     default_action = 'courses'
     get_actions = [
-        default_action, 'settings', 'deployment', 'perf', 'config_edit']
-    post_actions = ['config_reset', 'config_override']
+        default_action, 'settings', 'deployment', 'perf', 'config_edit',
+        'console']
+    post_actions = ['config_reset', 'config_override', 'console_run']
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -97,6 +124,7 @@ class AdminHandler(
           <a href="/admin?action=settings">Settings</a>
           <a href="/admin?action=perf">Metrics</a>
           <a href="/admin?action=deployment">Deployment</a>
+          <a href="/admin?action=console">Console</a>
           %s
           """ % console_link
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
@@ -365,4 +393,78 @@ class AdminHandler(
 
         template_values['main_content'] = ''.join(content)
 
+        self.render_page(template_values)
+
+    def get_console(self):
+        """Shows interactive Python console page."""
+        template_values = {}
+        template_values['page_title'] = self.format_title('Console')
+
+        # Check rights.
+        if not roles.Roles.is_direct_super_admin():
+            template_values['main_content'] = DELEGATED_ACCESS_IS_NOT_ALLOWED
+            self.render_page(template_values)
+            return
+
+        content = []
+        content.append("""
+            <p><i><strong>WARNING!</strong> The Interactive Console has the same
+            access to the application's environment and services as a .py file
+            inside the application itself. Be careful, because this means writes
+            to your data store will be executed for real!</i></p>
+            <p><strong>
+              Input your Python code below and press "Run Program" to execute.
+            </strong><p>
+            <form action='/admin?action=console_run' method='POST'>
+            <textarea style='width: 95%; height: 200px;' name='code'></textarea>
+            <p align='center'>
+                <button class="gcb-button" type="submit">Run Program</button>
+            </p>
+            </form>""")
+
+        template_values['main_content'] = ''.join(content)
+        self.render_page(template_values)
+
+    def post_console_run(self):
+        """Executes dynamically submitted Python code."""
+        template_values = {}
+        template_values['page_title'] = self.format_title('Execution Results')
+
+        # Check rights.
+        if not roles.Roles.is_direct_super_admin():
+            template_values['main_content'] = DELEGATED_ACCESS_IS_NOT_ALLOWED
+            self.render_page(template_values)
+            return
+
+        # Execute code.
+        code = self.request.get('code')
+        time_before = time.time()
+        output, results = evaluate_python_code(code)
+        duration = long(time.time() - time_before)
+        status = 'FAILURE'
+        if results:
+            status = 'SUCCESS'
+
+        # Render results.
+        content = []
+        content.append('<h3>Submitted Python Code</h3>')
+        content.append('<ol>')
+        for line in code.split('\n'):
+            content.append('<li>%s</li>' % cgi.escape(line))
+        content.append('</ol>')
+
+        content.append("""
+            <h3>Execution Results</h3>
+            <ol>
+                <li>Status: %s</li>
+                <li>Duration (sec): %s</li>
+            </ol>
+            """ % (status, duration))
+
+        content.append('<h3>Program Output</h3>')
+        content.append(
+            '<blockquote><pre>%s</pre></blockquote>' % cgi.escape(
+                output))
+
+        template_values['main_content'] = ''.join(content)
         self.render_page(template_values)

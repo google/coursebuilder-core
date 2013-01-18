@@ -42,6 +42,43 @@ UNIQUE_URLS_FOUND = {}
 class AdminAspectTest(actions.TestBase):
     """Tests site from the Admin perspective."""
 
+    def test_python_console(self):
+        """Tests access rights to the Python console."""
+
+        email = 'test_python_console@google.com'
+
+        # Check normal user has no access.
+        actions.login(email)
+        response = self.testapp.get('/admin?action=console')
+        assert_equals(response.status_int, 302)
+
+        response = self.testapp.post('/admin?action=console')
+        assert_equals(response.status_int, 302)
+
+        # Check delegated admin has no access.
+        os.environ['gcb_admin_list'] = email
+        actions.login(email)
+        response = self.testapp.get('/admin?action=console')
+        assert_equals(response.status_int, 200)
+        assert_contains(
+            'You must be an actual admin user to continue.', response.body)
+
+        response = self.testapp.get('/admin?action=console')
+        assert_equals(response.status_int, 200)
+        assert_contains(
+            'You must be an actual admin user to continue.', response.body)
+
+        del os.environ['gcb_admin_list']
+
+        # Check actual admin has access.
+        actions.login(email, True)
+        response = self.testapp.get('/admin?action=console')
+        assert_equals(response.status_int, 200)
+
+        response.form.set('code', 'print "foo" + "bar"')
+        response = self.submit(response.form)
+        assert_contains('foobar', response.body)
+
     def test_non_admin_has_no_access(self):
         """Test non admin has no access to pages or REST endpoints."""
 
@@ -680,7 +717,7 @@ class CourseUrlRewritingTest(
                 absolute = url.startswith('//')
                 root = url == '/'
                 canonical = url.startswith(self.base)
-                allowed = url.startswith('/admin')
+                allowed = url.startswith('/admin') or url.startswith('/_ah/')
 
                 if not (absolute or root or canonical or allowed):
                     raise Exception('Invalid reference \'%s\' in:\n%s' % (
