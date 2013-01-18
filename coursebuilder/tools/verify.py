@@ -542,12 +542,16 @@ class SchemaHelper(object):
         context = Context().new(name)
         self.parse_log.append('  ROOT %s' % context.format_path())
 
+        # pylint: disable-msg=protected-access
+        values_class = values.__class__
+        # pylint: enable-msg=protected-access
+
         # handle {..} containers
         if isinstance(types, dict):
             if not isinstance(values, dict):
                 raise SchemaException(
                     'Error at \'/\': expected {...}, found %s' % (
-                        values.__class_.__name__))
+                        values_class.__name__))
             self.check_value_of_valid_type(values, types, context.new([]))
             return
 
@@ -556,7 +560,7 @@ class SchemaHelper(object):
             if not isinstance(values, list):
                 raise SchemaException(
                     'Error at \'/\': expected [...], found %s' % (
-                        values.__class_.__name__))
+                        values_class.__name__))
             for i in range(0, len(values)):
                 self.check_value_of_valid_type(
                     values[i], types, context.new('[%s]' % i))
@@ -778,8 +782,10 @@ def remove_javascript_single_line_comment(text):
 
 
 def remove_javascript_multi_line_comment(text):
+    # pylint: disable-msg=anomalous-backslash-in-string
     return re.sub(
         re.compile('/\*(.*)\*/', re.MULTILINE + re.DOTALL), r'', text)
+    # pylint: enable-msg=anomalous-backslash-in-string
 
 
 def remove_content_marked_no_verify(content):
@@ -826,7 +832,11 @@ def evaluate_python_expression_from_text(content, root_name, scope):
     restricted_scope.update(scope)
     restricted_scope.update({'__builtins__': {}})
     code = compile(content, '<string>', 'exec')
+
+    # pylint: disable-msg=exec-statement
     exec code in restricted_scope
+    # pylint: disable-msg=exec-statement
+
     if not restricted_scope[root_name]:
         raise Exception('Unable to find \'%s\'' % root_name)
     return restricted_scope
@@ -841,6 +851,7 @@ def evaluate_javascript_expression_from_file(fname, root_name, scope, error):
             root_name, fname, text_to_line_numbered_text(content)))
         for message in sys.exc_info():
             error(str(message))
+        raise
 
 
 class Verifier(object):
@@ -1181,6 +1192,8 @@ class Verifier(object):
 
 def run_all_regex_unit_tests():
     """Executes all tests related to regular expressions."""
+
+    # pylint: disable-msg=anomalous-backslash-in-string
     assert escape_javascript_regex(
         'blah regex: /site:bls.gov?/i, blah') == (
             'blah regex: regex(\"/site:bls.gov?/i\"), blah')
@@ -1206,6 +1219,7 @@ def run_all_regex_unit_tests():
     assert remove_content_marked_no_verify(
         'blah1\n// <gcb-no-verify>/blah2\n// </gcb-no-verify>\nblah3') == (
             'blah1\n// \nblah3')
+    # pylint: enable-msg=anomalous-backslash-in-string
 
 
 def run_all_schema_helper_unit_tests():
