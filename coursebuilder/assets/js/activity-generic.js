@@ -19,8 +19,24 @@
 // Refactored version by Philip Guo
 
 
+var CHECK_ANSWER_TEXT = 'Check Answer';
+var CHECK_ANSWERS_TEXT = 'Check Answers';
+var SHOW_ANSWER_TEXT = 'Skip and Show Answer';
+var SAVE_ANSWERS_TEXT = 'Save Answers';
+
+var SELECT_ANSWER_PROMPT = 'Please click one of the buttons for your answer.';
+var ALL_CORRECT_TEXT = 'All your answers are correct!';
+var NUM_CORRECT_TEXT = 'Number of questions you answered correctly';
+var YOUR_SCORE_TEXT = 'You received a score on this assessment of';
+var LESSONS_TO_REVIEW_TEXT = 'Here are lessons you could review to improve your score';
+var PERFECT_SCORE_SAVE_TEXT =
+    'Congratulations! Press the \'Save Answers\' button to submit your grade.';
+var GENERIC_SAVE_TEXT =
+    'Press the \'Save Answers\' button below to save your scores. You can also ' +
+    'edit your answers above before clicking \'Save Answers\'.';
+
 // highlight the correct answer
-var highlightColor = "#3BB9FF";
+var highlightColor = '#3BB9FF';
 
 var globallyUniqueTag = 0; // each question should have a unique tag
 
@@ -58,13 +74,13 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
 
   domRoot.append('<br>');
   domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
-      'id="submit_' + tag + '">Check Answer</button>');
+      'id="submit_' + tag + '">' + CHECK_ANSWER_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
       'id="output_' + tag + '"></textarea>');
 
 
-  var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
+  var choiceInputs = $('input[name=' + radioButtonGroupName + ']');
 
   // clear output and highlighting whenever a checkbox is clicked
   choiceInputs.click(function() {
@@ -100,7 +116,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
     }
 
     if (!answerChosen) {
-      $('#output_' + tag).val('Please click one of the buttons for your answer.');
+      $('#output_' + tag).val(SELECT_ANSWER_PROMPT);
       $('#output_' + tag).focus();
     }
   });
@@ -161,8 +177,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   var toplevel_tag = getFreshTag();
 
   domRoot.append(
-      '<p/><button class="gcb-button gcb-button-primary" id="submit_' + toplevel_tag + '">' +
-      'Check your answers</button>');
+      '<p/><button class="gcb-button gcb-button-primary" id="submit_' +
+      toplevel_tag + '">' + CHECK_ANSWERS_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 100px;" readonly="true" ' +
       'id="output_' + toplevel_tag + '"></textarea>');
@@ -172,7 +188,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   $.each(questionsList, function(ind, q) {
     var tag = used_tags[ind];
     var radioButtonGroupName = 'q' + tag;
-    var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
+    var choiceInputs = $('input[name=' + radioButtonGroupName + ']');
 
     choiceInputs.click(function() {
       $.each(used_tags, function(i, t) {
@@ -198,7 +214,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
     $.each(questionsList, function(ind, q) {
       var tag = used_tags[ind];
       var radioButtonGroupName = 'q' + tag;
-      var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
+      var choiceInputs = $('input[name=' + radioButtonGroupName + ']');
 
       for (var i = 0; i < choiceInputs.length; i++) {
         var isChecked = choiceInputs[i].checked;
@@ -213,13 +229,13 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
         $('.correct_' + t).css('background-color', highlightColor);
       });
       $('#output_' + toplevel_tag).val(
-          "All your answers are correct! " + allCorrectOutput);
+          ALL_CORRECT_TEXT + ' ' + allCorrectOutput);
       $('#output_' + toplevel_tag).focus();
     }
     else {
       $('#output_' + toplevel_tag).val(
-          "You got " + numCorrect + " out of " + questionsList.length +
-          " questions correct. " + someIncorrectOutput);
+          NUM_CORRECT_TEXT + ': ' + numCorrect + '/' + questionsList.length +
+          '.\n\n' + someIncorrectOutput);
       $('#output_' + toplevel_tag).focus();
     }
   });
@@ -239,7 +255,7 @@ function generateFreetextQuestion(params, domRoot) {
   var correctAnswerOutput = params.correctAnswerOutput;
   var incorrectAnswerOutput = params.incorrectAnswerOutput;
   var showAnswerOutput = params.showAnswerOutput;
-  var showAnswerPrompt = params.showAnswerPrompt || 'Skip & Show Answer'; // optional parameter
+  var showAnswerPrompt = params.showAnswerPrompt || SHOW_ANSWER_TEXT; // optional parameter
   var outputHeight = params.outputHeight || '50px'; // optional parameter
 
 
@@ -250,7 +266,7 @@ function generateFreetextQuestion(params, domRoot) {
       'class="alphanumericOnly" id="input_' + tag + '">');
   if (correctAnswerOutput && incorrectAnswerOutput) {
     domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
-        'id="submit_' + tag + '">Check Answer</button>');
+        'id="submit_' + tag + '">' + CHECK_ANSWER_TEXT + '</button>');
   }
   if (showAnswerOutput) {
     domRoot.append(
@@ -324,8 +340,8 @@ function renderActivity(contentsLst, domRoot) {
         generateFreetextQuestion(e, domRoot);
       }
       else {
-        alert("Error in renderActivity: e.questionType is not in " +
-              "{'multiple choice', 'multiple choice group', 'freetext'}");
+        alert('Error in renderActivity: e.questionType is not in ' +
+              '{\'multiple choice\', \'multiple choice group\', \'freetext\'}');
       }
     }
   });
@@ -381,7 +397,7 @@ function renderAssessment(assessment, domRoot) {
           'style="border-style: solid; border-color: black; border-width: 1px;" ' +
           'id="q' + questionNum + '">');
     } else {
-      alert("Error: Invalid question type.");
+      alert('Error: Invalid question type.');
     }
 
     curLI.append('<br><br>');
@@ -391,13 +407,13 @@ function renderAssessment(assessment, domRoot) {
   if (assessment.checkAnswers) {
     domRoot.append(
         '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
-        'Check your Answers</button><p/>');
+        CHECK_ANSWERS_TEXT + '</button><p/>');
     domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
         'readonly="true" id="answerOutput"></textarea>');
   }
   domRoot.append(
       '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
-      'Save Answers</button>');
+      SAVE_ANSWERS_TEXT + '</button>');
 
 
   function checkOrSubmitAnswers(submitAnswers) {
@@ -462,42 +478,42 @@ function renderAssessment(assessment, domRoot) {
     if (submitAnswers) {
       // create a new hidden form, submit it via POST, and then delete it
 
-      var myForm = document.createElement("form");
-      myForm.method = "post";
+      var myForm = document.createElement('form');
+      myForm.method = 'post';
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/lessons.py
-      myForm.action = assessment.formScript || "answer";
+      myForm.action = assessment.formScript || 'answer';
 
-      var assessmentType = assessment.assessmentName || "unnamed assessment";
+      var assessmentType = assessment.assessmentName || 'unnamed assessment';
 
       var myInput = null;
 
-      myInput= document.createElement("input");
-      myInput.setAttribute("name", "assessment_type");
-      myInput.setAttribute("value", assessmentType);
+      myInput= document.createElement('input');
+      myInput.setAttribute('name', 'assessment_type');
+      myInput.setAttribute('value', assessmentType);
       myForm.appendChild(myInput);
 
       // create a form entry for each question/result pair
       $.each(scoreArray, function(i, val) {
-        myInput = document.createElement("input");
-        myInput.setAttribute("name", i);
-        myInput.setAttribute("value", val);
+        myInput = document.createElement('input');
+        myInput.setAttribute('name', i);
+        myInput.setAttribute('value', val);
         myForm.appendChild(myInput);
       });
 
-      myInput = document.createElement("input");
-      myInput.setAttribute("name", "num_correct");
-      myInput.setAttribute("value", numCorrect);
+      myInput = document.createElement('input');
+      myInput.setAttribute('name', 'num_correct');
+      myInput.setAttribute('value', numCorrect);
       myForm.appendChild(myInput);
 
-      myInput = document.createElement("input");
-      myInput.setAttribute("name", "num_questions");
-      myInput.setAttribute("value", numQuestions);
+      myInput = document.createElement('input');
+      myInput.setAttribute('name', 'num_questions');
+      myInput.setAttribute('value', numQuestions);
       myForm.appendChild(myInput);
 
-      myInput = document.createElement("input");
-      myInput.setAttribute("name", "score");
-      myInput.setAttribute("value", score);
+      myInput = document.createElement('input');
+      myInput.setAttribute('name', 'score');
+      myInput.setAttribute('value', score);
       myForm.appendChild(myInput);
 
       document.body.appendChild(myForm);
@@ -506,23 +522,15 @@ function renderAssessment(assessment, domRoot) {
     } else {
       // display feedback without submitting any data to the backend
 
-      var outtext = "You received " + score + "% (" + numCorrect + "/" +
-          numQuestions + ") on this assessment.\n\n";
+      var outtext = YOUR_SCORE_TEXT + " " + score + '% (' + numCorrect + '/' +
+          numQuestions + ').\n\n';
 
       if (lessonsToRead.length > 0) {
-        outtext += "Here are lessons you could review to improve your score: " +
-            lessonsToRead.join(', ') + "\n\n";
+        outtext += LESSONS_TO_REVIEW_TEXT + ': ' + lessonsToRead.join(', ') +
+            '\n\n';
       }
 
-      if (score < 100) {
-        outtext += "Press the 'Save Answers' button below to save your " +
-            "scores. You can also edit your answers above before clicking " +
-            "'Save Answers'.";
-      }
-      else {
-        outtext += "Congratulations! Press the 'Save Answers' button to " +
-            "submit your grade.";
-      }
+      outtext += (score >= 100 ? PERFECT_SCORE_SAVE_TEXT : GENERIC_SAVE_TEXT);
       $('#answerOutput').html(outtext);
     }
   }
@@ -544,7 +552,7 @@ function correct(choiceStr) {
 function checkQuestionRadioSimple(radioGroup) {
   for (var i = 0; i < radioGroup.length; i++) {
     if (radioGroup[i].checked) {
-      return radioGroup[i].value == "correct";
+      return radioGroup[i].value == 'correct';
     }
   }
   return false;
@@ -574,7 +582,7 @@ $(document).ready(function() {
   function stopRKey(evt) {
     var evt  = evt || (event || null);
     var node = evt.target || (evt.srcElement || null);
-    if ((evt.keyCode == 13) && (node.type=="text")) {
+    if ((evt.keyCode == 13) && (node.type=='text')) {
       return false;
     }
   }
