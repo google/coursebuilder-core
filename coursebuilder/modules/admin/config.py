@@ -173,14 +173,16 @@ class ConfigPropertyEditor(object):
         # Delete if exists.
         try:
             entity = config.ConfigPropertyEntity.get_by_key_name(name)
-            old_value = entity.value
-            entity.delete()
+            if entity:
+                old_value = entity.value
+                entity.delete()
+
+                models.EventEntity.record(
+                    'delete-property', users.get_current_user(), json.dumps({
+                        'name': name, 'value': str(old_value)}))
+
         except db.BadKeyError:
             pass
-
-        models.EventEntity.record(
-            'delete-property', users.get_current_user(), json.dumps({
-                'name': name, 'value': str(old_value)}))
 
         self.redirect('/admin?action=settings')
 
