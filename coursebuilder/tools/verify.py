@@ -96,7 +96,7 @@ OUTPUT_DEBUG_LOG = False
 class SchemaException(Exception):
     """A class to represent a schema error."""
 
-    def FormatPrimitiveValueName(self, name):
+    def format_primitive_value_name(self, name):
         if name == REGEX:
             return "REGEX(...)"
         if name == CORRECT:
@@ -105,7 +105,7 @@ class SchemaException(Exception):
             return "BOOLEAN"
         return name
 
-    def FormatPrimitiveTypeName(self, name):
+    def format_primitive_type_name(self, name):
         if name == BOOLEAN:
             return "BOOLEAN"
         if name == REGEX:
@@ -124,21 +124,14 @@ class SchemaException(Exception):
             return "[...]"
         return "Unknown type name '%s'" % name.__class__.__name__
 
-    def FormatTypeNames(self, names):
+    def format_type_names(self, names):
         if isinstance(names, list):
             captions = []
             for name in names:
-                captions.append(self.FormatPrimitiveTypeName(name))
+                captions.append(self.format_primitive_type_name(name))
             return captions
         else:
-            return self.FormatPrimitiveTypeName(names)
-
-    def FormatTypeName(self, types):
-        if isinstance(types, dict):
-            return self.FormatTypeNames(types.keys())
-        if isinstance(types, list):
-            return self.FormatTypeNames(types)
-        return self.FormatTypeNames([types])
+            return self.format_primitive_type_name(names)
 
     def __init__(self, message, value=None, types=None, path=None):
         prefix = ""
@@ -148,14 +141,14 @@ class SchemaException(Exception):
         if types:
             if value:
                 message = prefix + message % (
-                    self.FormatPrimitiveValueName(value),
-                    self.FormatTypeNames(types))
+                    self.format_primitive_value_name(value),
+                    self.format_type_names(types))
             else:
-                message = prefix + message % self.FormatTypeNames(types)
+                message = prefix + message % self.format_type_names(types)
         else:
             if value:
                 message = prefix + (
-                    message % self.FormatPrimitiveValueName(value))
+                    message % self.format_primitive_value_name(value))
             else:
                 message = prefix + message
 
@@ -169,7 +162,7 @@ class Context(object):
         self.parent = None
         self.path = ["/"]
 
-    def New(self, names):
+    def new(self, names):
         """"Derives a new context from the current one."""
 
         context = Context()
@@ -184,8 +177,8 @@ class Context(object):
                 context.path.append("/" + "%s" % names)
         return context
 
-    def FormatPath(self):
-        """"Formats the canonical name of this context."""
+    def format_path(self):
+        """Formats the canonical name of this context."""
 
         return "".join(self.path)
 
@@ -196,7 +189,7 @@ class SchemaHelper(object):
     def __init__(self):
         self.type_stats = {}
 
-    def VisitElement(self, atype, value, context, is_terminal=True):
+    def visit_element(self, atype, value, context, is_terminal=True):
         """This method is called once for each schema element being
         traversed."""
 
@@ -208,12 +201,12 @@ class SchemaHelper(object):
 
         if is_terminal:
             self.parse_log.append("  TERMINAL: %s %s = %s" % (
-                    atype, context.FormatPath(), value))
+                    atype, context.format_path(), value))
         else:
             self.parse_log.append("  NON-TERMINAL: %s %s" % (
-                    atype, context.FormatPath()))
+                    atype, context.format_path()))
 
-    def ExtractAllTermsToDepth(self, key, values, type_map):
+    def extract_all_terms_to_depth(self, key, values, type_map):
         """Walks schema type map recursively to depth and creates a list of all
         possible {key: value} pairs. The latter is the list of all non-terminal
         and terminal terms allowed in the schema. The list of terms from this
@@ -240,18 +233,18 @@ class SchemaHelper(object):
 
         if isinstance(values, dict):
             for new_key, new_value in values.items():
-                self.ExtractAllTermsToDepth(new_key, new_value, type_map)
+                self.extract_all_terms_to_depth(new_key, new_value, type_map)
             return
 
         if isinstance(values, list):
             for new_value in values:
-                self.ExtractAllTermsToDepth(None, new_value, type_map)
+                self.extract_all_terms_to_depth(None, new_value, type_map)
             return
 
-    def FindSelectors(self, type_map):
-        """Finds all type selectors."""
+    def find_selectors(self, type_map):
+        """Finds all type selectors.
 
-        """Finds all elements in the type map where both a key and a value are
+        Finds all elements in the type map where both a key and a value are
         strings. These elements are used to find one specific type map among
         several alternative type maps."""
 
@@ -261,10 +254,10 @@ class SchemaHelper(object):
                 selector.update({akey: avalue})
         return selector
 
-    def FindCompatibleDict(self, value_map, type_map, context):
-        """Find the type map most compatible with the value map."""
+    def find_compatible_dict(self, value_map, type_map, context):
+        """Find the type map most compatible with the value map.
 
-        """"A value map is considered compatible with a type map when former
+        A value map is considered compatible with a type map when former
         contains the same key names and the value types as the type map."""
 
         # special case when we have just one type; check name and type are the
@@ -279,61 +272,61 @@ class SchemaHelper(object):
 
         # case when we have several types to choose from
         for adict in type_map:
-            dict_selector = self.FindSelectors(adict)
+            dict_selector = self.find_selectors(adict)
             for akey, avalue in dict_selector.items():
                 if value_map[akey] == avalue:
                     return akey, adict
         return None, None
 
-    def CheckSingleValueMatchesType(self, value, atype, context):
+    def check_single_value_matches_type(self, value, atype, context):
         """Checks if a single value matches a specific (primitive) type."""
 
         if atype == BOOLEAN:
             if (value == "True" or value == "False" or value == "true" or
                 value == "false" or isinstance(value, bool) or
                 value == BOOLEAN):
-                self.VisitElement("BOOLEAN", value, context)
+                self.visit_element("BOOLEAN", value, context)
                 return True
             else:
                 raise SchemaException(
                     "Expected: 'true' or 'false'\nfound: %s", value)
         if isinstance(atype, str):
             if isinstance(value, str):
-                self.VisitElement("str", value, context)
+                self.visit_element("str", value, context)
                 return True
             else:
                 raise SchemaException("Expected: 'string'\nfound: %s", value)
         if atype == STRING:
             if isinstance(value, str):
-                self.VisitElement("STRING", value, context)
+                self.visit_element("STRING", value, context)
                 return True
             else:
                 raise SchemaException("Expected: 'string'\nfound: %s", value)
         if atype == REGEX and value == REGEX:
-            self.VisitElement("REGEX", value, context)
+            self.visit_element("REGEX", value, context)
             return True
         if atype == CORRECT and value == CORRECT:
-            self.VisitElement("CORRECT", value, context)
+            self.visit_element("CORRECT", value, context)
             return True
         if atype == FLOAT:
-            if IsNumber(value):
-                self.VisitElement("NUMBER", value, context)
+            if is_number(value):
+                self.visit_element("NUMBER", value, context)
                 return True
             else:
-                raise SchemaException("Expected: 'number'\nfound: %s", value)
+                raise SchemaException("Expected: \'number\'\nfound: %s", value)
         if atype == INTEGER:
-            if IsInteger(value):
-                self.VisitElement("INTEGER", value, context)
+            if is_integer(value):
+                self.visit_element("INTEGER", value, context)
                 return True
             else:
                 raise SchemaException(
                     "Expected: 'integer'\nfound: %s", value,
-                    path=context.FormatPath())
+                    path=context.format_path())
         raise SchemaException(
-            "Unexpected value '%s'\n"
-            "for type %s", value, atype, path=context.FormatPath())
+            "Unexpected value \'%s\'\n"
+            "for type %s", value, atype, path=context.format_path())
 
-    def CheckValueListMatchesType(self, value, atype, context):
+    def check_value_list_matches_type(self, value, atype, context):
         """Checks if all items in value list match a specific type."""
 
         for value_item in value:
@@ -341,13 +334,13 @@ class SchemaHelper(object):
             for atype_item in atype:
                 if isinstance(atype_item, list):
                     for atype_item_item in atype_item:
-                        if self.DoesValueMatchType(value_item, atype_item_item,
-                                                   context):
+                        if self.does_value_match_type(
+                            value_item, atype_item_item, context):
                             found = True
                             break
                 else:
-                    if self.DoesValueMatchType(value_item, atype_item,
-                                               context):
+                    if self.does_value_match_type(
+                        value_item, atype_item, context):
                         found = True
                         break
             if not found:
@@ -355,23 +348,23 @@ class SchemaHelper(object):
                     "Expected: '%s'\nfound: %s", atype, value)
         return True
 
-    def CheckValueMatchesType(self, value, atype, context):
+    def check_value_matches_type(self, value, atype, context):
         """Checks if single value or a list of values match a specific type."""
 
         if isinstance(atype, list) and isinstance(value, list):
-            return self.CheckValueListMatchesType(value, atype, context)
+            return self.check_value_list_matches_type(value, atype, context)
         else:
-            return self.CheckSingleValueMatchesType(value, atype, context)
+            return self.check_single_value_matches_type(value, atype, context)
 
-    def DoesValueMatchType(self, value, atype, context):
+    def does_value_match_type(self, value, atype, context):
         """Same as other method, but does not throw an exception."""
 
         try:
-            return self.CheckValueMatchesType(value, atype, context)
+            return self.check_value_matches_type(value, atype, context)
         except SchemaException:
             return False
 
-    def DoesValueMatchesOneOfTypes(self, value, types, context):
+    def does_value_match_one_of_types(self, value, types, context):
         """Checks if a value matches to one of the types in the list."""
 
         type_names = None
@@ -379,12 +372,12 @@ class SchemaHelper(object):
             type_names = types
         if type_names:
             for i in range(0, len(type_names)):
-                if self.DoesValueMatchType(value, type_names[i], context):
+                if self.does_value_match_type(value, type_names[i], context):
                     return True
 
         return False
 
-    def DoesValueMatchMapOfType(self, value, types, context):
+    def does_value_match_map_of_type(self, value, types, context):
         """Checks if value matches any variation of {...} type."""
 
         # find all possible map types
@@ -397,25 +390,25 @@ class SchemaHelper(object):
 
         # check if the structure of value matches one of the maps
         if isinstance(value, dict):
-            aname, adict = self.FindCompatibleDict(value, maps, context)
+            aname, adict = self.find_compatible_dict(value, maps, context)
             if adict:
-                self.VisitElement("dict", value, context.New(aname), False)
+                self.visit_element("dict", value, context.new(aname), False)
                 for akey, avalue in value.items():
                     if akey not in adict:
                         raise SchemaException(
                             "Unknown term '%s'", akey,
-                            path=context.FormatPath())
-                    self.CheckValueOfValidType(
-                        avalue, adict[akey], context.New([aname, akey]))
+                            path=context.format_path())
+                    self.check_value_of_valid_type(
+                        avalue, adict[akey], context.new([aname, akey]))
                 return True
             raise SchemaException(
                     "The value:\n  %s\n"
                     "is incompatible with expected type(s):\n  %s",
-                    value, types, path=context.FormatPath())
+                    value, types, path=context.format_path())
 
         return False
 
-    def FormatNameWithIndex(self, alist, aindex):
+    def format_name_with_index(self, alist, aindex):
         """Custom function to format a context name with an array element
         index."""
 
@@ -424,7 +417,8 @@ class SchemaHelper(object):
         else:
             return "[%s]" % aindex
 
-    def DoesValueMatchListOfTypesInOrder(self, value, types, context, target):
+    def does_value_match_list_of_types_in_order(self, value, types,
+                                                context, target):
         """Iterates the value and types in given order and checks for match."""
 
         all_values_are_lists = True
@@ -434,20 +428,21 @@ class SchemaHelper(object):
 
         if all_values_are_lists:
             for i in range(0, len(value)):
-                self.CheckValueOfValidType(value[i], types, context.New(
-                    self.FormatNameWithIndex(value, i)), True)
+                self.check_value_of_valid_type(value[i], types, context.new(
+                    self.format_name_with_index(value, i)), True)
         else:
             if len(target) != len(value):
                 raise SchemaException(
                     "Expected: '%s' values\n" + "found: %s." % value,
-                    len(target), path=context.FormatPath())
+                    len(target), path=context.format_path())
             for i in range(0, len(value)):
-                self.CheckValueOfValidType(value[i], target[i], context.New(
-                    self.FormatNameWithIndex(value, i)))
+                self.check_value_of_valid_type(value[i], target[i],
+                    context.new(self.format_name_with_index(value, i)))
 
         return True
 
-    def DoesValueMatchListOfTypesAnyOrder(self, value, types, context, lists):
+    def does_value_match_list_of_types_any_order(self, value, types,
+                                                 context, lists):
         """Iterates the value and types, checks if they match in any order."""
 
         target = lists
@@ -455,15 +450,15 @@ class SchemaHelper(object):
             if not isinstance(types, list):
                 raise SchemaException(
                     "Unsupported type %s",
-                    None, types, path=context.FormatPath())
+                    None, types, path=context.format_path())
             target = types
 
         for i in range(0, len(value)):
             found = False
             for atarget in target:
                 try:
-                    self.CheckValueOfValidType(value[i], atarget, context.New(
-                        self.FormatNameWithIndex(value, i)))
+                    self.check_value_of_valid_type(value[i], atarget,
+                        context.new(self.format_name_with_index(value, i)))
                     found = True
                     break
                 except:
@@ -473,13 +468,13 @@ class SchemaHelper(object):
                 raise SchemaException(
                     "The value:\n  %s\n"
                     "is incompatible with expected type(s):\n  %s",
-                    value, types, path=context.FormatPath())
+                    value, types, path=context.format_path())
         return True
 
-    def DoesValueMatchListOfType(self, value, types, context, in_order):
-        """Checks if a value matches a variation of [...] type."""
+    def does_value_match_list_of_type(self, value, types, context, in_order):
+        """Checks if a value matches a variation of [...] type.
 
-        """Extra argument controls whether matching must be done in a specific
+        Extra argument controls whether matching must be done in a specific
         or in any order. A specific order is demanded by [[...]]] construct,
         i.e. [[STRING, INTEGER, BOOLEAN]], while sub elements inside {...} and
         [...] can be matched in any order."""
@@ -492,48 +487,49 @@ class SchemaHelper(object):
         if len(lists) > 1:
             raise SchemaException(
                 "Unable to validate types with multiple alternative "
-                "lists %s", None, types, path=context.FormatPath())
+                "lists %s", None, types, path=context.format_path())
 
         if isinstance(value, list):
             if len(lists) > 1:
                 raise SchemaException(
                     "Allowed at most one list\nfound: %s.",
-                    None, types, path=context.FormatPath())
+                    None, types, path=context.format_path())
 
             # determine if list is in order or not as hinted by double array
             # [[..]]; [STRING, NUMBER] is in any order, but [[STRING, NUMBER]]
             # demands order
             ordered = len(lists) == 1 and isinstance(types, list)
             if in_order or ordered:
-                return self.DoesValueMatchListOfTypesInOrder(
+                return self.does_value_match_list_of_types_in_order(
                     value, types, context, lists[0])
             else:
-                return self.DoesValueMatchListOfTypesAnyOrder(
+                return self.does_value_match_list_of_types_any_order(
                     value, types, context, lists)
 
         return False
 
-    def CheckValueOfValidType(self, value, types, context, in_order=None):
+    def check_value_of_valid_type(self, value, types, context, in_order=None):
         """Check if a value matches any of the given types."""
 
         if not (isinstance(types, list) or isinstance(types, dict)):
-            self.CheckValueMatchesType(value, types, context)
+            self.check_value_matches_type(value, types, context)
             return
-        if (self.DoesValueMatchListOfType(value, types, context, in_order) or
-            self.DoesValueMatchMapOfType(value, types, context) or
-            self.DoesValueMatchesOneOfTypes(value, types, context)):
+        if (self.does_value_match_list_of_type(
+                value, types, context, in_order) or
+            self.does_value_match_map_of_type(value, types, context) or
+            self.does_value_match_one_of_types(value, types, context)):
             return
 
         raise SchemaException("Unknown type %s", value,
-            path=context.FormatPath())
+            path=context.format_path())
 
-    def CheckInstancesMatchSchema(self, values, types, name):
+    def check_instances_match_schema(self, values, types, name):
         """Recursively decompose 'values' to see if they match schema
         (types)."""
 
         self.parse_log = []
-        context = Context().New(name)
-        self.parse_log.append("  ROOT %s" % context.FormatPath())
+        context = Context().new(name)
+        self.parse_log.append("  ROOT %s" % context.format_path())
 
         # handle {..} containers
         if isinstance(types, dict):
@@ -541,7 +537,7 @@ class SchemaHelper(object):
                 raise SchemaException(
                     "Error at '/': expected {...}, found %s" % (
                         values.__class_.__name__))
-            self.CheckValueOfValidType(values, types, context.New([]))
+            self.check_value_of_valid_type(values, types, context.new([]))
             return
 
         # handle [...] containers
@@ -551,16 +547,16 @@ class SchemaHelper(object):
                     "Error at '/': expected [...], found %s" % (
                         values.__class_.__name__))
             for i in range(0, len(values)):
-                self.CheckValueOfValidType(
-                    values[i], types, context.New("[%s]" % i))
+                self.check_value_of_valid_type(
+                    values[i], types, context.new("[%s]" % i))
             return
 
         raise SchemaException(
             "Expected an array or a dictionary.", None,
-            path=context.FormatPath())
+            path=context.format_path())
 
 
-def escapeQuote(value):
+def escape_quote(value):
     return str(value).replace("'", r"\'")
 
 
@@ -575,14 +571,14 @@ class Unit(object):
         self.release_date = ""
         self.now_available = False
 
-    def ListProperties(self, name, output):
+    def list_properties(self, name, output):
         output.append("%s['id'] = %s;" % (name, self.id))
-        output.append("%s['type'] = '%s';" % (name, escapeQuote(self.type)))
+        output.append("%s['type'] = '%s';" % (name, escape_quote(self.type)))
         output.append("%s['unit_id'] = '%s';" % (
-            name, escapeQuote(self.unit_id)))
-        output.append("%s['title'] = '%s';" % (name, escapeQuote(self.title)))
+            name, escape_quote(self.unit_id)))
+        output.append("%s['title'] = '%s';" % (name, escape_quote(self.title)))
         output.append("%s['release_date'] = '%s';" % (
-            name, escapeQuote(self.release_date)))
+            name, escape_quote(self.release_date)))
         output.append("%s['now_available'] = %s;" % (
             name, str(self.now_available).lower()))
 
@@ -601,28 +597,28 @@ class Lesson(object):
         self.lesson_video_id = ""
         self.lesson_objectives = ""
 
-    def ListProperties(self, name, output):
+    def list_properties(self, name, output):
         activity = "false"
         if self.lesson_activity == "yes":
             activity = "true"
 
         output.append("%s['unit_id'] = %s;" % (name, self.unit_id))
         output.append("%s['unit_title'] = '%s';" % (
-            name, escapeQuote(self.unit_title)))
+            name, escape_quote(self.unit_title)))
         output.append("%s['lesson_id'] = %s;" % (name, self.lesson_id))
         output.append("%s['lesson_title'] = '%s';" % (
-            name, escapeQuote(self.lesson_title)))
+            name, escape_quote(self.lesson_title)))
         output.append("%s['lesson_activity'] = %s;" % (name, activity))
         output.append("%s['lesson_activity_name'] = '%s';" % (
-            name, escapeQuote(self.lesson_activity_name)))
+            name, escape_quote(self.lesson_activity_name)))
         output.append("%s['lesson_notes'] = '%s';" % (
-            name, escapeQuote(self.lesson_notes)))
+            name, escape_quote(self.lesson_notes)))
         output.append("%s['lesson_video_id'] = '%s';" % (
-            name, escapeQuote(self.lesson_video_id)))
+            name, escape_quote(self.lesson_video_id)))
         output.append("%s['lesson_objectives'] = '%s';" % (
-            name, escapeQuote(self.lesson_objectives)))
+            name, escape_quote(self.lesson_objectives)))
 
-    def ToIdString(self):
+    def to_id_string(self):
         return "%s.%s.%s" % (self.unit_id, self.lesson_id, self.lesson_title)
 
 
@@ -631,7 +627,7 @@ class Assessment(object):
 
     def __init__(self):
         self.scope = {}
-        SchemaHelper().ExtractAllTermsToDepth(
+        SchemaHelper().extract_all_terms_to_depth(
             "assessment", SCHEMA["assessment"], self.scope)
 
 
@@ -640,29 +636,29 @@ class Activity(object):
 
     def __init__(self):
         self.scope = {}
-        SchemaHelper().ExtractAllTermsToDepth(
+        SchemaHelper().extract_all_terms_to_depth(
             "activity", SCHEMA["activity"], self.scope)
 
 
-def Echo(x):
+def echo(x):
     print x
 
 
-def IsInteger(s):
+def is_integer(s):
     try:
         return int(s) == float(s)
     except ValueError:
         return False
 
 
-def IsBoolean(s):
+def is_boolean(s):
     try:
         return s == "True" or s == "False"
     except ValueError:
         return False
 
 
-def IsNumber(s):
+def is_number(s):
     try:
         float(s)
         return True
@@ -670,14 +666,14 @@ def IsNumber(s):
         return False
 
 
-def IsOneOf(value, values):
+def is_one_of(value, values):
     for current in values:
         if value == current:
             return True
     return False
 
 
-def TextToLineNumberedText(text):
+def text_to_line_numbered_text(text):
     """Adds line numbers to the provided text."""
 
     lines = text.split("\n")
@@ -689,14 +685,14 @@ def TextToLineNumberedText(text):
     return "\n  ".join(results)
 
 
-def SetObjectAttributes(target_object, names, values):
+def set_object_attributes(target_object, names, values):
     """Sets object attributes from provided values."""
 
     if len(names) != len(values):
         raise SchemaException(
             "The number of elements must match: %s and %s" % (names, values))
     for i in range(0, len(names)):
-        if IsInteger(values[i]):
+        if is_integer(values[i]):
             # if we are setting an attribute of an object that support
             # metadata, try to infer the target type and convert 'int' into
             # 'str' here
@@ -711,17 +707,17 @@ def SetObjectAttributes(target_object, names, values):
             else:
                 setattr(target_object, names[i], int(values[i]))
             continue
-        if IsBoolean(values[i]):
+        if is_boolean(values[i]):
             setattr(target_object, names[i], bool(values[i]))
             continue
         setattr(target_object, names[i], values[i])
 
 
-def ReadObjectsFromCsvFile(fname, header, new_object):
-    return ReadObjectsFromCsv(csv.reader(open(fname)), header, new_object)
+def read_objects_from_csv_file(fname, header, new_object):
+    return read_objects_from_csv(csv.reader(open(fname)), header, new_object)
 
 
-def ReadObjectsFromCsv(value_rows, header, new_object):
+def read_objects_from_csv(value_rows, header, new_object):
     values = []
     for row in value_rows:
         if len(row) == 0:
@@ -746,31 +742,31 @@ def ReadObjectsFromCsv(value_rows, header, new_object):
                     i, len(values[i]), values[i], len(names), names))
 
         item = new_object()
-        SetObjectAttributes(item, names, values[i])
+        set_object_attributes(item, names, values[i])
         items.append(item)
     return items
 
 
-def EscapeJavascriptRegex(text):
+def escape_javascript_regex(text):
     return re.sub(
         r"([:][ ]*)([/])(.*)([/][ismx]*)", r': regex("\2\3\4")', text)
 
 
-def RemoveJavaScriptSingleLineComment(text):
+def remove_javascript_single_line_comment(text):
     text = re.sub(re.compile("^(.*?)[ ]+//(.*)$", re.MULTILINE), r"\1", text)
     text = re.sub(re.compile("^//(.*)$", re.MULTILINE), r"", text)
     return text
 
 
-def RemoveJavaScriptMultiLineComment(text):
+def remove_javascript_multi_line_comment(text):
     return re.sub(
         re.compile("/\*(.*)\*/", re.MULTILINE + re.DOTALL), r"", text)
 
 
-def RemoveContentMarkedNoVerify(content):
-    """Removes content that should not be verified."""
+def remove_content_marked_no_verify(content):
+    """Removes content that should not be verified.
 
-    """If you have any free-form JavaScript in the activity file, you need
+    If you have any free-form JavaScript in the activity file, you need
     to place it between //<gcb-no-verify> ... //</gcb-no-verify> tags
     so that the verifier can selectively ignore it."""
 
@@ -779,29 +775,29 @@ def RemoveContentMarkedNoVerify(content):
     return re.sub(pattern, "", content)
 
 
-def ConvertJavaScriptToPython(content, root_name):
-    """Removes JavaScript specific syntactic constructs."""
+def convert_javascript_to_python(content, root_name):
+    """Removes JavaScript specific syntactic constructs.
 
-    """Reads the content and removes JavaScript comments, var's, and escapes
+    Reads the content and removes JavaScript comments, var's, and escapes
     regular expressions."""
 
-    content = RemoveContentMarkedNoVerify(content)
-    content = RemoveJavaScriptMultiLineComment(content)
-    content = RemoveJavaScriptSingleLineComment(content)
+    content = remove_content_marked_no_verify(content)
+    content = remove_javascript_multi_line_comment(content)
+    content = remove_javascript_single_line_comment(content)
     content = content.replace("var %s = " % root_name, "%s = " % root_name)
-    content = EscapeJavascriptRegex(content)
+    content = escape_javascript_regex(content)
     return content
 
 
-def ConvertJavaScriptFileToPython(fname, root_name):
-    return ConvertJavaScriptToPython(
+def convert_javascript_file_to_python(fname, root_name):
+    return convert_javascript_to_python(
         "".join(open(fname, "r").readlines()), root_name)
 
 
-def EvaluatePythonExpressionFromText(content, root_name, scope):
-    """Compiles and evaluates a Python script in a restricted environment."""
+def evaluate_python_expression_from_text(content, root_name, scope):
+    """Compiles and evaluates a Python script in a restricted environment.
 
-    """First compiles and then evaluates a Python script text in a restricted
+    First compiles and then evaluates a Python script text in a restricted
     environment using provided bindings. Returns the resulting bindings if
     evaluation completed."""
 
@@ -817,65 +813,65 @@ def EvaluatePythonExpressionFromText(content, root_name, scope):
     return restricted_scope
 
 
-def EvaluateJavaScriptExpressionFromFile(fname, root_name, scope, error):
-    content = ConvertJavaScriptFileToPython(fname, root_name)
+def evaluate_javascript_expression_from_file(fname, root_name, scope, error):
+    content = convert_javascript_file_to_python(fname, root_name)
     try:
-        return EvaluatePythonExpressionFromText(content, root_name, scope)
+        return evaluate_python_expression_from_text(content, root_name, scope)
     except:
         error("Unable to parse %s in file %s\n  %s" % (
-            root_name, fname, TextToLineNumberedText(content)))
+            root_name, fname, text_to_line_numbered_text(content)))
         for message in sys.exc_info():
             error(str(message))
 
 
 class Verifier(object):
-    """A class that knows how to verify Units, Lessons, Assessments and
-    Activities, and understands their relationships."""
+    """Verifies Units, Lessons, Assessments, Activities and their
+    relationships."""
 
     def __init__(self):
         self.schema_helper = SchemaHelper()
         self.errors = 0
         self.warnings = 0
 
-    def VerifyUnitFields(self, units):
+    def verify_unit_fields(self, units):
         self.export.append("units = Array();")
         for unit in units:
-            if not IsOneOf(unit.now_available, [True, False]):
+            if not is_one_of(unit.now_available, [True, False]):
                 self.error("Bad now_available '%s' for unit id %s; expected "
                     "'True' or 'False'" % (unit.now_available, unit.id))
 
-            if not IsOneOf(unit.type, ["U", "A", "O"]):
+            if not is_one_of(unit.type, ["U", "A", "O"]):
                 self.error("Bad type '%s' for unit id %s; expected 'U', 'A', "
                     "or 'O'" % (unit.type, unit.id))
 
             if unit.type == "A":
-                if not IsOneOf(unit.unit_id, ("Pre", "Mid", "Fin")):
+                if not is_one_of(unit.unit_id, ("Pre", "Mid", "Fin")):
                     self.error("Bad unit_id '%s'; expected 'Pre', 'Mid' or "
                       "'Fin' for unit id %s" % (unit.unit_id, unit.id))
 
             if unit.type == "U":
-                if not IsInteger(unit.unit_id):
+                if not is_integer(unit.unit_id):
                     self.error("Expected integer unit_id, found %s in unit id "
                         " %s" % (unit.unit_id, unit.id))
 
             self.export.append("")
             self.export.append("units[%s] = Array();" % unit.id)
             self.export.append("units[%s]['lessons'] = Array();" % unit.id)
-            unit.ListProperties("units[%s]" % unit.id, self.export)
+            unit.list_properties("units[%s]" % unit.id, self.export)
 
-    def VerifyLessonFields(self, lessons):
+    def verify_lesson_fields(self, lessons):
         for lesson in lessons:
-            if not IsOneOf(lesson.lesson_activity, ["yes", ""]):
+            if not is_one_of(lesson.lesson_activity, ["yes", ""]):
                 self.error("Bad lesson_activity '%s' for lesson_id %s" %
                     (lesson.lesson_activity, lesson.lesson_id))
 
             self.export.append("")
             self.export.append("units[%s]['lessons'][%s] = Array();" % (
                 lesson.unit_id, lesson.lesson_id))
-            lesson.ListProperties("units[%s]['lessons'][%s]" % (
+            lesson.list_properties("units[%s]['lessons'][%s]" % (
                 lesson.unit_id, lesson.lesson_id), self.export)
 
-    def VerifyUnitLessonRelationships(self, units, lessons):
+    def verify_unit_lesson_relationships(self, units, lessons):
         """Checks that each lesson points to a valid unit and all lessons are
         used by one of the units."""
 
@@ -907,7 +903,7 @@ class Verifier(object):
                     self.warn(
                         "Lesson lesson_id is out of order: expected %s, found "
                         " %s (%s)" % (
-                            j + 1, lesson.lesson_id, lesson.ToIdString()))
+                            j + 1, lesson.lesson_id, lesson.to_id_string()))
 
                 self.fine("  Lesson %s: %s" % (lesson.lesson_id,
                     lesson.lesson_title))
@@ -918,7 +914,7 @@ class Verifier(object):
             unused_lessons.remove(lesson)
         for lesson in unused_lessons:
             self.warn("Unused lesson_id %s (%s)" % (
-                lesson.lesson_id, lesson.ToIdString()))
+                lesson.lesson_id, lesson.to_id_string()))
 
         # check all lessons point to known units
         for lesson in lessons:
@@ -929,9 +925,9 @@ class Verifier(object):
                     break
             if not has:
                 self.error("Lesson has unknown unit_id %s (%s)" %
-                    (lesson.unit_id, lesson.ToIdString()))
+                    (lesson.unit_id, lesson.to_id_string()))
 
-    def VerifyActivities(self, lessons):
+    def verify_activities(self, lessons):
         """Loads and verifies all activities."""
 
         self.info("Loading activities:")
@@ -946,13 +942,13 @@ class Verifier(object):
                 if not os.path.exists(fname):
                     self.error("  Missing activity: %s" % fname)
                 else:
-                    activity = EvaluateJavaScriptExpressionFromFile(
+                    activity = evaluate_javascript_expression_from_file(
                         fname, "activity", Activity().scope, self.error)
-                    self.VerifyActivityInstance(activity, fname)
+                    self.verify_activity_instance(activity, fname)
 
         self.info("Read %s activities" % count)
 
-    def VerifyAssessment(self, units):
+    def verify_assessment(self, units):
         """Loads and verifies all assessments."""
 
         self.info("Loading assessment:")
@@ -966,45 +962,45 @@ class Verifier(object):
                 if not os.path.exists(fname):
                     self.error("  Missing assessment: %s" % fname)
                 else:
-                    assessment = EvaluateJavaScriptExpressionFromFile(
+                    assessment = evaluate_javascript_expression_from_file(
                         fname, "assessment", Assessment().scope, self.error)
-                    self.VerifyAssessmentInstance(assessment, fname)
+                    self.verify_assessment_instance(assessment, fname)
 
         self.info("Read %s assessments" % count)
 
-    def FormatParseLog(self):
+    def format_parse_log(self):
         return "Parse log:\n%s" % "\n".join(self.schema_helper.parse_log)
 
-    def VerifyAssessmentInstance(self, scope, fname):
+    def verify_assessment_instance(self, scope, fname):
         """Verifies compliance of assessment with schema."""
 
         if scope:
             try:
-                self.schema_helper.CheckInstancesMatchSchema(
+                self.schema_helper.check_instances_match_schema(
                     scope["assessment"], SCHEMA["assessment"], "assessment")
                 self.info("  Verified assessment %s" % fname)
                 if OUTPUT_DEBUG_LOG:
-                    self.info(self.FormatParseLog())
+                    self.info(self.format_parse_log())
             except SchemaException as e:
                 self.error("  Error in assessment %s\n%s" % (
-                    fname, self.FormatParseLog()))
+                    fname, self.format_parse_log()))
                 raise e
         else:
             self.error("  Unable to evaluate 'assessment =' in %s" % fname)
 
-    def VerifyActivityInstance(self, scope, fname):
+    def verify_activity_instance(self, scope, fname):
         """Verifies compliance of activity with schema."""
 
         if scope:
             try:
-                self.schema_helper.CheckInstancesMatchSchema(
+                self.schema_helper.check_instances_match_schema(
                     scope["activity"], SCHEMA["activity"], "activity")
                 self.info("  Verified activity %s" % fname)
                 if OUTPUT_DEBUG_LOG:
-                    self.info(self.FormatParseLog())
+                    self.info(self.format_parse_log())
             except SchemaException as e:
                 self.error("  Error in activity %s\n%s" % (
-                    fname, self.FormatParseLog()))
+                    fname, self.format_parse_log()))
                 raise e
         else:
             self.error("  Unable to evaluate 'activity =' in %s" % fname)
@@ -1024,7 +1020,7 @@ class Verifier(object):
         self.errors += 1
         self.echo_func("ERROR: " + x)
 
-    def LoadAndVerifyModel(self, echo_func):
+    def load_and_verify_model(self, echo_func):
         """Loads, parses and verifies all content for a course."""
 
         self.echo_func = echo_func
@@ -1037,21 +1033,22 @@ class Verifier(object):
             "../data/lesson.csv")
 
         self.info("Loading units from: %s" % unit_file)
-        units = ReadObjectsFromCsvFile(unit_file, UNITS_HEADER, lambda: Unit())
+        units = read_objects_from_csv_file(
+            unit_file, UNITS_HEADER, lambda: Unit())
         self.info("Read %s units" % len(units))
 
         self.info("Loading lessons from: %s" % lesson_file)
-        lessons = ReadObjectsFromCsvFile(
+        lessons = read_objects_from_csv_file(
             lesson_file, LESSONS_HEADER, lambda: Lesson())
         self.info("Read %s lessons" % len(lessons))
 
-        self.VerifyUnitFields(units)
-        self.VerifyLessonFields(lessons)
-        self.VerifyUnitLessonRelationships(units, lessons)
+        self.verify_unit_fields(units)
+        self.verify_lesson_fields(lessons)
+        self.verify_unit_lesson_relationships(units, lessons)
 
         try:
-            self.VerifyActivities(lessons)
-            self.VerifyAssessment(units)
+            self.verify_activities(lessons)
+            self.verify_assessment(units)
         except SchemaException as e:
             self.error(str(e))
 
@@ -1063,55 +1060,55 @@ class Verifier(object):
         return self.errors
 
 
-def RunAllRegexUnitTests():
-    assert EscapeJavascriptRegex(
+def run_all_regex_unit_tests():
+    assert escape_javascript_regex(
         "blah regex: /site:bls.gov?/i, blah") == (
             "blah regex: regex(\"/site:bls.gov?/i\"), blah")
-    assert EscapeJavascriptRegex(
+    assert escape_javascript_regex(
         "blah regex: /site:http:\/\/www.google.com?q=abc/i, blah") == (
             "blah regex: regex(\"/site:http:\/\/www.google.com?q=abc/i\"), "
             "blah")
-    assert RemoveJavaScriptMultiLineComment(
+    assert remove_javascript_multi_line_comment(
         "blah\n/*\ncomment\n*/\nblah") == "blah\n\nblah"
-    assert RemoveJavaScriptMultiLineComment(
+    assert remove_javascript_multi_line_comment(
         "blah\nblah /*\ncomment\nblah */\nblah") == (
             "blah\nblah \nblah")
-    assert RemoveJavaScriptSingleLineComment(
+    assert remove_javascript_single_line_comment(
         "blah\n// comment\nblah") == "blah\n\nblah"
-    assert RemoveJavaScriptSingleLineComment(
+    assert remove_javascript_single_line_comment(
         "blah\nblah http://www.foo.com\nblah") == (
             "blah\nblah http://www.foo.com\nblah")
-    assert RemoveJavaScriptSingleLineComment(
+    assert remove_javascript_single_line_comment(
         "blah\nblah  // comment\nblah") == "blah\nblah\nblah"
-    assert RemoveJavaScriptSingleLineComment(
+    assert remove_javascript_single_line_comment(
         "blah\nblah  // comment http://www.foo.com\nblah") == (
         "blah\nblah\nblah")
-    assert RemoveContentMarkedNoVerify(
+    assert remove_content_marked_no_verify(
         "blah1\n// <gcb-no-verify>/blah2\n// </gcb-no-verify>\nblah3") == (
             "blah1\n// \nblah3")
 
 
-def RunAllSchemaHelperUnitTests():
-    def AssertSame(a, b):
+def run_all_schema_helper_unit_tests():
+    def assert_same(a, b):
         if a != b:
             raise Exception("Expected:\n  %s\nFound:\n  %s" % (a, b))
 
-    def AssertPass(instances, types, expected_result=None):
+    def assert_pass(instances, types, expected_result=None):
         try:
             schema_helper = SchemaHelper()
-            result = schema_helper.CheckInstancesMatchSchema(
+            result = schema_helper.check_instances_match_schema(
                 instances, types, "test")
             if OUTPUT_DEBUG_LOG:
                 print "\n".join(schema_helper.parse_log)
             if expected_result:
-                AssertSame(expected_result, result)
+                assert_same(expected_result, result)
         except SchemaException as e:
             if OUTPUT_DEBUG_LOG:
                 print str(e)
                 print "\n".join(schema_helper.parse_log)
             raise
 
-    def AssertFails(func):
+    def assert_fails(func):
         try:
             func()
             raise Exception("Expected to fail")
@@ -1120,147 +1117,148 @@ def RunAllSchemaHelperUnitTests():
                 print str(e)
             pass
 
-    def AssertFail(instances, types):
-        AssertFails(lambda: AssertPass(instances, types))
+    def assert_fail(instances, types):
+        assert_fails(lambda: assert_pass(instances, types))
 
     # CSV tests
-    ReadObjectsFromCsv(
+    read_objects_from_csv(
         [["id", "type"], [1, "none"]], "id,type", lambda: Unit())
-    AssertFails(lambda: ReadObjectsFromCsv(
+    assert_fails(lambda: read_objects_from_csv(
         [["id", "type"], [1, "none"]], "id,type,title", lambda: Unit()))
-    AssertFails(lambda: ReadObjectsFromCsv(
+    assert_fails(lambda: read_objects_from_csv(
         [["id", "type", "title"], [1, "none"]], "id,type,title",
         lambda: Unit()))
 
     # context tests
-    AssertSame(
-        Context().New([]).New(["a"]).New(["b", "c"]).FormatPath(), ("//a/b/c"))
+    assert_same(Context().new([]).new(["a"]).new(["b", "c"]).format_path(),
+                ("//a/b/c"))
 
     # simple map tests
-    AssertPass({"name": "Bob"}, {"name": STRING}, None)
-    AssertFail("foo", "bar")
-    AssertFail({"name": "Bob"}, {"name": INTEGER})
-    AssertFail({"name": 12345}, {"name": STRING})
-    AssertFail({"amount": 12345}, {"name": INTEGER})
-    AssertFail({"regex": CORRECT}, {"regex": REGEX})
-    AssertPass({"name": "Bob"}, {"name": STRING, "phone": STRING})
-    AssertPass({"name": "Bob"}, {"phone": STRING, "name": STRING})
-    AssertPass({"name": "Bob"},
-               {"phone": STRING, "name": STRING, "age": INTEGER})
+    assert_pass({"name": "Bob"}, {"name": STRING}, None)
+    assert_fail("foo", "bar")
+    assert_fail({"name": "Bob"}, {"name": INTEGER})
+    assert_fail({"name": 12345}, {"name": STRING})
+    assert_fail({"amount": 12345}, {"name": INTEGER})
+    assert_fail({"regex": CORRECT}, {"regex": REGEX})
+    assert_pass({"name": "Bob"}, {"name": STRING, "phone": STRING})
+    assert_pass({"name": "Bob"}, {"phone": STRING, "name": STRING})
+    assert_pass({"name": "Bob"},
+                {"phone": STRING, "name": STRING, "age": INTEGER})
 
     # mixed attributes tests
-    AssertPass({"colors": ["red", "blue"]}, {"colors": [STRING]})
-    AssertPass({"colors": []}, {"colors": [STRING]})
-    AssertFail({"colors": {"red": "blue"}}, {"colors": [STRING]})
-    AssertFail({"colors": {"red": "blue"}}, {"colors": [FLOAT]})
-    AssertFail({"colors": ["red", "blue", 5.5]}, {"colors": [STRING]})
+    assert_pass({"colors": ["red", "blue"]}, {"colors": [STRING]})
+    assert_pass({"colors": []}, {"colors": [STRING]})
+    assert_fail({"colors": {"red": "blue"}}, {"colors": [STRING]})
+    assert_fail({"colors": {"red": "blue"}}, {"colors": [FLOAT]})
+    assert_fail({"colors": ["red", "blue", 5.5]}, {"colors": [STRING]})
 
-    AssertFail({"colors": ["red", "blue", {"foo": "bar"}]},
-               {"colors": [STRING]})
-    AssertFail({"colors": ["red", "blue"], "foo": "bar"}, {"colors": [STRING]})
+    assert_fail({"colors": ["red", "blue", {"foo": "bar"}]},
+                {"colors": [STRING]})
+    assert_fail({"colors": ["red", "blue"], "foo": "bar"},
+                {"colors": [STRING]})
 
-    AssertPass({"colors": ["red", 1]}, {"colors": [[STRING, INTEGER]]})
-    AssertFail({"colors": ["red", "blue"]}, {"colors": [[STRING, INTEGER]]})
-    AssertFail({"colors": [1, 2, 3]}, {"colors": [[STRING, INTEGER]]})
-    AssertFail({"colors": ["red", 1, 5.3]}, {"colors": [[STRING, INTEGER]]})
+    assert_pass({"colors": ["red", 1]}, {"colors": [[STRING, INTEGER]]})
+    assert_fail({"colors": ["red", "blue"]}, {"colors": [[STRING, INTEGER]]})
+    assert_fail({"colors": [1, 2, 3]}, {"colors": [[STRING, INTEGER]]})
+    assert_fail({"colors": ["red", 1, 5.3]}, {"colors": [[STRING, INTEGER]]})
 
-    AssertPass({"colors": ["red", "blue"]}, {"colors": [STRING]})
-    AssertFail({"colors": ["red", "blue"]}, {"colors": [[STRING]]})
-    AssertFail({"colors": ["red", ["blue"]]}, {"colors": [STRING]})
-    AssertFail({"colors": ["red", ["blue", "green"]]}, {"colors": [STRING]})
+    assert_pass({"colors": ["red", "blue"]}, {"colors": [STRING]})
+    assert_fail({"colors": ["red", "blue"]}, {"colors": [[STRING]]})
+    assert_fail({"colors": ["red", ["blue"]]}, {"colors": [STRING]})
+    assert_fail({"colors": ["red", ["blue", "green"]]}, {"colors": [STRING]})
 
     # required attribute tests
-    AssertPass({"colors": ["red", 5]}, {"colors": [[STRING, INTEGER]]})
-    AssertFail({"colors": ["red", 5]}, {"colors": [[INTEGER, STRING]]})
-    AssertPass({"colors": ["red", 5]}, {"colors": [STRING, INTEGER]})
-    AssertPass({"colors": ["red", 5]}, {"colors": [INTEGER, STRING]})
-    AssertFail({"colors": ["red", 5, "FF0000"]},
-               {"colors": [[STRING, INTEGER]]})
+    assert_pass({"colors": ["red", 5]}, {"colors": [[STRING, INTEGER]]})
+    assert_fail({"colors": ["red", 5]}, {"colors": [[INTEGER, STRING]]})
+    assert_pass({"colors": ["red", 5]}, {"colors": [STRING, INTEGER]})
+    assert_pass({"colors": ["red", 5]}, {"colors": [INTEGER, STRING]})
+    assert_fail({"colors": ["red", 5, "FF0000"]},
+                {"colors": [[STRING, INTEGER]]})
 
     # an array and a map of primitive type tests
-    AssertPass({"color": {"name": "red", "rgb": "FF0000"}},
-               {"color": {"name": STRING, "rgb": STRING}})
-    AssertFail({"color": {"name": "red", "rgb": ["FF0000"]}},
-               {"color": {"name": STRING, "rgb": STRING}})
-    AssertFail({"color": {"name": "red", "rgb": "FF0000"}},
-               {"color": {"name": STRING, "rgb": INTEGER}})
-    AssertFail({"color": {"name": "red", "rgb": "FF0000"}},
-               {"color": {"name": STRING, "rgb": {"hex": STRING}}})
-    AssertPass({"color": {"name": "red", "rgb": "FF0000"}},
-               {"color": {"name": STRING, "rgb": STRING}})
-    AssertPass({"colors":
-                [{"name": "red", "rgb": "FF0000"},
-                 {"name": "blue", "rgb": "0000FF"}]},
-               {"colors": [{"name": STRING, "rgb": STRING}]})
-    AssertFail({"colors":
-                [{"name": "red", "rgb": "FF0000"},
-                 {"phone": "blue", "rgb": "0000FF"}]},
-               {"colors": [{"name": STRING, "rgb": STRING}]})
+    assert_pass({"color": {"name": "red", "rgb": "FF0000"}},
+                {"color": {"name": STRING, "rgb": STRING}})
+    assert_fail({"color": {"name": "red", "rgb": ["FF0000"]}},
+                {"color": {"name": STRING, "rgb": STRING}})
+    assert_fail({"color": {"name": "red", "rgb": "FF0000"}},
+                {"color": {"name": STRING, "rgb": INTEGER}})
+    assert_fail({"color": {"name": "red", "rgb": "FF0000"}},
+                {"color": {"name": STRING, "rgb": {"hex": STRING}}})
+    assert_pass({"color": {"name": "red", "rgb": "FF0000"}},
+                {"color": {"name": STRING, "rgb": STRING}})
+    assert_pass({"colors":
+                 [{"name": "red", "rgb": "FF0000"},
+                  {"name": "blue", "rgb": "0000FF"}]},
+                  {"colors": [{"name": STRING, "rgb": STRING}]})
+    assert_fail({"colors":
+                 [{"name": "red", "rgb": "FF0000"},
+                  {"phone": "blue", "rgb": "0000FF"}]},
+                  {"colors": [{"name": STRING, "rgb": STRING}]})
 
     # boolean type tests
-    AssertPass({"name": "Bob", "active": "true"},
-               {"name": STRING, "active": BOOLEAN})
-    AssertPass({"name": "Bob", "active": True},
-               {"name": STRING, "active": BOOLEAN})
-    AssertPass({"name": "Bob", "active": [5, True, "False"]},
-               {"name": STRING, "active": [INTEGER, BOOLEAN]})
-    AssertPass({"name": "Bob", "active": [5, True, "false"]},
-               {"name": STRING, "active": [STRING, INTEGER, BOOLEAN]})
-    AssertFail({"name": "Bob", "active": [5, True, "False"]},
-               {"name": STRING, "active": [[INTEGER, BOOLEAN]]})
+    assert_pass({"name": "Bob", "active": "true"},
+                {"name": STRING, "active": BOOLEAN})
+    assert_pass({"name": "Bob", "active": True},
+                {"name": STRING, "active": BOOLEAN})
+    assert_pass({"name": "Bob", "active": [5, True, "False"]},
+                {"name": STRING, "active": [INTEGER, BOOLEAN]})
+    assert_pass({"name": "Bob", "active": [5, True, "false"]},
+                {"name": STRING, "active": [STRING, INTEGER, BOOLEAN]})
+    assert_fail({"name": "Bob", "active": [5, True, "False"]},
+                {"name": STRING, "active": [[INTEGER, BOOLEAN]]})
 
     # optional attribute tests
-    AssertPass({"points":
-                [{"x": 1, "y": 2, "z": 3}, {"x": 3, "y": 2, "z": 1},
-                 {"x": 2, "y": 3, "z": 1}]},
-               {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
-    AssertPass({"points":
-                [{"x": 1, "z": 3}, {"x": 3, "y": 2}, {"y": 3, "z": 1}]},
-               {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
-    AssertPass({"account":
-                [{"name": "Bob", "age": 25, "active": True}]},
-               {"account":
-                [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
+    assert_pass({"points":
+                 [{"x": 1, "y": 2, "z": 3}, {"x": 3, "y": 2, "z": 1},
+                  {"x": 2, "y": 3, "z": 1}]},
+                  {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
+    assert_pass({"points":
+                 [{"x": 1, "z": 3}, {"x": 3, "y": 2}, {"y": 3, "z": 1}]},
+                 {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
+    assert_pass({"account":
+                 [{"name": "Bob", "age": 25, "active": True}]},
+                {"account":
+                 [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
 
-    AssertPass({"account":
-                [{"name": "Bob", "active": True}]},
-               {"account":
-                [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
+    assert_pass({"account":
+                 [{"name": "Bob", "active": True}]},
+                {"account":
+                 [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
 
     # nested array tests
-    AssertFail({"name": "Bob", "active": [5, True, "false"]},
-               {"name": STRING, "active": [[BOOLEAN]]})
-    AssertFail({"name": "Bob", "active": [True]},
-               {"name": STRING, "active": [[STRING]]})
-    AssertPass({"name": "Bob", "active": ["true"]},
-               {"name": STRING, "active": [[STRING]]})
-    AssertPass({"name": "flowers", "price": ["USD", 9.99]},
-               {"name": STRING, "price": [[STRING, FLOAT]]})
-    AssertPass({"name": "flowers", "price":
-                [["USD", 9.99], ["CAD", 11.79], ["RUB", 250.23]]},
-               {"name": STRING, "price": [[STRING, FLOAT]]})
+    assert_fail({"name": "Bob", "active": [5, True, "false"]},
+                {"name": STRING, "active": [[BOOLEAN]]})
+    assert_fail({"name": "Bob", "active": [True]},
+                {"name": STRING, "active": [[STRING]]})
+    assert_pass({"name": "Bob", "active": ["true"]},
+                {"name": STRING, "active": [[STRING]]})
+    assert_pass({"name": "flowers", "price": ["USD", 9.99]},
+                {"name": STRING, "price": [[STRING, FLOAT]]})
+    assert_pass({"name": "flowers", "price":
+                 [["USD", 9.99], ["CAD", 11.79], ["RUB", 250.23]]},
+                {"name": STRING, "price": [[STRING, FLOAT]]})
 
     # selector tests
-    AssertPass({"likes": [{"state": "CA", "food": "cheese"},
-                          {"state": "NY", "drink": "wine"}]},
-               {"likes": [{"state": "CA", "food": STRING},
-                          {"state": "NY", "drink": STRING}]})
+    assert_pass({"likes": [{"state": "CA", "food": "cheese"},
+                           {"state": "NY", "drink": "wine"}]},
+                {"likes": [{"state": "CA", "food": STRING},
+                           {"state": "NY", "drink": STRING}]})
 
-    AssertPass({"likes": [{"state": "CA", "food": "cheese"},
-                          {"state": "CA", "food": "nuts"}]},
-               {"likes": [{"state": "CA", "food": STRING},
-                          {"state": "NY", "drink": STRING}]})
+    assert_pass({"likes": [{"state": "CA", "food": "cheese"},
+                           {"state": "CA", "food": "nuts"}]},
+                {"likes": [{"state": "CA", "food": STRING},
+                           {"state": "NY", "drink": STRING}]})
 
-    AssertFail({"likes": {"state": "CA", "drink": "cheese"}},
-               {"likes": [{"state": "CA", "food": STRING},
-                          {"state": "NY", "drink": STRING}]})
-
-
-def RunAllUnitTests():
-    RunAllRegexUnitTests()
-    RunAllSchemaHelperUnitTests()
+    assert_fail({"likes": {"state": "CA", "drink": "cheese"}},
+                {"likes": [{"state": "CA", "food": STRING},
+                           {"state": "NY", "drink": STRING}]})
 
 
-RunAllUnitTests()
+def run_all_unit_tests():
+    run_all_regex_unit_tests()
+    run_all_schema_helper_unit_tests()
+
+
+run_all_unit_tests()
 if __name__ == "__main__":
-    Verifier().LoadAndVerifyModel(Echo)
+    Verifier().load_and_verify_model(echo)

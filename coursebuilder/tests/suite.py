@@ -28,7 +28,7 @@ from google.appengine.ext import testbed
 EXPECTED_TEST_COUNT = 14
 
 
-def EmptyEnviron():
+def empty_environ():
     os.environ['AUTH_DOMAIN'] = 'example.com'
     os.environ['SERVER_NAME'] = 'localhost'
     os.environ['SERVER_PORT'] = '8080'
@@ -44,7 +44,7 @@ class BaseTestClass(unittest.TestCase):
         raise Exception('Not implemented.')
 
     def setUp(self):
-        EmptyEnviron()
+        empty_environ()
 
         # setup an app to be tested
         self.testapp = webtest.TestApp(self.getApp())
@@ -60,8 +60,8 @@ class BaseTestClass(unittest.TestCase):
         self.testbed.deactivate()
 
 
-def createTestSuite():
-    """Loads all tests classes from appropriate modules."""
+def create_test_suite():
+    """Loads all test classes from appropriate modules."""
     import tests.functional.tests as functional  # pylint: disable=C6204
     return unittest.TestLoader().loadTestsFromModule(functional)
 
@@ -80,7 +80,7 @@ def fix_sys_path():
 def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
-    result = unittest.TextTestRunner(verbosity=2).run(createTestSuite())
+    result = unittest.TextTestRunner(verbosity=2).run(create_test_suite())
 
     if result.testsRun != EXPECTED_TEST_COUNT:
         raise Exception('Expected %s tests to be run, not %s.' %

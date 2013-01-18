@@ -26,10 +26,10 @@ class CourseHandler(BaseHandler):
     """Handler for generating course page."""
 
     def get(self):
-        user = self.personalizePageAndGetUser()
+        user = self.personalize_page_and_get_user()
         if user:
-            self.templateValue['units'] = Unit.get_units()
-            self.templateValue['navbar'] = {'course': True}
+            self.template_value['units'] = Unit.get_units()
+            self.template_value['navbar'] = {'course': True}
             self.render('course.html')
         else:
             self.redirect('/preview')
@@ -41,7 +41,7 @@ class UnitHandler(BaseHandler):
     def get(self):
         """Handles GET requests."""
         # Set template values for user
-        user = self.personalizePageAndGetUser()
+        user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
@@ -52,43 +52,43 @@ class UnitHandler(BaseHandler):
             unit_id = 1
         else:
             unit_id = int(c)
-        self.templateValue['unit_id'] = unit_id
+        self.template_value['unit_id'] = unit_id
 
         l = self.request.get('lesson')
         if not l:
             lesson_id = 1
         else:
             lesson_id = int(l)
-        self.templateValue['lesson_id'] = lesson_id
+        self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
         for unit in Unit.get_units():
             if unit.unit_id == str(unit_id):
-                self.templateValue['units'] = unit
+                self.template_value['units'] = unit
 
         lessons = Unit.get_lessons(unit_id)
-        self.templateValue['lessons'] = lessons
+        self.template_value['lessons'] = lessons
 
         # Set template values for nav bar
-        self.templateValue['navbar'] = {'course': True}
+        self.template_value['navbar'] = {'course': True}
 
         # Set template values for back and next nav buttons
         if lesson_id == 1:
-            self.templateValue['back_button_url'] = ''
+            self.template_value['back_button_url'] = ''
         elif lessons[lesson_id - 2].activity:
-            self.templateValue['back_button_url'] = (
+            self.template_value['back_button_url'] = (
                 '/activity?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
         else:
-            self.templateValue['back_button_url'] = (
+            self.template_value['back_button_url'] = (
                 '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
 
         if lessons[lesson_id - 1].activity:
-            self.templateValue['next_button_url'] = (
+            self.template_value['next_button_url'] = (
                 '/activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
         elif lesson_id == lessons.count():
-            self.templateValue['next_button_url'] = ''
+            self.template_value['next_button_url'] = ''
         else:
-            self.templateValue['next_button_url'] = (
+            self.template_value['next_button_url'] = (
                 '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         self.render('unit.html')
@@ -100,7 +100,7 @@ class ActivityHandler(BaseHandler):
     def get(self):
         """Handles GET requests."""
         # Set template values for user
-        user = self.personalizePageAndGetUser()
+        user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
@@ -112,32 +112,32 @@ class ActivityHandler(BaseHandler):
         else:
             unit_id = int(c)
 
-        self.templateValue['unit_id'] = unit_id
+        self.template_value['unit_id'] = unit_id
         l = self.request.get('lesson')
         if not l:
             lesson_id = 1
         else:
             lesson_id = int(l)
-        self.templateValue['lesson_id'] = lesson_id
+        self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
         for unit in Unit.get_units():
             if unit.unit_id == str(unit_id):
-                self.templateValue['units'] = unit
+                self.template_value['units'] = unit
 
         lessons = Unit.get_lessons(unit_id)
-        self.templateValue['lessons'] = lessons
+        self.template_value['lessons'] = lessons
 
         # Set template values for nav-x bar
-        self.templateValue['navbar'] = {'course': True}
+        self.template_value['navbar'] = {'course': True}
 
         # Set template values for back and next nav buttons
-        self.templateValue['back_button_url'] = (
+        self.template_value['back_button_url'] = (
             '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
         if lesson_id == lessons.count():
-            self.templateValue['next_button_url'] = ''
+            self.template_value['next_button_url'] = ''
         else:
-            self.templateValue['next_button_url'] = (
+            self.template_value['next_button_url'] = (
                 '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         self.render('activity.html')
@@ -149,7 +149,7 @@ class AssessmentHandler(BaseHandler):
     def get(self):
         """Handles GET requests."""
         # Set template values for user
-        user = self.personalizePageAndGetUser()
+        user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
@@ -158,6 +158,6 @@ class AssessmentHandler(BaseHandler):
         n = self.request.get('name')
         if not n:
             n = 'Pre'
-        self.templateValue['name'] = n
-        self.templateValue['navbar'] = {'course': True}
+        self.template_value['name'] = n
+        self.template_value['navbar'] = {'course': True}
         self.render('assessment.html')

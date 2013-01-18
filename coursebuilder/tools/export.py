@@ -24,11 +24,11 @@ import verify
 RELEASE_TAG = '1.0'
 
 
-def Echo(unused_x):
+def echo(unused_x):
     pass
 
 
-def ExportToJavaScript(filename, lines, date):
+def export_to_javascript(filename, lines, date):
     """Creates JavaScript export function from given lines and writes a file."""
     code = []
     code.append('function gcb_import(){')
@@ -50,7 +50,7 @@ def ExportToJavaScript(filename, lines, date):
     afile.close()
 
 
-def ExportToPython(filename, lines, date):
+def export_to_python(filename, lines, date):
     """Creates Python export function from given lines and writes a file."""
     code = []
     code.append('class Array(dict):')
@@ -76,7 +76,7 @@ def ExportToPython(filename, lines, date):
     afile.close()
 
 
-def ExportToPHP(filename, lines, date):
+def export_to_php(filename, lines, date):
     """Creates PHP export function from given lines and writes a file."""
     code = []
     code.append('function gcb_import(){')
@@ -91,7 +91,8 @@ def ExportToPHP(filename, lines, date):
 
     afile = open('%s.php' % filename, 'w')
     afile.write('<?php\n')
-    afile.write('// Course Builder %s PHP Export on %s\n' % (RELEASE_TAG, date))
+    afile.write('// Course Builder %s PHP Export on %s\n' %
+                (RELEASE_TAG, date))
     afile.write('// begin\n')
     afile.write('\n'.join(code))
     afile.write('\n// end')
@@ -99,22 +100,22 @@ def ExportToPHP(filename, lines, date):
     afile.close()
 
 
-def ExportToFile(filename, lines):
+def export_to_file(filename, lines):
     date = datetime.utcnow()
-    ExportToJavaScript(filename, lines, date)
-    ExportToPython(filename, lines, date)
-    ExportToPHP(filename, lines, date)
+    export_to_javascript(filename, lines, date)
+    export_to_python(filename, lines, date)
+    export_to_php(filename, lines, date)
 
 
 if __name__ == '__main__':
     print 'Export started using %s' % os.path.realpath(__file__)
 
     verifier = verify.Verifier()
-    errors = verifier.LoadAndVerifyModel(Echo)
+    errors = verifier.load_and_verify_model(echo)
     if errors:
         raise Exception('Please fix all errors reported by tools/verify.py '
                         'before continuing!')
 
     fname = os.path.join(os.getcwd(), 'coursebuilder_course')
-    ExportToFile(fname, verifier.export)
+    export_to_file(fname, verifier.export)
     print 'Export complete to %s' % fname

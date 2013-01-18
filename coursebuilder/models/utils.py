@@ -20,7 +20,7 @@ __author__ = 'Sean Lip (sll@google.com)'
 import json
 
 
-def getAllScores(student):
+def get_all_scores(student):
     """Gets all score data for a student.
 
     Args:
@@ -36,19 +36,19 @@ def getAllScores(student):
         return json.loads(student.scores)
 
 
-def dictGet(dict_as_string, my_key):
+def dict_get(dict_as_string, my_key):
     if not dict_as_string:
         return None
     else:
         return json.loads(dict_as_string).get(my_key)
 
 
-def getAnswer(student, assessment_name):
+def get_answer(student, assessment_name):
     """Gets the answer array for this assessment (or None if not found)."""
-    return dictGet(student.answers, assessment_name)
+    return dict_get(student.answers, assessment_name)
 
 
-def setAnswer(student, assessment_name, answer):
+def set_answer(student, assessment_name, answer):
     """Stores the answer array for the given student and assessment.
 
     The caller must call student.put() to commit.
@@ -68,7 +68,7 @@ def setAnswer(student, assessment_name, answer):
     student.answers = json.dumps(score_dict)
 
 
-def getScore(student, assessment_name):
+def get_score(student, assessment_name):
     """Gets a student's score for a particular assessment.
 
     The caller must cast the score appropriately.
@@ -80,10 +80,10 @@ def getScore(student, assessment_name):
     Returns:
         The student's score for this assessment, or None if not found.
     """
-    return dictGet(student.scores, assessment_name)
+    return dict_get(student.scores, assessment_name)
 
 
-def setScore(student, assessment_name, score):
+def set_score(student, assessment_name, score):
     """Stores the score for the given student and assessment.
 
     The caller must call student.put() to commit.

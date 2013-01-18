@@ -29,9 +29,10 @@ class CourseHandler(StudentHandler):
     """Handler for serving course page."""
 
     def get(self):
-        student = self.getEnrolledStudent()
+        student = self.get_enrolled_student()
         if student:
-            page = self.getOrCreatePage('course_page', lessons.CourseHandler())
+            page = self.get_or_create_page(
+                'course_page', lessons.CourseHandler())
             self.serve(page, student.key().name())
         else:
             self.redirect('/preview')
@@ -56,9 +57,9 @@ class UnitHandler(StudentHandler):
             lesson_id = int(l)
 
         # Check for enrollment status
-        student = self.getEnrolledStudent()
+        student = self.get_enrolled_student()
         if student:
-            page = self.getOrCreatePage(
+            page = self.get_or_create_page(
                 'lesson%s%s_page' % (class_id, lesson_id),
                 lessons.UnitHandler())
             self.serve(page, student.key().name())
@@ -85,9 +86,9 @@ class ActivityHandler(StudentHandler):
             lesson_id = int(l)
 
         # Check for enrollment status
-        student = self.getEnrolledStudent()
+        student = self.get_enrolled_student()
         if student:
-            page = self.getOrCreatePage(
+            page = self.get_or_create_page(
                 'activity%s%s_page' % (class_id, lesson_id),
                 lessons.ActivityHandler())
             self.serve(page, student.key().name())
@@ -106,9 +107,9 @@ class AssessmentHandler(StudentHandler):
         name = n
 
         # Check for enrollment status
-        student = self.getEnrolledStudent()
+        student = self.get_enrolled_student()
         if student:
-            page = self.getOrCreatePage(
+            page = self.get_or_create_page(
                 'assessment%s_page' % name, lessons.AssessmentHandler())
             self.serve(page, student.key().name())
         else:
@@ -120,9 +121,9 @@ class ForumHandler(StudentHandler):
 
     def get(self):
         # Check for enrollment status
-        student = self.getEnrolledStudent()
+        student = self.get_enrolled_student()
         if student:
-            page = self.getOrCreatePage('forum_page', utils.ForumHandler())
+            page = self.get_or_create_page('forum_page', utils.ForumHandler())
             self.serve(page, student.key().name())
         else:
             self.redirect('/register')
@@ -137,10 +138,10 @@ class PreviewHandler(StudentHandler):
             if Student.get_enrolled_student_by_email(user.email()):
                 self.redirect('/course')
             else:
-                page = self.getOrCreatePage(
+                page = self.get_or_create_page(
                     'loggedin_preview_page', utils.CoursePreviewHandler())
                 self.serve(page, user.email())
         else:
-            page = self.getOrCreatePage(
+            page = self.get_or_create_page(
                 'anonymous_preview_page', utils.CoursePreviewHandler())
             self.serve(page)

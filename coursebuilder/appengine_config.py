@@ -26,4 +26,4 @@ BUNDLE_ROOT = os.path.dirname(__file__)
 def namespace_manager_default_namespace_for_request():
     """Set a namespace appropriate for this request."""
     from controllers import sites  # pylint: disable=C6204
-    return sites.ApplicationContext.getNamespaceName()
+    return sites.ApplicationContext.get_namespace_name()

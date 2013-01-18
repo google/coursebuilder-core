@@ -156,28 +156,28 @@ DEBUG_INFO = False
 PATH_INFO_THREAD_LOCAL = threading.local()
 
 
-def hasPathInfo():
+def has_path_info():
     """Checks if PATH_INFO is defined for the thread local."""
     return hasattr(PATH_INFO_THREAD_LOCAL, 'path')
 
 
-def setPathInfo(path):
+def set_path_info(path):
     """Stores PATH_INFO in thread local."""
     if not path:
         raise Exception('Use \'unset()\' instead.')
-    if hasPathInfo():
+    if has_path_info():
         raise Exception('Expected no path set.')
     PATH_INFO_THREAD_LOCAL.path = path
 
 
-def getPathInfo():
+def get_path_info():
     """Gets PATH_INFO from thread local."""
     return PATH_INFO_THREAD_LOCAL.path
 
 
-def unsetPathInfo():
+def unset_path_info():
     """Removed PATH_INFO from thread local."""
-    if not hasPathInfo():
+    if not has_path_info():
         raise Exception('Expected valid path already set.')
     del PATH_INFO_THREAD_LOCAL.path
 
@@ -187,14 +187,14 @@ def debug(message):
         logging.info(message)
 
 
-def makeDefaultRule():
+def make_default_rule():
     # The default is: one course in the root folder of the None namespace.
     return ApplicationContext('course', '/', '/', None)
 
 
-def getAllRules():
+def get_all_rules():
     """Reads all rewrite rule definitions from environment variable."""
-    default = makeDefaultRule()
+    default = make_default_rule()
 
     if not GCB_COURSES_CONFIG_ENV_VAR_NAME in os.environ:
         return [default]
@@ -248,29 +248,29 @@ def getAllRules():
     return all_contexts
 
 
-def getRuleForCurrentRequest():
+def get_rule_for_current_request():
     """Chooses rule that matches current request context path."""
 
     # get path if defined
-    if not hasPathInfo():
+    if not has_path_info():
         return None
-    path = getPathInfo()
+    path = get_path_info()
 
     # Get all rules.
-    rules = getAllRules()
+    rules = get_all_rules()
 
     # Match a path to a rule.
     # TODO(psimakov): linear search is unacceptable
     for rule in rules:
-        if path == rule.getSlug() or path.startswith(
-            '%s/' % rule.getSlug()) or rule.getSlug() == '/':
+        if path == rule.get_slug() or path.startswith(
+            '%s/' % rule.get_slug()) or rule.get_slug() == '/':
             return rule
 
     debug('No mapping for: %s' % path)
     return None
 
 
-def pathJoin(base, path):
+def path_join(base, path):
     """Joins 'base' and 'path' ('path' is interpreted as a relative path).
 
     This method is like os.path.join(), but 'path' is interpreted relatively.
@@ -294,8 +294,8 @@ def pathJoin(base, path):
 
 def abspath(home_folder, filename):
     """Creates an absolute URL for a filename in a home folder."""
-    return pathJoin(appengine_config.BUNDLE_ROOT,
-                    pathJoin(home_folder, filename))
+    return path_join(appengine_config.BUNDLE_ROOT,
+                     path_join(home_folder, filename))
 
 
 def unprefix(path, prefix):
@@ -312,7 +312,7 @@ def unprefix(path, prefix):
 
 def namespace_manager_default_namespace_for_request():
     """Set a namespace appropriate for this request."""
-    return ApplicationContext.getNamespaceName()
+    return ApplicationContext.get_namespace_name()
 
 
 class AssetHandler(webapp2.RequestHandler):
@@ -321,13 +321,14 @@ class AssetHandler(webapp2.RequestHandler):
     def __init__(self, filename):
         self.filename = filename
 
-    def getMimeType(self, filename, default='application/octet-stream'):
+    def get_mime_type(self, filename, default='application/octet-stream'):
         guess = mimetypes.guess_type(filename)[0]
         if guess is None:
             return default
         return guess
 
     def get(self):
+        """Handles GET requests."""
         debug('File: %s' % self.filename)
 
         if not os.path.isfile(self.filename):
@@ -335,7 +336,8 @@ class AssetHandler(webapp2.RequestHandler):
 
         self.response.headers['Cache-Control'] = (
             DEFAULT_CACHE_CONTROL_HEADER_VALUE)
-        self.response.headers['Content-Type'] = self.getMimeType(self.filename)
+        self.response.headers['Content-Type'] = self.get_mime_type(
+            self.filename)
         self.response.write(open(self.filename, 'r').read())
 
 
@@ -343,7 +345,7 @@ class ApplicationContext(object):
     """An application context for a request/response."""
 
     @classmethod
-    def getNamespaceName(cls):
+    def get_namespace_name(cls):
         """Gets the name of the namespace to use for this request.
 
         (Examples of such namespaces are NDB and memcache.)
@@ -352,7 +354,7 @@ class ApplicationContext(object):
             The namespace for the current request, or None if no rule matches
             the current request context path.
         """
-        rule = getRuleForCurrentRequest()
+        rule = get_rule_for_current_request()
         if rule:
             return rule.namespace
         return None
@@ -367,14 +369,14 @@ class ApplicationContext(object):
         self.homefolder = homefolder
         self.namespace = namespace
 
-    def getHomeFolder(self):
+    def get_home_folder(self):
         return self.homefolder
 
-    def getSlug(self):
+    def get_slug(self):
         return self.slug
 
-    def getTemplateHome(self):
-        path = abspath(self.getHomeFolder(), GCB_VIEWS_FOLDER_NAME)
+    def get_template_home(self):
+        path = abspath(self.get_home_folder(), GCB_VIEWS_FOLDER_NAME)
         debug('Template home: %s' % path)
         return path
 
@@ -390,27 +392,27 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             urls_map[url[0]] = url[1]
         ApplicationRequestHandler.urls_map = urls_map
 
-    def getHandler(self):
+    def get_handler(self):
         """Finds a routing rule suitable for this request."""
-        rule = getRuleForCurrentRequest()
+        rule = get_rule_for_current_request()
         if not rule:
             return None
 
-        path = getPathInfo()
+        path = get_path_info()
         if not path:
             return None
 
-        return self.getHandlerForCourseType(
-            rule, unprefix(path, rule.getSlug()))
+        return self.get_handler_for_course_type(
+            rule, unprefix(path, rule.get_slug()))
 
-    def getHandlerForCourseType(self, context, path):
+    def get_handler_for_course_type(self, context, path):
         """Gets the right handler for the given context and path."""
         # TODO(psimakov): Add docs (including args and returns).
         norm_path = os.path.normpath(path)
 
         # Handle static assets here.
         if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
-            abs_file = abspath(context.getHomeFolder(), norm_path)
+            abs_file = abspath(context.get_home_folder(), norm_path)
             debug('Course asset: %s' % abs_file)
 
             handler = AssetHandler(abs_file)
@@ -435,54 +437,54 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def get(self, path):
         try:
-            setPathInfo(path)
+            set_path_info(path)
             debug('Namespace: %s' % namespace_manager.get_namespace())
-            handler = self.getHandler()
+            handler = self.get_handler()
             if not handler:
                 self.error(404)
             else:
                 handler.get()
         finally:
-            unsetPathInfo()
+            unset_path_info()
 
     def post(self, path):
         try:
-            setPathInfo(path)
+            set_path_info(path)
             debug('Namespace: %s' % namespace_manager.get_namespace())
-            handler = self.getHandler()
+            handler = self.get_handler()
             if not handler:
                 self.error(404)
             else:
                 handler.post()
         finally:
-            unsetPathInfo()
+            unset_path_info()
 
 
-def AssertMapped(src, dest):
+def assert_mapped(src, dest):
     try:
-        setPathInfo(src)
-        rule = getRuleForCurrentRequest()
+        set_path_info(src)
+        rule = get_rule_for_current_request()
         if not dest:
             assert rule is None
         else:
-            assert rule.getSlug() == dest
+            assert rule.get_slug() == dest
     finally:
-        unsetPathInfo()
+        unset_path_info()
 
 
-def AssertHandled(src, targetHandler):
+def assert_handled(src, target_handler):
     try:
-        setPathInfo(src)
-        handler = ApplicationRequestHandler().getHandler()
-        if handler is None and targetHandler is None:
+        set_path_info(src)
+        handler = ApplicationRequestHandler().get_handler()
+        if handler is None and target_handler is None:
             return None
-        assert isinstance(handler, targetHandler)
+        assert isinstance(handler, target_handler)
         return handler
     finally:
-        unsetPathInfo()
+        unset_path_info()
 
 
-def AssertFails(func):
+def assert_fails(func):
     success = False
     try:
         func()
@@ -493,83 +495,83 @@ def AssertFails(func):
         raise Exception()
 
 
-def TestUnprefix():
+def test_unprefix():
     assert unprefix('/', '/') == '/'
     assert unprefix('/a/b/c', '/a/b') == '/c'
     assert unprefix('/a/b/index.html', '/a/b') == '/index.html'
     assert unprefix('/a/b', '/a/b') == '/'
 
 
-def TestRuleDefinitions():
+def test_rule_definitions():
     """Test various rewrite rule definitions."""
     os.environ = {}
 
     # Check that the default site is created when no rules are specified.
-    assert len(getAllRules()) == 1
+    assert len(get_all_rules()) == 1
 
     # Test that empty definition is ok.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = ''
-    assert len(getAllRules()) == 1
+    assert len(get_all_rules()) == 1
 
     # Test one rule parsing.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'course:/google/pswg:/sites/pswg')
-    rules = getAllRules()
-    assert len(getAllRules()) == 1
+    rules = get_all_rules()
+    assert len(get_all_rules()) == 1
     rule = rules[0]
-    assert rule.getSlug() == '/google/pswg'
-    assert rule.getHomeFolder() == '/sites/pswg'
+    assert rule.get_slug() == '/google/pswg'
+    assert rule.get_home_folder() == '/sites/pswg'
 
     # Test two rule parsing.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'course:/a/b:/c/d, course:/e/f:/g/h')
-    assert len(getAllRules()) == 2
+    assert len(get_all_rules()) == 2
 
     # Test that two of the same slugs are not allowed.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/a/b:/c/d')
-    AssertFails(getAllRules)
+    assert_fails(get_all_rules)
 
     # Test that only 'course' is supported.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/e/f:/g/h')
-    AssertFails(getAllRules)
+    assert_fails(get_all_rules)
 
     # Test namespaces.
-    setPathInfo('/')
+    set_path_info('/')
 
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
-    assert ApplicationContext.getNamespaceName() == 'gcb-course-c-d'
+    assert ApplicationContext.get_namespace_name() == 'gcb-course-c-d'
 
-    unsetPathInfo()
+    unset_path_info()
 
 
-def TestUrlToRuleMapping():
+def test_url_to_rule_mapping():
     """Tests mapping of a URL to a rule."""
     os.environ = {}
 
     # default mapping
-    AssertMapped('/favicon.ico', '/')
-    AssertMapped('/assets/img/foo.png', '/')
+    assert_mapped('/favicon.ico', '/')
+    assert_mapped('/assets/img/foo.png', '/')
 
     # explicit mapping
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'course:/a/b:/c/d, course:/e/f:/g/h')
 
-    AssertMapped('/a/b', '/a/b')
-    AssertMapped('/a/b/', '/a/b')
-    AssertMapped('/a/b/c', '/a/b')
-    AssertMapped('/a/b/c', '/a/b')
+    assert_mapped('/a/b', '/a/b')
+    assert_mapped('/a/b/', '/a/b')
+    assert_mapped('/a/b/c', '/a/b')
+    assert_mapped('/a/b/c', '/a/b')
 
-    AssertMapped('/e/f', '/e/f')
-    AssertMapped('/e/f/assets', '/e/f')
-    AssertMapped('/e/f/views', '/e/f')
+    assert_mapped('/e/f', '/e/f')
+    assert_mapped('/e/f/assets', '/e/f')
+    assert_mapped('/e/f/views', '/e/f')
 
-    AssertMapped('e/f', None)
-    AssertMapped('foo', None)
+    assert_mapped('e/f', None)
+    assert_mapped('foo', None)
 
 
-def TestUrlToHandlerMappingForCourseType():
+def test_url_to_handler_mapping_for_course_type():
     """Tests mapping of a URL to a handler for course type."""
     os.environ = {}
 
@@ -598,92 +600,92 @@ def TestUrlToHandlerMappingForCourseType():
     ApplicationRequestHandler.bind(urls)
 
     # Test proper handler mappings.
-    AssertHandled('/a/b', FakeHandler0)
-    AssertHandled('/a/b/', FakeHandler0)
-    AssertHandled('/a/b/foo', FakeHandler1)
-    AssertHandled('/a/b/bar', FakeHandler2)
+    assert_handled('/a/b', FakeHandler0)
+    assert_handled('/a/b/', FakeHandler0)
+    assert_handled('/a/b/foo', FakeHandler1)
+    assert_handled('/a/b/bar', FakeHandler2)
 
     # Test assets mapping.
-    handler = AssertHandled('/a/b/assets/img/foo.png', AssetHandler)
-    assert os.path.normpath(handler.app_context.getTemplateHome()).endswith(
+    handler = assert_handled('/a/b/assets/img/foo.png', AssetHandler)
+    assert os.path.normpath(handler.app_context.get_template_home()).endswith(
         os.path.normpath('/coursebuilder/c/d/views'))
 
     # This is allowed as we don't go out of /assets/...
-    handler = AssertHandled(
+    handler = assert_handled(
         '/a/b/assets/foo/../models/models.py', AssetHandler)
     assert os.path.normpath(handler.filename).endswith(
         os.path.normpath('/coursebuilder/c/d/assets/models/models.py'))
 
     # This is not allowed as we do go out of /assets/...
-    AssertHandled('/a/b/assets/foo/../../models/models.py', None)
+    assert_handled('/a/b/assets/foo/../../models/models.py', None)
 
     # Test negative cases
-    AssertHandled('/foo', None)
-    AssertHandled('/baz', None)
+    assert_handled('/foo', None)
+    assert_handled('/baz', None)
 
     # Site 'views' and 'data' are not accessible
-    AssertHandled('/a/b/view/base.html', None)
-    AssertHandled('/a/b/data/units.csv', None)
+    assert_handled('/a/b/view/base.html', None)
+    assert_handled('/a/b/data/units.csv', None)
 
     # Default mapping
     os.environ = {}
     urls = [('/', handler0), ('/foo', handler1), ('/bar', handler2)]
 
     # Positive cases
-    AssertHandled('/', FakeHandler0)
-    AssertHandled('/foo', FakeHandler1)
-    AssertHandled('/bar', FakeHandler2)
-    handler = AssertHandled('/assets/js/main.js', AssetHandler)
-    assert os.path.normpath(handler.app_context.getTemplateHome()).endswith(
+    assert_handled('/', FakeHandler0)
+    assert_handled('/foo', FakeHandler1)
+    assert_handled('/bar', FakeHandler2)
+    handler = assert_handled('/assets/js/main.js', AssetHandler)
+    assert os.path.normpath(handler.app_context.get_template_home()).endswith(
         os.path.normpath('/coursebuilder/views'))
 
     # Negative cases
-    AssertHandled('/favicon.ico', None)
-    AssertHandled('/e/f/index.html', None)
-    AssertHandled('/foo/foo.css', None)
+    assert_handled('/favicon.ico', None)
+    assert_handled('/e/f/index.html', None)
+    assert_handled('/foo/foo.css', None)
 
     # Clean up
     ApplicationRequestHandler.bind([])
 
 
-def TestSpecialChars():
+def test_special_chars():
     os.environ = {}
 
     # Test that namespace collisions are detected and are not allowed.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/a/b:/c-d')
-    AssertFails(getAllRules)
+    assert_fails(get_all_rules)
 
 
-def TestPathContruction():
-    """Checks that pathJoin() works correctly."""
+def test_path_construction():
+    """Checks that path_join() works correctly."""
     # Test cases common to all platforms.
-    assert (os.path.normpath(pathJoin('/a/b', '/c')) ==
+    assert (os.path.normpath(path_join('/a/b', '/c')) ==
             os.path.normpath('/a/b/c'))
-    assert (os.path.normpath(pathJoin('/a/b/', '/c')) ==
+    assert (os.path.normpath(path_join('/a/b/', '/c')) ==
             os.path.normpath('/a/b/c'))
-    assert (os.path.normpath(pathJoin('/a/b', 'c')) ==
+    assert (os.path.normpath(path_join('/a/b', 'c')) ==
             os.path.normpath('/a/b/c'))
-    assert (os.path.normpath(pathJoin('/a/b/', 'c')) ==
+    assert (os.path.normpath(path_join('/a/b/', 'c')) ==
             os.path.normpath('/a/b/c'))
 
     # Windows-specific test cases.
     drive, unused_path = os.path.splitdrive('c:\\windows')
     if drive:
-        assert (os.path.normpath(pathJoin('/a/b', 'c:/d')) ==
+        assert (os.path.normpath(path_join('/a/b', 'c:/d')) ==
                 os.path.normpath('/a/b/d'))
-        assert (os.path.normpath(pathJoin('/a/b/', 'c:/d')) ==
+        assert (os.path.normpath(path_join('/a/b/', 'c:/d')) ==
                 os.path.normpath('/a/b/d'))
 
 
-def RunAllUnitTests():
-    TestSpecialChars()
-    TestUnprefix()
-    TestRuleDefinitions()
-    TestUrlToRuleMapping()
-    TestUrlToHandlerMappingForCourseType()
-    TestPathContruction()
+def run_all_unit_tests():
+    test_special_chars()
+    test_unprefix()
+    test_rule_definitions()
+    test_url_to_rule_mapping()
+    test_url_to_handler_mapping_for_course_type()
+    test_path_construction()
 
 if __name__ == '__main__':
     DEBUG_INFO = True
-    RunAllUnitTests()
+    run_all_unit_tests()

@@ -28,7 +28,7 @@ from google.appengine.api import users
 from google.appengine.ext import db
 
 
-def storeAssessmentData(student, assessment_type, score, answer):
+def store_assessment_data(student, assessment_type, score, answer):
     """Stores a student's assessment data.
 
     Args:
@@ -46,15 +46,15 @@ def storeAssessmentData(student, assessment_type, score, answer):
     # TODO(pgbovine): Note that the latest version of answers are always saved,
     # but scores are only saved if they're higher than the previous attempt.
     # This can lead to unexpected analytics behavior. Resolve this.
-    utils.setAnswer(student, assessment_type, answer)
-    existing_score = utils.getScore(student, assessment_type)
+    utils.set_answer(student, assessment_type, answer)
+    existing_score = utils.get_score(student, assessment_type)
     # remember to cast to int for comparison
     if (existing_score is None) or (score > int(existing_score)):
-        utils.setScore(student, assessment_type, score)
+        utils.set_score(student, assessment_type, score)
 
     # special handling for computing final score:
     if assessment_type == 'postcourse':
-        midcourse_score = utils.getScore(student, 'midcourse')
+        midcourse_score = utils.get_score(student, 'midcourse')
         if midcourse_score is None:
             midcourse_score = 0
         else:
@@ -75,7 +75,7 @@ def storeAssessmentData(student, assessment_type, score, answer):
             assessment_type = 'postcourse_pass'
         else:
             assessment_type = 'postcourse_fail'
-        utils.setScore(student, 'overall_score', overall_score)
+        utils.set_score(student, 'overall_score', overall_score)
 
     return assessment_type
 
@@ -85,19 +85,19 @@ class AnswerHandler(BaseHandler):
 
     # Find student entity and save answers
     @db.transactional
-    def storeAssessmentTransaction(self, email, original_type, answer):
+    def store_assessment_transaction(self, email, original_type, answer):
         student = Student.get_by_email(email)
 
         # TODO(pgbovine): consider storing as float for better precision
         score = int(round(float(self.request.get('score'))))
-        assessment_type = storeAssessmentData(
+        assessment_type = store_assessment_data(
             student, original_type, score, answer)
         student.put()
         return (student, assessment_type)
 
     def post(self):
         """Handles POST requests."""
-        user = self.personalizePageAndGetUser()
+        user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
@@ -110,15 +110,15 @@ class AnswerHandler(BaseHandler):
         student = Student.get_by_email(user.email())
         if student and student.is_enrolled:
             # Log answer submission
-            logging.info(student.key().name() + ':' + answer)
+            logging.info('%s:%s', student.key().name(), answer)
 
-            (student, assessment_type) = self.storeAssessmentTransaction(
+            (student, assessment_type) = self.store_assessment_transaction(
                 student.key().name(), original_type, answer)
 
             # Serve the confirmation page
-            self.templateValue['navbar'] = {'course': True}
-            self.templateValue['assessment'] = assessment_type
-            self.templateValue['student_score'] = utils.getScore(
+            self.template_value['navbar'] = {'course': True}
+            self.template_value['assessment'] = assessment_type
+            self.template_value['student_score'] = utils.get_score(
                 student, 'overall_score')
             self.render('test_confirmation.html')
         else:

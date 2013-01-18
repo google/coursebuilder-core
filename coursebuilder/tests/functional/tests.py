@@ -20,10 +20,10 @@ import os
 
 from controllers import sites
 from controllers import utils
-from controllers.sites import AssertFails
+from controllers.sites import assert_fails
 from models import models
-from models.utils import getAllScores
-from models.utils import getScore
+from models.utils import get_all_scores
+from models.utils import get_score
 
 import actions
 
@@ -31,7 +31,7 @@ import actions
 class StudentAspectTest(actions.TestBase):
     """Tests the site from the Student perspective."""
 
-    def testRegistration(self):
+    def test_registration(self):
         """Test student registration."""
         email = 'test_registration@example.com'
         name1 = 'Test Student'
@@ -49,7 +49,7 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name3)
         actions.check_profile(self, name3)
 
-    def testLimitedClassSizeRegistration(self):
+    def test_limited_class_size_registration(self):
         """Test student registration with MAX_CLASS_SIZE."""
         utils.MAX_CLASS_SIZE = 2
 
@@ -69,7 +69,7 @@ class StudentAspectTest(actions.TestBase):
         actions.logout()
 
         actions.login(email3)
-        AssertFails(lambda: actions.register(self, name3))
+        assert_fails(lambda: actions.register(self, name3))
         actions.logout()
 
         # Now unset the limit, and registration should succeed
@@ -78,7 +78,7 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name3)
         actions.logout()
 
-    def testPermissions(self):
+    def test_permissions(self):
         """Test student permissions, and which pages they can view."""
         email = 'test_permissions@example.com'
         name = 'Test Permissions'
@@ -94,7 +94,7 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
         actions.Permissions.assert_enrolled(self)
 
-    def testLoginAndLogout(self):
+    def test_login_and_logout(self):
         """Test if login and logout behave as expected."""
         email = 'test_login_logout@example.com'
 
@@ -110,7 +110,7 @@ class StudentAspectTest(actions.TestBase):
 class PageCacheTest(actions.TestBase):
     """Checks if pages cached for one user are properly render for another."""
 
-    def testPageCache(self):
+    def test_page_cache(self):
         """Test a user can't see other user pages."""
         email1 = 'user1@foo.com'
         name1 = 'User 1'
@@ -123,7 +123,7 @@ class PageCacheTest(actions.TestBase):
         actions.register(self, name1)
         actions.Permissions.assert_enrolled(self)
         response = actions.view_unit(self)
-        actions.AssertContains(email1, response.body)
+        actions.assert_contains(email1, response.body)
         actions.logout()
 
         # Login as another user and check that 'unit' and other pages show
@@ -132,23 +132,23 @@ class PageCacheTest(actions.TestBase):
         actions.register(self, name2)
         actions.Permissions.assert_enrolled(self)
         response = actions.view_unit(self)
-        actions.AssertContains(email2, response.body)
+        actions.assert_contains(email2, response.body)
         actions.logout()
 
 
 class AssessmentTest(actions.TestBase):
     """Tests for assessments."""
 
-    def submitAssessment(self, name, args):
+    def submit_assessment(self, name, args):
         response = self.get('assessment?name=%s' % name)
-        actions.AssertContains(
+        actions.assert_contains(
             '<script src="assets/js/assessment-%s.js"></script>' % name,
             response.body)
         response = self.post('answer', args)
-        actions.AssertEquals(response.status_int, 200)
+        actions.assert_equals(response.status_int, 200)
         return response
 
-    def testCoursePass(self):
+    def test_course_pass(self):
         """Tests student passing final exam."""
         email = 'test_pass@google.com'
         name = 'Test Pass'
@@ -162,17 +162,17 @@ class AssessmentTest(actions.TestBase):
         actions.register(self, name)
 
         # Submit answer.
-        response = self.submitAssessment('Post', post)
-        actions.AssertEquals(response.status_int, 200)
-        actions.AssertContains('Your score is 70%', response.body)
-        actions.AssertContains('you have passed the course', response.body)
+        response = self.submit_assessment('Post', post)
+        actions.assert_equals(response.status_int, 200)
+        actions.assert_contains('Your score is 70%', response.body)
+        actions.assert_contains('you have passed the course', response.body)
 
         # Check that the result shows up on the profile page.
         response = actions.check_profile(self, name)
-        actions.AssertContains('70', response.body)
-        actions.AssertContains('100', response.body)
+        actions.assert_contains('70', response.body)
+        actions.assert_contains('100', response.body)
 
-    def testAssessments(self):
+    def test_assessments(self):
         """Tests assessment scores are properly submitted and summarized."""
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
@@ -208,47 +208,47 @@ class AssessmentTest(actions.TestBase):
 
         # Check that no scores exist right now.
         student = models.Student.get_enrolled_student_by_email(email)
-        assert len(getAllScores(student)) == 0  # pylint: disable=C6411
+        assert len(get_all_scores(student)) == 0  # pylint: disable=C6411
 
         # Submit assessments and check the numbers of scores recorded.
-        self.submitAssessment('Pre', pre)
+        self.submit_assessment('Pre', pre)
         student = models.Student.get_enrolled_student_by_email(email)
-        assert len(getAllScores(student)) == 1
+        assert len(get_all_scores(student)) == 1
 
-        self.submitAssessment('Mid', mid)
+        self.submit_assessment('Mid', mid)
         student = models.Student.get_enrolled_student_by_email(email)
-        assert len(getAllScores(student)) == 2
+        assert len(get_all_scores(student)) == 2
 
-        self.submitAssessment('Post', post)
+        self.submit_assessment('Post', post)
         student = models.Student.get_enrolled_student_by_email(email)
-        assert len(getAllScores(student)) == 4  # also includes overall_score
+        assert len(get_all_scores(student)) == 4  # also includes overall_score
 
         # Check that scores are recorded properly.
         student = models.Student.get_enrolled_student_by_email(email)
-        assert int(getScore(student, 'precourse')) == 1
-        assert int(getScore(student, 'midcourse')) == 2
-        assert int(getScore(student, 'postcourse')) == 3
-        assert (int(getScore(student, 'overall_score')) ==
+        assert int(get_score(student, 'precourse')) == 1
+        assert int(get_score(student, 'midcourse')) == 2
+        assert int(get_score(student, 'postcourse')) == 3
+        assert (int(get_score(student, 'overall_score')) ==
                 int((0.30 * 2) + (0.70 * 3)))
 
         # Try posting a new midcourse exam with a lower score; nothing should
         # change.
-        self.submitAssessment('Mid', second_mid)
+        self.submit_assessment('Mid', second_mid)
         student = models.Student.get_enrolled_student_by_email(email)
-        assert int(getScore(student, 'precourse')) == 1
-        assert int(getScore(student, 'midcourse')) == 2
-        assert int(getScore(student, 'postcourse')) == 3
-        assert (int(getScore(student, 'overall_score')) ==
+        assert int(get_score(student, 'precourse')) == 1
+        assert int(get_score(student, 'midcourse')) == 2
+        assert int(get_score(student, 'postcourse')) == 3
+        assert (int(get_score(student, 'overall_score')) ==
                 int((0.30 * 2) + (0.70 * 3)))
 
         # Now try posting a postcourse exam with a higher score and note
         # the changes.
-        self.submitAssessment('Post', second_post)
+        self.submit_assessment('Post', second_post)
         student = models.Student.get_enrolled_student_by_email(email)
-        assert int(getScore(student, 'precourse')) == 1
-        assert int(getScore(student, 'midcourse')) == 2
-        assert int(getScore(student, 'postcourse')) == 100000
-        assert (int(getScore(student, 'overall_score')) ==
+        assert int(get_score(student, 'precourse')) == 1
+        assert int(get_score(student, 'midcourse')) == 2
+        assert int(get_score(student, 'postcourse')) == 100000
+        assert (int(get_score(student, 'overall_score')) ==
                 int((0.30 * 2) + (0.70 * 100000)))
 
 
