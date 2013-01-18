@@ -835,7 +835,7 @@ def evaluate_python_expression_from_text(content, root_name, scope):
 
     # pylint: disable-msg=exec-statement
     exec code in restricted_scope
-    # pylint: disable-msg=exec-statement
+    # pylint: enable-msg=exec-statement
 
     if not restricted_scope[root_name]:
         raise Exception('Unable to find \'%s\'' % root_name)
