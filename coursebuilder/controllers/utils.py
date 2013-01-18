@@ -249,7 +249,7 @@ class BaseRESTHandler(BaseHandler):
         if not token or not XsrfTokenManager.is_xsrf_token_valid(token, action):
             transforms.send_json_response(
                 self, 403,
-                'Bad XSRF token. Please reload a page and try again',
+                'Bad XSRF token. Please reload the page and try again',
                 args_dict)
             return False
         return True
