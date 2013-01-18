@@ -25,7 +25,11 @@ from models import MemcacheManager
 class Course(object):
     """Manages a course and all of its components."""
 
-    memcache_key = 'course'
+    # The course content files may change between deployment. To avoid reading
+    # old cached values by the new version of the application we add deployment
+    # version to the key. Now each version of the application can put/get its
+    # own version of the course.
+    memcache_key = 'course-%s' % os.environ.get('CURRENT_VERSION_ID')
 
     def __init__(self, handler):
         self._app_context = handler.app_context
