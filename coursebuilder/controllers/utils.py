@@ -157,7 +157,6 @@ class BaseHandler(ApplicationHandler):
         units = Unit.get_units()
         if not units:
             units = put_course_into_datastore(self.app_context.get_data_home())
-            MemcacheManager.flush_all()
         return units
 
     def get_user(self):
@@ -223,10 +222,8 @@ def put_course_into_datastore(data_folder):
         entity = Lesson()
         copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
         entity.put()
-    assert Unit.all().count() == 11
-    assert Lesson.all().count() == 29
 
-    return Unit.get_units()
+    return Unit.get_units(False)
 
 
 class StudentHandler(ApplicationHandler):

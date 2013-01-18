@@ -61,11 +61,6 @@ class MemcacheManager(object):
         return GCB_IS_PAGE_CACHE_ENABLED.value
 
     @classmethod
-    def flush_all(cls):
-        """Deletes all entries from memcache."""
-        memcache.flush_all()
-
-    @classmethod
     def get(cls, key):
         """Gets an item from memcache if memcache is enabled."""
         if MemcacheManager.enabled():
@@ -139,9 +134,9 @@ class Unit(db.Model):
     now_available = db.BooleanProperty()
 
     @classmethod
-    def get_units(cls):
+    def get_units(cls, allow_cached=True):
         units = MemcacheManager.get('units')
-        if units is None:
+        if not allow_cached or units is None:
             units = Unit.all().order('id').fetch(1000)
             MemcacheManager.set('units', units)
         return units
