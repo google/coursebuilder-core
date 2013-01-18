@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import unittest
 from controllers import sites
 from models import config
+from models import transforms
 from tools import verify
 
 
@@ -30,7 +31,7 @@ class InvokeExistingUnitTest(unittest.TestCase):
         sites.run_all_unit_tests()
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
-
+        transforms.run_all_unit_tests()
 
 if __name__ == '__main__':
     unittest.TextTestRunner().run(

@@ -94,6 +94,36 @@ def dict_to_entity(entity, source_dict):
     return entity
 
 
+def string_to_value(string, value_type):
+    """Converts string representation to a value."""
+    if value_type == str:
+        return string
+    elif value_type == bool:
+        if string == '1' or string == 'True':
+            return True
+        else:
+            return False
+    elif value_type == int or value_type == long:
+        return long(string)
+    else:
+        raise ValueError('Unknown type: %s' % value_type)
+
+
+def value_to_string(value, value_type):
+    """Converts value to a string representation."""
+    if value_type == str:
+        return value
+    elif value_type == bool:
+        if value:
+            return 'True'
+        else:
+            return 'False'
+    elif value_type == int or value_type == long:
+        return str(value)
+    else:
+        raise ValueError('Unknown type: %s' % value_type)
+
+
 def send_json_response(handler, status_code, message, payload_dict=None):
     """Formats and sends out a JSON REST response envelope and body."""
     response = {}
@@ -102,3 +132,20 @@ def send_json_response(handler, status_code, message, payload_dict=None):
     if payload_dict:
         response['payload'] = json.dumps(payload_dict)
     handler.response.write(json.dumps(response))
+
+
+def run_all_unit_tests():
+    """Runs all unit tests."""
+    assert value_to_string(True, bool) == 'True'
+    assert value_to_string(False, bool) == 'False'
+    assert string_to_value('True', bool)
+    assert string_to_value('1', bool)
+    assert not string_to_value('False', bool)
+    assert not string_to_value('0', bool)
+    assert not string_to_value('5', bool)
+    assert string_to_value('15', int) == 15
+    assert string_to_value('foo', str) == 'foo'
+
+
+if __name__ == '__main__':
+    run_all_unit_tests()

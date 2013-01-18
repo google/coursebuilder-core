@@ -199,8 +199,9 @@ class ItemRESTHandler(webapp2.RequestHandler):
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
         else:
-            entity_dict = transforms.entity_to_dict(entity)
-            entity_dict['name'] = key
+            entity_dict = {'name': key, 'is_draft': entity.is_draft}
+            entity_dict['value'] = transforms.string_to_value(
+                entity.value, item.value_type)
             json_payload = transforms.dict_to_json(
                 entity_dict,
                 json.loads(ConfigPropertyEditor.get_schema_json(item)))
@@ -230,13 +231,9 @@ class ItemRESTHandler(webapp2.RequestHandler):
             return
 
         payload = request.get('payload')
-
         json_object = json.loads(payload)
-        json_object['value'] = str(item.value_type(json_object['value']))
-
-        transforms.dict_to_entity(entity, transforms.json_to_dict(
-            json_object, json.loads(
-                ConfigPropertyEditor.get_schema_json(item))))
+        entity.value = str(item.value_type(json_object['value']))
+        entity.is_draft = json_object['is_draft']
         entity.put()
 
         transforms.send_json_response(self, 200, 'Saved.')
