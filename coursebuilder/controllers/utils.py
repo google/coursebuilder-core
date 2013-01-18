@@ -137,15 +137,14 @@ class BaseHandler(ApplicationHandler):
         self.response.out.write(template.render(self.template_value))
 
 
-def put_course_into_datastore():
+def put_course_into_datastore(data_folder):
     """Loads course data from the CSV files."""
     logging.info('Initializing datastore from CSV files')
 
+    unit_file = os.path.join(data_folder, 'unit.csv')
+    lesson_file = os.path.join(data_folder, 'lesson.csv')
+
     # load and validate data from CSV files
-    unit_file = os.path.join(
-        os.path.dirname(__file__), '../data/unit.csv')
-    lesson_file = os.path.join(
-        os.path.dirname(__file__), '../data/lesson.csv')
     units = verify.read_objects_from_csv_file(
         unit_file, verify.UNITS_HEADER, verify.Unit)
     lessons = verify.read_objects_from_csv_file(
@@ -274,7 +273,7 @@ class CoursePreviewHandler(BaseHandler):
 
         units = Unit.get_units()
         if not units:
-            units = put_course_into_datastore()
+            units = put_course_into_datastore(self.app_context.get_data_home())
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['units'] = units

@@ -40,7 +40,9 @@ class TestBase(suite.BaseTestClass):
         try:
             if hasattr(self, 'namespace'):
                 namespace_manager.set_namespace(self.namespace)
-            utils.put_course_into_datastore()
+
+            data_folder = os.path.join(os.path.dirname(__file__), '../../data/')
+            utils.put_course_into_datastore(data_folder)
         finally:
             if not namespace:
                 namespace_manager.set_namespace(None)
