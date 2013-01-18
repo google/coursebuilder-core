@@ -20,7 +20,11 @@ __author__ = 'Sean Lip'
 import os
 import sys
 import unittest
+
+# The following import is needed in order to add third-party libraries.
+import appengine_config  # pylint: disable-msg=unused-import
 import webtest
+
 from google.appengine.ext import testbed
 
 

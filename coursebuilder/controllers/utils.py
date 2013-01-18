@@ -25,6 +25,7 @@ from models.models import Student
 from models.models import Unit
 from models.utils import get_all_scores
 import webapp2
+from webapp2_extras import i18n
 import yaml
 
 from google.appengine.api import users
@@ -79,8 +80,15 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.append_base()
         self.append_parameters_from_yaml_file()
         template_dir = self.app_context.get_template_home()
+
         jinja_environment = jinja2.Environment(
+            extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(template_dir))
+        jinja_environment.install_gettext_translations(i18n)
+
+        locale = self.template_value[COURSE_INFO_KEY]['course']['locale']
+        i18n.get_i18n().set_locale(locale)
+
         return jinja_environment.get_template(template_file)
 
     def is_absolute(self, url):

@@ -53,22 +53,32 @@
       <div class="gcb-aux">
         <ul>
           <li {% if navbar.announcements %}class='active'{% endif %}>
-            <a href="announcements">Announcements</a>
+            <a href="announcements">
+              {% trans %}Announcements{% endtrans %}
+            </a>
           </li>
           <li {% if navbar.course %}class='active'{% endif %}>
-            <a href="course">Course</a>
+            <a href="course">
+              {% trans %}Course{% endtrans %}
+            </a>
           </li>
           <li {% if navbar.forum %}class='active'{% endif %}>
-            <a href="forum">Forum</a>
+            <a href="forum">
+              {% trans %}Forum{% endtrans %}
+            </a>
           </li>
           <li {% if navbar.myprofile %}class='active'{% endif %}>
-            <a href="student/home">My Profile</a>
+            <a href="student/home">
+              {% trans %}My Profile{% endtrans %}
+            </a>
           </li>
 
           {% if logoutUrl %}
           <li class="pull-right">
             <span style="font-weight: normal;">{{ email }} | </span>
-            <a href="{{ logoutUrl }}">Logout</a>
+            <a href="{{ logoutUrl }}">
+              {% trans %}Logout{% endtrans %}
+            </a>
           </li>
           {% endif %}
         </ul>
@@ -100,7 +110,9 @@
               <a href="{{course_info.institution.url}}">{{course_info.institution.name}}</a>
             </li>
             <li>
-              <a href="{{course_info.base.privacy_terms_url}}">Privacy &amp; Terms</a>
+              <a href="{{course_info.base.privacy_terms_url}}">
+                {% trans %}Privacy &amp; Terms{% endtrans %}
+              </a>
             </li>
           </ul>
         </div>

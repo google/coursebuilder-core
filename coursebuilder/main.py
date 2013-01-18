@@ -13,8 +13,10 @@
 # limitations under the License.
 
 """Main package for Course Builder, which handles URL routing."""
-
 import webapp2
+
+# The following import is needed in order to add third-party libraries.
+import appengine_config  # pylint: disable-msg=unused-import
 from controllers import assessments
 from controllers import servings
 from controllers import sites
@@ -24,6 +26,7 @@ from modules.announcements import announcements
 
 # FIXME: set to 'False' before going live
 debug = True
+
 
 urls = [
     ('/', servings.CourseHandler),
@@ -42,5 +45,8 @@ urls = [
 
 sites.ApplicationRequestHandler.bind(urls)
 
+webapp2_i18n_config = {'translations_path': 'modules/i18n/resources/locale'}
 app = webapp2.WSGIApplication(
-    [(r'(.*)', sites.ApplicationRequestHandler)], debug=debug)
+    [(r'(.*)', sites.ApplicationRequestHandler)],
+    config={'webapp2_extras.i18n': webapp2_i18n_config},
+    debug=debug)

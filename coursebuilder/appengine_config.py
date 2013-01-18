@@ -17,10 +17,17 @@
 __author__ = 'psimakov@google.com (Pavel Simakov)'
 
 import os
+import sys
 
 
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
+
+# Third-party library zip files.
+THIRD_PARTY_LIBS = ['babel-0.9.6.zip', 'gaepytz-2011h.zip']
+
+for lib in THIRD_PARTY_LIBS:
+    sys.path.insert(0, os.path.join(BUNDLE_ROOT, 'lib/%s' % lib))
 
 
 def namespace_manager_default_namespace_for_request():
