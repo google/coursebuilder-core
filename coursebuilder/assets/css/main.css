@@ -460,10 +460,6 @@ a.gcb-button-action {
   font-weight: bold;
 }
 
-#gcb-nav-x li:last-child {
-  margin: 0;
-}
-
 #gcb-nav-x li.active {
 }
 

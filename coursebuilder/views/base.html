@@ -115,9 +115,14 @@
             </a>
           </li>
           {{course_info.base.before_navbar_ends}}
-          {% if is_manager %}
+          {% if is_super_admin %}
           <li class="pull-right">
-            <a href="dashboard">Admin</a>
+            <a href="/admin">Admin</a>
+          </li>
+          {% endif %}
+          {% if is_course_admin %}
+          <li class="pull-right">
+            <a href="dashboard">Dashboard</a>
           </li>
           {% endif %}
         </ul>

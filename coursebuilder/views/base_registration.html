@@ -16,9 +16,14 @@
       <li {% if navbar.registration %}class='active'{% endif %}>
         <a href="register">{% trans %} Registration {% endtrans %}</a>
       </li>
-      {% if is_manager %}
+      {% if is_super_admin %}
       <li class='pull-right'>
-        <a href="dashboard">Admin</a>
+        <a href="/admin">Admin</a>
+      </li>
+      {% endif %}
+      {% if is_course_admin %}
+      <li class='pull-right'>
+        <a href="dashboard">Dashboard</a>
       </li>
       {% endif %}
     </ul>
