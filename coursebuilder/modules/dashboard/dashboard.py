@@ -255,7 +255,7 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         job = ComputeStudentStats(self.app_context).load()
         if not job:
             update_message = """
-                Enrollment statistics was't calculated yet."""
+                Enrollment statistics weren't calculated yet."""
         else:
             if job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = """
@@ -267,9 +267,8 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
                 unenrolled = stats['unenrolled']
 
                 lines = []
-                lines.append(
-                    '<li>Registered, but not enrolled: %s</li>' % unenrolled)
-                lines.append('<li>Registered and enrolled: %s</li>' % enrolled)
+                lines.append('<li>Previously enrolled: %s</li>' % unenrolled)
+                lines.append('<li>Currently enrolled: %s</li>' % enrolled)
                 lines.append('<li>Total: %s</li>' % (unenrolled + enrolled))
                 stats = ''.join(lines)
 

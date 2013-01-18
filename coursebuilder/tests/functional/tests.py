@@ -311,7 +311,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         response = self.get('dashboard?action=students')
         assert_contains(
             'Google</a> &gt; Dashboard &gt; Students', response.body)
-        assert_contains('was\'t calculated yet', response.body)
+        assert_contains('weren\'t calculated yet', response.body)
 
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
@@ -325,7 +325,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         response = self.get('dashboard?action=students')
         assert_contains('was updated on', response.body)
-        assert_contains('Registered and enrolled: 1', response.body)
+        assert_contains('Currently enrolled: 1', response.body)
         assert_contains('Total: 1', response.body)
 
     def test_trigger_sample_announcements(self):
