@@ -17,9 +17,11 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import base64
-import random
+import hmac
+import time
 import urlparse
 import jinja2
+from models.config import ConfigProperty
 from models.courses import Course
 from models.models import MemcacheManager
 from models.models import Student
@@ -42,6 +44,14 @@ COURSE_BASE_KEY = 'gcb_course_base'
 
 # The name of the template dict key that stores data from course.yaml.
 COURSE_INFO_KEY = 'course_info'
+
+
+XSRF_SECRET = ConfigProperty(
+    'gcb_xsrf_secret', str, (
+        'A secret text used to encrypt XSRF tokens. Can be any alphanumeric '
+        'text, desirably 16-64 characters long. When this value changes, all '
+        'requests issued using the old value will be rejected by the server.'),
+    'course builder XSRF secret')
 
 
 class ReflectiveRequestHandler(object):
@@ -377,43 +387,72 @@ class StudentUnenrollHandler(BaseHandler):
 class XsrfTokenManager(object):
     """Provides XSRF protection by managing action/user tokens in memcache."""
 
-    # Default nickname to use if a user does not have a nickname,
-    USER_NICKNAME_DEFAULT = 'gcb-nickname-default'
+    # Max age of the token (4 hours).
+    XSRF_TOKEN_AGE_SECS = 60 * 60 * 4
 
-    XSRF_TOKEN_TTL_SECS = 600
+    # Token delimiters.
+    DELIMITER_PRIVATE = ':'
+    DELIMITER_PUBLIC = '/'
+
+    # Default nickname to use if a user does not have a nickname,
+    USER_ID_DEFAULT = 'default'
 
     @classmethod
-    def _make_user_str(cls):
-        """Make a user string to use to represent the user."""
+    def _create_token(cls, action_id, issued_on):
+        """Creates a string representation (digest) of a token."""
 
-        # taken from:
-        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
+        # We have decided to use transient tokens to reduce datastore costs.
+        # The token has 4 parts: hash of the actor user id, hash of the action,
+        # hash if the time issued and the plain text of time issued.
 
+        # Lookup user id.
         user = users.get_current_user()
-        return user.nickname() if user else cls.USER_NICKNAME_DEFAULT
+        if user:
+            user_id = user.user_id()
+        else:
+            user_id = cls.USER_ID_DEFAULT
+
+        # Round time to seconds.
+        issued_on = long(issued_on)
+
+        digester = hmac.new(XSRF_SECRET.value)
+        digester.update(str(user_id))
+        digester.update(cls.DELIMITER_PRIVATE)
+        digester.update(str(action_id))
+        digester.update(cls.DELIMITER_PRIVATE)
+        digester.update(str(issued_on))
+
+        digest = digester.digest()
+        token = '%s%s%s' % (
+            issued_on, cls.DELIMITER_PUBLIC, base64.urlsafe_b64encode(digest))
+
+        return token
 
     @classmethod
     def create_xsrf_token(cls, action):
-        """Generate a token to be passed with a form for XSRF protection."""
-
-        # taken from:
-        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
-
-        user_str = cls._make_user_str()
-        token = base64.b64encode(
-            ''.join(chr(int(random.random()*255)) for _ in range(0, 64)))
-        token_obj = (user_str, action)
-
-        MemcacheManager.set(
-            token, token_obj, ttl=cls.XSRF_TOKEN_TTL_SECS)
-        return token
+        return cls._create_token(action, time.time())
 
     @classmethod
     def is_xsrf_token_valid(cls, token, action):
         """Validate a given XSRF token by retrieving it from memcache."""
 
-        # taken from:
-        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
+        try:
+            parts = token.split('/')
+            if not len(parts) == 2:
+                raise Exception('Bad token format, expected: a/b.')
+
+            issued_on = long(parts[0])
+            age = time.time() - issued_on
+            if age > cls.XSRF_TOKEN_AGE_SECS:
+                return False
+
+            authentic_token = cls._create_token(action, issued_on)
+            if authentic_token == token:
+                return True
+
+            return False
+        except Exception:  # pylint: disable-msg=broad-except
+            return False
 
         user_str = cls._make_user_str()
         token_obj = MemcacheManager.get(token)
