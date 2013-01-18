@@ -20,6 +20,7 @@
 ############################
 # General course information
 ############################
+
 course:
   # Course title
   title: 'Power Searching with Google'
@@ -57,6 +58,7 @@ course:
 ####################################
 # Information about your institution
 ####################################
+
 institution:
   # Name of your institution
   name: 'Add Your Institution Here'
@@ -71,6 +73,7 @@ institution:
 ##########################################
 # Headers and footers for all course pages
 ##########################################
+
 base:
   # HTML to be included before the closing </head> tag in all pages. If you want to
   # include any analytics code that covers all your course webpages, do so here: see
@@ -93,6 +96,7 @@ base:
 ##########################
 # Course registration form
 ##########################
+
 reg_form:
   # Header text for the course registration form.
   header_text: |
