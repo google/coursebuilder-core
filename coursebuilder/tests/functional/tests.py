@@ -353,7 +353,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Admin has access.
         actions.login(email, True)
         response = self.get('dashboard')
-        assert_contains('Google</a> &gt; Dashboard &gt; Outline', response.body)
+        assert_contains('Google &gt; Dashboard &gt; Outline', response.body)
 
         # Tests outline view.
         response = self.get('dashboard')
@@ -361,7 +361,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Test assets view.
         response = self.get('dashboard?action=assets')
-        assert_contains('Google</a> &gt; Dashboard &gt; Assets', response.body)
+        assert_contains('Google &gt; Dashboard &gt; Assets', response.body)
         assert_contains('data/lesson.csv', response.body)
         assert_contains('assets/css/main.css', response.body)
         assert_contains('assets/img/Image1.5.png', response.body)
@@ -370,7 +370,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Test settings view.
         response = self.get('dashboard?action=settings')
         assert_contains(
-            'Google</a> &gt; Dashboard &gt; Settings', response.body)
+            'Google &gt; Dashboard &gt; Settings', response.body)
         assert_contains('course.yaml', response.body)
         assert_contains('title: \'Power Searching with Google\'', response.body)
         assert_contains('locale: \'en_US\'', response.body)
@@ -378,7 +378,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Tests student statistics view.
         response = self.get('dashboard?action=students')
         assert_contains(
-            'Google</a> &gt; Dashboard &gt; Students', response.body)
+            'Google &gt; Dashboard &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
         compute_form = response.forms['gcb-compute-student-stats']

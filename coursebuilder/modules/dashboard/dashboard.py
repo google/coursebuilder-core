@@ -83,10 +83,8 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
     def format_title(self, text):
         """Formats standard title."""
         title = self.app_context.get_environ()['course']['title']
-        return """
-            Course Builder &gt;
-            <a href="course">%s</a> &gt; Dashboard &gt; %s
-            """ % (cgi.escape(title), text)
+        return ('Course Builder &gt; %s &gt; Dashboard &gt; %s' %
+                (cgi.escape(title), text))
 
     def get_outline(self):
         """Renders course outline view."""
