@@ -574,16 +574,16 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = self.get('unit?unit=1&lesson=1')
-        assert_does_not_contain('Back', response.body)
-        assert_contains('Next', response.body)
+        assert_does_not_contain('Previous Page', response.body)
+        assert_contains('Next Page', response.body)
 
         response = self.get('unit?unit=2&lesson=3')
-        assert_contains('Back', response.body)
-        assert_contains('Next', response.body)
+        assert_contains('Previous Page', response.body)
+        assert_contains('Next Page', response.body)
 
         response = self.get('unit?unit=3&lesson=5')
-        assert_contains('Back', response.body)
-        assert_does_not_contain('Next', response.body)
+        assert_contains('Previous Page', response.body)
+        assert_does_not_contain('Next Page', response.body)
         assert_contains('End', response.body)
 
     def test_two_students_dont_see_each_other_pages(self):
