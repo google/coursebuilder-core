@@ -21,9 +21,14 @@ import os
 import re
 import appengine_config
 from controllers import sites
+from controllers import utils
 import main
 import suite
 from google.appengine.api import namespace_manager
+
+
+# All URLs referred to from all the pages.
+UNIQUE_URLS_FOUND = {}
 
 
 class TestBase(suite.BaseTestClass):
@@ -43,6 +48,7 @@ class TestBase(suite.BaseTestClass):
         super(TestBase, self).setUp()
         self.assert_default_namespace()
         self.namespace = ''
+        self.base = '/'
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.assert_default_namespace()
@@ -50,17 +56,28 @@ class TestBase(suite.BaseTestClass):
 
     def canonicalize(self, href, response=None):
         """Create absolute URL using <base> if defined, '/' otherwise."""
-        if href.startswith('/'):
-            return href
-        base = '/'
-        if response:
-            match = re.search(r'<base href=[\'"]?([^\'" >]+)', response.body)
-            if match and not href.startswith('/'):
-                base = match.groups()[0]
-        return '%s%s' % (base, href)
+        if href.startswith('/') or utils.ApplicationHandler.is_absolute(href):
+            pass
+        else:
+            base = '/'
+            if response:
+                match = re.search(
+                    r'<base href=[\'"]?([^\'" >]+)', response.body)
+                if match and not href.startswith('/'):
+                    base = match.groups()[0]
+            href = '%s%s' % (base, href)
+        self.audit_url(href)
+        return href
+
+    def audit_url(self, url):
+        """Record for audit purposes the URL we encountered."""
+        UNIQUE_URLS_FOUND[url] = True
 
     def hook_response(self, response):
         """Modify response.goto() to compute URL using <base>, if defined."""
+        if response.status_int == 200:
+            self.check_response_hrefs(response)
+
         gotox = response.goto
 
         def new_goto(href, method='get', **args):
@@ -68,6 +85,25 @@ class TestBase(suite.BaseTestClass):
 
         response.goto = new_goto
         return response
+
+    def check_response_hrefs(self, response):
+        """Check response page URLs are properly formatted/canonicalized."""
+        hrefs = re.findall(r'href=[\'"]?([^\'" >]+)', response.body)
+        srcs = re.findall(r'src=[\'"]?([^\'" >]+)', response.body)
+        for url in hrefs + srcs:
+            # We expect all internal URLs to be relative: 'asset/css/main.css',
+            # and use <base> tag. All others URLs must be whitelisted below.
+            if url.startswith('/'):
+                absolute = url.startswith('//')
+                root = url == '/'
+                canonical = url.startswith(self.base)
+                allowed = url.startswith('/admin') or url.startswith('/_ah/')
+
+                if not (absolute or root or canonical or allowed):
+                    raise Exception('Invalid reference \'%s\' in:\n%s' % (
+                        url, response.body))
+
+            self.audit_url(self.canonicalize(url, response))
 
     def get(self, url):
         url = self.canonicalize(url)

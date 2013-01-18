@@ -18,7 +18,6 @@ __author__ = 'Sean Lip'
 
 import json
 import os
-import re
 import urllib
 from controllers import sites
 from controllers import utils
@@ -34,10 +33,6 @@ from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
 from google.appengine.api import namespace_manager
-
-
-# All URLs referred to from all the pages.
-UNIQUE_URLS_FOUND = {}
 
 
 class InfrastructureTest(actions.TestBase):
@@ -746,45 +741,22 @@ class CourseUrlRewritingTest(
 
         super(CourseUrlRewritingTest, self).tearDown()
 
-    def hook_response(self, response):
-        """Inspect response of every request."""
-        if response.status_int == 200:
-            self.check_response_hrefs(response)
-        return super(CourseUrlRewritingTest, self).hook_response(response)
-
     def canonicalize(self, href, response=None):
         """Canonicalize URL's using either <base> or self.base."""
         # Check if already canonicalized.
-        if href.startswith(self.base):
-            return href
+        if href.startswith(
+                self.base) or utils.ApplicationHandler.is_absolute(href):
+            pass
+        else:
+            # Look for <base> tag in the response to compute the canonical URL.
+            if response:
+                return super(CourseUrlRewritingTest, self).canonicalize(
+                    href, response)
 
-        # Look for <base> tag in the response to compute the canonical URL.
-        if response:
-            return super(CourseUrlRewritingTest, self).canonicalize(
-                href, response)
+            # Prepend self.base to compute the canonical URL.
+            if not href.startswith('/'):
+                href = '/%s' % href
+            href = '%s%s' % (self.base, href)
 
-        # Prepend self.base to compute the canonical URL.
-        if not href.startswith('/'):
-            href = '/%s' % href
-        href = '%s%s' % (self.base, href)
+        self.audit_url(href)
         return href
-
-    def check_response_hrefs(self, response):
-        """Check response page URLs are properly formatted/canonicalized."""
-        hrefs = re.findall(r'href=[\'"]?([^\'" >]+)', response.body)
-        srcs = re.findall(r'src=[\'"]?([^\'" >]+)', response.body)
-        for url in hrefs + srcs:
-            # We expect all internal URLs to be relative: 'asset/css/main.css',
-            # and use <base> tag. All others URLs must be whitelisted below.
-            if url.startswith('/'):
-                absolute = url.startswith('//')
-                root = url == '/'
-                canonical = url.startswith(self.base)
-                allowed = url.startswith('/admin') or url.startswith('/_ah/')
-
-                if not (absolute or root or canonical or allowed):
-                    raise Exception('Invalid reference \'%s\' in:\n%s' % (
-                        url, response.body))
-
-            UNIQUE_URLS_FOUND[url] = url
-

@@ -17,6 +17,7 @@
 __author__ = 'Sean Lip'
 
 import base64
+import logging
 import os
 import sys
 import unittest
@@ -99,6 +100,11 @@ def main():
     fix_sys_path()
     result = unittest.TextTestRunner(verbosity=2).run(create_test_suite())
 
+    import tests.functional.actions as actions  # pylint: disable-msg=g-import-not-at-top
+    count = len(actions.UNIQUE_URLS_FOUND.keys())
+    urls = '\n  '.join(sorted(actions.UNIQUE_URLS_FOUND.keys()))
+    logging.warning('Unique URLs found: %s\n  %s', count, urls)
+
     if result.testsRun != EXPECTED_TEST_COUNT:
         raise Exception('Expected %s tests to be run, not %s.' %
                         (EXPECTED_TEST_COUNT, result.testsRun))
@@ -109,10 +115,7 @@ def main():
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
 
-    import tests.functional.tests as tests  # pylint: disable-msg=g-import-not-at-top
-    print 'Unique URLs found: %s\n  %s' % (
-        len(tests.UNIQUE_URLS_FOUND.keys()),
-        '\n  '.join(sorted(tests.UNIQUE_URLS_FOUND.keys())))
+    logging.warning('ALL %s TESTS PASSED!', EXPECTED_TEST_COUNT)
 
 
 if __name__ == '__main__':
