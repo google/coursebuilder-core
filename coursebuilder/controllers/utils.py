@@ -16,9 +16,12 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import base64
+import random
 import urlparse
 import jinja2
 from models.courses import Course
+from models.models import MemcacheManager
 from models.models import Student
 from models.roles import Roles
 from models.utils import get_all_scores
@@ -60,6 +63,9 @@ class ReflectiveRequestHandler(object):
     GET/POST parameter.
     """
 
+    def create_xsrf_token(self, action):
+        return XsrfTokenManager.create_xsrf_token(action)
+
     def get(self):
         """Handles GET."""
         action = self.request.get('action')
@@ -87,6 +93,12 @@ class ReflectiveRequestHandler(object):
         handler = getattr(self, 'post_%s' % action)
         if not handler:
             self.error(404)
+            return
+
+        # Each POST request must have valid XSRF token.
+        xsrf_token = self.request.get('xsrf_token')
+        if not XsrfTokenManager.is_xsrf_token_valid(xsrf_token, action):
+            self.error(403)
             return
 
         return handler()
@@ -201,6 +213,14 @@ class BaseHandler(ApplicationHandler):
 
         return student
 
+    def assert_xsrf_token_or_fail(self, action):
+        """Asserts the current request has proper XSRF token or fails."""
+        xsrf_token = self.request.get('xsrf_token')
+        if not XsrfTokenManager.is_xsrf_token_valid(xsrf_token, action):
+            self.error(403)
+            return False
+        return True
+
     def render(self, template_file):
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
@@ -230,24 +250,30 @@ class RegisterHandler(BaseHandler):
     """Handler for course registration."""
 
     def get(self):
+        """Handles GET request."""
         user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        self.template_value['navbar'] = {'registration': True}
-        # Check for existing registration -> redirect to course page
         student = Student.get_enrolled_student_by_email(user.email())
         if student:
             self.redirect('/course')
-        else:
-            self.render('register.html')
+            return
+
+        self.template_value['navbar'] = {'registration': True}
+        self.template_value['register_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('register'))
+        self.render('register.html')
 
     def post(self):
         """Handles POST requests."""
         user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        if not self.assert_xsrf_token_or_fail('register'):
             return
 
         if (MAX_CLASS_SIZE and
@@ -297,22 +323,13 @@ class StudentProfileHandler(BaseHandler):
         self.template_value['navbar'] = {}
         self.template_value['student'] = student
         self.template_value['scores'] = get_all_scores(student)
+        self.template_value['student_edit_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('student_edit'))
         self.render('student_profile.html')
 
 
 class StudentEditStudentHandler(BaseHandler):
     """Handles edits to student records by students."""
-
-    def get(self):
-        """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled()
-        if not student:
-            return
-
-        self.template_value['navbar'] = {}
-        self.template_value['student'] = student
-        self.template_value['scores'] = get_all_scores(student)
-        self.render('student_profile.html')
 
     def post(self):
         """Handles POST requests."""
@@ -320,9 +337,12 @@ class StudentEditStudentHandler(BaseHandler):
         if not student:
             return
 
+        if not self.assert_xsrf_token_or_fail('student_edit'):
+            return
+
         Student.rename_current(self.request.get('name'))
 
-        self.redirect('/student/editstudent')
+        self.redirect('/student/home')
 
 
 class StudentUnenrollHandler(BaseHandler):
@@ -336,6 +356,8 @@ class StudentUnenrollHandler(BaseHandler):
 
         self.template_value['student'] = student
         self.template_value['navbar'] = {'registration': True}
+        self.template_value['student_unenroll_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('student_unenroll'))
         self.render('unenroll_confirmation_check.html')
 
     def post(self):
@@ -344,7 +366,61 @@ class StudentUnenrollHandler(BaseHandler):
         if not student:
             return
 
+        if not self.assert_xsrf_token_or_fail('student_unenroll'):
+            return
+
         Student.set_enrollment_status_for_current(False)
 
         self.template_value['navbar'] = {'registration': True}
         self.render('unenroll_confirmation.html')
+
+
+class XsrfTokenManager(object):
+    """Provides XSRF protection by managing action/user tokens in memcache."""
+
+    # Default nickname to use if a user does not have a nickname,
+    USER_NICKNAME_DEFAULT = 'gcb-nickname-default'
+
+    XSRF_TOKEN_TTL_SECS = 600
+
+    @classmethod
+    def _make_user_str(cls):
+        """Make a user string to use to represent the user."""
+
+        # taken from:
+        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
+
+        user = users.get_current_user()
+        return user.nickname() if user else cls.USER_NICKNAME_DEFAULT
+
+    @classmethod
+    def create_xsrf_token(cls, action):
+        """Generate a token to be passed with a form for XSRF protection."""
+
+        # taken from:
+        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
+
+        user_str = cls._make_user_str()
+        token = base64.b64encode(
+            ''.join(chr(int(random.random()*255)) for _ in range(0, 64)))
+        token_obj = (user_str, action)
+
+        MemcacheManager.set(
+            token, token_obj, ttl=cls.XSRF_TOKEN_TTL_SECS)
+        return token
+
+    @classmethod
+    def is_xsrf_token_valid(cls, token, action):
+        """Validate a given XSRF token by retrieving it from memcache."""
+
+        # taken from:
+        # google_appengine_1.7.0/google/appengine/ext/datastore_admin/utils.py
+
+        user_str = cls._make_user_str()
+        token_obj = MemcacheManager.get(token)
+        if not token_obj:
+            return False
+        token_str, token_action = token_obj
+        if user_str != token_str or action != token_action:
+            return False
+        return True

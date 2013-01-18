@@ -18,7 +18,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import os
-from config import ConfigProperty
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
@@ -32,13 +31,6 @@ PRODUCTION_MODE = not os.environ.get(
 
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 60
-
-# Whether memcache caching is enabled.
-GCB_IS_MEMCACHE_ENABLED = ConfigProperty(
-    'gcb_is_memcache_enabled', bool, (
-        'A flag that controls whether memcache is enabled. By default, '
-        'it\'s "off" for development and "on" for production servers.'),
-    PRODUCTION_MODE)
 
 # performance counters
 CACHE_PUT = PerfCounter(
@@ -59,35 +51,26 @@ class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
 
     @classmethod
-    def enabled(cls):
-        return GCB_IS_MEMCACHE_ENABLED.value
-
-    @classmethod
     def get(cls, key):
         """Gets an item from memcache if memcache is enabled."""
-        if MemcacheManager.enabled():
-            value = memcache.get(key)
-            if value:
-                CACHE_HIT.inc()
-            else:
-                CACHE_MISS.inc()
-            return value
+        value = memcache.get(key)
+        if value:
+            CACHE_HIT.inc()
         else:
-            return None
+            CACHE_MISS.inc()
+        return value
 
     @classmethod
-    def set(cls, key, value):
+    def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS):
         """Sets an item in memcache if memcache is enabled."""
-        if MemcacheManager.enabled():
-            CACHE_PUT.inc()
-            memcache.set(key, value, DEFAULT_CACHE_TTL_SECS)
+        CACHE_PUT.inc()
+        memcache.set(key, value, ttl)
 
     @classmethod
     def delete(cls, key):
         """Deletes an item from memcache if memcache is enabled."""
-        if MemcacheManager.enabled():
-            CACHE_DELETE.inc()
-            memcache.delete(key)
+        CACHE_DELETE.inc()
+        memcache.delete(key)
 
 
 class Student(BaseEntity):

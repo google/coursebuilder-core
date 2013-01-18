@@ -263,21 +263,27 @@ class AdminHandler(
                     'action': 'config_edit', 'name': name}))
                 actions.append("""
                     <form action='/admin?%s' method='POST'>
+                    <input type="hidden" name="xsrf_token" value="%s">
                     <button class="gcb-button" type="submit"
                       onclick='return confirm("Delete an override for %s?");'>
                       Reset
                     </button></form>""" % (
                         urllib.urlencode(
                             {'action': 'config_reset', 'name': name}),
-                        cgi.escape(name)))
+                        cgi.escape(self.create_xsrf_token('config_reset')),
+                        cgi.escape(name)
+                    ))
             else:
                 actions.append("""
                     <form action='/admin?%s' method='POST'>
+                    <input type="hidden" name="xsrf_token" value="%s">
                     <button class="gcb-button" type="submit">
                       Override
                     </button></form>""" % (
                         urllib.urlencode(
-                            {'action': 'config_override', 'name': name})))
+                            {'action': 'config_override', 'name': name}),
+                        cgi.escape(self.create_xsrf_token('config_override'))
+                    ))
             return ''.join(actions)
 
         def get_doc_string(item, default_value):
@@ -416,11 +422,13 @@ class AdminHandler(
               Input your Python code below and press "Run Program" to execute.
             </strong><p>
             <form action='/admin?action=console_run' method='POST'>
-            <textarea style='width: 95%; height: 200px;' name='code'></textarea>
+            <input type="hidden" name="xsrf_token" value="%s">
+            <textarea
+                style='width: 95%%; height: 200px;' name='code'></textarea>
             <p align='center'>
                 <button class="gcb-button" type="submit">Run Program</button>
             </p>
-            </form>""")
+            </form>""" % cgi.escape(self.create_xsrf_token('console_run')))
 
         template_values['main_content'] = ''.join(content)
         self.render_page(template_values)

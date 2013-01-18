@@ -14,6 +14,7 @@
       </h3>
       <br>
       <form action="student/unenroll" method='post'>
+        <input type="hidden" name="xsrf_token" value="{{ student_unenroll_xsrf_token|escape }}">
         <button class="gcb-button" type="submit">
           {% trans %} Yes {% endtrans %}
         </button>

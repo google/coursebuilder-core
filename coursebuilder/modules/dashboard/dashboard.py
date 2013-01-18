@@ -244,13 +244,14 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
                 id='gcb-compute-student-stats'
                 action='dashboard?action=compute_student_stats'
                 method='POST'>
+                <input type="hidden" name="xsrf_token" value="%s">
                 <p>
                     <button class="gcb-button" type="submit">
                         Re-Calculate Now
                     </button>
                 </p>
             </form>
-        """
+        """ % self.create_xsrf_token('compute_student_stats')
 
         job = ComputeStudentStats(self.app_context).load()
         if not job:

@@ -10,17 +10,19 @@
       {% if announcements %}
         {% if announcements.add_action %}
           <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
+            <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token|escape }}">
             <button class="gcb-button gcb-button-action" type="submit">{% trans %} Add New {% endtrans %}</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
         {% if not announcements.children %}
-          <p>{% trans %} No announcements yet. {% endtrans %}</p>        
+          <p>{% trans %} No announcements yet. {% endtrans %}</p>
         {% endif %}
         {% for item in announcements.children %}
           <hr>
           {% if item.delete_action %}
           <form id='gcb-delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
+            <input type="hidden" name="xsrf_token" value="{{ item.delete_xsrf_token|escape }}">
             <button class="gcb-button gcb-button-action" type="submit"
               onclick='return confirm("Delete this item?");'>
               {% trans %} Delete {% endtrans %}

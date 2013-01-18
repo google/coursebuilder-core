@@ -17,7 +17,6 @@
 __author__ = 'Sean Lip'
 
 import base64
-import logging
 import os
 import sys
 import unittest
@@ -30,7 +29,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 40
+EXPECTED_TEST_COUNT = 41
 
 
 def empty_environ():
@@ -116,11 +115,10 @@ def main():
                 len(result.errors), len(result.failures), result.testsRun))
 
     import tests.functional.actions as actions  # pylint: disable-msg=g-import-not-at-top
-    count = len(actions.UNIQUE_URLS_FOUND.keys())
-    urls = '\n  '.join(sorted(actions.UNIQUE_URLS_FOUND.keys()))
-    logging.warning('Unique URLs found: %s\n  %s', count, urls)
 
-    logging.warning('ALL %s TESTS PASSED!', EXPECTED_TEST_COUNT)
+    count = len(actions.UNIQUE_URLS_FOUND.keys())
+    result.stream.writeln('INFO: Unique URLs found: %s' % count)
+    result.stream.writeln('INFO: All %s tests PASSED!' % EXPECTED_TEST_COUNT)
 
 
 if __name__ == '__main__':

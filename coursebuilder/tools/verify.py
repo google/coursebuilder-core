@@ -1264,7 +1264,7 @@ class Verifier(object):
         self.info('Completed verification: %s warnings, %s errors.' % (
             self.warnings, self.errors))
 
-        return self.errors
+        return self.warnings, self.errors
 
 
 def run_all_regex_unit_tests():

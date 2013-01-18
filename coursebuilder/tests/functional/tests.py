@@ -31,6 +31,7 @@ from models.utils import get_all_scores
 from models.utils import get_answer
 from models.utils import get_score
 from modules.announcements.announcements import AnnouncementEntity
+from tools import verify
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
@@ -40,6 +41,15 @@ from google.appengine.api import namespace_manager
 
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
+
+    def test_assets_and_date(self):
+        """Verify semantics of all asset and data files."""
+
+        def echo(unused_message):
+            pass
+
+        warnings, errors = verify.Verifier().load_and_verify_model(echo)
+        assert not errors and not warnings
 
     def test_config_visble_from_any_namespace(self):
         """Test that ConfigProperty is visible from any namespace."""
@@ -268,7 +278,7 @@ class CourseAuthorAspectTest(actions.TestBase):
     """Tests the site from the Course Author perspective."""
 
     def test_dashboard(self):
-        """Tests course dashboard."""
+        """Test course dashboard."""
 
         email = 'test_dashboard@google.com'
         name = 'Test Dashboard'

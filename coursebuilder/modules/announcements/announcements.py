@@ -128,6 +128,8 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             # add 'edit' actions
             if AnnouncementsRights.can_edit():
                 item['edit_action'] = self.get_action_url('edit', item['key'])
+
+                item['delete_xsrf_token'] = self.create_xsrf_token('delete')
                 item['delete_action'] = self.get_action_url(
                     'delete', item['key'])
 
@@ -138,6 +140,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
         # add 'add' action
         if AnnouncementsRights.can_edit():
+            output['add_xsrf_token'] = self.create_xsrf_token('add')
             output['add_action'] = self.get_action_url('add')
 
         return output
