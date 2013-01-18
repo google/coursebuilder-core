@@ -16,25 +16,20 @@
 
 __author__ = 'pgbovine@google.com (Philip Guo)'
 
-import logging
-
 from models import utils
 from models.models import Student
-
+from models.models import StudentAnswersEntity
 from utils import BaseHandler
-
-from google.appengine.api import users
 from google.appengine.ext import db
 
 
-def store_assessment_data(student, assessment_type, score, answer):
-    """Stores a student's assessment data.
+def store_score(student, assessment_type, score):
+    """Stores a student's score on a particular assessment.
 
     Args:
         student: the student whose data is stored.
         assessment_type: the type of the assessment.
         score: the student's score on this assessment.
-        answer: the list of the student's answers on this assessment.
 
     Returns:
         the (possibly modified) assessment_type, which the caller can
@@ -45,7 +40,6 @@ def store_assessment_data(student, assessment_type, score, answer):
     # TODO(pgbovine): Note that the latest version of answers are always saved,
     # but scores are only saved if they're higher than the previous attempt.
     # This can lead to unexpected analytics behavior. Resolve this.
-    utils.set_answer(student, assessment_type, answer)
     existing_score = utils.get_score(student, assessment_type)
     # remember to cast to int for comparison
     if (existing_score is None) or (score > int(existing_score)):
@@ -83,45 +77,44 @@ class AnswerHandler(BaseHandler):
     """Handler for saving assessment answers."""
 
     # Find student entity and save answers
-    @db.transactional
-    def store_assessment_transaction(self, email, original_type, answer):
+    @db.transactional(xg=True)
+    def store_assessment_transaction(self, email, assessment_type, answer):
+        """Stores answer and updates user scores."""
         student = Student.get_by_email(email)
+
+        answers = StudentAnswersEntity.get_by_key_name(student.user_id)
+        if not answers:
+            answers = StudentAnswersEntity(key_name=student.user_id)
+        utils.set_answer(answers, assessment_type, answer)
 
         # TODO(pgbovine): consider storing as float for better precision
         score = int(round(float(self.request.get('score'))))
-        assessment_type = store_assessment_data(
-            student, original_type, score, answer)
+        assessment_type = store_score(student, assessment_type, score)
+
         student.put()
+        answers.put()
+
         return (student, assessment_type)
 
     def post(self):
         """Handles POST requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
-        # Read in answers
+        # Read in answers.
         # TODO(sll): Add error-handling for when self.request.POST.items() is
         # empty or mis-formatted.
         answer = [[str(item[0]), str(item[1])] for item in
                   self.request.POST.items()]
-        original_type = self.request.get('assessment_type')
+        assessment_type = self.request.get('assessment_type')
 
-        # Check for enrollment status
-        student = Student.get_by_email(user.email())
-        if student and student.is_enrolled:
-            # Log answer submission
-            logging.info('%s: %s', student.key().name(), answer)
+        # Record score.
+        (student, assessment_type) = self.store_assessment_transaction(
+            student.key().name(), assessment_type, answer)
 
-            (student, assessment_type) = self.store_assessment_transaction(
-                student.key().name(), original_type, answer)
-
-            # Serve the confirmation page
-            self.template_value['navbar'] = {'course': True}
-            self.template_value['assessment'] = assessment_type
-            self.template_value['student_score'] = utils.get_score(
-                student, 'overall_score')
-            self.render('test_confirmation.html')
-        else:
-            self.redirect('/register')
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['assessment'] = assessment_type
+        self.template_value['student_score'] = utils.get_score(
+            student, 'overall_score')
+        self.render('test_confirmation.html')

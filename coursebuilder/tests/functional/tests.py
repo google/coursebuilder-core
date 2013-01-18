@@ -739,9 +739,13 @@ class AssessmentTest(actions.TestBase):
             # Check final score also includes overall_score.
             assert len(get_all_scores(student)) == 4
 
-            assert isinstance(get_answer(student, 'precourse'), list)
-            assert isinstance(get_answer(student, 'midcourse'), list)
-            assert isinstance(get_answer(student, 'postcourse'), list)
+            answers = models.StudentAnswersEntity.get_by_key_name(
+                student.user_id)
+            assert answers
+
+            assert isinstance(get_answer(answers, 'precourse'), list)
+            assert isinstance(get_answer(answers, 'midcourse'), list)
+            assert isinstance(get_answer(answers, 'postcourse'), list)
 
             # Check that scores are recorded properly.
             student = models.Student.get_enrolled_student_by_email(email)

@@ -375,11 +375,6 @@ class ComputeStudentStats(jobs.DurableJob):
     def run(self):
         """Computes student statistics."""
 
-        # TODO(psimakov): we should not fetch entire Students; unfortunately
-        # we can't use projection queries here because they require indexed
-        # attributes, while 'scores' is not indexed; we may create separate
-        # jobs and iterate concurrently; not sure what else we can do...
-
         enrollment = EnrollmentAggregator()
         scores = ScoresAggregator()
         query = db.GqlQuery(

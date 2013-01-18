@@ -81,7 +81,6 @@ class Student(BaseEntity):
     is_enrolled = db.BooleanProperty()
 
     # Each of the following is a string representation of a JSON dict.
-    answers = db.TextProperty(indexed=False)
     scores = db.TextProperty(indexed=False)
 
     def put(self):
@@ -150,3 +149,12 @@ class EventEntity(BaseEntity):
         event.user_id = user.user_id()
         event.data = data
         event.put()
+
+
+class StudentAnswersEntity(BaseEntity):
+    """Student answers to the assessments."""
+
+    recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=False)
+
+    # Each of the following is a string representation of a JSON dict.
+    data = db.TextProperty(indexed=False)

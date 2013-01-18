@@ -43,29 +43,29 @@ def dict_get(dict_as_string, my_key):
         return json.loads(dict_as_string).get(my_key)
 
 
-def get_answer(student, assessment_name):
+def get_answer(answers, assessment_name):
     """Gets the answer array for this assessment (or None if not found)."""
-    return dict_get(student.answers, assessment_name)
+    return dict_get(answers.data, assessment_name)
 
 
-def set_answer(student, assessment_name, answer):
+def set_answer(answers, assessment_name, answer):
     """Stores the answer array for the given student and assessment.
 
-    The caller must call student.put() to commit.
+    The caller must call answers.put() to commit.
     This does not do any type-checking on 'answer'; it just stores whatever
     is passed in.
 
     Args:
-        student: the student whose answer should be stored.
+        answers: the StudentAnswers entity in which the answer should be stored.
         assessment_name: the name of the assessment.
         answer: an array containing the student's answers.
     """
-    if not student.answers:
+    if not answers.data:
         score_dict = {}
     else:
-        score_dict = json.loads(student.answers)
+        score_dict = json.loads(answers.data)
     score_dict[assessment_name] = answer
-    student.answers = json.dumps(score_dict)
+    answers.data = json.dumps(score_dict)
 
 
 def get_score(student, assessment_name):

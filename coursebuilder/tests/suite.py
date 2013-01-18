@@ -25,6 +25,7 @@ import unittest
 import appengine_config  # pylint: disable-msg=unused-import
 import webtest
 
+from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
@@ -56,10 +57,14 @@ class BaseTestClass(unittest.TestCase):
         self.testbed = testbed.Testbed()
         self.testbed.activate()
 
+        # configure datastore policy to emulate globally consistent HRD
+        policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
+            probability=1)
+
         # declare any relevant App Engine service stubs here
         self.testbed.init_user_stub()
         self.testbed.init_memcache_stub()
-        self.testbed.init_datastore_v3_stub()
+        self.testbed.init_datastore_v3_stub(consistency_policy=policy)
         self.testbed.init_taskqueue_stub()
         self.taskq = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
 
