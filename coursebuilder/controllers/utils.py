@@ -437,7 +437,7 @@ class XsrfTokenManager(object):
         """Validate a given XSRF token by retrieving it from memcache."""
 
         try:
-            parts = token.split('/')
+            parts = token.split(cls.DELIMITER_PUBLIC)
             if not len(parts) == 2:
                 raise Exception('Bad token format, expected: a/b.')
 
