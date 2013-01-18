@@ -20,6 +20,7 @@ from models import models
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from utils import BaseHandler
+from utils import XsrfTokenManager
 
 # Whether to record events in a database.
 CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
@@ -30,13 +31,13 @@ CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
         'operations, or to minimize the use of Google App Engine quota.'),
     False)
 
-ACTIVITY_EVENTS_RECEIVED = PerfCounter(
-    'gcb-activity-events-received',
-    'A number of activity events received by the server.')
+COURSE_EVENTS_RECEIVED = PerfCounter(
+    'gcb-course-events-received',
+    'A number of activity/assessment events received by the server.')
 
-ACTIVITY_EVENTS_RECORDED = PerfCounter(
-    'gcb-activity-events-recorded',
-    'A number of activity events recorded by the server in a datastore.')
+COURSE_EVENTS_RECORDED = PerfCounter(
+    'gcb-course-events-recorded',
+    'A number of activity/assessment events recorded in a datastore.')
 
 
 def extract_unit_and_lesson_id(handler):
@@ -58,6 +59,11 @@ def extract_unit_and_lesson_id(handler):
 
 class CourseHandler(BaseHandler):
     """Handler for generating course page."""
+
+    @classmethod
+    def get_child_routes(cls):
+        """Add child handlers for REST."""
+        return [('/rest/events', EventsRESTHandler)]
 
     def get(self):
         """Handles GET requests."""
@@ -153,29 +159,11 @@ class ActivityHandler(BaseHandler):
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
-        self.template_value['record_events'] = str(
-            CAN_PERSIST_ACTIVITY_EVENTS.value).lower()
+        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
+        self.template_value['event_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('event'))
 
         self.render('activity.html')
-
-    def post(self):
-        """Receives activity submissions and puts it into datastore."""
-
-        ACTIVITY_EVENTS_RECEIVED.inc()
-        if not CAN_PERSIST_ACTIVITY_EVENTS.value:
-            return
-
-        user = self.get_user()
-        if not user:
-            return
-
-        student = models.Student.get_enrolled_student_by_email(user.email())
-        if not student:
-            return
-
-        models.EventEntity.record(
-            'attempt-activity', user, self.request.get('request'))
-        ACTIVITY_EVENTS_RECORDED.inc()
 
 
 class AssessmentHandler(BaseHandler):
@@ -192,4 +180,36 @@ class AssessmentHandler(BaseHandler):
             n = 'Pre'
         self.template_value['name'] = n
         self.template_value['navbar'] = {'course': True}
+        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
+        self.template_value['assessment_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('assessment'))
+        self.template_value['event_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('event'))
+
         self.render('assessment.html')
+
+
+class EventsRESTHandler(BaseHandler):
+    """Provides REST API for an Event."""
+
+    def post(self):
+        """Receives event and puts it into datastore."""
+
+        COURSE_EVENTS_RECEIVED.inc()
+        if not CAN_PERSIST_ACTIVITY_EVENTS.value:
+            return
+
+        if not self.assert_xsrf_token_or_fail('event'):
+            return
+
+        user = self.get_user()
+        if not user:
+            return
+
+        student = models.Student.get_enrolled_student_by_email(user.email())
+        if not student:
+            return
+
+        models.EventEntity.record(
+            self.request.get('source'), user, self.request.get('request'))
+        COURSE_EVENTS_RECORDED.inc()

@@ -19,6 +19,7 @@ __author__ = 'Sean Lip'
 import json
 import logging
 import os
+import re
 import shutil
 import urllib
 import appengine_config
@@ -28,7 +29,6 @@ from controllers.sites import assert_fails
 from models import config
 from models import models
 from models.utils import get_all_scores
-from models.utils import get_answer
 from models.utils import get_score
 from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
@@ -651,10 +651,19 @@ class AssessmentTest(actions.TestBase):
     """Test for assessments."""
 
     def submit_assessment(self, name, args):
+        """Test student taking an assessment."""
+
         response = self.get('assessment?name=%s' % name)
         assert_contains(
             '<script src="assets/js/assessment-%s.js"></script>' % name,
             response.body)
+
+        # Extract XSRF token from the page.
+        match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)
+        assert match
+        xsrf_token = match.group(1)
+        args['xsrf_token'] = xsrf_token
+
         response = self.post('answer', args)
         assert_equals(response.status_int, 200)
         return response
@@ -664,9 +673,7 @@ class AssessmentTest(actions.TestBase):
         email = 'test_pass@google.com'
         name = 'Test Pass'
 
-        post = {'assessment_type': 'postcourse',
-                'num_correct': '0', 'num_questions': '4',
-                'score': '100.00'}
+        post = {'assessment_type': 'postcourse', 'score': '100.00'}
 
         # Register.
         actions.login(email)
@@ -688,30 +695,14 @@ class AssessmentTest(actions.TestBase):
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
 
-        pre = {'assessment_type': 'precourse',
-               '0': 'false', '1': 'false', '2': 'false', '3': 'false',
-               'num_correct': '0', 'num_questions': '4',
-               'score': '1.00'}
-
-        mid = {'assessment_type': 'midcourse',
-               '0': 'false', '1': 'false', '2': 'false', '3': 'false',
-               'num_correct': '0', 'num_questions': '4',
-               'score': '2.00'}
-
-        post = {'assessment_type': 'postcourse',
-                '0': 'false', '1': 'false', '2': 'false', '3': 'false',
-                'num_correct': '0', 'num_questions': '4',
-                'score': '3.00'}
-
-        second_mid = {'assessment_type': 'midcourse',
-                      '0': 'false', '1': 'false', '2': 'false', '3': 'false',
-                      'num_correct': '0', 'num_questions': '4',
-                      'score': '1.00'}
-
-        second_post = {'assessment_type': 'postcourse',
-                       '0': 'false', '1': 'false', '2': 'false', '3': 'false',
-                       'num_correct': '0', 'num_questions': '4',
-                       'score': '100000'}
+        pre_answers = [{'foo': 'bar'}, {'Alice': 'Bob'}]
+        pre = {
+            'assessment_type': 'precourse', 'score': '1.00',
+            'answers': json.dumps(pre_answers)}
+        mid = {'assessment_type': 'midcourse', 'score': '2.00'}
+        post = {'assessment_type': 'postcourse', 'score': '3.00'}
+        second_mid = {'assessment_type': 'midcourse', 'score': '1.00'}
+        second_post = {'assessment_type': 'postcourse', 'score': '100000'}
 
         # Register.
         actions.login(email)
@@ -739,13 +730,16 @@ class AssessmentTest(actions.TestBase):
             # Check final score also includes overall_score.
             assert len(get_all_scores(student)) == 4
 
-            answers = models.StudentAnswersEntity.get_by_key_name(
-                student.user_id)
-            assert answers
+            # Check assessment answers.
+            answers = json.loads(
+                models.StudentAnswersEntity.get_by_key_name(
+                    student.user_id).data)
+            assert pre_answers == answers['precourse']
 
-            assert isinstance(get_answer(answers, 'precourse'), list)
-            assert isinstance(get_answer(answers, 'midcourse'), list)
-            assert isinstance(get_answer(answers, 'postcourse'), list)
+            # pylint: disable-msg=g-explicit-bool-comparison
+            assert [] == answers['midcourse']
+            assert [] == answers['postcourse']
+            # pylint: enable-msg=g-explicit-bool-comparison
 
             # Check that scores are recorded properly.
             student = models.Student.get_enrolled_student_by_email(email)

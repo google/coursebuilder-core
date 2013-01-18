@@ -16,6 +16,7 @@
 
 __author__ = 'pgbovine@google.com (Philip Guo)'
 
+import json
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
@@ -78,7 +79,8 @@ class AnswerHandler(BaseHandler):
 
     # Find student entity and save answers
     @db.transactional(xg=True)
-    def store_assessment_transaction(self, email, assessment_type, answer):
+    def update_assessment_transaction(
+        self, email, assessment_type, new_answers, score):
         """Stores answer and updates user scores."""
         student = Student.get_by_email(email)
 
@@ -89,10 +91,8 @@ class AnswerHandler(BaseHandler):
         answers = StudentAnswersEntity.get_by_key_name(student.user_id)
         if not answers:
             answers = StudentAnswersEntity(key_name=student.user_id)
-        utils.set_answer(answers, assessment_type, answer)
+        utils.set_answer(answers, assessment_type, new_answers)
 
-        # TODO(pgbovine): consider storing as float for better precision
-        score = int(round(float(self.request.get('score'))))
         assessment_type = store_score(student, assessment_type, score)
 
         student.put()
@@ -106,16 +106,24 @@ class AnswerHandler(BaseHandler):
         if not student:
             return
 
-        # Read in answers.
-        # TODO(sll): Add error-handling for when self.request.POST.items() is
-        # empty or mis-formatted.
-        answer = [[str(item[0]), str(item[1])] for item in
-                  self.request.POST.items()]
+        if not self.assert_xsrf_token_or_fail('assessment'):
+            return
+
         assessment_type = self.request.get('assessment_type')
 
+        # Convert answers from JSON to dict.
+        answers = self.request.get('answers')
+        if answers:
+            answers = json.loads(answers)
+        else:
+            answers = []
+
+        # TODO(pgbovine): consider storing as float for better precision
+        score = int(round(float(self.request.get('score'))))
+
         # Record score.
-        (student, assessment_type) = self.store_assessment_transaction(
-            student.key().name(), assessment_type, answer)
+        (student, assessment_type) = self.update_assessment_transaction(
+            student.key().name(), assessment_type, answers, score)
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment'] = assessment_type

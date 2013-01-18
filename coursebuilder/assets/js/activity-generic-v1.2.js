@@ -28,15 +28,31 @@ function getFreshTag() {
   return globallyUniqueTag;
 }
 
-// sends activity submission to the server; off by default; override to enable
-var gcb_can_persist_activity_events = false;
+// controls sending events to the server; off by default; override to enable
+var gcbCanPostEvents = false;
+
+// various XSRF tokens
+var eventXsrfToken = '';
+var assessmentXsrfToken = '';
+
 function gcbActivityAudit(dict) {
-  if (gcb_can_persist_activity_events) {
+  gcbAudit(dict, 'attempt-activity');
+}
+
+function gcbAssessmentAudit(dict) {
+  gcbAudit(dict, 'attempt-assessment');
+}
+
+function gcbAudit(dict, source) {
+  if (gcbCanPostEvents) {
     dict['location'] = '' + window.location;
     $.ajax({
-        url: 'activity',
+        url: 'rest/events',
         type: 'POST',
-        data: {"request": JSON.stringify(dict)},
+        data: {
+            'source': source, 
+            'request': JSON.stringify(dict),
+            'xsrf_token': eventXsrfToken},
         success: function(){},
         error:function(){}
     });
@@ -46,7 +62,8 @@ function gcbActivityAudit(dict) {
 // 'choices' is a list of choices, where each element is:
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
-function generateMultipleChoiceQuestion(choices, domRoot, uid) {
+// 'index' is the index of this activity in the containing list  
+function generateMultipleChoiceQuestion(choices, domRoot, index) {
   var tag = getFreshTag();
   var radioButtonGroupName = 'q' + tag;
 
@@ -105,7 +122,8 @@ function generateMultipleChoiceQuestion(choices, domRoot, uid) {
       var isChecked = choiceInputs[i].checked;
       if (isChecked) {
         gcbActivityAudit({
-            "uid": uid, "type": "choice", "index": i, "correct": isCorrect})
+            'index': index, 'type': 'activity-choice', 'value': i,
+            'correct': isCorrect});
         $('#output_' + tag).val(outputMsg);
         $('#output_' + tag).focus();
         if (isCorrect) {
@@ -125,7 +143,8 @@ function generateMultipleChoiceQuestion(choices, domRoot, uid) {
 // Generate a collection of multiple choice questions
 // 'params' is an object containing parameters
 // 'domRoot' is the dom element to append HTML onto
-function generateMultipleChoiceGroupQuestion(params, domRoot, uid) {
+// 'index' is the index of this activity in the containing list
+function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
 
   // 'questionsList' is an ordered list of questions, where each element is:
   //     {questionHTML: <HTML of question>,
@@ -218,6 +237,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, uid) {
       var radioButtonGroupName = 'q' + tag;
       var choiceInputs = $('input[name=' + radioButtonGroupName + ']');
 
+      var userInputRecorded = false;
       for (var i = 0; i < choiceInputs.length; i++) {
         var isChecked = choiceInputs[i].checked;
         var isCorrect = i == q.correctIndex
@@ -226,15 +246,21 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, uid) {
           if (isCorrect) {
              numCorrect++;
           }
-          answers.push({'index': i, 'correct': isCorrect});
-        }        
+          
+          userInputRecorded = true;
+          answers.push({'index': ind, 'value': i, 'correct': isCorrect});
+        }
+      }
+      
+      if (!userInputRecorded) {
+        answers.push({'index': ind, 'value': null, 'correct': isCorrect});
       }
     });
 
     gcbActivityAudit({
-        "uid": uid, "type": "group", "values": answers,
-        "num_expected": questionsList.length,
-        "num_submitted": numChecked, "num_correct": numCorrect})
+        'index': index, 'type': 'activity-group', 'values': answers,
+        'num_expected': questionsList.length,
+        'num_submitted': numChecked, 'num_correct': numCorrect});
 
     if (numCorrect == questionsList.length) {
       $.each(used_tags, function(i, t) {
@@ -255,7 +281,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, uid) {
 
 // 'params' is an object containing parameters (some optional)
 // 'domRoot' is the dom element to append HTML onto
-function generateFreetextQuestion(params, domRoot, uid) {
+// 'index' is the index of this activity in the containing list
+function generateFreetextQuestion(params, domRoot, index) {
 
   // 'correctAnswerRegex' is a regular expression that matches the correct answer
   // 'correctAnswerOutput' and 'incorrectAnswerOutput' are what to display
@@ -313,7 +340,8 @@ function generateFreetextQuestion(params, domRoot, uid) {
 
       var isCorrect = correctAnswerRegex.test(textValue);
       gcbActivityAudit({
-          "uid": uid, "type": "freetext", "value": textValue, "correct": isCorrect})
+          'index': index, 'type': 'activity-freetext', 'value': textValue,
+          'correct': isCorrect})
       if (isCorrect) {
         $('#output_' + tag).val(correctAnswerOutput);
         $('#output_' + tag).focus();
@@ -329,7 +357,8 @@ function generateFreetextQuestion(params, domRoot, uid) {
     $('#skip_and_show_' + tag).click(function() {
       var textValue = $('#input_' + tag).val();
       gcbActivityAudit({
-          "uid": uid, "type": "freetext", "value": textValue, "correct": null})
+          'index': index, 'type': 'activity-freetext', 'value': textValue,
+          'correct': null})
       $('#output_' + tag).val(showAnswerOutput);
       $('#output_' + tag).focus();
     });
@@ -438,13 +467,32 @@ function renderAssessment(assessment, domRoot) {
 
     var scoreArray = [];
     var lessonsToRead = [];
+    var userInput = [];
 
     $.each(assessment.questionsList, function(questionNum, q) {
       var isCorrect = false;
 
       if (q.choices) {
-        isCorrect = checkQuestionRadioSimple(
-            document.assessment['q' + questionNum]);
+        var userInputRecorded = false;
+        var radioGroup = document.assessment['q' + questionNum];
+        for (var i = 0; i < radioGroup.length; i++) {
+          if (radioGroup[i].checked) {
+            isCorrect = radioGroup[i].value == 'correct';
+
+            userInputRecorded = true;
+            userInput.push({
+                'index': questionNum, 'type': 'choices', 'value': i,
+                'correct': isCorrect});
+
+            break;
+          }
+        }
+
+        if (!userInputRecorded) {
+          userInput.push({
+              'index': questionNum, 'type': 'choices', 'value': null,
+              'correct': isCorrect});
+        }
       }
       else if (q.correctAnswerString) {
         var answerVal = $('#q' + questionNum).val();
@@ -453,6 +501,10 @@ function renderAssessment(assessment, domRoot) {
 
         isCorrect = (
             answerVal.toLowerCase() == q.correctAnswerString.toLowerCase());
+
+        userInput.push({
+            'index': questionNum, 'type': 'string', 'value': answerVal,
+            'correct': isCorrect});
       }
       else if (q.correctAnswerRegex) {
         var answerVal = $('#q' + questionNum).val();
@@ -460,6 +512,10 @@ function renderAssessment(assessment, domRoot) {
         answerVal = answerVal.replace(/\s+$/,''); // trim trailing spaces
 
         isCorrect = q.correctAnswerRegex.test(answerVal);
+
+        userInput.push({
+            'index': questionNum, 'type': 'regex', 'value': answerVal,
+            'correct': isCorrect});
       }
       else if (q.correctAnswerNumeric) {
         // allow for some small floating-point leeway
@@ -470,6 +526,10 @@ function renderAssessment(assessment, domRoot) {
             (answerNum <= q.correctAnswerNumeric + EPSILON)) {
           isCorrect = true;
         }
+
+        userInput.push({
+            'index': questionNum, 'type': 'numeric', 'value': answerNum,
+            'correct': isCorrect});
       }
 
       scoreArray.push(isCorrect);
@@ -510,35 +570,32 @@ function renderAssessment(assessment, domRoot) {
       myInput.setAttribute('value', assessmentType);
       myForm.appendChild(myInput);
 
-      // create a form entry for each question/result pair
-      $.each(scoreArray, function(i, val) {
-        myInput = document.createElement('input');
-        myInput.setAttribute('name', i);
-        myInput.setAttribute('value', val);
-        myForm.appendChild(myInput);
-      });
-
-      myInput = document.createElement('input');
-      myInput.setAttribute('name', 'num_correct');
-      myInput.setAttribute('value', numCorrect);
-      myForm.appendChild(myInput);
-
-      myInput = document.createElement('input');
-      myInput.setAttribute('name', 'num_questions');
-      myInput.setAttribute('value', numQuestions);
-      myForm.appendChild(myInput);
-
       myInput = document.createElement('input');
       myInput.setAttribute('name', 'score');
       myInput.setAttribute('value', score);
+      myForm.appendChild(myInput);
+
+      myInput = document.createElement('input');
+      myInput.setAttribute('name', 'answers');
+      myInput.setAttribute('value', JSON.stringify(userInput));
+      myForm.appendChild(myInput);
+
+      myInput = document.createElement('input');
+      myInput.setAttribute('name', 'xsrf_token');
+      myInput.setAttribute('value', assessmentXsrfToken);
       myForm.appendChild(myInput);
 
       document.body.appendChild(myForm);
       myForm.submit();
       document.body.removeChild(myForm);
     } else {
-      // display feedback without submitting any data to the backend
+      // send event to the server
+      gcbAssessmentAudit({
+            'type': 'assessment', 'values': userInput,
+            'num_expected': numQuestions, 'num_submitted': userInput.length,
+            'num_correct': numCorrect});
 
+      // display feedback to the user
       var outtext = trans.YOUR_SCORE_TEXT + " " + score + '% (' + numCorrect + '/' +
           numQuestions + ').\n\n';
 
@@ -563,16 +620,6 @@ function renderAssessment(assessment, domRoot) {
 // wrap the value with a 'correct' tag
 function correct(choiceStr) {
   return ['correct', choiceStr];
-}
-
-// check a radio button answer - simple; return 1 if correct button checked
-function checkQuestionRadioSimple(radioGroup) {
-  for (var i = 0; i < radioGroup.length; i++) {
-    if (radioGroup[i].checked) {
-      return radioGroup[i].value == 'correct';
-    }
-  }
-  return false;
 }
 
 function checkText(id, regex) {

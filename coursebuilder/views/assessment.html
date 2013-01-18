@@ -10,11 +10,16 @@
 {% block main_content %}
 <div class="gcb-main">
   <div class="gcb-article">
-
     <script src="assets/js/assessment-{{ name }}.js"></script>
+    <script>
+      assessmentXsrfToken = '{{ assessment_xsrf_token }}';
 
+      {% if record_events %}
+      gcbCanPostEvents = true;
+      eventXsrfToken = '{{ event_xsrf_token }}';
+      {% endif %}
+    </script>
     <div style="width: 970px;" id="assessmentContents"></div>
-
   </div>
 </div>
 

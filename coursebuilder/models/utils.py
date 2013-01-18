@@ -43,11 +43,6 @@ def dict_get(dict_as_string, my_key):
         return json.loads(dict_as_string).get(my_key)
 
 
-def get_answer(answers, assessment_name):
-    """Gets the answer array for this assessment (or None if not found)."""
-    return dict_get(answers.data, assessment_name)
-
-
 def set_answer(answers, assessment_name, answer):
     """Stores the answer array for the given student and assessment.
 

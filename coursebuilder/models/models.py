@@ -132,7 +132,13 @@ class Student(BaseEntity):
 
 
 class EventEntity(BaseEntity):
-    """Generic events."""
+    """Generic events.
+
+    Each event has a 'source' that defines a place in a code where the event was
+    recorded. Each event has a 'user_id' to represent an actor who triggered
+    the event. The event 'data' is a JSON object, the format of which is defined
+    elsewhere and depends on the type of the event.
+    """
     datetime = db.DateTimeProperty(auto_now_add=True, indexed=False)
     source = db.StringProperty(indexed=False)
     user_id = db.StringProperty(indexed=False)
