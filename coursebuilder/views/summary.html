@@ -16,11 +16,12 @@
 
 <div class="gcb-col-5">
 
-  {% if course_info.course.main_video_url %}
-    <iframe width="460" height="300" src="{{course_info.course.main_video_url}}"
+  {% if course_info.course.main_video %}
+    <iframe class="youtube-player" type="text/html" width="460"
+     height="300" src="{{course_info.course.main_video.url}}"
      frameborder="0" allowfullscreen></iframe>
   {% else %}
-    <img height="300" src="{{course_info.course.main_image_url}}">
+    <img height="300" src="{{course_info.course.main_image.url}}">
   {% endif %}
 
 </div>

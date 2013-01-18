@@ -720,7 +720,7 @@ h1.class_header {
   border-bottom:2px dotted #e0e0e0;
 }
 
-p.lesson_title {
+h1.lesson_title {
   font-size: 23px;
   text-align: left;
   margin: 0px;

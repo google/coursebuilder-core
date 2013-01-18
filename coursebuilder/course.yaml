@@ -36,9 +36,13 @@ course:
 
   # You can choose whether you want a video or an image on the main page.
   # If you specify both a video and an image link, then the video will take
-  # priority.
-  main_video_url: 'http://www.youtube.com/embed/Kdg2drcUjYI?rel=0'
-  main_image_url: '/assets/img/banner1.png'
+  # priority. The image alt text allows the image to be understood by text-only
+  # screen readers.
+  main_video:
+    url: //www.youtube.com/embed/Kdg2drcUjYI?rel=0
+  main_image:
+    url: /assets/img/banner1.png
+    alt_text: Photo of Dan Russell
 
   # Course start date.
   start_date: 'July 10, 2012'
@@ -46,17 +50,17 @@ course:
   # Forum URL. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/WebForums.
-  forum_url: http://groups.google.com/group/My-Course
+  forum_url: //groups.google.com/group/My-Course
 
   # Forum embedding URL. This link is used to embed the forum in an iframe on
   # the forum.html page.
-  forum_embed_url: https://groups.google.com/forum/embed/?place=forum/My-Course
+  forum_embed_url: //groups.google.com/forum/embed/?place=forum/My-Course
 
   # URL for the mailing list where students can register to receive course
   # announcements. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/CreateEmailList
-  announcement_list_url: http://groups.google.com/group/My-Course-Announce
+  announcement_list_url: //groups.google.com/group/My-Course-Announce
 
 
 ####################################
@@ -70,8 +74,10 @@ institution:
   # URL of your institution's webpage
   url: 'LINK_TO_YOUR_INSTITUTION_HERE'
 
-  # Link to the logo of the course or your institution
-  logo_url: 'assets/img/your_logo_here.png'
+  # Link and alt text for the logo of the course or your institution
+  logo:
+    url: 'assets/img/your_logo_here.png'
+    alt_text: YOUR_LOGO_HERE
 
 
 ##########################################
@@ -156,7 +162,7 @@ announcements: |
     Certificates will be e-mailed to qualifying participants by Friday,
     October 12.
     <br><br>
-    Do you want to check your assessment scores? Visit the 
+    Do you want to check your assessment scores? Visit the
     <a href="student/home">"My profile”</a> page!
   </p>
   <hr>

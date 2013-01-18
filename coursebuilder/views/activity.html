@@ -36,7 +36,7 @@
     </ul>
   </div>
 
-  <div class="gcb-article tab-content">
+  <div class="gcb-article tab-content" role="main">
     {% for lesson in lessons %}
       {% if lesson.id == lesson_id %}
 
@@ -45,7 +45,9 @@
           <div class="gcb-aside">
             <div class="gcb-cols">
               <div class="gcb-col-7">
-                <p class="lesson_title">{{ lesson.activity_title }}</p>
+                <h1 class="lesson_title">
+                  {{ lesson.activity_title }}
+                </h1>
               </div>
               <div class="gcb-col-3">
                 <p style="float:right; margin-top: 0px; margin-left: 10px;">
