@@ -23,12 +23,13 @@ from google.appengine.api import users
 
 GCB_ADMIN_LIST = config.ConfigProperty(
     'gcb_admin_user_emails', str, (
-        'A new line or a space separated list of email addresses of super '
-        'admin users. Each email address must be placed between "[" and "]", '
-        'for example: "[test@example.com]". Regular expressions are not '
-        'supported, exact match only. WARNING! Listed users will have the '
-        'highest level of access to the system and all data covering all '
-        'courses and students. Be very careful when modifying this property.'),
+        'A list of email addresses for super-admin users. '
+        'WARNING! Super-admin users have the highest level of access to your '
+        'Google App Engine instance and to all data about all courses and '
+        'students within that instance. Be very careful when modifying this '
+        'property. Syntax: Surround each email address with [ and ]; for '
+        'example, [test@example.com]. Separate the entries with either a new '
+        'line or a space. Do not use regular expressions.'),
     '', multiline=True)
 
 KEY_COURSE = 'course'

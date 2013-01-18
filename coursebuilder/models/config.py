@@ -246,10 +246,12 @@ def run_all_unit_tests():
 
 UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
-        'An update interval (in seconds) for reloading runtime properties from '
-        'a datastore. A value of "0" completely disables loading of properties '
-        'from a datastore. A value of "0" can only be set in app.yaml file. '
-        'Maximum value is \'%s\'.' % MAX_UPDATE_INTERVAL),
+        'An update interval (in seconds) for reloading runtime properties '
+        'from a datastore. Using this editor, you can set this value to an '
+        'integer between 1 and 300. To completely disable  reloading '
+        'properties from a datastore, you must set the value to 0. However, '
+        'you can only set the value to 0 by directly modifying the app.yaml '
+        'file. Maximum value is "%s".' % MAX_UPDATE_INTERVAL),
     DEFAULT_UPDATE_INTERVAL)
 
 if __name__ == '__main__':

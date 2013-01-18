@@ -49,9 +49,11 @@ COURSE_INFO_KEY = 'course_info'
 
 XSRF_SECRET = ConfigProperty(
     'gcb_xsrf_secret', str, (
-        'A secret text used to encrypt XSRF tokens. Can be any alphanumeric '
-        'text, desirably 16-64 characters long. When this value changes, all '
-        'requests issued using the old value will be rejected by the server.'),
+        'Text used to encrypt tokens, which help prevent Cross-site request '
+        'forgery (CSRF, XSRF). You can set the value to any alphanumeric text, '
+        'preferably using 16-64 characters. Once you change this value, the '
+        'server rejects all subsequent requests issued using an old value for '
+        'this variable.'),
     'course builder XSRF secret')
 
 
