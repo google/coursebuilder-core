@@ -40,22 +40,27 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
   $.each(choices, function(i, elt) {
     var label = elt[0];
     var isCorrect = elt[1];
+    var buttonId = radioButtonGroupName + '-' + i;
     if (isCorrect) {
-      domRoot.append('<span class="correct_' + tag + '">' +
-          '<input type="radio" name="' + radioButtonGroupName + '" value="correct"> ' +
-          label + '</span>');
+      domRoot.append(
+          '<span class="correct_' + tag + '">' +
+          '<input type="radio" name="' + radioButtonGroupName + '" ' +
+          'id="' + buttonId + '" value="correct"> ' +
+          '<label for="' + buttonId + '">' + label + '</label></span>');
     }
     else {
-      domRoot.append('<input type="radio" name="' + radioButtonGroupName + '"> ' +
-          label);
+      domRoot.append('<input type="radio" name="' + radioButtonGroupName + '" ' +
+          'id="' + buttonId + '"> ' +
+          '<label for="' + buttonId + '">' + label + '</label>');
     }
     domRoot.append('<br>');
   });
 
   domRoot.append('<br>');
-  domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">' +
-      'Check Answer</a>');
-  domRoot.append('<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
+  domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
+      'id="submit_' + tag + '">Check Answer</button>');
+  domRoot.append(
+      '<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
       'id="output_' + tag + '"></textarea>');
 
 
@@ -65,6 +70,15 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
   choiceInputs.click(function() {
     $('.correct_' + tag).css('background-color', '');
     $('#output_' + tag).val('');
+  });
+
+
+  // treat enter keypresses in the same way as clicks
+  $('#submit_' + tag).keydown(function(e) {
+    if (e.keyCode === 13) {
+      $(this).trigger('click', true);
+      e.preventDefault();
+    }
   });
 
   // check inputs and update output
@@ -77,6 +91,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
       var isChecked = choiceInputs[i].checked;
       if (isChecked) {
         $('#output_' + tag).val(outputMsg);
+        $('#output_' + tag).focus();
         if (isCorrect) {
           $('.correct_' + tag).css('background-color', highlightColor);
         }
@@ -86,6 +101,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
 
     if (!answerChosen) {
       $('#output_' + tag).val('Please click one of the buttons for your answer.');
+      $('#output_' + tag).focus();
     }
   });
 }
@@ -119,17 +135,20 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
     domRoot.append('<br>');
 
     // create radio buttons
-    $.each(q.choices, function(i, choiceLabel) {
-      if (i == q.correctIndex) {
+    $.each(q.choices, function(j, choiceLabel) {
+      var buttonId = radioButtonGroupName + '-' + i + '-' + j;
+      if (j == q.correctIndex) {
         domRoot.append(
             '<span class="correct_' + tag + '">' +
-            '<input type="radio" name="' + radioButtonGroupName + '" value="correct"> ' +
-            choiceLabel + '</span>');
+            '<input type="radio" name="' + radioButtonGroupName + '" ' +
+            'id="' + buttonId + '" value="correct"> ' +
+            '<label for="' + buttonId + '">' + choiceLabel + '</label></span>');
       }
       else {
         domRoot.append(
-            '<input type="radio" name="' + radioButtonGroupName + '"> ' +
-            choiceLabel);
+            '<input type="radio" name="' + radioButtonGroupName + '" ' +
+            'id="' + buttonId + '"> ' +
+            '<label for="' + buttonId + '">' + choiceLabel + '</label>');
       }
       domRoot.append('<br>');
     });
@@ -142,8 +161,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   var toplevel_tag = getFreshTag();
 
   domRoot.append(
-      '<p/><a class="gcb-button gcb-button-primary" id="submit_' + toplevel_tag + '">' +
-      'Check your answers</a>');
+      '<p/><button class="gcb-button gcb-button-primary" id="submit_' + toplevel_tag + '">' +
+      'Check your answers</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 100px;" readonly="true" ' +
       'id="output_' + toplevel_tag + '"></textarea>');
@@ -163,6 +182,14 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
     });
   });
 
+
+  // treat enter keypresses in the same way as clicks
+  $('#submit_' + toplevel_tag).keydown(function(e) {
+    if (e.keyCode === 13) {
+      $(this).trigger('click', true);
+      e.preventDefault();
+    }
+  });
 
   // handle question submission
   $('#submit_' + toplevel_tag).click(function() {
@@ -187,11 +214,13 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
       });
       $('#output_' + toplevel_tag).val(
           "All your answers are correct! " + allCorrectOutput);
+      $('#output_' + toplevel_tag).focus();
     }
     else {
       $('#output_' + toplevel_tag).val(
           "You got " + numCorrect + " out of " + questionsList.length +
           " questions correct. " + someIncorrectOutput);
+      $('#output_' + toplevel_tag).focus();
     }
   });
 }
@@ -220,13 +249,14 @@ function generateFreetextQuestion(params, domRoot) {
       '&nbsp;&nbsp;<input type="text" style="width: 400px; ' +
       'class="alphanumericOnly" id="input_' + tag + '">');
   if (correctAnswerOutput && incorrectAnswerOutput) {
-    domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">' +
-        'Check Answer</a>');
+    domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
+        'id="submit_' + tag + '">Check Answer</button>');
   }
   if (showAnswerOutput) {
     domRoot.append(
-        '<p/><a class="gcb-button gcb-button-primary" id="skip_and_show_' + tag + '">' +
-        showAnswerPrompt + '</a>');
+        '<p/><button class="gcb-button gcb-button-primary" ' +
+        'id="skip_and_show_' + tag + '">' +
+        showAnswerPrompt + '</button>');
   }
   domRoot.append(
       '<p/><textarea style="width: 600px; height: ' + outputHeight + ';" ' +
@@ -240,19 +270,27 @@ function generateFreetextQuestion(params, domRoot) {
   });
 
   if (correctAnswerOutput && incorrectAnswerOutput) {
-    $('#submit_' + tag).click(function() {
+    // treat enter keypresses in the same way as clicks
+    $('#submit_' + tag).keydown(function(e) {
+      if (e.keyCode === 13) {
+        $(this).trigger('click', true);
+        e.preventDefault();
+      }
+    });
 
+    $('#submit_' + tag).click(function() {
       var textValue = $('#input_' + tag).val();
       textValue = textValue.replace(/^\s+/,''); //trim leading spaces
       textValue = textValue.replace(/\s+$/,''); //trim trailing spaces
 
-      // check specific words: killer whale
       var isCorrect = correctAnswerRegex.test(textValue);
       if (isCorrect) {
         $('#output_' + tag).val(correctAnswerOutput);
+        $('#output_' + tag).focus();
       }
       else {
         $('#output_' + tag).val(incorrectAnswerOutput);
+        $('#output_' + tag).focus();
       }
     });
   }
@@ -260,6 +298,7 @@ function generateFreetextQuestion(params, domRoot) {
   if (showAnswerOutput) {
     $('#skip_and_show_' + tag).click(function() {
       $('#output_' + tag).val(showAnswerOutput);
+      $('#output_' + tag).focus();
     });
   }
 }
@@ -273,8 +312,7 @@ function renderActivity(contentsLst, domRoot) {
   $.each(contentsLst, function(i, e) {
     if (typeof e == 'string') {
       domRoot.append(e);
-    }
-    else {
+    } else {
       // dispatch on type:
       if (e.questionType == 'multiple choice') {
         generateMultipleChoiceQuestion(e.choices, domRoot);
@@ -321,10 +359,11 @@ function renderAssessment(assessment, domRoot) {
     //   correctAnswerNumeric - freetext numeric match
     if (q.choices) {
       $.each(q.choices, function(i, c) {
+        var buttonId = 'q' + questionNum + '-' + i;
         if (typeof c == 'string') {
           // incorrect choice
-          curLI.append('<input type="radio" name="q' + questionNum + '">&nbsp;' +
-              c + '<br>');
+          curLI.append('<input type="radio" name="q' + questionNum + '" id="' +
+              buttonId + '">&nbsp;<label for="' + buttonId + '">' + c + '</label><br>');
         }
         else {
           // wrapped in correct() ...
@@ -332,17 +371,16 @@ function renderAssessment(assessment, domRoot) {
             alert('Error: Malformed question.');
           }
           // correct choice
-          curLI.append('<input type="radio" name="q' + questionNum + '" value="correct">' +
-              '&nbsp;' + c[1] + '<br>');
+          curLI.append('<input type="radio" name="q' + questionNum + '" id="' +
+              buttonId + '" value="correct">&nbsp;<label for="' + buttonId + '">' +
+              c[1] + '</label><br>');
         }
       });
-    }
-    else if (q.correctAnswerString || q.correctAnswerRegex || q.correctAnswerNumeric) {
+    } else if (q.correctAnswerString || q.correctAnswerRegex || q.correctAnswerNumeric) {
       curLI.append('Answer:&nbsp;&nbsp;<input type="text" class="alphanumericOnly" ' +
           'style="border-style: solid; border-color: black; border-width: 1px;" ' +
           'id="q' + questionNum + '">');
-    }
-    else {
+    } else {
       alert("Error: Invalid question type.");
     }
 
@@ -352,13 +390,14 @@ function renderAssessment(assessment, domRoot) {
 
   if (assessment.checkAnswers) {
     domRoot.append(
-        '<a class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
-        'Check your Answers</a><p/>');
+        '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
+        'Check your Answers</button><p/>');
     domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
         'readonly="true" id="answerOutput"></textarea>');
   }
   domRoot.append(
-      '<br><a class="gcb-button gcb-button-primary" id="submitAnswersBtn">Save Answers</a>');
+      '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
+      'Save Answers</button>');
 
 
   function checkOrSubmitAnswers(submitAnswers) {
@@ -387,7 +426,6 @@ function renderAssessment(assessment, domRoot) {
         answerVal = answerVal.replace(/^\s+/,''); // trim leading spaces
         answerVal = answerVal.replace(/\s+$/,''); // trim trailing spaces
 
-        // check specific words: killer whale
         isCorrect = q.correctAnswerRegex.test(answerVal);
       }
       else if (q.correctAnswerNumeric) {
@@ -465,8 +503,7 @@ function renderAssessment(assessment, domRoot) {
       document.body.appendChild(myForm);
       myForm.submit();
       document.body.removeChild(myForm);
-    }
-    else {
+    } else {
       // display feedback without submitting any data to the backend
 
       var outtext = "You received " + score + "% (" + numCorrect + "/" +

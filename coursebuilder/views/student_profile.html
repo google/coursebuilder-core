@@ -37,7 +37,7 @@
       <form action='student/editstudent' method='post'>
         <h2><label for="name">New Name</label></h2>
         <fieldset style="border: none;">
-          <p><input name="name" type="text" size="40">
+          <p><input name="name" id="name" type="text" size="40">
             <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
         </fieldset>
         <p><button class="gcb-button" type="submit">Save Changes</button> &nbsp;&nbsp;&nbsp;
