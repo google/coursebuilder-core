@@ -12,26 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import appengine_config, webapp2
-from controllers import servings, sites, utils, assessments
+"""Main package for Course Builder, which handles URL routing."""
+
+import webapp2
+from controllers import assessments
+from controllers import servings
+from controllers import sites
+from controllers import utils
+
 
 # FIXME: set to 'False' before going live
 debug = True
 
 urls = [
-  ('/', servings.CourseHandler),
-  ('/activity', servings.ActivityHandler),
-  ('/announcements', utils.AnnouncementsHandler),
-  ('/answer', assessments.AnswerHandler),
-  ('/assessment', servings.AssessmentHandler),
-  ('/course', servings.CourseHandler),
-  ('/forum', servings.ForumHandler),
-  ('/preview', servings.PreviewHandler),
-  ('/register', utils.RegisterHandler),
-  ('/student/editstudent', utils.StudentEditStudentHandler),
-  ('/student/home', utils.StudentProfileHandler),
-  ('/student/unenroll', utils.StudentUnenrollHandler),
-  ('/unit', servings.UnitHandler)]
+    ('/', servings.CourseHandler),
+    ('/activity', servings.ActivityHandler),
+    ('/announcements', utils.AnnouncementsHandler),
+    ('/answer', assessments.AnswerHandler),
+    ('/assessment', servings.AssessmentHandler),
+    ('/course', servings.CourseHandler),
+    ('/forum', servings.ForumHandler),
+    ('/preview', servings.PreviewHandler),
+    ('/register', utils.RegisterHandler),
+    ('/student/editstudent', utils.StudentEditStudentHandler),
+    ('/student/home', utils.StudentProfileHandler),
+    ('/student/unenroll', utils.StudentUnenrollHandler),
+    ('/unit', servings.UnitHandler)]
 
 sites.ApplicationRequestHandler.bind(urls)
 

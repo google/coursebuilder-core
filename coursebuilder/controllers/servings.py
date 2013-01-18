@@ -15,140 +15,132 @@
 # @author: psimakov@google.com (Pavel Simakov)
 
 
-"""All handlers here either serve the cached pages or delegate to real handlers."""
-
-import logging, json
+"""These handlers either serve cached pages or delegate to real handlers."""
 
 from models.models import Student
 
-import lessons, utils
+import lessons
+import utils
 from utils import StudentHandler
 from google.appengine.api import users
 
 
-"""
-Handler for serving course page.
-"""
 class CourseHandler(StudentHandler):
+    """Handler for serving course page."""
 
-  def get(self):
-    student = self.getEnrolledStudent()
-    if student:
-      page = self.getOrCreatePage('course_page', lessons.CourseHandler())
-      self.serve(page, student.key().name())
-    else:
-      self.redirect('/preview')
+    def get(self):
+        student = self.getEnrolledStudent()
+        if student:
+            page = self.getOrCreatePage('course_page', lessons.CourseHandler())
+            self.serve(page, student.key().name())
+        else:
+            self.redirect('/preview')
 
 
-"""
-Handler for serving class page.
-"""
 class UnitHandler(StudentHandler):
+    """Handler for serving class page."""
 
-  def get(self):
-    # Extract incoming args
-    c = self.request.get('unit')
-    if not c:
-      class_id = 1
-    else:
-      class_id = int(c)
+    def get(self):
+        """Handles GET requests."""
+        # Extract incoming args
+        c = self.request.get('unit')
+        if not c:
+            class_id = 1
+        else:
+            class_id = int(c)
 
-    l = self.request.get('lesson')
-    if not l:
-      lesson_id = 1
-    else:
-      lesson_id = int(l)
+        l = self.request.get('lesson')
+        if not l:
+            lesson_id = 1
+        else:
+            lesson_id = int(l)
 
-    # Check for enrollment status
-    student = self.getEnrolledStudent()
-    if student:
-      page = self.getOrCreatePage(
-          'lesson%s%s_page' % (class_id, lesson_id), lessons.UnitHandler())
-      self.serve(page, student.key().name())
-    else:
-      self.redirect('/register')
+        # Check for enrollment status
+        student = self.getEnrolledStudent()
+        if student:
+            page = self.getOrCreatePage(
+                'lesson%s%s_page' % (class_id, lesson_id),
+                lessons.UnitHandler())
+            self.serve(page, student.key().name())
+        else:
+            self.redirect('/register')
 
 
-"""
-Handler for serving activity page.
-"""
 class ActivityHandler(StudentHandler):
+    """Handler for serving activity page."""
 
-  def get(self):
-    # Extract incoming args
-    c = self.request.get('unit')
-    if not c:
-      class_id = 1
-    else:
-      class_id = int(c)
+    def get(self):
+        """Handles GET requests."""
+        # Extract incoming args
+        c = self.request.get('unit')
+        if not c:
+            class_id = 1
+        else:
+            class_id = int(c)
 
-    l = self.request.get('lesson')
-    if not l:
-      lesson_id = 1
-    else:
-      lesson_id = int(l)
+        l = self.request.get('lesson')
+        if not l:
+            lesson_id = 1
+        else:
+            lesson_id = int(l)
 
-    # Check for enrollment status
-    student = self.getEnrolledStudent()
-    if student:
-      page = self.getOrCreatePage(
-          'activity' + str(class_id) + str(lesson_id) + '_page', lessons.ActivityHandler())
-      self.serve(page, student.key().name())
-    else:
-      self.redirect('/register')
+        # Check for enrollment status
+        student = self.getEnrolledStudent()
+        if student:
+            page = self.getOrCreatePage(
+                'activity%s%s_page' % (class_id, lesson_id),
+                lessons.ActivityHandler())
+            self.serve(page, student.key().name())
+        else:
+            self.redirect('/register')
 
 
-"""
-Handler for serving assessment page.
-"""
 class AssessmentHandler(StudentHandler):
+    """Handler for serving assessment page."""
 
-  def get(self):
-    # Extract incoming args
-    n = self.request.get('name')
-    if not n:
-      n = 'Pre'
-    name = n
+    def get(self):
+        # Extract incoming args
+        n = self.request.get('name')
+        if not n:
+            n = 'Pre'
+        name = n
 
-    # Check for enrollment status
-    student = self.getEnrolledStudent()
-    if student:
-      page = self.getOrCreatePage(
-          'assessment' + name + '_page', lessons.AssessmentHandler())
-      self.serve(page, student.key().name())
-    else:
-      self.redirect('/register')
+        # Check for enrollment status
+        student = self.getEnrolledStudent()
+        if student:
+            page = self.getOrCreatePage(
+                'assessment%s_page' % name, lessons.AssessmentHandler())
+            self.serve(page, student.key().name())
+        else:
+            self.redirect('/register')
 
 
-"""
-Handler for serving forum page.
-"""
 class ForumHandler(StudentHandler):
+    """Handler for serving forum page."""
 
-  def get(self):
-    # Check for enrollment status
-    student = self.getEnrolledStudent()
-    if student:
-      page = self.getOrCreatePage('forum_page', utils.ForumHandler())
-      self.serve(page, student.key().name())
-    else:
-      self.redirect('/register')
+    def get(self):
+        # Check for enrollment status
+        student = self.getEnrolledStudent()
+        if student:
+            page = self.getOrCreatePage('forum_page', utils.ForumHandler())
+            self.serve(page, student.key().name())
+        else:
+            self.redirect('/register')
 
 
-"""
-Handler for serving preview page.
-"""
 class PreviewHandler(StudentHandler):
+    """Handler for serving preview page."""
 
-  def get(self):
-    user = users.get_current_user()
-    if user:
-      if Student.get_enrolled_student_by_email(user.email()):
-        self.redirect('/course')
-      else:
-        page = self.getOrCreatePage('loggedin_preview_page', utils.CoursePreviewHandler())
-        self.serve(page, user.email())
-    else:
-      page = self.getOrCreatePage('anonymous_preview_page', utils.CoursePreviewHandler())
-      self.serve(page)
-
+    def get(self):
+        user = users.get_current_user()
+        if user:
+            if Student.get_enrolled_student_by_email(user.email()):
+                self.redirect('/course')
+            else:
+                page = self.getOrCreatePage(
+                    'loggedin_preview_page', utils.CoursePreviewHandler())
+                self.serve(page, user.email())
+        else:
+            page = self.getOrCreatePage(
+                'anonymous_preview_page', utils.CoursePreviewHandler())
+            self.serve(page)

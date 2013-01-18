@@ -11,58 +11,93 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# @author: sll@google.com (Sean Lip)
-
 
 """Helper functions to work with various models."""
 
-import json, logging
+__author__ = 'Sean Lip (sll@google.com)'
 
-# returns a dict where the key is the assessment/summary name,
-# and the value is the assessment/summary score (if available)
+
+import json
+
+
 def getAllScores(student):
-  if not student.scores:
-    return {}
-  else:
-    return json.loads(student.scores)
+    """Gets all score data for a student.
+
+    Args:
+        student: the student whose scores should be retrieved.
+
+    Returns:
+         a dict where the keys are the assessment/summary name, and the value
+         is the assessment/summary score (if available).
+    """
+    if not student.scores:
+        return {}
+    else:
+        return json.loads(student.scores)
+
 
 def dictGet(dict_as_string, my_key):
-  if not dict_as_string:
-    return None
-  else:
-    return json.loads(dict_as_string).get(my_key)
+    if not dict_as_string:
+        return None
+    else:
+        return json.loads(dict_as_string).get(my_key)
 
 
-# returns the answer array corresponding to the given assessment, or None if
-# not found
 def getAnswer(student, assessment_name):
-  return dictGet(student.answers, assessment_name)
+    """Gets the answer array for this assessment (or None if not found)."""
+    return dictGet(student.answers, assessment_name)
 
-# (caller must call student.put() to commit)
-# NB: this does not do any type-checking on 'answer'; it just stores whatever
-#     is passed in.
+
 def setAnswer(student, assessment_name, answer):
-  if not student.answers:
-    score_dict = {}
-  else:
-    score_dict = json.loads(student.answers)
-  score_dict[assessment_name] = answer
-  student.answers = json.dumps(score_dict)
+    """Stores the answer array for the given student and assessment.
 
-# returns the score corresponding to the given assessment, or None if not found
-# (caller must cast appropriately)
+    The caller must call student.put() to commit.
+    This does not do any type-checking on 'answer'; it just stores whatever
+    is passed in.
+
+    Args:
+        student: the student whose answer should be stored.
+        assessment_name: the name of the assessment.
+        answer: an array containing the student's answers.
+    """
+    if not student.answers:
+        score_dict = {}
+    else:
+        score_dict = json.loads(student.answers)
+    score_dict[assessment_name] = answer
+    student.answers = json.dumps(score_dict)
+
+
 def getScore(student, assessment_name):
-  return dictGet(student.scores, assessment_name)
+    """Gets a student's score for a particular assessment.
 
-# (caller must call student.put() to commit)
-# NB: this does not do any type-checking on 'score'; it just stores whatever
-#     is passed in.
+    The caller must cast the score appropriately.
+
+    Args:
+        student: the student whose score should be retrieved.
+        assessment_name: the name of the assessment.
+
+    Returns:
+        The student's score for this assessment, or None if not found.
+    """
+    return dictGet(student.scores, assessment_name)
+
+
 def setScore(student, assessment_name, score):
-  if not student.scores:
-    score_dict = {}
-  else:
-    score_dict = json.loads(student.scores)
-  score_dict[assessment_name] = score
-  student.scores = json.dumps(score_dict)
+    """Stores the score for the given student and assessment.
 
+    The caller must call student.put() to commit.
+    This does not do any type-checking on 'score'; it just stores whatever
+    is passed in.
+
+    Args:
+        student: the student whose answer should be stored.
+        assessment_name: the name of the assessment.
+        score: the student's score.
+    """
+    if not student.scores:
+        score_dict = {}
+    else:
+        score_dict = json.loads(student.scores)
+    score_dict[assessment_name] = score
+    student.scores = json.dumps(score_dict)

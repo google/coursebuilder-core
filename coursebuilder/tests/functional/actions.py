@@ -17,299 +17,320 @@
 """A collection of actions for testing Course Builder pages."""
 
 import logging
-import main
 import os
 import re
+
+import main
+from models.models import Lesson
+from models.models import Unit
 import suite
-from models.models import Unit, Lesson
 from tools import verify
+
 from google.appengine.api import namespace_manager
 
 
 class TestBase(suite.BaseTestClass):
-  def getApp(self):
-    main.debug = True
-    return main.app
+    """Contains methods common to all tests."""
 
-  def setUp(self):
-    super(TestBase, self).setUp()
+    def getApp(self):
+        main.debug = True
+        return main.app
 
-    # set desired namespace and inits data
-    namespace = namespace_manager.get_namespace()
-    try:
-      if hasattr(self, 'namespace'):
-        namespace_manager.set_namespace(self.namespace)
-      self.initDatastore()
-    finally:
-      if namespace == '':
-        namespace_manager.set_namespace(None)
+    def setUp(self):
+        super(TestBase, self).setUp()
 
-  def initDatastore(self):
-    """Loads course data from the CSV files."""
-    logging.info('')
-    logging.info('Initializing datastore')
+        # set desired namespace and inits data
+        namespace = namespace_manager.get_namespace()
+        try:
+            if hasattr(self, 'namespace'):
+                namespace_manager.set_namespace(self.namespace)
+            self.initDatastore()
+        finally:
+            if not namespace:
+                namespace_manager.set_namespace(None)
 
-    # load and parse data from CSV file
-    unit_file = os.path.join(os.path.dirname(__file__), "../../data/unit.csv")
-    lesson_file = os.path.join(os.path.dirname(__file__), "../../data/lesson.csv")
-    units = verify.ReadObjectsFromCsvFile(unit_file, verify.UNITS_HEADER, Unit)
-    lessons = verify.ReadObjectsFromCsvFile(lesson_file, verify.LESSONS_HEADER, Lesson)
+    def initDatastore(self):
+        """Loads course data from the CSV files."""
+        logging.info('')
+        logging.info('Initializing datastore')
 
-    # store all units and lessons
-    for unit in units:
-      unit.put()
-    for lesson in lessons:
-      lesson.put()
-    assert Unit.all().count() == 11
-    assert Lesson.all().count() == 29
+        # load and parse data from CSV file
+        unit_file = os.path.join(
+            os.path.dirname(__file__), '../../data/unit.csv')
+        lesson_file = os.path.join(
+            os.path.dirname(__file__), '../../data/lesson.csv')
+        units = verify.ReadObjectsFromCsvFile(
+            unit_file, verify.UNITS_HEADER, Unit)
+        lessons = verify.ReadObjectsFromCsvFile(
+            lesson_file, verify.LESSONS_HEADER, Lesson)
 
-  def canonicalize(self, href, response=None):
-    """Create absolute URL using <base> if defined, '/' otherwise."""
-    if href.startswith('/'):
-      return href
-    base = '/'
-    if response:
-      match = re.search(r'<base href=[\'"]?([^\'" >]+)', response.body)
-      if match and not href.startswith('/'):
-        base = match.groups()[0]
-    return '%s%s' % (base, href)
+        # store all units and lessons
+        for unit in units:
+            unit.put()
+        for lesson in lessons:
+            lesson.put()
+        assert Unit.all().count() == 11
+        assert Lesson.all().count() == 29
 
-  def hookResponse(self, response):
-    """Modify response.goto() to properly compute URL using <base> if defined."""
-    gotox = response.goto
-    def newGoto(href, method='get', **args):
-      return gotox(self.canonicalize(href), method, **args)
+    def canonicalize(self, href, response=None):
+        """Create absolute URL using <base> if defined, '/' otherwise."""
+        if href.startswith('/'):
+            return href
+        base = '/'
+        if response:
+            match = re.search(r'<base href=[\'"]?([^\'" >]+)', response.body)
+            if match and not href.startswith('/'):
+                base = match.groups()[0]
+        return '%s%s' % (base, href)
 
-    response.goto = newGoto
-    return response
+    def hookResponse(self, response):
+        """Modify response.goto() to compute URL using <base>, if defined."""
+        gotox = response.goto
 
-  def get(self, url):
-    url = self.canonicalize(url)
-    logging.info('HTTP Get: %s' % url)
-    response = self.testapp.get(url)
-    return self.hookResponse(response)
+        def newGoto(href, method='get', **args):
+            return gotox(self.canonicalize(href), method, **args)
 
-  def post(self, url, params):
-    url = self.canonicalize(url)
-    logging.info('HTTP Post: %s' % url)
-    response = self.testapp.post(url, params)
-    return self.hookResponse(response)
+        response.goto = newGoto
+        return response
 
-  def click(self, response, name):
-    logging.info('Link click: %s' % name)
-    response = response.click(name)
-    return self.hookResponse(response)
+    def get(self, url):
+        url = self.canonicalize(url)
+        logging.info('HTTP Get: %s', url)
+        response = self.testapp.get(url)
+        return self.hookResponse(response)
 
-  def submit(self, form):
-    logging.info('Form submit: %s' % form)
-    response = form.submit()
-    return self.hookResponse(response)
+    def post(self, url, params):
+        url = self.canonicalize(url)
+        logging.info('HTTP Post: %s', url)
+        response = self.testapp.post(url, params)
+        return self.hookResponse(response)
+
+    def click(self, response, name):
+        logging.info('Link click: %s', name)
+        response = response.click(name)
+        return self.hookResponse(response)
+
+    def submit(self, form):
+        logging.info('Form submit: %s', form)
+        response = form.submit()
+        return self.hookResponse(response)
 
 
 def AssertEquals(expected, actual):
-  if not expected == actual:
-    raise Exception('Expected \'%s\', does not match actual \'%s\'.' % (expected, actual))
+    if not expected == actual:
+        raise Exception('Expected \'%s\', does not match actual \'%s\'.' %
+                        (expected, actual))
 
 
 def AssertContains(needle, haystack):
-  if not needle in haystack:
-    raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
+    if not needle in haystack:
+        raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def AssertNoneFail(browser, callbacks):
-  """Invokes all callbacks and expects each one not to fail."""
-  for callback in callbacks:
-    callback(browser)
+    """Invokes all callbacks and expects each one not to fail."""
+    for callback in callbacks:
+        callback(browser)
 
 
 def AssertAllFail(browser, callbacks):
-  """Invokes all callbacks and expects each one to fail."""
-  class MustFail(Exception):
-    pass
+    """Invokes all callbacks and expects each one to fail."""
 
-  for callback in callbacks:
-    try:
-      callback(browser)
-      raise MustFail('Expected to fail: %s().' % callback.__name__)
-    except MustFail as e:
-      raise e
-    except Exception:
-      pass
+    class MustFail(Exception):
+        pass
+
+    for callback in callbacks:
+        try:
+            callback(browser)
+            raise MustFail('Expected to fail: %s().' % callback.__name__)
+        except MustFail as e:
+            raise e
+        except Exception:
+            pass
 
 
 def login(email):
-  os.environ['USER_EMAIL'] = email
-  os.environ['USER_ID'] = 'user1'
+    os.environ['USER_EMAIL'] = email
+    os.environ['USER_ID'] = 'user1'
 
 
 def get_current_user_email():
-  email = os.environ['USER_EMAIL']
-  if not email:
-    raise Exception('No current user.')
-  return email
+    email = os.environ['USER_EMAIL']
+    if not email:
+        raise Exception('No current user.')
+    return email
 
 
 def logout():
-  del os.environ['USER_EMAIL']
-  del os.environ['USER_ID']
+    del os.environ['USER_EMAIL']
+    del os.environ['USER_ID']
 
 
 def register(browser, name):
-  response = browser.get('/')
-  AssertEquals(response.status_int, 302)
+    """Registers a new student with the given name."""
 
-  response = view_registration(browser)
+    response = browser.get('/')
+    AssertEquals(response.status_int, 302)
 
-  response.form.set('form01', name)
-  response = browser.submit(response.form)
+    response = view_registration(browser)
 
-  AssertContains('Thank you for registering for', response.body)
-  check_profile(browser, name)
+    response.form.set('form01', name)
+    response = browser.submit(response.form)
+
+    AssertContains('Thank you for registering for', response.body)
+    check_profile(browser, name)
 
 
 def check_profile(browser, name):
-  response = view_my_profile(browser)
-  AssertContains('Email', response.body)
-  AssertContains(name, response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = view_my_profile(browser)
+    AssertContains('Email', response.body)
+    AssertContains(name, response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_registration(browser):
-  response = browser.get('register')
-  AssertContains('What is your name?', response.body)
-  return response
+    response = browser.get('register')
+    AssertContains('What is your name?', response.body)
+    return response
 
 
 def view_preview(browser):
-  response = browser.get('preview')
-  AssertContains(' the stakes are high.', response.body)
-  AssertContains('<li><p class="top_content">Pre-course assessment</p></li>', response.body)
-  return response
+    response = browser.get('preview')
+    AssertContains(' the stakes are high.', response.body)
+    AssertContains('<li><p class="top_content">Pre-course assessment</p></li>',
+                   response.body)
+    return response
 
 
 def view_course(browser):
-  response = browser.get('course')
-  AssertContains(' the stakes are high.', response.body)
-  AssertContains('<a href="assessment?name=Pre">Pre-course assessment</a>', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('course')
+    AssertContains(' the stakes are high.', response.body)
+    AssertContains('<a href="assessment?name=Pre">Pre-course assessment</a>',
+                   response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_unit(browser):
-  response = browser.get('unit?unit=1&lesson=1')
-  AssertContains('Unit 1 - Introduction', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('unit?unit=1&lesson=1')
+    AssertContains('Unit 1 - Introduction', response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_activity(browser):
-  response = browser.get('activity?unit=1&lesson=2')
-  AssertContains('<script src="assets/js/activity-1.2.js"></script>', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('activity?unit=1&lesson=2')
+    AssertContains('<script src="assets/js/activity-1.2.js"></script>',
+                   response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_announcements(browser):
-  response = browser.get('announcements')
-  AssertContains('Example Announcement', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('announcements')
+    AssertContains('Example Announcement', response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_my_profile(browser):
-  response = browser.get('student/home')
-  AssertContains('Date enrolled', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('student/home')
+    AssertContains('Date enrolled', response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_forum(browser):
-  response = browser.get('forum')
-  AssertContains('document.getElementById("forum_embed").src =', response.body)
-  AssertContains(get_current_user_email(), response.body)
-  return response
+    response = browser.get('forum')
+    AssertContains('document.getElementById("forum_embed").src =',
+                   response.body)
+    AssertContains(get_current_user_email(), response.body)
+    return response
 
 
 def view_assessments(browser):
-  for name in ['Pre', 'Mid', 'Fin']:
-    response = browser.get('assessment?name=%s' % name)
-    assert 'assets/js/assessment-%s.js' % name in response.body
-    AssertEquals(response.status_int, 200)
-    AssertContains(get_current_user_email(), response.body)
+    for name in ['Pre', 'Mid', 'Fin']:
+        response = browser.get('assessment?name=%s' % name)
+        assert 'assets/js/assessment-%s.js' % name in response.body
+        AssertEquals(response.status_int, 200)
+        AssertContains(get_current_user_email(), response.body)
 
 
 def change_name(browser, new_name):
-  response = browser.get('student/home')
+    response = browser.get('student/home')
 
-  response.form.set('name', new_name)
-  response = browser.submit(response.form)
+    response.form.set('name', new_name)
+    response = browser.submit(response.form)
 
-  AssertEquals(response.status_int, 302)
-  check_profile(browser, new_name)
+    AssertEquals(response.status_int, 302)
+    check_profile(browser, new_name)
 
 
 def unregister(browser):
-  response = browser.get('student/home')
-  response = browser.click(response, 'Unenroll')
+    response = browser.get('student/home')
+    response = browser.click(response, 'Unenroll')
 
-  AssertContains('to unenroll from', response.body)
-  browser.submit(response.form)
+    AssertContains('to unenroll from', response.body)
+    browser.submit(response.form)
 
 
-class Permissions():
-  """Defines who can see what."""
-  @classmethod
-  def get_logged_out_allowed_pages(cls):
-    """Returns all pages that a logged-out user can see."""
-    return [view_preview]
+class Permissions(object):
+    """Defines who can see what."""
 
-  @classmethod
-  def get_logged_out_denied_pages(cls):
-    """Returns all pages that a logged-out user can't see."""
-    return [view_announcements, view_forum, view_course, view_assessments,
-            view_unit, view_activity, view_my_profile, view_registration]
+    @classmethod
+    def get_logged_out_allowed_pages(cls):
+        """Returns all pages that a logged-out user can see."""
+        return [view_preview]
 
-  @classmethod
-  def get_enrolled_student_allowed_pages(cls):
-    """Returns all pages that a logged-in, enrolled student can see."""
-    return [view_announcements, view_forum, view_course,
-        view_assessments, view_unit, view_activity, view_my_profile]
+    @classmethod
+    def get_logged_out_denied_pages(cls):
+        """Returns all pages that a logged-out user can't see."""
+        return [view_announcements, view_forum, view_course, view_assessments,
+                view_unit, view_activity, view_my_profile, view_registration]
 
-  @classmethod
-  def get_enrolled_student_denied_pages(cls):
-    """Returns all pages that a logged-in, enrolled student can't see."""
-    return [view_registration, view_preview]
+    @classmethod
+    def get_enrolled_student_allowed_pages(cls):
+        """Returns all pages that a logged-in, enrolled student can see."""
+        return [view_announcements, view_forum, view_course,
+                view_assessments, view_unit, view_activity, view_my_profile]
 
-  @classmethod
-  def get_unenrolled_student_allowed_pages(cls):
-    """Returns all pages that a logged-in, unenrolled student can see."""
-    return [view_registration, view_preview]
+    @classmethod
+    def get_enrolled_student_denied_pages(cls):
+        """Returns all pages that a logged-in, enrolled student can't see."""
+        return [view_registration, view_preview]
 
-  @classmethod
-  def get_unenrolled_student_denied_pages(cls):
-    """Returns all pages that a logged-in, unenrolled student can't see."""
-    all = Permissions.get_enrolled_student_allowed_pages()
-    for allowed in Permissions.get_unenrolled_student_allowed_pages():
-      if allowed in all:
-        all.remove(allowed)
-    return all
+    @classmethod
+    def get_unenrolled_student_allowed_pages(cls):
+        """Returns all pages that a logged-in, unenrolled student can see."""
+        return [view_registration, view_preview]
 
-  @classmethod
-  def assert_logged_out(cls, browser):
-    """Check that current user can see only what is allowed to a logged-out user."""
-    AssertNoneFail(browser, Permissions.get_logged_out_allowed_pages())
-    AssertAllFail(browser, Permissions.get_logged_out_denied_pages())
+    @classmethod
+    def get_unenrolled_student_denied_pages(cls):
+        """Returns all pages that a logged-in, unenrolled student can't see."""
+        pages = Permissions.get_enrolled_student_allowed_pages()
+        for allowed in Permissions.get_unenrolled_student_allowed_pages():
+            if allowed in pages:
+                pages.remove(allowed)
+        return pages
 
-  @classmethod
-  def assert_enrolled(cls, browser):
-    """Check that current user can see only what is allowed to an enrolled student."""
-    AssertNoneFail(browser, Permissions.get_enrolled_student_allowed_pages())
-    AssertAllFail(browser, Permissions.get_enrolled_student_denied_pages())
+    @classmethod
+    def assert_logged_out(cls, browser):
+        """Check that only pages for a logged-out user are visible."""
+        AssertNoneFail(browser, Permissions.get_logged_out_allowed_pages())
+        AssertAllFail(browser, Permissions.get_logged_out_denied_pages())
 
-  @classmethod
-  def assert_unenrolled(cls, browser):
-    """Check that current user can see only what is allowed to an unenrolled student."""
-    AssertNoneFail(browser, Permissions.get_unenrolled_student_allowed_pages())
-    AssertAllFail(browser, Permissions.get_unenrolled_student_denied_pages())
+    @classmethod
+    def assert_enrolled(cls, browser):
+        """Check that only pages for an enrolled student are visible."""
+        AssertNoneFail(
+            browser, Permissions.get_enrolled_student_allowed_pages())
+        AssertAllFail(browser, Permissions.get_enrolled_student_denied_pages())
 
+    @classmethod
+    def assert_unenrolled(cls, browser):
+        """Check that only pages for an unenrolled student are visible."""
+        AssertNoneFail(
+            browser, Permissions.get_unenrolled_student_allowed_pages())
+        AssertAllFail(
+            browser, Permissions.get_unenrolled_student_denied_pages())

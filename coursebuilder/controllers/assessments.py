@@ -11,106 +11,115 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# @author: pgbovine@google.com (Philip Guo)
-
 
 """Classes and methods to manage all aspects of student assessments."""
 
-import json, logging
+__author__ = 'pgbovine@google.com (Philip Guo)'
+
+import json
+import logging
+
+from models import utils
 from models.models import Student
-from models.utils import *
+
 from utils import BaseHandler
+
 from google.appengine.api import users
 from google.appengine.ext import db
 
 
-# Stores the assessment data in the student database entry
-# and returns the (possibly-modified) assessment type,
-# which the caller can use to render an appropriate response page.
-#
-# (caller must call student.put() to commit)
-#
-# FIXME: Course creators can edit this code to implement
-#        custom assessment scoring and storage behavior
 def storeAssessmentData(student, assessment_type, score, answer):
-  # TODO: Note that the latest version of answers are always saved,
-  # but scores are only saved if they're higher than the previous
-  # attempt.  This can lead to unexpected analytics behavior, so we
-  # should resolve this somehow.
-  setAnswer(student, assessment_type, answer)
-  existing_score = getScore(student, assessment_type)
-  # remember to cast to int for comparison
-  if (existing_score is None) or (score > int(existing_score)):
-    setScore(student, assessment_type, score)
+    """Stores a student's assessment data.
 
-  # special handling for computing final score:
-  if assessment_type == 'postcourse':
-    midcourse_score = getScore(student, 'midcourse')
-    if midcourse_score is None:
-      midcourse_score = 0
-    else:
-      midcourse_score = int(midcourse_score)
+    Args:
+        student: the student whose data is stored.
+        assessment_type: the type of the assessment.
+        score: the student's score on this assessment.
+        answer: the list of the student's answers on this assessment.
 
-    if existing_score is None:
-      postcourse_score = score
-    else:
-      postcourse_score = int(existing_score)
-      if score > postcourse_score:
-        postcourse_score = score
+    Returns:
+        the (possibly modified) assessment_type, which the caller can
+        use to render an appropriate response page.
+    """
+    # FIXME: Course creators can edit this code to implement custom
+    # assessment scoring and storage behavior
+    # TODO(pgbovine): Note that the latest version of answers are always saved,
+    # but scores are only saved if they're higher than the previous attempt.
+    # This can lead to unexpected analytics behavior. Resolve this.
+    utils.setAnswer(student, assessment_type, answer)
+    existing_score = utils.getScore(student, assessment_type)
+    # remember to cast to int for comparison
+    if (existing_score is None) or (score > int(existing_score)):
+        utils.setScore(student, assessment_type, score)
 
-    # Calculate overall score based on a formula
-    overall_score = int((0.30*midcourse_score) + (0.70*postcourse_score))
+    # special handling for computing final score:
+    if assessment_type == 'postcourse':
+        midcourse_score = utils.getScore(student, 'midcourse')
+        if midcourse_score is None:
+            midcourse_score = 0
+        else:
+            midcourse_score = int(midcourse_score)
 
-    # TODO: this changing of assessment_type is ugly ...
-    if overall_score >= 70:
-      assessment_type = 'postcourse_pass'
-    else:
-      assessment_type = 'postcourse_fail'
-    setScore(student, 'overall_score', overall_score)
+        if existing_score is None:
+            postcourse_score = score
+        else:
+            postcourse_score = int(existing_score)
+            if score > postcourse_score:
+                postcourse_score = score
 
-  return assessment_type
+        # Calculate overall score based on a formula
+        overall_score = int((0.3 * midcourse_score) + (0.7 * postcourse_score))
+
+        # TODO(pgbovine): this changing of assessment_type is ugly ...
+        if overall_score >= 70:
+            assessment_type = 'postcourse_pass'
+        else:
+            assessment_type = 'postcourse_fail'
+        utils.setScore(student, 'overall_score', overall_score)
+
+    return assessment_type
 
 
-"""
-Handler for saving assessment answers
-"""
 class AnswerHandler(BaseHandler):
+    """Handler for saving assessment answers."""
 
-  # Find student entity and save answers
-  @db.transactional
-  def storeAssessmentTransaction(self, email, original_type, answer):
-    student = Student.get_by_email(email)
+    # Find student entity and save answers
+    @db.transactional
+    def storeAssessmentTransaction(self, email, original_type, answer):
+        student = Student.get_by_email(email)
 
-    # TODO: considering storing as float for better precision
-    score = int(round(float(self.request.get('score'))))
-    assessment_type = storeAssessmentData(student, original_type, score, answer)
-    student.put()
-    return (student, assessment_type)
+        # TODO(pgbovine): consider storing as float for better precision
+        score = int(round(float(self.request.get('score'))))
+        assessment_type = storeAssessmentData(
+            student, original_type, score, answer)
+        student.put()
+        return (student, assessment_type)
 
-  def post(self):
-    user = self.personalizePageAndGetUser()
-    if not user:
-      self.redirect(users.create_login_url(self.request.uri))
-      return
-    
-    # Read in answers
-    answer = json.dumps(self.request.POST.items())
-    original_type = self.request.get('assessment_type')
+    def post(self):
+        """Handles POST requests."""
+        user = self.personalizePageAndGetUser()
+        if not user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return
 
-    # Check for enrollment status
-    student = Student.get_by_email(user.email())
-    if student and student.is_enrolled:
-      # Log answer submission
-      logging.info(student.key().name() + ':' + answer)
+        # Read in answers
+        answer = json.dumps(self.request.POST.items())
+        original_type = self.request.get('assessment_type')
 
-      (student, assessment_type) = self.storeAssessmentTransaction(student.key().name(), original_type, answer)
+        # Check for enrollment status
+        student = Student.get_by_email(user.email())
+        if student and student.is_enrolled:
+            # Log answer submission
+            logging.info(student.key().name() + ':' + answer)
 
-      # Serve the confirmation page
-      self.templateValue['navbar'] = {'course': True}
-      self.templateValue['assessment'] = assessment_type
-      self.templateValue['student_score'] = getScore(student, 'overall_score')
-      self.render('test_confirmation.html')
-    else:
-      self.redirect('/register')
+            (student, assessment_type) = self.storeAssessmentTransaction(
+                student.key().name(), original_type, answer)
 
+            # Serve the confirmation page
+            self.templateValue['navbar'] = {'course': True}
+            self.templateValue['assessment'] = assessment_type
+            self.templateValue['student_score'] = utils.getScore(
+                student, 'overall_score')
+            self.render('test_confirmation.html')
+        else:
+            self.redirect('/register')

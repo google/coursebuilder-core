@@ -29,68 +29,70 @@ EXPECTED_TEST_COUNT = 14
 
 
 def EmptyEnviron():
-  os.environ['AUTH_DOMAIN'] = 'example.com'
-  os.environ['SERVER_NAME'] = 'localhost'
-  os.environ['SERVER_PORT'] = '8080'
-  os.environ['USER_EMAIL'] = ''
-  os.environ['USER_ID'] = ''
+    os.environ['AUTH_DOMAIN'] = 'example.com'
+    os.environ['SERVER_NAME'] = 'localhost'
+    os.environ['SERVER_PORT'] = '8080'
+    os.environ['USER_EMAIL'] = ''
+    os.environ['USER_ID'] = ''
 
 
 class BaseTestClass(unittest.TestCase):
-  """Base class for setting up and tearing down test cases."""
+    """Base class for setting up and tearing down test cases."""
 
-  def getApp(self):
-    """Returns the main application to be tested."""
-    raise Exception('Not implemented.')
+    def getApp(self):
+        """Returns the main application to be tested."""
+        raise Exception('Not implemented.')
 
-  def setUp(self):
-    EmptyEnviron()
+    def setUp(self):
+        EmptyEnviron()
 
-    # setup an app to be tested
-    self.testapp = webtest.TestApp(self.getApp())
-    self.testbed = testbed.Testbed()
-    self.testbed.activate()
+        # setup an app to be tested
+        self.testapp = webtest.TestApp(self.getApp())
+        self.testbed = testbed.Testbed()
+        self.testbed.activate()
 
-    # declare any relevant App Engine service stubs here
-    self.testbed.init_user_stub()
-    self.testbed.init_memcache_stub()
-    self.testbed.init_datastore_v3_stub()
+        # declare any relevant App Engine service stubs here
+        self.testbed.init_user_stub()
+        self.testbed.init_memcache_stub()
+        self.testbed.init_datastore_v3_stub()
 
-  def tearDown(self):
-    self.testbed.deactivate()
+    def tearDown(self):
+        self.testbed.deactivate()
 
 
 def createTestSuite():
-  """Loads all tests classes from appropriate modules."""
-  import tests.functional.tests as functional
-  return unittest.TestLoader().loadTestsFromModule(functional)
+    """Loads all tests classes from appropriate modules."""
+    import tests.functional.tests as functional  # pylint: disable=C6204
+    return unittest.TestLoader().loadTestsFromModule(functional)
 
 
 def fix_sys_path():
-  """Fix the sys.path to include GAE extra paths."""
-  import dev_appserver
+    """Fix the sys.path to include GAE extra paths."""
+    import dev_appserver  # pylint: disable=C6204
 
-  # dev_appserver.fix_sys_path() prepends GAE paths to sys.path and hides
-  # our classes like 'tests' behind other modules that have 'tests'
-  # here, unlike dev_appserver, we append, not prepend path so our classes are first
-  sys.path = sys.path + dev_appserver.EXTRA_PATHS[:]
+    # dev_appserver.fix_sys_path() prepends GAE paths to sys.path and hides
+    # our classes like 'tests' behind other modules that have 'tests'.
+    # Here, unlike dev_appserver, we append the path instead of prepending it,
+    # so that our classes come first.
+    sys.path += dev_appserver.EXTRA_PATHS[:]
 
 
 def main():
-  """Starts in-process server and runs all test cases in this module."""
-  fix_sys_path()
-  result = unittest.TextTestRunner(verbosity=2).run(createTestSuite())
+    """Starts in-process server and runs all test cases in this module."""
+    fix_sys_path()
+    result = unittest.TextTestRunner(verbosity=2).run(createTestSuite())
 
-  if result.testsRun != EXPECTED_TEST_COUNT:
-    raise Exception(
-        'Expected %s tests to be run, not %s.' % (EXPECTED_TEST_COUNT, result.testsRun))
+    if result.testsRun != EXPECTED_TEST_COUNT:
+        raise Exception('Expected %s tests to be run, not %s.' %
+                        (EXPECTED_TEST_COUNT, result.testsRun))
 
-  if len(result.errors) != 0 or len(result.failures) != 0:
-    raise Exception(
-        "Functional test suite failed: %s errors, %s failures of %s tests run." % (
-            len(result.errors), len(result.failures), result.testsRun))
+    if result.errors or result.failures:
+        raise Exception(
+            'Functional test suite failed: %s errors, %s failures of '
+            ' %s tests run.' % (
+                len(result.errors), len(result.failures), result.testsRun))
 
 
 if __name__ == '__main__':
-  logging.basicConfig(level=3)
-  main()
+    logging.basicConfig(level=3)
+    main()

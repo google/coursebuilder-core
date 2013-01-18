@@ -11,12 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# @author: psimakov@google.com (Pavel Simakov)
-
 
 """Custom configurations and functions for Google App Engine."""
 
+__author__ = 'psimakov@google.com (Pavel Simakov)'
 
 import os
 
@@ -25,10 +23,7 @@ import os
 BUNDLE_ROOT = os.path.dirname(__file__)
 
 
-from google.appengine.api import namespace_manager
-
-
 def namespace_manager_default_namespace_for_request():
-  """Set a namespace appropriate for this request."""
-  from controllers import sites
-  return sites.ApplicationContext.getNamespaceName()
+    """Set a namespace appropriate for this request."""
+    from controllers import sites  # pylint: disable=C6204
+    return sites.ApplicationContext.getNamespaceName()
