@@ -19,7 +19,7 @@
     margin-bottom: 2px;
     padding: 2px;
     text-align: left;
-    border: solid 1px #999999;    
+    border: solid 1px #999999;
   }
   div.inputex-form-buttonbar {
     margin: 0px;
@@ -98,7 +98,7 @@
     elem.innerText = text;
     elem.style.display = "block";
   }
-  
+
   function cbHideMsg(){
   elem = document.getElementById("formStatusMessage");
     elem.style.display = "none";
@@ -110,17 +110,17 @@
 
   // keep all our global objects here
   cb_global = {};
-  
+
   // set home folder
   YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
-  
+
   YUI({filter: "raw"}).use(
     'querystring-stringify-simple',
     'inputex-group','inputex-select','inputex-string','inputex-form',
     'inputex-radio','inputex-date','inputex-datepicker','inputex-jsonschema',
     'inputex-checkbox','inputex-list','inputex-color','inputex-rte','inputex-textarea',
     function (Y) {
-  
+
       // here is the object schema
       var schema = {
         root : {{ schema }}
@@ -136,7 +136,7 @@
         'schemaIdentifierMap': schema
       });
       inputExDefinition = builder.schemaToInputEx(schema.root);
-  
+
       // bind buttons
       inputExDefinition.buttons = [
         {type: 'submit-link', value: 'Save', onClick:function() {
@@ -169,10 +169,10 @@
                       cbShowMsg("Server error; error code " + json.status + ". " + msg);
                       return
                     }
-  
+
                     // save lastSavedFormValue
                     cb_global.lastSavedFormValue = lastSavedFormValue;
-  
+
                     // update UI
                     cbShowMsg(json.message);
                     setTimeout(function(){ cbHideMsg(); }, 750);
@@ -190,8 +190,7 @@
           lastSavedFormValue = cb_global.lastSavedFormValue.toPrettyJSONString(true);
           now = cb_global.form.getValue().toPrettyJSONString(true);
           if (lastSavedFormValue == now || confirm("Abandon all changes?")) {
-            // TODO(psimakov): use exit_url
-            history.back();
+            window.location = '{{ exit_url }}';
           }
 
         }}
@@ -200,10 +199,10 @@
       // create form and bind it to DOM
       inputExDefinition.parentEl = 'formContainer';
       cb_global.form = new Y.inputEx.Form(inputExDefinition);
-  
+
       // async get data from the sever and push it into the form when ready
       var url = '{{ get_url }}';
-  
+
       // request data for object being edited
       Y.io(url, {
         method: 'GET',
@@ -211,7 +210,7 @@
         on: {
             success: function(id, o, args) {
               var json = JSON.parse(o.responseText);
-  
+
               // check status code
               if (json.status != 200) {
                 msg = "Unknown error (" + json.status + ").";
@@ -221,25 +220,25 @@
                 cbShowMsg("Server error; error code " + json.status + ". " + msg);
                 return
               }
-  
+
               // check payload
               if (!json.payload) {
                 cbShowMsg("Server error; server sent no payload.");
                 return
               }
-  
+
               // push payload into form
               payload = JSON.parse(json.payload);
               cb_global.form.setValue(payload);
-                          
+
               // save lastSavedFormValue
               cb_global.original = payload;
               cb_global.lastSavedFormValue = payload;
-               
+
               // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
               // but it does not work for rich edit control as it has delayed loading
               // and may not be ready when this line above is executed
-  
+
               // update ui state
               document.getElementById("formContainer").style.display = "block";
               cbShowMsg(json.message);

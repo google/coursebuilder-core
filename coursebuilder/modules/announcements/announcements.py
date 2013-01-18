@@ -141,13 +141,10 @@ class AnnouncementsHandler(BaseHandler):
         """Add child handlers for REST."""
         return [('/rest/announcements/item', ItemRESTHandler)]
 
-    def get_edit_action_url(self, key):
-        args = {'action': 'edit', 'key': key}
-        return self.canonicalize_url(
-            '/announcements?%s' % urllib.urlencode(args))
-
-    def get_delete_action_url(self, key):
-        args = {'action': 'delete', 'key': key}
+    def get_action_url(self, action, key=None):
+        args = {'action': action}
+        if key:
+            args['key'] = key
         return self.canonicalize_url(
             '/announcements?%s' % urllib.urlencode(args))
 
@@ -194,6 +191,29 @@ class AnnouncementsHandler(BaseHandler):
 
         return handler()
 
+    def format_items_for_template(self, items):
+        """Formats a list of entities into template values."""
+        template_items = []
+        for item in items:
+            item = transforms.entity_to_dict(item)
+
+            # add 'edit' actions
+            if AnnouncementsRights.can_edit():
+                item['edit_action'] = self.get_action_url('edit', item['key'])
+                item['delete_action'] = self.get_action_url(
+                    'delete', item['key'])
+
+            template_items.append(item)
+
+        output = {}
+        output['children'] = template_items
+
+        # add 'add' action
+        if AnnouncementsRights.can_edit():
+            output['add_action'] = self.get_action_url('add')
+
+        return output
+
     def get_list(self):
         """Shows a list of announcements."""
         user = self.personalize_page_and_get_user()
@@ -212,22 +232,8 @@ class AnnouncementsHandler(BaseHandler):
             items = init_sample_announcements(
                 [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
 
-        items = self.apply_rights(items)
-
-        args = {}
-        args['children'] = items
-
-        if AnnouncementsRights.can_edit():
-            # add 'edit' actions
-            for item in items:
-                item.edit_action = self.get_edit_action_url(item.key())
-                item.delete_action = self.get_delete_action_url(item.key())
-
-            # add 'add' action
-            args['add_action'] = self.canonicalize_url(
-                '/announcements?action=add')
-
-        self.template_value['announcements'] = args
+        self.template_value['announcements'] = self.format_items_for_template(
+            self.apply_rights(items))
         self.template_value['navbar'] = {'announcements': True}
         self.render('announcements.html')
 
@@ -238,9 +244,12 @@ class AnnouncementsHandler(BaseHandler):
             return
 
         key = self.request.get('key')
+
+        exit_url = self.canonicalize_url(
+            '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = ObjectEditor.get_html_for(
-            self, ANNOUNCEMENT_ENTITY_SCHEMA, key, rest_url)
+            self, ANNOUNCEMENT_ENTITY_SCHEMA, key, rest_url, exit_url)
         self.template_value['navbar'] = {'announcements': True}
         self.template_value['content'] = form_html
         self.render('bare.html')
@@ -269,7 +278,7 @@ class AnnouncementsHandler(BaseHandler):
         entity.html = 'Here is my announcement!'
         entity.is_draft = True
         entity.put()
-        self.redirect(self.get_edit_action_url(entity.key()))
+        self.redirect(self.get_action_url('edit', entity.key()))
 
 
 def send_json_response(handler, status_code, message, payload_dict=None):

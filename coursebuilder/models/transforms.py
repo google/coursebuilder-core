@@ -71,6 +71,10 @@ def entity_to_dict(entity):
             output[key] = value
         else:
             raise ValueError('Failed to encode: %s' % prop)
+
+    # explicitly add entity key as a 'string' attribute
+    output['key'] = str(entity.key())
+
     return output
 
 

@@ -25,7 +25,7 @@ class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
 
     @classmethod
-    def get_html_for(cls, handler, schema, object_key, rest_provider_url):
+    def get_html_for(cls, handler, schema, object_key, rest_url, exit_url):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -35,17 +35,20 @@ class ObjectEditor(object):
             handler: a BaseHandler class, which will host this HTML, JS and CSS
             schema: a JSON schema dictionary for the object being edited
             object_key: a key of an object being edited
-            rest_provider_url: a REST endpoint for object GET/PUT operation
+            rest_url: a REST endpoint for object GET/PUT operation
+            exit_url: a URL to go to after the editor form is dismissed
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
         """
 
         type_label = schema['description']
+        if not type_label:
+            type_label = 'Generic Object'
 
-        get_url = rest_provider_url
+        get_url = rest_url
         get_args = {'key': object_key}
-        post_url = rest_provider_url
+        post_url = rest_url
         post_args = {'key': object_key}
 
         template_values = {
@@ -53,7 +56,8 @@ class ObjectEditor(object):
             'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
             'post_url': post_url,
-            'post_args': json.dumps(post_args)
+            'post_args': json.dumps(post_args),
+            'exit_url': exit_url
         }
 
         return handler.get_template(

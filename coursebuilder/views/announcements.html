@@ -29,7 +29,7 @@
               <button class="gcb-button gcb-button-action">Edit</button>
             </a>
           {% endif %}
-          <h2>{{ item.title }}{% if item.is_draft %} (Draft){% endif %}</h2>
+          <h2><a name='{{ item.key }}'></a>{{ item.title }}{% if item.is_draft %} (Draft){% endif %}</h2>
           <p>{{ item.date }}</p>
           <p "margin: 20px 0px;">
           {{ item.html }}
