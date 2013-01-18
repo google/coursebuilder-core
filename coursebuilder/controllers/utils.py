@@ -105,10 +105,17 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     def append_base(self):
         """Append current course <base> to template variables."""
-        slug = self.app_context.get_slug()
-        if not slug.endswith('/'):
-            slug = '%s/' % slug
-        self.template_value[COURSE_BASE_KEY] = slug
+        base = self.app_context.get_slug()
+        if not base.endswith('/'):
+            base = '%s/' % base
+
+        # For IE to work with the <base> tag, its href must be an absolute URL.
+        if not self.is_absolute(base):
+            parts = urlparse.urlparse(self.request.url)
+            base = urlparse.urlunparse(
+                (parts.scheme, parts.netloc, base, None, None, None))
+
+        self.template_value[COURSE_BASE_KEY] = base
 
     def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
