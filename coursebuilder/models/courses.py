@@ -119,7 +119,6 @@ class Lesson(object):
         self.objectives = ''
         self.video = ''
         self.notes = ''
-        self.slides = ''
         self.duration = ''
         self.activity = ''
         self.activity_title = ''
