@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 from datetime import datetime
 import json
 import logging
+import time
 import entities
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
@@ -46,18 +47,24 @@ class DurableJob(object):
     def main(self):
         """Main method of the deferred task."""
         logging.info('Job started: %s', self._job_name)
+
+        time_started = time.time()
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(self._namespace)
             try:
                 result = self.run()
+                duration = long(time.time() - time_started)
+
                 DurableJobEntity.complete_job(
-                    self._job_name, json.dumps(result))
+                    self._job_name, json.dumps(result), duration)
 
                 logging.info('Job completed: %s', self._job_name)
             except Exception as e:
                 logging.error('Job failed: %s\n%s', self._job_name, e)
-                DurableJobEntity.fail_job(self._job_name, str(e))
+
+                duration = long(time.time() - time_started)
+                DurableJobEntity.fail_job(self._job_name, str(e), duration)
                 raise e
         finally:
             namespace_manager.set_namespace(old_namespace)
@@ -76,6 +83,7 @@ class DurableJobEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of durable job."""
 
     updated_on = db.DateTimeProperty()
+    execution_time_sec = db.IntegerProperty()
     status_code = db.IntegerProperty()
     output = db.TextProperty()
 
@@ -84,7 +92,7 @@ class DurableJobEntity(entities.BaseEntity):
         return DurableJobEntity.get_by_key_name(name)
 
     @classmethod
-    def update(cls, name, status_code, output):
+    def update(cls, name, status_code, output, execution_time_sec):
         """Updates job state in a datastore."""
 
         def mutation():
@@ -93,6 +101,7 @@ class DurableJobEntity(entities.BaseEntity):
                 logging.error('Job was not started or was deleted: %s', name)
                 return
             job.updated_on = datetime.now()
+            job.execution_time_sec = execution_time_sec
             job.status_code = status_code
             job.output = output
             job.put()
@@ -108,6 +117,7 @@ class DurableJobEntity(entities.BaseEntity):
                 job = DurableJobEntity(key_name=name)
 
             job.updated_on = datetime.now()
+            job.execution_time_sec = 0
             job.status_code = STATUS_CODE_NONE
             job.output = None
             job.put()
@@ -115,12 +125,13 @@ class DurableJobEntity(entities.BaseEntity):
 
     @classmethod
     def start_job(cls, name):
-        return cls.update(name, STATUS_CODE_STARTED, None)
+        return cls.update(name, STATUS_CODE_STARTED, None, 0)
 
     @classmethod
-    def complete_job(cls, name, output):
-        return cls.update(name, STATUS_CODE_COMPLETED, output)
+    def complete_job(cls, name, output, execution_time_sec):
+        return cls.update(
+            name, STATUS_CODE_COMPLETED, output, execution_time_sec)
 
     @classmethod
-    def fail_job(cls, name, output):
-        return cls.update(name, STATUS_CODE_FAILED, output)
+    def fail_job(cls, name, output, execution_time_sec):
+        return cls.update(name, STATUS_CODE_FAILED, output, execution_time_sec)

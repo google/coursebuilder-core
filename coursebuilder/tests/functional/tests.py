@@ -272,8 +272,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         response = self.get('dashboard?action=students')
         assert_contains(
             'Google</a> &gt; Dashboard &gt; Students', response.body)
-        assert_contains(
-            'Enrollment statistics has\'t been calculated yet.', response.body)
+        assert_contains('was\'t calculated yet', response.body)
 
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
@@ -281,12 +280,12 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert len(self.taskq.GetTasks('default')) == 1
 
         response = self.get('dashboard?action=students')
-        assert_contains(
-            'Enrollment statistics is being calculated now.', response.body)
+        assert_contains('is running', response.body)
 
         self.execute_all_deferred_tasks()
 
         response = self.get('dashboard?action=students')
+        assert_contains('was updated on', response.body)
         assert_contains('Registered and enrolled: 1', response.body)
         assert_contains('Total: 1', response.body)
 

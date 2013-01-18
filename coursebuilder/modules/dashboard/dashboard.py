@@ -236,6 +236,8 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Students')
 
+        stats = '<li>no data</li>'
+        update_message = ''
         update_action = """
             <form
                 id='gcb-compute-student-stats'
@@ -251,13 +253,13 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
         job = ComputeStudentStats(self.app_context).load()
         if not job:
-            enrollment_data = """
-                <li>Enrollment statistics has't been calculated yet.</li>"""
+            update_message = """
+                Enrollment statistics was't calculated yet."""
         else:
             if job.status_code == jobs.STATUS_CODE_FAILED:
-                enrollment_data = """
-                    <li>There was an error computing enrollment statistics.
-                    Please try again.</li>"""
+                update_message = """
+                    There was an error updating enrollment statistics.
+                    Please review log file messages and try again."""
             elif job.status_code == jobs.STATUS_CODE_COMPLETED:
                 stats = json.loads(job.output)
                 enrolled = stats['enrolled']
@@ -268,25 +270,26 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                     '<li>Registered, but not enrolled: %s</li>' % unenrolled)
                 lines.append('<li>Registered and enrolled: %s</li>' % enrolled)
                 lines.append('<li>Total: %s</li>' % (unenrolled + enrolled))
-                lines.append('<li>Last updated on: %s</li>' % job.updated_on)
+                stats = ''.join(lines)
 
-                enrollment_data = ''.join(lines)
+                update_message = """
+                    Enrollment statistics was updated on
+                    %s in about %s second(s).""" % (
+                        job.updated_on, job.execution_time_sec)
             else:
                 update_action = ''
-                enrollment_data = """
-                    <li>
-                        Enrollment statistics is being calculated now.
-                        Please come back shortly.
-                    </li>"""
+                update_message = """
+                    Enrollment statistics update started on %s and is running
+                    now. Please come back shortly.""" % job.updated_on
 
         lines = []
 
         lines.append("""
             <h3>Enrollment Statistics</h3>
-            <ul>
+            <ul>%s</ul>
             %s
             %s
-            </ul>""" % (enrollment_data, update_action))
+            """ % (stats, update_message, update_action))
 
         lines = ''.join(lines)
 
