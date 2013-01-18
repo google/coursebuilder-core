@@ -18,6 +18,7 @@
 
 __author__ = 'Sean Lip'
 
+import datetime
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ from controllers import utils
 from controllers.sites import assert_fails
 from controllers.utils import XsrfTokenManager
 from models import config
+from models import jobs
 from models import models
 from models.utils import get_all_scores
 from models.utils import get_score
@@ -45,6 +47,46 @@ from google.appengine.api import namespace_manager
 
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
+
+    def assert_queriable(self, entity, name, date_type=datetime.datetime):
+        """Create some entities and check that single-property queries work."""
+        for i in range(1, 32):
+            item = entity(
+                key_name='%s_%s' % (date_type.__class__.__name__, i))
+            setattr(item, name, date_type(2012, 1, i))
+            item.put()
+
+        # Descending order.
+        items = entity.all().order('-%s' % name).fetch(1000)
+        assert len(items) == 31
+        assert getattr(items[0], name) == date_type(2012, 1, 31)
+
+        # Ascending order.
+        items = entity.all().order('%s' % name).fetch(1000)
+        assert len(items) == 31
+        assert getattr(items[0], name) == date_type(2012, 1, 1)
+
+    def test_indexed_properties(self):
+        """Test whether entities support specific query types."""
+
+        # A 'DateProperty' or 'DateTimeProperty' of each persistent entity must
+        # be indexed. This is true even if the application doesn't execute any
+        # queries relying on the index. The index is still critically important
+        # for managing data, for example, for bulk data download or for
+        # incremental computations. Using index, the entire table can be
+        # processed in daily, weekly, etc. chunks and it is easy to query for
+        # new data. If we did not have an index, chunking would have to be done
+        # by the primary index, where it is impossible to separate recently
+        # added/modified rows from the rest of the data. Having this index adds
+        # to the cost of datastore writes, but we believe it is important to
+        # have it. Below we check that all persistent date/datetime properties
+        # are indexed.
+
+        self.assert_queriable(AnnouncementEntity, 'date', datetime.date)
+        self.assert_queriable(models.EventEntity, 'recorded_on')
+        self.assert_queriable(models.Student, 'enrolled_on')
+        self.assert_queriable(models.StudentAnswersEntity, 'recorded_on')
+        self.assert_queriable(jobs.DurableJobEntity, 'updated_on')
 
     def test_assets_and_date(self):
         """Verify semantics of all asset and data files."""

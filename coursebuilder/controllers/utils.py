@@ -243,9 +243,7 @@ class BaseRESTHandler(BaseHandler):
 
     def assert_xsrf_token_or_fail(self, token_dict, action, args_dict):
         """Asserts that current request has proper XSRF token or fails."""
-        token = None
-        if 'xsrf_token' in token_dict:
-            token = token_dict['xsrf_token']
+        token = token_dict.get('xsrf_token')
         if not token or not XsrfTokenManager.is_xsrf_token_valid(token, action):
             transforms.send_json_response(
                 self, 403,

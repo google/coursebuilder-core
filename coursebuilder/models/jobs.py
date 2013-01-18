@@ -82,7 +82,7 @@ class DurableJob(object):
 class DurableJobEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of durable job."""
 
-    updated_on = db.DateTimeProperty(indexed=False)
+    updated_on = db.DateTimeProperty(indexed=True)
     execution_time_sec = db.IntegerProperty(indexed=False)
     status_code = db.IntegerProperty(indexed=False)
     output = db.TextProperty(indexed=False)

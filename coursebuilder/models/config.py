@@ -208,9 +208,8 @@ class Registry(object):
 
 class ConfigPropertyEntity(entities.BaseEntity):
     """A class that represents a named configuration property."""
-    namespace = db.StringProperty()  # TODO(psimakov): incomplete
-    value = db.TextProperty()
-    is_draft = db.BooleanProperty()
+    value = db.TextProperty(indexed=False)
+    is_draft = db.BooleanProperty(indexed=False)
 
 
 def run_all_unit_tests():

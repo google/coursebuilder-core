@@ -70,10 +70,10 @@ class MemcacheManager(object):
 
 class Student(BaseEntity):
     """Student profile."""
-    enrolled_date = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    enrolled_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
     user_id = db.StringProperty(indexed=False)
     name = db.StringProperty(indexed=False)
-    is_enrolled = db.BooleanProperty()
+    is_enrolled = db.BooleanProperty(indexed=False)
 
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
@@ -134,7 +134,7 @@ class EventEntity(BaseEntity):
     the event. The event 'data' is a JSON object, the format of which is defined
     elsewhere and depends on the type of the event.
     """
-    datetime = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
     source = db.StringProperty(indexed=False)
     user_id = db.StringProperty(indexed=False)
 
@@ -155,7 +155,7 @@ class EventEntity(BaseEntity):
 class StudentAnswersEntity(BaseEntity):
     """Student answers to the assessments."""
 
-    recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
 
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)
