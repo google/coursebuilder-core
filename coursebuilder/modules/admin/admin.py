@@ -22,10 +22,17 @@ import os
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
+from models.config import ConfigProperty
+from models.config import Registry
 from models.models import PRODUCTION_MODE
 import webapp2
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
+
+
+GCB_ADMIN_LIST = ConfigProperty('gcb-admin-list', str, (
+    'A new line separated list of email addresses of administrative users. '
+    'Regular expressions are not supported, exact match only.'))
 
 
 class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
@@ -35,9 +42,18 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
     get_actions = [default_action, 'settings']
     post_actions = []
 
+    def can_view(self):
+        """Checks if current user has viewing rights."""
+        user = users.get_current_user()
+        if user and users.is_current_user_admin():
+            return True
+        if user and user.email() in GCB_ADMIN_LIST.value:
+            return True
+        return False
+
     def get(self):
         """Enforces rights to all GET operations."""
-        if not users.get_current_user() or not users.is_current_user_admin():
+        if not self.can_view():
             self.redirect('/')
             return
         return super(AdminHandler, self).get()
@@ -83,6 +99,8 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content.append('<ol>')
         for key in keys:
             value = source_dict[key]
+            if isinstance(value, ConfigProperty):
+                value = value.value
             content.append(
                 '<li>%s: %s</li>' % (cgi.escape(key), cgi.escape(str(value))))
         content.append('</ol>')
@@ -93,8 +111,9 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = 'Course Builder - Settings'
 
+        # Yaml file content.
         yaml_content = []
-        yaml_content.append('<h3>Contents of <code>app.yaml</code></h3>')
+        yaml_content.append('<h3>Application <code>app.yaml</code></h3>')
         yaml_content.append('<ul><pre>')
         yaml_lines = open(os.path.join(os.path.dirname(
             __file__), '../../app.yaml'), 'r').readlines()
@@ -102,15 +121,16 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             yaml_content.append('%s<br/>' % cgi.escape(line))
         yaml_content.append('</pre></ul>')
 
+        # Application identity.
         app_id = app.get_application_id()
         app_dict = {}
         app_dict['application_id'] = app_id
         app_dict['default_ver_hostname'] = app.get_default_version_hostname()
 
         template_values['main_content'] = self.render_dict(
-            app_dict, 'Application Identity') + ''.join(
-                yaml_content) + self.render_dict(
-                    os.environ, 'Server Environment Variables')
+            app_dict, 'Application Identity') + self.render_dict(
+                Registry.registered, 'Runtime Variables') + self.render_dict(
+                    os.environ, 'Environment Variables') + ''.join(yaml_content)
 
         self.render_page(template_values)
 

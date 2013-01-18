@@ -38,6 +38,32 @@ from actions import assert_equals
 class AdminAspectTest(actions.TestBase):
     """Tests site from the Admin perspective."""
 
+    def test_admin_list(self):
+        """Test delegation of admin access to another user."""
+
+        email = 'test_admin_list@google.com'
+        actions.login(email)
+
+        # Check user has no access.
+        response = self.testapp.get('/admin?action=settings')
+        assert_equals(response.status_int, 302)
+
+        # Add override.
+        os.environ['gcb-admin-list'] = email
+
+        # Check user has access now.
+        response = self.testapp.get('/admin?action=settings')
+        assert_equals(response.status_int, 200)
+        assert_contains(
+            'gcb-admin-list: test_admin_list@google.com', response.body)
+
+        # Remove override.
+        del os.environ['gcb-admin-list']
+
+        # Check user has no access.
+        response = self.testapp.get('/admin?action=settings')
+        assert_equals(response.status_int, 302)
+
     def test_access_to_admin_pages(self):
         """Test access to admin pages."""
 
@@ -54,7 +80,7 @@ class AdminAspectTest(actions.TestBase):
 
         response = self.testapp.get('/admin?action=settings')
         assert_contains('default_ver_hostname: None', response.body)
-        assert_contains('Server Environment Variables', response.body)
+        assert_contains('Environment Variables', response.body)
 
         actions.unregister(self)
         actions.logout()
