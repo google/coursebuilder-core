@@ -49,6 +49,57 @@ COURSE_BASE_KEY = 'gcb_course_base'
 COURSE_INFO_KEY = 'course_info'
 
 
+class ReflectiveRequestHandler(object):
+    """Uses reflection to handle custom get() and post() requests.
+
+    Use this class as a mix-in with any webapp2.RequestHandler to allow request
+    dispatching to multiple get() and post() methods based on the 'action'
+    parameter.
+
+    Open your existing webapp2.RequestHandler, add this class as a mix-in.
+    Define the following class variables:
+
+        default_action = 'list'
+        get_actions = ['default_action', 'edit']
+        post_actions = ['save']
+
+    Add instance methods named get_list(self), get_edit(self), post_save(self).
+    These methods will now be called automatically based on the 'action'
+    GET/POST parameter.
+    """
+
+    def get(self):
+        """Handles GET."""
+        action = self.request.get('action')
+        if not action:
+            action = self.__class__.default_action
+
+        if not action in self.__class__.get_actions:
+            self.error(404)
+            return
+
+        handler = getattr(self, 'get_%s' % action)
+        if not handler:
+            self.error(404)
+            return
+
+        return handler()
+
+    def post(self):
+        """Handles POST."""
+        action = self.request.get('action')
+        if not action or not action in self.__class__.post_actions:
+            self.error(404)
+            return
+
+        handler = getattr(self, 'post_%s' % action)
+        if not handler:
+            self.error(404)
+            return
+
+        return handler()
+
+
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 

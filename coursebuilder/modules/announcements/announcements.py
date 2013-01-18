@@ -20,6 +20,7 @@ import datetime
 import json
 import urllib
 from controllers.utils import BaseHandler
+from controllers.utils import ReflectiveRequestHandler
 from models.models import Student
 import models.transforms as transforms
 import modules.announcements.samples as samples
@@ -49,7 +50,7 @@ class AnnouncementsRights(object):
         return cls.can_edit()
 
 
-class AnnouncementsHandler(BaseHandler):
+class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
     """Handler for announcements."""
 
     default_action = 'list'
@@ -79,37 +80,6 @@ class AnnouncementsHandler(BaseHandler):
                 allowed.append(item)
 
         return allowed
-
-    def get(self):
-        """Handles GET."""
-        action = self.request.get('action')
-        if not action:
-            action = AnnouncementsHandler.default_action
-
-        if not action in AnnouncementsHandler.get_actions:
-            self.error(404)
-            return
-
-        handler = getattr(self, 'get_%s' % action)
-        if not handler:
-            self.error(404)
-            return
-
-        return handler()
-
-    def post(self):
-        """Handles POST."""
-        action = self.request.get('action')
-        if not action or not action in AnnouncementsHandler.post_actions:
-            self.error(404)
-            return
-
-        handler = getattr(self, 'post_%s' % action)
-        if not handler:
-            self.error(404)
-            return
-
-        return handler()
 
     def format_items_for_template(self, items):
         """Formats a list of entities into template values."""
