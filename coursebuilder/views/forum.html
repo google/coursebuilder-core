@@ -12,14 +12,16 @@
             frameborder="0"
             width="900"
             height="700">
-	  </iframe>
+       	  </iframe>
 
-          <script type="text/javascript">
-            document.getElementById("forum_embed").src =
-              "https://groups.google.com/forum/embed/?place=forum/[FIXME: insert course forum name here]"
+          {% if course_info.course.forum_embed_url %}
+            <script type="text/javascript">
+              document.getElementById("forum_embed").src =
+              "{{course_info.course.forum_embed_url}}"
               + "&showsearch=true&showpopout=true&showtabs=false"
               + "&parenturl=" + encodeURIComponent(window.location.href);
-          </script>
+            </script>
+          {% endif %}
         </div>
       </div>
     </div>

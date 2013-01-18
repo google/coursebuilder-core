@@ -48,6 +48,10 @@ course:
   #     http://code.google.com/p/course-builder/wiki/WebForums.
   forum_url: http://groups.google.com/group/My-Course
 
+  # Forum embedding URL. This link is used to embed the forum in an iframe on
+  # the forum.html page.
+  forum_embed_url: https://groups.google.com/forum/embed/?place=forum/My-Course
+
   # URL for the mailing list where students can register to receive course
   # announcements. For details, see
   #
