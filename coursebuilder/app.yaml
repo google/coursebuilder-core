@@ -21,9 +21,6 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/admin
   login: admin
   secure: always
-- url: /favicon.ico
-  static_files: assets/img/favicon.ico
-  upload: assets/img/favicon.ico
 - url: /.*
   script: main.app
 
