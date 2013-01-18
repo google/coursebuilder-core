@@ -6,6 +6,9 @@
 {% block main_content %}
 
 <script src="assets/js/activity-{{ units.unit_id }}.{{ lesson_id }}.js"></script>
+<script>
+  gcb_can_persist_activity_events = {{ record_events }};
+</script>
 
 <div class="gcb-main">
   <ul class="gcb-breadcrumb">

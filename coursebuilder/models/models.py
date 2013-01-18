@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ class MemcacheManager(object):
 class Student(BaseEntity):
     """Student profile."""
     enrolled_date = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    user_id = db.StringProperty(indexed=False)
     name = db.StringProperty(indexed=False)
     is_enrolled = db.BooleanProperty()
 
@@ -129,3 +130,23 @@ class Student(BaseEntity):
         student = Student.get_by_email(user.email())
         student.is_enrolled = is_enrolled
         student.put()
+
+
+class EventEntity(BaseEntity):
+    """Generic events."""
+    datetime = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    source = db.StringProperty(indexed=False)
+    user_id = db.StringProperty(indexed=False)
+
+    # Each of the following is a string representation of a JSON dict.
+    data = db.TextProperty(indexed=False)
+
+    @classmethod
+    def record(cls, source, user, data):
+        """Records new event into a datastore."""
+
+        event = EventEntity()
+        event.source = source
+        event.user_id = user.user_id()
+        event.data = data
+        event.put()

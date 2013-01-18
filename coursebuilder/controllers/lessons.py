@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,27 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-
+from models import models
+from models.config import ConfigProperty
+from models.counters import PerfCounter
 from utils import BaseHandler
+
+# Whether to record events in a database.
+CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
+    'gcb_can_persist_activity_events', bool, (
+        'If "True", all student activity interactions are recorded in a '
+        'datastore. Set to "False" to turn off event recording. Do so if you '
+        'will not analyze the data, to reduce the number of datastore '
+        'operations, or to minimize the use of Google App Engine quota.'),
+    False)
+
+ACTIVITY_EVENTS_RECEIVED = PerfCounter(
+    'gcb-activity-events-received',
+    'A number of activity events received by the server.')
+
+ACTIVITY_EVENTS_RECORDED = PerfCounter(
+    'gcb-activity-events-recorded',
+    'A number of activity events recorded by the server in a datastore.')
 
 
 def extract_unit_and_lesson_id(handler):
@@ -102,7 +121,7 @@ class UnitHandler(BaseHandler):
 
 
 class ActivityHandler(BaseHandler):
-    """Handler for generating activity page."""
+    """Handler for generating activity page and receiving submissions."""
 
     def get(self):
         """Handles GET requests."""
@@ -122,7 +141,7 @@ class ActivityHandler(BaseHandler):
         lessons = self.get_lessons(unit_id)
         self.template_value['lessons'] = lessons
 
-        # Set template values for nav-x bar
+        # Set template values for nav bar
         self.template_value['navbar'] = {'course': True}
 
         # Set template values for back and next nav buttons
@@ -134,7 +153,28 @@ class ActivityHandler(BaseHandler):
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
+        self.template_value['record_events'] = str(
+            CAN_PERSIST_ACTIVITY_EVENTS.value).lower()
+
         self.render('activity.html')
+
+    def post(self):
+        """Receives activity submissions and puts it into datastore."""
+
+        ACTIVITY_EVENTS_RECEIVED.inc()
+        if not CAN_PERSIST_ACTIVITY_EVENTS.value:
+            return
+
+        user = self.get_user()
+        if not user:
+            return
+
+        student = models.Student.get_enrolled_student_by_email(user.email())
+        if not student:
+            return
+
+        models.EventEntity.record('activity', user, self.request.get('request'))
+        ACTIVITY_EVENTS_RECORDED.inc()
 
 
 class AssessmentHandler(BaseHandler):

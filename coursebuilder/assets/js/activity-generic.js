@@ -1,4 +1,4 @@
-// Copyright 2012 Google Inc. All Rights Reserved.
+// Copyright 2013 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,10 +28,25 @@ function getFreshTag() {
   return globallyUniqueTag;
 }
 
+// sends activity submission to the server; off by default; override to enable
+var gcb_can_persist_activity_events = false;
+function gcbActivityAudit(dict) {
+  if (gcb_can_persist_activity_events) {
+    dict['location'] = '' + window.location;
+    $.ajax({
+        url: 'activity',
+        type: 'POST',
+        data: {"request": JSON.stringify(dict)},
+        success: function(){},
+        error:function(){}
+    });
+  }
+}
+
 // 'choices' is a list of choices, where each element is:
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
-function generateMultipleChoiceQuestion(choices, domRoot) {
+function generateMultipleChoiceQuestion(choices, domRoot, uid) {
   var tag = getFreshTag();
   var radioButtonGroupName = 'q' + tag;
 
@@ -89,6 +104,8 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
 
       var isChecked = choiceInputs[i].checked;
       if (isChecked) {
+        gcbActivityAudit({
+            "uid": uid, "type": "choice", "index": i, "correct": isCorrect})
         $('#output_' + tag).val(outputMsg);
         $('#output_' + tag).focus();
         if (isCorrect) {
@@ -108,7 +125,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
 // Generate a collection of multiple choice questions
 // 'params' is an object containing parameters
 // 'domRoot' is the dom element to append HTML onto
-function generateMultipleChoiceGroupQuestion(params, domRoot) {
+function generateMultipleChoiceGroupQuestion(params, domRoot, uid) {
 
   // 'questionsList' is an ordered list of questions, where each element is:
   //     {questionHTML: <HTML of question>,
@@ -193,6 +210,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   // handle question submission
   $('#submit_' + toplevel_tag).click(function() {
     var numCorrect = 0;
+    var numChecked = 0;
+    answers = []
 
     $.each(questionsList, function(ind, q) {
       var tag = used_tags[ind];
@@ -201,11 +220,21 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
 
       for (var i = 0; i < choiceInputs.length; i++) {
         var isChecked = choiceInputs[i].checked;
-        if (isChecked && (i == q.correctIndex)) {
-          numCorrect++;
-        }
+        var isCorrect = i == q.correctIndex
+        if (isChecked) {
+          numChecked++;
+          if (isCorrect) {
+             numCorrect++;
+          }
+          answers.push({'index': i, 'correct': isCorrect});
+        }        
       }
     });
+
+    gcbActivityAudit({
+        "uid": uid, "type": "group", "values": answers,
+        "num_expected": questionsList.length,
+        "num_submitted": numChecked, "num_correct": numCorrect})
 
     if (numCorrect == questionsList.length) {
       $.each(used_tags, function(i, t) {
@@ -226,7 +255,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
 
 // 'params' is an object containing parameters (some optional)
 // 'domRoot' is the dom element to append HTML onto
-function generateFreetextQuestion(params, domRoot) {
+function generateFreetextQuestion(params, domRoot, uid) {
 
   // 'correctAnswerRegex' is a regular expression that matches the correct answer
   // 'correctAnswerOutput' and 'incorrectAnswerOutput' are what to display
@@ -283,6 +312,8 @@ function generateFreetextQuestion(params, domRoot) {
       textValue = textValue.replace(/\s+$/,''); //trim trailing spaces
 
       var isCorrect = correctAnswerRegex.test(textValue);
+      gcbActivityAudit({
+          "uid": uid, "type": "freetext", "value": textValue, "correct": isCorrect})
       if (isCorrect) {
         $('#output_' + tag).val(correctAnswerOutput);
         $('#output_' + tag).focus();
@@ -296,6 +327,9 @@ function generateFreetextQuestion(params, domRoot) {
 
   if (showAnswerOutput) {
     $('#skip_and_show_' + tag).click(function() {
+      var textValue = $('#input_' + tag).val();
+      gcbActivityAudit({
+          "uid": uid, "type": "freetext", "value": textValue, "correct": null})
       $('#output_' + tag).val(showAnswerOutput);
       $('#output_' + tag).focus();
     });
@@ -314,13 +348,13 @@ function renderActivity(contentsLst, domRoot) {
     } else {
       // dispatch on type:
       if (e.questionType == 'multiple choice') {
-        generateMultipleChoiceQuestion(e.choices, domRoot);
+        generateMultipleChoiceQuestion(e.choices, domRoot, i);
       }
       else if (e.questionType == 'multiple choice group') {
-        generateMultipleChoiceGroupQuestion(e, domRoot);
+        generateMultipleChoiceGroupQuestion(e, domRoot, i);
       }
       else if (e.questionType == 'freetext') {
-        generateFreetextQuestion(e, domRoot);
+        generateFreetextQuestion(e, domRoot, i);
       }
       else {
         alert('Error in renderActivity: e.questionType is not in ' +

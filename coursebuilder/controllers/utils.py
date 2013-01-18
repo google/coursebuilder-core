@@ -280,18 +280,16 @@ class RegisterHandler(BaseHandler):
             Student.all(keys_only=True).count() >= MAX_CLASS_SIZE):
             self.template_value['course_status'] = 'full'
         else:
-            # Create student record
             name = self.request.get('form01')
 
             # create new or re-enroll old student
             student = Student.get_by_email(user.email())
-            if student:
-                if not student.is_enrolled:
-                    student.is_enrolled = True
-                    student.name = name
-            else:
-                student = Student(
-                    key_name=user.email(), name=name, is_enrolled=True)
+            if not student:
+                student = Student(key_name=user.email())
+                student.user_id = user.user_id()
+
+            student.is_enrolled = True
+            student.name = name
             student.put()
 
         # Render registration confirmation page
