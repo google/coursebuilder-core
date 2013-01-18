@@ -46,10 +46,10 @@ function gcbAssessmentAudit(dict) {
 function gcbAudit(dict, source) {
   if (gcbCanPostEvents) {
     dict['location'] = '' + window.location;
-    request = {
+    var request = {
         'source': source,
         'payload': JSON.stringify(dict),
-        'xsrf_token': eventXsrfToken}
+        'xsrf_token': eventXsrfToken};
     $.ajax({
         url: 'rest/events',
         type: 'POST',
