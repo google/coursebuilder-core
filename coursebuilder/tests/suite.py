@@ -29,7 +29,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 41
+EXPECTED_TEST_COUNT = 43
 
 
 def empty_environ():

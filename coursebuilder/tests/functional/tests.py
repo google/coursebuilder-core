@@ -585,6 +585,22 @@ class StudentAspectTest(actions.TestBase):
         assert_contains(email2, response.body)
         actions.logout()
 
+    def test_xsrf_defence(self):
+        """Test defense against XSRF attack."""
+
+        email = 'test_xsrf_defence@example.com'
+        name = 'Test Xsrf Defence'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = self.get('student/home')
+        response.form.set('name', 'My New Name')
+        response.form.set('xsrf_token', 'bad token')
+
+        response = response.form.submit(expect_errors=True)
+        assert_equals(response.status_int, 403)
+
 
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""
