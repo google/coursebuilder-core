@@ -65,7 +65,8 @@ class DurableJob(object):
 
                 duration = long(time.time() - time_started)
                 DurableJobEntity.fail_job(self._job_name, str(e), duration)
-                raise e
+
+                raise deferred.PermanentTaskFailure(e)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
