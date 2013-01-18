@@ -24,31 +24,34 @@ import verify
 RELEASE_TAG = '1.0'
 
 
-def Echo(x):
+def Echo(unused_x):
     pass
 
 
-def ExportToJavaScript(fname, lines, date):
-    file = open('%s.js' % fname, 'w')
-    file.write('// Course Builder %s JavaScript Export on %s\n' %
-               (RELEASE_TAG, date))
-    file.write('// begin\n')
+def ExportToJavaScript(filename, lines, date):
+    """Creates JavaScript export function from given lines and writes a file."""
     code = []
     code.append('function gcb_import(){')
     for line in lines:
-        if len(line) != 0:
+        if line:
             code.append('  %s' % line)
         else:
             code.append('')
     code.append('')
     code.append('  return units;')
     code.append('}')
-    file.write('\n'.join(code))
-    file.write('\n// end')
-    file.close()
+
+    afile = open('%s.js' % filename, 'w')
+    afile.write('// Course Builder %s JavaScript Export on %s\n' % (
+        RELEASE_TAG, date))
+    afile.write('// begin\n')
+    afile.write('\n'.join(code))
+    afile.write('\n// end')
+    afile.close()
 
 
-def ExportToPython(fname, lines, date):
+def ExportToPython(filename, lines, date):
+    """Creates Python export function from given lines and writes a file."""
     code = []
     code.append('class Array(dict):')
     code.append('  pass')
@@ -64,49 +67,51 @@ def ExportToPython(fname, lines, date):
     code.append('if __name__ == \"__main__\":')
     code.append('  init()')
 
-    file = open('%s.py' % fname, 'w')
-    file.write('# Course Builder %s Python Export on %s\n' %
-               (RELEASE_TAG, date))
-    file.write('# begin\n')
-    file.write('\n'.join(code))
-    file.write('\n# end')
-    file.close()
+    afile = open('%s.py' % filename, 'w')
+    afile.write('# Course Builder %s Python Export on %s\n' % (
+        RELEASE_TAG, date))
+    afile.write('# begin\n')
+    afile.write('\n'.join(code))
+    afile.write('\n# end')
+    afile.close()
 
 
-def ExportToPHP(fname, lines, date):
-    file = open('%s.php' % fname, 'w')
-    file.write('<?php\n')
-    file.write('// Course Builder %s PHP Export on %s\n' % (RELEASE_TAG, date))
-    file.write('// begin\n')
+def ExportToPHP(filename, lines, date):
+    """Creates PHP export function from given lines and writes a file."""
     code = []
     code.append('function gcb_import(){')
     for line in lines:
-        if len(line) != 0:
+        if line:
             code.append('  $%s' % line)
         else:
             code.append('')
     code.append('')
     code.append('  return $units;')
     code.append('}')
-    file.write('\n'.join(code))
-    file.write('\n// end')
-    file.write('?>')
-    file.close()
+
+    afile = open('%s.php' % filename, 'w')
+    afile.write('<?php\n')
+    afile.write('// Course Builder %s PHP Export on %s\n' % (RELEASE_TAG, date))
+    afile.write('// begin\n')
+    afile.write('\n'.join(code))
+    afile.write('\n// end')
+    afile.write('?>')
+    afile.close()
 
 
-def ExportToFile(fname, lines):
+def ExportToFile(filename, lines):
     date = datetime.utcnow()
-    ExportToJavaScript(fname, lines, date)
-    ExportToPython(fname, lines, date)
-    ExportToPHP(fname, lines, date)
+    ExportToJavaScript(filename, lines, date)
+    ExportToPython(filename, lines, date)
+    ExportToPHP(filename, lines, date)
 
 
 if __name__ == '__main__':
-    print "Export started using %s" % os.path.realpath(__file__)
+    print 'Export started using %s' % os.path.realpath(__file__)
 
     verifier = verify.Verifier()
     errors = verifier.LoadAndVerifyModel(Echo)
-    if errors and len(errors) != 0:
+    if errors:
         raise Exception('Please fix all errors reported by tools/verify.py '
                         'before continuing!')
 
