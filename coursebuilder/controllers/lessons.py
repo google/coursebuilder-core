@@ -85,19 +85,19 @@ class UnitHandler(BaseHandler):
             self.template_value['back_button_url'] = ''
         elif lessons[lesson_id - 2].activity:
             self.template_value['back_button_url'] = (
-                '/activity?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
+                'activity?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
         else:
             self.template_value['back_button_url'] = (
-                '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
+                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
 
         if lessons[lesson_id - 1].activity:
             self.template_value['next_button_url'] = (
-                '/activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
+                'activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
         elif lesson_id == lessons.count():
             self.template_value['next_button_url'] = ''
         else:
             self.template_value['next_button_url'] = (
-                '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         self.render('unit.html')
 
@@ -128,12 +128,12 @@ class ActivityHandler(BaseHandler):
 
         # Set template values for back and next nav buttons
         self.template_value['back_button_url'] = (
-            '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
+            'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
         if lesson_id == lessons.count():
             self.template_value['next_button_url'] = ''
         else:
             self.template_value['next_button_url'] = (
-                '/unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         self.render('activity.html')
 

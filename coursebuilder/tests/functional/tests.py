@@ -18,8 +18,8 @@ __author__ = 'Sean Lip'
 
 import json
 import os
+import re
 import urllib
-
 from controllers import sites
 from controllers import utils
 from controllers.sites import assert_fails
@@ -29,11 +29,14 @@ from models.utils import get_all_scores
 from models.utils import get_answer
 from models.utils import get_score
 from modules.announcements.announcements import AnnouncementEntity
-
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
+
+
+# All URLs referred to from all the pages.
+UNIQUE_URLS_FOUND = {}
 
 
 class AdminAspectTest(actions.TestBase):
@@ -388,6 +391,28 @@ class StudentAspectTest(actions.TestBase):
         actions.logout()
         actions.Permissions.assert_logged_out(self)
 
+    def test_lesson_activity_navigation(self):
+        """Tests navigation between lesson/activity pages."""
+
+        email = 'test_lesson_activity_navigation@example.com'
+        name = 'Test Lesson Activity Navigation'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = self.get('unit?unit=1&lesson=1')
+        assert_does_not_contain('Back', response.body)
+        assert_contains('Next', response.body)
+
+        response = self.get('unit?unit=2&lesson=3')
+        assert_contains('Back', response.body)
+        assert_contains('Next', response.body)
+
+        response = self.get('unit?unit=3&lesson=5')
+        assert_contains('Back', response.body)
+        assert_does_not_contain('Next', response.body)
+        assert_contains('End', response.body)
+
     def test_two_students_dont_see_each_other_pages(self):
         """Test a user can't see another user pages."""
         email1 = 'user1@foo.com'
@@ -574,6 +599,12 @@ class CourseUrlRewritingTest(
         super(CourseUrlRewritingTest, self).tearDown()
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
+    def hook_response(self, response):
+        """Inspect response of every request."""
+        if response.status_int == 200:
+            self.check_response_hrefs(response)
+        return super(CourseUrlRewritingTest, self).hook_response(response)
+
     def canonicalize(self, href, response=None):
         """Canonicalize URL's using either <base> or self.base."""
         # Check if already canonicalized.
@@ -590,3 +621,22 @@ class CourseUrlRewritingTest(
             href = '/%s' % href
         href = '%s%s' % (self.base, href)
         return href
+
+    def check_response_hrefs(self, response):
+        """Checks response page URLs are properly formatted/canonicalized."""
+        hrefs = re.findall(r'href=[\'"]?([^\'" >]+)', response.body)
+        srcs = re.findall(r'src=[\'"]?([^\'" >]+)', response.body)
+        for url in hrefs + srcs:
+            # We expect all internal URLs to be relative: 'asset/css/main.css',
+            # and use <base> tag. All others URLs must be whitelisted below.
+            if url.startswith('/'):
+                absolute = url.startswith('//')
+                root = url == '/'
+                canonical = url.startswith(self.base)
+                allowed = url.startswith('/admin')
+
+                if not (absolute or root or canonical or allowed):
+                    raise Exception('Invalid reference \'%s\' in:\n%s' % (
+                        url, response.body))
+
+            UNIQUE_URLS_FOUND[url] = url

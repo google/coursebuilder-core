@@ -28,7 +28,7 @@ import webtest
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 32
+EXPECTED_TEST_COUNT = 34
 
 
 def empty_environ():
@@ -99,6 +99,11 @@ def main():
             'Functional test suite failed: %s errors, %s failures of '
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
+
+    import tests.functional.tests as tests  # pylint: disable-msg=g-import-not-at-top
+    print 'Unique URLs found: %s\n  %s' % (
+        len(tests.UNIQUE_URLS_FOUND.keys()),
+        '\n  '.join(sorted(tests.UNIQUE_URLS_FOUND.keys())))
 
 
 if __name__ == '__main__':
