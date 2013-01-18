@@ -19,6 +19,7 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 from controllers.utils import BaseHandler
 from models.models import Student
 from google.appengine.api import users
+from google.appengine.ext import db
 
 
 SAMPLE_ANNOUNCEMENT_1 = {
@@ -76,6 +77,21 @@ SAMPLE_ANNOUNCEMENT_2 = {
 class AnnouncementsHandler(BaseHandler):
     """Handler for announcements."""
 
+    @classmethod
+    def getChildRoutes(cls):
+        """Add child handler for REST."""
+        return [('/rest/item', ItemRESTHandler)]
+
+    def initSampleAnnouncements(self, announcements):
+        """Loads sample data into a database."""
+        items = []
+        for item in announcements:
+            entity = AnnouncementEntity()
+            entity.from_json(item)
+            entity.put()
+            items.append(entity)
+        return items
+
     def get(self):
         """Handles GET requests."""
         user = self.personalize_page_and_get_user()
@@ -88,10 +104,42 @@ class AnnouncementsHandler(BaseHandler):
             self.redirect('/preview')
             return
 
+        # TODO(psimakov): cache this page and invalidate the cache on update
+        items = AnnouncementEntity.all().order('-date').fetch(1000)
+        if not items:
+            items = self.initSampleAnnouncements(
+                [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
+
         self.template_value['announcements'] = {}
-        self.template_value['announcements']['children'] = [
-            SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2]
+        self.template_value['announcements']['children'] = items
         self.template_value['announcements']['add_url'] = None
 
         self.template_value['navbar'] = {'announcements': True}
         self.render('announcements.html')
+
+
+class ItemRESTHandler(BaseHandler):
+    """Provides REST API for an announcement."""
+    # TODO(psimakov): complete this handler
+    pass
+
+
+class AnnouncementEntity(db.Model):
+    """A class that represents a persistent database entity of announcement."""
+
+    title = db.StringProperty()
+    date = db.StringProperty()
+    html = db.TextProperty()
+    is_draft = db.BooleanProperty()
+
+    def from_json(self, json):
+        """Converts JSON representation into an object."""
+        self.title = json['title']
+        self.date = json['date']
+        self.html = json['html']
+
+    def to_json(self, json):
+        """Converts object to JSON representation."""
+        json['title'] = self.title
+        json['date'] = self.date
+        json['html'] = self.html
