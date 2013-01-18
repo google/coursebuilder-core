@@ -554,7 +554,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def get(self, path):
         try:
             set_path_info(path)
-            debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -567,7 +566,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def post(self, path):
         try:
             set_path_info(path)
-            debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -580,7 +578,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def put(self, path):
         try:
             set_path_info(path)
-            debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -593,7 +590,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     def delete(self, path):
         try:
             set_path_info(path)
-            debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
                 self.error(404)
