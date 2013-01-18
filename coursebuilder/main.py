@@ -26,7 +26,7 @@ from models.models import PRODUCTION_MODE
 from modules.admin import admin
 from modules.admin import config
 from modules.announcements import announcements
-from modules.courses import courses
+from modules.dashboard import dashboard
 
 
 urls = [
@@ -37,7 +37,7 @@ urls = [
     ('/assessment', lessons.AssessmentHandler),
     ('/course', lessons.CourseHandler),
     ('/forum', utils.ForumHandler),
-    ('/dashboard', courses.DashboardHandler),
+    ('/dashboard', dashboard.DashboardHandler),
     ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
     ('/student/editstudent', utils.StudentEditStudentHandler),
