@@ -275,7 +275,7 @@ class AssessmentTest(actions.TestBase):
 class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):
     """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
-    def setUp(self):
+    def setUp(self):  # pylint: disable-msg=g-bad-name
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
 
@@ -284,7 +284,7 @@ class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):
 
         super(CourseUrlRewritingTest, self).setUp()
 
-    def tearDown(self):
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
         super(CourseUrlRewritingTest, self).tearDown()
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 

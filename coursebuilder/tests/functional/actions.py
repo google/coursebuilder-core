@@ -32,11 +32,11 @@ from google.appengine.api import namespace_manager
 class TestBase(suite.BaseTestClass):
     """Contains methods common to all tests."""
 
-    def getApp(self):
+    def getApp(self):  # pylint: disable-msg=g-bad-name
         main.debug = True
         return main.app
 
-    def setUp(self):
+    def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
 
         # set desired namespace and inits data
@@ -87,10 +87,10 @@ class TestBase(suite.BaseTestClass):
         """Modify response.goto() to compute URL using <base>, if defined."""
         gotox = response.goto
 
-        def newGoto(href, method='get', **args):
+        def new_goto(href, method='get', **args):
             return gotox(self.canonicalize(href), method, **args)
 
-        response.goto = newGoto
+        response.goto = new_goto
         return response
 
     def get(self, url):

@@ -353,12 +353,12 @@ class SchemaHelper(object):
                 if isinstance(atype_item, list):
                     for atype_item_item in atype_item:
                         if self.does_value_match_type(
-                            value_item, atype_item_item, context):
+                                value_item, atype_item_item, context):
                             found = True
                             break
                 else:
                     if self.does_value_match_type(
-                        value_item, atype_item, context):
+                            value_item, atype_item, context):
                         found = True
                         break
             if not found:
@@ -532,8 +532,8 @@ class SchemaHelper(object):
         if not (isinstance(types, list) or isinstance(types, dict)):
             self.check_value_matches_type(value, types, context)
             return
-        if (self.does_value_match_list_of_type(
-            value, types, context, in_order) or
+        if (self.does_value_match_list_of_type(value, types,
+                                               context, in_order) or
             self.does_value_match_map_of_type(value, types, context) or
             self.does_value_match_one_of_types(value, types, context)):
             return

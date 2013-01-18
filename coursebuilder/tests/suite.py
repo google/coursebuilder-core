@@ -38,11 +38,11 @@ def empty_environ():
 class BaseTestClass(unittest.TestCase):
     """Base class for setting up and tearing down test cases."""
 
-    def getApp(self):
+    def getApp(self):  # pylint: disable-msg=g-bad-name
         """Returns the main application to be tested."""
         raise Exception('Not implemented.')
 
-    def setUp(self):
+    def setUp(self):  # pylint: disable-msg=g-bad-name
         empty_environ()
 
         # setup an app to be tested
@@ -55,7 +55,7 @@ class BaseTestClass(unittest.TestCase):
         self.testbed.init_memcache_stub()
         self.testbed.init_datastore_v3_stub()
 
-    def tearDown(self):
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.testbed.deactivate()
 
 

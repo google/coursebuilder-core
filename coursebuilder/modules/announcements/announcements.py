@@ -80,11 +80,11 @@ class AnnouncementsHandler(BaseHandler):
     """Handler for announcements."""
 
     @classmethod
-    def getChildRoutes(cls):
+    def get_child_routes(cls):
         """Add child handler for REST."""
         return [('/rest/item', ItemRESTHandler)]
 
-    def initSampleAnnouncements(self, announcements):
+    def init_sample_announcements(self, announcements):
         """Loads sample data into a database."""
         items = []
         for item in announcements:
@@ -94,12 +94,12 @@ class AnnouncementsHandler(BaseHandler):
             items.append(entity)
         return items
 
-    def canSeeDraftAnnouncements(self):
+    def can_see_draft_announcements(self):
         return users.is_current_user_admin()
 
-    def applyRights(self, items):
+    def apply_rights(self, items):
         """Filter out items that current user can't see."""
-        if self.canSeeDraftAnnouncements():
+        if self.can_see_draft_announcements():
             return items
 
         allowed = []
@@ -124,10 +124,10 @@ class AnnouncementsHandler(BaseHandler):
         # TODO(psimakov): cache this page and invalidate the cache on update
         items = AnnouncementEntity.all().order('-date').fetch(1000)
         if not items:
-            items = self.initSampleAnnouncements(
+            items = self.init_sample_announcements(
                 [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
 
-        items = self.applyRights(items)
+        items = self.apply_rights(items)
 
         self.template_value['announcements'] = {}
         self.template_value['announcements']['children'] = items

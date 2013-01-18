@@ -264,7 +264,7 @@ def get_rule_for_current_request():
     # TODO(psimakov): linear search is unacceptable
     for rule in rules:
         if path == rule.get_slug() or path.startswith(
-            '%s/' % rule.get_slug()) or rule.get_slug() == '/':
+                '%s/' % rule.get_slug()) or rule.get_slug() == '/':
             return rule
 
     debug('No mapping for: %s' % path)

@@ -138,10 +138,10 @@ class StudentHandler(ApplicationHandler):
 
     def get_or_create_page(self, page_name, handler):
         def content_lambda():
-            return self.delegateTo(handler)
+            return self.delegate_to(handler)
         return self.get_page(page_name, content_lambda)
 
-    def delegateTo(self, handler):
+    def delegate_to(self, handler):
         """Run another handler using system identity.
 
         This method is called when a dynamic page template cannot be found in
