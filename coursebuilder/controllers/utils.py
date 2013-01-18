@@ -415,7 +415,7 @@ class XsrfTokenManager(object):
         # Round time to seconds.
         issued_on = long(issued_on)
 
-        digester = hmac.new(XSRF_SECRET.value)
+        digester = hmac.new(str(XSRF_SECRET.value))
         digester.update(str(user_id))
         digester.update(cls.DELIMITER_PRIVATE)
         digester.update(str(action_id))
