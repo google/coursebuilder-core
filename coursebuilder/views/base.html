@@ -111,11 +111,13 @@
               {% trans %} Course {% endtrans %}
             </a>
           </li>
+          {% if course_info.course.forum_embed_url %}
           <li {% if navbar.forum %}class='active'{% endif %}>
             <a href="forum">
               {% trans %} Forum {% endtrans %}
             </a>
           </li>
+          {% endif %}
           <li {% if navbar.myprofile %}class='active'{% endif %}>
             <a href="student/home">
               {% trans %} My Profile {% endtrans %}

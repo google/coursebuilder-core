@@ -59,7 +59,8 @@ course:
   forum_url: //groups.google.com/group/My-Course
 
   # Forum embedding URL. This link is used to embed the forum in an iframe on
-  # the forum.html page.
+  # the forum.html page. Set this value to False if you don't use forum and/or
+  # to remove the Forum link from the student navigation bar.
   forum_embed_url: //groups.google.com/forum/embed/?place=forum/My-Course
 
   # URL for the mailing list where students can register to receive course
