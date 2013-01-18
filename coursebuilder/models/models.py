@@ -16,7 +16,8 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-
+import appengine_config
+from config import ConfigProperty
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
@@ -25,7 +26,16 @@ from google.appengine.ext import db
 
 
 # The default amount of time to cache the items for in memcache.
-DEFAULT_CACHE_TTL_SECS = 60 * 60
+DEFAULT_CACHE_TTL_SECS = 60 * 5
+
+# Global memcache controls.
+CAN_USE_MEMCACHE = ConfigProperty(
+    'gcb_can_use_memcache', bool, (
+        'Whether or not to cache various objects in memcache. For production '
+        'this value should be on to enable maximum performance. For '
+        'development this value should be off so you can see your changes to '
+        'course content instantaneously.'),
+    appengine_config.PRODUCTION_MODE)
 
 # performance counters
 CACHE_PUT = PerfCounter(
@@ -48,6 +58,8 @@ class MemcacheManager(object):
     @classmethod
     def get(cls, key):
         """Gets an item from memcache if memcache is enabled."""
+        if not CAN_USE_MEMCACHE.value:
+            return None
         value = memcache.get(key)
         if value:
             CACHE_HIT.inc()
@@ -58,14 +70,16 @@ class MemcacheManager(object):
     @classmethod
     def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS):
         """Sets an item in memcache if memcache is enabled."""
-        CACHE_PUT.inc()
-        memcache.set(key, value, ttl)
+        if CAN_USE_MEMCACHE.value:
+            CACHE_PUT.inc()
+            memcache.set(key, value, ttl)
 
     @classmethod
     def delete(cls, key):
         """Deletes an item from memcache if memcache is enabled."""
-        CACHE_DELETE.inc()
-        memcache.delete(key)
+        if CAN_USE_MEMCACHE.value:
+            CACHE_DELETE.inc()
+            memcache.delete(key)
 
 
 class Student(BaseEntity):
