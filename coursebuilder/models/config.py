@@ -34,7 +34,7 @@ from google.appengine.ext import db
 
 
 # The default update interval supported.
-DEFAULT_UPDATE_INTERVAL = 15
+DEFAULT_UPDATE_INTERVAL = 60
 
 # The longest update interval supported.
 MAX_UPDATE_INTERVAL = 60 * 5
