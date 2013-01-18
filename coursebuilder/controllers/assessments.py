@@ -82,6 +82,10 @@ class AnswerHandler(BaseHandler):
         """Stores answer and updates user scores."""
         student = Student.get_by_email(email)
 
+        # It may be that old Student entities done have user_id set; fix it.
+        if not student.user_id:
+            student.user_id = self.get_user().user_id()
+
         answers = StudentAnswersEntity.get_by_key_name(student.user_id)
         if not answers:
             answers = StudentAnswersEntity(key_name=student.user_id)
