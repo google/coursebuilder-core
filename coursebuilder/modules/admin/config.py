@@ -18,11 +18,55 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import json
+import urllib
 from models import config
+from models import roles
 from models import transforms
 from modules.oeditor.oeditor import ObjectEditor
 import webapp2
 from google.appengine.ext import db
+
+
+# This is a template because the value type is not yet known.
+SCHEMA_JSON_TEMPLATE = """
+    {
+        "id": "Configuration Property",
+        "type": "object",
+        "description": "Configuration Property",
+        "properties": {
+            "name" : {"type": "string"},
+            "value": {"optional": true, "type": "%s"},
+            "is_draft": {"type": "boolean"}
+            }
+    }
+    """
+
+# This is a template because the doc_string is not yet known.
+SCHEMA_ANNOTATIONS_TEMPLATE = [
+    (['title'], 'Configuration Property'),
+    (['properties', 'name', '_inputex'], {
+        'label': 'Name', '_type': 'uneditable'}),
+    (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})]
+
+
+class ConfigPropertyRights(object):
+    """Manages view/edit rights for configuration properties."""
+
+    @classmethod
+    def can_view(cls):
+        return cls.can_edit()
+
+    @classmethod
+    def can_edit(cls):
+        return roles.Roles.is_super_admin()
+
+    @classmethod
+    def can_delete(cls):
+        return cls.can_edit()
+
+    @classmethod
+    def can_add(cls):
+        return cls.can_edit()
 
 
 class ConfigPropertyEditor(object):
@@ -31,33 +75,12 @@ class ConfigPropertyEditor(object):
     # Map of configuration property type into inputex type.
     type_map = {str: 'string', int: 'integer', bool: 'boolean'}
 
-    # This is a template because the value type is not yet known.
-    schema_json_template = """
-        {
-            "id": "Configuration Property",
-            "type": "object",
-            "description": "Configuration Property",
-            "properties": {
-                "name" : {"type": "string"},
-                "value": {"optional": true, "type": "%s"},
-                "is_draft": {"type": "boolean"}
-                }
-        }
-        """
-
-    # This is a template because the doc_string is not yet known.
-    schema_annotations = [
-        (['title'], 'Configuration Property'),
-        (['properties', 'name', '_inputex'], {
-            'label': 'Name', '_type': 'uneditable'}),
-        (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})]
-
     @classmethod
     def get_schema_annotations(cls, config_property):
         """Gets editor specific schema annotations."""
         doc_string = '%s Default: \'%s\'.' % (
             config_property.doc_string, config_property.default_value)
-        item_dict = [] + cls.schema_annotations
+        item_dict = [] + SCHEMA_ANNOTATIONS_TEMPLATE
         item_dict.append((
             ['properties', 'value', '_inputex'], {
                 'label': 'Value', '_type': '%s' % cls.get_value_type(
@@ -78,7 +101,7 @@ class ConfigPropertyEditor(object):
     @classmethod
     def get_schema_json(cls, config_property):
         """Gets JSON schema for configuration property."""
-        return cls.schema_json_template % cls.get_value_type(config_property)
+        return SCHEMA_JSON_TEMPLATE % cls.get_value_type(config_property)
 
     def get_config_edit(self):
         """Handles 'edit' property action."""
@@ -104,9 +127,50 @@ class ConfigPropertyEditor(object):
 
         self.render_page(template_values)
 
-    def get_config_override(self):
+    def post_config_override(self):
         """Handles 'override' property action."""
-        # TODO(psimakov): incomplete
+        name = self.request.get('name')
+
+        # Find item in registry.
+        item = None
+        if name and name in config.Registry.registered.keys():
+            item = config.Registry.registered[name]
+        if not item:
+            self.redirect('/admin?action=settings')
+
+        # Add new entity if does not exist.
+        try:
+            entity = config.ConfigPropertyEntity.get_by_key_name(name)
+        except db.BadKeyError:
+            entity = None
+        if not entity:
+            entity = config.ConfigPropertyEntity(key_name=name)
+            entity.value = str(item.value)
+            entity.is_draft = True
+            entity.put()
+
+        self.redirect('/admin?%s' % urllib.urlencode(
+            {'action': 'config_edit', 'name': name}))
+
+    def post_config_reset(self):
+        """Handles 'reset' property action."""
+        name = self.request.get('name')
+
+        # Find item in registry.
+        item = None
+        if name and name in config.Registry.registered.keys():
+            item = config.Registry.registered[name]
+        if not item:
+            self.redirect('/admin?action=settings')
+
+        # Delete if exists.
+        try:
+            entity = config.ConfigPropertyEntity.get_by_key_name(name)
+            entity.delete()
+        except db.BadKeyError:
+            pass
+
+        self.redirect('/admin?action=settings')
 
 
 class ItemRESTHandler(webapp2.RequestHandler):
@@ -115,7 +179,14 @@ class ItemRESTHandler(webapp2.RequestHandler):
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
         key = self.request.get('key')
-        item = config.Registry.registered[key]
+        if not ConfigPropertyRights.can_view():
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        item = None
+        if key and key in config.Registry.registered.keys():
+            item = config.Registry.registered[key]
         if not item:
             self.redirect('/admin?action=settings')
 
@@ -137,4 +208,36 @@ class ItemRESTHandler(webapp2.RequestHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        # TODO(psimakov): incomplete
+        request = json.loads(self.request.get('request'))
+        key = request.get('key')
+
+        if not ConfigPropertyRights.can_edit():
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        item = None
+        if key and key in config.Registry.registered.keys():
+            item = config.Registry.registered[key]
+        if not item:
+            self.redirect('/admin?action=settings')
+
+        try:
+            entity = config.ConfigPropertyEntity.get_by_key_name(key)
+        except db.BadKeyError:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
+            return
+
+        payload = request.get('payload')
+
+        json_object = json.loads(payload)
+        json_object['value'] = str(item.value_type(json_object['value']))
+
+        transforms.dict_to_entity(entity, transforms.json_to_dict(
+            json_object, json.loads(
+                ConfigPropertyEditor.get_schema_json(item))))
+        entity.put()
+
+        transforms.send_json_response(self, 200, 'Saved.')
+

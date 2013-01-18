@@ -84,14 +84,23 @@ class ConfigProperty(object):
 
     def get_environ_value(self):
         """Tries to get value from the environment variables."""
-        if self._name in os.environ:
+
+        # Look for a name in lower or upper case.
+        name = None
+        if self._name.lower() in os.environ:
+            name = self._name.lower()
+        else:
+            if self._name.upper() in os.environ:
+                name = self._name.upper()
+
+        if name:
             try:
-                return True, self._type(os.environ[self._name])
+                return True, self._type(os.environ[name])
             except Exception:  # pylint: disable-msg=broad-except
                 logging.error(
                     'Property %s failed to cast to type %s; removing.',
                     self._name, self._type)
-                del os.environ[self._name]
+                del os.environ[name]
         return False, None
 
     @property
@@ -187,7 +196,7 @@ class Registry(object):
 class ConfigPropertyEntity(db.Model):
     """A class that represents a named configuration property."""
     namespace = db.StringProperty()  # TODO(psimakov): incomplete
-    value = db.StringProperty()
+    value = db.TextProperty()
     is_draft = db.BooleanProperty()
 
 

@@ -21,13 +21,50 @@ import json
 import urllib
 from controllers.utils import BaseHandler
 from controllers.utils import ReflectiveRequestHandler
+from models import roles
 from models.models import Student
 import models.transforms as transforms
 import modules.announcements.samples as samples
-import modules.announcements.schema as schema
 from modules.oeditor.oeditor import ObjectEditor
 from google.appengine.api import users
 from google.appengine.ext import db
+
+
+# TODO(psimakov): we should really use an ordered dictionary, not plain text; it
+# can't be just a normal dict because a dict iterates its items in undefined
+# order;  thus when we render a dict to JSON an order of fields will not match
+# what we specify here; the final editor will also show the fields in an
+# undefined order; for now we use the raw JSON, rather than the dict, but will
+# move to an ordered dict later
+SCHEMA_JSON = """
+    {
+        "id": "Announcement Entity",
+        "type": "object",
+        "description": "Announcement",
+        "properties": {
+            "key" : {"type": "string"},
+            "title": {"optional": true, "type": "string"},
+            "date": {"optional": true, "type": "date"},
+            "html": {"optional": true, "type": "text"},
+            "is_draft": {"type": "boolean"}
+            }
+    }
+    """
+
+SCHEMA_DICT = json.loads(SCHEMA_JSON)
+
+# inputex specific schema annotations to control editor look and feel
+SCHEMA_ANNOTATIONS_DICT = [
+    (['title'], 'Announcement'),
+    (['properties', 'key', '_inputex'], {
+        'label': 'ID', '_type': 'uneditable'}),
+    (['properties', 'date', '_inputex'], {
+        'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
+        'valueFormat': 'Y/m/d'}),
+    (['properties', 'title', '_inputex'], {'label': 'Title'}),
+    (['properties', 'html', '_inputex'], {'label': 'Body', '_type': 'text'}),
+    (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})
+]
 
 
 class AnnouncementsRights(object):
@@ -39,7 +76,7 @@ class AnnouncementsRights(object):
 
     @classmethod
     def can_edit(cls):
-        return users.is_current_user_admin()
+        return roles.Roles.is_super_admin()
 
     @classmethod
     def can_delete(cls):
@@ -148,7 +185,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = ObjectEditor.get_html_for(
-            self, schema.SCHEMA_JSON, schema.SCHEMA_ANNOTATIONS_DICT,
+            self, SCHEMA_JSON, SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url)
         self.template_value['navbar'] = {'announcements': True}
         self.template_value['content'] = form_html
@@ -181,16 +218,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         self.redirect(self.get_action_url('edit', entity.key()))
 
 
-def send_json_response(handler, status_code, message, payload_dict=None):
-    """Formats and sends out a JSON REST response envelope and body."""
-    response = {}
-    response['status'] = status_code
-    response['message'] = message
-    if payload_dict:
-        response['payload'] = json.dumps(payload_dict)
-    handler.response.write(json.dumps(response))
-
-
 class ItemRESTHandler(BaseHandler):
     """Provides REST API for an announcement."""
 
@@ -203,11 +230,12 @@ class ItemRESTHandler(BaseHandler):
             entity = None
 
         if not entity:
-            send_json_response(self, 404, 'Object not found.', {'key': key})
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
         else:
             json_payload = transforms.dict_to_json(transforms.entity_to_dict(
-                entity), schema.SCHEMA_DICT)
-            send_json_response(self, 200, 'Success.', json_payload)
+                entity), SCHEMA_DICT)
+            transforms.send_json_response(self, 200, 'Success.', json_payload)
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -215,20 +243,22 @@ class ItemRESTHandler(BaseHandler):
         key = request.get('key')
 
         if not AnnouncementsRights.can_edit():
-            send_json_response(self, 401, 'Access denied.', {'key': key})
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
             return
 
         entity = AnnouncementEntity.get(key)
         if not entity:
-            send_json_response(self, 404, 'Object not found.', {'key': key})
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
             return
 
         payload = request.get('payload')
         transforms.dict_to_entity(entity, transforms.json_to_dict(
-            json.loads(payload), schema.SCHEMA_DICT))
+            json.loads(payload), SCHEMA_DICT))
         entity.put()
 
-        send_json_response(self, 200, 'Saved.')
+        transforms.send_json_response(self, 200, 'Saved.')
 
 
 class AnnouncementEntity(db.Model):

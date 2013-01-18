@@ -39,15 +39,58 @@ from actions import assert_equals
 class AdminAspectTest(actions.TestBase):
     """Tests site from the Admin perspective."""
 
+    def test_non_admin_has_no_access(self):
+        """Test non admin has no access to pages or REST endpoints."""
+
+        email = 'test_non_admin_has_no_access@google.com'
+        actions.login(email)
+
+        # Add datastore override.
+        prop = config.ConfigPropertyEntity(
+            key_name='gcb_config_update_interval_sec')
+        prop.value = '5'
+        prop.is_draft = False
+        prop.put()
+
+        # Check user has no access to specific pages and actions.
+        response = self.testapp.get('/admin?action=settings')
+        assert_equals(response.status_int, 302)
+
+        response = self.testapp.get(
+            '/admin?action=config_edit&name=gcb_admin_list')
+        assert_equals(response.status_int, 302)
+
+        response = self.testapp.post(
+            '/admin?action=config_reset&name=gcb_admin_list')
+        assert_equals(response.status_int, 302)
+
+        # Check user has no access to GET REST verb.
+        response = self.testapp.get(
+            '/rest/config/item?key=gcb_config_update_interval_sec')
+        assert_equals(response.status_int, 200)
+        json_dict = json.loads(response.body)
+        assert json_dict['status'] == 401
+        assert json_dict['message'] == 'Access denied.'
+
+        # Check user has no access to GET PUT verb.
+        payload_dict = {}
+        payload_dict['value'] = '666'
+        payload_dict['is_draft'] = False
+        request = {}
+        request['key'] = 'gcb_config_update_interval_sec'
+        request['payload'] = json.dumps(payload_dict)
+        response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
+            {'request': json.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        json_dict = json.loads(response.body)
+        assert json_dict['status'] == 401
+        assert json_dict['message'] == 'Access denied.'
+
     def test_admin_list(self):
         """Test delegation of admin access to another user."""
 
         email = 'test_admin_list@google.com'
         actions.login(email)
-
-        # Check user has no access.
-        response = self.testapp.get('/admin?action=settings')
-        assert_equals(response.status_int, 302)
 
         # Add environment variable override.
         os.environ['gcb_admin_list'] = email

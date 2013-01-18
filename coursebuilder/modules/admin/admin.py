@@ -26,6 +26,7 @@ from controllers.utils import ReflectiveRequestHandler
 import jinja2
 from models import config
 from models import counters
+from models import roles
 from models.config import ConfigProperty
 from models.models import PRODUCTION_MODE
 from modules.admin.config import ConfigPropertyEditor
@@ -37,12 +38,6 @@ import google.appengine.api.app_identity as app
 # A time this module was initialized.
 BEGINNING_OF_TIME = time.time()
 
-GCB_ADMIN_LIST = ConfigProperty(
-    'gcb_admin_list', str, (
-        'A new line separated list of email addresses of administrative users. '
-        'Regular expressions are not supported, exact match only.'),
-    '', multiline=True)
-
 
 class AdminHandler(
     webapp2.RequestHandler, ReflectiveRequestHandler, ConfigPropertyEditor):
@@ -50,18 +45,12 @@ class AdminHandler(
 
     default_action = 'courses'
     get_actions = [
-        default_action, 'settings', 'deployment', 'perf', 'config_edit',
-        'config_override']
-    post_actions = ['config_reset']
+        default_action, 'settings', 'deployment', 'perf', 'config_edit']
+    post_actions = ['config_reset', 'config_override']
 
     def can_view(self):
         """Checks if current user has viewing rights."""
-        user = users.get_current_user()
-        if user and users.is_current_user_admin():
-            return True
-        if user and user.email() in GCB_ADMIN_LIST.value:
-            return True
-        return False
+        return roles.Roles.is_super_admin()
 
     def can_edit(self):
         """Checks if current user has editing rights."""
@@ -248,8 +237,13 @@ class AdminHandler(
                             {'action': 'config_reset', 'name': name}),
                         cgi.escape(name)))
             else:
-                actions.append(get_action_html('Override', {
-                    'action': 'config_override', 'name': name}))
+                actions.append("""
+                    <form action='/admin?%s' method='POST'>
+                    <button class="gcb-button" type="submit">
+                      Override
+                    </button></form>""" % (
+                        urllib.urlencode(
+                            {'action': 'config_override', 'name': name})))
             return ''.join(actions)
 
         def get_doc_string(item, default_value):
@@ -362,11 +356,3 @@ class AdminHandler(
         template_values['main_content'] = ''.join(content)
 
         self.render_page(template_values)
-
-    def post_config_reset(self):
-        """Handles 'reset' property action."""
-        name = self.request.get('name')
-        item = config.ConfigPropertyEntity.get_by_key_name(name)
-        if item:
-            item.delete()
-        self.redirect('/admin?action=settings')

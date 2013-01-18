@@ -26,7 +26,7 @@ SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 
 SUPPORTED_TYPES = (db.GeoPt, datetime.date)
 
-JSON_TYPES = ['string', 'date', 'text', 'boolean']
+JSON_TYPES = ['string', 'date', 'text', 'boolean', 'integer']
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
 
@@ -51,6 +51,10 @@ def json_to_dict(source_dict, schema):
     """Converts JSON dictionary into Python dictionary using schema."""
     output = {}
     for key, attr in schema['properties'].items():
+        # Skip schema elements that don't exist in source.
+        if not key in source_dict:
+            continue
+
         attr_type = attr['type']
         if not attr_type in JSON_TYPES:
             raise ValueError('Unsupported JSON type: %s' % attr_type)
