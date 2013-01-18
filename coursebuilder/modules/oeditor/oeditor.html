@@ -116,6 +116,9 @@
 
 <!-- TODO(psimakov): take most of JS out into a separate file -->
 <script type='text/javascript'>
+  // server communications timeout
+  var ajaxRpcTimeoutMillis = 15 * 1000;
+
   function cbShowMsg(text){
     elem = document.getElementById("formStatusMessage");
     elem.textContent = text;  // FF, Chrome
@@ -176,7 +179,7 @@
             Y.io(url, {
               method: 'PUT',
               data: request_data,
-              timeout : 3000,
+              timeout : ajaxRpcTimeoutMillis,
               on: {
                   success: function(id, o, args) {
                     var json = JSON.parse(o.responseText);
@@ -226,7 +229,7 @@
       // request data for object being edited
       Y.io(url, {
         method: 'GET',
-        timeout : 3000,
+        timeout : ajaxRpcTimeoutMillis,
         on: {
             success: function(id, o, args) {
               var json = JSON.parse(o.responseText);
