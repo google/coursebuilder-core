@@ -16,7 +16,7 @@
 
 __author__ = 'Sean Lip'
 
-
+import base64
 import os
 import sys
 import unittest
@@ -25,6 +25,7 @@ import unittest
 import appengine_config  # pylint: disable-msg=unused-import
 import webtest
 
+from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
@@ -34,6 +35,7 @@ EXPECTED_TEST_COUNT = 38
 def empty_environ():
     os.environ['AUTH_DOMAIN'] = 'example.com'
     os.environ['SERVER_NAME'] = 'localhost'
+    os.environ['HTTP_HOST'] = 'localhost'
     os.environ['SERVER_PORT'] = '8080'
     os.environ['USER_EMAIL'] = ''
     os.environ['USER_ID'] = ''
@@ -58,9 +60,16 @@ class BaseTestClass(unittest.TestCase):
         self.testbed.init_user_stub()
         self.testbed.init_memcache_stub()
         self.testbed.init_datastore_v3_stub()
+        self.testbed.init_taskqueue_stub()
+        self.taskq = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.testbed.deactivate()
+
+    def execute_all_deferred_tasks(self, queue_name='default'):
+        """Executes all pending deferred tasks."""
+        for task in self.taskq.GetTasks(queue_name):
+            deferred.run(base64.b64decode(task['body']))
 
 
 def create_test_suite():

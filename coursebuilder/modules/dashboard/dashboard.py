@@ -18,11 +18,13 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import datetime
+import json
 import os
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
 from models import courses
+from models import jobs
 from models import roles
 from models.models import Student
 import webapp2
@@ -35,7 +37,7 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
     default_action = 'outline'
     get_actions = [default_action, 'assets', 'settings', 'students']
-    post_actions = []
+    post_actions = ['compute_student_stats']
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -234,7 +236,75 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Students')
 
-        # Compute enrollment now.
+        update_action = """
+            <form
+                id='gcb-compute-student-stats'
+                action='/dashboard?action=compute_student_stats'
+                method='POST'>
+                <p>
+                    <button class="gcb-button" type="submit">
+                        Re-Calculate Now
+                    </button>
+                </p>
+            </form>
+        """
+
+        job = ComputeStudentStats(self.app_context).load()
+        if not job:
+            enrollment_data = """
+                <li>Enrollment statistics has't been calculated yet.</li>"""
+        else:
+            if job.status_code == jobs.STATUS_CODE_FAILED:
+                enrollment_data = """
+                    <li>There was an error computing enrollment statistics.
+                    Please try again.</li>"""
+            elif job.status_code == jobs.STATUS_CODE_COMPLETED:
+                stats = json.loads(job.output)
+                enrolled = stats['enrolled']
+                unenrolled = stats['unenrolled']
+
+                lines = []
+                lines.append(
+                    '<li>Registered, but not enrolled: %s</li>' % unenrolled)
+                lines.append('<li>Registered and enrolled: %s</li>' % enrolled)
+                lines.append('<li>Total: %s</li>' % (unenrolled + enrolled))
+                lines.append('<li>Last updated on: %s</li>' % job.updated_on)
+
+                enrollment_data = ''.join(lines)
+            else:
+                update_action = ''
+                enrollment_data = """
+                    <li>
+                        Enrollment statistics is being calculated now.
+                        Please come back shortly.
+                    </li>"""
+
+        lines = []
+
+        lines.append("""
+            <h3>Enrollment Statistics</h3>
+            <ul>
+            %s
+            %s
+            </ul>""" % (enrollment_data, update_action))
+
+        lines = ''.join(lines)
+
+        template_values['main_content'] = lines
+        self.render_page(template_values)
+
+    def post_compute_student_stats(self):
+        """Submits student enrollment statistics calculation task."""
+        job = ComputeStudentStats(self.app_context)
+        job.submit()
+        self.redirect('/dashboard?action=students')
+
+
+class ComputeStudentStats(jobs.DurableJob):
+    """A job that computes student enrollment statistics."""
+
+    def run(self):
+        """Computes student enrollment statistics."""
         enrolled = 0
         unenrolled = 0
         query = db.GqlQuery(
@@ -246,16 +316,4 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             else:
                 unenrolled += 1
 
-        lines = []
-
-        lines.append('<h3>Enrollment</h3>')
-        lines.append('<ul>')
-        lines.append('<li>Registered, but not enrolled: %s</li>' % unenrolled)
-        lines.append('<li>Registered and enrolled: %s</li>' % enrolled)
-        lines.append('<li>Total: %s</li>' % (unenrolled + enrolled))
-        lines.append('</ul>')
-
-        lines = ''.join(lines)
-
-        template_values['main_content'] = lines
-        self.render_page(template_values)
+        return {'enrolled': enrolled, 'unenrolled': unenrolled}

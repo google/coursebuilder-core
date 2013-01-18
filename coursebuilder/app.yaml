@@ -6,6 +6,7 @@ threadsafe: false
 
 builtins:
 - remote_api: on
+- deferred: on
 
 libraries:
 - name: webapp2
