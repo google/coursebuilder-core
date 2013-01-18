@@ -5,6 +5,11 @@
 <div class="gcb-nav gcb-complex" id="gcb-nav-x">
   <div class="gcb-aux">
     <ul>
+      <li {% if navbar.announcements %}class='active'{% endif %}>
+        <a href="announcements">
+          {% trans %} Announcements {% endtrans %}
+        </a>
+      </li>
       <li {% if navbar.course %}class='active'{% endif %}>
         <a href="course">{% trans %} Course {% endtrans %}</a>
       </li>
@@ -12,21 +17,8 @@
         <a href="register">{% trans %} Registration {% endtrans %}</a>
       </li>
       {% if is_manager %}
-      <li>
-        <a href="dashboard">
-          Dashboard
-        </a>
-      </li>
-      {% endif %}
-
-      {% if logoutUrl %}
-      <li class="pull-right">
-        <span style="font-weight: normal;">{{ email }} | </span>
-        <a href="{{ logoutUrl }}">{% trans %} Logout {% endtrans %}</a>
-      </li>
-      {% elif loginUrl %}
-      <li class="pull-right">
-        <a href="{{ loginUrl }}">{% trans %} Login {% endtrans %}</a>
+      <li class='pull-right'>
+        <a href="dashboard">Admin</a>
       </li>
       {% endif %}
     </ul>

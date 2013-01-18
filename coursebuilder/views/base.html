@@ -71,6 +71,20 @@
             <g:plusone size="medium"></g:plusone>
           </span>
         {% endif %}
+
+        {% if logoutUrl %}
+        <div class="pull-right" style="font-size: larger;">
+          {{ email }}
+          &nbsp;|&nbsp;
+          <a href="{{ logoutUrl }}" style="text-decoration: underline;">
+            {% trans %} Logout {% endtrans %}
+          </a>
+        </div>
+        {% elif loginUrl %}
+        <div class="pull-right" style="font-size: larger;">
+          <a href="{{ loginUrl }}">{% trans %} Login {% endtrans %}</a>
+        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -102,19 +116,8 @@
           </li>
           {{course_info.base.before_navbar_ends}}
           {% if is_manager %}
-          <li>
-            <a href="dashboard">
-              Dashboard
-            </a>
-          </li>
-          {% endif %}
-
-          {% if logoutUrl %}
           <li class="pull-right">
-            <span style="font-weight: normal;">{{ email }} | </span>
-            <a href="{{ logoutUrl }}">
-              {% trans %} Logout {% endtrans %}
-            </a>
+            <a href="dashboard">Admin</a>
           </li>
           {% endif %}
         </ul>
