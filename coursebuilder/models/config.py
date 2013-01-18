@@ -26,6 +26,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import logging
 import os
 import time
+import transforms
 from google.appengine.ext import db
 
 
@@ -95,7 +96,8 @@ class ConfigProperty(object):
 
         if name:
             try:
-                return True, self._type(os.environ[name])
+                return True, transforms.string_to_value(
+                    os.environ[name], self.value_type)
             except Exception:  # pylint: disable-msg=broad-except
                 logging.error(
                     'Property %s failed to cast to type %s; removing.',
@@ -172,7 +174,8 @@ class Registry(object):
             if target and not item.is_draft:
                 # Enforce value type.
                 try:
-                    value = target.value_type(item.value)
+                    value = transforms.string_to_value(
+                        item.value, target.value_type)
                 except Exception:  # pylint: disable-msg=broad-except
                     logging.error(
                         'Property %s failed to cast to a type %s; removing.',
@@ -236,7 +239,8 @@ UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties from '
         'a datastore. A value of "0" completely disables loading of properties '
-        'from a datastore. A value of "0" can only be set in app.yaml file.'),
+        'from a datastore. A value of "0" can only be set in app.yaml file. '
+        'Maximum value is \'%s\'.' % MAX_UPDATE_INTERVAL),
     DEFAULT_UPDATE_INTERVAL)
 
 if __name__ == '__main__':

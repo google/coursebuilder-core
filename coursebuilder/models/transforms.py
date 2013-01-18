@@ -97,14 +97,20 @@ def dict_to_entity(entity, source_dict):
 def string_to_value(string, value_type):
     """Converts string representation to a value."""
     if value_type == str:
-        return string
+        if not string:
+            return ''
+        else:
+            return string
     elif value_type == bool:
-        if string == '1' or string == 'True':
+        if string == '1' or string == 'True' or string == 1:
             return True
         else:
             return False
     elif value_type == int or value_type == long:
-        return long(string)
+        if not string:
+            return 0
+        else:
+            return long(string)
     else:
         raise ValueError('Unknown type: %s' % value_type)
 
@@ -138,13 +144,25 @@ def run_all_unit_tests():
     """Runs all unit tests."""
     assert value_to_string(True, bool) == 'True'
     assert value_to_string(False, bool) == 'False'
+    assert value_to_string(None, bool) == 'False'
+
     assert string_to_value('True', bool)
     assert string_to_value('1', bool)
+    assert string_to_value(1, bool)
+
     assert not string_to_value('False', bool)
     assert not string_to_value('0', bool)
     assert not string_to_value('5', bool)
+    assert not string_to_value(0, bool)
+    assert not string_to_value(5, bool)
+    assert not string_to_value(None, bool)
+
     assert string_to_value('15', int) == 15
+    assert string_to_value(15, int) == 15
+    assert string_to_value(None, int) == 0
+
     assert string_to_value('foo', str) == 'foo'
+    assert string_to_value(None, str) == str('')
 
 
 if __name__ == '__main__':
