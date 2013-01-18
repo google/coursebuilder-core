@@ -21,6 +21,7 @@ import os
 from config import ConfigProperty
 from counters import PerfCounter
 from google.appengine.api import memcache
+from google.appengine.api import users
 from google.appengine.ext import db
 
 
@@ -122,6 +123,27 @@ class Student(db.Model):
             return student
         else:
             return None
+
+    @classmethod
+    def rename_current(cls, new_name):
+        """Gives student a new name."""
+        user = users.get_current_user()
+        if not user:
+            raise Exception('No current user.')
+        if new_name:
+            student = Student.get_by_email(user.email())
+            student.name = new_name
+            student.put()
+
+    @classmethod
+    def set_enrollment_status_for_current(cls, is_enrolled):
+        """Changes student enrollment status."""
+        user = users.get_current_user()
+        if not user:
+            raise Exception('No current user.')
+        student = Student.get_by_email(user.email())
+        student.is_enrolled = is_enrolled
+        student.put()
 
 
 class Unit(db.Model):

@@ -18,7 +18,7 @@ import webapp2
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable-msg=unused-import
 from controllers import assessments
-from controllers import servings
+from controllers import lessons
 from controllers import sites
 from controllers import utils
 from models.models import PRODUCTION_MODE
@@ -29,19 +29,19 @@ from google.appengine.ext.zipserve import make_zip_handler
 
 
 urls = [
-    ('/', servings.CourseHandler),
-    ('/activity', servings.ActivityHandler),
+    ('/', lessons.CourseHandler),
+    ('/activity', lessons.ActivityHandler),
     ('/announcements', announcements.AnnouncementsHandler),
     ('/answer', assessments.AnswerHandler),
-    ('/assessment', servings.AssessmentHandler),
-    ('/course', servings.CourseHandler),
-    ('/forum', servings.ForumHandler),
-    ('/preview', servings.PreviewHandler),
+    ('/assessment', lessons.AssessmentHandler),
+    ('/course', lessons.CourseHandler),
+    ('/forum', utils.ForumHandler),
+    ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
     ('/student/editstudent', utils.StudentEditStudentHandler),
     ('/student/home', utils.StudentProfileHandler),
     ('/student/unenroll', utils.StudentUnenrollHandler),
-    ('/unit', servings.UnitHandler)]
+    ('/unit', lessons.UnitHandler)]
 
 sites.ApplicationRequestHandler.bind(urls)
 

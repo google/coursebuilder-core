@@ -21,7 +21,6 @@ import os
 import urlparse
 import jinja2
 from models.models import Lesson
-from models.models import MemcacheManager
 from models.models import Student
 from models.models import Unit
 from models.utils import get_all_scores
@@ -37,9 +36,6 @@ from google.appengine.api import users
 # and money.
 # TODO(psimakov): we must use sharded counter and not Student.all().count()
 MAX_CLASS_SIZE = None
-
-# A template place holder for the student email.
-USER_EMAIL_PLACE_HOLDER = '{{ email }}'
 
 # The name of the template dict key that stores a course's base location.
 COURSE_BASE_KEY = 'gcb_course_base'
@@ -175,6 +171,20 @@ class BaseHandler(ApplicationHandler):
             self.template_value['logoutUrl'] = users.create_logout_url('/')
         return user
 
+    def personalize_page_and_get_enrolled(self):
+        """If the user is enrolled, add personalized fields to the navbar."""
+        user = self.personalize_page_and_get_user()
+        if not user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return None
+
+        student = Student.get_enrolled_student_by_email(user.email())
+        if not student:
+            self.redirect('/preview')
+            return None
+
+        return student
+
     def render(self, template_file):
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
@@ -226,91 +236,7 @@ def put_course_into_datastore(data_folder):
     return Unit.get_units(False)
 
 
-class StudentHandler(ApplicationHandler):
-    """Student handler."""
-
-    def get_page(self, page_name, content_lambda):
-        """Get page from cache or create page on demand."""
-        content = MemcacheManager.get(page_name)
-        if not content:
-            logging.info('Cache miss: %s', page_name)
-            content = content_lambda()
-            MemcacheManager.set(page_name, content)
-        return content
-
-    def get_or_create_page(self, page_name, handler):
-        def content_lambda():
-            return self.delegate_to(handler)
-        return self.get_page(page_name, content_lambda)
-
-    def delegate_to(self, handler):
-        """Run another handler using system identity.
-
-        This method is called when a dynamic page template cannot be found in
-        either memcache or the datastore. We now need to create this page using
-        a handler passed to this method. The handler must run with the exact
-        same request parameters as self, but we need to replace current user
-        and the response.
-
-        Args:
-            handler: The handler to be run using the system identity.
-
-        Returns:
-            The text output by the handler.
-        """
-
-        # create custom function for replacing the current user
-        def get_placeholder_user():
-            return users.User(email=USER_EMAIL_PLACE_HOLDER)
-
-        # create custom response.out to intercept output
-        class StringWriter(object):
-            def __init__(self):
-                self.buffer = []
-
-            def write(self, text):
-                self.buffer.append(text)
-
-            def get_text(self):
-                return ''.join(self.buffer)
-
-        class BufferedResponse(object):
-            def __init__(self):
-                self.out = StringWriter()
-
-        # configure handler request and response
-        handler.app_context = self.app_context
-        handler.request = self.request
-        handler.response = BufferedResponse()
-
-        # substitute current user with the system account and run the handler
-        get_current_user_old = users.get_current_user
-        try:
-            user = users.get_current_user()
-            if user:
-                users.get_current_user = get_placeholder_user
-            handler.get()
-        finally:
-            users.get_current_user = get_current_user_old
-
-        return handler.response.out.get_text()
-
-    def get_enrolled_student(self):
-        user = users.get_current_user()
-        if user:
-            return Student.get_enrolled_student_by_email(user.email())
-        else:
-            self.redirect(users.create_login_url(self.request.uri))
-
-    def serve(self, page, email=None):
-        """Substitute email placeholders before serving the cached page."""
-        html = page
-        if email:
-            html = html.replace(USER_EMAIL_PLACE_HOLDER, email)
-        self.response.out.write(html)
-
-
-class CoursePreviewHandler(BaseHandler):
+class PreviewHandler(BaseHandler):
     """Handler for viewing course preview."""
 
     def get(self):
@@ -381,31 +307,12 @@ class ForumHandler(BaseHandler):
     """Handler for forum page."""
 
     def get(self):
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        """Handles GET requests."""
+        if not self.personalize_page_and_get_enrolled():
             return
 
         self.template_value['navbar'] = {'forum': True}
         self.render('forum.html')
-
-
-class AnswerConfirmationHandler(BaseHandler):
-    """Handler for rendering answer submission confirmation page."""
-
-    def __init__(self, assessment_type):
-        super(AnswerConfirmationHandler, self).__init__()
-        self.type = assessment_type
-
-    def get(self):
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['assessment'] = self.type
-        self.render('test_confirmation.html')
 
 
 class StudentProfileHandler(BaseHandler):
@@ -413,15 +320,8 @@ class StudentProfileHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-
-        # Check for existing registration -> redirect to registration page.
-        student = Student.get_enrolled_student_by_email(user.email())
+        student = self.personalize_page_and_get_enrolled()
         if not student:
-            self.redirect('/preview')
             return
 
         self.template_value['navbar'] = {}
@@ -435,42 +335,24 @@ class StudentEditStudentHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
         self.template_value['navbar'] = {}
-        e = self.request.get('email')
-        # Check for existing registration -> redirect to course page
-        student = Student.get_by_email(e)
-        if not student:
-            self.template_value['student'] = None
-            self.template_value['errormsg'] = (
-                'Error: Student with email %s cannot be found on the '
-                'roster.' % e)
-        else:
-            self.template_value['student'] = student
-            self.template_value['scores'] = get_all_scores(student)
+        self.template_value['student'] = student
+        self.template_value['scores'] = get_all_scores(student)
         self.render('student_profile.html')
 
     def post(self):
         """Handles POST requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
-        # Update student record
-        email = self.request.get('email')
-        name = self.request.get('name')
+        Student.rename_current(self.request.get('name'))
 
-        student = Student.get_by_email(email)
-        if student:
-            if name:
-                student.name = name
-            student.put()
-        self.redirect('/student/editstudent?email=%s' % email)
+        self.redirect('/student/editstudent')
 
 
 class StudentUnenrollHandler(BaseHandler):
@@ -478,28 +360,21 @@ class StudentUnenrollHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
-        student = Student.get_enrolled_student_by_email(user.email())
-        if student:
-            self.template_value['student'] = student
+        self.template_value['student'] = student
         self.template_value['navbar'] = {'registration': True}
         self.render('unenroll_confirmation_check.html')
 
     def post(self):
         """Handles POST requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
-        # Update student record
-        student = Student.get_by_email(user.email())
-        if student and student.is_enrolled:
-            student.is_enrolled = False
-            student.put()
+        Student.set_enrollment_status_for_current(False)
+
         self.template_value['navbar'] = {'registration': True}
         self.render('unenroll_confirmation.html')

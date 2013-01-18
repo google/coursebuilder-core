@@ -19,20 +19,41 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 
 from models.models import Unit
 from utils import BaseHandler
-from google.appengine.api import users
+
+
+def extract_unit_and_lesson_id(handler):
+    """Extracts unit and lesson id from the request."""
+    c = handler.request.get('unit')
+    if not c:
+        unit_id = 1
+    else:
+        unit_id = int(c)
+
+    l = handler.request.get('lesson')
+    if not l:
+        lesson_id = 1
+    else:
+        lesson_id = int(l)
+
+    return unit_id, lesson_id
 
 
 class CourseHandler(BaseHandler):
     """Handler for generating course page."""
 
     def get(self):
+        """Handles GET requests."""
         user = self.personalize_page_and_get_user()
-        if user:
-            self.template_value['units'] = self.get_units()
-            self.template_value['navbar'] = {'course': True}
-            self.render('course.html')
-        else:
+        if not user:
             self.redirect('/preview')
+            return None
+
+        if not self.personalize_page_and_get_enrolled():
+            return
+
+        self.template_value['units'] = self.get_units()
+        self.template_value['navbar'] = {'course': True}
+        self.render('course.html')
 
 
 class UnitHandler(BaseHandler):
@@ -40,25 +61,12 @@ class UnitHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        # Set template values for user
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        if not self.personalize_page_and_get_enrolled():
             return
 
         # Extract incoming args
-        c = self.request.get('unit')
-        if not c:
-            unit_id = 1
-        else:
-            unit_id = int(c)
+        unit_id, lesson_id = extract_unit_and_lesson_id(self)
         self.template_value['unit_id'] = unit_id
-
-        l = self.request.get('lesson')
-        if not l:
-            lesson_id = 1
-        else:
-            lesson_id = int(l)
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
@@ -99,25 +107,12 @@ class ActivityHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        # Set template values for user
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        if not self.personalize_page_and_get_enrolled():
             return
 
         # Extract incoming args
-        c = self.request.get('unit')
-        if not c:
-            unit_id = 1
-        else:
-            unit_id = int(c)
-
+        unit_id, lesson_id = extract_unit_and_lesson_id(self)
         self.template_value['unit_id'] = unit_id
-        l = self.request.get('lesson')
-        if not l:
-            lesson_id = 1
-        else:
-            lesson_id = int(l)
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
@@ -148,10 +143,7 @@ class AssessmentHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        # Set template values for user
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        if not self.personalize_page_and_get_enrolled():
             return
 
         # Extract incoming args
