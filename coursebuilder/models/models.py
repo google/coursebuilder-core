@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
 from config import ConfigProperty
+from counters import PerfCounter
 from google.appengine.api import memcache
 from google.appengine.ext import db
 
@@ -37,6 +38,20 @@ GCB_IS_PAGE_CACHE_ENABLED = ConfigProperty(
         'it\'s "off" for development and "on" for production servers.'),
     PRODUCTION_MODE)
 
+# performance counters
+CACHE_PUT = PerfCounter(
+    'gcb-models-cache-put',
+    'A number of times an object was put into memcache.')
+CACHE_HIT = PerfCounter(
+    'gcb-models-cache-hit',
+    'A number of times an object was found in memcache.')
+CACHE_MISS = PerfCounter(
+    'gcb-models-cache-miss',
+    'A number of times an object was not found in memcache.')
+CACHE_DELETE = PerfCounter(
+    'gcb-models-cache-delete',
+    'A number of times an object was deleted from memcache.')
+
 
 class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
@@ -49,7 +64,12 @@ class MemcacheManager(object):
     def get(cls, key):
         """Gets an item from memcache if memcache is enabled."""
         if MemcacheManager.enabled():
-            return memcache.get(key)
+            value = memcache.get(key)
+            if value:
+                CACHE_HIT.inc()
+            else:
+                CACHE_MISS.inc()
+            return value
         else:
             return None
 
@@ -57,12 +77,14 @@ class MemcacheManager(object):
     def set(cls, key, value):
         """Sets an item in memcache if memcache is enabled."""
         if MemcacheManager.enabled():
+            CACHE_PUT.inc()
             memcache.set(key, value, DEFAULT_CACHE_TTL_SECS)
 
     @classmethod
     def delete(cls, key):
         """Deletes an item from memcache if memcache is enabled."""
         if MemcacheManager.enabled():
+            CACHE_DELETE.inc()
             memcache.delete(key)
 
 

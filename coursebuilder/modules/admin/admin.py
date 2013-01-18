@@ -24,13 +24,17 @@ import urllib
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
+from models import config
+from models import counters
 from models.config import ConfigProperty
-from models.config import Registry
 from models.models import PRODUCTION_MODE
 import webapp2
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
 
+
+# A time this module was initialized.
+BEGINNING_OF_TIME = time.time()
 
 GCB_ADMIN_LIST = ConfigProperty('gcb_admin_list', str, (
     'A new line separated list of email addresses of administrative users. '
@@ -42,7 +46,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
     default_action = 'courses'
     get_actions = [
-        default_action, 'settings', 'environ', 'perf', 'config_edit',
+        default_action, 'settings', 'deployment', 'perf', 'config_edit',
         'config_reset', 'config_override']
     post_actions = []
 
@@ -83,7 +87,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
           <a href="/admin">Courses</a>
           <a href="/admin?action=settings">Settings</a>
           <a href="/admin?action=perf">Metrics</a>
-          <a href="/admin?action=environ">Application</a>
+          <a href="/admin?action=deployment">Deployment</a>
           %s
           """ % console_link
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
@@ -117,21 +121,33 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = 'Course Builder - Metrics'
 
-        Registry.get_overrides()
         perf_counters = {}
+
+        # built in counters
+        perf_counters['gcb-admin-uptime-sec'] = long(
+            time.time() - BEGINNING_OF_TIME)
+
+        # config counters
+        config.Registry.get_overrides()
         perf_counters['gcb-config-age-sec'] = (
-            long(time.time()) - Registry.last_update_time)
-        perf_counters['gcb-config-update-time-sec'] = Registry.last_update_time
-        perf_counters['gcb-config-update-index'] = Registry.update_index
+            long(time.time()) - config.Registry.last_update_time)
+        perf_counters['gcb-config-update-time-sec'] = (
+            config.Registry.last_update_time)
+        perf_counters['gcb-config-update-index'] = config.Registry.update_index
+
+        # add all registered counters
+        all_counters = counters.Registry.registered.copy()
+        for name in all_counters.keys():
+            perf_counters[name] = all_counters[name].value
 
         template_values['main_content'] = self.render_dict(
             perf_counters, 'In-process Performance Counters')
         self.render_page(template_values)
 
-    def get_environ(self):
-        """Shows server environment information page."""
+    def get_deployment(self):
+        """Shows server environment and deployment information page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Application'
+        template_values['page_title'] = 'Course Builder - Deployment'
 
         # Yaml file content.
         yaml_content = []
@@ -152,7 +168,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
         template_values['main_content'] = self.render_dict(
             app_dict, 'Application Identity') + yaml_content + self.render_dict(
-                os.environ, 'Environment Variables')
+                os.environ, 'Server Environment Variables')
 
         self.render_page(template_values)
 
@@ -169,7 +185,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
               }
             </style>
             """)
-        content.append('<h3>Configuration Variables</h3>')
+        content.append('<h3>All Settings</h3>')
         content.append('<table class="gcb-config">')
         content.append("""
             <tr>
@@ -193,8 +209,8 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                 style = 'style="text-align: center;"'
             return style
 
-        Registry.get_overrides(True)
-        registered = Registry.registered.copy()
+        config.Registry.get_overrides(True)
+        registered = config.Registry.registered.copy()
 
         count = 0
         for name in sorted(registered.keys()):
@@ -259,7 +275,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values['page_title'] = 'Course Builder - Courses'
 
         content = []
-        content.append('<h3>Courses</h3>')
+        content.append('<h3>All Courses</h3>')
         content.append('<table>')
         content.append("""
             <tr>

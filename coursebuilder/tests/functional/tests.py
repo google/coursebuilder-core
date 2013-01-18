@@ -82,10 +82,22 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, True)
         actions.register(self, name)
 
+        response = self.testapp.get('/admin')
+        assert_contains('Power Searching with Google', response.body)
+        assert_contains('All Courses', response.body)
+
         response = self.testapp.get('/admin?action=settings')
         assert_contains('gcb_admin_list', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
-        assert_contains('Configuration Variables', response.body)
+        assert_contains('All Settings', response.body)
+
+        response = self.testapp.get('/admin?action=perf')
+        assert_contains('gcb-admin-uptime-sec:', response.body)
+        assert_contains('In-process Performance Counters', response.body)
+
+        response = self.testapp.get('/admin?action=deployment')
+        assert_contains('application_id: testbed-test', response.body)
+        assert_contains('Application Identity', response.body)
 
         actions.unregister(self)
         actions.logout()

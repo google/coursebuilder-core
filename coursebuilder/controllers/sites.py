@@ -126,11 +126,10 @@ import logging
 import mimetypes
 import os
 import threading
-
 import appengine_config
+from models.counters import PerfCounter
 import webapp2
 import yaml
-
 from google.appengine.api import namespace_manager
 
 
@@ -157,6 +156,27 @@ DEBUG_INFO = False
 
 # thread local storage for current request PATH_INFO
 PATH_INFO_THREAD_LOCAL = threading.local()
+
+
+# performance counters
+STATIC_HANDLER_COUNT = PerfCounter(
+    'gcb-sites-handler-static',
+    'A number of times request was served via static handler.')
+DYNAMIC_HANDLER_COUNT = PerfCounter(
+    'gcb-sites-handler-dynamic',
+    'A number of times request was served via dynamic handler.')
+NO_HANDLER_COUNT = PerfCounter(
+    'gcb-sites-handler-none',
+    'A number of times request was not matched to any handler.')
+HTTP_STATUS_200 = PerfCounter(
+    'gcb-sites-http-200',
+    'A number of times HTTP status code 200 was returned.')
+HTTP_STATUS_404 = PerfCounter(
+    'gcb-sites-http-404',
+    'A number of times HTTP status code 404 was returned.')
+HTTP_STATUS_500 = PerfCounter(
+    'gcb-sites-http-500',
+    'A number of times HTTP status code 500 was returned.')
 
 
 def has_path_info():
@@ -335,7 +355,9 @@ class AssetHandler(webapp2.RequestHandler):
         debug('File: %s' % self.filename)
 
         if not os.path.isfile(self.filename):
+            HTTP_STATUS_404.inc()
             self.error(404)
+            return
 
         self.response.headers['Cache-Control'] = (
             DEFAULT_CACHE_CONTROL_HEADER_VALUE)
@@ -449,13 +471,13 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         # Handle static assets here.
         if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
             abs_file = abspath(context.get_home_folder(), norm_path)
-            debug('Course asset: %s' % abs_file)
-
             handler = AssetHandler(abs_file)
             handler.request = self.request
             handler.response = self.response
             handler.app_context = context
 
+            debug('Course asset: %s' % abs_file)
+            STATIC_HANDLER_COUNT.inc()
             return handler
 
         # Handle all dynamic handlers here.
@@ -467,8 +489,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             handler.response = self.response
 
             debug('Handler: %s > %s' % (path, handler.__class__.__name__))
+            DYNAMIC_HANDLER_COUNT.inc()
             return handler
 
+        NO_HANDLER_COUNT.inc()
         return None
 
     def get(self, path):
@@ -477,9 +501,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
+                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.get()
+                HTTP_STATUS_200.inc()
+        except Exception as e:
+            HTTP_STATUS_500.inc()
+            raise e
         finally:
             unset_path_info()
 
@@ -489,9 +518,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
+                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.post()
+                HTTP_STATUS_200.inc()
+        except Exception as e:
+            HTTP_STATUS_500.inc()
+            raise e
         finally:
             unset_path_info()
 
@@ -501,9 +535,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
+                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.put()
+                HTTP_STATUS_200.inc()
+        except Exception as e:
+            HTTP_STATUS_500.inc()
+            raise e
         finally:
             unset_path_info()
 
@@ -513,9 +552,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             debug('Namespace: %s' % namespace_manager.get_namespace())
             handler = self.get_handler()
             if not handler:
+                HTTP_STATUS_404.inc()
                 self.error(404)
             else:
                 handler.delete()
+                HTTP_STATUS_200.inc()
+        except Exception as e:
+            HTTP_STATUS_500.inc()
+            raise e
         finally:
             unset_path_info()
 
