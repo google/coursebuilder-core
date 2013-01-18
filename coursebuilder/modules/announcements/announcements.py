@@ -21,6 +21,7 @@ import json
 import urllib
 from controllers.utils import BaseHandler
 from controllers.utils import ReflectiveRequestHandler
+from models import entities
 from models import roles
 from models.models import MemcacheManager
 import models.transforms as transforms
@@ -264,7 +265,7 @@ class ItemRESTHandler(BaseHandler):
         transforms.send_json_response(self, 200, 'Saved.')
 
 
-class AnnouncementEntity(db.Model):
+class AnnouncementEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of announcement."""
     title = db.StringProperty()
     date = db.DateProperty()
@@ -287,8 +288,9 @@ class AnnouncementEntity(db.Model):
 
     def put(self):
         """Do the normal put() and also invalidate memcache."""
-        super(AnnouncementEntity, self).put()
+        result = super(AnnouncementEntity, self).put()
         MemcacheManager.delete(self.memcache_key)
+        return result
 
     def delete(self):
         """Do the normal delete() and invalidate memcache."""

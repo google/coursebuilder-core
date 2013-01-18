@@ -26,6 +26,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import logging
 import os
 import time
+import entities
 import transforms
 from google.appengine.ext import db
 
@@ -196,7 +197,7 @@ class Registry(object):
         cls.db_overrides = overrides
 
 
-class ConfigPropertyEntity(db.Model):
+class ConfigPropertyEntity(entities.BaseEntity):
     """A class that represents a named configuration property."""
     namespace = db.StringProperty()  # TODO(psimakov): incomplete
     value = db.TextProperty()

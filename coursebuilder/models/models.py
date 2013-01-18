@@ -20,6 +20,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import os
 from config import ConfigProperty
 from counters import PerfCounter
+from entities import BaseEntity
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -89,7 +90,7 @@ class MemcacheManager(object):
             memcache.delete(key)
 
 
-class Student(db.Model):
+class Student(BaseEntity):
     """Student profile."""
     enrolled_date = db.DateTimeProperty(auto_now_add=True)
     name = db.StringProperty()
@@ -101,8 +102,9 @@ class Student(db.Model):
 
     def put(self):
         """Do the normal put() and also add the object to memcache."""
-        super(Student, self).put()
+        result = super(Student, self).put()
         MemcacheManager.set(self.key().name(), self)
+        return result
 
     def delete(self):
         """Do the normal delete() and also remove the object from memcache."""
@@ -146,7 +148,7 @@ class Student(db.Model):
         student.put()
 
 
-class Unit(db.Model):
+class Unit(BaseEntity):
     """Unit metadata."""
     id = db.IntegerProperty()
     type = db.StringProperty()
@@ -172,7 +174,7 @@ class Unit(db.Model):
         return lessons
 
 
-class Lesson(db.Model):
+class Lesson(BaseEntity):
     """Lesson metadata."""
     unit_id = db.IntegerProperty()
     id = db.IntegerProperty()
