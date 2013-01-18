@@ -233,7 +233,12 @@ def set_path_info(path):
         raise Exception('Use \'unset()\' instead.')
     if has_path_info():
         raise Exception('Expected no path set.')
+
     PATH_INFO_THREAD_LOCAL.path = path
+    PATH_INFO_THREAD_LOCAL.old_namespace = namespace_manager.get_namespace()
+
+    namespace_manager.set_namespace(
+        ApplicationContext.get_namespace_name_for_request())
 
 
 def get_path_info():
@@ -245,6 +250,11 @@ def unset_path_info():
     """Removed PATH_INFO from thread local."""
     if not has_path_info():
         raise Exception('Expected valid path already set.')
+
+    namespace_manager.set_namespace(
+        PATH_INFO_THREAD_LOCAL.old_namespace)
+
+    del PATH_INFO_THREAD_LOCAL.old_namespace
     del PATH_INFO_THREAD_LOCAL.path
 
 
@@ -255,7 +265,8 @@ def debug(message):
 
 def make_default_rule():
     # The default is: one course in the root folder of the None namespace.
-    return ApplicationContext('course', '/', '/', None)
+    return ApplicationContext(
+        'course', '/', '/', appengine_config.DEFAULT_NAMESPACE_NAME)
 
 
 def get_all_courses():
@@ -298,7 +309,7 @@ def get_all_courses():
         folder = parts[2]
 
         # validate or derive namespace
-        namespace = None
+        namespace = appengine_config.DEFAULT_NAMESPACE_NAME
         if len(parts) == 4:
             namespace = parts[3]
         else:
@@ -444,7 +455,7 @@ class ApplicationContext(object):
         course = get_course_for_current_request()
         if course:
             return course.namespace
-        return None
+        return appengine_config.DEFAULT_NAMESPACE_NAME
 
     def __init__(self, site_type, slug, homefolder, namespace):
         # TODO(psimakov): Document these parameters.
@@ -689,6 +700,9 @@ def test_rule_definitions():
         'foo:/a/b:/c/d, bar:/e/f:/g/h')
     assert_fails(get_all_courses)
 
+    # Cleanup.
+    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+
     # Test namespaces.
     set_path_info('/')
     try:
@@ -697,9 +711,6 @@ def test_rule_definitions():
             'gcb-course-c-d')
     finally:
         unset_path_info()
-
-    # Cleanup.
-    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
 
 def test_url_to_rule_mapping():

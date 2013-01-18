@@ -26,8 +26,10 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import logging
 import os
 import time
+import appengine_config
 import entities
 import transforms
+from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 
@@ -147,7 +149,14 @@ class Registry(object):
         age = now - cls.last_update_time
         if force_update or age < 0 or age >= cls.update_interval:
             try:
-                cls.load_from_db()
+                old_namespace = namespace_manager.get_namespace()
+                try:
+                    namespace_manager.set_namespace(
+                        appengine_config.DEFAULT_NAMESPACE_NAME)
+
+                    cls.load_from_db()
+                finally:
+                    namespace_manager.set_namespace(old_namespace)
             except Exception as e:  # pylint: disable-msg=broad-except
                 logging.error(
                     'Failed to load properties from a database: %s.', str(e))

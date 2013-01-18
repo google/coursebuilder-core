@@ -33,6 +33,7 @@ import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
+from google.appengine.api import namespace_manager
 
 
 # All URLs referred to from all the pages.
@@ -637,54 +638,65 @@ class AssessmentTest(actions.TestBase):
         actions.login(email)
         actions.register(self, name)
 
-        # Check that no scores exist right now.
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert len(get_all_scores(student)) == 0  # pylint: disable=C6411
+        old_namespace = None
+        try:
+            if hasattr(self, 'namespace'):
+                old_namespace = namespace_manager.get_namespace()
+                namespace_manager.set_namespace(self.namespace)
 
-        # Submit assessments and check the numbers of scores recorded.
-        self.submit_assessment('Pre', pre)
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert len(get_all_scores(student)) == 1
+            # Check that no scores exist right now.
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert len(get_all_scores(student)) == 0  # pylint: disable=C6411
 
-        self.submit_assessment('Mid', mid)
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert len(get_all_scores(student)) == 2
+            # Submit assessments and check the numbers of scores recorded.
+            self.submit_assessment('Pre', pre)
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert len(get_all_scores(student)) == 1
 
-        self.submit_assessment('Post', post)
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert len(get_all_scores(student)) == 4  # also includes overall_score
+            self.submit_assessment('Mid', mid)
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert len(get_all_scores(student)) == 2
 
-        assert isinstance(get_answer(student, 'precourse'), list)
-        assert isinstance(get_answer(student, 'midcourse'), list)
-        assert isinstance(get_answer(student, 'postcourse'), list)
+            self.submit_assessment('Post', post)
+            student = models.Student.get_enrolled_student_by_email(email)
 
-        # Check that scores are recorded properly.
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert int(get_score(student, 'precourse')) == 1
-        assert int(get_score(student, 'midcourse')) == 2
-        assert int(get_score(student, 'postcourse')) == 3
-        assert (int(get_score(student, 'overall_score')) ==
-                int((0.30 * 2) + (0.70 * 3)))
+            # Check final score also includes overall_score.
+            assert len(get_all_scores(student)) == 4
 
-        # Try posting a new midcourse exam with a lower score; nothing should
-        # change.
-        self.submit_assessment('Mid', second_mid)
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert int(get_score(student, 'precourse')) == 1
-        assert int(get_score(student, 'midcourse')) == 2
-        assert int(get_score(student, 'postcourse')) == 3
-        assert (int(get_score(student, 'overall_score')) ==
-                int((0.30 * 2) + (0.70 * 3)))
+            assert isinstance(get_answer(student, 'precourse'), list)
+            assert isinstance(get_answer(student, 'midcourse'), list)
+            assert isinstance(get_answer(student, 'postcourse'), list)
 
-        # Now try posting a postcourse exam with a higher score and note
-        # the changes.
-        self.submit_assessment('Post', second_post)
-        student = models.Student.get_enrolled_student_by_email(email)
-        assert int(get_score(student, 'precourse')) == 1
-        assert int(get_score(student, 'midcourse')) == 2
-        assert int(get_score(student, 'postcourse')) == 100000
-        assert (int(get_score(student, 'overall_score')) ==
-                int((0.30 * 2) + (0.70 * 100000)))
+            # Check that scores are recorded properly.
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert int(get_score(student, 'precourse')) == 1
+            assert int(get_score(student, 'midcourse')) == 2
+            assert int(get_score(student, 'postcourse')) == 3
+            assert (int(get_score(student, 'overall_score')) ==
+                    int((0.30 * 2) + (0.70 * 3)))
+
+            # Try posting a new midcourse exam with a lower score;
+            # nothing should change.
+            self.submit_assessment('Mid', second_mid)
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert int(get_score(student, 'precourse')) == 1
+            assert int(get_score(student, 'midcourse')) == 2
+            assert int(get_score(student, 'postcourse')) == 3
+            assert (int(get_score(student, 'overall_score')) ==
+                    int((0.30 * 2) + (0.70 * 3)))
+
+            # Now try posting a postcourse exam with a higher score and note
+            # the changes.
+            self.submit_assessment('Post', second_post)
+            student = models.Student.get_enrolled_student_by_email(email)
+            assert int(get_score(student, 'precourse')) == 1
+            assert int(get_score(student, 'midcourse')) == 2
+            assert int(get_score(student, 'postcourse')) == 100000
+            assert (int(get_score(student, 'overall_score')) ==
+                    int((0.30 * 2) + (0.70 * 100000)))
+        finally:
+            if old_namespace:
+                namespace_manager.set_namespace(old_namespace)
 
 
 # TODO(psimakov): if mixin method names overlap, we don't run them all; must fix

@@ -23,6 +23,9 @@ import sys
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
 
+# Default namespace name is '' and not None.
+DEFAULT_NAMESPACE_NAME = ''
+
 # Third-party library zip files.
 THIRD_PARTY_LIBS = ['babel-0.9.6.zip', 'gaepytz-2011h.zip']
 
@@ -31,9 +34,3 @@ for lib in THIRD_PARTY_LIBS:
     if not os.path.exists(thirdparty_lib):
         raise Exception('Library does not exist: %s' % thirdparty_lib)
     sys.path.insert(0, thirdparty_lib)
-
-
-def namespace_manager_default_namespace_for_request():
-    """Set a namespace appropriate for this request."""
-    from controllers import sites  # pylint: disable=C6204
-    return sites.ApplicationContext.get_namespace_name_for_request()

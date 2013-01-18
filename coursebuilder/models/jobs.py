@@ -54,18 +54,14 @@ class DurableJob(object):
             namespace_manager.set_namespace(self._namespace)
             try:
                 result = self.run()
-                duration = long(time.time() - time_started)
-
                 DurableJobEntity.complete_job(
-                    self._job_name, json.dumps(result), duration)
-
+                    self._job_name, json.dumps(result),
+                    long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
             except Exception as e:
                 logging.error('Job failed: %s\n%s', self._job_name, e)
-
-                duration = long(time.time() - time_started)
-                DurableJobEntity.fail_job(self._job_name, str(e), duration)
-
+                DurableJobEntity.fail_job(
+                    self._job_name, str(e), long(time.time() - time_started))
                 raise deferred.PermanentTaskFailure(e)
         finally:
             namespace_manager.set_namespace(old_namespace)
