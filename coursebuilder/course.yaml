@@ -22,6 +22,12 @@
 ############################
 
 course:
+  # A new line or a space separated list of email addresses of course
+  # administrative users. Each email address must be placed between '[' and ']',
+  # for example: '[test@example.com]'. Regular expressions are not supported,
+  # exact match only.
+  admin_user_emails: ''
+
   # Course title
   title: 'Power Searching with Google'
 

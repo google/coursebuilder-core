@@ -132,7 +132,8 @@ class ApplicationHandler(webapp2.RequestHandler):
     def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
-        self.template_value['is_manager'] = Roles.is_super_admin()
+        self.template_value['is_manager'] = Roles.is_course_admin(
+            self.app_context)
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
 
         template_dir = self.app_context.get_template_home()

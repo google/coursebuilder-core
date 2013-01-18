@@ -27,6 +27,9 @@ GCB_ADMIN_LIST = config.ConfigProperty(
         'Regular expressions are not supported, exact match only.'),
     '', multiline=True)
 
+KEY_COURSE = 'course'
+KEY_ADMIN_USER_EMAILS = 'admin_user_emails'
+
 
 class Roles(object):
     """A class that provides information about user roles."""
@@ -46,3 +49,20 @@ class Roles(object):
         if user and user.email() in GCB_ADMIN_LIST.value:
             return True
         return False
+
+    @classmethod
+    def is_course_admin(cls, app_context):
+        """Checks if a user is a course admin, possibly via delegation."""
+        if cls.is_super_admin():
+            return True
+
+        if KEY_COURSE in app_context.get_environ():
+            environ = app_context.get_environ()[KEY_COURSE]
+            if KEY_ADMIN_USER_EMAILS in environ:
+                allowed = environ[KEY_ADMIN_USER_EMAILS]
+                user = users.get_current_user()
+                if user and '[%s]' % user.email() in allowed:
+                    return True
+
+        return False
+

@@ -71,25 +71,25 @@ class AnnouncementsRights(object):
     """Manages view/edit rights for announcements."""
 
     @classmethod
-    def can_view(cls):
+    def can_view(cls, unused_handler):
         return True
 
     @classmethod
-    def can_edit(cls):
-        return roles.Roles.is_super_admin()
+    def can_edit(cls, handler):
+        return roles.Roles.is_course_admin(handler.app_context)
 
     @classmethod
-    def can_delete(cls):
-        return cls.can_edit()
+    def can_delete(cls, handler):
+        return cls.can_edit(handler)
 
     @classmethod
-    def can_add(cls):
-        return cls.can_edit()
+    def can_add(cls, handler):
+        return cls.can_edit(handler)
 
     @classmethod
-    def apply_rights(cls, items):
+    def apply_rights(cls, handler, items):
         """Filter out items that current user can't see."""
-        if AnnouncementsRights.can_edit():
+        if AnnouncementsRights.can_edit(handler):
             return items
 
         allowed = []
@@ -126,7 +126,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             item = transforms.entity_to_dict(item)
 
             # add 'edit' actions
-            if AnnouncementsRights.can_edit():
+            if AnnouncementsRights.can_edit(self):
                 item['edit_action'] = self.get_action_url('edit', item['key'])
 
                 item['delete_xsrf_token'] = self.create_xsrf_token('delete')
@@ -139,7 +139,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         output['children'] = template_items
 
         # add 'add' action
-        if AnnouncementsRights.can_edit():
+        if AnnouncementsRights.can_edit(self):
             output['add_xsrf_token'] = self.create_xsrf_token('add')
             output['add_action'] = self.get_action_url('add')
 
@@ -161,10 +161,10 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             return
 
         items = AnnouncementEntity.get_announcements()
-        if not items and AnnouncementsRights.can_edit():
+        if not items and AnnouncementsRights.can_edit(self):
             items = self.put_sample_announcements()
 
-        items = AnnouncementsRights.apply_rights(items)
+        items = AnnouncementsRights.apply_rights(self, items)
 
         self.template_value['announcements'] = self.format_items_for_template(
             items)
@@ -173,7 +173,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def get_edit(self):
         """Shows an editor for an announcement."""
-        if not AnnouncementsRights.can_edit():
+        if not AnnouncementsRights.can_edit(self):
             self.error(401)
             return
 
@@ -191,7 +191,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def post_delete(self):
         """Deletes an announcement."""
-        if not AnnouncementsRights.can_delete():
+        if not AnnouncementsRights.can_delete(self):
             self.error(401)
             return
 
@@ -203,7 +203,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def post_add(self):
         """Adds a new announcement and redirects to an editor for it."""
-        if not AnnouncementsRights.can_add():
+        if not AnnouncementsRights.can_add(self):
             self.error(401)
             return
 
@@ -233,7 +233,7 @@ class ItemRESTHandler(BaseHandler):
                 self, 404, 'Object not found.', {'key': key})
             return
 
-        viewable = AnnouncementsRights.apply_rights([entity])
+        viewable = AnnouncementsRights.apply_rights(self, [entity])
         if not viewable:
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
@@ -249,7 +249,7 @@ class ItemRESTHandler(BaseHandler):
         request = json.loads(self.request.get('request'))
         key = request.get('key')
 
-        if not AnnouncementsRights.can_edit():
+        if not AnnouncementsRights.can_edit(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
