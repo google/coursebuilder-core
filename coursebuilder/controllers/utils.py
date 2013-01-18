@@ -367,25 +367,6 @@ class StudentEditStudentHandler(BaseHandler):
         self.redirect('/student/editstudent?email=%s' % email)
 
 
-class AnnouncementsHandler(BaseHandler):
-    """Handler for announcements."""
-
-    def get(self):
-        """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-
-        student = Student.get_enrolled_student_by_email(user.email())
-        if not student:
-            self.redirect('/preview')
-            return
-
-        self.template_value['navbar'] = {'announcements': True}
-        self.render('announcements.html')
-
-
 class StudentUnenrollHandler(BaseHandler):
     """Handler for students to unenroll themselves."""
 

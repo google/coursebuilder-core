@@ -19,6 +19,7 @@ from controllers import assessments
 from controllers import servings
 from controllers import sites
 from controllers import utils
+from modules.announcements import announcements
 
 
 # FIXME: set to 'False' before going live
@@ -27,7 +28,7 @@ debug = True
 urls = [
     ('/', servings.CourseHandler),
     ('/activity', servings.ActivityHandler),
-    ('/announcements', utils.AnnouncementsHandler),
+    ('/announcements', announcements.AnnouncementsHandler),
     ('/answer', assessments.AnswerHandler),
     ('/assessment', servings.AssessmentHandler),
     ('/course', servings.CourseHandler),
