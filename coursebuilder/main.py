@@ -21,13 +21,11 @@ from controllers import assessments
 from controllers import servings
 from controllers import sites
 from controllers import utils
+from models.models import PRODUCTION_MODE
 from modules.admin import admin
 from modules.announcements import announcements
 from google.appengine.ext.zipserve import make_zip_handler
 
-
-# FIXME: set to 'False' before going live
-debug = True
 
 urls = [
     ('/', servings.CourseHandler),
@@ -50,9 +48,12 @@ inputex_handler = (
     '/static/inputex-3.1.0/(.*)', make_zip_handler('lib/inputex-3.1.0.zip'))
 
 admin_handler = ('/admin', admin.AdminHandler)
+
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 
 webapp2_i18n_config = {'translations_path': 'modules/i18n/resources/locale'}
+
+debug = not PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
     [admin_handler, inputex_handler, app_handler],
