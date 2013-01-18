@@ -33,7 +33,9 @@ Good luck!
 """
 
 import csv
+import json
 import os
+import pprint  # for debugging
 import re
 import sys
 
@@ -91,6 +93,12 @@ NO_VERIFY_TAG_NAME_CLOSE = "</gcb-no-verify>"
 
 OUTPUT_FINE_LOG = False
 OUTPUT_DEBUG_LOG = False
+
+
+class Term(object):
+    def __init__(self, term_type, value=None):
+        self.term_type = term_type
+        self.value = value
 
 
 class SchemaException(Exception):
@@ -217,15 +225,15 @@ class SchemaHelper(object):
             type_map.update({key: key})
 
         if values == REGEX:
-            type_map.update({"regex": lambda x: REGEX})
+            type_map.update({"regex": lambda x: Term(REGEX, x)})
             return
 
         if values == CORRECT:
-            type_map.update({"correct": lambda x: CORRECT})
+            type_map.update({"correct": lambda x: Term(CORRECT, x)})
             return
 
         if values == BOOLEAN:
-            type_map.update({"true": BOOLEAN, "false": BOOLEAN})
+            type_map.update({"true": Term(BOOLEAN, True), "false": Term(BOOLEAN, False)})
             return
 
         if values == STRING or values == INTEGER:
@@ -282,9 +290,10 @@ class SchemaHelper(object):
         """Checks if a single value matches a specific (primitive) type."""
 
         if atype == BOOLEAN:
+            # TODO: double-check all variants of boolean values
             if (value == "True" or value == "False" or value == "true" or
                 value == "false" or isinstance(value, bool) or
-                value == BOOLEAN):
+                value.term_type == BOOLEAN):
                 self.visit_element("BOOLEAN", value, context)
                 return True
             else:
@@ -302,10 +311,10 @@ class SchemaHelper(object):
                 return True
             else:
                 raise SchemaException("Expected: 'string'\nfound: %s", value)
-        if atype == REGEX and value == REGEX:
+        if atype == REGEX and value.term_type == REGEX:
             self.visit_element("REGEX", value, context)
             return True
-        if atype == CORRECT and value == CORRECT:
+        if atype == CORRECT and value.term_type == CORRECT:
             self.visit_element("CORRECT", value, context)
             return True
         if atype == FLOAT:
@@ -945,28 +954,124 @@ class Verifier(object):
                     activity = evaluate_javascript_expression_from_file(
                         fname, "activity", Activity().scope, self.error)
                     self.verify_activity_instance(activity, fname)
+                    self.export.append('')
+                    self.encode_activity_json(activity, lesson.unit_id, lesson.lesson_id)
 
         self.info("Read %s activities" % count)
 
     def verify_assessment(self, units):
         """Loads and verifies all assessments."""
 
+        self.export.append('')
+        self.export.append('assessments = Array();')
+
         self.info("Loading assessment:")
         count = 0
         for unit in units:
             if unit.type == "A":
                 count += 1
+                assessment_name = str(unit.unit_id)
                 fname = os.path.join(
                     os.path.dirname(__file__),
-                    "../assets/js/assessment-" + str(unit.unit_id) + ".js")
+                    "../assets/js/assessment-" + assessment_name + ".js")
                 if not os.path.exists(fname):
                     self.error("  Missing assessment: %s" % fname)
                 else:
                     assessment = evaluate_javascript_expression_from_file(
                         fname, "assessment", Assessment().scope, self.error)
                     self.verify_assessment_instance(assessment, fname)
+                    self.export.append('')
+                    self.encode_assessment_json(assessment, assessment_name)
 
         self.info("Read %s assessments" % count)
+
+    def encode_activity_json(self, activity_dict, unit_id, lesson_id):
+        output = []
+        for elt in activity_dict['activity']:
+            t = type(elt)
+            encoded_elt = None
+
+            if t is str:
+                encoded_elt = {'type': 'string', 'value': elt}
+            elif t is dict:
+                qt = elt['questionType']
+                encoded_elt = {'type': qt}
+                if qt == 'multiple choice':
+                    choices = elt['choices']
+                    encoded_choices = [[x, y.value, z] for x,y,z in choices]
+                    encoded_elt['choices'] = encoded_choices
+                elif qt == 'multiple choice group':
+                    # everything inside are primitive types that can be directly encoded
+                    elt_copy = dict(elt)
+                    del elt_copy['questionType'] # redundant
+                    encoded_elt['value'] = elt_copy
+                elif qt == 'freetext':
+                    for k in elt.keys():
+                        if k == 'questionType':
+                            continue
+                        elif k == 'correctAnswerRegex':
+                            # NB: The exported script needs to define a gcb_regex() wrapper function
+                            encoded_elt[k] = 'gcb_regex(' + repr(elt[k].value) + ')'
+                        else:
+                            # ordinary string
+                            encoded_elt[k] = elt[k]
+                else:
+                    assert False
+            else:
+                assert False
+
+            assert encoded_elt
+            output.append(encoded_elt)
+
+        # for debugging
+        #pprinter = pprint.PrettyPrinter()
+        #pprinter.pprint(output)
+
+        # N.B.: make sure to get the string quoting right!
+        code_str = "units[%s]['lessons'][%s]['activity'] = " % (unit_id, lesson_id) + repr(json.dumps(output)) + ';'
+        self.export.append(code_str)
+
+    def encode_assessment_json(self, assessment_dict, assessment_name):
+        real_dict = assessment_dict['assessment']
+
+        output = {}
+        output['assessmentName'] = real_dict['assessmentName']
+        if 'preamble' in real_dict:
+            output['preamble'] = real_dict['preamble']
+        output['checkAnswers'] = real_dict['checkAnswers'].value
+
+        encoded_questions_list = []
+        for elt in real_dict['questionsList']:
+            encoded_elt = {}
+            encoded_elt['questionHTML'] = elt['questionHTML']
+            if 'lesson' in elt:
+                encoded_elt['lesson'] = elt['lesson']
+            if 'correctAnswerNumeric' in elt:
+                encoded_elt['correctAnswerNumeric'] = elt['correctAnswerNumeric']
+            if 'correctAnswerString' in elt:
+                encoded_elt['correctAnswerString'] = elt['correctAnswerString']
+            if 'correctAnswerRegex' in elt:
+                # NB: The exported script needs to define a gcb_regex() wrapper function
+                encoded_elt['correctAnswerRegex'] = 'gcb_regex(' + repr(elt['correctAnswerRegex'].value) + ')'
+            if 'choices' in elt:
+                encoded_choices = []
+                for e in elt['choices']:
+                    if type(e) is str:
+                        encoded_choices.append(e)
+                    else:
+                        # NB: The exported script needs to define a gcb_correct() wrapper function
+                        encoded_choices.append('gcb_correct(' + repr(e.value) + ')')
+                encoded_elt['choices'] = encoded_choices
+            encoded_questions_list.append(encoded_elt)
+        output['questionsList'] = encoded_questions_list
+
+        # for debugging
+        #pprinter = pprint.PrettyPrinter()
+        #pprinter.pprint(output)
+
+        # N.B.: make sure to get the string quoting right!
+        code_str = 'assessments["' + assessment_name + '"] = ' + repr(json.dumps(output)) + ';'
+        self.export.append(code_str)
 
     def format_parse_log(self):
         return "Parse log:\n%s" % "\n".join(self.schema_helper.parse_log)
@@ -1139,7 +1244,7 @@ def run_all_schema_helper_unit_tests():
     assert_fail({"name": "Bob"}, {"name": INTEGER})
     assert_fail({"name": 12345}, {"name": STRING})
     assert_fail({"amount": 12345}, {"name": INTEGER})
-    assert_fail({"regex": CORRECT}, {"regex": REGEX})
+    assert_fail({"regex": CORRECT}, {"regex": Term(REGEX)})
     assert_pass({"name": "Bob"}, {"name": STRING, "phone": STRING})
     assert_pass({"name": "Bob"}, {"phone": STRING, "name": STRING})
     assert_pass({"name": "Bob"},

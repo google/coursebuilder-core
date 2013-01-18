@@ -38,7 +38,10 @@ def export_to_javascript(filename, lines, date):
         else:
             code.append('')
     code.append('')
-    code.append('  return units;')
+    code.append('  course = Array();')
+    code.append('  course["units"] = units;')
+    code.append('  course["assessments"] = assessments;')
+    code.append('  return course;')
     code.append('}')
 
     afile = open('%s.js' % filename, 'w')
@@ -62,7 +65,11 @@ def export_to_python(filename, lines, date):
     code.append('def gcb_import():')
     for line in lines:
         code.append('  %s' % line)
-    code.append('  return units')
+    code.append('')
+    code.append('  course = Array();')
+    code.append('  course["units"] = units;')
+    code.append('  course["assessments"] = assessments;')
+    code.append('  return course;')
     code.append('')
     code.append('if __name__ == \"__main__\":')
     code.append('  init()')
@@ -86,7 +93,10 @@ def export_to_php(filename, lines, date):
         else:
             code.append('')
     code.append('')
-    code.append('  return $units;')
+    code.append('  $course = Array();')
+    code.append('  $course["units"] = $units;')
+    code.append('  $course["assessments"] = $assessments;')
+    code.append('  return $course;')
     code.append('}')
 
     afile = open('%s.php' % filename, 'w')
