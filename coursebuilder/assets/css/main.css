@@ -415,6 +415,11 @@ button.gcb-button-action {
   margin-left: 8px;
 }
 
+a.gcb-button-action {
+  float: right;
+  margin-left: 8px;
+}
+
 #gcb-nav-x {
   background-color: #4D5B76;
   background-image: linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
