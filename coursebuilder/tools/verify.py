@@ -97,6 +97,9 @@ UNIT_CSV_TO_DB_CONVERTER = {
 }
 LESSON_CSV_TO_DB_CONVERTER = {
     'unit_id': ('unit_id', int),
+
+    # Field 'unit_title' is a duplicate of Unit.title. We enforce that both
+    # values are the same and ignore this value altogether.
     'unit_title': None,
     'lesson_id': ('id', int),
     'lesson_title': ('title', str),
@@ -965,6 +968,11 @@ class Verifier(object):
             unit_lessons = []
             for lesson in lessons:
                 if lesson.unit_id == unit.unit_id:
+                    if not lesson.unit_title == unit.title:
+                        raise Exception(''.join([
+                            'A unit_title of a lesson (id=%s) must match ',
+                            'title of a unit (id=%s) the lesson belongs to.'
+                            ]) % (lesson.lesson_id, lesson.unit_id))
                     unit_lessons.append(lesson)
                     used_lessons.append(lesson)
 

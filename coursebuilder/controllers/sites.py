@@ -68,27 +68,7 @@ If you have existing course developed using Course Builder and DO want to start
 hosting multiple courses here are the steps. First, define the courses
 configuration environment variable as described above. Second, copy existing
 'assets', 'data' and 'views' folders of your course into the new location, for
-example '/courses/mycourse'. Third, change your bulkloader commands to use the
-new CSV data file locations and add a 'namespace' parameter, here is an
-example:
-
-  ...
-  echo Uploading units.csv
-  $GOOGLE_APP_ENGINE_HOME/appcfg.py upload_data \
-  --url=http://localhost:8080/_ah/remote_api \
-  --config_file=experimental/coursebuilder/bulkloader.yaml \
-  --filename=experimental/coursebuilder/courses/a/data/unit.csv \
-  --kind=Unit \
-  --namespace=gcb-courses-a
-
-  echo Uploading lessons.csv
-  $GOOGLE_APP_ENGINE_HOME/appcfg.py upload_data \
-  --url=http://localhost:8080/_ah/remote_api \
-  --config_file=experimental/coursebuilder/bulkloader.yaml \
-  --filename=experimental/coursebuilder/courses/a/data/lesson.csv \
-  --kind=Lesson \
-  --namespace=gcb-courses-a
-  ...
+example '/courses/mycourse'.
 
 If you have an existing course built on a previous version of Course Builder
 and you now decided to use new URL prefix, which is not '/', you will need

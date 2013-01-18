@@ -808,6 +808,10 @@ class GeneratedCourse(object):
         return 'Interpreting unit-title-%s results' % self.path
 
     @property
+    def lesson_title(self):
+        return 'Word lesson-title-%s order matters' % self.path
+
+    @property
     def head(self):
         return '<!-- head-%s -->' % self.path
 
@@ -877,6 +881,16 @@ class TwoCoursesTest(actions.TestBase):
 
         self.modify_file(
             os.path.join(course.home, 'data/unit.csv'),
+            ',Interpreting results,',
+            ',%s,' % course.unit_title)
+
+        self.modify_file(
+            os.path.join(course.home, 'data/lesson.csv'),
+            ',Word order matters,',
+            ',%s,' % course.lesson_title)
+
+        self.modify_file(
+            os.path.join(course.home, 'data/lesson.csv'),
             ',Interpreting results,',
             ',%s,' % course.unit_title)
 
@@ -966,7 +980,7 @@ class TwoCoursesTest(actions.TestBase):
         # Check normal user has no access.
         actions.login(course.email)
 
-        # Test course content.
+        # Test schedule.
         if first_time:
             response = self.testapp.get('/courses/%s/preview' % course.path)
         else:
@@ -983,10 +997,21 @@ class TwoCoursesTest(actions.TestBase):
         if first_time:
             # Test registration.
             response = self.get('/courses/%s/register' % course.path)
+            assert_contains(course.title, response.body)
+            assert_contains(course.head, response.body)
             response.form.set('form01', course.name)
             response.form.action = '/courses/%s/register' % course.path
             response = self.submit(response.form)
 
+            assert_contains(course.title, response.body)
+            assert_contains(course.head, response.body)
             assert_contains('Thank you for registering for', response.body)
+
+        # Check lesson page.
+        response = self.testapp.get(
+            '/courses/%s/unit?unit=1&lesson=5' % course.path)
+        assert_contains(course.title, response.body)
+        assert_contains(course.lesson_title, response.body)
+        assert_contains(course.head, response.body)
 
         actions.logout()
