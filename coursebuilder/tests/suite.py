@@ -12,7 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Functional tests for Course Builder."""
+"""Course Builder test suite.
+
+This script runs all functional and units test in the Course Builder project.
+
+Here is how to use the script:
+    - download WebTest Python package here:
+        http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip
+    - add it to your Python path:
+        PYTHONPATH=$PYTHONPATH:/tmp/webtest
+    - run this command from a command line:
+        python tests/suite.py
+    - review the output
+
+Good luck!
+"""
 
 __author__ = 'Sean Lip'
 
