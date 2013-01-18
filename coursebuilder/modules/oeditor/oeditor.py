@@ -27,7 +27,7 @@ REQUIRED_MODULES = """
     "inputex-group", "inputex-select", "inputex-string", "inputex-form",
     "inputex-radio", "inputex-date", "inputex-datepicker", "inputex-jsonschema",
     "inputex-checkbox", "inputex-list", "inputex-color", "inputex-rte",
-    "inputex-textarea"
+    "inputex-textarea", "inputex-uneditable"
     """
 
 

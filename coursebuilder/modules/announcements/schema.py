@@ -30,6 +30,7 @@ SCHEMA_JSON = """
         "type": "object",
         "description": "Announcement",
         "properties": {
+            "key" : {"type": "string"},
             "title": {"optional": true, "type": "string"},
             "date": {"optional": true, "type": "date"},
             "html": {"optional": true, "type": "text"},
@@ -43,10 +44,12 @@ SCHEMA_DICT = json.loads(SCHEMA_JSON)
 # inputex specific schema annotations to control editor look and feel
 SCHEMA_ANNOTATIONS_DICT = [
     (['title'], 'Announcement'),
+    (['properties', 'key', '_inputex'], {
+        'label': 'ID', '_type': 'uneditable'}),
     (['properties', 'date', '_inputex'], {
-        '_type': 'date', 'dateFormat': 'Y/m/d', 'valueFormat': 'Y/m/d',
-        'label': 'Date'}),
+        'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
+        'valueFormat': 'Y/m/d'}),
     (['properties', 'title', '_inputex'], {'label': 'Title'}),
-    (['properties', 'html', '_inputex'], {'_type': 'text', 'label': 'Body'}),
+    (['properties', 'html', '_inputex'], {'label': 'Body', '_type': 'text'}),
     (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})
 ]
