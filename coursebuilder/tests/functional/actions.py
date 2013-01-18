@@ -50,6 +50,11 @@ PREVIEW_HOOK_POINTS = [
     '<!-- preview.after_main_content_ends -->']
 
 
+class MustFail(Exception):
+    """Special exception raised when a prior method did not raise."""
+    pass
+
+
 class TestBase(suite.BaseTestClass):
     """Contains methods common to all tests."""
 
@@ -190,9 +195,6 @@ def assert_none_fail(browser, callbacks):
 
 def assert_all_fail(browser, callbacks):
     """Invokes all callbacks and expects each one to fail."""
-
-    class MustFail(Exception):
-        pass
 
     for callback in callbacks:
         try:

@@ -29,7 +29,6 @@ import appengine_config
 from controllers import lessons
 from controllers import sites
 from controllers import utils
-from controllers.sites import assert_fails
 from controllers.utils import XsrfTokenManager
 from models import config
 from models import jobs
@@ -577,34 +576,34 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name3)
         actions.check_profile(self, name3)
 
-    def test_limited_class_size_registration(self):
-        """Test student registration with MAX_CLASS_SIZE."""
-        utils.MAX_CLASS_SIZE = 2
+    def test_registration_closed(self):
+        """Test student registration when course is full."""
 
-        email1 = '111@example.com'
-        name1 = 'student1'
-        email2 = '222@example.com'
-        name2 = 'student2'
-        email3 = '333@example.com'
-        name3 = 'student3'
+        email = 'test_registration_closed@example.com'
+        name = 'Test Registration Closed'
 
-        actions.login(email1)
-        actions.register(self, name1)
-        actions.logout()
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
 
-        actions.login(email2)
-        actions.register(self, name2)
-        actions.logout()
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['reg_form']['can_register'] = False
+            return environ
 
-        actions.login(email3)
-        assert_fails(lambda: actions.register(self, name3))
-        actions.logout()
+        sites.ApplicationContext.get_environ = get_environ_new
 
-        # Now unset the limit, and registration should succeed
-        utils.MAX_CLASS_SIZE = None
-        actions.login(email3)
-        actions.register(self, name3)
-        actions.logout()
+        # Try to ogin and register.
+        actions.login(email)
+        try:
+            actions.register(self, name)
+            raise actions.MustFail('Expected to fail.')
+        except actions.MustFail as e:
+            raise e
+        except:
+            pass
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
 
     def test_permissions(self):
         """Test student permissions, and which pages they can view."""

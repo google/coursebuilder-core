@@ -33,13 +33,6 @@ from webapp2_extras import i18n
 from google.appengine.api import users
 
 
-# FIXME: Set MAX_CLASS_SIZE to a positive integer if you want to restrict the
-# course size to a maximum of N students. Note, though, that counting the
-# students in this way uses a lot of database calls that may cost you quota
-# and money.
-# TODO(psimakov): we must use sharded counter and not Student.all().count()
-MAX_CLASS_SIZE = None
-
 # The name of the template dict key that stores a course's base location.
 COURSE_BASE_KEY = 'gcb_course_base'
 
@@ -306,8 +299,9 @@ class RegisterHandler(BaseHandler):
         if not self.assert_xsrf_token_or_fail(self.request, 'register-post'):
             return
 
-        if (MAX_CLASS_SIZE and
-            Student.all(keys_only=True).count() >= MAX_CLASS_SIZE):
+        can_register = self.app_context.get_environ(
+            )['reg_form']['can_register']
+        if not can_register:
             self.template_value['course_status'] = 'full'
         else:
             name = self.request.get('form01')

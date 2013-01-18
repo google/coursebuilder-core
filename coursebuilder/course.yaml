@@ -144,6 +144,9 @@ reg_form:
   # be wrapped in <li></li> tags.
   additional_registration_fields: '<!-- reg_form.additional_registration_fields -->'
 
+  # Whether to allow new students to register for the course.
+  can_register: True
+
 
 ##############################
 # Assessment confirmation page
