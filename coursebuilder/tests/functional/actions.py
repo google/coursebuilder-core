@@ -19,9 +19,11 @@
 import logging
 import os
 import re
+import appengine_config
 from controllers import sites
 import main
 import suite
+from google.appengine.api import namespace_manager
 
 
 class TestBase(suite.BaseTestClass):
@@ -32,8 +34,19 @@ class TestBase(suite.BaseTestClass):
         sites.ApplicationRequestHandler.bind(main.urls)
         return main.app
 
+    def assert_default_namespace(self):
+        ns = namespace_manager.get_namespace()
+        if not ns == appengine_config.DEFAULT_NAMESPACE_NAME:
+            raise Exception('Expected default namespace, found: %s' % ns)
+
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
+        self.assert_default_namespace()
+        self.namespace = ''
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        self.assert_default_namespace()
+        super(TestBase, self).tearDown()
 
     def canonicalize(self, href, response=None):
         """Create absolute URL using <base> if defined, '/' otherwise."""

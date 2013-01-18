@@ -40,6 +40,40 @@ from google.appengine.api import namespace_manager
 UNIQUE_URLS_FOUND = {}
 
 
+class InfrastructureTest(actions.TestBase):
+    """Test core infrastructure classes agnostic to specific user roles."""
+
+    def test_config_visble_from_any_namespace(self):
+        """Test that ConfigProperty is visible from any namespace."""
+
+        assert (
+            config.UPDATE_INTERVAL_SEC.value ==
+            config.UPDATE_INTERVAL_SEC.default_value)
+        new_value = config.UPDATE_INTERVAL_SEC.default_value + 5
+
+        # Add datastore override for known property.
+        prop = config.ConfigPropertyEntity(
+            key_name=config.UPDATE_INTERVAL_SEC.name)
+        prop.value = str(new_value)
+        prop.is_draft = False
+        prop.put()
+
+        # Check visible from default namespace.
+        config.Registry.last_update_time = 0
+        assert config.UPDATE_INTERVAL_SEC.value == new_value
+
+        # Check visible from another namespace.
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(
+                'ns-test_config_visble_from_any_namespace')
+
+            config.Registry.last_update_time = 0
+            assert config.UPDATE_INTERVAL_SEC.value == new_value
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+
 class AdminAspectTest(actions.TestBase):
     """Test site from the Admin perspective."""
 
@@ -230,8 +264,6 @@ class AdminAspectTest(actions.TestBase):
         # Check namespaces.
         assert_contains('gcb-course-foo-data', response.body)
         assert_contains('nsbar', response.body)
-
-        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
 
 class CourseAuthorAspectTest(actions.TestBase):
@@ -638,12 +670,9 @@ class AssessmentTest(actions.TestBase):
         actions.login(email)
         actions.register(self, name)
 
-        old_namespace = None
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.namespace)
         try:
-            if hasattr(self, 'namespace'):
-                old_namespace = namespace_manager.get_namespace()
-                namespace_manager.set_namespace(self.namespace)
-
             # Check that no scores exist right now.
             student = models.Student.get_enrolled_student_by_email(email)
             assert len(get_all_scores(student)) == 0  # pylint: disable=C6411
@@ -695,8 +724,7 @@ class AssessmentTest(actions.TestBase):
             assert (int(get_score(student, 'overall_score')) ==
                     int((0.30 * 2) + (0.70 * 100000)))
         finally:
-            if old_namespace:
-                namespace_manager.set_namespace(old_namespace)
+            namespace_manager.set_namespace(old_namespace)
 
 
 # TODO(psimakov): if mixin method names overlap, we don't run them all; must fix
@@ -705,17 +733,18 @@ class CourseUrlRewritingTest(
     """Run existing tests using rewrite rules for '/courses/pswg' base URL."""
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(CourseUrlRewritingTest, self).setUp()
+
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
 
         courses = 'course:%s:/:%s' % (self.base, self.namespace)
         os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
 
-        super(CourseUrlRewritingTest, self).setUp()
-
     def tearDown(self):  # pylint: disable-msg=g-bad-name
-        super(CourseUrlRewritingTest, self).tearDown()
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+
+        super(CourseUrlRewritingTest, self).tearDown()
 
     def hook_response(self, response):
         """Inspect response of every request."""
@@ -758,3 +787,4 @@ class CourseUrlRewritingTest(
                         url, response.body))
 
             UNIQUE_URLS_FOUND[url] = url
+
