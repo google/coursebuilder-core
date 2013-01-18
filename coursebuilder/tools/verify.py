@@ -87,7 +87,9 @@ LESSONS_HEADER = (
     'unit_id,unit_title,lesson_id,lesson_title,lesson_activity,'
     'lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives')
 
-NO_VERIFY_TAG_NAME_OPEN = '<gcb-no-verify>'
+# pylint: disable-msg=anomalous-backslash-in-string
+NO_VERIFY_TAG_NAME_OPEN = '<gcb-no-verify>\s*\n'
+# pylint: enable-msg=anomalous-backslash-in-string
 NO_VERIFY_TAG_NAME_CLOSE = '</gcb-no-verify>'
 
 OUTPUT_FINE_LOG = False
@@ -98,6 +100,13 @@ class Term(object):
     def __init__(self, term_type, value=None):
         self.term_type = term_type
         self.value = value
+
+    def __eq__(self, other):
+        if type(other) is not Term:
+            return False
+        else:
+            return ((self.term_type == other.term_type) and
+                    (self.value == other.value))
 
 
 class SchemaException(Exception):
@@ -293,10 +302,7 @@ class SchemaHelper(object):
         """Checks if a single value matches a specific (primitive) type."""
 
         if atype == BOOLEAN:
-            # TODO(psimakov): double-check all variants of boolean values
-            if (value == 'True' or value == 'False' or value == 'true' or
-                value == 'false' or isinstance(value, bool) or
-                value.term_type == BOOLEAN):
+            if isinstance(value, bool) or value.term_type == BOOLEAN:
                 self.visit_element('BOOLEAN', value, context)
                 return True
             else:
@@ -788,30 +794,34 @@ def remove_javascript_multi_line_comment(text):
     # pylint: enable-msg=anomalous-backslash-in-string
 
 
-def remove_content_marked_no_verify(content):
-    """Removes content that should not be verified."""
+def parse_content_marked_no_verify(content):
+    """Parses and returns a tuple of real content and no-verify text."""
 
     # If you have any free-form JavaScript in the activity file, you need
     # to place it between //<gcb-no-verify> ... //</gcb-no-verify> tags
     # so that the verifier can selectively ignore it.
 
-    pattern = re.compile('(%s)(.*)(%s)' % (
+    pattern = re.compile('%s(.*)%s' % (
         NO_VERIFY_TAG_NAME_OPEN, NO_VERIFY_TAG_NAME_CLOSE), re.DOTALL)
-    return re.sub(pattern, '', content)
+    m = pattern.search(content)
+    noverify_text = None
+    if m:
+        noverify_text = m.group(1)
+    return (re.sub(pattern, '', content), noverify_text)
 
 
 def convert_javascript_to_python(content, root_name):
-    """Removes JavaScript specific syntactic constructs."""
+    """Removes JavaScript specific syntactic constructs and returns a tuple."""
 
     # Reads the content and removes JavaScript comments, var's, and escapes
     # regular expressions.
 
-    content = remove_content_marked_no_verify(content)
+    (content, noverify_text) = parse_content_marked_no_verify(content)
     content = remove_javascript_multi_line_comment(content)
     content = remove_javascript_single_line_comment(content)
     content = content.replace('var %s = ' % root_name, '%s = ' % root_name)
     content = escape_javascript_regex(content)
-    return content
+    return (content, noverify_text)
 
 
 def convert_javascript_file_to_python(fname, root_name):
@@ -819,7 +829,8 @@ def convert_javascript_file_to_python(fname, root_name):
         ''.join(open(fname, 'r').readlines()), root_name)
 
 
-def evaluate_python_expression_from_text(content, root_name, scope):
+def evaluate_python_expression_from_text(content, root_name, scope,
+                                         noverify_text):
     """Compiles and evaluates a Python script in a restricted environment."""
 
     # First compiles and then evaluates a Python script text in a restricted
@@ -837,15 +848,20 @@ def evaluate_python_expression_from_text(content, root_name, scope):
     exec code in restricted_scope
     # pylint: enable-msg=exec-statement
 
+    if noverify_text:
+        restricted_scope['noverify'] = noverify_text
+
     if not restricted_scope[root_name]:
         raise Exception('Unable to find \'%s\'' % root_name)
     return restricted_scope
 
 
 def evaluate_javascript_expression_from_file(fname, root_name, scope, error):
-    content = convert_javascript_file_to_python(fname, root_name)
+    (content, noverify_text) = convert_javascript_file_to_python(fname,
+                                                                 root_name)
     try:
-        return evaluate_python_expression_from_text(content, root_name, scope)
+        return evaluate_python_expression_from_text(content, root_name, scope,
+                                                    noverify_text)
     except:
         error('Unable to parse %s in file %s\n  %s' % (
             root_name, fname, text_to_line_numbered_text(content)))
@@ -1009,6 +1025,23 @@ class Verifier(object):
 
         self.info('Read %s assessments' % count)
 
+    # NB: The exported script needs to define a gcb_regex() wrapper function
+    @staticmethod
+    def encode_regex(regex_str):
+        """Encodes a JavaScript-style regex into a Python gcb_regex call."""
+        # parse the regex into the base and modifiers. e.g., for /foo/i
+        # base is 'foo' and modifiers is 'i'
+        assert regex_str[0] == '/'
+        # find the LAST '/' in regex_str (because there might be other
+        # escaped '/' characters in the middle of regex_str)
+        final_slash_index = regex_str.rfind('/')
+        assert final_slash_index > 0
+
+        base = regex_str[1:final_slash_index]
+        modifiers = regex_str[final_slash_index+1:]
+        func_str = 'gcb_regex(' + repr(base) + ', ' + repr(modifiers) + ')'
+        return func_str
+
     def encode_activity_json(self, activity_dict, unit_id, lesson_id):
         """Encodes an activity dictionary into JSON."""
         output = []
@@ -1035,10 +1068,7 @@ class Verifier(object):
                         if k == 'questionType':
                             continue
                         elif k == 'correctAnswerRegex':
-                            # NB: The exported script needs to define a
-                            # gcb_regex() wrapper function
-                            encoded_elt[k] = 'gcb_regex(%s)' % repr(
-                                elt[k].value)
+                            encoded_elt[k] = Verifier.encode_regex(elt[k].value)
                         else:
                             # ordinary string
                             encoded_elt[k] = elt[k]
@@ -1054,6 +1084,12 @@ class Verifier(object):
         code_str = "units[%s]['lessons'][%s]['activity'] = " % (
             unit_id, lesson_id) + repr(json.dumps(output)) + ';'
         self.export.append(code_str)
+
+        if 'noverify' in activity_dict:
+            self.export.append('')
+            noverify_code_str = "units[%s]['lessons'][%s]['code'] = " % (
+                unit_id, lesson_id) + repr(activity_dict['noverify']) + ';'
+            self.export.append(noverify_code_str)
 
     def encode_assessment_json(self, assessment_dict, assessment_name):
         """Encodes an assessment dictionary into JSON."""
@@ -1077,28 +1113,35 @@ class Verifier(object):
             if 'correctAnswerString' in elt:
                 encoded_elt['correctAnswerString'] = elt['correctAnswerString']
             if 'correctAnswerRegex' in elt:
-                # NB: The exported script needs to define a
-                # gcb_regex() wrapper function
-                encoded_elt['correctAnswerRegex'] = 'gcb_regex(' + repr(
-                    elt['correctAnswerRegex'].value) + ')'
+                encoded_elt['correctAnswerRegex'] = Verifier.encode_regex(
+                    elt['correctAnswerRegex'].value)
             if 'choices' in elt:
                 encoded_choices = []
-                for e in elt['choices']:
+                correct_answer_index = None
+                for (ind, e) in enumerate(elt['choices']):
                     if type(e) is str:
                         encoded_choices.append(e)
+                    elif e.term_type == CORRECT:
+                        encoded_choices.append(e.value)
+                        correct_answer_index = ind
                     else:
-                        # NB: The exported script needs to define a
-                        # gcb_correct() wrapper function
-                        encoded_choices.append(
-                            'gcb_correct(' + repr(e.value) + ')')
+                        raise Exception("Invalid type in 'choices'")
                 encoded_elt['choices'] = encoded_choices
+                encoded_elt['correctAnswerIndex'] = correct_answer_index
             encoded_questions_list.append(encoded_elt)
         output['questionsList'] = encoded_questions_list
 
         # N.B.: make sure to get the string quoting right!
-        code_str = 'assessments["' + assessment_name + '"] = ' + repr(
+        code_str = 'assessments[\'' + assessment_name + '\'] = ' + repr(
             json.dumps(output)) + ';'
         self.export.append(code_str)
+
+        if 'noverify' in assessment_dict:
+            self.export.append('')
+            noverify_code_str = ('assessments[\'' + assessment_name +
+                                 '\'] = ' + repr(assessment_dict['noverify']) +
+                                 ';')
+            self.export.append(noverify_code_str)
 
     def format_parse_log(self):
         return 'Parse log:\n%s' % '\n'.join(self.schema_helper.parse_log)
@@ -1216,10 +1259,20 @@ def run_all_regex_unit_tests():
     assert remove_javascript_single_line_comment(
         'blah\nblah  // comment http://www.foo.com\nblah') == (
             'blah\nblah\nblah')
-    assert remove_content_marked_no_verify(
-        'blah1\n// <gcb-no-verify>/blah2\n// </gcb-no-verify>\nblah3') == (
+    assert parse_content_marked_no_verify(
+        'blah1\n// <gcb-no-verify>\n/blah2\n// </gcb-no-verify>\nblah3')[0] == (
             'blah1\n// \nblah3')
     # pylint: enable-msg=anomalous-backslash-in-string
+
+    assert Verifier.encode_regex('/white?/i') == """gcb_regex('white?', 'i')"""
+    assert (Verifier.encode_regex('/jane austen (book|books) \\-price/i') ==
+            r"""gcb_regex('jane austen (book|books) \\-price', 'i')""")
+    assert (Verifier.encode_regex('/Kozanji|Kozan-ji|Kosanji|Kosan-ji/i') ==
+            r"""gcb_regex('Kozanji|Kozan-ji|Kosanji|Kosan-ji', 'i')""")
+    assert (Verifier.encode_regex('/Big Time College Sport?/i') ==
+            "gcb_regex('Big Time College Sport?', 'i')")
+    assert (Verifier.encode_regex('/354\\s*[+]\\s*651/') ==
+            r"""gcb_regex('354\\s*[+]\\s*651', '')""")
 
 
 def run_all_schema_helper_unit_tests():
@@ -1255,6 +1308,13 @@ def run_all_schema_helper_unit_tests():
     def assert_fail(instances, types):
         assert_fails(lambda: assert_pass(instances, types))
 
+    def create_python_dict_from_js_object(js_object):
+        python_str, noverify = convert_javascript_to_python(
+            'var x = ' + js_object, 'x')
+        ret = evaluate_python_expression_from_text(
+            python_str, 'x', Assessment().scope, noverify)
+        return ret['x']
+
     # CSV tests
     read_objects_from_csv(
         [['id', 'type'], [1, 'none']], 'id,type', Unit)
@@ -1279,7 +1339,7 @@ def run_all_schema_helper_unit_tests():
     assert_fail({'name': 'Bob'}, {'name': INTEGER})
     assert_fail({'name': 12345}, {'name': STRING})
     assert_fail({'amount': 12345}, {'name': INTEGER})
-    assert_fail({'regex': CORRECT}, {'regex': Term(REGEX)})
+    assert_fail({'regex': Term(CORRECT)}, {'regex': Term(REGEX)})
     assert_pass({'name': 'Bob'}, {'name': STRING, 'phone': STRING})
     assert_pass({'name': 'Bob'}, {'phone': STRING, 'name': STRING})
     assert_pass({'name': 'Bob'},
@@ -1336,11 +1396,9 @@ def run_all_schema_helper_unit_tests():
                 {'colors': [{'name': STRING, 'rgb': STRING}]})
 
     # boolean type tests
-    assert_pass({'name': 'Bob', 'active': 'true'},
-                {'name': STRING, 'active': BOOLEAN})
     assert_pass({'name': 'Bob', 'active': True},
                 {'name': STRING, 'active': BOOLEAN})
-    assert_pass({'name': 'Bob', 'active': [5, True, 'False']},
+    assert_pass({'name': 'Bob', 'active': [5, True, False]},
                 {'name': STRING, 'active': [INTEGER, BOOLEAN]})
     assert_pass({'name': 'Bob', 'active': [5, True, 'false']},
                 {'name': STRING, 'active': [STRING, INTEGER, BOOLEAN]})
@@ -1392,6 +1450,15 @@ def run_all_schema_helper_unit_tests():
     assert_fail({'likes': {'state': 'CA', 'drink': 'cheese'}},
                 {'likes': [{'state': 'CA', 'food': STRING},
                            {'state': 'NY', 'drink': STRING}]})
+
+    # creating from dict tests
+    assert_same(create_python_dict_from_js_object('{"active": true}'),
+                {'active': Term(BOOLEAN, True)})
+    assert_same(create_python_dict_from_js_object(
+        '{"a": correct("hello world")}'),
+                {'a': Term(CORRECT, 'hello world')})
+    assert_same(create_python_dict_from_js_object('{"a": /hello/i}'),
+                {'a': Term(REGEX, '/hello/i')})
 
 
 def run_all_unit_tests():

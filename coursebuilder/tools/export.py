@@ -28,9 +28,19 @@ def echo(unused_x):
     pass
 
 
+JS_GCB_REGEX = """
+function gcb_regex(base, modifiers) {
+    // NB: base should already have backslashes escaped
+    return new RegExp(base, modifiers);
+}
+
+"""
+
+
 def export_to_javascript(filename, lines, date):
     """Creates JavaScript export function from given lines and writes a file."""
     code = []
+    code.append(JS_GCB_REGEX)
     code.append('function gcb_import(){')
     for line in lines:
         if line:
@@ -53,6 +63,19 @@ def export_to_javascript(filename, lines, date):
     afile.close()
 
 
+PYTHON_GCB_REGEX = """
+import re
+def gcb_regex(base, modifiers):
+    flags = 0
+    if 'i' in modifiers:
+        flags |= re.IGNORECASE
+    if 'm' in modifiers:
+        flags |= re.MULTILINE
+    return re.compile(base, flags)
+
+"""
+
+
 def export_to_python(filename, lines, date):
     """Creates Python export function from given lines and writes a file."""
     code = []
@@ -61,7 +84,7 @@ def export_to_python(filename, lines, date):
     code.append('')
     code.append('true = True')
     code.append('false = False')
-    code.append('')
+    code.append(PYTHON_GCB_REGEX)
     code.append('def gcb_import():')
     for line in lines:
         code.append('  %s' % line)
@@ -70,9 +93,6 @@ def export_to_python(filename, lines, date):
     code.append('  course["units"] = units;')
     code.append('  course["assessments"] = assessments;')
     code.append('  return course;')
-    code.append('')
-    code.append('if __name__ == \"__main__\":')
-    code.append('  init()')
 
     afile = open('%s.py' % filename, 'w')
     afile.write('# Course Builder %s Python Export on %s\n' % (
@@ -81,6 +101,10 @@ def export_to_python(filename, lines, date):
     afile.write('\n'.join(code))
     afile.write('\n# end')
     afile.close()
+
+
+# TODO(psimakov): implement PHP_GCB_REGEX, but it's unclear how to return a new
+# regexp object in PHP. maybe see http://www.regular-expressions.info/php.html
 
 
 def export_to_php(filename, lines, date):
