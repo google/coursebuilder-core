@@ -22,11 +22,10 @@ import urllib
 from controllers.utils import BaseHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import roles
-from models.models import Student
+from models.models import MemcacheManager
 import models.transforms as transforms
 import modules.announcements.samples as samples
 from modules.oeditor import oeditor
-from google.appengine.api import users
 from google.appengine.ext import db
 
 
@@ -86,6 +85,19 @@ class AnnouncementsRights(object):
     def can_add(cls):
         return cls.can_edit()
 
+    @classmethod
+    def apply_rights(cls, items):
+        """Filter out items that current user can't see."""
+        if AnnouncementsRights.can_edit():
+            return items
+
+        allowed = []
+        for item in items:
+            if not item.is_draft:
+                allowed.append(item)
+
+        return allowed
+
 
 class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
     """Handler for announcements."""
@@ -105,18 +117,6 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             args['key'] = key
         return self.canonicalize_url(
             '/announcements?%s' % urllib.urlencode(args))
-
-    def apply_rights(self, items):
-        """Filter out items that current user can't see."""
-        if AnnouncementsRights.can_edit():
-            return items
-
-        allowed = []
-        for item in items:
-            if not item.is_draft:
-                allowed.append(item)
-
-        return allowed
 
     def format_items_for_template(self, items):
         """Formats a list of entities into template values."""
@@ -153,23 +153,17 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def get_list(self):
         """Shows a list of announcements."""
-        user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+        if not self.personalize_page_and_get_enrolled():
             return
 
-        student = Student.get_enrolled_student_by_email(user.email())
-        if not student:
-            self.redirect('/preview')
-            return
-
-        # TODO(psimakov): cache this page and invalidate the cache on update
-        items = AnnouncementEntity.all().order('-date').fetch(1000)
-        if not items:
+        items = AnnouncementEntity.get_announcements()
+        if not items and AnnouncementsRights.can_edit():
             items = self.put_sample_announcements()
 
+        items = AnnouncementsRights.apply_rights(items)
+
         self.template_value['announcements'] = self.format_items_for_template(
-            self.apply_rights(items))
+            items)
         self.template_value['navbar'] = {'announcements': True}
         self.render('announcements.html')
 
@@ -224,6 +218,7 @@ class ItemRESTHandler(BaseHandler):
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
         key = self.request.get('key')
+
         try:
             entity = AnnouncementEntity.get(key)
         except db.BadKeyError:
@@ -232,10 +227,18 @@ class ItemRESTHandler(BaseHandler):
         if not entity:
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
-        else:
-            json_payload = transforms.dict_to_json(transforms.entity_to_dict(
-                entity), SCHEMA_DICT)
-            transforms.send_json_response(self, 200, 'Success.', json_payload)
+            return
+
+        viewable = AnnouncementsRights.apply_rights([entity])
+        if not viewable:
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+        entity = viewable[0]
+
+        json_payload = transforms.dict_to_json(transforms.entity_to_dict(
+            entity), SCHEMA_DICT)
+        transforms.send_json_response(self, 200, 'Success.', json_payload)
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -267,3 +270,27 @@ class AnnouncementEntity(db.Model):
     date = db.DateProperty()
     html = db.TextProperty()
     is_draft = db.BooleanProperty()
+
+    memcache_key = 'AnnouncementEntity.get_announcements'
+
+    @classmethod
+    def get_announcements(cls, allow_cached=True):
+        items = MemcacheManager.get(cls.memcache_key)
+        if not allow_cached or items is None:
+            items = AnnouncementEntity.all().order('-date').fetch(1000)
+
+            # TODO(psimakov): prepare to exceed 1MB max item size
+            # read more here: http://stackoverflow.com
+            #   /questions/5081502/memcache-1-mb-limit-in-google-app-engine
+            MemcacheManager.set(cls.memcache_key, items)
+        return items
+
+    def put(self):
+        """Do the normal put() and also invalidate memcache."""
+        super(AnnouncementEntity, self).put()
+        MemcacheManager.delete(self.memcache_key)
+
+    def delete(self):
+        """Do the normal delete() and invalidate memcache."""
+        super(AnnouncementEntity, self).delete()
+        MemcacheManager.delete(self.memcache_key)

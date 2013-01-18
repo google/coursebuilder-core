@@ -188,8 +188,8 @@ class AdminAspectTest(actions.TestBase):
 class CourseAuthorAspectTest(actions.TestBase):
     """Tests the site from the Course Author perspective."""
 
-    def test_draft_announcements(self):
-        """Test course author can see draft announcements."""
+    def test_trigger_sample_announcements(self):
+        """Test course author can trigger adding sample announcements."""
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
@@ -197,7 +197,9 @@ class CourseAuthorAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = actions.view_announcements(self)
+        assert_contains('Example Announcement', response.body)
         assert_contains('Welcome to the final class!', response.body)
+        assert_does_not_contain('No announcements yet.', response.body)
 
     def test_manage_announcements(self):
         """Test course author can manage announcements."""
@@ -273,16 +275,43 @@ class CourseAuthorAspectTest(actions.TestBase):
 class StudentAspectTest(actions.TestBase):
     """Tests the site from the Student perspective."""
 
-    def test_draft_announcements(self):
-        """Test student can't see draft announcements."""
-        email = 'test_draft_announcements@google.com'
-        name = 'Test Draft Announcements'
+    def test_view_announcements(self):
+        """Test student aspect of announcements."""
+        email = 'test_announcements@google.com'
+        name = 'Test Announcements'
 
         actions.login(email)
         actions.register(self, name)
 
+        # Check no announcements yet.
         response = actions.view_announcements(self)
+        assert_does_not_contain('Example Announcement', response.body)
         assert_does_not_contain('Welcome to the final class!', response.body)
+        assert_contains('No announcements yet.', response.body)
+        actions.logout()
+
+        # Login as admin and add announcements.
+        actions.login('admin@sample.com', True)
+        actions.register(self, 'admin')
+        response = actions.view_announcements(self)
+        actions.logout()
+
+        # Check we can see non-draft announcements.
+        actions.login(email)
+        response = actions.view_announcements(self)
+        assert_contains('Example Announcement', response.body)
+        assert_does_not_contain('Welcome to the final class!', response.body)
+        assert_does_not_contain('No announcements yet.', response.body)
+
+        # Check no access to access to draft announcements via REST handler.
+        items = AnnouncementEntity.all().fetch(1000)
+        for item in items:
+            response = self.get('rest/announcements/item?key=%s' % item.key())
+            if item.is_draft:
+                json_dict = json.loads(response.body)
+                assert json_dict['status'] == 401
+            else:
+                assert_equals(response.status_int, 200)
 
     def test_registration(self):
         """Test student registration."""
@@ -527,6 +556,7 @@ class AssessmentTest(actions.TestBase):
                 int((0.30 * 2) + (0.70 * 100000)))
 
 
+# TODO(psimakov): if mixin method names overlap, we don't run them all; must fix
 class CourseUrlRewritingTest(
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest, AdminAspectTest):
     """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""

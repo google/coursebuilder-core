@@ -213,7 +213,7 @@ def view_activity(browser):
 
 def view_announcements(browser):
     response = browser.get('announcements')
-    assert_contains('Example Announcement', response.body)
+    assert_equals(response.status_int, 200)
     assert_contains(get_current_user_email(), response.body)
     return response
 
