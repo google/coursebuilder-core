@@ -83,8 +83,7 @@ class AdminHandler(
             app_id = app.get_application_id()
             console_link = """
                 <a target="_blank"
-                  href="https://appengine.google.com/dashboard?&'
-                  app_id=s~%s">
+                  href="https://appengine.google.com/dashboard?app_id=s~%s">
                   Production Dashboard
                 </a>
                 """ % app_id
