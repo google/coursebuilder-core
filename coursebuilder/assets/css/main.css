@@ -356,6 +356,16 @@ th, td {
 
 }
 
+a.gcb-button-action {
+  background-color: #4D90FE;
+  text-decoration: none;
+  float: right;
+  color: #FFFFFF;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-weight: bold;
+}
+
 .gcb-button-large {
   width: 200px;
   height: 48px;
