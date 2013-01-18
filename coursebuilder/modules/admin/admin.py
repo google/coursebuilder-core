@@ -360,12 +360,17 @@ class AdminHandler(
         count = 0
         for course in courses:
             count += 1
+            error = ''
             slug = course.get_slug()
             location = sites.abspath(course.get_home_folder(), '/')
             try:
                 name = cgi.escape(course.get_environ()['course']['title'])
             except Exception as e:  # pylint: disable-msg=broad-except
-                name = 'Error in course.yaml:<br/>%s' % cgi.escape(str(e))
+                name = 'UNKNOWN COURSE'
+                error = (
+                    '<p>Error in <strong>course.yaml</strong> file:<br/>'
+                    '<pre>\n%s\n%s\n</pre></p>' % (
+                        e.__class__.__name__, cgi.escape(str(e))))
 
             if slug == '/':
                 link = '/dashboard'
@@ -375,12 +380,13 @@ class AdminHandler(
 
             content.append("""
                 <tr>
-                  <td>%s</td>
+                  <td>%s%s</td>
                   <td>%s</td>
                   <td>%s</td>
                   <td>%s</td>
                 </tr>
-                """ % (link, slug, location, course.get_namespace_name()))
+                """ % (
+                    link, error, slug, location, course.get_namespace_name()))
 
         content.append("""
             <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
