@@ -39,7 +39,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
-    get_actions = [default_action, 'settings']
+    get_actions = [default_action, 'settings', 'perf']
     post_actions = []
 
     def can_view(self):
@@ -78,6 +78,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values['top_nav'] = """
           <a href="/admin">Courses</a>
           <a href="/admin?action=settings">Settings</a>
+          <a href="/admin?action=perf">Performance</a>
           %s
           """ % console_link
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
@@ -106,6 +107,20 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content.append('</ol>')
         return '\n'.join(content)
 
+    def get_perf(self):
+        """Shows server performance counters page."""
+        template_values = {}
+        template_values['page_title'] = 'Course Builder - Performance'
+
+        Registry.get_overrides()
+        perf_counters = {}
+        perf_counters['gcb-config-update-time'] = Registry.last_update_time
+        perf_counters['gcb-config-update-index'] = Registry.update_index
+
+        template_values['main_content'] = self.render_dict(
+            perf_counters, 'Performance Counters')
+        self.render_page(template_values)
+
     def get_settings(self):
         """Shows server & application information page."""
         template_values = {}
@@ -127,9 +142,12 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         app_dict['application_id'] = app_id
         app_dict['default_ver_hostname'] = app.get_default_version_hostname()
 
+        # Runtime variables.
+        app_vars = Registry.registered
+
         template_values['main_content'] = self.render_dict(
             app_dict, 'Application Identity') + self.render_dict(
-                Registry.registered, 'Runtime Variables') + self.render_dict(
+                app_vars, 'Runtime Variables') + self.render_dict(
                     os.environ, 'Environment Variables') + ''.join(yaml_content)
 
         self.render_page(template_values)

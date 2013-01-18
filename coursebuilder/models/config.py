@@ -23,10 +23,17 @@ of this with performance in mind.
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-
 import logging
 import os
+import time
 from google.appengine.ext import db
+
+
+# The default update interval supported.
+DEFAULT_UPDATE_INTERVAL = 15
+
+# The longest update interval supported.
+MAX_UPDATE_INTERVAL = 60 * 5
 
 
 class ConfigProperty(object):
@@ -60,29 +67,90 @@ class ConfigProperty(object):
     @property
     def value(self):
         """Get the latest value from datastore, environment or use default."""
-        if not self._value:
-            if self._name in os.environ:
-                try:
-                    return self._type(os.environ[self._name])
-                except Exception:  # pylint: disable-msg=broad-except
-                    logging.error(
-                        'Property %s failed to cast to type %s; removing.',
-                        self._name, self._type)
-                    del os.environ[self._name]
-                    return self._default_value
-            else:
+
+        # Try datastore override.
+        overrides = Registry.get_overrides()
+        if overrides and self.name in overrides:
+            return overrides[self.name]
+
+        # Try environment variable override.
+        if self._name in os.environ:
+            try:
+                return self._type(os.environ[self._name])
+            except Exception:  # pylint: disable-msg=broad-except
+                logging.error(
+                    'Property %s failed to cast to type %s; removing.',
+                    self._name, self._type)
+                del os.environ[self._name]
                 return self._default_value
-        return self._type(self._value)
+
+        # Default value.
+        return self._default_value
 
 
 class Registry(object):
     """Holds all registered properties."""
     registered = {}
+    overrides = {}
+    update_interval = DEFAULT_UPDATE_INTERVAL
+    last_update_time = 0
+    update_index = 0
+
+    @classmethod
+    def get_overrides(cls):
+        """Returns current property overrides."""
+        now = long(time.time())
+        age = now - cls.last_update_time
+        if age < 0 or age >= cls.update_interval:
+            try:
+                cls.load_from_db()
+            except Exception as e:  # pylint: disable-msg=broad-except
+                logging.error(
+                    'Failed to load properties from database: %s.', str(e))
+            finally:
+                # Avoid overload and update timestamp even if we failed.
+                cls.last_update_time = now
+                cls.update_index += 1
+
+        return cls.overrides
+
+    @classmethod
+    def load_from_db(cls):
+        """Loads dynamic properties from db."""
+        logging.info('Reloading properties.')
+        overrides = {}
+        for item in ConfigPropertyEntity.all().fetch(1000):
+            if not item.name in cls.registered:
+                logging.error(
+                    'Property is not registered (skipped): %s', item.name)
+                continue
+
+            target = cls.registered[item.name]
+            if target and not item.is_draft:
+                try:
+                    value = target.value_type(item.value)
+                except Exception:  # pylint: disable-msg=broad-except
+                    logging.error(
+                        'Property %s failed to cast to a type %s; removing.',
+                        target.name, target.type)
+
+                # Don't allow disabling of update interval from a database.
+                if item.name == GCB_CONFIG_UPDATE_INTERVAL_SEC.name:
+                    if value == 0 or value < 0 or value > MAX_UPDATE_INTERVAL:
+                        logging.error(
+                            'Bad value %s for %s; discarded.', item.name, value)
+                        continue
+                    else:
+                        cls.update_interval = value
+
+                overrides[item.name] = value
+
+        cls.overrides = overrides
 
 
 class ConfigPropertyEntity(db.Model):
     """A class that represents a named configuration property."""
-    namespace = db.StringProperty()
+    namespace = db.StringProperty()  # TODO(psimakov): incomplete
     name = db.StringProperty()
     value = db.StringProperty()
     is_draft = db.BooleanProperty()
@@ -119,6 +187,13 @@ def run_all_unit_tests():
     os.environ[int_prop.name] = 'foo bar'
     assert int_prop.value == int_prop.default_value
 
+
+GCB_CONFIG_UPDATE_INTERVAL_SEC = ConfigProperty(
+    'gcb-config-update-interval-sec', int, (
+        'An update interval (in seconds) for reloading runtime properties from '
+        'a datastore. A value of "0" completely disables loading of properties '
+        'from a datastore. A value of "0" can only be set in app.yaml file.'),
+    DEFAULT_UPDATE_INTERVAL)
 
 if __name__ == '__main__':
     run_all_unit_tests()
