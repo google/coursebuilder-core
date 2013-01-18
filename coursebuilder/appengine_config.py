@@ -27,7 +27,10 @@ BUNDLE_ROOT = os.path.dirname(__file__)
 THIRD_PARTY_LIBS = ['babel-0.9.6.zip', 'gaepytz-2011h.zip']
 
 for lib in THIRD_PARTY_LIBS:
-    sys.path.insert(0, os.path.join(BUNDLE_ROOT, 'lib/%s' % lib))
+    thirdparty_lib = os.path.join(BUNDLE_ROOT, 'lib/%s' % lib)
+    if not os.path.exists(thirdparty_lib):
+        raise Exception('Library does not exist: %s' % thirdparty_lib)
+    sys.path.insert(0, thirdparty_lib)
 
 
 def namespace_manager_default_namespace_for_request():
