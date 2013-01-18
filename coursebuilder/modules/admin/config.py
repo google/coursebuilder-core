@@ -20,10 +20,12 @@ import cgi
 import json
 import urllib
 from models import config
+from models import models
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
 import webapp2
+from google.appengine.api import users
 from google.appengine.ext import db
 
 
@@ -150,6 +152,10 @@ class ConfigPropertyEditor(object):
             entity.is_draft = True
             entity.put()
 
+        models.EventEntity.record(
+            'override-property', users.get_current_user(), json.dumps({
+                'name': name, 'value': str(entity.value)}))
+
         self.redirect('/admin?%s' % urllib.urlencode(
             {'action': 'config_edit', 'name': name}))
 
@@ -167,9 +173,14 @@ class ConfigPropertyEditor(object):
         # Delete if exists.
         try:
             entity = config.ConfigPropertyEntity.get_by_key_name(name)
+            old_value = entity.value
             entity.delete()
         except db.BadKeyError:
             pass
+
+        models.EventEntity.record(
+            'delete-property', users.get_current_user(), json.dumps({
+                'name': name, 'value': str(old_value)}))
 
         self.redirect('/admin?action=settings')
 
@@ -233,9 +244,14 @@ class ItemRESTHandler(webapp2.RequestHandler):
 
         payload = request.get('payload')
         json_object = json.loads(payload)
+        old_value = entity.value
         entity.value = str(item.value_type(json_object['value']))
         entity.is_draft = json_object['is_draft']
         entity.put()
 
-        transforms.send_json_response(self, 200, 'Saved.')
+        models.EventEntity.record(
+            'put-property', users.get_current_user(), json.dumps({
+                'name': key,
+                'before': str(old_value), 'after': str(entity.value)}))
 
+        transforms.send_json_response(self, 200, 'Saved.')

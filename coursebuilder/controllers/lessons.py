@@ -173,7 +173,8 @@ class ActivityHandler(BaseHandler):
         if not student:
             return
 
-        models.EventEntity.record('activity', user, self.request.get('request'))
+        models.EventEntity.record(
+            'attempt-activity', user, self.request.get('request'))
         ACTIVITY_EVENTS_RECORDED.inc()
 
 
