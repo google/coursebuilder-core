@@ -15,7 +15,10 @@
         </div>
       </div>
     </div>
+    {{course_info.preview.after_top_content_ends}}
+{% endblock %}
 
+{% block main_content %}
     <div style="margin-top: 20px;" class="gcb-cols">
       <div class="gcb-col-1">
       </div>
@@ -50,9 +53,5 @@
 
       </div>
     </div>
-
-{% endblock %}
-
-{% block main_content %}
-
+    {{course_info.preview.after_main_content_ends}}
 {% endblock %}

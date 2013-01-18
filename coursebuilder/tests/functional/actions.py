@@ -30,6 +30,25 @@ from google.appengine.api import namespace_manager
 # All URLs referred to from all the pages.
 UNIQUE_URLS_FOUND = {}
 
+BASE_HOOK_POINTS = [
+    '<!-- base.before_head_tag_ends -->',
+    '<!-- base.after_body_tag_begins -->',
+    '<!-- base.after_navbar_begins -->',
+    '<!-- base.before_navbar_ends -->',
+    '<!-- base.after_top_content_ends -->',
+    '<!-- base.after_main_content_ends -->',
+    '<!-- base.before_body_tag_ends -->']
+
+UNIT_HOOK_POINTS = [
+    '<!-- unit.after_leftnav_begins -->',
+    '<!-- unit.before_leftnav_ends -->',
+    '<!-- unit.after_content_begins -->',
+    '<!-- unit.before_content_ends -->']
+
+PREVIEW_HOOK_POINTS = [
+    '<!-- preview.after_top_content_ends -->',
+    '<!-- preview.after_main_content_ends -->']
+
 
 class TestBase(suite.BaseTestClass):
     """Contains methods common to all tests."""
@@ -145,9 +164,22 @@ def assert_contains(needle, haystack):
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
+def assert_contains_all_of(needles, haystack):
+    for needle in needles:
+        if not needle in haystack:
+            raise Exception(
+                'Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
+
+
 def assert_does_not_contain(needle, haystack):
     if needle in haystack:
         raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
+
+
+def assert_contains_none_of(needles, haystack):
+    for needle in needles:
+        if needle in haystack:
+            raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_none_fail(browser, callbacks):
@@ -221,34 +253,55 @@ def check_profile(browser, name):
 def view_registration(browser):
     response = browser.get('register')
     assert_contains('What is your name?', response.body)
+    assert_contains_all_of([
+        '<!-- reg_form.additional_registration_fields -->'], response.body)
     return response
 
 
 def view_preview(browser):
+    """Views /preview page."""
     response = browser.get('preview')
     assert_contains(' the stakes are high.', response.body)
     assert_contains(
         '<li><p class="top_content">Pre-course assessment</p></li>',
         response.body)
+
+    assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
+    assert_contains_all_of(PREVIEW_HOOK_POINTS, response.body)
+
     return response
 
 
 def view_course(browser):
+    """Views /course page."""
     response = browser.get('course')
+
     assert_contains(' the stakes are high.', response.body)
     assert_contains('<a href="assessment?name=Pre">Pre-course assessment</a>',
                     response.body)
     assert_contains(get_current_user_email(), response.body)
+
+    assert_contains_all_of(BASE_HOOK_POINTS, response.body)
+    assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
+    assert_contains_none_of(PREVIEW_HOOK_POINTS, response.body)
+
     return response
 
 
 def view_unit(browser):
+    """Views /unit page."""
     response = browser.get('unit?unit=1&lesson=1')
+
     assert_contains('Unit 1 - Introduction', response.body)
     assert_contains('1.3 How search works', response.body)
     assert_contains('1.6 Finding text on a web page', response.body)
     assert_contains('http://www.youtube.com/embed/1ppwmxidyIE', response.body)
     assert_contains(get_current_user_email(), response.body)
+
+    assert_contains_all_of(BASE_HOOK_POINTS, response.body)
+    assert_contains_all_of(UNIT_HOOK_POINTS, response.body)
+    assert_contains_none_of(PREVIEW_HOOK_POINTS, response.body)
+
     return response
 
 

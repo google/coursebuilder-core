@@ -20,8 +20,9 @@
 
   <div class="gcb-nav" id="gcb-nav-y">
     <ul>
+      {{course_info.unit.after_leftnav_begins}}
       {% for lesson in lessons %}
-        <li
+      <li
         {% if lesson.id == lesson_id %}
         class="active"> {{ unit_id }}.{{ lesson.id }}<br>{{ lesson.title }}
         {% else %}
@@ -33,12 +34,14 @@
             {% trans %} Activity {% endtrans %}
           </a></li></ul>
         {% endif %}
-        </li>
+      </li>
       {% endfor %}
+      {{course_info.unit.before_leftnav_ends}}
     </ul>
   </div>
 
   <div class="gcb-article tab-content" role="main">
+    {{course_info.unit.after_content_begins}}
     {% for lesson in lessons %}
       {% if lesson.id == lesson_id %}
 
@@ -94,6 +97,7 @@
         </div>
       {% endif %}
     {% endfor %}
+    {{course_info.unit.before_content_ends}}
   </div>
 </div>
 

@@ -28,6 +28,7 @@
   </head>
 
   <body>
+    {{course_info.base.after_body_tag_begins}}
 
     <!-- logo bar -->
     <div class="gcb-header" id="gcb-header">
@@ -54,6 +55,7 @@
     <div class="gcb-nav gcb-complex" id="gcb-nav-x">
       <div class="gcb-aux">
         <ul>
+          {{course_info.base.after_navbar_begins}}
           <li {% if navbar.announcements %}class='active'{% endif %}>
             <a href="announcements">
               {% trans %} Announcements {% endtrans %}
@@ -74,6 +76,7 @@
               {% trans %} My Profile {% endtrans %}
             </a>
           </li>
+          {{course_info.base.before_navbar_ends}}
           {% if is_manager %}
           <li>
             <a href="dashboard">
@@ -98,10 +101,12 @@
     <!-- top section -->
     <div class="is-wrapper">
       <div class="gcb-aux">
-    {% block top_content %}{% endblock %}
+        {% block top_content %}{% endblock %}
+        {{course_info.base.after_top_content_ends}}
 
-    <!-- main section -->
-    {% block main_content %}{% endblock %}
+        <!-- main section -->
+        {% block main_content %}{% endblock %}
+        {{course_info.base.after_main_content_ends}}
       </div>
     </div>
 
@@ -127,6 +132,6 @@
         </div>
       </div>
     </div>
-
+    {{course_info.base.before_body_tag_ends}}
  </body>
 </html>

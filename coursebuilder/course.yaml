@@ -83,18 +83,25 @@ institution:
     alt_text: YOUR_LOGO_HERE
 
 
-##########################################
-# Headers and footers for all course pages
-##########################################
+#########################################
+# Base page template for all course pages
+#########################################
 
 base:
-  # HTML to be included before the closing </head> tag in all pages. If you want to
-  # include any analytics code that covers all your course webpages, do so here: see
+  # HTML to be included in all course pages. For example: if you want to
+  # include any analytics code that covers all your course webpages, you can do
+  # so here: see
   #
   #     https://code.google.com/p/course-builder/wiki/ReachAndEngagementMetrics.
   #
   # for details.
-  before_head_tag_ends: ''
+  before_head_tag_ends: '<!-- base.before_head_tag_ends -->'
+  after_body_tag_begins: '<!-- base.after_body_tag_begins -->'
+  after_navbar_begins: '<!-- base.after_navbar_begins -->'
+  before_navbar_ends: '<!-- base.before_navbar_ends -->'
+  after_top_content_ends: '<!-- base.after_top_content_ends -->'
+  after_main_content_ends: '<!-- base.after_main_content_ends -->'
+  before_body_tag_ends: '<!-- base.before_body_tag_ends -->'
 
   # Whether to show a G+ button on the header of all pages.
   show_gplus_button: True
@@ -104,6 +111,16 @@ base:
 
   # Link to your privacy policy and terms of service
   privacy_terms_url: 'PRIVACY_POLICY_AND_TERMS_OF_SERVICE'
+
+
+########################
+# Course preview page
+########################
+
+preview:
+  # HTML to be included in the course preview page.
+  after_top_content_ends: '<!-- preview.after_top_content_ends -->'
+  after_main_content_ends: '<!-- preview.after_main_content_ends -->'
 
 
 ##########################
@@ -119,7 +136,7 @@ reg_form:
   # HTML representing additional fields to include in the course
   # registration form, in addition to the student's name. These should
   # be wrapped in <li></li> tags.
-  additional_registration_fields: ''
+  additional_registration_fields: '<!-- reg_form.additional_registration_fields -->'
 
 
 ##############################
@@ -150,3 +167,15 @@ assessment_confirmations:
   precourse: |
     Thank you for taking the pre-assessment. Please begin the course with
     Unit 1.
+
+
+########################
+# Units and lessons page
+########################
+
+unit:
+  # HTML to be included in the course unit/lesson pages.
+  after_leftnav_begins: '<!-- unit.after_leftnav_begins -->'
+  before_leftnav_ends: '<!-- unit.before_leftnav_ends -->'
+  after_content_begins: '<!-- unit.after_content_begins -->'
+  before_content_ends: '<!-- unit.before_content_ends -->'
