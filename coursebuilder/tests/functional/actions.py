@@ -105,6 +105,12 @@ class TestBase(suite.BaseTestClass):
         response = self.testapp.post(url, params)
         return self.hook_response(response)
 
+    def put(self, url, params):
+        url = self.canonicalize(url)
+        logging.info('HTTP Put: %s', url)
+        response = self.testapp.put(url, params)
+        return self.hook_response(response)
+
     def click(self, response, name):
         logging.info('Link click: %s', name)
         response = response.click(name)

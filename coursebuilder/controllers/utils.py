@@ -75,15 +75,19 @@ class ApplicationHandler(webapp2.RequestHandler):
                          course_data_filename)
             raise
 
-    def get_template(self, template_file):
+    def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
         self.append_base()
         self.append_parameters_from_yaml_file()
         template_dir = self.app_context.get_template_home()
 
+        dirs = [template_dir]
+        if additional_dir:
+            dirs += additional_dir
+
         jinja_environment = jinja2.Environment(
             extensions=['jinja2.ext.i18n'],
-            loader=jinja2.FileSystemLoader(template_dir))
+            loader=jinja2.FileSystemLoader(dirs))
         jinja_environment.install_gettext_translations(i18n)
 
         locale = self.template_value[COURSE_INFO_KEY]['course']['locale']

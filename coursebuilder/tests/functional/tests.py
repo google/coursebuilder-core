@@ -16,7 +16,9 @@
 
 __author__ = 'Sean Lip'
 
+import json
 import os
+import urllib
 
 from controllers import sites
 from controllers import utils
@@ -25,6 +27,7 @@ from models import models
 from models.utils import get_all_scores
 from models.utils import get_answer
 from models.utils import get_score
+from modules.announcements.announcements import AnnouncementEntity
 
 import actions
 from actions import assert_contains
@@ -72,6 +75,49 @@ class AdminAspectTest(actions.TestBase):
 
         # check deleted
         assert_does_not_contain('Welcome to the final class!', response.body)
+
+    def test_announcements_rest(self):
+        """Test REST access to announcements."""
+        email = 'test_announcements_rest@google.com'
+        name = 'Test Announcements Rest'
+
+        actions.login(email, True)
+        actions.register(self, name)
+
+        response = actions.view_announcements(self)
+        assert_does_not_contain('My Test Title!!!', response.body)
+
+        # REST GET existing item
+        items = AnnouncementEntity.all().fetch(1)
+        for item in items:
+            response = self.get('rest/announcements/item?key=%s' % item.key())
+            json_dict = json.loads(response.body)
+            assert json_dict['status'] == 200
+            assert 'message' in json_dict
+            assert 'payload' in json_dict
+
+            payload_dict = json.loads(json_dict['payload'])
+            assert 'title' in payload_dict
+            assert 'date' in payload_dict
+
+            # REST PUT item
+            payload_dict['title'] = 'My Test Title!!!'
+            payload_dict['date'] = '2012/12/31'
+            payload_dict['is_draft'] = True
+            request = {}
+            request['key'] = str(item.key())
+            request['payload'] = json.dumps(payload_dict)
+            response = self.put('rest/announcements/item?%s' % urllib.urlencode(
+                {'request': json.dumps(request)}), {})
+
+            # confirm change is visible
+            response = self.get('announcements')
+            assert_contains('My Test Title!!! (Draft)', response.body)
+
+        # REST GET not-existing item
+        response = self.get('rest/announcements/item?key=not_existent_key')
+        json_dict = json.loads(response.body)
+        assert json_dict['status'] == 404
 
 
 class StudentAspectTest(actions.TestBase):
