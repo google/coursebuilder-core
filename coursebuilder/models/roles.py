@@ -22,9 +22,13 @@ from google.appengine.api import users
 
 
 GCB_ADMIN_LIST = config.ConfigProperty(
-    'gcb_admin_list', str, (
-        'A new line separated list of email addresses of administrative users. '
-        'Regular expressions are not supported, exact match only.'),
+    'gcb_admin_user_emails', str, (
+        'A new line or a space separated list of email addresses of super '
+        'admin users. Each email address must be placed between "[" and "]", '
+        'for example: "[test@example.com]". Regular expressions are not '
+        'supported, exact match only. WARNING! Listed users will have the '
+        'highest level of access to the system and all data covering all '
+        'courses and students. Be very careful when modifying this property.'),
     '', multiline=True)
 
 KEY_COURSE = 'course'
@@ -46,7 +50,7 @@ class Roles(object):
             return True
 
         user = users.get_current_user()
-        if user and user.email() in GCB_ADMIN_LIST.value:
+        if user and '[%s]' % user.email() in GCB_ADMIN_LIST.value:
             return True
         return False
 

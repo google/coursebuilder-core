@@ -101,7 +101,7 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 302)
 
         # Check delegated admin has no access.
-        os.environ['gcb_admin_list'] = email
+        os.environ['gcb_admin_user_emails'] = '[%s]' % email
         actions.login(email)
         response = self.testapp.get('/admin?action=console')
         assert_equals(response.status_int, 200)
@@ -113,7 +113,7 @@ class AdminAspectTest(actions.TestBase):
         assert_contains(
             'You must be an actual admin user to continue.', response.body)
 
-        del os.environ['gcb_admin_list']
+        del os.environ['gcb_admin_user_emails']
 
         # Check actual admin has access.
         actions.login(email, True)
@@ -142,11 +142,11 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 302)
 
         response = self.testapp.get(
-            '/admin?action=config_edit&name=gcb_admin_list')
+            '/admin?action=config_edit&name=gcb_admin_user_emails')
         assert_equals(response.status_int, 302)
 
         response = self.testapp.post(
-            '/admin?action=config_reset&name=gcb_admin_list')
+            '/admin?action=config_reset&name=gcb_admin_user_emails')
         assert_equals(response.status_int, 302)
 
         # Check user has no access to GET REST verb.
@@ -178,7 +178,7 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email)
 
         # Add environment variable override.
-        os.environ['gcb_admin_list'] = email
+        os.environ['gcb_admin_user_emails'] = '[%s]' % email
 
         # Add datastore override.
         prop = config.ConfigPropertyEntity(
@@ -192,10 +192,11 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 200)
 
         # Check overrides are active and have proper management actions.
-        assert_contains('gcb_admin_list', response.body)
-        assert_contains('test_admin_list@google.com', response.body)
+        assert_contains('gcb_admin_user_emails', response.body)
+        assert_contains('[test_admin_list@google.com]', response.body)
         assert_contains(
-            '/admin?action=config_override&name=gcb_admin_list', response.body)
+            '/admin?action=config_override&name=gcb_admin_user_emails',
+            response.body)
         assert_contains(
             '/admin?action=config_edit&name=gcb_config_update_interval_sec',
             response.body)
@@ -204,7 +205,7 @@ class AdminAspectTest(actions.TestBase):
             response.body)
 
         # Remove override.
-        del os.environ['gcb_admin_list']
+        del os.environ['gcb_admin_user_emails']
 
         # Check user has no access.
         response = self.testapp.get('/admin?action=settings')
@@ -229,7 +230,7 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('All Courses', response.body)
 
         response = self.testapp.get('/admin?action=settings')
-        assert_contains('gcb_admin_list', response.body)
+        assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('gcb_config_update_interval_sec', response.body)
         assert_contains('All Settings', response.body)
 
