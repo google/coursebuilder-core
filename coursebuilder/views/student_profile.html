@@ -38,6 +38,7 @@
       </table>
 
       <form action='student/editstudent' method='post'>
+        <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
         <h2><label for="name">{% trans %} New Name {% endtrans %}</label></h2>
         <fieldset style="border: none;">
           <p><input name="name" id="name" type="text" size="40">
