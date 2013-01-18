@@ -101,3 +101,11 @@ class ObjectEditor(object):
 
         return handler.get_template(
             'oeditor.html', [os.path.dirname(__file__)]).render(template_values)
+
+
+def create_bool_select_annotation(keys_list, label, true_label, false_label):
+    """Creates inputex annotation to display bool type as a select."""
+    return (keys_list, {'type': 'select', '_inputex': {
+        'label': label, 'choices': [
+            {'value': True, 'label': true_label},
+            {'value': False, 'label': false_label}]}})

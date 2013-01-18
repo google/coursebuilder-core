@@ -22,7 +22,7 @@ import urllib
 from models import config
 from models import roles
 from models import transforms
-from modules.oeditor.oeditor import ObjectEditor
+from modules.oeditor import oeditor
 import webapp2
 from google.appengine.ext import db
 
@@ -46,7 +46,8 @@ SCHEMA_ANNOTATIONS_TEMPLATE = [
     (['title'], 'Configuration Property'),
     (['properties', 'name', '_inputex'], {
         'label': 'Name', '_type': 'uneditable'}),
-    (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})]
+    oeditor.create_bool_select_annotation(
+        ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
 
 class ConfigPropertyRights(object):
@@ -120,7 +121,7 @@ class ConfigPropertyEditor(object):
 
         exit_url = '/admin?action=settings#%s' % cgi.escape(key)
         rest_url = '/rest/config/item'
-        template_values['main_content'] = ObjectEditor.get_html_for(
+        template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, ConfigPropertyEditor.get_schema_json(item),
             ConfigPropertyEditor.get_schema_annotations(item),
             key, rest_url, exit_url)

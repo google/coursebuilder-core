@@ -25,7 +25,7 @@ from models import roles
 from models.models import Student
 import models.transforms as transforms
 import modules.announcements.samples as samples
-from modules.oeditor.oeditor import ObjectEditor
+from modules.oeditor import oeditor
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -63,8 +63,8 @@ SCHEMA_ANNOTATIONS_DICT = [
         'valueFormat': 'Y/m/d'}),
     (['properties', 'title', '_inputex'], {'label': 'Title'}),
     (['properties', 'html', '_inputex'], {'label': 'Body', '_type': 'text'}),
-    (['properties', 'is_draft', '_inputex'], {'label': 'Is Draft'})
-]
+    oeditor.create_bool_select_annotation(
+        ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
 
 class AnnouncementsRights(object):
@@ -184,7 +184,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         exit_url = self.canonicalize_url(
             '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
-        form_html = ObjectEditor.get_html_for(
+        form_html = oeditor.ObjectEditor.get_html_for(
             self, SCHEMA_JSON, SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url)
         self.template_value['navbar'] = {'announcements': True}
