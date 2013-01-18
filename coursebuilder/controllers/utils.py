@@ -28,7 +28,6 @@ from models.utils import get_all_scores
 from tools import verify
 import webapp2
 from webapp2_extras import i18n
-import yaml
 from google.appengine.api import users
 
 
@@ -114,25 +113,12 @@ class ApplicationHandler(webapp2.RequestHandler):
             slug = '%s/' % slug
         self.template_value[COURSE_BASE_KEY] = slug
 
-    def append_parameters_from_yaml_file(self):
-        """Append parameters from the relevant course.yaml file."""
-        course_data_filename = self.app_context.get_config_filename()
-
-        try:
-            with open(course_data_filename) as course_data_file:
-                course_info = yaml.load(course_data_file)
-                self.template_value[COURSE_INFO_KEY] = course_info
-        except IOError():
-            logging.info('Error: course.yaml file at %s not accessible',
-                         course_data_filename)
-            raise
-
     def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
+        self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
         self.append_base()
-        self.append_parameters_from_yaml_file()
-        template_dir = self.app_context.get_template_home()
 
+        template_dir = self.app_context.get_template_home()
         dirs = [template_dir]
         if additional_dir:
             dirs += additional_dir

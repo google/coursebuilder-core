@@ -129,6 +129,7 @@ import threading
 
 import appengine_config
 import webapp2
+import yaml
 
 from google.appengine.api import namespace_manager
 
@@ -194,8 +195,8 @@ def make_default_rule():
     return ApplicationContext('course', '/', '/', None)
 
 
-def get_all_rules():
-    """Reads all rewrite rule definitions from environment variable."""
+def get_all_courses():
+    """Reads all course rewrite rule definitions from environment variable."""
     default = make_default_rule()
 
     if not GCB_COURSES_CONFIG_ENV_VAR_NAME in os.environ:
@@ -250,8 +251,8 @@ def get_all_rules():
     return all_contexts
 
 
-def get_rule_for_current_request():
-    """Chooses rule that matches current request context path."""
+def get_course_for_current_request():
+    """Chooses course that matches current request context path."""
 
     # get path if defined
     if not has_path_info():
@@ -259,14 +260,14 @@ def get_rule_for_current_request():
     path = get_path_info()
 
     # Get all rules.
-    rules = get_all_rules()
+    courses = get_all_courses()
 
-    # Match a path to a rule.
+    # Match a path to a course.
     # TODO(psimakov): linear search is unacceptable
-    for rule in rules:
-        if path == rule.get_slug() or path.startswith(
-                '%s/' % rule.get_slug()) or rule.get_slug() == '/':
-            return rule
+    for course in courses:
+        if path == course.get_slug() or path.startswith(
+                '%s/' % course.get_slug()) or course.get_slug() == '/':
+            return course
 
     debug('No mapping for: %s' % path)
     return None
@@ -353,12 +354,12 @@ class ApplicationContext(object):
         (Examples of such namespaces are NDB and memcache.)
 
         Returns:
-            The namespace for the current request, or None if no rule matches
+            The namespace for the current request, or None if no course matches
             the current request context path.
         """
-        rule = get_rule_for_current_request()
-        if rule:
-            return rule.namespace
+        course = get_course_for_current_request()
+        if course:
+            return course.namespace
         return None
 
     def __init__(self, site_type, slug, homefolder, namespace):
@@ -382,6 +383,16 @@ class ApplicationContext(object):
         filename = abspath(self.get_home_folder(), GCB_CONFIG_FILENAME)
         debug('Config file: %s' % filename)
         return filename
+
+    def get_environ(self):
+        """Returns a dict of course configuration variables."""
+        course_data_filename = self.get_config_filename()
+        try:
+            return yaml.load(open(course_data_filename))
+        except Exception:
+            logging.info('Error: course.yaml file at %s not accessible',
+                         course_data_filename)
+            raise
 
     def get_template_home(self):
         """Returns absolute location of a course template folder."""
@@ -418,9 +429,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         cls.urls_map = urls_map
 
     def get_handler(self):
-        """Finds a routing rule suitable for this request."""
-        rule = get_rule_for_current_request()
-        if not rule:
+        """Finds a course suitable for handling this request."""
+        course = get_course_for_current_request()
+        if not course:
             return None
 
         path = get_path_info()
@@ -428,7 +439,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             return None
 
         return self.get_handler_for_course_type(
-            rule, unprefix(path, rule.get_slug()))
+            course, unprefix(path, course.get_slug()))
 
     def get_handler_for_course_type(self, context, path):
         """Gets the right handler for the given context and path."""
@@ -512,11 +523,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 def assert_mapped(src, dest):
     try:
         set_path_info(src)
-        rule = get_rule_for_current_request()
+        course = get_course_for_current_request()
         if not dest:
-            assert rule is None
+            assert course is None
         else:
-            assert rule.get_slug() == dest
+            assert course.get_slug() == dest
     finally:
         unset_path_info()
 
@@ -556,17 +567,17 @@ def test_rule_definitions():
     os.environ = {}
 
     # Check that the default site is created when no rules are specified.
-    assert len(get_all_rules()) == 1
+    assert len(get_all_courses()) == 1
 
     # Test that empty definition is ok.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = ''
-    assert len(get_all_rules()) == 1
+    assert len(get_all_courses()) == 1
 
     # Test one rule parsing.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'course:/google/pswg:/sites/pswg')
-    rules = get_all_rules()
-    assert len(get_all_rules()) == 1
+    rules = get_all_courses()
+    assert len(get_all_courses()) == 1
     rule = rules[0]
     assert rule.get_slug() == '/google/pswg'
     assert rule.get_home_folder() == '/sites/pswg'
@@ -574,17 +585,17 @@ def test_rule_definitions():
     # Test two rule parsing.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'course:/a/b:/c/d, course:/e/f:/g/h')
-    assert len(get_all_rules()) == 2
+    assert len(get_all_courses()) == 2
 
     # Test that two of the same slugs are not allowed.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/a/b:/c/d')
-    assert_fails(get_all_rules)
+    assert_fails(get_all_courses)
 
     # Test that only 'course' is supported.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/e/f:/g/h')
-    assert_fails(get_all_rules)
+    assert_fails(get_all_courses)
 
     # Test namespaces.
     set_path_info('/')
@@ -703,7 +714,7 @@ def test_special_chars():
     # Test that namespace collisions are detected and are not allowed.
     os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
         'foo:/a/b:/c/d, bar:/a/b:/c-d')
-    assert_fails(get_all_rules)
+    assert_fails(get_all_courses)
 
 
 def test_path_construction():

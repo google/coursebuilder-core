@@ -36,10 +36,59 @@ from actions import assert_equals
 
 
 class AdminAspectTest(actions.TestBase):
-    """Tests the site from the Admin perspective."""
+    """Tests site from the Admin perspective."""
+
+    def test_access_to_admin_pages(self):
+        """Test access to admin pages."""
+
+        # assert anonymous user has no access
+        response = self.testapp.get('/admin?action=server')
+        assert_equals(response.status_int, 302)
+
+        # assert admin user has access
+        email = 'test_access_to_admin_pages@google.com'
+        name = 'Test Access to Admin Pages'
+
+        actions.login(email, True)
+        actions.register(self, name)
+
+        response = self.testapp.get('/admin?action=server')
+        assert_contains('Server Environment Variables', response.body)
+
+        actions.unregister(self)
+        actions.logout()
+
+        # assert not-admin user has no access
+        actions.login(email)
+        actions.register(self, name)
+        response = self.testapp.get('/admin?action=server')
+        assert_equals(response.status_int, 302)
+
+    def test_multiple_courses(self):
+        """Tests courses admin page with two courses configured."""
+
+        config = 'course:/foo:/foo-data, course:/bar:/bar-data'
+        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = config
+
+        email = 'test_multiple_courses@google.com'
+
+        actions.login(email, True)
+        response = self.testapp.get('/admin')
+        assert_contains('Course Builder - Courses', response.body)
+        assert_contains('<a href="/foo">', response.body)
+        assert_contains('/foo-data', response.body)
+        assert_contains('<a href="/bar">', response.body)
+        assert_contains('/bar-data', response.body)
+        assert_contains('Total: 2 course(s)', response.body)
+
+        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+
+
+class CourseAuthorAspectTest(actions.TestBase):
+    """Tests the site from the Course Author perspective."""
 
     def test_draft_announcements(self):
-        """Test admin can see draft announcements."""
+        """Test course author can see draft announcements."""
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
@@ -50,7 +99,7 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('Welcome to the final class!', response.body)
 
     def test_manage_announcements(self):
-        """Test admin can manage announcements."""
+        """Test course author can manage announcements."""
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
@@ -359,7 +408,9 @@ class AssessmentTest(actions.TestBase):
                 int((0.30 * 2) + (0.70 * 100000)))
 
 
-class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):
+class CourseUrlRewritingTest(
+    StudentAspectTest, PageCacheTest, AssessmentTest, CourseAuthorAspectTest,
+    AdminAspectTest):
     """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
@@ -377,13 +428,17 @@ class CourseUrlRewritingTest(StudentAspectTest, PageCacheTest, AssessmentTest):
 
     def canonicalize(self, href, response=None):
         """Canonicalize URL's using either <base> or self.base."""
+        # Check if already canonicalized.
+        if href.startswith(self.base):
+            return href
+
+        # Look for <base> tag in the response to compute the canonical URL.
         if response:
-            # Look for <base> tag in the response to compute the canonical URL.
             return super(CourseUrlRewritingTest, self).canonicalize(
                 href, response)
-        else:
-            # Prepend self.base to compute the canonical URL.
-            if not href.startswith('/'):
-                href = '/%s' % href
-            href = '%s%s' % (self.base, href)
-            return href
+
+        # Prepend self.base to compute the canonical URL.
+        if not href.startswith('/'):
+            href = '/%s' % href
+        href = '%s%s' % (self.base, href)
+        return href
