@@ -17,17 +17,12 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
-import os
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 
-
-# Whether we are running in the production environment.
-PRODUCTION_MODE = not os.environ.get(
-    'SERVER_SOFTWARE', 'Development').startswith('Development')
 
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 60

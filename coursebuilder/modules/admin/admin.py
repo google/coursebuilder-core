@@ -23,6 +23,7 @@ import os
 import sys
 import time
 import urllib
+from appengine_config import PRODUCTION_MODE
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
@@ -30,7 +31,6 @@ from models import config
 from models import counters
 from models import roles
 from models.config import ConfigProperty
-from models.models import PRODUCTION_MODE
 from modules.admin.config import ConfigPropertyEditor
 import webapp2
 from google.appengine.api import users

@@ -22,7 +22,6 @@ from controllers import assessments
 from controllers import lessons
 from controllers import sites
 from controllers import utils
-from models.models import PRODUCTION_MODE
 from modules.admin import admin
 from modules.admin import config
 from modules.announcements import announcements
@@ -60,7 +59,7 @@ app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
-debug = not PRODUCTION_MODE
+debug = not appengine_config.PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
     admin_handlers + [inputex_handler] + [app_handler],

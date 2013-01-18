@@ -20,6 +20,10 @@ import os
 import sys
 
 
+# Whether we are running in the production environment.
+PRODUCTION_MODE = not os.environ.get(
+    'SERVER_SOFTWARE', 'Development').startswith('Development')
+
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
 
@@ -34,3 +38,19 @@ for lib in THIRD_PARTY_LIBS:
     if not os.path.exists(thirdparty_lib):
         raise Exception('Library does not exist: %s' % thirdparty_lib)
     sys.path.insert(0, thirdparty_lib)
+
+if not PRODUCTION_MODE:
+    from google.appengine.api import apiproxy_stub_map  # pylint: disable-msg=g-import-not-at-top
+    from google.appengine.datastore import datastore_stub_util  # pylint: disable-msg=g-import-not-at-top
+
+    # Make dev_appserver run with PseudoRandomHRConsistencyPolicy, which we
+    # believe is the best for localhost manual testing; normally dev_appserver
+    # runs either under MasterSlave policy, which does not allow XG
+    # transactions, or under TimeBasedHR policy, which serves counter-intuitive
+    # dirty query results; this also matches policy for the functional tests
+    stub = apiproxy_stub_map.apiproxy.GetStub(
+        'datastore_v3')
+    if stub:
+        policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
+            probability=1)
+        stub.SetConsistencyPolicy(policy)
