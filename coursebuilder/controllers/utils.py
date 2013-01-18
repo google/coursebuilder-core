@@ -25,6 +25,7 @@ from models.models import Student
 from models.models import Unit
 from models.utils import get_all_scores
 import webapp2
+import yaml
 
 from google.appengine.api import users
 
@@ -39,6 +40,12 @@ MAX_CLASS_SIZE = None
 # A template place holder for the student email.
 USER_EMAIL_PLACE_HOLDER = '{{ email }}'
 
+# The name of the template dict key that stores a course's base location.
+COURSE_BASE_KEY = 'gcb_course_base'
+
+# The name of the template dict key that stores data from course.yaml.
+COURSE_INFO_KEY = 'course_info'
+
 
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
@@ -52,15 +59,30 @@ class ApplicationHandler(webapp2.RequestHandler):
         slug = self.app_context.get_slug()
         if not slug.endswith('/'):
             slug = '%s/' % slug
-        self.template_value['gcb_course_base'] = slug
+        self.template_value[COURSE_BASE_KEY] = slug
 
-    def get_template(self, templateFile):
+    def append_parameters_from_yaml_file(self):
+        """Append parameters from the relevant course.yaml file."""
+        course_data_filename = self.app_context.get_config_filename()
+
+        try:
+            with open(course_data_filename) as course_data_file:
+                course_info = yaml.load(course_data_file)
+                logging.info(course_info)
+                self.template_value[COURSE_INFO_KEY] = course_info
+        except IOError():
+            logging.info('Error: course.yaml file at %s not accessible',
+                         course_data_filename)
+            raise
+
+    def get_template(self, template_file):
         """Computes location of template files for the current namespace."""
         self.append_base()
+        self.append_parameters_from_yaml_file()
         template_dir = self.app_context.get_template_home()
         jinja_environment = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir))
-        return jinja_environment.get_template(templateFile)
+        return jinja_environment.get_template(template_file)
 
     def is_absolute(self, url):
         return bool(urlparse.urlparse(url).scheme)
@@ -93,8 +115,8 @@ class BaseHandler(ApplicationHandler):
             self.template_value['logoutUrl'] = users.create_logout_url('/')
         return user
 
-    def render(self, templateFile):
-        template = self.get_template(templateFile)
+    def render(self, template_file):
+        template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
 
 

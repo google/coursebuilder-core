@@ -8,10 +8,11 @@
 <div class="gcb-main">
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
-      <!--FIXME: You can edit the questions that you ask on the pre-course registration form by changing the HTML below.-->
-      <p style="margin: 20px 0px;">
-	Welcome!  Please answer the following question, and you will be enrolled in the course.
+
+      <p>
+        {{course_info.reg_form.header_text}}
       </p>
+
       <form action="register" method='post'>
         <fieldset>
           <ol>
@@ -19,12 +20,14 @@
               <label for="form01">What is your name?</label>
               <input name="form01" type="text">
             </li>
+            {{course_info.reg_form.additional_fields}}
           </ol>
         </fieldset>
+
         <button class="gcb-button" type="submit">Enroll</button>
       </form>
+
     </div>
   </div>
 </div>
 {% endblock %}
-
