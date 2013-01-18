@@ -17,8 +17,11 @@
 __author__ = 'Sean Lip'
 
 import json
+import logging
 import os
+import shutil
 import urllib
+import appengine_config
 from controllers import sites
 from controllers import utils
 from controllers.sites import assert_fails
@@ -760,3 +763,230 @@ class CourseUrlRewritingTest(
 
         self.audit_url(href)
         return href
+
+
+def remove_dir(dir_name):
+    """Delete a directory."""
+
+    logging.info('removing folder: %s', dir_name)
+    if os.path.exists(dir_name):
+        shutil.rmtree(dir_name)
+        if os.path.exists(dir_name):
+            raise Exception('Failed to delete directory: %s' % dir_name)
+
+
+def clean_dir(dir_name):
+    """Clean a directory."""
+
+    remove_dir(dir_name)
+
+    logging.info('creating folder: %s', dir_name)
+    os.makedirs(dir_name)
+    if not os.path.exists(dir_name):
+        raise Exception('Failed to create directory: %s' % dir_name)
+
+
+class GeneratedCourse(object):
+    """A helper class for a dynamically generated course content."""
+
+    # All data for this test will be placed here.
+    data_home = '/tmp/experimental/coursebuilder/test-data'
+
+    def __init__(self, ns):
+        self.path = ns
+
+    @property
+    def namespace(self):
+        return 'ns%s' % self.path
+
+    @property
+    def title(self):
+        return 'Power title-%s Searching with Google' % self.path
+
+    @property
+    def unit_title(self):
+        return 'Interpreting unit-title-%s results' % self.path
+
+    @property
+    def head(self):
+        return '<!-- head-%s -->' % self.path
+
+    @property
+    def css(self):
+        return '<!-- css-%s -->' % self.path
+
+    @property
+    def home(self):
+        return os.path.join(self.data_home, 'data-%s' % self.path)
+
+    @property
+    def email(self):
+        return 'walk_the_course_named_%s@google.com' % self.path
+
+    @property
+    def name(self):
+        return 'Walk The Course Named %s' % self.path
+
+
+class TwoCoursesTest(actions.TestBase):
+    """Test two courses running concurrently."""
+
+    def prepare_canonical_course_data(self, course):
+        """Make a copy of canonical course content."""
+        clean_dir(course.home)
+
+        def copytree(name):
+            shutil.copytree(
+                os.path.join(self.bundle_root, name),
+                os.path.join(course.home, name))
+
+        copytree('assets')
+        copytree('data')
+        copytree('views')
+
+        shutil.copy(
+            os.path.join(self.bundle_root, 'course.yaml'),
+            os.path.join(course.home, 'course.yaml'))
+
+        # Make all files writable.
+        for root, unused_dirs, files in os.walk(course.home):
+            for afile in files:
+                fname = os.path.join(root, afile)
+                os.chmod(fname, 0777)
+
+    def modify_file(self, filename, find, replace):
+        """Read, modify and write back the file."""
+
+        lines = open(filename, 'r').readlines()
+        text = ''.join(lines)
+
+        # Make sure target text is not in the file.
+        assert not replace in text
+        text = text.replace(find, replace)
+        assert replace in text
+
+        open(filename, 'w').write(text)
+
+    def modify_canonical_course_data(self, course):
+        """Modify canonical content by adding unique bits to it."""
+
+        self.modify_file(
+            os.path.join(course.home, 'course.yaml'),
+            'title: \'Power Searching with Google\'',
+            'title: \'%s\'' % course.title)
+
+        self.modify_file(
+            os.path.join(course.home, 'data/unit.csv'),
+            ',Interpreting results,',
+            ',%s,' % course.unit_title)
+
+        self.modify_file(
+            os.path.join(course.home, 'views/base.html'),
+            '<head>',
+            '<head>\n%s' % course.head)
+
+        self.modify_file(
+            os.path.join(course.home, 'assets/css/main.css'),
+            'html {',
+            '%s\nhtml {' % course.css)
+
+    def prepare_course_data(self, course):
+        """Create unique course content for a course."""
+
+        self.prepare_canonical_course_data(course)
+        self.modify_canonical_course_data(course)
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        """Configure the test."""
+
+        super(TwoCoursesTest, self).setUp()
+
+        self.course_a = GeneratedCourse('a')
+        self.course_b = GeneratedCourse('b')
+
+        # Override BUNDLE_ROOT.
+        self.bundle_root = appengine_config.BUNDLE_ROOT
+        appengine_config.BUNDLE_ROOT = GeneratedCourse.data_home
+
+        # Prepare course content.
+        clean_dir(GeneratedCourse.data_home)
+        self.prepare_course_data(self.course_a)
+        self.prepare_course_data(self.course_b)
+
+        # Configure courses.
+        courses = '%s, %s' % (
+            'course:/courses/a:/data-a:nsa',
+            'course:/courses/b:/data-b:nsb')
+        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        """Clean up."""
+
+        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+        appengine_config.BUNDLE_ROOT = self.bundle_root
+        super(TwoCoursesTest, self).tearDown()
+
+    def test_courses_are_isolated(self):
+        """Test each course serves its own assets, views and data."""
+
+        # Pretend students visit courses.
+        self.walk_the_course(self.course_a)
+        self.walk_the_course(self.course_b)
+        self.walk_the_course(self.course_a, False)
+        self.walk_the_course(self.course_b, False)
+
+        # Check course namespaced data.
+        self.validate_course_data(self.course_a)
+        self.validate_course_data(self.course_b)
+
+        # Check default namespace.
+        assert (
+            namespace_manager.get_namespace() ==
+            appengine_config.DEFAULT_NAMESPACE_NAME)
+
+        assert not models.Student.all().fetch(1000)
+
+    def validate_course_data(self, course):
+        """Check course data is valid."""
+
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(course.namespace)
+        try:
+            students = models.Student.all().fetch(1000)
+            assert len(students) == 1
+            for student in students:
+                assert_equals(course.email, student.key().name())
+                assert_equals(course.name, student.name)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+    def walk_the_course(self, course, first_time=True):
+        """Visit a course as a Student would."""
+
+        # Check normal user has no access.
+        actions.login(course.email)
+
+        # Test course content.
+        if first_time:
+            response = self.testapp.get('/courses/%s/preview' % course.path)
+        else:
+            response = self.testapp.get('/courses/%s/course' % course.path)
+        assert_contains(course.title, response.body)
+        assert_contains(course.unit_title, response.body)
+        assert_contains(course.head, response.body)
+
+        # Tests static resource.
+        response = self.testapp.get(
+            '/courses/%s/assets/css/main.css' % course.path)
+        assert_contains(course.css, response.body)
+
+        if first_time:
+            # Test registration.
+            response = self.get('/courses/%s/register' % course.path)
+            response.form.set('form01', course.name)
+            response.form.action = '/courses/%s/register' % course.path
+            response = self.submit(response.form)
+
+            assert_contains('Thank you for registering for', response.body)
+
+        actions.logout()

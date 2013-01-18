@@ -30,7 +30,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 39
+EXPECTED_TEST_COUNT = 40
 
 
 def empty_environ():
@@ -81,6 +81,11 @@ def create_test_suite():
     tests = []
     for item in [unit_tests, functional_tests]:
         tests += unittest.TestLoader().loadTestsFromModule(item)
+
+    # Here is how to test just one test case:
+    #     tests = unittest.TestLoader().loadTestsFromTestCase(
+    #         functional_tests.TwoCoursesTest)
+
     return unittest.TestLoader().suiteClass(tests)
 
 
@@ -100,11 +105,6 @@ def main():
     fix_sys_path()
     result = unittest.TextTestRunner(verbosity=2).run(create_test_suite())
 
-    import tests.functional.actions as actions  # pylint: disable-msg=g-import-not-at-top
-    count = len(actions.UNIQUE_URLS_FOUND.keys())
-    urls = '\n  '.join(sorted(actions.UNIQUE_URLS_FOUND.keys()))
-    logging.warning('Unique URLs found: %s\n  %s', count, urls)
-
     if result.testsRun != EXPECTED_TEST_COUNT:
         raise Exception('Expected %s tests to be run, not %s.' %
                         (EXPECTED_TEST_COUNT, result.testsRun))
@@ -114,6 +114,11 @@ def main():
             'Functional test suite failed: %s errors, %s failures of '
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
+
+    import tests.functional.actions as actions  # pylint: disable-msg=g-import-not-at-top
+    count = len(actions.UNIQUE_URLS_FOUND.keys())
+    urls = '\n  '.join(sorted(actions.UNIQUE_URLS_FOUND.keys()))
+    logging.warning('Unique URLs found: %s\n  %s', count, urls)
 
     logging.warning('ALL %s TESTS PASSED!', EXPECTED_TEST_COUNT)
 
