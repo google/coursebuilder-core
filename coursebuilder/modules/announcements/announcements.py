@@ -26,6 +26,7 @@ SAMPLE_ANNOUNCEMENT_1 = {
     'edit_url': None,
     'title': 'Example Announcement',
     'date': 'Oct 6, 2012',
+    'is_draft': False,
     'html': """
         <br>Certificates will be e-mailed to qualifying participants by
         Friday, October 12.
@@ -38,6 +39,7 @@ SAMPLE_ANNOUNCEMENT_2 = {
     'edit_url': None,
     'title': 'Welcome to Class 6 and the Post-class Assessment',
     'date': 'Oct 5, 2012',
+    'is_draft': True,
     'html': """
         <br>Welcome to the final class! <a href="class?class=6"> Class 6</a>
         focuses on combining the skills you have learned throughout the class
@@ -87,10 +89,25 @@ class AnnouncementsHandler(BaseHandler):
         items = []
         for item in announcements:
             entity = AnnouncementEntity()
-            entity.from_json(item)
+            entity.from_dict(item)
             entity.put()
             items.append(entity)
         return items
+
+    def canSeeDraftAnnouncements(self):
+        return users.is_current_user_admin()
+
+    def applyRights(self, items):
+        """Filter out items that current user can't see."""
+        if self.canSeeDraftAnnouncements():
+            return items
+
+        allowed = []
+        for item in items:
+            if not item.is_draft:
+                allowed.append(item)
+
+        return allowed
 
     def get(self):
         """Handles GET requests."""
@@ -109,6 +126,8 @@ class AnnouncementsHandler(BaseHandler):
         if not items:
             items = self.initSampleAnnouncements(
                 [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
+
+        items = self.applyRights(items)
 
         self.template_value['announcements'] = {}
         self.template_value['announcements']['children'] = items
@@ -132,14 +151,7 @@ class AnnouncementEntity(db.Model):
     html = db.TextProperty()
     is_draft = db.BooleanProperty()
 
-    def from_json(self, json):
-        """Converts JSON representation into an object."""
-        self.title = json['title']
-        self.date = json['date']
-        self.html = json['html']
-
-    def to_json(self, json):
-        """Converts object to JSON representation."""
-        json['title'] = self.title
-        json['date'] = self.date
-        json['html'] = self.html
+    def from_dict(self, source_dict):
+        """Sets this object attributes from a dictionary of values."""
+        for key, value in source_dict.items():
+            setattr(self, key, value)

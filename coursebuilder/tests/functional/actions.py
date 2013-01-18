@@ -149,9 +149,14 @@ def assert_all_fail(browser, callbacks):
             pass
 
 
-def login(email):
+def login(email, is_admin=False):
     os.environ['USER_EMAIL'] = email
     os.environ['USER_ID'] = 'user1'
+
+    is_admin_value = '0'
+    if is_admin:
+        is_admin_value = '1'
+    os.environ['USER_IS_ADMIN'] = is_admin_value
 
 
 def get_current_user_email():
@@ -164,6 +169,7 @@ def get_current_user_email():
 def logout():
     del os.environ['USER_EMAIL']
     del os.environ['USER_ID']
+    del os.environ['USER_IS_ADMIN']
 
 
 def register(browser, name):

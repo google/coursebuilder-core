@@ -28,6 +28,21 @@ from models.utils import get_score
 import actions
 
 
+class AdminAspectTest(actions.TestBase):
+    """Tests the site from the Admin perspective."""
+
+    def test_announcements(self):
+        """Test admin can see draft announcements."""
+        email = 'test_announcements@google.com'
+        name = 'Test Announcements'
+
+        actions.login(email, True)
+        actions.register(self, name)
+
+        response = actions.view_announcements(self)
+        actions.assert_contains('Welcome to the final class!', response.body)
+
+
 class StudentAspectTest(actions.TestBase):
     """Tests the site from the Student perspective."""
 
