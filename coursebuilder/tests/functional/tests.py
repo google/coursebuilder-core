@@ -882,8 +882,8 @@ class GeneratedCourse(object):
         return 'Walk The Course Named %s' % self.path
 
 
-class TwoCoursesTest(actions.TestBase):
-    """Test two courses running concurrently."""
+class MultipleCoursesTest(actions.TestBase):
+    """Test several courses running concurrently."""
 
     def prepare_canonical_course_data(self, course):
         """Make a copy of canonical course content."""
@@ -963,7 +963,7 @@ class TwoCoursesTest(actions.TestBase):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         """Configure the test."""
 
-        super(TwoCoursesTest, self).setUp()
+        super(MultipleCoursesTest, self).setUp()
 
         self.course_a = GeneratedCourse('a')
         self.course_b = GeneratedCourse('b')
@@ -997,7 +997,7 @@ class TwoCoursesTest(actions.TestBase):
 
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
         appengine_config.BUNDLE_ROOT = self.bundle_root
-        super(TwoCoursesTest, self).tearDown()
+        super(MultipleCoursesTest, self).tearDown()
 
     def test_i18n(self):
         """Test course is properly internationalized."""
