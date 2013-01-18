@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Main package for Course Builder, which handles URL routing."""
+import os
 import webapp2
 
 # The following import is needed in order to add third-party libraries.
@@ -25,7 +26,6 @@ from models.models import PRODUCTION_MODE
 from modules.admin import admin
 from modules.admin import config
 from modules.announcements import announcements
-from google.appengine.ext.zipserve import make_zip_handler
 
 
 urls = [
@@ -46,7 +46,8 @@ urls = [
 sites.ApplicationRequestHandler.bind(urls)
 
 inputex_handler = (
-    '/static/inputex-3.1.0/(.*)', make_zip_handler('lib/inputex-3.1.0.zip'))
+    '/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip')))
 
 admin_handlers = [
     ('/admin', admin.AdminHandler),

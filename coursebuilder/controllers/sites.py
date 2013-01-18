@@ -131,6 +131,7 @@ from models.counters import PerfCounter
 import webapp2
 import yaml
 from google.appengine.api import namespace_manager
+from google.appengine.ext import zipserve
 
 
 # the name of environment variable that holds rewrite rule definitions
@@ -149,7 +150,8 @@ GCB_CONFIG_FILENAME = os.path.normpath('/course.yaml')
 SITE_TYPE_COURSE = 'course'
 
 # default 'Cache-Control' HTTP header for static files
-DEFAULT_CACHE_CONTROL_HEADER_VALUE = 'public, max-age=600'
+DEFAULT_CACHE_CONTROL_MAX_AGE = 600
+DEFAULT_CACHE_CONTROL_PUBLIC = 'public'
 
 # enable debug output
 DEBUG_INFO = False
@@ -376,6 +378,30 @@ def namespace_manager_default_namespace_for_request():
     return ApplicationContext.get_namespace_name()
 
 
+def set_static_resource_cache_control(handler):
+    """Properly sets Cache-Control for a WebOb/webapp2 response."""
+    handler.response.cache_control.no_cache = None
+    handler.response.cache_control.public = DEFAULT_CACHE_CONTROL_PUBLIC
+    handler.response.cache_control.max_age = DEFAULT_CACHE_CONTROL_MAX_AGE
+
+
+def make_zip_handler(zipfilename):
+    """Creates a handler that serves files from a zip file."""
+
+    class CustomZipHandler(zipserve.ZipHandler):
+        """Custom ZipHandler that properly controls caching."""
+
+        def get(self, name):
+            """Handles GET request."""
+            self.ServeFromZipFile(zipfilename, name)
+
+        def SetCachingHeaders(self):  # pylint: disable=C6409
+            """Properly controls caching."""
+            set_static_resource_cache_control(self)
+
+    return CustomZipHandler
+
+
 class AssetHandler(webapp2.RequestHandler):
     """Handles serving of static resources located on the file system."""
 
@@ -396,8 +422,7 @@ class AssetHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-        self.response.headers['Cache-Control'] = (
-            DEFAULT_CACHE_CONTROL_HEADER_VALUE)
+        set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
         self.response.write(open(self.filename, 'rb').read())

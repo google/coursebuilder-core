@@ -359,12 +359,8 @@ class StudentAspectTest(actions.TestBase):
         actions.logout()
         actions.Permissions.assert_logged_out(self)
 
-
-class PageCacheTest(actions.TestBase):
-    """Checks if pages cached for one user are properly render for another."""
-
-    def test_page_cache(self):
-        """Test a user can't see other user pages."""
+    def test_two_students_dont_see_each_other_pages(self):
+        """Test a user can't see another user pages."""
         email1 = 'user1@foo.com'
         name1 = 'User 1'
         email2 = 'user2@foo.com'
@@ -387,6 +383,28 @@ class PageCacheTest(actions.TestBase):
         response = actions.view_unit(self)
         assert_contains(email2, response.body)
         actions.logout()
+
+
+class StaticHandlerTest(actions.TestBase):
+    """Checks serving of static resources."""
+
+    def test_static_files_cache_control(self):
+        """Tests static/zip handlers use proper Cache-Control headers."""
+
+        # Check static handler.
+        response = self.get('/assets/css/main.css')
+        assert_equals(response.status_int, 200)
+        assert_contains('max-age=600', response.headers['Cache-Control'])
+        assert_contains('public', response.headers['Cache-Control'])
+        assert_does_not_contain('no-cache', response.headers['Cache-Control'])
+
+        # Check zip file handler.
+        response = self.get(
+            '/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css')
+        assert_equals(response.status_int, 200)
+        assert_contains('max-age=600', response.headers['Cache-Control'])
+        assert_contains('public', response.headers['Cache-Control'])
+        assert_does_not_contain('no-cache', response.headers['Cache-Control'])
 
 
 class AssessmentTest(actions.TestBase):
@@ -510,8 +528,7 @@ class AssessmentTest(actions.TestBase):
 
 
 class CourseUrlRewritingTest(
-    StudentAspectTest, PageCacheTest, AssessmentTest, CourseAuthorAspectTest,
-    AdminAspectTest):
+    StudentAspectTest, AssessmentTest, CourseAuthorAspectTest, AdminAspectTest):
     """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
