@@ -17,7 +17,6 @@
 __author__ = 'Sean Lip'
 
 
-import logging
 import os
 import sys
 import unittest
@@ -94,5 +93,4 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=3)
     main()
