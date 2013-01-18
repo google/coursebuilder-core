@@ -244,7 +244,7 @@
            delete_button = {type: 'link', value: 'Delete',
               className: 'inputEx-Button inputEx-Button-Link pull-right',
               onClick:function(e) {
-                  if (confirm("Are you sure you want to delete this object?")) {
+                  if (confirm("Are you sure you want to delete this {{ type_label }}?")) {
                       var form = document.createElement('form');
                       form.method = 'post';
                       form.action = cb_global.delete_url;

@@ -35,7 +35,7 @@ SCHEMA_JSON_TEMPLATE = """
     {
         "id": "Configuration Property",
         "type": "object",
-        "description": "Configuration Property",
+        "description": "Configuration Property Override",
         "properties": {
             "name" : {"type": "string"},
             "value": {"optional": true, "type": "%s"},
@@ -46,7 +46,7 @@ SCHEMA_JSON_TEMPLATE = """
 
 # This is a template because the doc_string is not yet known.
 SCHEMA_ANNOTATIONS_TEMPLATE = [
-    (['title'], 'Configuration Property'),
+    (['title'], 'Configuration Property Override'),
     (['properties', 'name', '_inputex'], {
         'label': 'Name', '_type': 'uneditable'}),
     oeditor.create_bool_select_annotation(
@@ -123,7 +123,7 @@ class ConfigPropertyEditor(object):
 
         template_values = {}
         template_values[
-            'page_title'] = 'Course Builder - Editing \'%s\'' % cgi.escape(key)
+            'page_title'] = 'Course Builder - Edit Settings'
 
         exit_url = '/admin?action=settings#%s' % cgi.escape(key)
         rest_url = '/rest/config/item'
