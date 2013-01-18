@@ -23,6 +23,7 @@ import jinja2
 from models.models import Lesson
 from models.models import Student
 from models.models import Unit
+from models.roles import Roles
 from models.utils import get_all_scores
 from tools import verify
 import webapp2
@@ -112,6 +113,7 @@ class ApplicationHandler(webapp2.RequestHandler):
     def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
+        self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.append_base()
 
         template_dir = self.app_context.get_template_home()

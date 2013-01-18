@@ -74,6 +74,13 @@
               {% trans %} My Profile {% endtrans %}
             </a>
           </li>
+          {% if is_super_admin %}
+          <li>
+            <a href="/admin">
+              {% trans %} Admin {% endtrans %}
+            </a>
+          </li>
+          {% endif %}
 
           {% if logoutUrl %}
           <li class="pull-right">

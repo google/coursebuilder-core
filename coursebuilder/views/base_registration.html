@@ -11,6 +11,13 @@
       <li {% if navbar.registration %}class='active'{% endif %}>
         <a href="register">{% trans %} Registration {% endtrans %}</a>
       </li>
+      {% if is_super_admin %}
+      <li>
+        <a href="/admin">
+          {% trans %} Admin {% endtrans %}
+        </a>
+      </li>
+      {% endif %}
 
       {% if logoutUrl %}
       <li class="pull-right">
