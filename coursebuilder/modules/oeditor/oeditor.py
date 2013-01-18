@@ -20,12 +20,46 @@ import json
 import os
 import urllib
 
+# a set of YUI and inputex modules required by the editor; need to be optimized
+# to load what is needed for a specific schema; for now we use a static list
+REQUIRED_MODULES = """
+    "querystring-stringify-simple",
+    "inputex-group", "inputex-select", "inputex-string", "inputex-form",
+    "inputex-radio", "inputex-date", "inputex-datepicker", "inputex-jsonschema",
+    "inputex-checkbox", "inputex-list", "inputex-color", "inputex-rte",
+    "inputex-textarea"
+    """
+
 
 class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
 
     @classmethod
-    def get_html_for(cls, handler, schema, object_key, rest_url, exit_url):
+    def format_annotations(cls, annotations):
+        """Formats annotations into JavaScript.
+
+        An annotation is a tuple of two elements. The first element is a
+        list of key names forming xpath of a target schema element. The second
+        is a dictionary, items of which must be attached to the target element.
+
+        Args:
+            annotations: an array of annotations
+
+        Returns:
+            The JavaScript representation of the annotations.
+        """
+        annotations_lines = []
+        for item in annotations:
+            path = []
+            for element in item[0]:
+                path.append('[\'%s\']' % element)
+            annotations_lines.append('schema.root%s = %s;' % (
+                ''.join(path), json.dumps(item[1])))
+        return '\n'.join(annotations_lines)
+
+    @classmethod
+    def get_html_for(
+        cls, handler, schema_json, annotations, object_key, rest_url, exit_url):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -33,7 +67,8 @@ class ObjectEditor(object):
 
         Args:
             handler: a BaseHandler class, which will host this HTML, JS and CSS
-            schema: a JSON schema dictionary for the object being edited
+            schema_json: a text of JSON schema for the object being edited
+            annotations: schema annotations dictionary
             object_key: a key of an object being edited
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
@@ -42,22 +77,26 @@ class ObjectEditor(object):
             The HTML, JS and CSS text that will instantiate an object editor.
         """
 
-        type_label = schema['description']
+        # extract label
+        type_label = json.loads(schema_json)['description']
         if not type_label:
             type_label = 'Generic Object'
 
+        # construct parameters
         get_url = rest_url
         get_args = {'key': object_key}
         post_url = rest_url
         post_args = {'key': object_key}
 
         template_values = {
-            'schema': json.dumps(schema),
+            'schema': schema_json,
             'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
             'post_url': post_url,
             'post_args': json.dumps(post_args),
-            'exit_url': exit_url
+            'exit_url': exit_url,
+            'required_modules': REQUIRED_MODULES,
+            'schema_annotations': cls.format_annotations(annotations)
         }
 
         return handler.get_template(

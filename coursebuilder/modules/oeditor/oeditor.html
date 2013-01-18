@@ -9,67 +9,6 @@
 
 <!-- TODO(psimakov): take styles out into a separate file -->
 <style>
-  fieldset {
-    border: none;
-    border-top: solid 1px #9999FF;
-  }
-  div.inputEx-StringField-wrapper input {
-    width: 460px;
-    margin-top: 2px;
-    margin-bottom: 2px;
-    padding: 2px;
-    text-align: left;
-    border: solid 1px #999999;
-  }
-  div.inputex-form-buttonbar {
-    margin: 0px;
-    padding-left: 8px;
-    padding-top: 18px;
-    border-top: solid 1px #9999FF;
-    text-align: center;
-  }
-  div.inputex-form-buttonbar a {
-    text-decoration: none;
-    background-color: #A0A0FF;
-    padding: 4px;
-    padding-left: 16px;
-    padding-right: 16px;
-    margin-right: 16px;
-    font-weight: bold;
-    color: #000000;
-  }
-  fieldset legend span {
-    color: #505050;
-    font-weight: bold;
-  }
-  a.inputex-list-link {
-    float: right;
-  }
-  div.inputEx-StringField-wrapper {
-    width: 460px;
-  }
-  div.inputEx-StringField-wrapper textarea {
-    width: 100%;
-  }
-
-  body {
-    font: 13px/1.231 arial,helvetica,clean,sans-serif;
-  }
-  div#menu {
-    width: 100%;
-    background-color: #F0F0F0;
-    padding: 4px;
-    text-align: center;
-  }
-  div.form {
-    width: 700px;
-    background-color: #DDDDFF;
-    border: 1px solid #9999FF;
-    margin: 20px;
-    padding: 15px;
-    display: none;
-    text-align: left;
-  }
   div.status-message {
     width:400px;   /* adjust */
     top:15%;
@@ -83,11 +22,90 @@
     padding: 16px;
     z-index: 999;
   }
+
+  div.form {
+    width: 700px;
+    margin: 20px;
+    padding: 15px;
+    display: none;
+    text-align: left;
+  }
+  div#formContainer fieldset {
+    border: none;
+    border-top: solid 1px #999999;
+    border-bottom: solid 1px #999999;
+    margin-bottom: 16px;
+  }
+  div#formContainer fieldset legend span {
+    color: #505050;
+    font-weight: bold;
+    padding: 4px;
+  }
+
+  div.inputEx-Field {
+    width: 500px;
+  }
+  div.inputEx-Field textarea {
+    width: 496px;
+    max-width: 496px;
+    height: 200px;
+    border: solid 1px #999999;
+    padding: 4px;
+    border-left: 6px solid #999999;
+  }
+  div.inputEx-StringField-wrapper input {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding: 2px;
+    text-align: left;
+    border: solid 1px #999999;
+  }
+  div.inputEx-Field input {
+    width: 100%;
+    border-left: 6px solid #999999;
+  }
+  div.inputEx-CheckBox input {
+    width: auto;
+  }
+  div.inputEx-DateField {
+    width: 480px;
+  }
+
+  div.inputex-form-buttonbar {
+    margin: 0px;
+    padding-left: 8px;
+    padding-top: 18px;
+    border-top: solid 1px #9999FF;
+    text-align: center;
+  }
+  div.inputex-form-buttonbar a {
+    text-decoration: none;
+    padding: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-right: 16px;
+    font-weight: bold;
+    color: #000000;
+  }
+  a.inputex-list-link {
+    float: right;
+  }
+  a.inputEx-Button {
+    background-color: #666;
+    color: #FFFFFF;
+    padding: 4px;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-left: 4px;
+    margin-right: 4px;
+    font-weight: bold;
+    text-decoration: none;
+  }
 </style>
 
 <div class='status-message' id='formStatusMessage' style='display: none;'>&nbsp;</div>
 
-<div style='width: 100%;' align='center'>
+<div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
   <div class='form' id='formContainer'></div>
 </div>
 
@@ -95,7 +113,7 @@
 <script type='text/javascript'>
   function cbShowMsg(text){
     elem = document.getElementById("formStatusMessage");
-    elem.innerText = text;
+    elem.textContent = text;
     elem.style.display = "block";
   }
 
@@ -114,11 +132,9 @@
   // set home folder
   YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
 
+  // here is the main method
   YUI({filter: "raw"}).use(
-    'querystring-stringify-simple',
-    'inputex-group','inputex-select','inputex-string','inputex-form',
-    'inputex-radio','inputex-date','inputex-datepicker','inputex-jsonschema',
-    'inputex-checkbox','inputex-list','inputex-color','inputex-rte','inputex-textarea',
+    {{ required_modules }},
     function (Y) {
 
       // here is the object schema
@@ -127,9 +143,7 @@
       };
 
       // inject inputex annotations
-      if (!schema.root["title"]) {
-        schema.root["title"] = "{{ type_label }}";
-      }
+      {{ schema_annotations }}
 
       // build form definition from the json schema
       builder = new Y.inputEx.JsonSchema.Builder({

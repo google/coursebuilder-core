@@ -22,91 +22,11 @@ import urllib
 from controllers.utils import BaseHandler
 from models.models import Student
 import models.transforms as transforms
+import modules.announcements.samples as samples
+import modules.announcements.schema as schema
 from modules.oeditor.oeditor import ObjectEditor
 from google.appengine.api import users
 from google.appengine.ext import db
-
-
-ANNOUNCEMENT_ENTITY_SCHEMA = {
-    'id': 'Announcement Entity',
-    'description': 'Announcement',
-    'type': 'object',
-    'properties': {
-        'title': {'type': 'string', 'optional': True},
-        'date': {'type': 'date', 'optional': True},
-        'html': {'type': 'text', 'optional': True},
-        'is_draft': {'type': 'boolean'}
-        }
-    }
-
-# add inputex specific annotations
-ANNOUNCEMENT_ENTITY_SCHEMA['properties']['date']['_inputex'] = {
-    '_type': 'datepicker', 'dateFormat': 'Y/m/d', 'valueFormat': 'Y/m/d'
-    }
-
-SAMPLE_ANNOUNCEMENT_1 = {
-    'edit_url': None,
-    'title': 'Example Announcement',
-    'date': datetime.date(2012, 10, 6),
-    'is_draft': False,
-    'html': """
-        <br>Certificates will be e-mailed to qualifying participants by
-        Friday, October 12.
-        <br>
-        <br>Do you want to check your assessment scores? Visit the
-        <a href="student/home">"My profile"</a> page!</p>
-        """}
-
-SAMPLE_ANNOUNCEMENT_2 = {
-    'edit_url': None,
-    'title': 'Welcome to Class 6 and the Post-class Assessment',
-    'date': datetime.date(2012, 10, 5),
-    'is_draft': True,
-    'html': """
-        <br>Welcome to the final class! <a href="class?class=6"> Class 6</a>
-        focuses on combining the skills you have learned throughout the class
-        to maximize the effectiveness of your searches.
-        <br>
-        <br><b>Customize Your Experience</b>
-        <br>You can customize your experience in several ways:
-        <ul>
-          <li>You can watch the videos multiple times for a deeper understanding
-          of each lesson. </li>
-          <li>You can read the text version for each lesson. Click the button
-          above the video to access it.</li>
-          <li>Lesson activities are designed for multiple levels of experience.
-          The first question checks your recall of the material in the video;
-          the second question lets you verify your mastery of the lesson; the
-          third question is an opportunity to apply your skills and share your
-          experiences in the class forums. You can answer some or all of the
-          questions depending on your familiarity and interest in the topic.
-          Activities are not graded and do not affect your final grade. </li>
-          <li>We'll also post extra challenges in the forums for people who seek
-          additional opportunities to practice and test their new skills!</li>
-        </ul>
-
-        <br><b>Forum</b>
-        <br>Apply your skills, share with others, and connect with your peers
-        and course staff in the <a href="forum">forum.</a> Discuss your favorite
-        search tips and troubleshoot technical issues. We'll also post bonus
-        videos and challenges there!
-
-        <p> </p>
-        <p>For an optimal learning experience, please plan to use the most
-        recent version of your browser, as well as a desktop, laptop or a tablet
-        computer instead of your mobile phone.</p>
-        """}
-
-
-def init_sample_announcements(announcements):
-    """Loads sample data into a database."""
-    items = []
-    for item in announcements:
-        entity = AnnouncementEntity()
-        transforms.dict_to_entity(entity, item)
-        entity.put()
-        items.append(entity)
-    return items
 
 
 class AnnouncementsRights(object):
@@ -214,6 +134,16 @@ class AnnouncementsHandler(BaseHandler):
 
         return output
 
+    def put_sample_announcements(self):
+        """Loads sample data into a database."""
+        items = []
+        for item in samples.SAMPLE_ANNOUNCEMENTS:
+            entity = AnnouncementEntity()
+            transforms.dict_to_entity(entity, item)
+            entity.put()
+            items.append(entity)
+        return items
+
     def get_list(self):
         """Shows a list of announcements."""
         user = self.personalize_page_and_get_user()
@@ -229,8 +159,7 @@ class AnnouncementsHandler(BaseHandler):
         # TODO(psimakov): cache this page and invalidate the cache on update
         items = AnnouncementEntity.all().order('-date').fetch(1000)
         if not items:
-            items = init_sample_announcements(
-                [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
+            items = self.put_sample_announcements()
 
         self.template_value['announcements'] = self.format_items_for_template(
             self.apply_rights(items))
@@ -249,7 +178,8 @@ class AnnouncementsHandler(BaseHandler):
             '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = ObjectEditor.get_html_for(
-            self, ANNOUNCEMENT_ENTITY_SCHEMA, key, rest_url, exit_url)
+            self, schema.SCHEMA_JSON, schema.SCHEMA_ANNOTATIONS_DICT,
+            key, rest_url, exit_url)
         self.template_value['navbar'] = {'announcements': True}
         self.template_value['content'] = form_html
         self.render('bare.html')
@@ -306,7 +236,7 @@ class ItemRESTHandler(BaseHandler):
             send_json_response(self, 404, 'Object not found.', {'key': key})
         else:
             json_payload = transforms.dict_to_json(transforms.entity_to_dict(
-                entity), ANNOUNCEMENT_ENTITY_SCHEMA)
+                entity), schema.SCHEMA_DICT)
             send_json_response(self, 200, 'Success.', json_payload)
 
     def put(self):
@@ -325,7 +255,7 @@ class ItemRESTHandler(BaseHandler):
 
         payload = request.get('payload')
         transforms.dict_to_entity(entity, transforms.json_to_dict(
-            json.loads(payload), ANNOUNCEMENT_ENTITY_SCHEMA))
+            json.loads(payload), schema.SCHEMA_DICT))
         entity.put()
 
         send_json_response(self, 200, 'Saved.')
