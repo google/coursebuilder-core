@@ -667,8 +667,12 @@ class Activity(object):
             'activity', SCHEMA['activity'], self.scope)
 
 
-def echo(x):
-    print x
+def silent_echo(unused_message):
+    pass
+
+
+def echo(message):
+    print message
 
 
 def is_integer(s):
@@ -874,9 +878,11 @@ class Verifier(object):
     """Verifies Units, Lessons, Assessments, Activities and their relations."""
 
     def __init__(self):
+        self.echo_func = silent_echo
         self.schema_helper = SchemaHelper()
         self.errors = 0
         self.warnings = 0
+        self.export = []
 
     def verify_unit_fields(self, units):
         self.export.append('units = Array();')
@@ -1199,7 +1205,6 @@ class Verifier(object):
         """Loads, parses and verifies all content for a course."""
 
         self.echo_func = echo_func
-        self.export = []
 
         self.info('Started verification in: %s' % __file__)
 

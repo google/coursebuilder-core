@@ -111,7 +111,7 @@ class Unit(db.Model):
     def get_units(cls):
         units = MemcacheManager.get('units')
         if units is None:
-            units = Unit.all().order('id')
+            units = Unit.all().order('id').fetch(1000)
             MemcacheManager.set('units', units)
         return units
 

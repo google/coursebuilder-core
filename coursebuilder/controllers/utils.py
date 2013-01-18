@@ -17,17 +17,19 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import logging
+import os
 import urlparse
-
 import jinja2
+from models import transforms
+from models.models import Lesson
 from models.models import MemcacheManager
 from models.models import Student
 from models.models import Unit
 from models.utils import get_all_scores
+from tools import verify
 import webapp2
 from webapp2_extras import i18n
 import yaml
-
 from google.appengine.api import users
 
 
@@ -135,6 +137,45 @@ class BaseHandler(ApplicationHandler):
         self.response.out.write(template.render(self.template_value))
 
 
+def put_course_into_datastore():
+    """Loads course data from the CSV files."""
+    logging.info('Initializing datastore from CSV files')
+
+    # load and validate data from CSV files
+    unit_file = os.path.join(
+        os.path.dirname(__file__), '../data/unit.csv')
+    lesson_file = os.path.join(
+        os.path.dirname(__file__), '../data/lesson.csv')
+    units = verify.read_objects_from_csv_file(
+        unit_file, verify.UNITS_HEADER, verify.Unit)
+    lessons = verify.read_objects_from_csv_file(
+        lesson_file, verify.LESSONS_HEADER, verify.Lesson)
+    verifier = verify.Verifier()
+    verifier.verify_unit_fields(units)
+    verifier.verify_lesson_fields(lessons)
+    verifier.verify_unit_lesson_relationships(units, lessons)
+    assert verifier.errors == 0
+    assert verifier.warnings == 0
+
+    # load data from CSV files and store in a datastore
+    units = verify.read_objects_from_csv_file(
+        unit_file, verify.UNITS_HEADER, Unit)
+    lessons = verify.read_objects_from_csv_file(
+        lesson_file, verify.LESSONS_HEADER, Lesson)
+    for unit in units:
+        entity = Unit()
+        transforms.dict_to_entity(entity, unit.__dict__)
+        entity.put()
+    for lesson in lessons:
+        entity = Lesson()
+        transforms.dict_to_entity(entity, lesson.__dict__)
+        entity.put()
+    assert Unit.all().count() == 11
+    assert Lesson.all().count() == 29
+
+    return Unit.get_units()
+
+
 class StudentHandler(ApplicationHandler):
     """Student handler."""
 
@@ -231,8 +272,12 @@ class CoursePreviewHandler(BaseHandler):
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = users.create_logout_url('/')
 
+        units = Unit.get_units()
+        if not units:
+            units = put_course_into_datastore()
+
         self.template_value['navbar'] = {'course': True}
-        self.template_value['units'] = Unit.get_units()
+        self.template_value['units'] = units
         if user and Student.get_enrolled_student_by_email(user.email()):
             self.redirect('/course')
         else:

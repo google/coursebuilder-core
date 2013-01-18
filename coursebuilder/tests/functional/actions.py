@@ -19,13 +19,9 @@
 import logging
 import os
 import re
-
+from controllers import utils
 import main
-from models.models import Lesson
-from models.models import Unit
 import suite
-from tools import verify
-
 from google.appengine.api import namespace_manager
 
 
@@ -44,33 +40,10 @@ class TestBase(suite.BaseTestClass):
         try:
             if hasattr(self, 'namespace'):
                 namespace_manager.set_namespace(self.namespace)
-            self.init_datastore()
+            utils.put_course_into_datastore()
         finally:
             if not namespace:
                 namespace_manager.set_namespace(None)
-
-    def init_datastore(self):
-        """Loads course data from the CSV files."""
-        logging.info('')
-        logging.info('Initializing datastore')
-
-        # load and parse data from CSV file
-        unit_file = os.path.join(
-            os.path.dirname(__file__), '../../data/unit.csv')
-        lesson_file = os.path.join(
-            os.path.dirname(__file__), '../../data/lesson.csv')
-        units = verify.read_objects_from_csv_file(
-            unit_file, verify.UNITS_HEADER, Unit)
-        lessons = verify.read_objects_from_csv_file(
-            lesson_file, verify.LESSONS_HEADER, Lesson)
-
-        # store all units and lessons
-        for unit in units:
-            unit.put()
-        for lesson in lessons:
-            lesson.put()
-        assert Unit.all().count() == 11
-        assert Lesson.all().count() == 29
 
     def canonicalize(self, href, response=None):
         """Create absolute URL using <base> if defined, '/' otherwise."""
