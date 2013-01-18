@@ -87,6 +87,26 @@ LESSONS_HEADER = (
     'unit_id,unit_title,lesson_id,lesson_title,lesson_activity,'
     'lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives')
 
+UNIT_CSV_TO_DB_CONVERTER = {
+    'id': ('id', int),
+    'type': ('type', str),
+    'unit_id': ('unit_id', str),
+    'title': ('title', str),
+    'release_date': ('release_date', str),
+    'now_available': ('now_available', bool)
+}
+LESSON_CSV_TO_DB_CONVERTER = {
+    'unit_id': ('unit_id', int),
+    'unit_title': None,
+    'lesson_id': ('id', int),
+    'lesson_title': ('title', str),
+    'lesson_activity': ('activity', str),
+    'lesson_activity_name': ('activity_title', str),
+    'lesson_video_id': ('video', str),
+    'lesson_objectives': ('objectives', str),
+    'lesson_notes': ('notes', str)
+}
+
 # pylint: disable-msg=anomalous-backslash-in-string
 NO_VERIFY_TAG_NAME_OPEN = '<gcb-no-verify>\s*\n'
 # pylint: enable-msg=anomalous-backslash-in-string

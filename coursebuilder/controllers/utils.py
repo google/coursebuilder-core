@@ -20,7 +20,6 @@ import logging
 import os
 import urlparse
 import jinja2
-from models import transforms
 from models.models import Lesson
 from models.models import MemcacheManager
 from models.models import Student
@@ -116,6 +115,13 @@ class ApplicationHandler(webapp2.RequestHandler):
 class BaseHandler(ApplicationHandler):
     """Base handler."""
 
+    def get_units(self):
+        """Gets a list of units in a course. Loads data from CSV if None."""
+        units = Unit.get_units()
+        if not units:
+            units = put_course_into_datastore(self.app_context.get_data_home())
+        return units
+
     def get_user(self):
         """Validate user exists."""
         user = users.get_current_user()
@@ -135,6 +141,16 @@ class BaseHandler(ApplicationHandler):
     def render(self, template_file):
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
+
+
+def copy_attributes(source, target, converter):
+    """Copies source object attributes into a target using a converter."""
+    for source_name, value in converter.items():
+        if value:
+            target_name = value[0]
+            target_type = value[1]
+            setattr(
+                target, target_name, target_type(getattr(source, source_name)))
 
 
 def put_course_into_datastore(data_folder):
@@ -163,11 +179,11 @@ def put_course_into_datastore(data_folder):
         lesson_file, verify.LESSONS_HEADER, Lesson)
     for unit in units:
         entity = Unit()
-        transforms.dict_to_entity(entity, unit.__dict__)
+        copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)
         entity.put()
     for lesson in lessons:
         entity = Lesson()
-        transforms.dict_to_entity(entity, lesson.__dict__)
+        copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
         entity.put()
     assert Unit.all().count() == 11
     assert Lesson.all().count() == 29
@@ -271,12 +287,8 @@ class CoursePreviewHandler(BaseHandler):
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = users.create_logout_url('/')
 
-        units = Unit.get_units()
-        if not units:
-            units = put_course_into_datastore(self.app_context.get_data_home())
-
         self.template_value['navbar'] = {'course': True}
-        self.template_value['units'] = units
+        self.template_value['units'] = self.get_units()
         if user and Student.get_enrolled_student_by_email(user.email()):
             self.redirect('/course')
         else:

@@ -28,7 +28,7 @@ class CourseHandler(BaseHandler):
     def get(self):
         user = self.personalize_page_and_get_user()
         if user:
-            self.template_value['units'] = Unit.get_units()
+            self.template_value['units'] = self.get_units()
             self.template_value['navbar'] = {'course': True}
             self.render('course.html')
         else:
@@ -62,7 +62,7 @@ class UnitHandler(BaseHandler):
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
-        for unit in Unit.get_units():
+        for unit in self.get_units():
             if unit.unit_id == str(unit_id):
                 self.template_value['units'] = unit
 
@@ -121,7 +121,7 @@ class ActivityHandler(BaseHandler):
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
-        for unit in Unit.get_units():
+        for unit in self.get_units():
             if unit.unit_id == str(unit_id):
                 self.template_value['units'] = unit
 

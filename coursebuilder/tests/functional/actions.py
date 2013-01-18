@@ -208,6 +208,9 @@ def view_course(browser):
 def view_unit(browser):
     response = browser.get('unit?unit=1&lesson=1')
     assert_contains('Unit 1 - Introduction', response.body)
+    assert_contains('1.3 How search works', response.body)
+    assert_contains('1.6 Finding text on a web page', response.body)
+    assert_contains('http://www.youtube.com/embed/1ppwmxidyIE', response.body)
     assert_contains(get_current_user_email(), response.body)
     return response
 
