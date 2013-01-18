@@ -166,6 +166,9 @@ STATIC_HANDLER_COUNT = PerfCounter(
 DYNAMIC_HANDLER_COUNT = PerfCounter(
     'gcb-sites-handler-dynamic',
     'A number of times request was served via dynamic handler.')
+ZIP_HANDLER_COUNT = PerfCounter(
+    'gcb-sites-handler-zip',
+    'A number of times request was served via zip handler.')
 NO_HANDLER_COUNT = PerfCounter(
     'gcb-sites-handler-none',
     'A number of times request was not matched to any handler.')
@@ -393,7 +396,9 @@ def make_zip_handler(zipfilename):
 
         def get(self, name):
             """Handles GET request."""
+            ZIP_HANDLER_COUNT.inc()
             self.ServeFromZipFile(zipfilename, name)
+            count_stats(self)
 
         def SetCachingHeaders(self):  # pylint: disable=C6409
             """Properly controls caching."""
