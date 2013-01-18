@@ -17,13 +17,14 @@
 This script runs all functional and units test in the Course Builder project.
 
 Here is how to use the script:
-    - download WebTest Python package here:
-        http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip
-    - add it to your Python path:
-        PYTHONPATH=$PYTHONPATH:/tmp/webtest
+    - download WebTest Python package from a URL below and put
+      the files in a folder of your choice, for example: tmp/webtest:
+          http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip
+    - update your Python path:
+          PYTHONPATH=$PYTHONPATH:/tmp/webtest
     - run this command from a command line:
-        python tests/suite.py
-    - review the output
+          python tests/suite.py
+    - review the output to make sure there are no errors or warnings
 
 Good luck!
 """
@@ -44,7 +45,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 43
+EXPECTED_TEST_COUNT = 44
 
 
 def empty_environ():
@@ -101,8 +102,8 @@ def create_test_suite():
         tests += unittest.TestLoader().loadTestsFromModule(item)
 
     # Here is how to test just one test case:
-    #     tests = unittest.TestLoader().loadTestsFromTestCase(
-    #         functional_tests.TwoCoursesTest)
+    #    tests = unittest.TestLoader().loadTestsFromTestCase(
+    #        functional_tests.TwoCoursesTest)
 
     return unittest.TestLoader().suiteClass(tests)
 

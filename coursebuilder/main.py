@@ -57,7 +57,8 @@ admin_handlers = [
 
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 
-webapp2_i18n_config = {'translations_path': 'modules/i18n/resources/locale'}
+webapp2_i18n_config = {'translations_path': os.path.join(
+    appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
 debug = not PRODUCTION_MODE
 

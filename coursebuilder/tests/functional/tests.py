@@ -1,4 +1,6 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# coding: utf-8
+
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -964,6 +966,7 @@ class TwoCoursesTest(actions.TestBase):
 
         self.course_a = GeneratedCourse('a')
         self.course_b = GeneratedCourse('b')
+        self.course_ru = GeneratedCourse('ru')
 
         # Override BUNDLE_ROOT.
         self.bundle_root = appengine_config.BUNDLE_ROOT
@@ -973,11 +976,19 @@ class TwoCoursesTest(actions.TestBase):
         clean_dir(GeneratedCourse.data_home)
         self.prepare_course_data(self.course_a)
         self.prepare_course_data(self.course_b)
+        self.prepare_course_data(self.course_ru)
+
+        # Setup one course for I18N.
+        self.modify_file(
+            os.path.join(self.course_ru.home, 'course.yaml'),
+            'locale: \'en_US\'',
+            'locale: \'ru_RU\'')
 
         # Configure courses.
-        courses = '%s, %s' % (
+        courses = '%s, %s, %s' % (
             'course:/courses/a:/data-a:nsa',
-            'course:/courses/b:/data-b:nsb')
+            'course:/courses/b:/data-b:nsb',
+            'course:/courses/ru:/data-ru:nsru')
         os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
@@ -986,6 +997,17 @@ class TwoCoursesTest(actions.TestBase):
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
         appengine_config.BUNDLE_ROOT = self.bundle_root
         super(TwoCoursesTest, self).tearDown()
+
+    def test_i18n(self):
+        """Test course is properly internationalized."""
+
+        response = self.get('/courses/%s/preview' % self.course_ru.path)
+
+        # Assertions below fail because Russian is not being rendered. Why?
+        assert_contains('Вход', response.body)
+        assert_contains('Регистрация', response.body)
+        assert_contains('Расписание', response.body)
+        assert_contains('Курс', response.body)
 
     def test_courses_are_isolated(self):
         """Test each course serves its own assets, views and data."""
