@@ -21,18 +21,18 @@ import datetime
 import json
 import os
 from controllers import sites
+from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
 from models import courses
 from models import jobs
 from models import roles
 from models.models import Student
-import webapp2
 from google.appengine.api import users
 from google.appengine.ext import db
 
 
-class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
+class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
@@ -71,6 +71,7 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
           %s
           """ % admin_menu
 
+        template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
             users.get_current_user().email(), users.create_logout_url('/'))
         template_values[
@@ -241,7 +242,7 @@ class DashboardHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         update_action = """
             <form
                 id='gcb-compute-student-stats'
-                action='/dashboard?action=compute_student_stats'
+                action='dashboard?action=compute_student_stats'
                 method='POST'>
                 <p>
                     <button class="gcb-button" type="submit">

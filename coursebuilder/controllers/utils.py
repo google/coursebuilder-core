@@ -95,29 +95,33 @@ class ReflectiveRequestHandler(object):
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
-    def __init__(self):
-        super(ApplicationHandler, self).__init__()
-        self.template_value = {}
+    @classmethod
+    def is_absolute(cls, url):
+        return bool(urlparse.urlparse(url).scheme)
 
-    def append_base(self):
-        """Append current course <base> to template variables."""
-        base = self.app_context.get_slug()
+    @classmethod
+    def get_base_href(cls, handler):
+        """Computes current course <base> href."""
+        base = handler.app_context.get_slug()
         if not base.endswith('/'):
             base = '%s/' % base
 
         # For IE to work with the <base> tag, its href must be an absolute URL.
-        if not self.is_absolute(base):
-            parts = urlparse.urlparse(self.request.url)
+        if not cls.is_absolute(base):
+            parts = urlparse.urlparse(handler.request.url)
             base = urlparse.urlunparse(
                 (parts.scheme, parts.netloc, base, None, None, None))
+        return base
 
-        self.template_value[COURSE_BASE_KEY] = base
+    def __init__(self):
+        super(ApplicationHandler, self).__init__()
+        self.template_value = {}
 
     def get_template(self, template_file, additional_dir=None):
         """Computes location of template files for the current namespace."""
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
         self.template_value['is_manager'] = Roles.is_super_admin()
-        self.append_base()
+        self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
 
         template_dir = self.app_context.get_template_home()
         dirs = [template_dir]
@@ -133,9 +137,6 @@ class ApplicationHandler(webapp2.RequestHandler):
         i18n.get_i18n().set_locale(locale)
 
         return jinja_environment.get_template(template_file)
-
-    def is_absolute(self, url):
-        return bool(urlparse.urlparse(url).scheme)
 
     def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""
