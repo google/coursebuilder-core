@@ -42,7 +42,7 @@ class AdminAspectTest(actions.TestBase):
         """Test access to admin pages."""
 
         # assert anonymous user has no access
-        response = self.testapp.get('/admin?action=server')
+        response = self.testapp.get('/admin?action=settings')
         assert_equals(response.status_int, 302)
 
         # assert admin user has access
@@ -52,7 +52,8 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, True)
         actions.register(self, name)
 
-        response = self.testapp.get('/admin?action=server')
+        response = self.testapp.get('/admin?action=settings')
+        assert_contains('default_ver_hostname: None', response.body)
         assert_contains('Server Environment Variables', response.body)
 
         actions.unregister(self)
@@ -61,7 +62,7 @@ class AdminAspectTest(actions.TestBase):
         # assert not-admin user has no access
         actions.login(email)
         actions.register(self, name)
-        response = self.testapp.get('/admin?action=server')
+        response = self.testapp.get('/admin?action=settings')
         assert_equals(response.status_int, 302)
 
     def test_multiple_courses(self):

@@ -22,15 +22,17 @@ import os
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
+from models.models import PRODUCTION_MODE
 import webapp2
 from google.appengine.api import users
+import google.appengine.api.app_identity as app
 
 
 class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
-    get_actions = [default_action, 'server']
+    get_actions = [default_action, 'settings']
     post_actions = []
 
     def get(self):
@@ -42,12 +44,28 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
     def render_page(self, template_values):
         """Renders a page using provided template values."""
-        template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
-            users.get_current_user().email(), users.create_logout_url('/'))
+
+        if PRODUCTION_MODE:
+            app_id = app.get_application_id()
+            console_link = """
+                <a target="_blank"
+                  href="https://appengine.google.com/dashboard?&'
+                  app_id=s~%s">
+                  Production Dashboard
+                </a>
+                """ % app_id
+        else:
+            console_link = """
+                <a target="_blank" href="/_ah/admin">Development Console</a>
+                """
+
         template_values['top_nav'] = """
           <a href="/admin">Courses</a>
-          <a href="/admin?action=server">Server Information</a>
-          """
+          <a href="/admin?action=settings">Settings</a>
+          %s
+          """ % console_link
+        template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
+            users.get_current_user().email(), users.create_logout_url('/'))
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
 
@@ -70,10 +88,10 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content.append('</ol>')
         return '\n'.join(content)
 
-    def get_server(self):
+    def get_settings(self):
         """Shows server & application information page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Server Information'
+        template_values['page_title'] = 'Course Builder - Settings'
 
         yaml_content = []
         yaml_content.append('<h3>Contents of <code>app.yaml</code></h3>')
@@ -84,9 +102,15 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             yaml_content.append('%s<br/>' % cgi.escape(line))
         yaml_content.append('</pre></ul>')
 
-        template_values['main_content'] = ''.join(
-            yaml_content) + self.render_dict(
-                os.environ, 'Server Environment Variables')
+        app_id = app.get_application_id()
+        app_dict = {}
+        app_dict['application_id'] = app_id
+        app_dict['default_ver_hostname'] = app.get_default_version_hostname()
+
+        template_values['main_content'] = self.render_dict(
+            app_dict, 'Application Identity') + ''.join(
+                yaml_content) + self.render_dict(
+                    os.environ, 'Server Environment Variables')
 
         self.render_page(template_values)
 
@@ -98,8 +122,14 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         content = []
         content.append('<h3>Courses</h3>')
         content.append('<table>')
-        content.append(
-            '<tr><th>Context Path</th><th>Data Location</th><th>Name</th></tr>')
+        content.append("""
+            <tr>
+              <th>Course Title</th>
+              <th>Context Path</th>
+              <th>Content Location</th>
+              <th>Datastore Namespace</th>
+            </tr>
+            """)
         courses = sites.get_all_courses()
         count = 0
         for course in courses:
@@ -112,12 +142,18 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
             link = '<a href="%s">%s</a>' % (slug, name)
 
-            content.append('<tr><td>%s</td><td>%s</td><td>%s</td></tr>' % (
-                slug, location, link))
+            content.append("""
+                <tr>
+                  <td>%s</td>
+                  <td>%s</td>
+                  <td>%s</td>
+                  <td>%s</td>
+                </tr>
+                """ % (link, slug, location, course.get_namespace_name()))
             count += 1
 
         content.append("""
-            <tr><th colspan="3" align="right">Total: %s course(s)</th></tr>
+            <tr><th colspan="4" align="right">Total: %s course(s)</th></tr>
             """ % count)
         content.append('</table>')
 
