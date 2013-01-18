@@ -7,9 +7,22 @@
 <div class="gcb-main">
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
-
-      {{course_info.announcements}}
-
+      {% if announcements %}
+        {% if announcements.add_url %}
+          <a class='gcb-button-action' href='{{ announcements.add_url }}'>Add New</a><br/>
+          <div style='clear: both;' />
+        {% endif %}
+        {% for item in announcements.children %}
+          <hr>
+          {% if item.edit_url %}
+            <a class='gcb-button-action' href='{{ item.edit_url }}'>Edit</a>
+          {% endif %}
+          <h2>{{ item.title }}</h2>
+          <p>{{ item.date }}</p>
+          <p "margin: 20px 0px;">
+          {{ item.html }}
+        {% endfor %}
+      {% endif %}
     </div>
   </div>
 </div>
