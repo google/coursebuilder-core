@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import datetime
+import json
 from google.appengine.ext import db
 
 
@@ -87,3 +88,13 @@ def dict_to_entity(entity, source_dict):
         else:
             raise ValueError('Failed to encode: %s' % value)
     return entity
+
+
+def send_json_response(handler, status_code, message, payload_dict=None):
+    """Formats and sends out a JSON REST response envelope and body."""
+    response = {}
+    response['status'] = status_code
+    response['message'] = message
+    if payload_dict:
+        response['payload'] = json.dumps(payload_dict)
+    handler.response.write(json.dumps(response))

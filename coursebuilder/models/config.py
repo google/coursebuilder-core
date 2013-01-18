@@ -46,11 +46,14 @@ ALLOWED_TYPES = frozenset([TYPE_INT, TYPE_STR, TYPE_BOOL])
 class ConfigProperty(object):
     """A property with name, type, doc_string and a default value."""
 
-    def __init__(self, name, value_type, doc_string, default_value=None):
+    def __init__(
+        self, name, value_type, doc_string,
+        default_value=None, multiline=False):
 
         if not value_type in ALLOWED_TYPES:
             raise Exception('Bad value type: %s' % value_type)
 
+        self._multiline = multiline
         self._name = name
         self._type = value_type
         self._doc_string = doc_string
@@ -58,6 +61,10 @@ class ConfigProperty(object):
         self._value = None
 
         Registry.registered[name] = self
+
+    @property
+    def multiline(self):
+        return self._multiline
 
     @property
     def name(self):
@@ -145,12 +152,14 @@ class Registry(object):
         logging.info('Reloading properties.')
         overrides = {}
         for item in ConfigPropertyEntity.all().fetch(1000):
-            if not item.name in cls.registered:
+            name = item.key().name()
+
+            if not name in cls.registered:
                 logging.error(
-                    'Property is not registered (skipped): %s', item.name)
+                    'Property is not registered (skipped): %s', name)
                 continue
 
-            target = cls.registered[item.name]
+            target = cls.registered[name]
             if target and not item.is_draft:
                 # Enforce value type.
                 try:
@@ -162,15 +171,15 @@ class Registry(object):
                     continue
 
                 # Don't allow disabling of update interval from a database.
-                if item.name == UPDATE_INTERVAL_SEC.name:
+                if name == UPDATE_INTERVAL_SEC.name:
                     if value == 0 or value < 0 or value > MAX_UPDATE_INTERVAL:
                         logging.error(
-                            'Bad value %s for %s; discarded.', item.name, value)
+                            'Bad value %s for %s; discarded.', name, value)
                         continue
                     else:
                         cls.update_interval = value
 
-                overrides[item.name] = value
+                overrides[name] = value
 
         cls.db_overrides = overrides
 
@@ -178,7 +187,6 @@ class Registry(object):
 class ConfigPropertyEntity(db.Model):
     """A class that represents a named configuration property."""
     namespace = db.StringProperty()  # TODO(psimakov): incomplete
-    name = db.StringProperty()
     value = db.StringProperty()
     is_draft = db.BooleanProperty()
 

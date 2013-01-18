@@ -53,8 +53,8 @@ class AdminAspectTest(actions.TestBase):
         os.environ['gcb_admin_list'] = email
 
         # Add datastore override.
-        prop = config.ConfigPropertyEntity()
-        prop.name = 'gcb_config_update_interval_sec'
+        prop = config.ConfigPropertyEntity(
+            key_name='gcb_config_update_interval_sec')
         prop.value = '5'
         prop.is_draft = False
         prop.put()

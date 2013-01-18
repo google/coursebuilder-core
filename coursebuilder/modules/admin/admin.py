@@ -28,6 +28,7 @@ from models import config
 from models import counters
 from models.config import ConfigProperty
 from models.models import PRODUCTION_MODE
+from modules.admin.config import ConfigPropertyEditor
 import webapp2
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
@@ -36,19 +37,22 @@ import google.appengine.api.app_identity as app
 # A time this module was initialized.
 BEGINNING_OF_TIME = time.time()
 
-GCB_ADMIN_LIST = ConfigProperty('gcb_admin_list', str, (
-    'A new line separated list of email addresses of administrative users. '
-    'Regular expressions are not supported, exact match only.'), '')
+GCB_ADMIN_LIST = ConfigProperty(
+    'gcb_admin_list', str, (
+        'A new line separated list of email addresses of administrative users. '
+        'Regular expressions are not supported, exact match only.'),
+    '', multiline=True)
 
 
-class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
+class AdminHandler(
+    webapp2.RequestHandler, ReflectiveRequestHandler, ConfigPropertyEditor):
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
     get_actions = [
         default_action, 'settings', 'deployment', 'perf', 'config_edit',
-        'config_reset', 'config_override']
-    post_actions = []
+        'config_override']
+    post_actions = ['config_reset']
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -59,12 +63,29 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             return True
         return False
 
+    def can_edit(self):
+        """Checks if current user has editing rights."""
+        return self.can_view()
+
     def get(self):
         """Enforces rights to all GET operations."""
         if not self.can_view():
             self.redirect('/')
             return
         return super(AdminHandler, self).get()
+
+    def post(self):
+        """Enforces rights to all POST operations."""
+        if not self.can_edit():
+            self.redirect('/')
+            return
+        return super(AdminHandler, self).post()
+
+    def get_template(self, template_name, dirs):
+        """Sets up an environment and Gets jinja template."""
+        jinja_environment = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
+        return jinja_environment.get_template(template_name)
 
     def render_page(self, template_values):
         """Renders a page using provided template values."""
@@ -95,10 +116,8 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
 
-        jinja_environment = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-        self.response.write(jinja_environment.get_template(
-            'admin.html').render(template_values))
+        self.response.write(
+            self.get_template('admin.html', []).render(template_values))
 
     def render_dict(self, source_dict, title):
         """Renders a dictionary ordered by keys."""
@@ -198,11 +217,6 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
             </tr>
             """)
 
-        def get_action_html(caption, args):
-            """Formats actions <a> link."""
-            return '<a class="gcb-button" href="/admin?%s">%s</a>' % (
-                urllib.urlencode(args), cgi.escape(caption))
-
         def get_style_for(value, value_type):
             """Formats CSS style for given value."""
             style = ''
@@ -210,14 +224,29 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                 style = 'style="text-align: center;"'
             return style
 
+        def get_action_html(caption, args, onclick=None):
+            """Formats actions <a> link."""
+            handler = ''
+            if onclick:
+                handler = 'onclick="%s"' % onclick
+            return '<a %s class="gcb-button" href="/admin?%s">%s</a>' % (
+                handler, urllib.urlencode(args), cgi.escape(caption))
+
         def get_actions(name, override):
             """Creates actions appropriate to an item."""
             actions = []
             if override:
                 actions.append(get_action_html('Edit', {
                     'action': 'config_edit', 'name': name}))
-                actions.append(get_action_html('Reset', {
-                    'action': 'config_reset', 'name': name}))
+                actions.append("""
+                    <form action='/admin?%s' method='POST'>
+                    <button class="gcb-button" type="submit"
+                      onclick='return confirm("Delete an override for %s?");'>
+                      Reset
+                    </button></form>""" % (
+                        urllib.urlencode(
+                            {'action': 'config_reset', 'name': name}),
+                        cgi.escape(name)))
             else:
                 actions.append(get_action_html('Override', {
                     'action': 'config_override', 'name': name}))
@@ -262,7 +291,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                 <tr>
                 <td style='white-space: nowrap;'>%s</td>
                 <td %s %s>%s</td>
-                <td align='center'>%s</td>
+                <td style='white-space: nowrap;' align='center'>%s</td>
                 <td>%s</td>
                 </tr>
                 """ % (
@@ -334,17 +363,10 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
 
         self.render_page(template_values)
 
-    def get_config_edit(self):
-        """Handles 'edit' property action."""
-        # TODO(psimakov): incomplete
-        self.redirect('/admin?action=settings')
-
-    def get_config_reset(self):
+    def post_config_reset(self):
         """Handles 'reset' property action."""
-        # TODO(psimakov): incomplete
-        self.redirect('/admin?action=settings')
-
-    def get_config_override(self):
-        """Handles 'override' property action."""
-        # TODO(psimakov): incomplete
+        name = self.request.get('name')
+        item = config.ConfigPropertyEntity.get_by_key_name(name)
+        if item:
+            item.delete()
         self.redirect('/admin?action=settings')
