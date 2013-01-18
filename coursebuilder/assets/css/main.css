@@ -356,16 +356,6 @@ th, td {
 
 }
 
-a.gcb-button-action {
-  background-color: #4D90FE;
-  text-decoration: none;
-  float: right;
-  color: #FFFFFF;
-  padding-left: 8px;
-  padding-right: 8px;
-  font-weight: bold;
-}
-
 .gcb-button-large {
   width: 200px;
   height: 48px;
@@ -418,6 +408,11 @@ button.gcb-button::-moz-focus-inner {
 
 form.gcb-button {
   padding: 4px 12px;
+}
+
+button.gcb-button-action {
+  float: right;
+  margin-left: 8px;
 }
 
 #gcb-nav-x {

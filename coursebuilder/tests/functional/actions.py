@@ -127,6 +127,11 @@ def assert_contains(needle, haystack):
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
+def assert_does_not_contain(needle, haystack):
+    if needle in haystack:
+        raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
+
+
 def assert_none_fail(browser, callbacks):
     """Invokes all callbacks and expects each one not to fail."""
     for callback in callbacks:

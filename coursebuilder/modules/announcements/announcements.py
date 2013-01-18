@@ -16,6 +16,7 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import urllib
 from controllers.utils import BaseHandler
 from models.models import Student
 from google.appengine.api import users
@@ -76,30 +77,46 @@ SAMPLE_ANNOUNCEMENT_2 = {
         """}
 
 
+def init_sample_announcements(announcements):
+    """Loads sample data into a database."""
+    items = []
+    for item in announcements:
+        entity = AnnouncementEntity()
+        entity.from_dict(item)
+        entity.put()
+        items.append(entity)
+    return items
+
+
 class AnnouncementsHandler(BaseHandler):
     """Handler for announcements."""
 
+    default_action = 'list'
+    get_actions = [default_action, 'edit']
+    post_actions = ['add', 'delete']
+
     @classmethod
     def get_child_routes(cls):
-        """Add child handler for REST."""
-        return [('/rest/item', ItemRESTHandler)]
+        """Add child handlers for REST."""
+        return [('/rest/item', ItemRESTHandler), (
+            '/rest/list', ItemListRESTHandler)]
 
-    def init_sample_announcements(self, announcements):
-        """Loads sample data into a database."""
-        items = []
-        for item in announcements:
-            entity = AnnouncementEntity()
-            entity.from_dict(item)
-            entity.put()
-            items.append(entity)
-        return items
+    def get_edit_action_url(self, key):
+        args = {'action': 'edit', 'key': key}
+        return self.canonicalize_url(
+            '/announcements?%s' % urllib.urlencode(args))
 
-    def can_see_draft_announcements(self):
+    def get_delete_action_url(self, key):
+        args = {'action': 'delete', 'key': key}
+        return self.canonicalize_url(
+            '/announcements?%s' % urllib.urlencode(args))
+
+    def can_edit(self):
         return users.is_current_user_admin()
 
     def apply_rights(self, items):
         """Filter out items that current user can't see."""
-        if self.can_see_draft_announcements():
+        if self.can_edit():
             return items
 
         allowed = []
@@ -110,7 +127,29 @@ class AnnouncementsHandler(BaseHandler):
         return allowed
 
     def get(self):
-        """Handles GET requests."""
+        action = self.request.get('action')
+        if not action:
+            action = AnnouncementsHandler.default_action
+        if not action in AnnouncementsHandler.get_actions:
+            self.error(404)
+        else:
+            handler = getattr(self, 'get_%s' % action)
+            if not handler:
+                self.error(404)
+            return handler()
+
+    def post(self):
+        action = self.request.get('action')
+        if not action or not action in AnnouncementsHandler.post_actions:
+            self.error(404)
+        else:
+            handler = getattr(self, 'post_%s' % action)
+            if not handler:
+                self.error(404)
+            return handler()
+
+    def get_list(self):
+        """Shows a list of announcements."""
         user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
@@ -124,17 +163,50 @@ class AnnouncementsHandler(BaseHandler):
         # TODO(psimakov): cache this page and invalidate the cache on update
         items = AnnouncementEntity.all().order('-date').fetch(1000)
         if not items:
-            items = self.init_sample_announcements(
+            items = init_sample_announcements(
                 [SAMPLE_ANNOUNCEMENT_1, SAMPLE_ANNOUNCEMENT_2])
 
         items = self.apply_rights(items)
 
-        self.template_value['announcements'] = {}
-        self.template_value['announcements']['children'] = items
-        self.template_value['announcements']['add_url'] = None
+        args = {}
+        args['children'] = items
 
+        if self.can_edit():
+            # add 'edit' actions
+            for item in items:
+                item.edit_action = self.get_edit_action_url(item.key())
+                item.delete_action = self.get_delete_action_url(item.key())
+
+            # add 'add' action
+            args['add_action'] = self.canonicalize_url(
+                '/announcements?action=add')
+
+        self.template_value['announcements'] = args
         self.template_value['navbar'] = {'announcements': True}
         self.render('announcements.html')
+
+    def get_edit(self):
+        """Shows an editor for an announcement."""
+        # TODO(psimakov): complete this handler
+        pass
+
+    def post_delete(self):
+        """Deletes an announcement."""
+        key = self.request.get('key')
+        entity = AnnouncementEntity.get(key)
+        if entity:
+            entity.delete()
+        self.redirect('/announcements')
+
+    def post_add(self):
+        """Adds a new announcement and redirects to an editor for it."""
+        entity = AnnouncementEntity()
+        entity.title = 'Sample Announcement'
+        entity.date = ''
+        entity.html = 'Here is my announcement!'
+        entity.is_draft = True
+        entity.put()
+        self.redirect(self.get_edit_action_url(entity.key()))
 
 
 class ItemRESTHandler(BaseHandler):
@@ -143,9 +215,14 @@ class ItemRESTHandler(BaseHandler):
     pass
 
 
+class ItemListRESTHandler(BaseHandler):
+    """Provides REST API for a collection of announcements."""
+    # TODO(psimakov): complete this handler
+    pass
+
+
 class AnnouncementEntity(db.Model):
     """A class that represents a persistent database entity of announcement."""
-
     title = db.StringProperty()
     date = db.StringProperty()
     html = db.TextProperty()

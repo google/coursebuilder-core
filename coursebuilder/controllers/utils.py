@@ -68,7 +68,6 @@ class ApplicationHandler(webapp2.RequestHandler):
         try:
             with open(course_data_filename) as course_data_file:
                 course_info = yaml.load(course_data_file)
-                logging.info(course_info)
                 self.template_value[COURSE_INFO_KEY] = course_info
         except IOError():
             logging.info('Error: course.yaml file at %s not accessible',

@@ -27,12 +27,15 @@ from models.utils import get_answer
 from models.utils import get_score
 
 import actions
+from actions import assert_contains
+from actions import assert_does_not_contain
+from actions import assert_equals
 
 
 class AdminAspectTest(actions.TestBase):
     """Tests the site from the Admin perspective."""
 
-    def test_announcements(self):
+    def test_draft_announcements(self):
         """Test admin can see draft announcements."""
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
@@ -41,11 +44,49 @@ class AdminAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = actions.view_announcements(self)
-        actions.assert_contains('Welcome to the final class!', response.body)
+        assert_contains('Welcome to the final class!', response.body)
+
+    def test_manage_announcements(self):
+        """Test admin can manage announcements."""
+        email = 'test_announcements@google.com'
+        name = 'Test Announcements'
+
+        actions.login(email, True)
+        actions.register(self, name)
+
+        # add new
+        response = actions.view_announcements(self)
+        add_form = response.forms['add-announcement']
+        response = self.submit(add_form)
+        assert_equals(response.status_int, 302)
+
+        # check added
+        response = actions.view_announcements(self)
+        assert_contains('Sample Announcement (Draft)', response.body)
+
+        # delete draft
+        response = actions.view_announcements(self)
+        delete_form = response.forms['delete-announcement-1']
+        response = self.submit(delete_form)
+        assert_equals(response.status_int, 302)
+
+        # check deleted
+        assert_does_not_contain('Welcome to the final class!', response.body)
 
 
 class StudentAspectTest(actions.TestBase):
     """Tests the site from the Student perspective."""
+
+    def test_draft_announcements(self):
+        """Test student can't see draft announcements."""
+        email = 'test_draft_announcements@google.com'
+        name = 'Test Draft Announcements'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = actions.view_announcements(self)
+        assert_does_not_contain('Welcome to the final class!', response.body)
 
     def test_registration(self):
         """Test student registration."""
@@ -139,7 +180,7 @@ class PageCacheTest(actions.TestBase):
         actions.register(self, name1)
         actions.Permissions.assert_enrolled(self)
         response = actions.view_unit(self)
-        actions.assert_contains(email1, response.body)
+        assert_contains(email1, response.body)
         actions.logout()
 
         # Login as another user and check that 'unit' and other pages show
@@ -148,7 +189,7 @@ class PageCacheTest(actions.TestBase):
         actions.register(self, name2)
         actions.Permissions.assert_enrolled(self)
         response = actions.view_unit(self)
-        actions.assert_contains(email2, response.body)
+        assert_contains(email2, response.body)
         actions.logout()
 
 
@@ -157,11 +198,11 @@ class AssessmentTest(actions.TestBase):
 
     def submit_assessment(self, name, args):
         response = self.get('assessment?name=%s' % name)
-        actions.assert_contains(
+        assert_contains(
             '<script src="assets/js/assessment-%s.js"></script>' % name,
             response.body)
         response = self.post('answer', args)
-        actions.assert_equals(response.status_int, 200)
+        assert_equals(response.status_int, 200)
         return response
 
     def test_course_pass(self):
@@ -179,14 +220,14 @@ class AssessmentTest(actions.TestBase):
 
         # Submit answer.
         response = self.submit_assessment('Post', post)
-        actions.assert_equals(response.status_int, 200)
-        actions.assert_contains('Your score is 70%', response.body)
-        actions.assert_contains('you have passed the course', response.body)
+        assert_equals(response.status_int, 200)
+        assert_contains('Your score is 70%', response.body)
+        assert_contains('you have passed the course', response.body)
 
         # Check that the result shows up on the profile page.
         response = actions.check_profile(self, name)
-        actions.assert_contains('70', response.body)
-        actions.assert_contains('100', response.body)
+        assert_contains('70', response.body)
+        assert_contains('100', response.body)
 
     def test_assessments(self):
         """Tests assessment scores are properly submitted and summarized."""
