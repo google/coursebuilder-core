@@ -393,12 +393,22 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
     """Handles dispatching of all URL's to proper handlers."""
 
     @classmethod
+    def bind_to(cls, urls, urls_map):
+        """Recursively builds a map from a list of (URL, Handler) tuples."""
+        for url in urls:
+            path_prefix = url[0]
+            handler = url[1]
+            urls_map[path_prefix] = handler
+
+            # add child handlers
+            if hasattr(handler, 'get_child_routes'):
+                cls.bind_to(handler.get_child_routes(), urls_map)
+
+    @classmethod
     def bind(cls, urls):
         urls_map = {}
-        ApplicationRequestHandler.urls = {}
-        for url in urls:
-            urls_map[url[0]] = url[1]
-        ApplicationRequestHandler.urls_map = urls_map
+        cls.bind_to(urls, urls_map)
+        cls.urls_map = urls_map
 
     def get_handler(self):
         """Finds a routing rule suitable for this request."""
@@ -464,6 +474,30 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
                 self.error(404)
             else:
                 handler.post()
+        finally:
+            unset_path_info()
+
+    def put(self, path):
+        try:
+            set_path_info(path)
+            debug('Namespace: %s' % namespace_manager.get_namespace())
+            handler = self.get_handler()
+            if not handler:
+                self.error(404)
+            else:
+                handler.put()
+        finally:
+            unset_path_info()
+
+    def delete(self, path):
+        try:
+            set_path_info(path)
+            debug('Namespace: %s' % namespace_manager.get_namespace())
+            handler = self.get_handler()
+            if not handler:
+                self.error(404)
+            else:
+                handler.delete()
         finally:
             unset_path_info()
 
