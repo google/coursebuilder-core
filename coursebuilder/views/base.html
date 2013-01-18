@@ -18,6 +18,25 @@
 
     <!-- jQuery should be imported first -->
     <script src="assets/js/jquery-1.7.2.min.js"></script>
+
+    <!-- The following translated strings are used in activity-generic.js and should be
+    declared before that file is imported. -->
+    <script>
+      var trans = {};
+      trans.CHECK_ANSWER_TEXT = '{% trans %} Check Answer {% endtrans %}';
+      trans.CHECK_ANSWERS_TEXT = '{% trans %} Check Answers {% endtrans %}';
+      trans.SHOW_ANSWER_TEXT = '{% trans %} Skip and Show Answer {% endtrans %}';
+      trans.SAVE_ANSWERS_TEXT = '{% trans %} Save Answers {% endtrans %}';
+      trans.SELECT_ANSWER_PROMPT = '{% trans %} Please click one of the buttons for your answer. {% endtrans %}';
+      trans.ALL_CORRECT_TEXT = '{% trans %} All your answers are correct! {% endtrans %}';
+      trans.NUM_CORRECT_TEXT = '{% trans %} Number of questions you answered correctly {% endtrans %}';
+      trans.YOUR_SCORE_TEXT = '{% trans %} You received a score on this assessment of {% endtrans %}';
+      trans.LESSONS_TO_REVIEW_TEXT = '{% trans %} Here are lessons you could review to improve your score {% endtrans %}';
+      trans.PERFECT_SCORE_SAVE_TEXT =
+          '{% trans %} Congratulations! Press the \'Save Answers\' button to submit your grade. {% endtrans %}';
+      trans.GENERIC_SAVE_TEXT =
+          '{% trans %} Press the \'Save Answers\' button below to save your scores. You can also edit your answers above before clicking \'Save Answers\'. {% endtrans %}';
+    </script>
     <script src="assets/js/activity-generic.js"></script>
 
     {% if course_info.base.show_gplus_button %}

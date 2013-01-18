@@ -18,23 +18,6 @@
 // Original activity and assessment code written by Maggie Johnson
 // Refactored version by Philip Guo
 
-
-var CHECK_ANSWER_TEXT = 'Check Answer';
-var CHECK_ANSWERS_TEXT = 'Check Answers';
-var SHOW_ANSWER_TEXT = 'Skip and Show Answer';
-var SAVE_ANSWERS_TEXT = 'Save Answers';
-
-var SELECT_ANSWER_PROMPT = 'Please click one of the buttons for your answer.';
-var ALL_CORRECT_TEXT = 'All your answers are correct!';
-var NUM_CORRECT_TEXT = 'Number of questions you answered correctly';
-var YOUR_SCORE_TEXT = 'You received a score on this assessment of';
-var LESSONS_TO_REVIEW_TEXT = 'Here are lessons you could review to improve your score';
-var PERFECT_SCORE_SAVE_TEXT =
-    'Congratulations! Press the \'Save Answers\' button to submit your grade.';
-var GENERIC_SAVE_TEXT =
-    'Press the \'Save Answers\' button below to save your scores. You can also ' +
-    'edit your answers above before clicking \'Save Answers\'.';
-
 // highlight the correct answer
 var highlightColor = '#3BB9FF';
 
@@ -74,7 +57,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
 
   domRoot.append('<br>');
   domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
-      'id="submit_' + tag + '">' + CHECK_ANSWER_TEXT + '</button>');
+      'id="submit_' + tag + '">' + trans.CHECK_ANSWER_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
       'id="output_' + tag + '"></textarea>');
@@ -116,7 +99,7 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
     }
 
     if (!answerChosen) {
-      $('#output_' + tag).val(SELECT_ANSWER_PROMPT);
+      $('#output_' + tag).val(trans.SELECT_ANSWER_PROMPT);
       $('#output_' + tag).focus();
     }
   });
@@ -178,7 +161,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
 
   domRoot.append(
       '<p/><button class="gcb-button gcb-button-primary" id="submit_' +
-      toplevel_tag + '">' + CHECK_ANSWERS_TEXT + '</button>');
+      toplevel_tag + '">' + trans.CHECK_ANSWERS_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 100px;" readonly="true" ' +
       'id="output_' + toplevel_tag + '"></textarea>');
@@ -229,12 +212,12 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
         $('.correct_' + t).css('background-color', highlightColor);
       });
       $('#output_' + toplevel_tag).val(
-          ALL_CORRECT_TEXT + ' ' + allCorrectOutput);
+          trans.ALL_CORRECT_TEXT + ' ' + allCorrectOutput);
       $('#output_' + toplevel_tag).focus();
     }
     else {
       $('#output_' + toplevel_tag).val(
-          NUM_CORRECT_TEXT + ': ' + numCorrect + '/' + questionsList.length +
+          trans.NUM_CORRECT_TEXT + ': ' + numCorrect + '/' + questionsList.length +
           '.\n\n' + someIncorrectOutput);
       $('#output_' + toplevel_tag).focus();
     }
@@ -255,7 +238,7 @@ function generateFreetextQuestion(params, domRoot) {
   var correctAnswerOutput = params.correctAnswerOutput;
   var incorrectAnswerOutput = params.incorrectAnswerOutput;
   var showAnswerOutput = params.showAnswerOutput;
-  var showAnswerPrompt = params.showAnswerPrompt || SHOW_ANSWER_TEXT; // optional parameter
+  var showAnswerPrompt = params.showAnswerPrompt || trans.SHOW_ANSWER_TEXT; // optional parameter
   var outputHeight = params.outputHeight || '50px'; // optional parameter
 
 
@@ -266,7 +249,7 @@ function generateFreetextQuestion(params, domRoot) {
       'class="alphanumericOnly" id="input_' + tag + '">');
   if (correctAnswerOutput && incorrectAnswerOutput) {
     domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
-        'id="submit_' + tag + '">' + CHECK_ANSWER_TEXT + '</button>');
+        'id="submit_' + tag + '">' + trans.CHECK_ANSWER_TEXT + '</button>');
   }
   if (showAnswerOutput) {
     domRoot.append(
@@ -407,13 +390,13 @@ function renderAssessment(assessment, domRoot) {
   if (assessment.checkAnswers) {
     domRoot.append(
         '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
-        CHECK_ANSWERS_TEXT + '</button><p/>');
+        trans.CHECK_ANSWERS_TEXT + '</button><p/>');
     domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
         'readonly="true" id="answerOutput"></textarea>');
   }
   domRoot.append(
       '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
-      SAVE_ANSWERS_TEXT + '</button>');
+      trans.SAVE_ANSWERS_TEXT + '</button>');
 
 
   function checkOrSubmitAnswers(submitAnswers) {
@@ -481,7 +464,7 @@ function renderAssessment(assessment, domRoot) {
       var myForm = document.createElement('form');
       myForm.method = 'post';
 
-      // defaults to 'answer', which invokes AnswerHandler in ../../controllers/lessons.py
+      // defaults to 'answer', which invokes AnswerHandler in ../../controllers/assessments.py
       myForm.action = assessment.formScript || 'answer';
 
       var assessmentType = assessment.assessmentName || 'unnamed assessment';
@@ -522,15 +505,15 @@ function renderAssessment(assessment, domRoot) {
     } else {
       // display feedback without submitting any data to the backend
 
-      var outtext = YOUR_SCORE_TEXT + " " + score + '% (' + numCorrect + '/' +
+      var outtext = trans.YOUR_SCORE_TEXT + " " + score + '% (' + numCorrect + '/' +
           numQuestions + ').\n\n';
 
       if (lessonsToRead.length > 0) {
-        outtext += LESSONS_TO_REVIEW_TEXT + ': ' + lessonsToRead.join(', ') +
+        outtext += trans.LESSONS_TO_REVIEW_TEXT + ': ' + lessonsToRead.join(', ') +
             '\n\n';
       }
 
-      outtext += (score >= 100 ? PERFECT_SCORE_SAVE_TEXT : GENERIC_SAVE_TEXT);
+      outtext += (score >= 100 ? trans.PERFECT_SCORE_SAVE_TEXT : trans.GENERIC_SAVE_TEXT);
       $('#answerOutput').html(outtext);
     }
   }
