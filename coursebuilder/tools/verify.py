@@ -35,7 +35,6 @@ Good luck!
 import csv
 import json
 import os
-import pprint  # for debugging
 import re
 import sys
 
@@ -48,48 +47,48 @@ CORRECT = object()
 REGEX = object()
 
 SCHEMA = {
-    "assessment": {
-        "assessmentName": STRING,
-        "preamble": STRING,
-        "checkAnswers": BOOLEAN,
-        "questionsList": [{
-            "questionHTML": STRING,
-            "lesson": STRING,
-            "choices": [STRING, CORRECT],
-            "correctAnswerNumeric": FLOAT,
-            "correctAnswerString": STRING,
-            "correctAnswerRegex": REGEX}]
-    }, "activity": [
+    'assessment': {
+        'assessmentName': STRING,
+        'preamble': STRING,
+        'checkAnswers': BOOLEAN,
+        'questionsList': [{
+            'questionHTML': STRING,
+            'lesson': STRING,
+            'choices': [STRING, CORRECT],
+            'correctAnswerNumeric': FLOAT,
+            'correctAnswerString': STRING,
+            'correctAnswerRegex': REGEX}]
+    }, 'activity': [
         STRING,
         {
-            "questionType": "multiple choice",
-            "choices": [[STRING, BOOLEAN, STRING]]
+            'questionType': 'multiple choice',
+            'choices': [[STRING, BOOLEAN, STRING]]
         }, {
-            "questionType": "multiple choice group",
-            "questionsList": [{
-                "questionHTML": STRING,
-                "choices": [STRING],
-                "correctIndex": INTEGER}],
-            "allCorrectOutput": STRING,
-            "someIncorrectOutput": STRING
+            'questionType': 'multiple choice group',
+            'questionsList': [{
+                'questionHTML': STRING,
+                'choices': [STRING],
+                'correctIndex': INTEGER}],
+            'allCorrectOutput': STRING,
+            'someIncorrectOutput': STRING
         }, {
-            "questionType": "freetext",
-            "correctAnswerRegex": REGEX,
-            "correctAnswerOutput": STRING,
-            "incorrectAnswerOutput": STRING,
-            "showAnswerOutput": STRING,
-            "showAnswerPrompt": STRING,
-            "outputHeight": STRING
+            'questionType': 'freetext',
+            'correctAnswerRegex': REGEX,
+            'correctAnswerOutput': STRING,
+            'incorrectAnswerOutput': STRING,
+            'showAnswerOutput': STRING,
+            'showAnswerPrompt': STRING,
+            'outputHeight': STRING
         }]}
 
 UNITS_HEADER = (
-    "id,type,unit_id,title,release_date,now_available")
+    'id,type,unit_id,title,release_date,now_available')
 LESSONS_HEADER = (
-    "unit_id,unit_title,lesson_id,lesson_title,lesson_activity,"
-    "lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives")
+    'unit_id,unit_title,lesson_id,lesson_title,lesson_activity,'
+    'lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives')
 
-NO_VERIFY_TAG_NAME_OPEN = "<gcb-no-verify>"
-NO_VERIFY_TAG_NAME_CLOSE = "</gcb-no-verify>"
+NO_VERIFY_TAG_NAME_OPEN = '<gcb-no-verify>'
+NO_VERIFY_TAG_NAME_CLOSE = '</gcb-no-verify>'
 
 OUTPUT_FINE_LOG = False
 OUTPUT_DEBUG_LOG = False
@@ -106,31 +105,33 @@ class SchemaException(Exception):
 
     def format_primitive_value_name(self, name):
         if name == REGEX:
-            return "REGEX(...)"
+            return 'REGEX(...)'
         if name == CORRECT:
-            return "CORRECT(...)"
+            return 'CORRECT(...)'
         if name == BOOLEAN:
-            return "BOOLEAN"
+            return 'BOOLEAN'
         return name
 
     def format_primitive_type_name(self, name):
+        """Formats a name for a primitive type."""
+
         if name == BOOLEAN:
-            return "BOOLEAN"
+            return 'BOOLEAN'
         if name == REGEX:
-            return "REGEX(...)"
+            return 'REGEX(...)'
         if name == CORRECT:
-            return "CORRECT(...)"
+            return 'CORRECT(...)'
         if name == STRING or isinstance(name, str):
-            return "STRING"
+            return 'STRING'
         if name == FLOAT:
-            return "FLOAT"
+            return 'FLOAT'
         if name == INTEGER:
-            return "INTEGER"
+            return 'INTEGER'
         if isinstance(name, dict):
-            return "{...}"
+            return '{...}'
         if isinstance(name, list):
-            return "[...]"
-        return "Unknown type name '%s'" % name.__class__.__name__
+            return '[...]'
+        return 'Unknown type name \'%s\'' % name.__class__.__name__
 
     def format_type_names(self, names):
         if isinstance(names, list):
@@ -142,9 +143,9 @@ class SchemaException(Exception):
             return self.format_primitive_type_name(names)
 
     def __init__(self, message, value=None, types=None, path=None):
-        prefix = ""
+        prefix = ''
         if path:
-            prefix = "Error at %s\n" % path
+            prefix = 'Error at %s\n' % path
 
         if types:
             if value:
@@ -168,7 +169,7 @@ class Context(object):
 
     def __init__(self):
         self.parent = None
-        self.path = ["/"]
+        self.path = ['/']
 
     def new(self, names):
         """"Derives a new context from the current one."""
@@ -180,15 +181,15 @@ class Context(object):
             if isinstance(names, list):
                 for name in names:
                     if name:
-                        context.path.append("/" + "%s" % name)
+                        context.path.append('/' + '%s' % name)
             else:
-                context.path.append("/" + "%s" % names)
+                context.path.append('/' + '%s' % names)
         return context
 
     def format_path(self):
         """Formats the canonical name of this context."""
 
-        return "".join(self.path)
+        return ''.join(self.path)
 
 
 class SchemaHelper(object):
@@ -198,8 +199,7 @@ class SchemaHelper(object):
         self.type_stats = {}
 
     def visit_element(self, atype, value, context, is_terminal=True):
-        """This method is called once for each schema element being
-        traversed."""
+        """Callback for each schema element being traversed."""
 
         if atype in self.type_stats:
             count = self.type_stats[atype]
@@ -208,32 +208,35 @@ class SchemaHelper(object):
         self.type_stats[atype] = count + 1
 
         if is_terminal:
-            self.parse_log.append("  TERMINAL: %s %s = %s" % (
-                    atype, context.format_path(), value))
+            self.parse_log.append('  TERMINAL: %s %s = %s' % (
+                atype, context.format_path(), value))
         else:
-            self.parse_log.append("  NON-TERMINAL: %s %s" % (
-                    atype, context.format_path()))
+            self.parse_log.append('  NON-TERMINAL: %s %s' % (
+                atype, context.format_path()))
 
     def extract_all_terms_to_depth(self, key, values, type_map):
-        """Walks schema type map recursively to depth and creates a list of all
-        possible {key: value} pairs. The latter is the list of all non-terminal
-        and terminal terms allowed in the schema. The list of terms from this
-        method can be bound to an execution context for evaluating whether a
-        given instance's map complies with the schema."""
+        """Walks schema type map recursively to depth."""
+
+        # Walks schema type map recursively to depth and creates a list of all
+        # possible {key: value} pairs. The latter is a list of all non-terminal
+        # and terminal terms allowed in the schema. The list of terms from this
+        # method can be bound to an execution context for evaluating whether a
+        # given instance's map complies with the schema.
 
         if key:
             type_map.update({key: key})
 
         if values == REGEX:
-            type_map.update({"regex": lambda x: Term(REGEX, x)})
+            type_map.update({'regex': lambda x: Term(REGEX, x)})
             return
 
         if values == CORRECT:
-            type_map.update({"correct": lambda x: Term(CORRECT, x)})
+            type_map.update({'correct': lambda x: Term(CORRECT, x)})
             return
 
         if values == BOOLEAN:
-            type_map.update({"true": Term(BOOLEAN, True), "false": Term(BOOLEAN, False)})
+            type_map.update(
+                {'true': Term(BOOLEAN, True), 'false': Term(BOOLEAN, False)})
             return
 
         if values == STRING or values == INTEGER:
@@ -250,11 +253,11 @@ class SchemaHelper(object):
             return
 
     def find_selectors(self, type_map):
-        """Finds all type selectors.
+        """Finds all type selectors."""
 
-        Finds all elements in the type map where both a key and a value are
-        strings. These elements are used to find one specific type map among
-        several alternative type maps."""
+        # Finds all elements in the type map where both a key and a value are
+        # strings. These elements are used to find one specific type map among
+        # several alternative type maps.
 
         selector = {}
         for akey, avalue in type_map.items():
@@ -262,11 +265,11 @@ class SchemaHelper(object):
                 selector.update({akey: avalue})
         return selector
 
-    def find_compatible_dict(self, value_map, type_map, context):
-        """Find the type map most compatible with the value map.
+    def find_compatible_dict(self, value_map, type_map, unused_context):
+        """Find the type map most compatible with the value map."""
 
-        A value map is considered compatible with a type map when former
-        contains the same key names and the value types as the type map."""
+        # A value map is considered compatible with a type map when former
+        # contains the same key names and the value types as the type map.
 
         # special case when we have just one type; check name and type are the
         # same
@@ -290,50 +293,50 @@ class SchemaHelper(object):
         """Checks if a single value matches a specific (primitive) type."""
 
         if atype == BOOLEAN:
-            # TODO: double-check all variants of boolean values
-            if (value == "True" or value == "False" or value == "true" or
-                value == "false" or isinstance(value, bool) or
+            # TODO(psimakov): double-check all variants of boolean values
+            if (value == 'True' or value == 'False' or value == 'true' or
+                value == 'false' or isinstance(value, bool) or
                 value.term_type == BOOLEAN):
-                self.visit_element("BOOLEAN", value, context)
+                self.visit_element('BOOLEAN', value, context)
                 return True
             else:
                 raise SchemaException(
-                    "Expected: 'true' or 'false'\nfound: %s", value)
+                    'Expected: \'true\' or \'false\'\nfound: %s', value)
         if isinstance(atype, str):
             if isinstance(value, str):
-                self.visit_element("str", value, context)
+                self.visit_element('str', value, context)
                 return True
             else:
-                raise SchemaException("Expected: 'string'\nfound: %s", value)
+                raise SchemaException('Expected: \'string\'\nfound: %s', value)
         if atype == STRING:
             if isinstance(value, str):
-                self.visit_element("STRING", value, context)
+                self.visit_element('STRING', value, context)
                 return True
             else:
-                raise SchemaException("Expected: 'string'\nfound: %s", value)
+                raise SchemaException('Expected: \'string\'\nfound: %s', value)
         if atype == REGEX and value.term_type == REGEX:
-            self.visit_element("REGEX", value, context)
+            self.visit_element('REGEX', value, context)
             return True
         if atype == CORRECT and value.term_type == CORRECT:
-            self.visit_element("CORRECT", value, context)
+            self.visit_element('CORRECT', value, context)
             return True
         if atype == FLOAT:
             if is_number(value):
-                self.visit_element("NUMBER", value, context)
+                self.visit_element('NUMBER', value, context)
                 return True
             else:
-                raise SchemaException("Expected: \'number\'\nfound: %s", value)
+                raise SchemaException('Expected: \'number\'\nfound: %s', value)
         if atype == INTEGER:
             if is_integer(value):
-                self.visit_element("INTEGER", value, context)
+                self.visit_element('INTEGER', value, context)
                 return True
             else:
                 raise SchemaException(
-                    "Expected: 'integer'\nfound: %s", value,
+                    'Expected: \'integer\'\nfound: %s', value,
                     path=context.format_path())
         raise SchemaException(
-            "Unexpected value \'%s\'\n"
-            "for type %s", value, atype, path=context.format_path())
+            'Unexpected value \'%s\'\n'
+            'for type %s', value, atype, path=context.format_path())
 
     def check_value_list_matches_type(self, value, atype, context):
         """Checks if all items in value list match a specific type."""
@@ -354,7 +357,7 @@ class SchemaHelper(object):
                         break
             if not found:
                 raise SchemaException(
-                    "Expected: '%s'\nfound: %s", atype, value)
+                    'Expected: \'%s\'\nfound: %s', atype, value)
         return True
 
     def check_value_matches_type(self, value, atype, context):
@@ -394,40 +397,39 @@ class SchemaHelper(object):
         for atype in types:
             if isinstance(atype, dict):
                 maps.append(atype)
-        if len(maps) == 0 and isinstance(types, dict):
+        if not maps and isinstance(types, dict):
             maps.append(types)
 
         # check if the structure of value matches one of the maps
         if isinstance(value, dict):
             aname, adict = self.find_compatible_dict(value, maps, context)
             if adict:
-                self.visit_element("dict", value, context.new(aname), False)
+                self.visit_element('dict', value, context.new(aname), False)
                 for akey, avalue in value.items():
                     if akey not in adict:
                         raise SchemaException(
-                            "Unknown term '%s'", akey,
+                            'Unknown term \'%s\'', akey,
                             path=context.format_path())
                     self.check_value_of_valid_type(
                         avalue, adict[akey], context.new([aname, akey]))
                 return True
             raise SchemaException(
-                    "The value:\n  %s\n"
-                    "is incompatible with expected type(s):\n  %s",
-                    value, types, path=context.format_path())
+                'The value:\n  %s\n'
+                'is incompatible with expected type(s):\n  %s',
+                value, types, path=context.format_path())
 
         return False
 
     def format_name_with_index(self, alist, aindex):
-        """Custom function to format a context name with an array element
-        index."""
+        """A function to format a context name with an array element index."""
 
         if len(alist) == 1:
-            return ""
+            return ''
         else:
-            return "[%s]" % aindex
+            return '[%s]' % aindex
 
-    def does_value_match_list_of_types_in_order(self, value, types,
-                                                context, target):
+    def does_value_match_list_of_types_in_order(
+        self, value, types, context, target):
         """Iterates the value and types in given order and checks for match."""
 
         all_values_are_lists = True
@@ -442,11 +444,11 @@ class SchemaHelper(object):
         else:
             if len(target) != len(value):
                 raise SchemaException(
-                    "Expected: '%s' values\n" + "found: %s." % value,
+                    'Expected: \'%s\' values\n' + 'found: %s.' % value,
                     len(target), path=context.format_path())
             for i in range(0, len(value)):
-                self.check_value_of_valid_type(value[i], target[i],
-                    context.new(self.format_name_with_index(value, i)))
+                self.check_value_of_valid_type(value[i], target[i], context.new(
+                    self.format_name_with_index(value, i)))
 
         return True
 
@@ -455,10 +457,10 @@ class SchemaHelper(object):
         """Iterates the value and types, checks if they match in any order."""
 
         target = lists
-        if len(target) == 0:
+        if not target:
             if not isinstance(types, list):
                 raise SchemaException(
-                    "Unsupported type %s",
+                    'Unsupported type %s',
                     None, types, path=context.format_path())
             target = types
 
@@ -466,27 +468,28 @@ class SchemaHelper(object):
             found = False
             for atarget in target:
                 try:
-                    self.check_value_of_valid_type(value[i], atarget,
+                    self.check_value_of_valid_type(
+                        value[i], atarget,
                         context.new(self.format_name_with_index(value, i)))
                     found = True
                     break
-                except:
+                except SchemaException as unused_e:
                     continue
 
             if not found:
                 raise SchemaException(
-                    "The value:\n  %s\n"
-                    "is incompatible with expected type(s):\n  %s",
+                    'The value:\n  %s\n'
+                    'is incompatible with expected type(s):\n  %s',
                     value, types, path=context.format_path())
         return True
 
     def does_value_match_list_of_type(self, value, types, context, in_order):
-        """Checks if a value matches a variation of [...] type.
+        """Checks if a value matches a variation of [...] type."""
 
-        Extra argument controls whether matching must be done in a specific
-        or in any order. A specific order is demanded by [[...]]] construct,
-        i.e. [[STRING, INTEGER, BOOLEAN]], while sub elements inside {...} and
-        [...] can be matched in any order."""
+        # Extra argument controls whether matching must be done in a specific
+        # or in any order. A specific order is demanded by [[...]]] construct,
+        # i.e. [[STRING, INTEGER, BOOLEAN]], while sub elements inside {...} and
+        # [...] can be matched in any order.
 
         # prepare a list of list types
         lists = []
@@ -495,13 +498,13 @@ class SchemaHelper(object):
                 lists.append(atype)
         if len(lists) > 1:
             raise SchemaException(
-                "Unable to validate types with multiple alternative "
-                "lists %s", None, types, path=context.format_path())
+                'Unable to validate types with multiple alternative '
+                'lists %s', None, types, path=context.format_path())
 
         if isinstance(value, list):
             if len(lists) > 1:
                 raise SchemaException(
-                    "Allowed at most one list\nfound: %s.",
+                    'Allowed at most one list\nfound: %s.',
                     None, types, path=context.format_path())
 
             # determine if list is in order or not as hinted by double array
@@ -524,27 +527,26 @@ class SchemaHelper(object):
             self.check_value_matches_type(value, types, context)
             return
         if (self.does_value_match_list_of_type(
-                value, types, context, in_order) or
+            value, types, context, in_order) or
             self.does_value_match_map_of_type(value, types, context) or
             self.does_value_match_one_of_types(value, types, context)):
             return
 
-        raise SchemaException("Unknown type %s", value,
-            path=context.format_path())
+        raise SchemaException(
+            'Unknown type %s', value, path=context.format_path())
 
     def check_instances_match_schema(self, values, types, name):
-        """Recursively decompose 'values' to see if they match schema
-        (types)."""
+        """Recursively decompose 'values' to see if they match schema types."""
 
         self.parse_log = []
         context = Context().new(name)
-        self.parse_log.append("  ROOT %s" % context.format_path())
+        self.parse_log.append('  ROOT %s' % context.format_path())
 
         # handle {..} containers
         if isinstance(types, dict):
             if not isinstance(values, dict):
                 raise SchemaException(
-                    "Error at '/': expected {...}, found %s" % (
+                    'Error at \'/\': expected {...}, found %s' % (
                         values.__class_.__name__))
             self.check_value_of_valid_type(values, types, context.new([]))
             return
@@ -553,20 +555,20 @@ class SchemaHelper(object):
         if isinstance(types, list):
             if not isinstance(values, list):
                 raise SchemaException(
-                    "Error at '/': expected [...], found %s" % (
+                    'Error at \'/\': expected [...], found %s' % (
                         values.__class_.__name__))
             for i in range(0, len(values)):
                 self.check_value_of_valid_type(
-                    values[i], types, context.new("[%s]" % i))
+                    values[i], types, context.new('[%s]' % i))
             return
 
         raise SchemaException(
-            "Expected an array or a dictionary.", None,
+            'Expected an array or a dictionary.', None,
             path=context.format_path())
 
 
 def escape_quote(value):
-    return str(value).replace("'", r"\'")
+    return str(value).replace('\'', r'\'')
 
 
 class Unit(object):
@@ -574,21 +576,25 @@ class Unit(object):
 
     def __init__(self):
         self.id = 0
-        self.type = ""
-        self.unit_id = ""
-        self.title = ""
-        self.release_date = ""
+        self.type = ''
+        self.unit_id = ''
+        self.title = ''
+        self.release_date = ''
         self.now_available = False
 
     def list_properties(self, name, output):
-        output.append("%s['id'] = %s;" % (name, self.id))
-        output.append("%s['type'] = '%s';" % (name, escape_quote(self.type)))
-        output.append("%s['unit_id'] = '%s';" % (
+        """Outputs all properties of the unit."""
+
+        output.append('%s[\'id\'] = %s;' % (name, self.id))
+        output.append('%s[\'type\'] = \'%s\';' % (
+            name, escape_quote(self.type)))
+        output.append('%s[\'unit_id\'] = \'%s\';' % (
             name, escape_quote(self.unit_id)))
-        output.append("%s['title'] = '%s';" % (name, escape_quote(self.title)))
-        output.append("%s['release_date'] = '%s';" % (
+        output.append('%s[\'title\'] = \'%s\';' % (
+            name, escape_quote(self.title)))
+        output.append('%s[\'release_date\'] = \'%s\';' % (
             name, escape_quote(self.release_date)))
-        output.append("%s['now_available'] = %s;" % (
+        output.append('%s[\'now_available\'] = %s;' % (
             name, str(self.now_available).lower()))
 
 
@@ -597,38 +603,40 @@ class Lesson(object):
 
     def __init__(self):
         self.unit_id = 0
-        self.unit_title = ""
+        self.unit_title = ''
         self.lesson_id = 0
-        self.lesson_title = ""
-        self.lesson_activity = ""
-        self.lesson_activity_name = ""
-        self.lesson_notes = ""
-        self.lesson_video_id = ""
-        self.lesson_objectives = ""
+        self.lesson_title = ''
+        self.lesson_activity = ''
+        self.lesson_activity_name = ''
+        self.lesson_notes = ''
+        self.lesson_video_id = ''
+        self.lesson_objectives = ''
 
     def list_properties(self, name, output):
-        activity = "false"
-        if self.lesson_activity == "yes":
-            activity = "true"
+        """Outputs all properties of the lesson."""
 
-        output.append("%s['unit_id'] = %s;" % (name, self.unit_id))
-        output.append("%s['unit_title'] = '%s';" % (
+        activity = 'false'
+        if self.lesson_activity == 'yes':
+            activity = 'true'
+
+        output.append('%s[\'unit_id\'] = %s;' % (name, self.unit_id))
+        output.append('%s[\'unit_title\'] = \'%s\';' % (
             name, escape_quote(self.unit_title)))
-        output.append("%s['lesson_id'] = %s;" % (name, self.lesson_id))
-        output.append("%s['lesson_title'] = '%s';" % (
+        output.append('%s[\'lesson_id\'] = %s;' % (name, self.lesson_id))
+        output.append('%s[\'lesson_title\'] = \'%s\';' % (
             name, escape_quote(self.lesson_title)))
-        output.append("%s['lesson_activity'] = %s;" % (name, activity))
-        output.append("%s['lesson_activity_name'] = '%s';" % (
+        output.append('%s[\'lesson_activity\'] = %s;' % (name, activity))
+        output.append('%s[\'lesson_activity_name\'] = \'%s\';' % (
             name, escape_quote(self.lesson_activity_name)))
-        output.append("%s['lesson_notes'] = '%s';" % (
+        output.append('%s[\'lesson_notes\'] = \'%s\';' % (
             name, escape_quote(self.lesson_notes)))
-        output.append("%s['lesson_video_id'] = '%s';" % (
+        output.append('%s[\'lesson_video_id\'] = \'%s\';' % (
             name, escape_quote(self.lesson_video_id)))
-        output.append("%s['lesson_objectives'] = '%s';" % (
+        output.append('%s[\'lesson_objectives\'] = \'%s\';' % (
             name, escape_quote(self.lesson_objectives)))
 
     def to_id_string(self):
-        return "%s.%s.%s" % (self.unit_id, self.lesson_id, self.lesson_title)
+        return '%s.%s.%s' % (self.unit_id, self.lesson_id, self.lesson_title)
 
 
 class Assessment(object):
@@ -637,7 +645,7 @@ class Assessment(object):
     def __init__(self):
         self.scope = {}
         SchemaHelper().extract_all_terms_to_depth(
-            "assessment", SCHEMA["assessment"], self.scope)
+            'assessment', SCHEMA['assessment'], self.scope)
 
 
 class Activity(object):
@@ -646,7 +654,7 @@ class Activity(object):
     def __init__(self):
         self.scope = {}
         SchemaHelper().extract_all_terms_to_depth(
-            "activity", SCHEMA["activity"], self.scope)
+            'activity', SCHEMA['activity'], self.scope)
 
 
 def echo(x):
@@ -662,7 +670,7 @@ def is_integer(s):
 
 def is_boolean(s):
     try:
-        return s == "True" or s == "False"
+        return s == 'True' or s == 'False'
     except ValueError:
         return False
 
@@ -685,13 +693,13 @@ def is_one_of(value, values):
 def text_to_line_numbered_text(text):
     """Adds line numbers to the provided text."""
 
-    lines = text.split("\n")
+    lines = text.split('\n')
     results = []
     i = 1
     for line in lines:
-        results.append(str(i) + ": " + line)
+        results.append(str(i) + ': ' + line)
         i += 1
-    return "\n  ".join(results)
+    return '\n  '.join(results)
 
 
 def set_object_attributes(target_object, names, values):
@@ -699,7 +707,7 @@ def set_object_attributes(target_object, names, values):
 
     if len(names) != len(values):
         raise SchemaException(
-            "The number of elements must match: %s and %s" % (names, values))
+            'The number of elements must match: %s and %s' % (names, values))
     for i in range(0, len(names)):
         if is_integer(values[i]):
             # if we are setting an attribute of an object that support
@@ -727,27 +735,29 @@ def read_objects_from_csv_file(fname, header, new_object):
 
 
 def read_objects_from_csv(value_rows, header, new_object):
+    """Reads objects from the rows of a CSV file."""
+
     values = []
     for row in value_rows:
-        if len(row) == 0:
+        if not row:
             continue
         values.append(row)
-    names = header.split(",")
+    names = header.split(',')
 
     if names != values[0]:
         raise SchemaException(
-            "Error reading CSV header.\n  "
-            "Header row had %s element(s): %s\n  "
-            "Expected header row with %s element(s): %s" % (
+            'Error reading CSV header.\n  '
+            'Header row had %s element(s): %s\n  '
+            'Expected header row with %s element(s): %s' % (
                 len(values[0]), values[0], len(names), names))
 
     items = []
     for i in range(1, len(values)):
         if len(names) != len(values[i]):
             raise SchemaException(
-                "Error reading CSV data row.\n  "
-                "Row #%s had %s element(s): %s\n  "
-                "Expected %s element(s): %s" % (
+                'Error reading CSV data row.\n  '
+                'Row #%s had %s element(s): %s\n  '
+                'Expected %s element(s): %s' % (
                     i, len(values[i]), values[i], len(names), names))
 
         item = new_object()
@@ -758,67 +768,67 @@ def read_objects_from_csv(value_rows, header, new_object):
 
 def escape_javascript_regex(text):
     return re.sub(
-        r"([:][ ]*)([/])(.*)([/][ismx]*)", r': regex("\2\3\4")', text)
+        r'([:][ ]*)([/])(.*)([/][ismx]*)', r': regex("\2\3\4")', text)
 
 
 def remove_javascript_single_line_comment(text):
-    text = re.sub(re.compile("^(.*?)[ ]+//(.*)$", re.MULTILINE), r"\1", text)
-    text = re.sub(re.compile("^//(.*)$", re.MULTILINE), r"", text)
+    text = re.sub(re.compile('^(.*?)[ ]+//(.*)$', re.MULTILINE), r'\1', text)
+    text = re.sub(re.compile('^//(.*)$', re.MULTILINE), r'', text)
     return text
 
 
 def remove_javascript_multi_line_comment(text):
     return re.sub(
-        re.compile("/\*(.*)\*/", re.MULTILINE + re.DOTALL), r"", text)
+        re.compile('/\*(.*)\*/', re.MULTILINE + re.DOTALL), r'', text)
 
 
 def remove_content_marked_no_verify(content):
-    """Removes content that should not be verified.
+    """Removes content that should not be verified."""
 
-    If you have any free-form JavaScript in the activity file, you need
-    to place it between //<gcb-no-verify> ... //</gcb-no-verify> tags
-    so that the verifier can selectively ignore it."""
+    # If you have any free-form JavaScript in the activity file, you need
+    # to place it between //<gcb-no-verify> ... //</gcb-no-verify> tags
+    # so that the verifier can selectively ignore it.
 
-    pattern = re.compile("(%s)(.*)(%s)" % (
+    pattern = re.compile('(%s)(.*)(%s)' % (
         NO_VERIFY_TAG_NAME_OPEN, NO_VERIFY_TAG_NAME_CLOSE), re.DOTALL)
-    return re.sub(pattern, "", content)
+    return re.sub(pattern, '', content)
 
 
 def convert_javascript_to_python(content, root_name):
-    """Removes JavaScript specific syntactic constructs.
+    """Removes JavaScript specific syntactic constructs."""
 
-    Reads the content and removes JavaScript comments, var's, and escapes
-    regular expressions."""
+    # Reads the content and removes JavaScript comments, var's, and escapes
+    # regular expressions.
 
     content = remove_content_marked_no_verify(content)
     content = remove_javascript_multi_line_comment(content)
     content = remove_javascript_single_line_comment(content)
-    content = content.replace("var %s = " % root_name, "%s = " % root_name)
+    content = content.replace('var %s = ' % root_name, '%s = ' % root_name)
     content = escape_javascript_regex(content)
     return content
 
 
 def convert_javascript_file_to_python(fname, root_name):
     return convert_javascript_to_python(
-        "".join(open(fname, "r").readlines()), root_name)
+        ''.join(open(fname, 'r').readlines()), root_name)
 
 
 def evaluate_python_expression_from_text(content, root_name, scope):
-    """Compiles and evaluates a Python script in a restricted environment.
+    """Compiles and evaluates a Python script in a restricted environment."""
 
-    First compiles and then evaluates a Python script text in a restricted
-    environment using provided bindings. Returns the resulting bindings if
-    evaluation completed."""
+    # First compiles and then evaluates a Python script text in a restricted
+    # environment using provided bindings. Returns the resulting bindings if
+    # evaluation completed.
 
     # create a new execution scope that has only the schema terms defined;
     # remove all other languages constructs including __builtins__
     restricted_scope = {}
     restricted_scope.update(scope)
-    restricted_scope.update({"__builtins__": {}})
-    code = compile(content, "<string>", "exec")
+    restricted_scope.update({'__builtins__': {}})
+    code = compile(content, '<string>', 'exec')
     exec code in restricted_scope
     if not restricted_scope[root_name]:
-        raise Exception("Unable to find '%s'" % root_name)
+        raise Exception('Unable to find \'%s\'' % root_name)
     return restricted_scope
 
 
@@ -827,15 +837,14 @@ def evaluate_javascript_expression_from_file(fname, root_name, scope, error):
     try:
         return evaluate_python_expression_from_text(content, root_name, scope)
     except:
-        error("Unable to parse %s in file %s\n  %s" % (
+        error('Unable to parse %s in file %s\n  %s' % (
             root_name, fname, text_to_line_numbered_text(content)))
         for message in sys.exc_info():
             error(str(message))
 
 
 class Verifier(object):
-    """Verifies Units, Lessons, Assessments, Activities and their
-    relationships."""
+    """Verifies Units, Lessons, Assessments, Activities and their relations."""
 
     def __init__(self):
         self.schema_helper = SchemaHelper()
@@ -843,59 +852,62 @@ class Verifier(object):
         self.warnings = 0
 
     def verify_unit_fields(self, units):
-        self.export.append("units = Array();")
+        self.export.append('units = Array();')
         for unit in units:
             if not is_one_of(unit.now_available, [True, False]):
-                self.error("Bad now_available '%s' for unit id %s; expected "
-                    "'True' or 'False'" % (unit.now_available, unit.id))
+                self.error(
+                    'Bad now_available \'%s\' for unit id %s; expected '
+                    '\'True\' or \'False\'' % (unit.now_available, unit.id))
 
-            if not is_one_of(unit.type, ["U", "A", "O"]):
-                self.error("Bad type '%s' for unit id %s; expected 'U', 'A', "
-                    "or 'O'" % (unit.type, unit.id))
+            if not is_one_of(unit.type, ['U', 'A', 'O']):
+                self.error(
+                    'Bad type \'%s\' for unit id %s; '
+                    'expected \'U\', \'A\', or \'O\'' % (unit.type, unit.id))
 
-            if unit.type == "A":
-                if not is_one_of(unit.unit_id, ("Pre", "Mid", "Fin")):
-                    self.error("Bad unit_id '%s'; expected 'Pre', 'Mid' or "
-                      "'Fin' for unit id %s" % (unit.unit_id, unit.id))
+            if unit.type == 'A':
+                if not is_one_of(unit.unit_id, ('Pre', 'Mid', 'Fin')):
+                    self.error(
+                        'Bad unit_id \'%s\'; expected \'Pre\', \'Mid\' or '
+                        '\'Fin\' for unit id %s' % (unit.unit_id, unit.id))
 
-            if unit.type == "U":
+            if unit.type == 'U':
                 if not is_integer(unit.unit_id):
-                    self.error("Expected integer unit_id, found %s in unit id "
-                        " %s" % (unit.unit_id, unit.id))
+                    self.error(
+                        'Expected integer unit_id, found %s in unit id '
+                        ' %s' % (unit.unit_id, unit.id))
 
-            self.export.append("")
-            self.export.append("units[%s] = Array();" % unit.id)
-            self.export.append("units[%s]['lessons'] = Array();" % unit.id)
-            unit.list_properties("units[%s]" % unit.id, self.export)
+            self.export.append('')
+            self.export.append('units[%s] = Array();' % unit.id)
+            self.export.append('units[%s][\'lessons\'] = Array();' % unit.id)
+            unit.list_properties('units[%s]' % unit.id, self.export)
 
     def verify_lesson_fields(self, lessons):
         for lesson in lessons:
-            if not is_one_of(lesson.lesson_activity, ["yes", ""]):
-                self.error("Bad lesson_activity '%s' for lesson_id %s" %
-                    (lesson.lesson_activity, lesson.lesson_id))
+            if not is_one_of(lesson.lesson_activity, ['yes', '']):
+                self.error('Bad lesson_activity \'%s\' for lesson_id %s' % (
+                    lesson.lesson_activity, lesson.lesson_id))
 
-            self.export.append("")
-            self.export.append("units[%s]['lessons'][%s] = Array();" % (
+            self.export.append('')
+            self.export.append('units[%s][\'lessons\'][%s] = Array();' % (
                 lesson.unit_id, lesson.lesson_id))
-            lesson.list_properties("units[%s]['lessons'][%s]" % (
+            lesson.list_properties('units[%s][\'lessons\'][%s]' % (
                 lesson.unit_id, lesson.lesson_id), self.export)
 
     def verify_unit_lesson_relationships(self, units, lessons):
-        """Checks that each lesson points to a valid unit and all lessons are
-        used by one of the units."""
+        """Checks each lesson points to a unit and all lessons are in use."""
 
         used_lessons = []
         units.sort(key=lambda x: x.id)
-        #for unit in units:
+        # for unit in units:
         for i in range(0, len(units)):
             unit = units[i]
 
             # check that unit ids are 1-based and sequential
             if unit.id != i + 1:
-                self.error("Unit out of order: %s" % (unit.id))
+                self.error('Unit out of order: %s' % (unit.id))
 
             # get the list of lessons for each unit
-            self.fine("Unit %s: %s" % (unit.id, unit.title))
+            self.fine('Unit %s: %s' % (unit.id, unit.title))
             unit_lessons = []
             for lesson in lessons:
                 if lesson.unit_id == unit.unit_id:
@@ -910,19 +922,19 @@ class Verifier(object):
                 # check that lesson_ids are 1-based and sequential
                 if lesson.lesson_id != j + 1:
                     self.warn(
-                        "Lesson lesson_id is out of order: expected %s, found "
-                        " %s (%s)" % (
+                        'Lesson lesson_id is out of order: expected %s, found '
+                        ' %s (%s)' % (
                             j + 1, lesson.lesson_id, lesson.to_id_string()))
 
-                self.fine("  Lesson %s: %s" % (lesson.lesson_id,
-                    lesson.lesson_title))
+                self.fine('  Lesson %s: %s' % (
+                    lesson.lesson_id, lesson.lesson_title))
 
         # find lessons not used by any of the units
         unused_lessons = list(lessons)
         for lesson in used_lessons:
             unused_lessons.remove(lesson)
         for lesson in unused_lessons:
-            self.warn("Unused lesson_id %s (%s)" % (
+            self.warn('Unused lesson_id %s (%s)' % (
                 lesson.lesson_id, lesson.to_id_string()))
 
         # check all lessons point to known units
@@ -933,31 +945,32 @@ class Verifier(object):
                     has = True
                     break
             if not has:
-                self.error("Lesson has unknown unit_id %s (%s)" %
-                    (lesson.unit_id, lesson.to_id_string()))
+                self.error('Lesson has unknown unit_id %s (%s)' % (
+                    lesson.unit_id, lesson.to_id_string()))
 
     def verify_activities(self, lessons):
         """Loads and verifies all activities."""
 
-        self.info("Loading activities:")
+        self.info('Loading activities:')
         count = 0
         for lesson in lessons:
-            if lesson.lesson_activity == "yes":
+            if lesson.lesson_activity == 'yes':
                 count += 1
                 fname = os.path.join(
                     os.path.dirname(__file__),
-                    "../assets/js/activity-" + str(lesson.unit_id) + "." +
-                    str(lesson.lesson_id) + ".js")
+                    '../assets/js/activity-' + str(lesson.unit_id) + '.' +
+                    str(lesson.lesson_id) + '.js')
                 if not os.path.exists(fname):
-                    self.error("  Missing activity: %s" % fname)
+                    self.error('  Missing activity: %s' % fname)
                 else:
                     activity = evaluate_javascript_expression_from_file(
-                        fname, "activity", Activity().scope, self.error)
+                        fname, 'activity', Activity().scope, self.error)
                     self.verify_activity_instance(activity, fname)
                     self.export.append('')
-                    self.encode_activity_json(activity, lesson.unit_id, lesson.lesson_id)
+                    self.encode_activity_json(
+                        activity, lesson.unit_id, lesson.lesson_id)
 
-        self.info("Read %s activities" % count)
+        self.info('Read %s activities' % count)
 
     def verify_assessment(self, units):
         """Loads and verifies all assessments."""
@@ -965,27 +978,28 @@ class Verifier(object):
         self.export.append('')
         self.export.append('assessments = Array();')
 
-        self.info("Loading assessment:")
+        self.info('Loading assessment:')
         count = 0
         for unit in units:
-            if unit.type == "A":
+            if unit.type == 'A':
                 count += 1
                 assessment_name = str(unit.unit_id)
                 fname = os.path.join(
                     os.path.dirname(__file__),
-                    "../assets/js/assessment-" + assessment_name + ".js")
+                    '../assets/js/assessment-' + assessment_name + '.js')
                 if not os.path.exists(fname):
-                    self.error("  Missing assessment: %s" % fname)
+                    self.error('  Missing assessment: %s' % fname)
                 else:
                     assessment = evaluate_javascript_expression_from_file(
-                        fname, "assessment", Assessment().scope, self.error)
+                        fname, 'assessment', Assessment().scope, self.error)
                     self.verify_assessment_instance(assessment, fname)
                     self.export.append('')
                     self.encode_assessment_json(assessment, assessment_name)
 
-        self.info("Read %s assessments" % count)
+        self.info('Read %s assessments' % count)
 
     def encode_activity_json(self, activity_dict, unit_id, lesson_id):
+        """Encodes an activity dictionary into JSON."""
         output = []
         for elt in activity_dict['activity']:
             t = type(elt)
@@ -998,20 +1012,22 @@ class Verifier(object):
                 encoded_elt = {'type': qt}
                 if qt == 'multiple choice':
                     choices = elt['choices']
-                    encoded_choices = [[x, y.value, z] for x,y,z in choices]
+                    encoded_choices = [[x, y.value, z] for x, y, z in choices]
                     encoded_elt['choices'] = encoded_choices
                 elif qt == 'multiple choice group':
-                    # everything inside are primitive types that can be directly encoded
+                    # everything inside are primitive types that can be encoded
                     elt_copy = dict(elt)
-                    del elt_copy['questionType'] # redundant
+                    del elt_copy['questionType']  # redundant
                     encoded_elt['value'] = elt_copy
                 elif qt == 'freetext':
                     for k in elt.keys():
                         if k == 'questionType':
                             continue
                         elif k == 'correctAnswerRegex':
-                            # NB: The exported script needs to define a gcb_regex() wrapper function
-                            encoded_elt[k] = 'gcb_regex(' + repr(elt[k].value) + ')'
+                            # NB: The exported script needs to define a
+                            # gcb_regex() wrapper function
+                            encoded_elt[k] = 'gcb_regex(%s)' % repr(
+                                elt[k].value)
                         else:
                             # ordinary string
                             encoded_elt[k] = elt[k]
@@ -1023,15 +1039,13 @@ class Verifier(object):
             assert encoded_elt
             output.append(encoded_elt)
 
-        # for debugging
-        #pprinter = pprint.PrettyPrinter()
-        #pprinter.pprint(output)
-
         # N.B.: make sure to get the string quoting right!
-        code_str = "units[%s]['lessons'][%s]['activity'] = " % (unit_id, lesson_id) + repr(json.dumps(output)) + ';'
+        code_str = "units[%s]['lessons'][%s]['activity'] = " % (
+            unit_id, lesson_id) + repr(json.dumps(output)) + ';'
         self.export.append(code_str)
 
     def encode_assessment_json(self, assessment_dict, assessment_name):
+        """Encodes an assessment dictionary into JSON."""
         real_dict = assessment_dict['assessment']
 
         output = {}
@@ -1047,34 +1061,36 @@ class Verifier(object):
             if 'lesson' in elt:
                 encoded_elt['lesson'] = elt['lesson']
             if 'correctAnswerNumeric' in elt:
-                encoded_elt['correctAnswerNumeric'] = elt['correctAnswerNumeric']
+                encoded_elt['correctAnswerNumeric'] = elt[
+                    'correctAnswerNumeric']
             if 'correctAnswerString' in elt:
                 encoded_elt['correctAnswerString'] = elt['correctAnswerString']
             if 'correctAnswerRegex' in elt:
-                # NB: The exported script needs to define a gcb_regex() wrapper function
-                encoded_elt['correctAnswerRegex'] = 'gcb_regex(' + repr(elt['correctAnswerRegex'].value) + ')'
+                # NB: The exported script needs to define a
+                # gcb_regex() wrapper function
+                encoded_elt['correctAnswerRegex'] = 'gcb_regex(' + repr(
+                    elt['correctAnswerRegex'].value) + ')'
             if 'choices' in elt:
                 encoded_choices = []
                 for e in elt['choices']:
                     if type(e) is str:
                         encoded_choices.append(e)
                     else:
-                        # NB: The exported script needs to define a gcb_correct() wrapper function
-                        encoded_choices.append('gcb_correct(' + repr(e.value) + ')')
+                        # NB: The exported script needs to define a
+                        # gcb_correct() wrapper function
+                        encoded_choices.append(
+                            'gcb_correct(' + repr(e.value) + ')')
                 encoded_elt['choices'] = encoded_choices
             encoded_questions_list.append(encoded_elt)
         output['questionsList'] = encoded_questions_list
 
-        # for debugging
-        #pprinter = pprint.PrettyPrinter()
-        #pprinter.pprint(output)
-
         # N.B.: make sure to get the string quoting right!
-        code_str = 'assessments["' + assessment_name + '"] = ' + repr(json.dumps(output)) + ';'
+        code_str = 'assessments["' + assessment_name + '"] = ' + repr(
+            json.dumps(output)) + ';'
         self.export.append(code_str)
 
     def format_parse_log(self):
-        return "Parse log:\n%s" % "\n".join(self.schema_helper.parse_log)
+        return 'Parse log:\n%s' % '\n'.join(self.schema_helper.parse_log)
 
     def verify_assessment_instance(self, scope, fname):
         """Verifies compliance of assessment with schema."""
@@ -1082,16 +1098,16 @@ class Verifier(object):
         if scope:
             try:
                 self.schema_helper.check_instances_match_schema(
-                    scope["assessment"], SCHEMA["assessment"], "assessment")
-                self.info("  Verified assessment %s" % fname)
+                    scope['assessment'], SCHEMA['assessment'], 'assessment')
+                self.info('  Verified assessment %s' % fname)
                 if OUTPUT_DEBUG_LOG:
                     self.info(self.format_parse_log())
             except SchemaException as e:
-                self.error("  Error in assessment %s\n%s" % (
+                self.error('  Error in assessment %s\n%s' % (
                     fname, self.format_parse_log()))
                 raise e
         else:
-            self.error("  Unable to evaluate 'assessment =' in %s" % fname)
+            self.error('  Unable to evaluate \'assessment =\' in %s' % fname)
 
     def verify_activity_instance(self, scope, fname):
         """Verifies compliance of activity with schema."""
@@ -1099,31 +1115,31 @@ class Verifier(object):
         if scope:
             try:
                 self.schema_helper.check_instances_match_schema(
-                    scope["activity"], SCHEMA["activity"], "activity")
-                self.info("  Verified activity %s" % fname)
+                    scope['activity'], SCHEMA['activity'], 'activity')
+                self.info('  Verified activity %s' % fname)
                 if OUTPUT_DEBUG_LOG:
                     self.info(self.format_parse_log())
             except SchemaException as e:
-                self.error("  Error in activity %s\n%s" % (
+                self.error('  Error in activity %s\n%s' % (
                     fname, self.format_parse_log()))
                 raise e
         else:
-            self.error("  Unable to evaluate 'activity =' in %s" % fname)
+            self.error('  Unable to evaluate \'activity =\' in %s' % fname)
 
     def fine(self, x):
         if OUTPUT_FINE_LOG:
-            self.echo_func("FINE: " + x)
+            self.echo_func('FINE: ' + x)
 
     def info(self, x):
-        self.echo_func("INFO: " + x)
+        self.echo_func('INFO: ' + x)
 
     def warn(self, x):
         self.warnings += 1
-        self.echo_func("WARNING: " + x)
+        self.echo_func('WARNING: ' + x)
 
     def error(self, x):
         self.errors += 1
-        self.echo_func("ERROR: " + x)
+        self.echo_func('ERROR: ' + x)
 
     def load_and_verify_model(self, echo_func):
         """Loads, parses and verifies all content for a course."""
@@ -1131,21 +1147,20 @@ class Verifier(object):
         self.echo_func = echo_func
         self.export = []
 
-        self.info("Started verification in: %s" % __file__)
+        self.info('Started verification in: %s' % __file__)
 
-        unit_file = os.path.join(os.path.dirname(__file__), "../data/unit.csv")
-        lesson_file = os.path.join(os.path.dirname(__file__),
-            "../data/lesson.csv")
+        unit_file = os.path.join(os.path.dirname(__file__), '../data/unit.csv')
+        lesson_file = os.path.join(
+            os.path.dirname(__file__), '../data/lesson.csv')
 
-        self.info("Loading units from: %s" % unit_file)
-        units = read_objects_from_csv_file(
-            unit_file, UNITS_HEADER, lambda: Unit())
-        self.info("Read %s units" % len(units))
+        self.info('Loading units from: %s' % unit_file)
+        units = read_objects_from_csv_file(unit_file, UNITS_HEADER, Unit)
+        self.info('Read %s units' % len(units))
 
-        self.info("Loading lessons from: %s" % lesson_file)
+        self.info('Loading lessons from: %s' % lesson_file)
         lessons = read_objects_from_csv_file(
-            lesson_file, LESSONS_HEADER, lambda: Lesson())
-        self.info("Read %s lessons" % len(lessons))
+            lesson_file, LESSONS_HEADER, Lesson)
+        self.info('Read %s lessons' % len(lessons))
 
         self.verify_unit_fields(units)
         self.verify_lesson_fields(lessons)
@@ -1157,206 +1172,212 @@ class Verifier(object):
         except SchemaException as e:
             self.error(str(e))
 
-        self.info("Schema usage statistics: %s" %
-            self.schema_helper.type_stats)
-        self.info("Completed verification: %s warnings, %s errors." %
-            (self.warnings, self.errors))
+        self.info('Schema usage statistics: %s' % self.schema_helper.type_stats)
+        self.info('Completed verification: %s warnings, %s errors.' % (
+            self.warnings, self.errors))
 
         return self.errors
 
 
 def run_all_regex_unit_tests():
+    """Executes all tests related to regular expressions."""
     assert escape_javascript_regex(
-        "blah regex: /site:bls.gov?/i, blah") == (
-            "blah regex: regex(\"/site:bls.gov?/i\"), blah")
+        'blah regex: /site:bls.gov?/i, blah') == (
+            'blah regex: regex(\"/site:bls.gov?/i\"), blah')
     assert escape_javascript_regex(
-        "blah regex: /site:http:\/\/www.google.com?q=abc/i, blah") == (
-            "blah regex: regex(\"/site:http:\/\/www.google.com?q=abc/i\"), "
-            "blah")
+        'blah regex: /site:http:\/\/www.google.com?q=abc/i, blah') == (
+            'blah regex: regex(\"/site:http:\/\/www.google.com?q=abc/i\"), '
+            'blah')
     assert remove_javascript_multi_line_comment(
-        "blah\n/*\ncomment\n*/\nblah") == "blah\n\nblah"
+        'blah\n/*\ncomment\n*/\nblah') == 'blah\n\nblah'
     assert remove_javascript_multi_line_comment(
-        "blah\nblah /*\ncomment\nblah */\nblah") == (
-            "blah\nblah \nblah")
+        'blah\nblah /*\ncomment\nblah */\nblah') == (
+            'blah\nblah \nblah')
     assert remove_javascript_single_line_comment(
-        "blah\n// comment\nblah") == "blah\n\nblah"
+        'blah\n// comment\nblah') == 'blah\n\nblah'
     assert remove_javascript_single_line_comment(
-        "blah\nblah http://www.foo.com\nblah") == (
-            "blah\nblah http://www.foo.com\nblah")
+        'blah\nblah http://www.foo.com\nblah') == (
+            'blah\nblah http://www.foo.com\nblah')
     assert remove_javascript_single_line_comment(
-        "blah\nblah  // comment\nblah") == "blah\nblah\nblah"
+        'blah\nblah  // comment\nblah') == 'blah\nblah\nblah'
     assert remove_javascript_single_line_comment(
-        "blah\nblah  // comment http://www.foo.com\nblah") == (
-        "blah\nblah\nblah")
+        'blah\nblah  // comment http://www.foo.com\nblah') == (
+            'blah\nblah\nblah')
     assert remove_content_marked_no_verify(
-        "blah1\n// <gcb-no-verify>/blah2\n// </gcb-no-verify>\nblah3") == (
-            "blah1\n// \nblah3")
+        'blah1\n// <gcb-no-verify>/blah2\n// </gcb-no-verify>\nblah3') == (
+            'blah1\n// \nblah3')
 
 
 def run_all_schema_helper_unit_tests():
+    """Executes all tests related to schema validation."""
+
     def assert_same(a, b):
         if a != b:
-            raise Exception("Expected:\n  %s\nFound:\n  %s" % (a, b))
+            raise Exception('Expected:\n  %s\nFound:\n  %s' % (a, b))
 
     def assert_pass(instances, types, expected_result=None):
         try:
             schema_helper = SchemaHelper()
             result = schema_helper.check_instances_match_schema(
-                instances, types, "test")
+                instances, types, 'test')
             if OUTPUT_DEBUG_LOG:
-                print "\n".join(schema_helper.parse_log)
+                print '\n'.join(schema_helper.parse_log)
             if expected_result:
                 assert_same(expected_result, result)
         except SchemaException as e:
             if OUTPUT_DEBUG_LOG:
                 print str(e)
-                print "\n".join(schema_helper.parse_log)
+                print '\n'.join(schema_helper.parse_log)
             raise
 
     def assert_fails(func):
         try:
             func()
-            raise Exception("Expected to fail")
+            raise Exception('Expected to fail')
         except SchemaException as e:
             if OUTPUT_DEBUG_LOG:
                 print str(e)
-            pass
 
     def assert_fail(instances, types):
         assert_fails(lambda: assert_pass(instances, types))
 
     # CSV tests
     read_objects_from_csv(
-        [["id", "type"], [1, "none"]], "id,type", lambda: Unit())
-    assert_fails(lambda: read_objects_from_csv(
-        [["id", "type"], [1, "none"]], "id,type,title", lambda: Unit()))
-    assert_fails(lambda: read_objects_from_csv(
-        [["id", "type", "title"], [1, "none"]], "id,type,title",
-        lambda: Unit()))
+        [['id', 'type'], [1, 'none']], 'id,type', Unit)
+
+    def reader_one():
+        return read_objects_from_csv(
+            [['id', 'type'], [1, 'none']], 'id,type,title', Unit)
+    assert_fails(reader_one)
+
+    def reader_two():
+        read_objects_from_csv(
+            [['id', 'type', 'title'], [1, 'none']], 'id,type,title', Unit)
+    assert_fails(reader_two)
 
     # context tests
-    assert_same(Context().new([]).new(["a"]).new(["b", "c"]).format_path(),
-                ("//a/b/c"))
+    assert_same(Context().new([]).new(['a']).new(['b', 'c']).format_path(),
+                ('//a/b/c'))
 
     # simple map tests
-    assert_pass({"name": "Bob"}, {"name": STRING}, None)
-    assert_fail("foo", "bar")
-    assert_fail({"name": "Bob"}, {"name": INTEGER})
-    assert_fail({"name": 12345}, {"name": STRING})
-    assert_fail({"amount": 12345}, {"name": INTEGER})
-    assert_fail({"regex": CORRECT}, {"regex": Term(REGEX)})
-    assert_pass({"name": "Bob"}, {"name": STRING, "phone": STRING})
-    assert_pass({"name": "Bob"}, {"phone": STRING, "name": STRING})
-    assert_pass({"name": "Bob"},
-                {"phone": STRING, "name": STRING, "age": INTEGER})
+    assert_pass({'name': 'Bob'}, {'name': STRING}, None)
+    assert_fail('foo', 'bar')
+    assert_fail({'name': 'Bob'}, {'name': INTEGER})
+    assert_fail({'name': 12345}, {'name': STRING})
+    assert_fail({'amount': 12345}, {'name': INTEGER})
+    assert_fail({'regex': CORRECT}, {'regex': Term(REGEX)})
+    assert_pass({'name': 'Bob'}, {'name': STRING, 'phone': STRING})
+    assert_pass({'name': 'Bob'}, {'phone': STRING, 'name': STRING})
+    assert_pass({'name': 'Bob'},
+                {'phone': STRING, 'name': STRING, 'age': INTEGER})
 
     # mixed attributes tests
-    assert_pass({"colors": ["red", "blue"]}, {"colors": [STRING]})
-    assert_pass({"colors": []}, {"colors": [STRING]})
-    assert_fail({"colors": {"red": "blue"}}, {"colors": [STRING]})
-    assert_fail({"colors": {"red": "blue"}}, {"colors": [FLOAT]})
-    assert_fail({"colors": ["red", "blue", 5.5]}, {"colors": [STRING]})
+    assert_pass({'colors': ['red', 'blue']}, {'colors': [STRING]})
+    assert_pass({'colors': []}, {'colors': [STRING]})
+    assert_fail({'colors': {'red': 'blue'}}, {'colors': [STRING]})
+    assert_fail({'colors': {'red': 'blue'}}, {'colors': [FLOAT]})
+    assert_fail({'colors': ['red', 'blue', 5.5]}, {'colors': [STRING]})
 
-    assert_fail({"colors": ["red", "blue", {"foo": "bar"}]},
-                {"colors": [STRING]})
-    assert_fail({"colors": ["red", "blue"], "foo": "bar"},
-                {"colors": [STRING]})
+    assert_fail({'colors': ['red', 'blue', {'foo': 'bar'}]},
+                {'colors': [STRING]})
+    assert_fail({'colors': ['red', 'blue'], 'foo': 'bar'},
+                {'colors': [STRING]})
 
-    assert_pass({"colors": ["red", 1]}, {"colors": [[STRING, INTEGER]]})
-    assert_fail({"colors": ["red", "blue"]}, {"colors": [[STRING, INTEGER]]})
-    assert_fail({"colors": [1, 2, 3]}, {"colors": [[STRING, INTEGER]]})
-    assert_fail({"colors": ["red", 1, 5.3]}, {"colors": [[STRING, INTEGER]]})
+    assert_pass({'colors': ['red', 1]}, {'colors': [[STRING, INTEGER]]})
+    assert_fail({'colors': ['red', 'blue']}, {'colors': [[STRING, INTEGER]]})
+    assert_fail({'colors': [1, 2, 3]}, {'colors': [[STRING, INTEGER]]})
+    assert_fail({'colors': ['red', 1, 5.3]}, {'colors': [[STRING, INTEGER]]})
 
-    assert_pass({"colors": ["red", "blue"]}, {"colors": [STRING]})
-    assert_fail({"colors": ["red", "blue"]}, {"colors": [[STRING]]})
-    assert_fail({"colors": ["red", ["blue"]]}, {"colors": [STRING]})
-    assert_fail({"colors": ["red", ["blue", "green"]]}, {"colors": [STRING]})
+    assert_pass({'colors': ['red', 'blue']}, {'colors': [STRING]})
+    assert_fail({'colors': ['red', 'blue']}, {'colors': [[STRING]]})
+    assert_fail({'colors': ['red', ['blue']]}, {'colors': [STRING]})
+    assert_fail({'colors': ['red', ['blue', 'green']]}, {'colors': [STRING]})
 
     # required attribute tests
-    assert_pass({"colors": ["red", 5]}, {"colors": [[STRING, INTEGER]]})
-    assert_fail({"colors": ["red", 5]}, {"colors": [[INTEGER, STRING]]})
-    assert_pass({"colors": ["red", 5]}, {"colors": [STRING, INTEGER]})
-    assert_pass({"colors": ["red", 5]}, {"colors": [INTEGER, STRING]})
-    assert_fail({"colors": ["red", 5, "FF0000"]},
-                {"colors": [[STRING, INTEGER]]})
+    assert_pass({'colors': ['red', 5]}, {'colors': [[STRING, INTEGER]]})
+    assert_fail({'colors': ['red', 5]}, {'colors': [[INTEGER, STRING]]})
+    assert_pass({'colors': ['red', 5]}, {'colors': [STRING, INTEGER]})
+    assert_pass({'colors': ['red', 5]}, {'colors': [INTEGER, STRING]})
+    assert_fail({'colors': ['red', 5, 'FF0000']},
+                {'colors': [[STRING, INTEGER]]})
 
     # an array and a map of primitive type tests
-    assert_pass({"color": {"name": "red", "rgb": "FF0000"}},
-                {"color": {"name": STRING, "rgb": STRING}})
-    assert_fail({"color": {"name": "red", "rgb": ["FF0000"]}},
-                {"color": {"name": STRING, "rgb": STRING}})
-    assert_fail({"color": {"name": "red", "rgb": "FF0000"}},
-                {"color": {"name": STRING, "rgb": INTEGER}})
-    assert_fail({"color": {"name": "red", "rgb": "FF0000"}},
-                {"color": {"name": STRING, "rgb": {"hex": STRING}}})
-    assert_pass({"color": {"name": "red", "rgb": "FF0000"}},
-                {"color": {"name": STRING, "rgb": STRING}})
-    assert_pass({"colors":
-                 [{"name": "red", "rgb": "FF0000"},
-                  {"name": "blue", "rgb": "0000FF"}]},
-                  {"colors": [{"name": STRING, "rgb": STRING}]})
-    assert_fail({"colors":
-                 [{"name": "red", "rgb": "FF0000"},
-                  {"phone": "blue", "rgb": "0000FF"}]},
-                  {"colors": [{"name": STRING, "rgb": STRING}]})
+    assert_pass({'color': {'name': 'red', 'rgb': 'FF0000'}},
+                {'color': {'name': STRING, 'rgb': STRING}})
+    assert_fail({'color': {'name': 'red', 'rgb': ['FF0000']}},
+                {'color': {'name': STRING, 'rgb': STRING}})
+    assert_fail({'color': {'name': 'red', 'rgb': 'FF0000'}},
+                {'color': {'name': STRING, 'rgb': INTEGER}})
+    assert_fail({'color': {'name': 'red', 'rgb': 'FF0000'}},
+                {'color': {'name': STRING, 'rgb': {'hex': STRING}}})
+    assert_pass({'color': {'name': 'red', 'rgb': 'FF0000'}},
+                {'color': {'name': STRING, 'rgb': STRING}})
+    assert_pass({'colors':
+                 [{'name': 'red', 'rgb': 'FF0000'},
+                  {'name': 'blue', 'rgb': '0000FF'}]},
+                {'colors': [{'name': STRING, 'rgb': STRING}]})
+    assert_fail({'colors':
+                 [{'name': 'red', 'rgb': 'FF0000'},
+                  {'phone': 'blue', 'rgb': '0000FF'}]},
+                {'colors': [{'name': STRING, 'rgb': STRING}]})
 
     # boolean type tests
-    assert_pass({"name": "Bob", "active": "true"},
-                {"name": STRING, "active": BOOLEAN})
-    assert_pass({"name": "Bob", "active": True},
-                {"name": STRING, "active": BOOLEAN})
-    assert_pass({"name": "Bob", "active": [5, True, "False"]},
-                {"name": STRING, "active": [INTEGER, BOOLEAN]})
-    assert_pass({"name": "Bob", "active": [5, True, "false"]},
-                {"name": STRING, "active": [STRING, INTEGER, BOOLEAN]})
-    assert_fail({"name": "Bob", "active": [5, True, "False"]},
-                {"name": STRING, "active": [[INTEGER, BOOLEAN]]})
+    assert_pass({'name': 'Bob', 'active': 'true'},
+                {'name': STRING, 'active': BOOLEAN})
+    assert_pass({'name': 'Bob', 'active': True},
+                {'name': STRING, 'active': BOOLEAN})
+    assert_pass({'name': 'Bob', 'active': [5, True, 'False']},
+                {'name': STRING, 'active': [INTEGER, BOOLEAN]})
+    assert_pass({'name': 'Bob', 'active': [5, True, 'false']},
+                {'name': STRING, 'active': [STRING, INTEGER, BOOLEAN]})
+    assert_fail({'name': 'Bob', 'active': [5, True, 'False']},
+                {'name': STRING, 'active': [[INTEGER, BOOLEAN]]})
 
     # optional attribute tests
-    assert_pass({"points":
-                 [{"x": 1, "y": 2, "z": 3}, {"x": 3, "y": 2, "z": 1},
-                  {"x": 2, "y": 3, "z": 1}]},
-                  {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
-    assert_pass({"points":
-                 [{"x": 1, "z": 3}, {"x": 3, "y": 2}, {"y": 3, "z": 1}]},
-                 {"points": [{"x": INTEGER, "y": INTEGER, "z": INTEGER}]})
-    assert_pass({"account":
-                 [{"name": "Bob", "age": 25, "active": True}]},
-                {"account":
-                 [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
+    assert_pass({'points':
+                 [{'x': 1, 'y': 2, 'z': 3}, {'x': 3, 'y': 2, 'z': 1},
+                  {'x': 2, 'y': 3, 'z': 1}]},
+                {'points': [{'x': INTEGER, 'y': INTEGER, 'z': INTEGER}]})
+    assert_pass({'points':
+                 [{'x': 1, 'z': 3}, {'x': 3, 'y': 2}, {'y': 3, 'z': 1}]},
+                {'points': [{'x': INTEGER, 'y': INTEGER, 'z': INTEGER}]})
+    assert_pass({'account':
+                 [{'name': 'Bob', 'age': 25, 'active': True}]},
+                {'account':
+                 [{'age': INTEGER, 'name': STRING, 'active': BOOLEAN}]})
 
-    assert_pass({"account":
-                 [{"name": "Bob", "active": True}]},
-                {"account":
-                 [{"age": INTEGER, "name": STRING, "active": BOOLEAN}]})
+    assert_pass({'account':
+                 [{'name': 'Bob', 'active': True}]},
+                {'account':
+                 [{'age': INTEGER, 'name': STRING, 'active': BOOLEAN}]})
 
     # nested array tests
-    assert_fail({"name": "Bob", "active": [5, True, "false"]},
-                {"name": STRING, "active": [[BOOLEAN]]})
-    assert_fail({"name": "Bob", "active": [True]},
-                {"name": STRING, "active": [[STRING]]})
-    assert_pass({"name": "Bob", "active": ["true"]},
-                {"name": STRING, "active": [[STRING]]})
-    assert_pass({"name": "flowers", "price": ["USD", 9.99]},
-                {"name": STRING, "price": [[STRING, FLOAT]]})
-    assert_pass({"name": "flowers", "price":
-                 [["USD", 9.99], ["CAD", 11.79], ["RUB", 250.23]]},
-                {"name": STRING, "price": [[STRING, FLOAT]]})
+    assert_fail({'name': 'Bob', 'active': [5, True, 'false']},
+                {'name': STRING, 'active': [[BOOLEAN]]})
+    assert_fail({'name': 'Bob', 'active': [True]},
+                {'name': STRING, 'active': [[STRING]]})
+    assert_pass({'name': 'Bob', 'active': ['true']},
+                {'name': STRING, 'active': [[STRING]]})
+    assert_pass({'name': 'flowers', 'price': ['USD', 9.99]},
+                {'name': STRING, 'price': [[STRING, FLOAT]]})
+    assert_pass({'name': 'flowers', 'price':
+                 [['USD', 9.99], ['CAD', 11.79], ['RUB', 250.23]]},
+                {'name': STRING, 'price': [[STRING, FLOAT]]})
 
     # selector tests
-    assert_pass({"likes": [{"state": "CA", "food": "cheese"},
-                           {"state": "NY", "drink": "wine"}]},
-                {"likes": [{"state": "CA", "food": STRING},
-                           {"state": "NY", "drink": STRING}]})
+    assert_pass({'likes': [{'state': 'CA', 'food': 'cheese'},
+                           {'state': 'NY', 'drink': 'wine'}]},
+                {'likes': [{'state': 'CA', 'food': STRING},
+                           {'state': 'NY', 'drink': STRING}]})
 
-    assert_pass({"likes": [{"state": "CA", "food": "cheese"},
-                           {"state": "CA", "food": "nuts"}]},
-                {"likes": [{"state": "CA", "food": STRING},
-                           {"state": "NY", "drink": STRING}]})
+    assert_pass({'likes': [{'state': 'CA', 'food': 'cheese'},
+                           {'state': 'CA', 'food': 'nuts'}]},
+                {'likes': [{'state': 'CA', 'food': STRING},
+                           {'state': 'NY', 'drink': STRING}]})
 
-    assert_fail({"likes": {"state": "CA", "drink": "cheese"}},
-                {"likes": [{"state": "CA", "food": STRING},
-                           {"state": "NY", "drink": STRING}]})
+    assert_fail({'likes': {'state': 'CA', 'drink': 'cheese'}},
+                {'likes': [{'state': 'CA', 'food': STRING},
+                           {'state': 'NY', 'drink': STRING}]})
 
 
 def run_all_unit_tests():
@@ -1365,5 +1386,5 @@ def run_all_unit_tests():
 
 
 run_all_unit_tests()
-if __name__ == "__main__":
+if __name__ == '__main__':
     Verifier().load_and_verify_model(echo)
