@@ -18,7 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import os
-
+from config import ConfigProperty
 from google.appengine.api import memcache
 from google.appengine.ext import db
 
@@ -31,7 +31,11 @@ PRODUCTION_MODE = not os.environ.get(
 DEFAULT_CACHE_TTL_SECS = 60 * 60
 
 # Whether memcache caching is enabled.
-IS_CACHE_ENABLED = PRODUCTION_MODE
+GCB_IS_PAGE_CACHE_ENABLED = ConfigProperty(
+    'gcb_is_page_cache_enabled', bool, (
+        'A flag that controls whether page caching is enabled. By default, '
+        'it\'s "off" for development and "on" for production servers.'),
+    PRODUCTION_MODE)
 
 
 class MemcacheManager(object):
@@ -39,7 +43,7 @@ class MemcacheManager(object):
 
     @classmethod
     def enabled(cls):
-        return IS_CACHE_ENABLED
+        return GCB_IS_PAGE_CACHE_ENABLED.value
 
     @classmethod
     def get(cls, key):

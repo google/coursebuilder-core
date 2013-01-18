@@ -49,16 +49,20 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 302)
 
         # Add override.
-        os.environ['gcb-admin-list'] = email
+        os.environ['gcb_admin_list'] = email
 
         # Check user has access now.
         response = self.testapp.get('/admin?action=settings')
         assert_equals(response.status_int, 200)
+        assert_contains('gcb_admin_list', response.body)
+        assert_contains('test_admin_list@google.com', response.body)
         assert_contains(
-            'gcb-admin-list: test_admin_list@google.com', response.body)
+            '/admin?action=config_edit&name=gcb_admin_list', response.body)
+        assert_contains(
+            '/admin?action=config_reset&name=gcb_admin_list', response.body)
 
         # Remove override.
-        del os.environ['gcb-admin-list']
+        del os.environ['gcb_admin_list']
 
         # Check user has no access.
         response = self.testapp.get('/admin?action=settings')
@@ -79,8 +83,9 @@ class AdminAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = self.testapp.get('/admin?action=settings')
-        assert_contains('default_ver_hostname: None', response.body)
-        assert_contains('Environment Variables', response.body)
+        assert_contains('gcb_admin_list', response.body)
+        assert_contains('gcb_config_update_interval_sec', response.body)
+        assert_contains('Configuration Variables', response.body)
 
         actions.unregister(self)
         actions.logout()
@@ -106,7 +111,7 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('/foo-data', response.body)
         assert_contains('<a href="/bar">', response.body)
         assert_contains('/bar-data', response.body)
-        assert_contains('Total: 2 course(s)', response.body)
+        assert_contains('Total: 2 item(s)', response.body)
 
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 

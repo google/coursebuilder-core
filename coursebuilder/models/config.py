@@ -91,17 +91,17 @@ class ConfigProperty(object):
 class Registry(object):
     """Holds all registered properties."""
     registered = {}
-    overrides = {}
+    db_overrides = {}
     update_interval = DEFAULT_UPDATE_INTERVAL
     last_update_time = 0
     update_index = 0
 
     @classmethod
-    def get_overrides(cls):
-        """Returns current property overrides."""
+    def get_overrides(cls, force_update=False):
+        """Returns current property overrides, maybe cached."""
         now = long(time.time())
         age = now - cls.last_update_time
-        if age < 0 or age >= cls.update_interval:
+        if force_update or age < 0 or age >= cls.update_interval:
             try:
                 cls.load_from_db()
             except Exception as e:  # pylint: disable-msg=broad-except
@@ -112,7 +112,7 @@ class Registry(object):
                 cls.last_update_time = now
                 cls.update_index += 1
 
-        return cls.overrides
+        return cls.db_overrides
 
     @classmethod
     def load_from_db(cls):
@@ -145,7 +145,7 @@ class Registry(object):
 
                 overrides[item.name] = value
 
-        cls.overrides = overrides
+        cls.db_overrides = overrides
 
 
 class ConfigPropertyEntity(db.Model):
@@ -189,7 +189,7 @@ def run_all_unit_tests():
 
 
 GCB_CONFIG_UPDATE_INTERVAL_SEC = ConfigProperty(
-    'gcb-config-update-interval-sec', int, (
+    'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties from '
         'a datastore. A value of "0" completely disables loading of properties '
         'from a datastore. A value of "0" can only be set in app.yaml file.'),

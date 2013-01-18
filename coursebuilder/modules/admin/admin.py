@@ -19,6 +19,8 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import cgi
 import datetime
 import os
+import time
+import urllib
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
@@ -30,16 +32,18 @@ from google.appengine.api import users
 import google.appengine.api.app_identity as app
 
 
-GCB_ADMIN_LIST = ConfigProperty('gcb-admin-list', str, (
+GCB_ADMIN_LIST = ConfigProperty('gcb_admin_list', str, (
     'A new line separated list of email addresses of administrative users. '
-    'Regular expressions are not supported, exact match only.'))
+    'Regular expressions are not supported, exact match only.'), '')
 
 
 class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
-    get_actions = [default_action, 'settings', 'perf']
+    get_actions = [
+        default_action, 'settings', 'environ', 'perf', 'config_edit',
+        'config_reset', 'config_override']
     post_actions = []
 
     def can_view(self):
@@ -78,7 +82,8 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         template_values['top_nav'] = """
           <a href="/admin">Courses</a>
           <a href="/admin?action=settings">Settings</a>
-          <a href="/admin?action=perf">Performance</a>
+          <a href="/admin?action=perf">Metrics</a>
+          <a href="/admin?action=environ">Application</a>
           %s
           """ % console_link
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
@@ -110,21 +115,23 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
     def get_perf(self):
         """Shows server performance counters page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Performance'
+        template_values['page_title'] = 'Course Builder - Metrics'
 
         Registry.get_overrides()
         perf_counters = {}
-        perf_counters['gcb-config-update-time'] = Registry.last_update_time
+        perf_counters['gcb-config-age-sec'] = (
+            long(time.time()) - Registry.last_update_time)
+        perf_counters['gcb-config-update-time-sec'] = Registry.last_update_time
         perf_counters['gcb-config-update-index'] = Registry.update_index
 
         template_values['main_content'] = self.render_dict(
-            perf_counters, 'Performance Counters')
+            perf_counters, 'In-process Performance Counters')
         self.render_page(template_values)
 
-    def get_settings(self):
-        """Shows server & application information page."""
+    def get_environ(self):
+        """Shows server environment information page."""
         template_values = {}
-        template_values['page_title'] = 'Course Builder - Settings'
+        template_values['page_title'] = 'Course Builder - Application'
 
         # Yaml file content.
         yaml_content = []
@@ -135,6 +142,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         for line in yaml_lines:
             yaml_content.append('%s<br/>' % cgi.escape(line))
         yaml_content.append('</pre></ul>')
+        yaml_content = ''.join(yaml_content)
 
         # Application identity.
         app_id = app.get_application_id()
@@ -142,13 +150,106 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         app_dict['application_id'] = app_id
         app_dict['default_ver_hostname'] = app.get_default_version_hostname()
 
-        # Runtime variables.
-        app_vars = Registry.registered
-
         template_values['main_content'] = self.render_dict(
-            app_dict, 'Application Identity') + self.render_dict(
-                app_vars, 'Runtime Variables') + self.render_dict(
-                    os.environ, 'Environment Variables') + ''.join(yaml_content)
+            app_dict, 'Application Identity') + yaml_content + self.render_dict(
+                os.environ, 'Environment Variables')
+
+        self.render_page(template_values)
+
+    def get_settings(self):
+        """Shows configuration properties information page."""
+        template_values = {}
+        template_values['page_title'] = 'Course Builder - Settings'
+
+        content = []
+        content.append("""
+            <style>
+              table.gcb-config td.gcb-diff {
+                  background-color: #A0FFA0;
+              }
+            </style>
+            """)
+        content.append('<h3>Configuration Variables</h3>')
+        content.append('<table class="gcb-config">')
+        content.append("""
+            <tr>
+            <th>Name</th>
+            <th>Default Value</th>
+            <th>Current Value</th>
+            <th>Actions</th>
+            <th>Description</th>
+            </tr>
+            """)
+
+        def get_action_html(caption, args):
+            """Formats actions <a> link."""
+            return '<a class="gcb-button" href="/admin?%s">%s</a>' % (
+                urllib.urlencode(args), cgi.escape(caption))
+
+        def get_style_for(value, value_type):
+            """Formats CSS style for given value."""
+            style = ''
+            if not value or value_type in [int, long, bool]:
+                style = 'style="text-align: center;"'
+            return style
+
+        Registry.get_overrides(True)
+        registered = Registry.registered.copy()
+
+        count = 0
+        for name in sorted(registered.keys()):
+            count += 1
+            item = registered[name]
+            actions = []
+
+            doc_string = item.doc_string
+            if doc_string:
+                doc_string = cgi.escape(doc_string)
+
+            default_value = item.default_value
+            value = item.value
+            override = default_value != value
+
+            if default_value:
+                default_value = cgi.escape(str(default_value))
+            if value:
+                value = cgi.escape(str(value))
+
+            if override:
+                actions.append(get_action_html('Edit', {
+                    'action': 'config_edit', 'name': name}))
+                actions.append(get_action_html('Reset', {
+                    'action': 'config_reset', 'name': name}))
+            else:
+                actions.append(get_action_html('Override', {
+                    'action': 'config_override', 'name': name}))
+
+            style_default = get_style_for(item.default_value, item.value_type)
+            style_current = get_style_for(value, item.value_type)
+            class_current = ''
+            if item.value != item.default_value:
+                class_current = 'class="gcb-diff"'
+
+            content.append("""
+                <tr>
+                <td style='white-space: nowrap;'>%s</td>
+                <td %s>%s</td>
+                <td %s %s>%s</td>
+                <td align='center'>%s</td>
+                <td>%s</td>
+                </tr>
+                """ % (
+                    item.name, style_default, item.default_value,
+                    class_current, style_current, value, ''.join(actions),
+                    item.doc_string))
+
+        content.append("""
+            <tr><td colspan="5" align="right">Total: %s item(s)</td></tr>
+            """ % count)
+
+        content.append('</table>')
+
+        template_values['main_content'] = ''.join(content)
 
         self.render_page(template_values)
 
@@ -171,6 +272,7 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
         courses = sites.get_all_courses()
         count = 0
         for course in courses:
+            count += 1
             slug = course.get_slug()
             location = sites.abspath(course.get_home_folder(), '/')
             try:
@@ -188,13 +290,27 @@ class AdminHandler(webapp2.RequestHandler, ReflectiveRequestHandler):
                   <td>%s</td>
                 </tr>
                 """ % (link, slug, location, course.get_namespace_name()))
-            count += 1
 
         content.append("""
-            <tr><th colspan="4" align="right">Total: %s course(s)</th></tr>
+            <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
             """ % count)
         content.append('</table>')
 
         template_values['main_content'] = ''.join(content)
 
         self.render_page(template_values)
+
+    def get_config_edit(self):
+        """Handles 'edit' property action."""
+        # TODO(psimakov): incomplete
+        self.redirect('/admin?action=settings')
+
+    def get_config_reset(self):
+        """Handles 'reset' property action."""
+        # TODO(psimakov): incomplete
+        self.redirect('/admin?action=settings')
+
+    def get_config_override(self):
+        """Handles 'override' property action."""
+        # TODO(psimakov): incomplete
+        self.redirect('/admin?action=settings')
