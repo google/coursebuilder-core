@@ -92,8 +92,8 @@ class MemcacheManager(object):
 
 class Student(BaseEntity):
     """Student profile."""
-    enrolled_date = db.DateTimeProperty(auto_now_add=True)
-    name = db.StringProperty()
+    enrolled_date = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    name = db.StringProperty(indexed=False)
     is_enrolled = db.BooleanProperty()
 
     # Each of the following is a string representation of a JSON dict.

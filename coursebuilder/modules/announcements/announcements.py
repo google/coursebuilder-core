@@ -267,9 +267,9 @@ class ItemRESTHandler(BaseHandler):
 
 class AnnouncementEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of announcement."""
-    title = db.StringProperty()
+    title = db.StringProperty(indexed=False)
     date = db.DateProperty()
-    html = db.TextProperty()
+    html = db.TextProperty(indexed=False)
     is_draft = db.BooleanProperty()
 
     memcache_key = 'announcements'

@@ -82,10 +82,10 @@ class DurableJob(object):
 class DurableJobEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of durable job."""
 
-    updated_on = db.DateTimeProperty()
-    execution_time_sec = db.IntegerProperty()
-    status_code = db.IntegerProperty()
-    output = db.TextProperty()
+    updated_on = db.DateTimeProperty(indexed=False)
+    execution_time_sec = db.IntegerProperty(indexed=False)
+    status_code = db.IntegerProperty(indexed=False)
+    output = db.TextProperty(indexed=False)
 
     @classmethod
     def get_by_name(cls, name):
