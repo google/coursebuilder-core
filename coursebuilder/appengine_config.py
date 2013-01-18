@@ -36,4 +36,4 @@ for lib in THIRD_PARTY_LIBS:
 def namespace_manager_default_namespace_for_request():
     """Set a namespace appropriate for this request."""
     from controllers import sites  # pylint: disable=C6204
-    return sites.ApplicationContext.get_namespace_name()
+    return sites.ApplicationContext.get_namespace_name_for_request()

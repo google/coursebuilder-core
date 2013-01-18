@@ -376,11 +376,6 @@ def unprefix(path, prefix):
     return path
 
 
-def namespace_manager_default_namespace_for_request():
-    """Set a namespace appropriate for this request."""
-    return ApplicationContext.get_namespace_name()
-
-
 def set_static_resource_cache_control(handler):
     """Properly sets Cache-Control for a WebOb/webapp2 response."""
     handler.response.cache_control.no_cache = None
@@ -437,7 +432,7 @@ class ApplicationContext(object):
     """An application context for a request/response."""
 
     @classmethod
-    def get_namespace_name(cls):
+    def get_namespace_name_for_request(cls):
         """Gets the name of the namespace to use for this request.
 
         (Examples of such namespaces are NDB and memcache.)
@@ -460,6 +455,9 @@ class ApplicationContext(object):
         # A folder with the assets belonging to this context.
         self.homefolder = homefolder
         self.namespace = namespace
+
+    def get_namespace_name(self):
+        return self.namespace
 
     def get_home_folder(self):
         return self.homefolder
@@ -695,7 +693,8 @@ def test_rule_definitions():
     set_path_info('/')
     try:
         os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
-        assert ApplicationContext.get_namespace_name() == 'gcb-course-c-d'
+        assert ApplicationContext.get_namespace_name_for_request() == (
+            'gcb-course-c-d')
     finally:
         unset_path_info()
 

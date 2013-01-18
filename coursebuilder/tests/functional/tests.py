@@ -40,10 +40,10 @@ UNIQUE_URLS_FOUND = {}
 
 
 class AdminAspectTest(actions.TestBase):
-    """Tests site from the Admin perspective."""
+    """Test site from the Admin perspective."""
 
     def test_python_console(self):
-        """Tests access rights to the Python console."""
+        """Test access rights to the Python console."""
 
         email = 'test_python_console@google.com'
 
@@ -206,9 +206,9 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 302)
 
     def test_multiple_courses(self):
-        """Tests courses admin page with two courses configured."""
+        """Test courses admin page with two courses configured."""
 
-        courses = 'course:/foo:/foo-data, course:/bar:/bar-data'
+        courses = 'course:/foo:/foo-data, course:/bar:/bar-data:nsbar'
         os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
 
         email = 'test_multiple_courses@google.com'
@@ -216,11 +216,19 @@ class AdminAspectTest(actions.TestBase):
         actions.login(email, True)
         response = self.testapp.get('/admin')
         assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
-        assert_contains('<a href="/foo/dashboard">', response.body)
-        assert_contains('/foo-data', response.body)
-        assert_contains('<a href="/bar/dashboard">', response.body)
-        assert_contains('/bar-data', response.body)
         assert_contains('Total: 2 item(s)', response.body)
+
+        # Check ocurse URL's.
+        assert_contains('<a href="/foo/dashboard">', response.body)
+        assert_contains('<a href="/bar/dashboard">', response.body)
+
+        # Check content locations.
+        assert_contains('/foo-data', response.body)
+        assert_contains('/bar-data', response.body)
+
+        # Check namespaces.
+        assert_contains('gcb-course-foo-data', response.body)
+        assert_contains('nsbar', response.body)
 
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
 
@@ -374,7 +382,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
 
 class StudentAspectTest(actions.TestBase):
-    """Tests the site from the Student perspective."""
+    """Test the site from the Student perspective."""
 
     def test_view_announcements(self):
         """Test student aspect of announcements."""
@@ -490,7 +498,7 @@ class StudentAspectTest(actions.TestBase):
         actions.Permissions.assert_logged_out(self)
 
     def test_lesson_activity_navigation(self):
-        """Tests navigation between lesson/activity pages."""
+        """Test navigation between lesson/activity pages."""
 
         email = 'test_lesson_activity_navigation@example.com'
         name = 'Test Lesson Activity Navigation'
@@ -538,10 +546,10 @@ class StudentAspectTest(actions.TestBase):
 
 
 class StaticHandlerTest(actions.TestBase):
-    """Checks serving of static resources."""
+    """Check serving of static resources."""
 
     def test_static_files_cache_control(self):
-        """Tests static/zip handlers use proper Cache-Control headers."""
+        """Test static/zip handlers use proper Cache-Control headers."""
 
         # Check static handler.
         response = self.get('/assets/css/main.css')
@@ -560,7 +568,7 @@ class StaticHandlerTest(actions.TestBase):
 
 
 class AssessmentTest(actions.TestBase):
-    """Tests for assessments."""
+    """Test for assessments."""
 
     def submit_assessment(self, name, args):
         response = self.get('assessment?name=%s' % name)
@@ -572,7 +580,7 @@ class AssessmentTest(actions.TestBase):
         return response
 
     def test_course_pass(self):
-        """Tests student passing final exam."""
+        """Test student passing final exam."""
         email = 'test_pass@google.com'
         name = 'Test Pass'
 
@@ -596,7 +604,7 @@ class AssessmentTest(actions.TestBase):
         assert_contains('100', response.body)
 
     def test_assessments(self):
-        """Tests assessment scores are properly submitted and summarized."""
+        """Test assessment scores are properly submitted and summarized."""
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
 
@@ -682,7 +690,7 @@ class AssessmentTest(actions.TestBase):
 # TODO(psimakov): if mixin method names overlap, we don't run them all; must fix
 class CourseUrlRewritingTest(
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest, AdminAspectTest):
-    """Runs existing tests using rewrite rules for '/courses/pswg' base URL."""
+    """Run existing tests using rewrite rules for '/courses/pswg' base URL."""
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         self.base = '/courses/pswg'
@@ -721,7 +729,7 @@ class CourseUrlRewritingTest(
         return href
 
     def check_response_hrefs(self, response):
-        """Checks response page URLs are properly formatted/canonicalized."""
+        """Check response page URLs are properly formatted/canonicalized."""
         hrefs = re.findall(r'href=[\'"]?([^\'" >]+)', response.body)
         srcs = re.findall(r'src=[\'"]?([^\'" >]+)', response.body)
         for url in hrefs + srcs:
