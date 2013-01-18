@@ -28,7 +28,7 @@ import webtest
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 27
+EXPECTED_TEST_COUNT = 28
 
 
 def empty_environ():
@@ -65,8 +65,13 @@ class BaseTestClass(unittest.TestCase):
 
 def create_test_suite():
     """Loads all test classes from appropriate modules."""
-    import tests.functional.tests as functional  # pylint: disable=C6204
-    return unittest.TestLoader().loadTestsFromModule(functional)
+    import tests.functional.tests as functional_tests  # pylint: disable=C6204
+    import tests.unit.tests as unit_tests  # pylint: disable=C6204
+
+    tests = []
+    for item in [unit_tests, functional_tests]:
+        tests += unittest.TestLoader().loadTestsFromModule(item)
+    return unittest.TestLoader().suiteClass(tests)
 
 
 def fix_sys_path():
