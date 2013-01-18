@@ -19,25 +19,21 @@
 // Refactored version by Philip Guo
 
 
-// highlight the correct answer 
+// highlight the correct answer
 var highlightColor = "#3BB9FF";
 
+var globallyUniqueTag = 0; // each question should have a unique tag
 
-var globally_unique_tag = 1; // each question should have a unique tag
-
-function get_fresh_tag() {
-  var t = globally_unique_tag
-  globally_unique_tag++;
-  return t;
+function getFreshTag() {
+  globallyUniqueTag++;
+  return globallyUniqueTag;
 }
-
 
 // 'choices' is a list of choices, where each element is:
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
 function generateMultipleChoiceQuestion(choices, domRoot) {
-  var tag = get_fresh_tag();
-
+  var tag = getFreshTag();
   var radioButtonGroupName = 'q' + tag;
 
   // create radio buttons
@@ -45,17 +41,22 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
     var label = elt[0];
     var isCorrect = elt[1];
     if (isCorrect) {
-      domRoot.append('<span class="correct_' + tag + '"><input type="radio" name="' + radioButtonGroupName + '" value="correct"/> ' + label + '</span>');
+      domRoot.append('<span class="correct_' + tag + '">' +
+          '<input type="radio" name="' + radioButtonGroupName + '" value="correct"> ' +
+          label + '</span>');
     }
     else {
-      domRoot.append('<input type="radio" name="' + radioButtonGroupName + '"/> ' + label);
+      domRoot.append('<input type="radio" name="' + radioButtonGroupName + '"> ' +
+          label);
     }
-    domRoot.append('<br/>');
+    domRoot.append('<br>');
   });
 
-  domRoot.append('<br/>');
-	domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">Check Answer</a>');
-  domRoot.append('<p/><textarea style="width: 600px; height: 50px;" readonly="true" id="output_' + tag + '"></textarea>');
+  domRoot.append('<br>');
+  domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">' +
+      'Check Answer</a>');
+  domRoot.append('<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
+      'id="output_' + tag + '"></textarea>');
 
 
   var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
@@ -79,7 +80,6 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
         if (isCorrect) {
           $('.correct_' + tag).css('background-color', highlightColor);
         }
-
         answerChosen = true;
       }
     }
@@ -90,14 +90,15 @@ function generateMultipleChoiceQuestion(choices, domRoot) {
   });
 }
 
-
 // Generate a collection of multiple choice questions
 // 'params' is an object containing parameters
 // 'domRoot' is the dom element to append HTML onto
 function generateMultipleChoiceGroupQuestion(params, domRoot) {
 
   // 'questionsList' is an ordered list of questions, where each element is:
-  //   {questionHTML: <HTML of question>, choices: <list of choice labels>, correctIndex: <index of correct choice>}
+  //     {questionHTML: <HTML of question>,
+  //      choices: <list of choice labels>,
+  //      correctIndex: <index of correct choice>}
   // 'allCorrectOutput' is what to display when ALL of the answers are correct
   // 'someIncorrectOutput' is what to display when not all of the answers are correct
   var questionsList = params.questionsList;
@@ -107,25 +108,30 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   var used_tags = [];
 
   // create questions
-  $.each(questionsList, function(xxx, q) {
-    var tag = get_fresh_tag();
+  $.each(questionsList, function(i, q) {
+    var tag = getFreshTag();
     used_tags.push(tag);
 
     var radioButtonGroupName = 'q' + tag;
 
     // create question HTML
     domRoot.append(q.questionHTML);
-    domRoot.append('<br/>');
+    domRoot.append('<br>');
 
     // create radio buttons
     $.each(q.choices, function(i, choiceLabel) {
       if (i == q.correctIndex) {
-        domRoot.append('<span class="correct_' + tag + '"><input type="radio" name="' + radioButtonGroupName + '" value="correct"/> ' + choiceLabel + '</span>');
+        domRoot.append(
+            '<span class="correct_' + tag + '">' +
+            '<input type="radio" name="' + radioButtonGroupName + '" value="correct"> ' +
+            choiceLabel + '</span>');
       }
       else {
-        domRoot.append('<input type="radio" name="' + radioButtonGroupName + '"/> ' + choiceLabel);
+        domRoot.append(
+            '<input type="radio" name="' + radioButtonGroupName + '"> ' +
+            choiceLabel);
       }
-      domRoot.append('<br/>');
+      domRoot.append('<br>');
     });
 
     domRoot.append('<p/>');
@@ -133,20 +139,24 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   });
 
 
-  var toplevel_tag = get_fresh_tag();
+  var toplevel_tag = getFreshTag();
 
-	domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + toplevel_tag + '">Check your answers</a>');
-  domRoot.append('<p/><textarea style="width: 600px; height: 100px;" readonly="true" id="output_' + toplevel_tag + '"></textarea>');
+  domRoot.append(
+      '<p/><a class="gcb-button gcb-button-primary" id="submit_' + toplevel_tag + '">' +
+      'Check your answers</a>');
+  domRoot.append(
+      '<p/><textarea style="width: 600px; height: 100px;" readonly="true" ' +
+      'id="output_' + toplevel_tag + '"></textarea>');
 
 
   // clear output and highlighting for ALL questions whenever any checkbox is clicked
-  $.each(questionsList, function(i, q) {
-    var tag = used_tags[i];
+  $.each(questionsList, function(ind, q) {
+    var tag = used_tags[ind];
     var radioButtonGroupName = 'q' + tag;
     var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
 
     choiceInputs.click(function() {
-      $.each(used_tags, function(xxx, t) {
+      $.each(used_tags, function(i, t) {
         $('.correct_' + t).css('background-color', '');
       });
       $('#output_' + toplevel_tag).val('');
@@ -158,8 +168,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
   $('#submit_' + toplevel_tag).click(function() {
     var numCorrect = 0;
 
-    $.each(questionsList, function(i, q) {
-      var tag = used_tags[i];
+    $.each(questionsList, function(ind, q) {
+      var tag = used_tags[ind];
       var radioButtonGroupName = 'q' + tag;
       var choiceInputs = $("input[name=" + radioButtonGroupName + "]");
 
@@ -175,14 +185,16 @@ function generateMultipleChoiceGroupQuestion(params, domRoot) {
       $.each(used_tags, function(i, t) {
         $('.correct_' + t).css('background-color', highlightColor);
       });
-      $('#output_' + toplevel_tag).val("All your answers are correct! " + allCorrectOutput);
+      $('#output_' + toplevel_tag).val(
+          "All your answers are correct! " + allCorrectOutput);
     }
     else {
-      $('#output_' + toplevel_tag).val("You got " + numCorrect + " out of " + questionsList.length + " questions correct. " + someIncorrectOutput);
+      $('#output_' + toplevel_tag).val(
+          "You got " + numCorrect + " out of " + questionsList.length +
+          " questions correct. " + someIncorrectOutput);
     }
   });
 }
-
 
 // 'params' is an object containing parameters (some optional)
 // 'domRoot' is the dom element to append HTML onto
@@ -198,20 +210,27 @@ function generateFreetextQuestion(params, domRoot) {
   var correctAnswerOutput = params.correctAnswerOutput;
   var incorrectAnswerOutput = params.incorrectAnswerOutput;
   var showAnswerOutput = params.showAnswerOutput;
-  var showAnswerPrompt = params.showAnswerPrompt ?  params.showAnswerPrompt : 'Skip & Show Answer'; // optional parameter
-  var outputHeight = params.outputHeight ?  params.outputHeight : '50px'; // optional parameter
+  var showAnswerPrompt = params.showAnswerPrompt || 'Skip & Show Answer'; // optional parameter
+  var outputHeight = params.outputHeight || '50px'; // optional parameter
 
 
-  var tag = get_fresh_tag();
+  var tag = getFreshTag();
 
-  domRoot.append('&nbsp;&nbsp;<input type="text" style="width: 400px; class="alphanumericOnly" id="input_' + tag + '"/>');
+  domRoot.append(
+      '&nbsp;&nbsp;<input type="text" style="width: 400px; ' +
+      'class="alphanumericOnly" id="input_' + tag + '">');
   if (correctAnswerOutput && incorrectAnswerOutput) {
-    domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">Check Answer</a>');
+    domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="submit_' + tag + '">' +
+        'Check Answer</a>');
   }
   if (showAnswerOutput) {
-    domRoot.append('<p/><a class="gcb-button gcb-button-primary" id="skip_and_show_' + tag + '">' + showAnswerPrompt + '</a>');
+    domRoot.append(
+        '<p/><a class="gcb-button gcb-button-primary" id="skip_and_show_' + tag + '">' +
+        showAnswerPrompt + '</a>');
   }
-  domRoot.append('<p/><textarea style="width: 600px; height: ' + outputHeight + ';" readonly="true" id="output_' + tag + '"></textarea>');
+  domRoot.append(
+      '<p/><textarea style="width: 600px; height: ' + outputHeight + ';" ' +
+      'readonly="true" id="output_' + tag + '"></textarea>');
 
 
   // we need to wait until ALL elements are in the DOM before binding event handlers
@@ -219,7 +238,7 @@ function generateFreetextQuestion(params, domRoot) {
   $('#input_' + tag).focus(function() {
     $('#output_' + tag).val('');
   });
-  
+
   if (correctAnswerOutput && incorrectAnswerOutput) {
     $('#submit_' + tag).click(function() {
 
@@ -245,11 +264,11 @@ function generateFreetextQuestion(params, domRoot) {
   }
 }
 
-
-// Takes a list of HTML element strings and special question objects and renders HTML onto domRoot
+// Takes a list of HTML element strings and special question objects and renders
+// HTML onto domRoot
 //
-// The main caveat here is that each HTML string must be a FULLY-FORMED HTML element that
-// can be appended wholesale to the DOM, not a partial element.
+// The main caveat here is that each HTML string must be a FULLY-FORMED HTML
+// element that can be appended wholesale to the DOM, not a partial element.
 function renderActivity(contentsLst, domRoot) {
   $.each(contentsLst, function(i, e) {
     if (typeof e == 'string') {
@@ -267,12 +286,12 @@ function renderActivity(contentsLst, domRoot) {
         generateFreetextQuestion(e, domRoot);
       }
       else {
-        alert("Error in renderActivity: e.questionType is not in {'multiple choice', 'multiple choice group', 'freetext'}");
+        alert("Error in renderActivity: e.questionType is not in " +
+              "{'multiple choice', 'multiple choice group', 'freetext'}");
       }
     }
   });
 }
-
 
 // Takes a special 'assessment' object and renders it as HTML under domRoot
 function renderAssessment(assessment, domRoot) {
@@ -304,7 +323,8 @@ function renderAssessment(assessment, domRoot) {
       $.each(q.choices, function(i, c) {
         if (typeof c == 'string') {
           // incorrect choice
-          curLI.append('<input type="radio" name="q' + questionNum + '"/>&nbsp;' + c + '<br/>');
+          curLI.append('<input type="radio" name="q' + questionNum + '">&nbsp;' +
+              c + '<br>');
         }
         else {
           // wrapped in correct() ...
@@ -312,26 +332,33 @@ function renderAssessment(assessment, domRoot) {
             alert('Error: Malformed question.');
           }
           // correct choice
-          curLI.append('<input type="radio" name="q' + questionNum + '" value="correct"/>&nbsp;' + c[1] + '<br/>');
+          curLI.append('<input type="radio" name="q' + questionNum + '" value="correct">' +
+              '&nbsp;' + c[1] + '<br>');
         }
       });
     }
     else if (q.correctAnswerString || q.correctAnswerRegex || q.correctAnswerNumeric) {
-      curLI.append('Answer:&nbsp;&nbsp;<input type="text" class="alphanumericOnly" style="border-style: solid; border-color: black; border-width: 1px;" id="q' + questionNum + '"/>');
+      curLI.append('Answer:&nbsp;&nbsp;<input type="text" class="alphanumericOnly" ' +
+          'style="border-style: solid; border-color: black; border-width: 1px;" ' +
+          'id="q' + questionNum + '">');
     }
     else {
       alert("Error: Invalid question type.");
     }
 
-    curLI.append('<br/><br/>');
+    curLI.append('<br><br>');
   });
 
 
   if (assessment.checkAnswers) {
-    domRoot.append('<a class="gcb-button gcb-button-primary" id="checkAnswersBtn">Check your Answers</a><p/>');
-    domRoot.append('<p/><textarea style="width: 600px; height: 120px;" readonly="true" id="answerOutput"></textarea>');
+    domRoot.append(
+        '<a class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
+        'Check your Answers</a><p/>');
+    domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
+        'readonly="true" id="answerOutput"></textarea>');
   }
-  domRoot.append('<br/><a class="gcb-button gcb-button-primary" id="submitAnswersBtn">Save Answers</a>');
+  domRoot.append(
+      '<br><a class="gcb-button gcb-button-primary" id="submitAnswersBtn">Save Answers</a>');
 
 
   function checkOrSubmitAnswers(submitAnswers) {
@@ -339,19 +366,21 @@ function renderAssessment(assessment, domRoot) {
 
     var scoreArray = [];
     var lessonsToRead = [];
-    
+
     $.each(assessment.questionsList, function(questionNum, q) {
       var isCorrect = false;
 
       if (q.choices) {
-        isCorrect = checkQuestionRadioSimple(document.assessment['q' + questionNum]);
+        isCorrect = checkQuestionRadioSimple(
+            document.assessment['q' + questionNum]);
       }
       else if (q.correctAnswerString) {
         var answerVal = $('#q' + questionNum).val();
         answerVal = answerVal.replace(/^\s+/,''); // trim leading spaces
         answerVal = answerVal.replace(/\s+$/,''); // trim trailing spaces
 
-        isCorrect = (answerVal.toLowerCase() == q.correctAnswerString.toLowerCase());
+        isCorrect = (
+            answerVal.toLowerCase() == q.correctAnswerString.toLowerCase());
       }
       else if (q.correctAnswerRegex) {
         var answerVal = $('#q' + questionNum).val();
@@ -399,12 +428,12 @@ function renderAssessment(assessment, domRoot) {
       myForm.method = "post";
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/lessons.py
-      myForm.action = assessment.formScript ? assessment.formScript : "answer";
+      myForm.action = assessment.formScript || "answer";
 
-      var assessmentType = assessment.assessmentName ? assessment.assessmentName : "unnamed assessment";
+      var assessmentType = assessment.assessmentName || "unnamed assessment";
 
       var myInput = null;
-      
+
       myInput= document.createElement("input");
       myInput.setAttribute("name", "assessment_type");
       myInput.setAttribute("value", assessmentType);
@@ -440,27 +469,33 @@ function renderAssessment(assessment, domRoot) {
     else {
       // display feedback without submitting any data to the backend
 
-      var outtext = "You received " + score + "% (" + numCorrect + "/" + numQuestions + ") on this assessment.\n\n";
+      var outtext = "You received " + score + "% (" + numCorrect + "/" +
+          numQuestions + ") on this assessment.\n\n";
 
       if (lessonsToRead.length > 0) {
-        outtext += "Here are lessons you could review to improve your score: " + lessonsToRead.join(', ') + "\n\n";
+        outtext += "Here are lessons you could review to improve your score: " +
+            lessonsToRead.join(', ') + "\n\n";
       }
 
       if (score < 100) {
-        outtext += "Press the 'Save Answers' button below to save your scores. You can also edit your answers above before clicking 'Save Answers'.";
+        outtext += "Press the 'Save Answers' button below to save your " +
+            "scores. You can also edit your answers above before clicking " +
+            "'Save Answers'.";
       }
       else {
-        outtext += "Congratulations! Press the 'Save Answers' button to submit your grade.";
+        outtext += "Congratulations! Press the 'Save Answers' button to " +
+            "submit your grade.";
       }
-
       $('#answerOutput').html(outtext);
     }
-
   }
 
-
-  $('#checkAnswersBtn').click(function() {checkOrSubmitAnswers(false);});
-  $('#submitAnswersBtn').click(function() {checkOrSubmitAnswers(true);});
+  $('#checkAnswersBtn').click(function() {
+      checkOrSubmitAnswers(false);
+  });
+  $('#submitAnswersBtn').click(function() {
+      checkOrSubmitAnswers(true);
+  });
 }
 
 // wrap the value with a 'correct' tag
@@ -468,31 +503,22 @@ function correct(choiceStr) {
   return ['correct', choiceStr];
 }
 
-
 // check a radio button answer - simple; return 1 if correct button checked
 function checkQuestionRadioSimple(radioGroup) {
-  for (i=0; i<radioGroup.length; i++) {
+  for (var i = 0; i < radioGroup.length; i++) {
     if (radioGroup[i].checked) {
-      if (radioGroup[i].value == "correct") {
-        return true;
-      }
-      else {
-        return false;
-      }
+      return radioGroup[i].value == "correct";
     }
   }
   return false;
 }
 
-
 function checkText(id, regex) {
   var textValue = document.getElementById(id).value;
   textValue = textValue.replace(/^\s+/,''); // trim leading spaces
   textValue = textValue.replace(/\s+$/,''); // trim trailing spaces
-  // check specific words: killer whale
   return regex.test(textValue);
 }
-
 
 // this code runs when the document fully loads:
 $(document).ready(function() {
@@ -501,19 +527,19 @@ $(document).ready(function() {
   if (typeof activity != 'undefined') {
     renderActivity(activity, $('#activityContents'));
   }
-  // or render the assessment specified in the 'var assessment' top-level variable
-  // (if it exists)
+  // or render the assessment specified in the 'var assessment' top-level
+  // variable (if it exists)
   else if (typeof assessment != 'undefined') {
     renderAssessment(assessment, $('#assessmentContents'));
   }
 
-
   // disable enter key on textboxes
   function stopRKey(evt) {
-    var evt  = (evt) ? evt : ((event) ? event : null);
-    var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
-    if ((evt.keyCode == 13) && (node.type=="text")) { return false; }
+    var evt  = evt || (event || null);
+    var node = evt.target || (evt.srcElement || null);
+    if ((evt.keyCode == 13) && (node.type=="text")) {
+      return false;
+    }
   }
   $(document).keypress(stopRKey);
 });
-
