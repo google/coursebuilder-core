@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -89,10 +89,10 @@ LESSONS_HEADER = (
 
 UNIT_CSV_TO_DB_CONVERTER = {
     'id': ('id', int),
-    'type': ('type', str),
-    'unit_id': ('unit_id', str),
-    'title': ('title', str),
-    'release_date': ('release_date', str),
+    'type': ('type', unicode),
+    'unit_id': ('unit_id', unicode),
+    'title': ('title', unicode),
+    'release_date': ('release_date', unicode),
     'now_available': ('now_available', bool)
 }
 LESSON_CSV_TO_DB_CONVERTER = {
@@ -102,12 +102,12 @@ LESSON_CSV_TO_DB_CONVERTER = {
     # values are the same and ignore this value altogether.
     'unit_title': None,
     'lesson_id': ('id', int),
-    'lesson_title': ('title', str),
-    'lesson_activity': ('activity', str),
-    'lesson_activity_name': ('activity_title', str),
-    'lesson_video_id': ('video', str),
-    'lesson_objectives': ('objectives', str),
-    'lesson_notes': ('notes', str)
+    'lesson_title': ('title', unicode),
+    'lesson_activity': ('activity', unicode),
+    'lesson_activity_name': ('activity_title', unicode),
+    'lesson_video_id': ('video', unicode),
+    'lesson_objectives': ('objectives', unicode),
+    'lesson_notes': ('notes', unicode)
 }
 
 # pylint: disable-msg=anomalous-backslash-in-string
@@ -601,7 +601,7 @@ class SchemaHelper(object):
 
 
 def escape_quote(value):
-    return str(value).replace('\'', r'\'')
+    return unicode(value).replace('\'', r'\'')
 
 
 class Unit(object):
@@ -802,8 +802,17 @@ def read_objects_from_csv(value_rows, header, new_object):
                 'Expected %s element(s): %s' % (
                     i, len(values[i]), values[i], len(names), names))
 
+        # Decode string values in case they were encoded in UTF-8. The CSV
+        # reader should do this automatically, but it does not. The issue is
+        # discussed here: http://docs.python.org/2/library/csv.html
+        decoded_values = []
+        for value in values[i]:
+            if isinstance(value, basestring):
+                value = unicode(value.decode('utf-8'))
+            decoded_values.append(value)
+
         item = new_object()
-        set_object_attributes(item, names, values[i])
+        set_object_attributes(item, names, decoded_values)
         items.append(item)
     return items
 
@@ -1285,8 +1294,7 @@ def run_all_regex_unit_tests():
     assert remove_javascript_multi_line_comment(
         'blah\n/*\ncomment\n*/\nblah') == 'blah\n\nblah'
     assert remove_javascript_multi_line_comment(
-        'blah\nblah /*\ncomment\nblah */\nblah') == (
-            'blah\nblah \nblah')
+        'blah\nblah /*\ncomment\nblah */\nblah') == ('blah\nblah \nblah')
     assert remove_javascript_single_line_comment(
         'blah\n// comment\nblah') == 'blah\n\nblah'
     assert remove_javascript_single_line_comment(

@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,24 +33,46 @@ DEFAULT_NAMESPACE_NAME = ''
 # Third-party library zip files.
 THIRD_PARTY_LIBS = ['babel-0.9.6.zip', 'gaepytz-2011h.zip']
 
-for lib in THIRD_PARTY_LIBS:
-    thirdparty_lib = os.path.join(BUNDLE_ROOT, 'lib/%s' % lib)
-    if not os.path.exists(thirdparty_lib):
-        raise Exception('Library does not exist: %s' % thirdparty_lib)
-    sys.path.insert(0, thirdparty_lib)
 
-if not PRODUCTION_MODE:
-    from google.appengine.api import apiproxy_stub_map  # pylint: disable-msg=g-import-not-at-top
-    from google.appengine.datastore import datastore_stub_util  # pylint: disable-msg=g-import-not-at-top
+def gcb_force_default_encoding(encoding):
+    """Force default encoding to a specific value."""
 
-    # Make dev_appserver run with PseudoRandomHRConsistencyPolicy, which we
-    # believe is the best for localhost manual testing; normally dev_appserver
-    # runs either under MasterSlave policy, which does not allow XG
-    # transactions, or under TimeBasedHR policy, which serves counter-intuitive
-    # dirty query results; this also matches policy for the functional tests
-    stub = apiproxy_stub_map.apiproxy.GetStub(
-        'datastore_v3')
-    if stub:
-        policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
-            probability=1)
-        stub.SetConsistencyPolicy(policy)
+    # Eclipse silently sets default encoding to 'utf-8', while GAE forces
+    # 'ascii'. We need to control this directly for consistency.
+    if not sys.getdefaultencoding() == encoding:
+        reload(sys)
+        sys.setdefaultencoding(encoding)
+
+
+def gcb_init_third_party():
+    """Add all third party libraries to system path."""
+    for lib in THIRD_PARTY_LIBS:
+        thirdparty_lib = os.path.join(BUNDLE_ROOT, 'lib/%s' % lib)
+        if not os.path.exists(thirdparty_lib):
+            raise Exception('Library does not exist: %s' % thirdparty_lib)
+        sys.path.insert(0, thirdparty_lib)
+
+
+def gcb_configure_dev_server_if_running():
+    """Configure various aspects of development server if not production."""
+    if not PRODUCTION_MODE:
+        # pylint: disable-msg=g-import-not-at-top
+        from google.appengine.api import apiproxy_stub_map
+        from google.appengine.datastore import datastore_stub_util
+
+        # Make dev_appserver run with PseudoRandomHRConsistencyPolicy, which we
+        # believe is the best for localhost manual testing; normally
+        # dev_appserver runs either under MasterSlave policy, which does not
+        # allow XG transactions, or under TimeBasedHR policy, which serves
+        # counter-intuitive dirty query results; this also matches policy for
+        # the functional tests
+        stub = apiproxy_stub_map.apiproxy.GetStub(
+            'datastore_v3')
+        if stub:
+            policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
+                probability=1)
+            stub.SetConsistencyPolicy(policy)
+
+
+gcb_init_third_party()
+gcb_configure_dev_server_if_running()

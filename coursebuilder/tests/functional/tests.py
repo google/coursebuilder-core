@@ -1,5 +1,4 @@
 # coding: utf-8
-
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +17,7 @@
 
 __author__ = 'Sean Lip'
 
+import csv
 import datetime
 import json
 import logging
@@ -488,7 +488,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert 'date' in payload_dict
 
             # REST PUT item
-            payload_dict['title'] = 'My Test Title'
+            payload_dict['title'] = 'My Test Title Мой заголовок теста'
             payload_dict['date'] = '2012/12/31'
             payload_dict['is_draft'] = True
             request = {}
@@ -510,7 +510,8 @@ class CourseAuthorAspectTest(actions.TestBase):
 
             # Confirm change is visible on the page.
             response = self.get('announcements')
-            assert_contains('My Test Title (Draft)', response.body)
+            assert_contains(
+                'My Test Title Мой заголовок теста (Draft)', response.body)
 
         # REST GET not-existing item
         response = self.get('rest/announcements/item?key=not_existent_key')
@@ -970,8 +971,11 @@ def clone_canonical_course_data(src, dst):
 class GeneratedCourse(object):
     """A helper class for a dynamically generated course content."""
 
-    # All data for this test will be placed here.
-    data_home = '/tmp/experimental/coursebuilder/test-data'
+    @classmethod
+    def set_data_home(cls, test):
+        """All data for this test will be placed here."""
+        cls.data_home = '/tmp/experimental/coursebuilder/test-data/%s' % (
+            test.__class__.__name__)
 
     def __init__(self, ns):
         self.path = ns
@@ -982,15 +986,15 @@ class GeneratedCourse(object):
 
     @property
     def title(self):
-        return 'Power title-%s Searching with Google' % self.path
+        return 'Power title-%s Searching with Google (тест данные)' % self.path
 
     @property
     def unit_title(self):
-        return 'Interpreting unit-title-%s results' % self.path
+        return 'Interpreting unit-title-%s results (тест данные)' % self.path
 
     @property
     def lesson_title(self):
-        return 'Word lesson-title-%s order matters' % self.path
+        return 'Word lesson-title-%s order matters (тест данные)' % self.path
 
     @property
     def head(self):
@@ -1073,6 +1077,8 @@ class MultipleCoursesTest(actions.TestBase):
 
         super(MultipleCoursesTest, self).setUp()
 
+        GeneratedCourse.set_data_home(self)
+
         self.course_a = GeneratedCourse('a')
         self.course_b = GeneratedCourse('b')
         self.course_ru = GeneratedCourse('ru')
@@ -1106,6 +1112,26 @@ class MultipleCoursesTest(actions.TestBase):
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
         appengine_config.BUNDLE_ROOT = self.bundle_root
         super(MultipleCoursesTest, self).tearDown()
+
+    def test_csv_supports_utf8(self):
+        """Test UTF-8 content in CSV file is handled correctly."""
+
+        title_ru = u'Найди факты быстрее'
+
+        csv_file = os.path.join(self.course_ru.home, 'data/unit.csv')
+        self.modify_file(
+            csv_file, ',Find facts faster,', ',%s,' % title_ru.encode('utf-8'))
+        self.modify_file(
+            os.path.join(self.course_ru.home, 'data/lesson.csv'),
+            ',Find facts faster,', ',%s,' % title_ru.encode('utf-8'))
+
+        rows = []
+        for row in csv.reader(open(csv_file)):
+            rows.append(row)
+        assert title_ru == rows[6][3].decode('utf-8')
+
+        response = self.get('/courses/%s/preview' % self.course_ru.path)
+        assert_contains(title_ru.encode('utf-8'), response.body)
 
     def test_i18n(self):
         """Test course is properly internationalized."""
@@ -1204,6 +1230,8 @@ class VirtualFileSystemTest(
         """Configure the test."""
 
         super(VirtualFileSystemTest, self).setUp()
+
+        GeneratedCourse.set_data_home(self)
 
         # Override BUNDLE_ROOT.
         self.bundle_root = appengine_config.BUNDLE_ROOT

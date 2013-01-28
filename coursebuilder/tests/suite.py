@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 64
+EXPECTED_TEST_COUNT = 66
 
 
 def empty_environ():
@@ -105,7 +105,7 @@ def create_test_suite():
 
     # Here is how to test just one test case:
     #    tests = unittest.TestLoader().loadTestsFromTestCase(
-    #        functional_tests.VirtualFileSystemTest)
+    #        functional_tests.MultipleCoursesTest)
 
     return unittest.TestLoader().suiteClass(tests)
 
@@ -144,4 +144,5 @@ def main():
 
 
 if __name__ == '__main__':
+    appengine_config.gcb_force_default_encoding('ascii')
     main()
