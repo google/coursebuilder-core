@@ -50,7 +50,7 @@ PREVIEW_HOOK_POINTS = [
     '<!-- preview.after_main_content_ends -->']
 
 
-class MustFail(Exception):
+class ShouldHaveFailedByNow(Exception):
     """Special exception raised when a prior method did not raise."""
     pass
 
@@ -199,8 +199,9 @@ def assert_all_fail(browser, callbacks):
     for callback in callbacks:
         try:
             callback(browser)
-            raise MustFail('Expected to fail: %s().' % callback.__name__)
-        except MustFail as e:
+            raise ShouldHaveFailedByNow(
+                'Expected to fail: %s().' % callback.__name__)
+        except ShouldHaveFailedByNow as e:
             raise e
         except Exception:
             pass

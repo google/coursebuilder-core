@@ -592,12 +592,14 @@ class StudentAspectTest(actions.TestBase):
 
         sites.ApplicationContext.get_environ = get_environ_new
 
-        # Try to ogin and register.
+        # Try to login and register.
         actions.login(email)
         try:
             actions.register(self, name)
-            raise actions.MustFail('Expected to fail.')
-        except actions.MustFail as e:
+            raise actions.ShouldHaveFailedByNow(
+                'Expected to fail: new registrations should not be allowed '
+                'when registration is closed.')
+        except actions.ShouldHaveFailedByNow as e:
             raise e
         except:
             pass
