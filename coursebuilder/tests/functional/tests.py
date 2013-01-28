@@ -40,6 +40,7 @@ from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
 import actions
 from actions import assert_contains
+from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
 from google.appengine.api import namespace_manager
@@ -500,7 +501,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert 'date' in payload_dict
 
             # REST PUT item
-            payload_dict['title'] = 'My Test Title Мой заголовок теста'
+            payload_dict['title'] = u'My Test Title Мой заголовок теста'
             payload_dict['date'] = '2012/12/31'
             payload_dict['is_draft'] = True
             request = {}
@@ -523,7 +524,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             # Confirm change is visible on the page.
             response = self.get('announcements')
             assert_contains(
-                'My Test Title Мой заголовок теста (Draft)', response.body)
+                u'My Test Title Мой заголовок теста (Draft)', response.body)
 
         # REST GET not-existing item
         response = self.get('rest/announcements/item?key=not_existent_key')
@@ -1243,20 +1244,21 @@ class I18NTest(MultipleCoursesTestBase):
         assert title_ru == rows[6][3].decode('utf-8')
 
         response = self.get('/courses/%s/preview' % self.course_ru.path)
-        assert_contains(title_ru, unicode(response.body, response.charset))
+        assert_contains(title_ru, response.body)
 
         # Tests student perspective.
-        self.walk_the_course(self.course_ru, True)
-        self.walk_the_course(self.course_ru, False)
+        self.walk_the_course(self.course_ru, first_time=True)
+        self.walk_the_course(self.course_ru, first_time=False)
 
         # Test course author dashboard.
-        self.walk_the_course(self.course_ru, False, True, False)
+        self.walk_the_course(
+            self.course_ru, first_time=False, is_admin=True, logout=False)
 
         def assert_page_contains(page_name, text_array):
             dashboard_url = '/courses/%s/dashboard' % self.course_ru.path
             response = self.get('%s?action=%s' % (dashboard_url, page_name))
             for text in text_array:
-                assert_contains(text, unicode(response.body, response.charset))
+                assert_contains(text, response.body)
 
         assert_page_contains('', [
             title_ru, self.course_ru.unit_title, self.course_ru.lesson_title])
@@ -1270,14 +1272,9 @@ class I18NTest(MultipleCoursesTestBase):
 
     def test_i18n(self):
         """Test course is properly internationalized."""
-
         response = self.get('/courses/%s/preview' % self.course_ru.path)
-
-        # Assertions below fail because Russian is not being rendered. Why?
-        assert_contains('Вход', response.body)
-        assert_contains('Регистрация', response.body)
-        assert_contains('Расписание', response.body)
-        assert_contains('Курс', response.body)
+        assert_contains_all_of(
+            [u'Вход', u'Регистрация', u'Расписание', u'Курс'], response.body)
 
 
 class VirtualFileSystemTest(

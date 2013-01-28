@@ -164,30 +164,33 @@ def assert_equals(expected, actual):
                         (expected, actual))
 
 
+def to_unicode(text):
+    """Converts text to Unicode if is not Unicode already."""
+    if not isinstance(text, unicode):
+        return unicode(text, 'utf-8')
+    return text
+
+
 def assert_contains(needle, haystack):
-    if isinstance(needle, unicode) and not isinstance(haystack, unicode):
-        haystack = unicode(haystack, 'utf-8')
-    if not needle in haystack:
+    if not to_unicode(needle) in to_unicode(haystack):
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_contains_all_of(needles, haystack):
     for needle in needles:
-        if not needle in haystack:
+        if not to_unicode(needle) in to_unicode(haystack):
             raise Exception(
                 'Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_does_not_contain(needle, haystack):
-    if isinstance(needle, unicode) and not isinstance(haystack, unicode):
-        haystack = unicode(haystack, 'utf-8')
-    if needle in haystack:
+    if to_unicode(needle) in to_unicode(haystack):
         raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_contains_none_of(needles, haystack):
     for needle in needles:
-        if needle in haystack:
+        if to_unicode(needle) in to_unicode(haystack):
             raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
 
