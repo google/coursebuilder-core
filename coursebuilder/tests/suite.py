@@ -45,7 +45,7 @@ from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 
-EXPECTED_TEST_COUNT = 48
+EXPECTED_TEST_COUNT = 64
 
 
 def empty_environ():
@@ -105,7 +105,7 @@ def create_test_suite():
 
     # Here is how to test just one test case:
     #    tests = unittest.TestLoader().loadTestsFromTestCase(
-    #        functional_tests.MultipleCoursesTest)
+    #        functional_tests.VirtualFileSystemTest)
 
     return unittest.TestLoader().suiteClass(tests)
 

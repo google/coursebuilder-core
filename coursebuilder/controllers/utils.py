@@ -20,7 +20,6 @@ import base64
 import hmac
 import time
 import urlparse
-import jinja2
 from models import transforms
 from models.config import ConfigProperty
 from models.courses import Course
@@ -29,7 +28,6 @@ from models.models import Student
 from models.roles import Roles
 from models.utils import get_all_scores
 import webapp2
-from webapp2_extras import i18n
 from google.appengine.api import users
 
 
@@ -135,28 +133,16 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).__init__(*args, **kwargs)
         self.template_value = {}
 
-    def get_template(self, template_file, additional_dir=None):
+    def get_template(self, template_file):
         """Computes location of template files for the current namespace."""
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
-
-        template_dir = self.app_context.get_template_home()
-        dirs = [template_dir]
-        if additional_dir:
-            dirs += additional_dir
-
-        jinja_environment = jinja2.Environment(
-            extensions=['jinja2.ext.i18n'],
-            loader=jinja2.FileSystemLoader(dirs))
-        jinja_environment.install_gettext_translations(i18n)
-
-        locale = self.template_value[COURSE_INFO_KEY]['course']['locale']
-        i18n.get_i18n().set_locale(locale)
-
-        return jinja_environment.get_template(template_file)
+        return self.app_context.get_template_environ(
+            self.template_value[COURSE_INFO_KEY]['course']['locale']
+            ).get_template(template_file)
 
     def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""

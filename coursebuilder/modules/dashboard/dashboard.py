@@ -169,8 +169,8 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         yaml_content.append(
             '<h3>Contents of <code>course.yaml</code> file</h3>')
         yaml_content.append('<ol>')
-        yaml_lines = open(
-            self.app_context.get_config_filename(), 'r').readlines()
+        yaml_lines = self.app_context.fs.open(
+            self.app_context.get_config_filename()).readlines()
         for line in yaml_lines:
             yaml_content.append('<li>%s</li>' % cgi.escape(line))
         yaml_content.append('</ol>')
@@ -183,17 +183,12 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         """Walks files in folders and renders their names."""
 
         home = sites.abspath(self.app_context.get_home_folder(), '/')
-        start = sites.abspath(self.app_context.get_home_folder(), subfolder)
-
-        files = []
-        for dirname, unused_dirnames, filenames in os.walk(start):
-            for filename in filenames:
-                files.append(
-                    os.path.relpath(os.path.join(dirname, filename), home))
-        files = sorted(files)
+        files = self.app_context.fs.list(
+            sites.abspath(self.app_context.get_home_folder(), subfolder))
 
         lines = []
-        for filename in files:
+        for abs_filename in sorted(files):
+            filename = os.path.relpath(abs_filename, home)
             if links:
                 lines.append(
                     '<li><a href="%s">%s</a></li>' % (filename, filename))

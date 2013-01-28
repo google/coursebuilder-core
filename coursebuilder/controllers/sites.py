@@ -108,7 +108,9 @@ import os
 import threading
 import appengine_config
 from models.counters import PerfCounter
+from models.vfs import LocalReadOnlyFileSystem
 import webapp2
+from webapp2_extras import i18n
 import yaml
 from google.appengine.api import namespace_manager
 from google.appengine.ext import zipserve
@@ -396,7 +398,8 @@ def make_zip_handler(zipfilename):
 class AssetHandler(webapp2.RequestHandler):
     """Handles serving of static resources located on the file system."""
 
-    def __init__(self, filename):
+    def __init__(self, app_context, filename):
+        self.app_context = app_context
         self.filename = filename
 
     def get_mime_type(self, filename, default='application/octet-stream'):
@@ -409,14 +412,15 @@ class AssetHandler(webapp2.RequestHandler):
         """Handles GET requests."""
         debug('File: %s' % self.filename)
 
-        if not os.path.isfile(self.filename):
+        if not self.app_context.fs.isfile(self.filename):
             self.error(404)
             return
 
         set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
-        self.response.write(open(self.filename, 'rb').read())
+        self.response.write(
+            self.app_context.fs.open(self.filename).read())
 
 
 class ApplicationContext(object):
@@ -437,15 +441,38 @@ class ApplicationContext(object):
             return course.namespace
         return appengine_config.DEFAULT_NAMESPACE_NAME
 
-    def __init__(self, site_type, slug, homefolder, namespace):
-        # TODO(psimakov): Document these parameters.
+    @classmethod
+    def after_create(cls, instance):
+        """Override this method to manipulate freshly created instance."""
+        pass
+
+    def __init__(self, site_type, slug, homefolder, namespace, fs=None):
+        """Creates new application context.
+
+        Args:
+            site_type: Specifies the type of context. Must be 'course' for now.
+            slug: A common context path prefix for all URLs in the context.
+            homefolder: A folder with the assets belonging to this context.
+            namespace: A name of a datastore namespace for use by this context.
+            fs: A file system object to be used for accessing homefolder.
+
+        Returns:
+            The new instance of namespace object.
+        """
         self.type = site_type
-        # A common context path for all URLs in this context
-        # ('/courses/mycourse').
         self.slug = slug
-        # A folder with the assets belonging to this context.
         self.homefolder = homefolder
         self.namespace = namespace
+        if fs:
+            self._fs = fs
+        else:
+            self._fs = LocalReadOnlyFileSystem()
+
+        self.after_create(self)
+
+    @ property
+    def fs(self):
+        return self._fs
 
     def get_namespace_name(self):
         return self.namespace
@@ -466,7 +493,7 @@ class ApplicationContext(object):
         """Returns a dict of course configuration variables."""
         course_data_filename = self.get_config_filename()
         try:
-            return yaml.load(open(course_data_filename))
+            return yaml.load(self.fs.open(course_data_filename))
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',
                          course_data_filename)
@@ -483,6 +510,17 @@ class ApplicationContext(object):
         path = abspath(self.get_home_folder(), GCB_DATA_FOLDER_NAME)
         debug('Data home: %s' % path)
         return path
+
+    def get_template_environ(self, locale):
+        """Create and configure jinja template evaluation environment."""
+        template_dir = self.get_template_home()
+        dirs = [template_dir]
+        jinja_environment = self.fs.get_jinja_environ(dirs)
+
+        i18n.get_i18n().set_locale(locale)
+        jinja_environment.install_gettext_translations(i18n)
+
+        return jinja_environment
 
 
 class ApplicationRequestHandler(webapp2.RequestHandler):
@@ -527,7 +565,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         # Handle static assets here.
         if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
             abs_file = abspath(context.get_home_folder(), norm_path)
-            handler = AssetHandler(abs_file)
+            handler = AssetHandler(self, abs_file)
             handler.request = self.request
             handler.response = self.response
             handler.app_context = context

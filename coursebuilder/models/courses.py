@@ -70,8 +70,7 @@ class Course(object):
 
     def _rebuild_from_source(self):
         """Loads course data from persistence storage into this instance."""
-        self._units, self._lessons = load_csv_course(
-            self._app_context.get_data_home())
+        self._units, self._lessons = load_csv_course(self._app_context)
         self._reindex()
         self._loaded = True
 
@@ -138,18 +137,18 @@ def copy_attributes(source, target, converter):
                 target, target_name, target_type(getattr(source, source_name)))
 
 
-def load_csv_course(data_folder):
+def load_csv_course(app_context):
     """Loads course data from the CSV files."""
     logging.info('Initializing datastore from CSV files')
 
-    unit_file = os.path.join(data_folder, 'unit.csv')
-    lesson_file = os.path.join(data_folder, 'lesson.csv')
+    unit_file = os.path.join(app_context.get_data_home(), 'unit.csv')
+    lesson_file = os.path.join(app_context.get_data_home(), 'lesson.csv')
 
     # Load and validate data from CSV files.
-    units = verify.read_objects_from_csv_file(
-        unit_file, verify.UNITS_HEADER, verify.Unit)
-    lessons = verify.read_objects_from_csv_file(
-        lesson_file, verify.LESSONS_HEADER, verify.Lesson)
+    units = verify.read_objects_from_csv_stream(
+        app_context.fs.open(unit_file), verify.UNITS_HEADER, verify.Unit)
+    lessons = verify.read_objects_from_csv_stream(
+        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, verify.Lesson)
     verifier = verify.Verifier()
     verifier.verify_unit_fields(units)
     verifier.verify_lesson_fields(lessons)
@@ -160,10 +159,10 @@ def load_csv_course(data_folder):
     # Load data from CSV files into a datastore.
     new_units = []
     new_lessons = []
-    units = verify.read_objects_from_csv_file(
-        unit_file, verify.UNITS_HEADER, Unit)
-    lessons = verify.read_objects_from_csv_file(
-        lesson_file, verify.LESSONS_HEADER, Lesson)
+    units = verify.read_objects_from_csv_stream(
+        app_context.fs.open(unit_file), verify.UNITS_HEADER, Unit)
+    lessons = verify.read_objects_from_csv_stream(
+        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, Lesson)
     for unit in units:
         entity = Unit()
         copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)

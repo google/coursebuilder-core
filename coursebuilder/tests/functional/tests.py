@@ -33,6 +33,7 @@ from controllers.utils import XsrfTokenManager
 from models import config
 from models import jobs
 from models import models
+from models import vfs
 from models.utils import get_all_scores
 from models.utils import get_score
 from modules.announcements.announcements import AnnouncementEntity
@@ -942,6 +943,30 @@ def clean_dir(dir_name):
         raise Exception('Failed to create directory: %s' % dir_name)
 
 
+def clone_canonical_course_data(src, dst):
+    """Makes a copy of canonical course content."""
+    clean_dir(dst)
+
+    def copytree(name):
+        shutil.copytree(
+            os.path.join(src, name),
+            os.path.join(dst, name))
+
+    copytree('assets')
+    copytree('data')
+    copytree('views')
+
+    shutil.copy(
+        os.path.join(src, 'course.yaml'),
+        os.path.join(dst, 'course.yaml'))
+
+    # Make all files writable.
+    for root, unused_dirs, files in os.walk(dst):
+        for afile in files:
+            fname = os.path.join(root, afile)
+            os.chmod(fname, 0o777)
+
+
 class GeneratedCourse(object):
     """A helper class for a dynamically generated course content."""
 
@@ -990,29 +1015,6 @@ class GeneratedCourse(object):
 
 class MultipleCoursesTest(actions.TestBase):
     """Test several courses running concurrently."""
-
-    def prepare_canonical_course_data(self, course):
-        """Make a copy of canonical course content."""
-        clean_dir(course.home)
-
-        def copytree(name):
-            shutil.copytree(
-                os.path.join(self.bundle_root, name),
-                os.path.join(course.home, name))
-
-        copytree('assets')
-        copytree('data')
-        copytree('views')
-
-        shutil.copy(
-            os.path.join(self.bundle_root, 'course.yaml'),
-            os.path.join(course.home, 'course.yaml'))
-
-        # Make all files writable.
-        for root, unused_dirs, files in os.walk(course.home):
-            for afile in files:
-                fname = os.path.join(root, afile)
-                os.chmod(fname, 0777)
 
     def modify_file(self, filename, find, replace):
         """Read, modify and write back the file."""
@@ -1063,7 +1065,7 @@ class MultipleCoursesTest(actions.TestBase):
     def prepare_course_data(self, course):
         """Create unique course content for a course."""
 
-        self.prepare_canonical_course_data(course)
+        clone_canonical_course_data(self.bundle_root, course.home)
         self.modify_canonical_course_data(course)
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
@@ -1191,3 +1193,43 @@ class MultipleCoursesTest(actions.TestBase):
         assert_contains(course.head, response.body)
 
         actions.logout()
+
+
+class VirtualFileSystemTest(
+    StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
+    StaticHandlerTest):
+    """Run existing tests using virtual local file system."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        """Configure the test."""
+
+        super(VirtualFileSystemTest, self).setUp()
+
+        # Override BUNDLE_ROOT.
+        self.bundle_root = appengine_config.BUNDLE_ROOT
+        appengine_config.BUNDLE_ROOT = GeneratedCourse.data_home
+
+        # Prepare course content.
+        home_folder = os.path.join(GeneratedCourse.data_home, 'data-v')
+        clone_canonical_course_data(self.bundle_root, home_folder)
+
+        # Configure course.
+        self.namespace = 'nsv'
+        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
+            'course:/:/data-vfs:%s' % self.namespace)
+
+        # Modify app_context filesystem to map /data-v to /data-vfs.
+        def after_create(unused_cls, instance):
+            # pylint: disable-msg=protected-access
+            instance._fs = vfs.LocalReadOnlyFileSystem(
+                os.path.join(GeneratedCourse.data_home, 'data-vfs'),
+                home_folder)
+
+        sites.ApplicationContext.after_create = after_create
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        """Clean up."""
+
+        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+        appengine_config.BUNDLE_ROOT = self.bundle_root
+        super(VirtualFileSystemTest, self).tearDown()
