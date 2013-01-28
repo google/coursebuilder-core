@@ -511,10 +511,12 @@ class ApplicationContext(object):
         debug('Data home: %s' % path)
         return path
 
-    def get_template_environ(self, locale):
+    def get_template_environ(self, locale, additional_dirs):
         """Create and configure jinja template evaluation environment."""
         template_dir = self.get_template_home()
         dirs = [template_dir]
+        if additional_dirs:
+            dirs += additional_dirs
         jinja_environment = self.fs.get_jinja_environ(dirs)
 
         i18n.get_i18n().set_locale(locale)

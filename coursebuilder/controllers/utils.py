@@ -133,7 +133,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).__init__(*args, **kwargs)
         self.template_value = {}
 
-    def get_template(self, template_file):
+    def get_template(self, template_file, additional_dirs=None):
         """Computes location of template files for the current namespace."""
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
         self.template_value['is_course_admin'] = Roles.is_course_admin(
@@ -141,7 +141,8 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
         return self.app_context.get_template_environ(
-            self.template_value[COURSE_INFO_KEY]['course']['locale']
+            self.template_value[COURSE_INFO_KEY]['course']['locale'],
+            additional_dirs
             ).get_template(template_file)
 
     def canonicalize_url(self, location):
