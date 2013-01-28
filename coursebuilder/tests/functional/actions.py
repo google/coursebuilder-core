@@ -165,6 +165,8 @@ def assert_equals(expected, actual):
 
 
 def assert_contains(needle, haystack):
+    if isinstance(needle, unicode) and not isinstance(haystack, unicode):
+        haystack = unicode(haystack, 'utf-8')
     if not needle in haystack:
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
@@ -177,6 +179,8 @@ def assert_contains_all_of(needles, haystack):
 
 
 def assert_does_not_contain(needle, haystack):
+    if isinstance(needle, unicode) and not isinstance(haystack, unicode):
+        haystack = unicode(haystack, 'utf-8')
     if needle in haystack:
         raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 

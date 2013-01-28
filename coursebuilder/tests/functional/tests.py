@@ -48,6 +48,18 @@ from google.appengine.api import namespace_manager
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_utf8_datastore(self):
+        """Test writing to and reading from datastore using UTF-8 content."""
+        event = models.EventEntity()
+        event.source = 'test-source'
+        event.user_id = 'test-user-id'
+        event.data = u'Test Data (тест данные)'
+        event.put()
+
+        stored_event = models.EventEntity().get_by_id([event.key().id()])
+        assert 1 == len(stored_event)
+        assert event.data == stored_event[0].data
+
     def assert_queriable(self, entity, name, date_type=datetime.datetime):
         """Create some entities and check that single-property queries work."""
         for i in range(1, 32):
@@ -565,7 +577,7 @@ class StudentAspectTest(actions.TestBase):
         email = 'test_registration@example.com'
         name1 = 'Test Student'
         name2 = 'John Smith'
-        name3 = 'Pavel Simakov'
+        name3 = u'Pavel Simakov (тест данные)'
 
         actions.login(email)
 
@@ -675,7 +687,7 @@ class StudentAspectTest(actions.TestBase):
         # Prepare event.
         request = {}
         request['source'] = 'test-source'
-        request['payload'] = json.dumps({'Alice': 'Bob'})
+        request['payload'] = json.dumps({'Alice': u'Bob (тест данные)'})
 
         # Check XSRF token is required.
         response = self.post('rest/events?%s' % urllib.urlencode(
@@ -690,6 +702,17 @@ class StudentAspectTest(actions.TestBase):
             {'request': json.dumps(request)}), {})
         assert_equals(response.status_int, 200)
         assert not response.body
+
+        # Check event is properly recorded.
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.namespace)
+        try:
+            events = models.EventEntity.all().fetch(1000)
+            assert 1 == len(events)
+            assert_contains(
+                u'Bob (тест данные)', json.loads(events[0].data)['Alice'])
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
         # Clean up.
         config.Registry.db_overrides = {}
@@ -806,7 +829,7 @@ class AssessmentTest(actions.TestBase):
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
 
-        pre_answers = [{'foo': 'bar'}, {'Alice': 'Bob'}]
+        pre_answers = [{'foo': 'bar'}, {'Alice': u'Bob (тест данные)'}]
         pre = {
             'assessment_type': 'precourse', 'score': '1.00',
             'answers': json.dumps(pre_answers)}
@@ -986,15 +1009,15 @@ class GeneratedCourse(object):
 
     @property
     def title(self):
-        return 'Power title-%s Searching with Google (тест данные)' % self.path
+        return u'Power title-%s Searching with Google (тест данные)' % self.path
 
     @property
     def unit_title(self):
-        return 'Interpreting unit-title-%s results (тест данные)' % self.path
+        return u'Interpreting unit-title-%s results (тест данные)' % self.path
 
     @property
     def lesson_title(self):
-        return 'Word lesson-title-%s order matters (тест данные)' % self.path
+        return u'Word lesson-title-%s order matters (тест данные)' % self.path
 
     @property
     def head(self):
@@ -1017,21 +1040,20 @@ class GeneratedCourse(object):
         return 'Walk The Course Named %s' % self.path
 
 
-class MultipleCoursesTest(actions.TestBase):
-    """Test several courses running concurrently."""
+class MultipleCoursesTestBase(actions.TestBase):
+    """Configures several courses for running concurrently."""
 
     def modify_file(self, filename, find, replace):
         """Read, modify and write back the file."""
 
-        lines = open(filename, 'r').readlines()
-        text = ''.join(lines)
+        text = open(filename, 'r').read().decode('utf-8')
 
         # Make sure target text is not in the file.
         assert not replace in text
         text = text.replace(find, replace)
         assert replace in text
 
-        open(filename, 'w').write(text)
+        open(filename, 'w').write(text.encode('utf-8'))
 
     def modify_canonical_course_data(self, course):
         """Modify canonical content by adding unique bits to it."""
@@ -1075,7 +1097,7 @@ class MultipleCoursesTest(actions.TestBase):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         """Configure the test."""
 
-        super(MultipleCoursesTest, self).setUp()
+        super(MultipleCoursesTestBase, self).setUp()
 
         GeneratedCourse.set_data_home(self)
 
@@ -1111,38 +1133,59 @@ class MultipleCoursesTest(actions.TestBase):
 
         del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
         appengine_config.BUNDLE_ROOT = self.bundle_root
-        super(MultipleCoursesTest, self).tearDown()
+        super(MultipleCoursesTestBase, self).tearDown()
 
-    def test_csv_supports_utf8(self):
-        """Test UTF-8 content in CSV file is handled correctly."""
+    def walk_the_course(
+        self, course, first_time=True, is_admin=False, logout=True):
+        """Visit a course as a Student would."""
 
-        title_ru = u'Найди факты быстрее'
+        # Check normal user has no access.
+        actions.login(course.email, is_admin)
 
-        csv_file = os.path.join(self.course_ru.home, 'data/unit.csv')
-        self.modify_file(
-            csv_file, ',Find facts faster,', ',%s,' % title_ru.encode('utf-8'))
-        self.modify_file(
-            os.path.join(self.course_ru.home, 'data/lesson.csv'),
-            ',Find facts faster,', ',%s,' % title_ru.encode('utf-8'))
+        # Test schedule.
+        if first_time:
+            response = self.testapp.get('/courses/%s/preview' % course.path)
+        else:
+            response = self.testapp.get('/courses/%s/course' % course.path)
+        assert_contains(course.title, response.body)
+        assert_contains(course.unit_title, response.body)
+        assert_contains(course.head, response.body)
 
-        rows = []
-        for row in csv.reader(open(csv_file)):
-            rows.append(row)
-        assert title_ru == rows[6][3].decode('utf-8')
+        # Tests static resource.
+        response = self.testapp.get(
+            '/courses/%s/assets/css/main.css' % course.path)
+        assert_contains(course.css, response.body)
 
-        response = self.get('/courses/%s/preview' % self.course_ru.path)
-        assert_contains(title_ru.encode('utf-8'), response.body)
+        if first_time:
+            # Test registration.
+            response = self.get('/courses/%s/register' % course.path)
+            assert_contains(course.title, response.body)
+            assert_contains(course.head, response.body)
+            response.form.set('form01', course.name)
+            response.form.action = '/courses/%s/register' % course.path
+            response = self.submit(response.form)
 
-    def test_i18n(self):
-        """Test course is properly internationalized."""
+            assert_contains(course.title, response.body)
+            assert_contains(course.head, response.body)
+            assert_contains(course.title, response.body)
+            assert_contains(
+                '//groups.google.com/group/My-Course-Announce', response.body)
+            assert_contains(
+                '//groups.google.com/group/My-Course', response.body)
 
-        response = self.get('/courses/%s/preview' % self.course_ru.path)
+        # Check lesson page.
+        response = self.testapp.get(
+            '/courses/%s/unit?unit=1&lesson=5' % course.path)
+        assert_contains(course.title, response.body)
+        assert_contains(course.lesson_title, response.body)
+        assert_contains(course.head, response.body)
 
-        # Assertions below fail because Russian is not being rendered. Why?
-        assert_contains('Вход', response.body)
-        assert_contains('Регистрация', response.body)
-        assert_contains('Расписание', response.body)
-        assert_contains('Курс', response.body)
+        if logout:
+            actions.logout()
+
+
+class MultipleCoursesTest(MultipleCoursesTestBase):
+    """Test several courses running concurrently."""
 
     def test_courses_are_isolated(self):
         """Test each course serves its own assets, views and data."""
@@ -1178,47 +1221,63 @@ class MultipleCoursesTest(actions.TestBase):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-    def walk_the_course(self, course, first_time=True):
-        """Visit a course as a Student would."""
 
-        # Check normal user has no access.
-        actions.login(course.email)
+class I18NTest(MultipleCoursesTestBase):
+    """Test courses running in different locales and containing I18N content."""
 
-        # Test schedule.
-        if first_time:
-            response = self.testapp.get('/courses/%s/preview' % course.path)
-        else:
-            response = self.testapp.get('/courses/%s/course' % course.path)
-        assert_contains(course.title, response.body)
-        assert_contains(course.unit_title, response.body)
-        assert_contains(course.head, response.body)
+    def test_csv_supports_utf8(self):
+        """Test UTF-8 content in CSV file is handled correctly."""
 
-        # Tests static resource.
-        response = self.testapp.get(
-            '/courses/%s/assets/css/main.css' % course.path)
-        assert_contains(course.css, response.body)
+        title_ru = u'Найди факты быстрее'
 
-        if first_time:
-            # Test registration.
-            response = self.get('/courses/%s/register' % course.path)
-            assert_contains(course.title, response.body)
-            assert_contains(course.head, response.body)
-            response.form.set('form01', course.name)
-            response.form.action = '/courses/%s/register' % course.path
-            response = self.submit(response.form)
+        csv_file = os.path.join(self.course_ru.home, 'data/unit.csv')
+        self.modify_file(
+            csv_file, ',Find facts faster,', ',%s,' % title_ru)
+        self.modify_file(
+            os.path.join(self.course_ru.home, 'data/lesson.csv'),
+            ',Find facts faster,', ',%s,' % title_ru)
 
-            assert_contains(course.title, response.body)
-            assert_contains(course.head, response.body)
-            assert_contains('Thank you for registering for', response.body)
+        rows = []
+        for row in csv.reader(open(csv_file)):
+            rows.append(row)
+        assert title_ru == rows[6][3].decode('utf-8')
 
-        # Check lesson page.
-        response = self.testapp.get(
-            '/courses/%s/unit?unit=1&lesson=5' % course.path)
-        assert_contains(course.title, response.body)
-        assert_contains(course.lesson_title, response.body)
-        assert_contains(course.head, response.body)
+        response = self.get('/courses/%s/preview' % self.course_ru.path)
+        assert_contains(title_ru, unicode(response.body, response.charset))
 
+        # Tests student perspective.
+        self.walk_the_course(self.course_ru, True)
+        self.walk_the_course(self.course_ru, False)
+
+        # Test course author dashboard.
+        self.walk_the_course(self.course_ru, False, True, False)
+
+        def assert_page_contains(page_name, text_array):
+            dashboard_url = '/courses/%s/dashboard' % self.course_ru.path
+            response = self.get('%s?action=%s' % (dashboard_url, page_name))
+            for text in text_array:
+                assert_contains(text, unicode(response.body, response.charset))
+
+        assert_page_contains('', [
+            title_ru, self.course_ru.unit_title, self.course_ru.lesson_title])
+        assert_page_contains(
+            'assets', [self.course_ru.title, self.course_ru.home])
+        assert_page_contains(
+            'settings', [self.course_ru.title, self.course_ru.home])
+
+        # Clean up.
         actions.logout()
+
+    def test_i18n(self):
+        """Test course is properly internationalized."""
+
+        response = self.get('/courses/%s/preview' % self.course_ru.path)
+
+        # Assertions below fail because Russian is not being rendered. Why?
+        assert_contains('Вход', response.body)
+        assert_contains('Регистрация', response.body)
+        assert_contains('Расписание', response.body)
+        assert_contains('Курс', response.body)
 
 
 class VirtualFileSystemTest(
