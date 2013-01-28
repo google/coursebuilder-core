@@ -170,8 +170,8 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
             '<h3>Contents of <code>course.yaml</code> file</h3>')
         yaml_content.append('<ol>')
         yaml_lines = self.app_context.fs.open(
-            self.app_context.get_config_filename()).readlines()
-        for line in yaml_lines:
+            self.app_context.get_config_filename()).read().decode('utf-8')
+        for line in yaml_lines.split('\n'):
             yaml_content.append('<li>%s</li>' % cgi.escape(line))
         yaml_content.append('</ol>')
         yaml_content = ''.join(yaml_content)
