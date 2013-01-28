@@ -5,7 +5,7 @@ api_version: 1
 threadsafe: false
 
 env_variables:
-  GCB_PRODUCT_VERSION: '1.2.0'
+  GCB_PRODUCT_VERSION: '1.2.1'
 
 builtins:
 - remote_api: on
