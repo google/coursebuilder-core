@@ -382,9 +382,9 @@ button.gcb-button::-moz-focus-inner {
 
 .gcb-button:hover, .gcb-button:focus {
   border-color: #404040;
-  background-image: -moz-linear-gradient(top,#666,#444);
-  background-image: -webkit-linear-gradient(top,#666,#444);
-  background-image: linear-gradient(top,#666,#444);
+  background-image: -moz-linear-gradient(top,#444,#111);
+  background-image: -webkit-linear-gradient(top,#444,#111);
+  background-image: linear-gradient(top,#444,#111);
 }
 
 .gcb-button:focus {
