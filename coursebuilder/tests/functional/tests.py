@@ -2761,6 +2761,11 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.new_course_title = 'New Course Title'
         self.sdk_path = os.environ.get('GOOGLE_APP_ENGINE_HOME')
+
+        # Find App Engine SDK folder by navigating up four folders from well
+        # known google.appengine.api.memcache.
+        self.sdk_path = os.path.abspath(memcache.__file__).rsplit(os.sep, 5)[0]
+
         self.url_prefix = '/test'
         self.raw = 'course:%s::ns_test' % self.url_prefix
         self.swap(os, 'environ', self.test_environ)
@@ -2884,7 +2889,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.create_archive()
         self.create_empty_course(self.raw)
         zip_archive = zipfile.ZipFile(self.archive_path, 'a')
-        zip_archive.writestr(etl._COURSE_YAML_PATH, 'garbage:\n-contents')
+        zip_archive.writestr(etl._COURSE_YAML_PATH, '{')
         zip_archive.close()
         self.assertRaises(
             SystemExit, etl.main, self.upload_args,

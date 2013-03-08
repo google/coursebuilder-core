@@ -394,9 +394,15 @@ def _remove_bundle_root(path):
 
 def _set_up_sys_path(sdk_path):
     """Sets up sys.path so App Engine/Course Builder imports work."""
+    assert os.path.exists(sdk_path)
     for path in [
-            _get_root_path(), sdk_path, os.path.join(sdk_path, 'lib/webapp2')]:
+            # Find course builder root by navigating up two folders from here.
+            os.path.abspath(__file__).rsplit(os.sep, 3)[0],
+            sdk_path,
+            # Add webapp2 so we can find webapp2_extras.
+            os.path.join(sdk_path, 'lib', 'webapp2')]:
         if path not in sys.path:
+            # Have to insert at head or app engine imports won't resolve.
             sys.path.insert(0, path)
 
 
@@ -429,7 +435,7 @@ def _upload(archive_path, course_url_prefix):
     if course_yaml:
         try:
             yaml.safe_load(course_yaml)
-        except yaml.scanner.ScannerError:
+        except Exception:  # pylint: disable-msg=broad-except
             _die((
                 'Cannot upload archive at %s containing malformed '
                 'course.yaml') % archive_path)
