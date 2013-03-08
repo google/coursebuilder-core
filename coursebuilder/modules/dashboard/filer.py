@@ -118,6 +118,7 @@ class FileManagerAndEditor(ApplicationHandler):
             key, rest_url, exit_url)
 
         template_values = {}
+        template_values['page_title'] = self.format_title('Edit Settings')
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
