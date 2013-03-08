@@ -367,7 +367,8 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable']
+        'inputex-select', 'inputex-string', 'inputex-textarea',
+        'inputex-uneditable']
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
