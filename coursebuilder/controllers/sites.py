@@ -109,6 +109,7 @@ import mimetypes
 import os
 import threading
 import urlparse
+
 import appengine_config
 from models.config import ConfigProperty
 from models.config import Registry
@@ -119,6 +120,9 @@ from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
 import webapp2
 from webapp2_extras import i18n
+
+import utils
+
 from google.appengine.api import namespace_manager
 from google.appengine.ext import zipserve
 
@@ -445,12 +449,19 @@ def set_static_resource_cache_control(handler):
     handler.response.cache_control.max_age = DEFAULT_CACHE_CONTROL_MAX_AGE
 
 
-def set_dynamic_response_headers(handler):
-    """Properly sets response headers for a dynamically-generated response."""
-    handler.response.cache_control.no_cache = True
-    handler.response.cache_control.must_revalidate = True
-    handler.response.expires = DEFAULT_EXPIRY_DATE
-    handler.response.pragma = DEFAULT_PRAGMA
+def set_default_response_headers(handler):
+    """Sets the default headers for outgoing responses."""
+
+    # This conditional is needed for the unit tests to pass, since their
+    # handlers do not have a response attribute.
+    if handler.response:
+        # Only set the headers for dynamic responses. This happens precisely
+        # when the handler is an instance of utils.ApplicationHandler.
+        if isinstance(handler, utils.ApplicationHandler):
+            handler.response.cache_control.no_cache = True
+            handler.response.cache_control.must_revalidate = True
+            handler.response.expires = DEFAULT_EXPIRY_DATE
+            handler.response.pragma = DEFAULT_PRAGMA
 
 
 def make_zip_handler(zipfilename):
@@ -688,10 +699,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             handler.request = self.request
             handler.response = self.response
 
-            # This conditional is needed for the unit tests to pass.
-            if handler.response:
-                set_dynamic_response_headers(handler)
-
             debug('Handler: %s > %s' % (path, handler.__class__.__name__))
             DYNAMIC_HANDLER_COUNT.inc()
             return handler
@@ -706,6 +713,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if not handler:
                 self.error(404)
             else:
+                set_default_response_headers(handler)
                 handler.get()
         finally:
             count_stats(self)
@@ -718,6 +726,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if not handler:
                 self.error(404)
             else:
+                set_default_response_headers(handler)
                 handler.post()
         finally:
             count_stats(self)
@@ -730,6 +739,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if not handler:
                 self.error(404)
             else:
+                set_default_response_headers(handler)
                 handler.put()
         finally:
             count_stats(self)
@@ -742,6 +752,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if not handler:
                 self.error(404)
             else:
+                set_default_response_headers(handler)
                 handler.delete()
         finally:
             count_stats(self)
