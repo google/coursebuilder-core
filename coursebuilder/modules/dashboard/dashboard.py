@@ -153,70 +153,70 @@ class DashboardHandler(
         return ('Course Builder &gt; %s &gt; Dashboard &gt; %s' %
                 (cgi.escape(title), text))
 
+    def _get_edit_link(self, url):
+        return '&nbsp;<a href="%s">[Edit]</a>' % url
+
     def render_course_outline_to_html(self):
         """Renders course outline to HTML."""
         course = courses.Course(self)
         if not course.get_units():
             return []
 
+        is_editable = filer.is_editable_fs(self.app_context)
+
         lines = []
         lines.append('<ul style="list-style: none;">')
         for unit in course.get_units():
             if unit.type == 'A':
-                if filer.is_editable_fs(self.app_context):
+                lines.append('<li>')
+                lines.append(
+                    '<strong><a href="assessment?name=%s">%s</a></strong>' % (
+                        unit.unit_id, cgi.escape(unit.title)))
+                if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_assessment',
                             'key': unit.id})
-                else:
-                    url = 'assessment?name=%s' % unit.unit_id
-                lines.append('<li>')
-                lines.append(
-                    '<strong><a href="%s">%s</a></strong>' % (
-                        url, cgi.escape(unit.title)))
+                    lines.append(self._get_edit_link(url))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'O':
-                if filer.is_editable_fs(self.app_context):
+                lines.append('<li>')
+                lines.append(
+                    '<strong><a href="%s">%s</a></strong>' % (
+                        unit.href, cgi.escape(unit.title)))
+                if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_link',
                             'key': unit.id})
-                else:
-                    url = unit.unit_id
-                lines.append('<li>')
-                lines.append(
-                    '<strong><a href="%s">%s</a></strong>' % (
-                        url, cgi.escape(unit.title)))
+                    lines.append(self._get_edit_link(url))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'U':
-                if filer.is_editable_fs(self.app_context):
+                lines.append('<li>')
+                lines.append(
+                    ('<strong><a href="unit?unit=%s">Unit %s - %s</a>'
+                     '</strong>') % (
+                         unit.unit_id, unit.unit_id, cgi.escape(unit.title)))
+                if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_unit',
                             'key': unit.id})
-                else:
-                    url = 'unit?unit=%s' % unit.unit_id
-
-                lines.append('<li>')
-                lines.append(
-                    '<strong><a href="%s">Unit %s - %s</a></strong>' % (
-                        url, unit.unit_id, cgi.escape(unit.title)))
+                    lines.append(self._get_edit_link(url))
 
                 lines.append('<ol>')
                 for lesson in course.get_lessons(unit.unit_id):
-                    if filer.is_editable_fs(self.app_context):
-                        action_url = self.get_action_url(
-                            'edit_lesson', key=lesson.id)
-                    else:
-                        action_url = 'unit?unit=%s&lesson=%s' % (
-                            unit.unit_id, lesson.id)
                     lines.append(
-                        '<li><a href="%s">%s</a></li>\n' % (
-                            action_url, cgi.escape(lesson.title)))
+                        '<li><a href="unit?unit=%s&lesson=%s">%s</a>\n' % (
+                            unit.unit_id, lesson.id, cgi.escape(lesson.title)))
+                    if is_editable:
+                        url = self.get_action_url('edit_lesson', key=lesson.id)
+                        lines.append(self._get_edit_link(url))
+                    lines.append('</li>')
                 lines.append('</ol>')
                 lines.append('</li>\n')
                 continue
@@ -364,7 +364,7 @@ class DashboardHandler(
     def list_and_format_file_list(
         self, title, subfolder,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
-        href_template='%s', sub_title=None):
+        edit_url_template=None, sub_title=None):
         """Walks files in folders and renders their names in a section."""
 
         lines = []
@@ -372,10 +372,13 @@ class DashboardHandler(
             if prefix and not filename.startswith(prefix):
                 continue
             if links:
-                href = href_template % urllib.quote(filename)
                 lines.append(
-                    '<li><a href="%s">%s</a></li>\n' % (
-                        href, cgi.escape(filename)))
+                    '<li><a href="%s">%s</a>' % (
+                        urllib.quote(filename), cgi.escape(filename)))
+                if edit_url_template:
+                    edit_url = edit_url_template % urllib.quote(filename)
+                    lines.append('&nbsp;<a href="%s">[Edit]</a>' % edit_url)
+                lines.append('</li>\n')
             else:
                 lines.append('<li>%s</li>\n' % cgi.escape(filename))
 
@@ -421,7 +424,7 @@ class DashboardHandler(
             prefix='assets/js/activity-')
         lines += self.list_and_format_file_list(
             'Images & Documents', '/assets/img/', links=True, upload=True,
-            href_template='dashboard?action=delete_asset&uri=%s',
+            edit_url_template='dashboard?action=delete_asset&uri=%s',
             sub_title='< inherited from /assets/img/ >', caption_if_empty=None)
         lines += self.list_and_format_file_list(
             'Cascading Style Sheets', '/assets/css/', links=True,
