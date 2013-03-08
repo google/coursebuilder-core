@@ -112,23 +112,29 @@ class ConfigProperty(object):
     def value(self):
         """Get the latest value from datastore, environment or use default."""
 
-        # Try datastore overrides first.
+        # Try testing overrides.
+        overrides = Registry.test_overrides
+        if overrides and self.name in overrides:
+            return overrides[self.name]
+
+        # Try datastore overrides.
         overrides = Registry.get_overrides()
         if overrides and self.name in overrides:
             return overrides[self.name]
 
-        # Try environment variable overrides second.
+        # Try environment variable overrides.
         has_value, environ_value = self.get_environ_value()
         if has_value:
             return environ_value
 
-        # Use default value last.
+        # Use default value as last resort.
         return self._default_value
 
 
 class Registry(object):
     """Holds all registered properties."""
     registered = {}
+    test_overrides = {}
     db_overrides = {}
     update_interval = DEFAULT_UPDATE_INTERVAL
     last_update_time = 0

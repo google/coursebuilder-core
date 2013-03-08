@@ -26,10 +26,11 @@ courses one must set an environment variable in app.yaml file, for example:
     GCB_COURSES_CONFIG: 'course:/coursea:/courses/a, course:/courseb:/courses/b'
   ...
 
-This variable holds a ',' separated list of rewrite rules. Each rewrite rule
-has three ':' separated parts: the word 'course', the URL prefix, and the file
-system location for the site files. The fourth, optional part, is a course
-namespace name.
+This variable holds a ',' or newline separated list of course entries. Each
+course entry has four ':' separated parts: the word 'course', the URL prefix,
+and the file system location for the site files. If the third part is empty,
+the course assets are stored in a datastore instead of the file system. The
+fourth, optional part, is the name of the course namespace.
 
 The URL prefix specifies, how will the course URL appear in the browser. In the
 example above, the courses will be mapped to http://www.example.com[/coursea]
@@ -41,7 +42,8 @@ course. For each course we expect three sub-folders: 'assets', 'views', and
 layout, the 'assets' and 'views' should contain the course specific files and
 jinja2 templates respectively. In the example above, the course files are
 expected to be placed into folders '/courses/a' and '/courses/b' of your Google
-App Engine installation respectively.
+App Engine installation respectively. If this value is absent a datastore is
+used to store course assets, not the file system.
 
 By default Course Builder handles static '/assets' files using a custom
 handler. You may choose to handle '/assets' files of your course as 'static'
@@ -107,7 +109,11 @@ import mimetypes
 import os
 import threading
 import appengine_config
+from models.config import ConfigProperty
+from models.config import Registry
 from models.counters import PerfCounter
+from models.vfs import AbstractFileSystem
+from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
 import webapp2
 from webapp2_extras import i18n
@@ -115,9 +121,6 @@ import yaml
 from google.appengine.api import namespace_manager
 from google.appengine.ext import zipserve
 
-
-# the name of environment variable that holds rewrite rule definitions
-GCB_COURSES_CONFIG_ENV_VAR_NAME = 'GCB_COURSES_CONFIG'
 
 # base name for all course namespaces
 GCB_BASE_COURSE_NAMESPACE = 'gcb-course'
@@ -177,6 +180,16 @@ HTTP_STATUS_500 = PerfCounter(
 COUNTER_BY_HTTP_CODE = {
     200: HTTP_STATUS_200, 300: HTTP_STATUS_300, 400: HTTP_STATUS_400,
     500: HTTP_STATUS_500}
+
+
+GCB_COURSES_CONFIG = ConfigProperty(
+    'gcb_courses_config', str, (
+        'A \',\' or newline separated list of course entries. '
+        'Each course entry has four \':\' separated parts: the word '
+        '\'course\', the URL prefix, and the file system location for the site '
+        'files. If the third part is empty, the course assets are stored '
+        'in a datastore instead of the file system. The fourth, optional part, '
+        'is the name of the course namespace.'), 'course:/:/', True)
 
 
 def count_stats(handler):
@@ -245,26 +258,13 @@ def debug(message):
         logging.info(message)
 
 
-def make_default_rule():
-    # The default is: one course in the root folder of the None namespace.
-    return ApplicationContext(
-        'course', '/', '/', appengine_config.DEFAULT_NAMESPACE_NAME)
-
-
 def get_all_courses():
     """Reads all course rewrite rule definitions from environment variable."""
-    default = make_default_rule()
-
-    if not GCB_COURSES_CONFIG_ENV_VAR_NAME in os.environ:
-        return [default]
-    var_string = os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
-    if not var_string:
-        return [default]
-
+    rules = GCB_COURSES_CONFIG.value.replace(',', '\n').split('\n')
     slugs = {}
     namespaces = {}
     all_contexts = []
-    for rule in var_string.split(','):
+    for rule in rules:
         rule = rule.strip()
         if not rule:
             continue
@@ -288,7 +288,14 @@ def get_all_courses():
         slug = parts[1]
 
         # validate folder name
-        folder = parts[2]
+        if parts[2]:
+            folder = parts[2]
+            fs = AbstractFileSystem(
+                LocalReadOnlyFileSystem(logical_home_folder=folder))
+        else:
+            folder = '/'
+            fs = AbstractFileSystem(
+                DatastoreBackedFileSystem(logical_home_folder=folder))
 
         # validate or derive namespace
         namespace = appengine_config.DEFAULT_NAMESPACE_NAME
@@ -303,7 +310,7 @@ def get_all_courses():
         namespaces[namespace] = True
 
         all_contexts.append(ApplicationContext(
-            site_type, slug, folder, namespace))
+            site_type, slug, folder, namespace, fs))
     return all_contexts
 
 
@@ -446,7 +453,7 @@ class ApplicationContext(object):
         """Override this method to manipulate freshly created instance."""
         pass
 
-    def __init__(self, site_type, slug, homefolder, namespace, fs=None):
+    def __init__(self, site_type, slug, homefolder, namespace, fs):
         """Creates new application context.
 
         Args:
@@ -463,10 +470,7 @@ class ApplicationContext(object):
         self.slug = slug
         self.homefolder = homefolder
         self.namespace = namespace
-        if fs:
-            self._fs = fs
-        else:
-            self._fs = LocalReadOnlyFileSystem()
+        self._fs = fs
 
         self.after_create(self)
 
@@ -675,6 +679,17 @@ def assert_fails(func):
         raise Exception()
 
 
+def setup_courses(course_config):
+    """Helper method that allows a test to setup courses on the fly."""
+    Registry.test_overrides[GCB_COURSES_CONFIG.name] = course_config
+
+
+def reset_courses():
+    """Cleanup method to complement setup_courses()."""
+    Registry.test_overrides[
+        GCB_COURSES_CONFIG.name] = GCB_COURSES_CONFIG.default_value
+
+
 def test_unprefix():
     assert unprefix('/', '/') == '/'
     assert unprefix('/a/b/c', '/a/b') == '/c'
@@ -688,13 +703,8 @@ def test_rule_definitions():
     # Check that the default site is created when no rules are specified.
     assert len(get_all_courses()) == 1
 
-    # Test that empty definition is ok.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = ''
-    assert len(get_all_courses()) == 1
-
     # Test one rule parsing.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'course:/google/pswg:/sites/pswg')
+    setup_courses('course:/google/pswg:/sites/pswg')
     rules = get_all_courses()
     assert len(get_all_courses()) == 1
     rule = rules[0]
@@ -702,31 +712,31 @@ def test_rule_definitions():
     assert rule.get_home_folder() == '/sites/pswg'
 
     # Test two rule parsing.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'course:/a/b:/c/d, course:/e/f:/g/h')
+    setup_courses('course:/a/b:/c/d, course:/e/f:/g/h')
     assert len(get_all_courses()) == 2
 
     # Test that two of the same slugs are not allowed.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'foo:/a/b:/c/d, bar:/a/b:/c/d')
+    setup_courses('foo:/a/b:/c/d, bar:/a/b:/c/d')
     assert_fails(get_all_courses)
 
     # Test that only 'course' is supported.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'foo:/a/b:/c/d, bar:/e/f:/g/h')
+    setup_courses('foo:/a/b:/c/d, bar:/e/f:/g/h')
     assert_fails(get_all_courses)
 
     # Cleanup.
-    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+    reset_courses()
 
     # Test namespaces.
     set_path_info('/')
     try:
-        os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = 'course:/:/c/d'
+        setup_courses('course:/:/c/d')
         assert ApplicationContext.get_namespace_name_for_request() == (
             'gcb-course-c-d')
     finally:
         unset_path_info()
+
+    # Cleanup.
+    reset_courses()
 
 
 def test_url_to_rule_mapping():
@@ -737,8 +747,7 @@ def test_url_to_rule_mapping():
     assert_mapped('/assets/img/foo.png', '/')
 
     # explicit mapping
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'course:/a/b:/c/d, course:/e/f:/g/h')
+    setup_courses('course:/a/b:/c/d, course:/e/f:/g/h')
 
     assert_mapped('/a/b', '/a/b')
     assert_mapped('/a/b/', '/a/b')
@@ -753,15 +762,14 @@ def test_url_to_rule_mapping():
     assert_mapped('foo', None)
 
     # Cleanup.
-    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+    reset_courses()
 
 
 def test_url_to_handler_mapping_for_course_type():
     """Tests mapping of a URL to a handler for course type."""
 
     # setup rules
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'course:/a/b:/c/d, course:/e/f:/g/h')
+    setup_courses('course:/a/b:/c/d, course:/e/f:/g/h')
 
     # setup helper classes
     class FakeHandler0(object):
@@ -812,7 +820,7 @@ def test_url_to_handler_mapping_for_course_type():
     assert_handled('/a/b/data/units.csv', None)
 
     # Default mapping
-    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+    reset_courses()
     urls = [('/', handler0), ('/foo', handler1), ('/bar', handler2)]
 
     # Positive cases
@@ -832,16 +840,11 @@ def test_url_to_handler_mapping_for_course_type():
     ApplicationRequestHandler.bind([])
 
 
-def test_special_chars():
-    """Test special character encoding."""
-
-    # Test that namespace collisions are detected and are not allowed.
-    os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-        'foo:/a/b:/c/d, bar:/a/b:/c-d')
+def test_namespace_collisions_are_detected():
+    """Test that namespace collisions are detected and are not allowed."""
+    setup_courses('foo:/a/b:/c/d, bar:/a/b:/c-d')
     assert_fails(get_all_courses)
-
-    # Cleanup.
-    del os.environ[GCB_COURSES_CONFIG_ENV_VAR_NAME]
+    reset_courses()
 
 
 def test_path_construction():
@@ -867,7 +870,7 @@ def test_path_construction():
 
 
 def run_all_unit_tests():
-    test_special_chars()
+    test_namespace_collisions_are_detected()
     test_unprefix()
     test_rule_definitions()
     test_url_to_rule_mapping()

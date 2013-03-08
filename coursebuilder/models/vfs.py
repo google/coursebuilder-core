@@ -20,8 +20,8 @@ import os
 import jinja2
 
 
-class AbstractReadOnlyFileSystem(object):
-    """A generic ro file system interface that forwards to an implementation."""
+class AbstractFileSystem(object):
+    """A generic file system interface that forwards to an implementation."""
 
     def __init__(self, impl):
         self._impl = impl
@@ -38,13 +38,21 @@ class AbstractReadOnlyFileSystem(object):
         """Lists all files in a directory."""
         return self._impl.list(dir_name)
 
-    def get_jinja_environ(self):
+    def get_jinja_environ(self, dir_names):
         """Configures jinja environment loaders for this file system."""
-        return self._impl.get_jinja_environ()
+        return self._impl.get_jinja_environ(dir_names)
+
+
+class DatastoreBackedFileSystem(object):
+    """A read-write file system backed by datastore."""
+
+    # TODO(psimakov): complete actual implementation
+    def __init__(self, logical_home_folder=None):
+        self._logical_home_folder = logical_home_folder
 
 
 class LocalReadOnlyFileSystem(object):
-    """A ro file system serving only local files."""
+    """A read-only file system serving only local files."""
 
     def __init__(self, logical_home_folder=None, physical_home_folder=None):
         """Create a new instance of the object.

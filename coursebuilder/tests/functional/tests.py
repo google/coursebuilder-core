@@ -326,8 +326,8 @@ class AdminAspectTest(actions.TestBase):
     def test_multiple_courses(self):
         """Test courses admin page with two courses configured."""
 
-        courses = 'course:/foo:/foo-data, course:/bar:/bar-data:nsbar'
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
+        sites.setup_courses(
+            'course:/foo:/foo-data, course:/bar:/bar-data:nsbar')
 
         email = 'test_multiple_courses@google.com'
 
@@ -347,6 +347,9 @@ class AdminAspectTest(actions.TestBase):
         # Check namespaces.
         assert_contains('gcb-course-foo-data', response.body)
         assert_contains('nsbar', response.body)
+
+        # Clean up.
+        sites.reset_courses()
 
 
 class CourseAuthorAspectTest(actions.TestBase):
@@ -682,7 +685,7 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
 
         # Enable event recording.
-        config.Registry.db_overrides[
+        config.Registry.test_overrides[
             lessons.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
 
         # Prepare event.
@@ -716,7 +719,7 @@ class StudentAspectTest(actions.TestBase):
             namespace_manager.set_namespace(old_namespace)
 
         # Clean up.
-        config.Registry.db_overrides = {}
+        config.Registry.test_overrides = {}
 
     def test_two_students_dont_see_each_other_pages(self):
         """Test a user can't see another user pages."""
@@ -914,16 +917,12 @@ class CourseUrlRewritingTest(
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(CourseUrlRewritingTest, self).setUp()
-
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
-
-        courses = 'course:%s:/:%s' % (self.base, self.namespace)
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
+        sites.setup_courses('course:%s:/:%s' % (self.base, self.namespace))
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
-        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
-
+        sites.reset_courses()
         super(CourseUrlRewritingTest, self).tearDown()
 
     def canonicalize(self, href, response=None):
@@ -1123,16 +1122,14 @@ class MultipleCoursesTestBase(actions.TestBase):
             'locale: \'ru_RU\'')
 
         # Configure courses.
-        courses = '%s, %s, %s' % (
+        sites.setup_courses('%s, %s, %s' % (
             'course:/courses/a:/data-a:nsa',
             'course:/courses/b:/data-b:nsb',
-            'course:/courses/ru:/data-ru:nsru')
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = courses
+            'course:/courses/ru:/data-ru:nsru'))
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         """Clean up."""
-
-        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+        sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
         super(MultipleCoursesTestBase, self).tearDown()
 
@@ -1299,8 +1296,7 @@ class VirtualFileSystemTest(
 
         # Configure course.
         self.namespace = 'nsv'
-        os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME] = (
-            'course:/:/data-vfs:%s' % self.namespace)
+        sites.setup_courses('course:/:/data-vfs:%s' % self.namespace)
 
         # Modify app_context filesystem to map /data-v to /data-vfs.
         def after_create(unused_cls, instance):
@@ -1313,7 +1309,6 @@ class VirtualFileSystemTest(
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         """Clean up."""
-
-        del os.environ[sites.GCB_COURSES_CONFIG_ENV_VAR_NAME]
+        sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
         super(VirtualFileSystemTest, self).tearDown()
