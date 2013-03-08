@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import copy
 import logging
 import os
+import pickle
 import sys
 from tools import verify
 import yaml
@@ -160,6 +161,78 @@ def index_units_and_lessons(course):
                 lesson_index += 1
 
 
+class AbstractCachedObject(object):
+    """Abstract serializable versioned object that can stored in memcache."""
+
+    @classmethod
+    def _make_key(cls):
+        # The course content files may change between deployment. To avoid
+        # reading old cached values by the new version of the application we
+        # add deployment version to the key. Now each version of the application
+        # can put/get its own version of the course and the deployment.
+        return 'course:model:pickle:%s:%s' % (
+            cls.VERSION, os.environ.get('CURRENT_VERSION_ID'))
+
+    @classmethod
+    def new_memento(cls):
+        """Creates new empty memento instance; must be pickle serializable."""
+        raise Exception('Not implemented')
+
+    @classmethod
+    def instance_from_memento(cls, unused_app_context, unused_memento):
+        """Creates instance from serializable memento."""
+        raise Exception('Not implemented')
+
+    @classmethod
+    def memento_from_instance(cls, unused_instance):
+        """Creates serializable memento from instance."""
+        raise Exception('Not implemented')
+
+    @classmethod
+    def load(cls, app_context):
+        """Loads instance from memcache; does not fail on errors."""
+        try:
+            binary_data = MemcacheManager.get(
+                cls._make_key(),
+                namespace=app_context.get_namespace_name())
+            if binary_data:
+                memento = cls.new_memento()
+                memento.deserialize(binary_data)
+                return cls.instance_from_memento(app_context, memento)
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to load object \'%s\' from memcache. %s',
+                cls._make_key(), e)
+            return None
+
+    @classmethod
+    def save(cls, app_context, instance):
+        """Saves instance to memcache."""
+        MemcacheManager.set(
+            cls._make_key(),
+            cls.memento_from_instance(instance).serialize(),
+            namespace=app_context.get_namespace_name())
+
+    @classmethod
+    def delete(cls, app_context):
+        """Deletes instance from memcache."""
+        MemcacheManager.delete(
+            cls._make_key(),
+            namespace=app_context.get_namespace_name())
+
+    def serialize(self):
+        """Saves instance to a pickle representation."""
+        return pickle.dumps(self.__dict__)
+
+    def deserialize(self, binary_data):
+        """Loads instance from a pickle representation."""
+        adict = pickle.loads(binary_data)
+        if not self.version == adict.get('version'):
+            raise Exception('Expected version %s, found %s.' % (
+                self.version, adict.get('version')))
+        self.__dict__.update(adict)
+
+
 class Unit12(object):
     """An object to represent a Unit, Assessment or Link (version 1.2)."""
 
@@ -212,6 +285,34 @@ class Lesson12(object):
         return self._index
 
 
+class CachedCourse12(AbstractCachedObject):
+    """A representation of a Course12 optimized for storing in memcache."""
+
+    VERSION = COURSE_MODEL_VERSION_1_2
+
+    def __init__(self, units=None, lessons=None, unit_id_to_lessons=None):
+        self.version = self.VERSION
+        self.units = units
+        self.lessons = lessons
+        self.unit_id_to_lessons = unit_id_to_lessons
+
+    @classmethod
+    def new_memento(cls):
+        return CachedCourse12()
+
+    @classmethod
+    def instance_from_memento(cls, app_context, memento):
+        return CourseModel12(
+            app_context, units=memento.units, lessons=memento.lessons,
+            unit_id_to_lessons=memento.unit_id_to_lessons)
+
+    @classmethod
+    def memento_from_instance(cls, course):
+        return CachedCourse12(
+            units=course.units, lessons=course.lessons,
+            unit_id_to_lessons=course.unit_id_to_lessons)
+
+
 class CourseModel12(object):
     """A course defined in terms of CSV files (version 1.2)."""
 
@@ -220,10 +321,14 @@ class CourseModel12(object):
     @classmethod
     def load(cls, app_context):
         """Loads course data into a model."""
-        units, lessons = load_csv_course(app_context)
-        if units and lessons:
-            return CourseModel12(app_context, units, lessons)
-        return None
+        course = CachedCourse12.load(app_context)
+        if not course:
+            units, lessons = load_csv_course(app_context)
+            if units and lessons:
+                course = CourseModel12(app_context, units, lessons)
+        if course:
+            CachedCourse12.save(app_context, course)
+        return course
 
     @classmethod
     def _make_unit_id_to_lessons_lookup_dict(cls, lessons):
@@ -236,18 +341,41 @@ class CourseModel12(object):
             unit_id_to_lessons[key].append(lesson)
         return unit_id_to_lessons
 
-    def __init__(self, app_context, units, lessons):
-        self._app_context = app_context
-        self._units = units
-        self._lessons = lessons
-        self._unit_id_to_lessons = self._make_unit_id_to_lessons_lookup_dict(
-            self._lessons)
+    def __init__(
+        self, app_context,
+        units=None, lessons=None, unit_id_to_lessons=None):
 
-        index_units_and_lessons(self)
+        self._app_context = app_context
+        self._units = []
+        self._lessons = []
+        self._unit_id_to_lessons = {}
+
+        if units:
+            self._units = units
+        if lessons:
+            self._lessons = lessons
+        if unit_id_to_lessons:
+            self._unit_id_to_lessons = unit_id_to_lessons
+        else:
+            self._unit_id_to_lessons = (
+                self._make_unit_id_to_lessons_lookup_dict(self._lessons))
+            index_units_and_lessons(self)
 
     @property
     def app_context(self):
         return self._app_context
+
+    @property
+    def units(self):
+        return self._units
+
+    @property
+    def lessons(self):
+        return self._lessons
+
+    @property
+    def unit_id_to_lessons(self):
+        return self._unit_id_to_lessons
 
     def get_units(self):
         return self._units[:]
@@ -342,60 +470,133 @@ class Lesson13(object):
         return self.has_activity
 
 
-class SerializableCourseEnvelope13(object):
-    """A serializable, data-only representation of a Course."""
+class PersistentCourse13(object):
+    """A representation of a Course13 optimized for persistence."""
 
-    def __init__(self):
-        self.version = None
-        self.next_id = None
-        self.units = None
-        self.lessons = None
+    COURSES_FILENAME = 'data/course.json'
 
-    @classmethod
-    def envelope_to_dict(cls, envelope):
-        """Saves an envelope into a dict."""
+    def __init__(self, next_id=None, units=None, lessons=None):
+        self.version = CourseModel13.VERSION
+        self.next_id = next_id
+        self.units = units
+        self.lessons = lessons
+
+    def to_dict(self):
+        """Saves object attributes into a dict."""
         result = {}
-        result['version'] = str(envelope.version)
-        result['next_id'] = int(envelope.next_id)
+        result['version'] = str(self.version)
+        result['next_id'] = int(self.next_id)
 
         units = []
-        for unit in envelope.units:
+        for unit in self.units:
             units.append(transforms.instance_to_dict(unit))
         result['units'] = units
 
         lessons = []
-        for lesson in envelope.lessons:
+        for lesson in self.lessons:
             lessons.append(transforms.instance_to_dict(lesson))
         result['lessons'] = lessons
 
         return result
 
-    @classmethod
-    def dict_to_envelope(cls, adict):
-        """Loads envelope data from the dict."""
-        envelope = SerializableCourseEnvelope13()
-        envelope.version = str(adict.get('version'))
-        envelope.next_id = int(adict.get('next_id'))
+    def _from_dict(self, adict):
+        """Loads instance attributes from the dict."""
+        self.next_id = int(adict.get('next_id'))
 
-        envelope.units = []
+        self.units = []
         unit_dicts = adict.get('units')
         if unit_dicts:
             for unit_dict in unit_dicts:
                 unit = Unit13()
                 transforms.dict_to_instance(unit_dict, unit)
-                envelope.units.append(unit)
+                self.units.append(unit)
 
-        envelope.lessons = []
+        self.lessons = []
         lesson_dicts = adict.get('lessons')
         if lesson_dicts:
             for lesson_dict in lesson_dicts:
                 lesson = Lesson13()
                 transforms.dict_to_instance(lesson_dict, lesson)
-                envelope.lessons.append(lesson)
+                self.lessons.append(lesson)
 
-        envelope.unit_id_to_lesson_ids = adict.get('unit_id_to_lesson_ids')
+    @classmethod
+    def save(cls, app_context, course):
+        """Saves course to datastore."""
+        persistent = PersistentCourse13(
+            next_id=course.next_id,
+            units=course.units, lessons=course.lessons)
 
-        return envelope
+        fs = app_context.fs.impl
+        filename = fs.physical_to_logical(cls.COURSES_FILENAME)
+        app_context.fs.put(filename, vfs.FileStreamWrapped(
+            None, persistent.serialize()))
+
+    @classmethod
+    def load(cls, app_context):
+        """Loads course from datastore."""
+        fs = app_context.fs.impl
+        filename = fs.physical_to_logical(cls.COURSES_FILENAME)
+        if app_context.fs.isfile(filename):
+            persistent = PersistentCourse13()
+            persistent.deserialize(app_context.fs.get(filename))
+            return CourseModel13(
+                app_context, next_id=persistent.next_id,
+                units=persistent.units, lessons=persistent.lessons)
+        return None
+
+    def serialize(self):
+        """Saves instance to a JSON representation."""
+        adict = self.to_dict()
+        json_text = transforms.dumps(adict)
+        return json_text.encode('utf-8')
+
+    def deserialize(self, binary_data):
+        """Loads instance from a JSON representation."""
+        json_text = binary_data.decode('utf-8')
+        adict = transforms.loads(json_text)
+        if not self.version == adict.get('version'):
+            raise Exception('Expected version %s, found %s.' % (
+                self.version, adict.get('version')))
+        self._from_dict(adict)
+
+
+class CachedCourse13(AbstractCachedObject):
+    """A representation of a Course12 optimized for storing in memcache."""
+
+    VERSION = COURSE_MODEL_VERSION_1_3
+
+    def __init__(
+        self, next_id=None, units=None, lessons=None,
+        unit_id_to_lesson_ids=None):
+
+        self.version = self.VERSION
+        self.next_id = next_id
+        self.units = units
+        self.lessons = lessons
+
+        # This is almost the same as PersistentCourse13 above, but it also
+        # stores additional indexes used for performance optimizations. There
+        # is no need to persist these indexes in durable storage, but it is
+        # nice to have them in memcache.
+        self.unit_id_to_lesson_ids = unit_id_to_lesson_ids
+
+    @classmethod
+    def new_memento(cls):
+        return CachedCourse13()
+
+    @classmethod
+    def instance_from_memento(cls, app_context, memento):
+        return CourseModel13(
+            app_context, next_id=memento.next_id,
+            units=memento.units, lessons=memento.lessons,
+            unit_id_to_lesson_ids=memento.unit_id_to_lesson_ids)
+
+    @classmethod
+    def memento_from_instance(cls, course):
+        return CachedCourse13(
+            next_id=course.next_id,
+            units=course.units, lessons=course.lessons,
+            unit_id_to_lesson_ids=course.unit_id_to_lesson_ids)
 
 
 class CourseModel13(object):
@@ -403,48 +604,15 @@ class CourseModel13(object):
 
     VERSION = COURSE_MODEL_VERSION_1_3
 
-    # A logical filename where we persist courses data."""
-    COURSES_FILENAME = 'data/course.json'
-
-    # The course content files may change between deployment. To avoid reading
-    # old cached values by the new version of the application we add deployment
-    # version to the key. Now each version of the application can put/get its
-    # own version of the course.
-    memcache_key = 'course-%s' % os.environ.get('CURRENT_VERSION_ID')
-
-    @classmethod
-    def assert_envelope_version(cls, envelope):
-        if cls.VERSION != envelope.version:
-            raise Exception(
-                'Unsupported course version %s, expected %s.' % (
-                    envelope.version, cls.VERSION))
-
     @classmethod
     def load(cls, app_context):
-        """Loads course from memcache or the fs."""
-        envelope = None
-        try:
-            binary_data = MemcacheManager.get(
-                cls.memcache_key, namespace=app_context.get_namespace_name())
-            if binary_data:
-                envelope = cls._deserialize(binary_data)
-                cls.assert_envelope_version(envelope)
-        except Exception as e:  # pylint: disable-msg=broad-except
-            logging.error(
-                'Failed to load course \'%s\' from memcache. %s',
-                cls.memcache_key, e)
-
-        if not envelope:
-            fs = app_context.fs.impl
-            filename = fs.physical_to_logical(cls.COURSES_FILENAME)
-            if app_context.fs.isfile(filename):
-                envelope = envelope = cls._deserialize(
-                    app_context.fs.get(filename))
-                cls.assert_envelope_version(envelope)
-                if envelope:
-                    return CourseModel13(app_context, envelope)
-
-        return None
+        """Loads course from memcache or persistence."""
+        course = CachedCourse13.load(app_context)
+        if not course:
+            course = PersistentCourse13.load(app_context)
+        if course:
+            CachedCourse13.save(app_context, course)
+        return course
 
     @classmethod
     def _make_unit_id_to_lessons_lookup_dict(cls, lessons):
@@ -457,23 +625,48 @@ class CourseModel13(object):
             unit_id_to_lesson_ids[key].append(str(lesson.lesson_id))
         return unit_id_to_lesson_ids
 
-    def __init__(self, app_context, envelope=None):
+    def __init__(
+        self, app_context, next_id=None, units=None, lessons=None,
+        unit_id_to_lesson_ids=None):
+
+        # Init default values.
         self._app_context = app_context
+        self._next_id = 1  # a counter for creating sequential entity ids
         self._units = []
         self._lessons = []
         self._unit_id_to_lesson_ids = {}
 
-        # a counter for creating sequential entity ids
-        self._next_id = 1
+        # Set provided values.
+        if next_id:
+            self._next_id = next_id
+        if units:
+            self._units = units
+        if lessons:
+            self._lessons = lessons
+        if unit_id_to_lesson_ids:
+            self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
+        else:
+            self._index()
 
-        if envelope:
-            self.assert_envelope_version(envelope)
+    @property
+    def app_context(self):
+        return self._app_context
 
-            self._next_id = envelope.next_id
-            self._units = envelope.units
-            self._lessons = envelope.lessons
+    @property
+    def next_id(self):
+        return self._next_id
 
-        self._index()
+    @property
+    def units(self):
+        return self._units
+
+    @property
+    def lessons(self):
+        return self._lessons
+
+    @property
+    def unit_id_to_lesson_ids(self):
+        return self._unit_id_to_lesson_ids
 
     def _get_next_id(self):
         """Allocates next id in sequence."""
@@ -487,46 +680,11 @@ class CourseModel13(object):
             self._lessons)
         index_units_and_lessons(self)
 
-    @classmethod
-    def _serialize(cls, envelope):
-        """Saves envelope to a binary representation."""
-        adict = SerializableCourseEnvelope13.envelope_to_dict(envelope)
-        json_text = transforms.dumps(adict)
-        return json_text.encode('utf-8')
-
-    @classmethod
-    def _deserialize(cls, binary_data):
-        """Loads an envelope from a binary representation."""
-        json_text = binary_data.decode('utf-8')
-        adict = transforms.loads(json_text)
-        return SerializableCourseEnvelope13.dict_to_envelope(adict)
-
-    def _make_envelope(self):
-        """Create an envelop for current object instance."""
-        envelope = SerializableCourseEnvelope13()
-        envelope.version = self.VERSION
-        envelope.next_id = self._next_id
-        envelope.units = self._units
-        envelope.lessons = self._lessons
-        envelope.unit_id_to_lesson_ids = self._unit_id_to_lesson_ids
-        return envelope
-
     def save(self):
-        """Saves this model to fs."""
-        binary_data = self._serialize(self._make_envelope())
-
-        fs = self._app_context.fs.impl
-        filename = fs.physical_to_logical(self.COURSES_FILENAME)
-        self._app_context.fs.put(
-            filename, vfs.FileStreamWrapped(None, binary_data))
-
-        MemcacheManager.delete(
-            self.memcache_key,
-            namespace=self._app_context.get_namespace_name())
-
-    @property
-    def app_context(self):
-        return self._app_context
+        """Saves course to datastore and memcache."""
+        self._index()
+        PersistentCourse13.save(self._app_context, self)
+        CachedCourse13.delete(self._app_context)
 
     def get_units(self):
         return self._units[:]
@@ -881,10 +1039,10 @@ class CourseModel13(object):
 
     def to_json(self):
         """Creates JSON representation of this instance."""
-        adict = SerializableCourseEnvelope13.envelope_to_dict(
-            self._make_envelope())
+        persistent = PersistentCourse13(
+            next_id=self._next_id, units=self._units, lessons=self._lessons)
         return transforms.dumps(
-            adict,
+            persistent.to_dict(),
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
 

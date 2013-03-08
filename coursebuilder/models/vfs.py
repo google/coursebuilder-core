@@ -25,6 +25,12 @@ from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 
+# We want to use memcache for both objects that exist and do not exist in the
+# datastore. If object exists we cache its instance, if object does not exist
+# we cache this object below.
+NO_OBJECT = {}
+
+
 class AbstractFileSystem(object):
     """A generic file system interface that forwards to an implementation."""
 
@@ -235,7 +241,16 @@ class DatastoreBackedFileSystem(object):
 
         Returns:
             A new instance of the object.
+
+        Raises:
+            Exception: if invalid inherits_from is given.
         """
+
+        # We cache files loaded via inherited fs; make sure they don't change.
+        if inherits_from and not isinstance(
+                inherits_from, LocalReadOnlyFileSystem):
+            raise Exception('Can only inherit from LocalReadOnlyFileSystem.')
+
         self._ns = ns
         self._logical_home_folder = logical_home_folder
         self._inherits_from = inherits_from
@@ -321,6 +336,8 @@ class DatastoreBackedFileSystem(object):
             self.make_key(filename), namespace=self._ns)
         if result:
             return result
+        if NO_OBJECT == result:
+            return None
 
         # Load from a datastore.
         metadata = FileMetadataEntity.get_by_key_name(filename)
@@ -332,11 +349,22 @@ class DatastoreBackedFileSystem(object):
                     self.make_key(filename), result, namespace=self._ns)
                 return result
 
+        result = None
+
         # Load from parent fs.
         if self._inherits_from and self._can_inherit(filename):
-            return self._inherits_from.get(afilename)
+            result = self._inherits_from.get(afilename)
 
-        return None
+        # Cache result.
+        if result:
+            result = FileStreamWrapped(metadata, result.read())
+            MemcacheManager.set(
+                self.make_key(filename), result, namespace=self._ns)
+        else:
+            MemcacheManager.set(
+                self.make_key(filename), NO_OBJECT, namespace=self._ns)
+
+        return result
 
     @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=True):
@@ -382,17 +410,26 @@ class DatastoreBackedFileSystem(object):
             self.make_key(filename), namespace=self._ns)
         if result:
             return True
+        if NO_OBJECT == result:
+            return False
 
         # Check datastore.
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             return True
 
+        result = False
+
         # Check with parent fs.
         if self._inherits_from and self._can_inherit(filename):
-            return self._inherits_from.isfile(afilename)
+            result = self._inherits_from.isfile(afilename)
 
-        return False
+        # Put NO_OBJECT marker into memcache to avoid repeated lookups.
+        if not result:
+            MemcacheManager.set(
+                self.make_key(filename), NO_OBJECT, namespace=self._ns)
+
+        return result
 
     def list(self, dir_name):
         """Lists all files in a directory by using datastore query."""

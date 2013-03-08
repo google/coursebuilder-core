@@ -49,6 +49,7 @@ from actions import assert_contains
 from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
+from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 
 
@@ -64,6 +65,12 @@ courses.Course.create_new_default_course = (
 
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
+
+    def test_response_content_type_is_application_json_in_utf_8(self):
+        response = self.testapp.get(
+            '/rest/config/item?key=gcb_config_update_interval_sec')
+        self.assertEqual(
+            'application/json, charset=utf-8', response.headers['Content-Type'])
 
     def test_xsrf_token_manager(self):
         """Test XSRF token operations."""
@@ -114,8 +121,6 @@ class InfrastructureTest(actions.TestBase):
 
         # Setup courses.
         sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
-        config.Registry.test_overrides[
-            models.CAN_USE_MEMCACHE.name] = True
 
         # Validate the courses before import.
         all_courses = sites.get_all_courses()
@@ -170,8 +175,6 @@ class InfrastructureTest(actions.TestBase):
 
         # Setup courses.
         sites.setup_courses('course:/test::ns_test, course:/:/')
-        config.Registry.test_overrides[
-            models.CAN_USE_MEMCACHE.name] = True
 
         # Add several units.
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
@@ -428,15 +431,11 @@ class InfrastructureTest(actions.TestBase):
         assert vfs.stream_to_string(stored) == foo_text
 
         # Check delete.
-        for can_use_memcache in [True, False]:
-            del_file = os.path.join('/', 'memcache.test')
-            config.Registry.test_overrides[
-                models.CAN_USE_MEMCACHE.name] = can_use_memcache
-            fs.put(del_file, vfs.string_to_stream(u'test'))
-            assert fs.isfile(del_file)
-            fs.delete(del_file)
-            assert not fs.isfile(del_file)
-            config.Registry.test_overrides = {}
+        del_file = os.path.join('/', 'memcache.test')
+        fs.put(del_file, vfs.string_to_stream(u'test'))
+        assert fs.isfile(del_file)
+        fs.delete(del_file)
+        assert not fs.isfile(del_file)
 
         # Check open or delete of non-existent does not fail.
         assert not fs.open('/foo/bar/baz')
@@ -444,14 +443,9 @@ class InfrastructureTest(actions.TestBase):
 
         # Check new content fully overrides old (with and without memcache).
         test_file = os.path.join('/', 'memcache.test')
-        for can_use_memcache in [True, False]:
-            config.Registry.test_overrides[
-                models.CAN_USE_MEMCACHE.name] = can_use_memcache
-            test_text = u'yes memcache' if can_use_memcache else u'no memcache'
-            fs.put(test_file, vfs.string_to_stream(test_text))
-            stored = fs.open(test_file)
-            assert vfs.stream_to_string(stored) == test_text
-            config.Registry.test_overrides = {}
+        fs.put(test_file, vfs.string_to_stream(u'test text'))
+        stored = fs.open(test_file)
+        assert u'test text' == vfs.stream_to_string(stored)
         fs.delete(test_file)
 
         # Check file existence.
@@ -2403,6 +2397,81 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # Clean up.
         sites.reset_courses()
 
+    def test_imported_course_performace(self):
+        """Tests various pages of the imported course."""
+        self.import_sample_course()
+
+        # Install a clone on the '/' so all the tests will treat it as normal
+        # sample course.
+        sites.setup_courses('course:/::ns_test')
+        self.namespace = 'ns_test'
+
+        # Enable memcache.
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['now_available'] = True
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        def custom_inc(unused_increment=1, context=None):
+            """A custom inc() function for cache miss counter."""
+            self.keys.append(context)
+            self.count += 1
+
+        def assert_cached(url, assert_text, cache_miss_allowed=0):
+            """Checks that specific URL supports caching."""
+            memcache.flush_all()
+
+            self.keys = []
+            self.count = 0
+
+            # Expect cache misses first time we load page.
+            cache_miss_before = self.count
+            response = self.get(url)
+            assert_contains(assert_text, response.body)
+            assert cache_miss_before != self.count
+
+            # Expect no cache misses first time we load page.
+            self.keys = []
+            cache_miss_before = self.count
+            response = self.get(url)
+            assert_contains(assert_text, response.body)
+            cache_miss_actual = self.count - cache_miss_before
+            if cache_miss_actual != cache_miss_allowed:
+                raise Exception(
+                    'Expected %s cache misses, got %s. Keys are:\n%s' % (
+                        cache_miss_allowed, cache_miss_actual,
+                        '\n'.join(self.keys)))
+
+        old_inc = models.CACHE_MISS.inc
+        models.CACHE_MISS.inc = custom_inc
+
+        # Walk the site.
+        email = 'test_units_lessons@google.com'
+        name = 'Test Units Lessons'
+
+        assert_cached('preview', 'Putting it all together')
+        actions.login(email, True)
+        assert_cached('preview', 'Putting it all together')
+        actions.register(self, name)
+        assert_cached(
+            'unit?unit=9', 'When search results suggest something new')
+        assert_cached(
+            'unit?unit=9&lesson=12', 'Understand options for different media')
+
+        # Clean up.
+        models.CACHE_MISS.inc = old_inc
+        sites.ApplicationContext.get_environ = get_environ_old
+        config.Registry.test_overrides = {}
+        sites.reset_courses()
+
     def test_imported_course(self):
         """Tests various pages of the imported course."""
         # TODO(psimakov): Ideally, this test class should run all aspect tests
@@ -2542,16 +2611,6 @@ class EtlRemoteEnvironmentTestCase(actions.TestBase):
         remote.Environment('mycourse', 'localhost:8080').establish()
 
 
-class SecurityTest(actions.TestBase):
-    """Run all security-related tests."""
-
-    def test_response_content_type_is_application_json_in_utf_8(self):
-        response = self.testapp.get(
-            '/rest/config/item?key=gcb_config_update_interval_sec')
-        self.assertEqual(
-            'application/json, charset=utf-8', response.headers['Content-Type'])
-
-
 class CourseUrlRewritingTest(CourseUrlRewritingTestBase):
     """Run all existing tests using '/courses/pswg' base URL rewrite rules."""
 
@@ -2560,11 +2619,27 @@ class VirtualFileSystemTest(VirtualFileSystemTestBase):
     """Run all existing tests using virtual local file system."""
 
 
+class MemcacheTestBase(actions.TestBase):
+    """Executes all tests with memcache enabled."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(MemcacheTestBase, self).setUp()
+        config.Registry.test_overrides = {models.CAN_USE_MEMCACHE.name: True}
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        config.Registry.test_overrides = {}
+        super(MemcacheTestBase, self).setUp()
+
+
+class MemcacheTest(MemcacheTestBase):
+    """Executes all tests with memcache enabled."""
+
+
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
     StaticHandlerTest, AdminAspectTest)
 
-
+MemcacheTest.__bases__ += (InfrastructureTest,) + ALL_COURSE_TESTS
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS
 VirtualFileSystemTest.__bases__ += ALL_COURSE_TESTS
 DatastoreBackedSampleCourseTest.__bases__ += ALL_COURSE_TESTS

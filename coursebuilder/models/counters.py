@@ -27,7 +27,8 @@ class PerfCounter(object):
 
         Registry.registered[self.name] = self
 
-    def inc(self, increment=1):
+    def inc(
+        self, increment=1, context=None):  # pylint: disable-msg=unused-argument
         """Increments value by a given increment."""
         self._value += increment
 

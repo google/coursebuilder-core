@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import logging
 import appengine_config
 from config import ConfigProperty
 from counters import PerfCounter
@@ -24,6 +25,11 @@ from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
 
+
+# We want to use memcache for both objects that exist and do not exist in the
+# datastore. If object exists we cache its instance, if object does not exist
+# we cache this object below.
+NO_OBJECT = {}
 
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 5
@@ -63,10 +69,15 @@ class MemcacheManager(object):
         if not namespace:
             namespace = appengine_config.DEFAULT_NAMESPACE_NAME
         value = memcache.get(key, namespace=namespace)
-        if value:
+
+        # We store some objects in memcache that don't evaluate to True, but are
+        # real objects, '{}' for example. Count a cache miss only in a case when
+        # an object is None.
+        if value != None:  # pylint: disable-msg=g-equals-none
             CACHE_HIT.inc()
         else:
-            CACHE_MISS.inc()
+            logging.info('Cache miss, key: %s. %s', key, Exception())
+            CACHE_MISS.inc(context=key)
         return value
 
     @classmethod
@@ -98,16 +109,21 @@ class Student(BaseEntity):
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
 
+    @classmethod
+    def _memcache_key(cls, key):
+        """Makes a memcache key from primary key."""
+        return 'entity:student:%s' % key
+
     def put(self):
         """Do the normal put() and also add the object to memcache."""
         result = super(Student, self).put()
-        MemcacheManager.set(self.key().name(), self)
+        MemcacheManager.set(self._memcache_key(self.key().name()), self)
         return result
 
     def delete(self):
         """Do the normal delete() and also remove the object from memcache."""
         super(Student, self).delete()
-        MemcacheManager.delete(self.key().name())
+        MemcacheManager.delete(self._memcache_key(self.key().name()))
 
     @classmethod
     def get_by_email(cls, email):
@@ -115,10 +131,16 @@ class Student(BaseEntity):
 
     @classmethod
     def get_enrolled_student_by_email(cls, email):
-        student = MemcacheManager.get(email)
+        """Returns enrolled student or None."""
+        student = MemcacheManager.get(cls._memcache_key(email))
+        if NO_OBJECT == student:
+            return None
         if not student:
             student = Student.get_by_email(email)
-            MemcacheManager.set(email, student)
+            if student:
+                MemcacheManager.set(cls._memcache_key(email), student)
+            else:
+                MemcacheManager.set(cls._memcache_key(email), NO_OBJECT)
         if student and student.is_enrolled:
             return student
         else:
@@ -191,6 +213,11 @@ class StudentPropertyEntity(BaseEntity):
     value = db.TextProperty()
 
     @classmethod
+    def _memcache_key(cls, key):
+        """Makes a memcache key from primary key."""
+        return 'entity:student_property:%s' % key
+
+    @classmethod
     def create_key(cls, student_id, property_name):
         return '%s-%s' % (student_id, property_name)
 
@@ -203,18 +230,25 @@ class StudentPropertyEntity(BaseEntity):
     def put(self):
         """Do the normal put() and also add the object to memcache."""
         result = super(StudentPropertyEntity, self).put()
-        MemcacheManager.set(self.key().name(), self)
+        MemcacheManager.set(self._memcache_key(self.key().name()), self)
         return result
 
     def delete(self):
         """Do the normal delete() and also remove the object from memcache."""
         super(Student, self).delete()
-        MemcacheManager.delete(self.key().name())
+        MemcacheManager.delete(self._memcache_key(self.key().name()))
 
     @classmethod
     def get(cls, student, property_name):
+        """Loads student property."""
         key = cls.create_key(student.user_id, property_name)
-        value = MemcacheManager.get(key)
+        value = MemcacheManager.get(cls._memcache_key(key))
+        if NO_OBJECT == value:
+            return None
         if not value:
             value = cls.get_by_key_name(key)
+            if value:
+                MemcacheManager.set(cls._memcache_key(key), value)
+            else:
+                MemcacheManager.set(cls._memcache_key(key), NO_OBJECT)
         return value
