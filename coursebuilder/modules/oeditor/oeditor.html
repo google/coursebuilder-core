@@ -44,6 +44,9 @@
     font-weight: bold;
     padding: 4px;
   }
+  div.split-from-main-group-parent {
+    margin: 0 0 20px 70px;
+  }
 
   div.inputEx-Field {
     width: 500px;
@@ -265,6 +268,23 @@
     return div;
   }
 
+  /**
+   * If there is a form element marked with class 'split-from-main-group'
+   * then this is pulled out of the fieldset and inserted between the fieldset
+   * and the button bar.
+   */
+  function moveMarkedFormElementsOutOfFieldset(Y) {
+    var splitFromMainGroup = Y.one('div.split-from-main-group');
+    if (splitFromMainGroup != null) {
+      // InputEx puts the class name on the div which contains the input element
+      // but we really want to work with the parent.
+      var splitFromMainGroupParent = splitFromMainGroup.get('parentNode');
+      splitFromMainGroupParent.addClass('split-from-main-group-parent');
+      Y.one('#cb-oeditor-form').insertBefore(splitFromMainGroupParent,
+        Y.one('#cb-oeditor-form > div.inputEx-Form-buttonBar'));
+    }
+  }
+
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
   cbShowMsg("Loading...");
@@ -276,6 +296,7 @@
   cb_global.get_url = '{{ get_url|safe }}';
   cb_global.save_url = '{{ save_url|safe }}';
   cb_global.save_args = {{ save_args|safe }};
+  cb_global.exit_button_caption = '{{ exit_button_caption|safe }}';
   cb_global.exit_url = '{{ exit_url|safe }}';
   cb_global.save_method = '{{ save_method }}';
   cb_global.auto_return = {% if auto_return %}true{% else %}false{% endif %};
@@ -388,7 +409,7 @@
       }};
 
       // close button
-      close_button = {type: 'link', value: 'Close', onClick:function(e) {
+      close_button = {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
           if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
               confirm("Abandon all changes?")) {
             window.location = cb_global.exit_url;
@@ -528,6 +549,8 @@
       inputExDefinition.parentEl = 'formContainer';
       cb_global.form = new Y.inputEx.Form(inputExDefinition);
       cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
+
+      moveMarkedFormElementsOutOfFieldset(Y);
 
       // async request data for the object being edited
       Y.io(cb_global.get_url, {

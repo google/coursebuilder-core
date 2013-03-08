@@ -65,7 +65,8 @@ class ObjectEditor(object):
         save_method='put',
         delete_url=None, delete_method='post',
         auto_return=False, read_only=False,
-        required_modules=None, save_button_caption='Save'):
+        required_modules=None, save_button_caption='Save',
+        exit_button_caption='Close'):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -85,6 +86,7 @@ class ObjectEditor(object):
             read_only: optional flag; if set, removes Save and Delete operations
             required_modules: list of inputex modules required for this editor
             save_button_caption: a caption for the 'Save' button
+            exit_button_caption: a caption for the 'Close' button
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
@@ -112,6 +114,7 @@ class ObjectEditor(object):
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
             'save_url': post_url,
             'save_args': transforms.dumps(post_args),
+            'exit_button_caption': exit_button_caption,
             'exit_url': exit_url,
             'required_modules': '"%s"' % '","'.join(
                 COMMON_REQUIRED_MODULES + required_modules),
@@ -131,12 +134,15 @@ class ObjectEditor(object):
 
 
 def create_bool_select_annotation(
-    keys_list, label, true_label, false_label, description=None):
+    keys_list, label, true_label, false_label, class_name=None,
+    description=None):
     """Creates inputex annotation to display bool type as a select."""
     properties = {
         'label': label, 'choices': [
             {'value': True, 'label': true_label},
             {'value': False, 'label': false_label}]}
+    if class_name:
+        properties['className'] = class_name
     if description:
         properties['description'] = description
     return (keys_list, {'type': 'select', '_inputex': properties})

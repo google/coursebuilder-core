@@ -30,6 +30,7 @@ from models import transforms
 from models import vfs
 from modules.oeditor import oeditor
 import yaml
+import unit_lesson_editor
 from google.appengine.api import users
 
 
@@ -90,7 +91,8 @@ class FileManagerAndEditor(ApplicationHandler):
             FilesItemRESTHandler.SCHEMA_JSON,
             FilesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url,
-            required_modules=FilesItemRESTHandler.REQUIRED_MODULES)
+            required_modules=FilesItemRESTHandler.REQUIRED_MODULES,
+            exit_button_caption='Cancel')
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
@@ -107,7 +109,8 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            '', rest_url, exit_url, save_method='upload', auto_return=True,
+            '', rest_url, exit_url, save_method='upload',
+            exit_button_caption='Cancel', auto_return=True,
             required_modules=AssetItemRESTHandler.REQUIRED_MODULES,
             save_button_caption='Upload')
 
@@ -170,8 +173,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
             'label': 'Encoding', '_type': 'uneditable'}),
         (['properties', 'content', '_inputex'], {
             'label': 'Content', '_type': 'text'}),
-        oeditor.create_bool_select_annotation(
-            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+        unit_lesson_editor.create_status_annotation()]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-textarea', 'inputex-select',

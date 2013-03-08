@@ -40,6 +40,12 @@ import filer
 # nested arrayable polymorphic attributes is a pain...
 
 
+def create_status_annotation():
+    return oeditor.create_bool_select_annotation(
+        ['properties', 'is_draft'], 'Status', 'Private', 'Public',
+        class_name='split-from-main-group')
+
+
 class CourseOutlineRights(object):
     """Manages view/edit rights for course outline."""
 
@@ -84,6 +90,7 @@ class UnitLessonEditor(ApplicationHandler):
             None, rest_url, exit_url,
             auto_return=True,
             save_button_caption='Import',
+            exit_button_caption='Cancel',
             required_modules=ImportCourseRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
@@ -103,7 +110,8 @@ class UnitLessonEditor(ApplicationHandler):
             UnitLessonTitleRESTHandler.SCHEMA_JSON,
             UnitLessonTitleRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url,
-            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES)
+            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES,
+            exit_button_caption='Cancel')
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Course Outline')
@@ -174,6 +182,7 @@ class UnitLessonEditor(ApplicationHandler):
             annotations_dict,
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
+            exit_button_caption='Cancel',
             read_only=not filer.is_editable_fs(self.app_context),
             required_modules=rest_handler_cls.REQUIRED_MODULES)
 
@@ -324,8 +333,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        oeditor.create_bool_select_annotation(
-            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+        create_status_annotation()]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable']
@@ -373,8 +381,7 @@ class LinkRESTHandler(CommonUnitRESTHandler):
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'url', '_inputex'], {'label': 'URL'}),
-        oeditor.create_bool_select_annotation(
-            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+        create_status_annotation()]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable']
@@ -525,8 +532,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
         (['properties', 'content', '_inputex'], {'label': 'Content'}),
-        oeditor.create_bool_select_annotation(
-            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+        create_status_annotation()]
 
     REQUIRED_MODULES = [
         'inputex-select', 'inputex-string', 'inputex-textarea',
@@ -708,7 +714,8 @@ class LessonRESTHandler(BaseRESTHandler):
                 "type": "string", "format": "html", "optional": true},
             "notes" : {"type": "string", "optional": true},
             "activity_title" : {"type": "string", "optional": true},
-            "activity": {"type": "string", "format": "text", "optional": true}
+            "activity": {"type": "string", "format": "text", "optional": true},
+            "is_draft": {"type": "boolean"}
             }
     }
     """
@@ -741,7 +748,8 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'activity_title', '_inputex'], {
                 'label': 'Activity Title'}),
             (['properties', 'activity', '_inputex'], {
-                'label': 'Activity'})]
+                'label': 'Activity'}),
+            create_status_annotation()]
 
     def get(self):
         """Handles GET REST verb and returns lesson object as JSON payload."""
@@ -771,7 +779,9 @@ class LessonRESTHandler(BaseRESTHandler):
             'video': lesson.video,
             'notes': lesson.notes,
             'activity_title': lesson.activity_title,
-            'activity': activity}
+            'activity': activity,
+            'is_draft': not lesson.now_available
+            }
 
         transforms.send_json_response(
             self, 200, 'Success.',
@@ -802,12 +812,14 @@ class LessonRESTHandler(BaseRESTHandler):
         payload = request.get('payload')
         updates_dict = transforms.json_to_dict(
             transforms.loads(payload), self.SCHEMA_DICT)
+
         lesson.title = updates_dict['title']
         lesson.unit_id = updates_dict['unit_id']
         lesson.objectives = updates_dict['objectives']
         lesson.video = updates_dict['video']
         lesson.notes = updates_dict['notes']
         lesson.activity_title = updates_dict['activity_title']
+        lesson.now_available = not updates_dict['is_draft']
 
         activity = updates_dict.get('activity', '').strip()
         errors = []
