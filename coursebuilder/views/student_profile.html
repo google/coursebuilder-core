@@ -42,36 +42,22 @@
         <tr>
           <th align="left" colspan=2>{% trans %} Assessment scores {% endtrans %}</th>
         </tr>
-        <tr>
-          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Pre-class {% endtrans %}</th>
-          <td>
-            {% if 'Pre' in scores %}
-              {% trans %} Completed {% endtrans %}
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Mid-class {% endtrans %}</th>
-          <td>
-            {% if 'Mid' in scores %}
-              {{ scores['Mid'] }}
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Post-class {% endtrans %}</th>
-          <td>
-            {% if 'Fin' in scores %}
-              {{ scores['Fin'] }}
-            {% endif %}
-          </td>
-        </tr>
+
+        {% for assessment in score_list %}
+          <tr>
+            <th align="left">&nbsp;&nbsp;&nbsp;{{ assessment['title'] }}</th>
+            <td>
+              {% if 'score' in assessment and assessment['score'] is defined %}
+                {{ assessment['score'] }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+
         <tr>
           <th align="left">{% trans %} Overall course score {% endtrans %}</th>
           <td>
-            {% if 'overall_score' in scores %}
-              {{ scores['overall_score'] }}
-            {% endif %}
+            {{ overall_score }}
           </td>
         </tr>
       </table>

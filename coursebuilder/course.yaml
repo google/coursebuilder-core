@@ -174,14 +174,6 @@ assessment_confirmations:
         encourage you to review the lessons noted and to attempt the
         assessment again before it closes. Certificate or not, we hope you
         enjoyed taking the course and learned new skills!
-  Mid:
-    text: |
-      Thank you for taking the mid-course assessment. You may return and take
-      this assessment again, or continue on to the next unit.
-  Pre:
-    text: |
-      Thank you for taking the pre-assessment. Please begin the course with
-      Unit 1.
 
 
 ########################

@@ -863,6 +863,65 @@ class Course(object):
     def delete_lesson(self, lesson):
         return self._model.delete_lesson(lesson)
 
+    def get_score(self, student, assessment_id):
+        """Gets a student's score for a particular assessment."""
+        assert self.is_valid_assessment_id(assessment_id)
+        scores = transforms.loads(student.scores) if student.scores else {}
+        return scores.get(assessment_id) if scores else None
+
+    def get_overall_score(self, student):
+        """Gets the overall course score for a student."""
+        # This can be replaced with a custom definition of an overall score.
+        # TODO(sll): If the unit id is not 'Mid' or 'Fin', this is not going to
+        # work. Fix this more generically.
+        score_list = self.get_all_scores(student)
+        overall_score = 0
+        for unit in score_list:
+            if unit['id'] == 'Mid' and unit['score']:
+                overall_score += 0.3 * unit['score']
+            if unit['id'] == 'Fin' and unit['score']:
+                overall_score += 0.7 * unit['score']
+        return int(overall_score)
+
+    def get_overall_result(self, student):
+        """Gets the overall result based on a student's score profile."""
+        # This can be replaced with a custom definition for an overall result
+        # string.
+        return 'pass' if self.get_overall_score(student) >= 70 else 'fail'
+
+    def get_all_scores(self, student):
+        """Gets all score data for a student.
+
+        Args:
+            student: the student whose scores should be retrieved.
+
+        Returns:
+            an array of dicts, each representing an assessment. Each dict has
+            the keys 'id', 'title' and 'score' (if available), representing the
+            unit id, the assessment title, and the assessment score.
+        """
+        assessment_list = self.get_assessment_list()
+        scores = transforms.loads(student.scores) if student.scores else {}
+
+        assessment_score_list = [{
+            'id': str(unit.unit_id),
+            'title': unit.title,
+            'score': (scores[str(unit.unit_id)]
+                      if str(unit.unit_id) in scores else 0),
+        } for unit in assessment_list]
+
+        return assessment_score_list
+
+    def get_assessment_list(self):
+        """Returns a list of units that are assessments."""
+        # TODO(psimakov): Streamline this so that it does not require a full
+        # iteration on each request, probably by modifying the index() method.
+        assessment_list = []
+        for unit in self.get_units():
+            if verify.UNIT_TYPE_ASSESSMENT == unit.type:
+                assessment_list.append(unit)
+        return copy.deepcopy(assessment_list)
+
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)
 
@@ -884,7 +943,7 @@ class Course(object):
         """Tests whether the given assessment id is valid."""
         for unit in self.get_units():
             if (verify.UNIT_TYPE_ASSESSMENT == unit.type and
-                assessment_id == unit.unit_id):
+                str(assessment_id) == str(unit.unit_id)):
                 return True
         return False
 

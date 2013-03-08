@@ -37,8 +37,6 @@ from models import models
 from models import transforms
 from models import vfs
 from models.courses import Course
-from models.utils import get_all_scores
-from models.utils import get_score
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
@@ -1432,6 +1430,8 @@ class AssessmentTest(actions.TestBase):
     def test_assessments(self):
         """Test assessment scores are properly submitted and summarized."""
 
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
 
@@ -1457,18 +1457,29 @@ class AssessmentTest(actions.TestBase):
         old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.namespace)
         try:
-            # Check that no scores exist right now.
             student = models.Student.get_enrolled_student_by_email(email)
-            assert len(get_all_scores(student)) == 0  # pylint: disable=C6411
 
-            # Submit assessments and check the numbers of scores recorded.
+            # Check that three score objects (corresponding to the Pre, Mid and
+            # Fin assessments) exist right now, and that they all have zero
+            # score.
+            student_scores = course.get_all_scores(student)
+            assert len(student_scores) == 3
+            for assessment in student_scores:
+                assert assessment['score'] == 0
+
+            # Submit assessments and check that the score is updated.
             self.submit_assessment('Pre', pre)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert len(get_all_scores(student)) == 1
+            student_scores = course.get_all_scores(student)
+            assert len(student_scores) == 3
+            for assessment in student_scores:
+                if assessment['id'] == 'Pre':
+                    assert assessment['score'] > 0
+                else:
+                    assert assessment['score'] == 0
 
             self.submit_assessment('Mid', mid)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert len(get_all_scores(student)) == 2
 
             # Navigate to the course overview page.
             response = self.get('course')
@@ -1486,8 +1497,8 @@ class AssessmentTest(actions.TestBase):
             assert_equals(response.status_int, 200)
             assert_contains(u'id="progress-completed-Fin', response.body)
 
-            # Check final score also includes overall_score.
-            assert len(get_all_scores(student)) == 4
+            # Check that the overall-score is non-zero.
+            assert course.get_overall_score(student)
 
             # Check assessment answers.
             answers = transforms.loads(
@@ -1502,30 +1513,30 @@ class AssessmentTest(actions.TestBase):
 
             # Check that scores are recorded properly.
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'Pre')) == 1
-            assert int(get_score(student, 'Mid')) == 2
-            assert int(get_score(student, 'Fin')) == 3
-            assert (int(get_score(student, 'overall_score')) ==
+            assert int(course.get_score(student, 'Pre')) == 1
+            assert int(course.get_score(student, 'Mid')) == 2
+            assert int(course.get_score(student, 'Fin')) == 3
+            assert (int(course.get_overall_score(student)) ==
                     int((0.30 * 2) + (0.70 * 3)))
 
             # Try posting a new midcourse exam with a lower score;
             # nothing should change.
             self.submit_assessment('Mid', second_mid)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'Pre')) == 1
-            assert int(get_score(student, 'Mid')) == 2
-            assert int(get_score(student, 'Fin')) == 3
-            assert (int(get_score(student, 'overall_score')) ==
+            assert int(course.get_score(student, 'Pre')) == 1
+            assert int(course.get_score(student, 'Mid')) == 2
+            assert int(course.get_score(student, 'Fin')) == 3
+            assert (int(course.get_overall_score(student)) ==
                     int((0.30 * 2) + (0.70 * 3)))
 
             # Now try posting a postcourse exam with a higher score and note
             # the changes.
             self.submit_assessment('Fin', second_fin)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'Pre')) == 1
-            assert int(get_score(student, 'Mid')) == 2
-            assert int(get_score(student, 'Fin')) == 100000
-            assert (int(get_score(student, 'overall_score')) ==
+            assert int(course.get_score(student, 'Pre')) == 1
+            assert int(course.get_score(student, 'Mid')) == 2
+            assert int(course.get_score(student, 'Fin')) == 100000
+            assert (int(course.get_overall_score(student)) ==
                     int((0.30 * 2) + (0.70 * 100000)))
         finally:
             namespace_manager.set_namespace(old_namespace)

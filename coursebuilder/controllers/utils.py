@@ -28,7 +28,6 @@ from models.config import ConfigPropertyEntity
 from models.courses import Course
 from models.models import Student
 from models.roles import Roles
-from models.utils import get_all_scores
 import webapp2
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
@@ -352,9 +351,12 @@ class StudentProfileHandler(BaseHandler):
         if not student:
             return
 
+        course = self.get_course()
+
         self.template_value['navbar'] = {}
         self.template_value['student'] = student
-        self.template_value['scores'] = get_all_scores(student)
+        self.template_value['score_list'] = course.get_all_scores(student)
+        self.template_value['overall_score'] = course.get_overall_score(student)
         self.template_value['student_edit_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('student-edit'))
         self.render('student_profile.html')

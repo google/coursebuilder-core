@@ -20,29 +20,6 @@ __author__ = 'Sean Lip (sll@google.com)'
 import transforms
 
 
-def get_all_scores(student):
-    """Gets all score data for a student.
-
-    Args:
-        student: the student whose scores should be retrieved.
-
-    Returns:
-         a dict where the keys are the assessment/summary name, and the value
-         is the assessment/summary score (if available).
-    """
-    if not student.scores:
-        return {}
-    else:
-        return transforms.loads(student.scores)
-
-
-def dict_get(dict_as_string, my_key):
-    if not dict_as_string:
-        return None
-    else:
-        return transforms.loads(dict_as_string).get(my_key)
-
-
 def set_answer(answers, assessment_name, answer):
     """Stores the answer array for the given student and assessment.
 
@@ -61,21 +38,6 @@ def set_answer(answers, assessment_name, answer):
         score_dict = transforms.loads(answers.data)
     score_dict[assessment_name] = answer
     answers.data = transforms.dumps(score_dict)
-
-
-def get_score(student, assessment_name):
-    """Gets a student's score for a particular assessment.
-
-    The caller must cast the score appropriately.
-
-    Args:
-        student: the student whose score should be retrieved.
-        assessment_name: the name of the assessment.
-
-    Returns:
-        The student's score for this assessment, or None if not found.
-    """
-    return dict_get(student.scores, assessment_name)
 
 
 def set_score(student, assessment_name, score):

@@ -28,10 +28,11 @@ from utils import BaseHandler
 from google.appengine.ext import db
 
 
-def store_score(student, assessment_type, score):
+def store_score(course, student, assessment_type, score):
     """Stores a student's score on a particular assessment.
 
     Args:
+        course: the course containing the assessment.
         student: the student whose data is stored.
         assessment_type: the type of the assessment.
         score: the student's score on this assessment.
@@ -44,34 +45,12 @@ def store_score(student, assessment_type, score):
     # TODO(pgbovine): Note that the latest version of answers are always saved,
     # but scores are only saved if they're higher than the previous attempt.
     # This can lead to unexpected analytics behavior. Resolve this.
-    existing_score = utils.get_score(student, assessment_type)
+    existing_score = course.get_score(student, assessment_type)
     # remember to cast to int for comparison
     if (existing_score is None) or (score > int(existing_score)):
         utils.set_score(student, assessment_type, score)
 
-    result = None
-
-    # special handling for computing final score:
-    if assessment_type == 'Fin':
-        midcourse_score = utils.get_score(student, 'Mid')
-        if midcourse_score is None:
-            midcourse_score = 0
-        else:
-            midcourse_score = int(midcourse_score)
-
-        if existing_score is None:
-            postcourse_score = score
-        else:
-            postcourse_score = int(existing_score)
-            if score > postcourse_score:
-                postcourse_score = score
-
-        # Calculate overall score based on a formula
-        overall_score = int((0.3 * midcourse_score) + (0.7 * postcourse_score))
-        result = 'pass' if overall_score >= 70 else 'fail'
-        utils.set_score(student, 'overall_score', overall_score)
-
-    return result
+    return course.get_overall_result(student)
 
 
 class AnswerHandler(BaseHandler):
@@ -93,6 +72,7 @@ class AnswerHandler(BaseHandler):
             the result of the assessment, if appropriate.
         """
         student = Student.get_by_email(email)
+        course = self.get_course()
 
         # It may be that old Student entities don't have user_id set; fix it.
         if not student.user_id:
@@ -105,7 +85,7 @@ class AnswerHandler(BaseHandler):
 
         utils.set_answer(answers, assessment_type, new_answers)
 
-        result = store_score(student, assessment_type, score)
+        result = store_score(course, student, assessment_type, score)
 
         student.put()
         answers.put()
@@ -165,6 +145,5 @@ class AnswerHandler(BaseHandler):
         self.template_value['is_last_assessment'] = (
             course.is_last_assessment(unit))
 
-        self.template_value['student_score'] = utils.get_score(
-            student, 'overall_score')
+        self.template_value['overall_score'] = course.get_overall_score(student)
         self.render('test_confirmation.html')
