@@ -134,7 +134,7 @@ class ConfigPropertyEditor(object):
         template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, ConfigPropertyEditor.get_schema_json(item),
             ConfigPropertyEditor.get_schema_annotations(item),
-            key, rest_url, exit_url, delete_url)
+            key, rest_url, exit_url, delete_url=delete_url)
 
         self.render_page(template_values)
 

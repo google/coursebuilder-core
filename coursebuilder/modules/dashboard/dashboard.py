@@ -106,11 +106,10 @@ class DashboardHandler(
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 
-    def _get_warnings(self):
-        warnings = []
+    def _get_readonly(self):
         if not courses.is_editable_fs(self.app_context):
-            warnings.append('This course is read-only.')
-        return '\n'.join(warnings)
+            return 'Read-only course'
+        return ''
 
     def _get_top_nav(self):
         current_action = self.request.get('action')
@@ -134,7 +133,7 @@ class DashboardHandler(
     def render_page(self, template_values):
         """Renders a page using provided template values."""
 
-        template_values['warning'] = self._get_warnings()
+        template_values['readonly'] = self._get_readonly()
         template_values['top_nav'] = self._get_top_nav()
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
