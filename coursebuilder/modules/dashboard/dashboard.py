@@ -33,23 +33,30 @@ from models.models import Student
 import filer
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
+from unit_lesson_editor import UNIT_LESSON_REST_HANDLER_URI
+from unit_lesson_editor import UnitLessonEditor
+from unit_lesson_editor import UnitLessonTitleRESTHandler
 from google.appengine.api import users
 from google.appengine.ext import db
 
 
 class DashboardHandler(
-    FileManagerAndEditor, ApplicationHandler, ReflectiveRequestHandler):
+    FileManagerAndEditor, UnitLessonEditor, ApplicationHandler,
+    ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
     get_actions = [
-        default_action, 'assets', 'settings', 'students', 'edit_settings']
+        default_action, 'assets', 'settings', 'students', 'edit_settings',
+        'edit_unit_lesson']
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
 
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
-        return [('/rest/files/item', FilesItemRESTHandler)]
+        return [
+            ('/rest/files/item', FilesItemRESTHandler),
+            (UNIT_LESSON_REST_HANDLER_URI, UnitLessonTitleRESTHandler)]
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -122,6 +129,12 @@ class DashboardHandler(
         lines += self.list_and_format_file_list('Data Files', '/data/')
 
         course = courses.Course(self)
+        lines.append(
+            '<a id=\"edit_unit_lesson\"'
+            ' class=\"gcb-button pull-right\"'
+            ' role=\"button\"'
+            ' href=\"dashboard?action=edit_unit_lesson\">Edit</a>')
+        lines.append('<div style=\"clear: both; padding-top: 2px;\" />')
         lines.append(
             '<h3>Course Outline</h3>')
         lines.append('<ul style="list-style: none;">')

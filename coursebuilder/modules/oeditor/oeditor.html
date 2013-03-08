@@ -95,7 +95,9 @@
   a.inputex-list-link {
     float: right;
   }
-  a.inputEx-Button {
+  a.inputEx-Button,
+  div.inputEx-Field input.inputEx-Button {
+    width: auto;
     background-color: #666;
     color: #FFFFFF;
     padding: 4px;
@@ -105,6 +107,7 @@
     margin-right: 4px;
     font-weight: bold;
     text-decoration: none;
+    border: none;
   }
 
   textarea.raw-text-editor {
@@ -123,6 +126,47 @@
 
   .pull-right {
     float: right;
+  }
+
+  /* TODO(jorr): Rework this CSS to have clearer headers for nested properties */
+
+  div.inputEx-ListField div.inputEx-Field {
+    width: auto;
+    padding: 0;
+    color: #000;
+  }
+  div#formContainer div.inputEx-ListField fieldset {
+    border-top: solid #ccc 1px;
+    border-bottom: none;
+    border-right: solid #ccc 1px;
+    min-width: 300px;
+    margin-bottom: 0;
+    -webkit-padding-before: 0;
+    -webkit-padding-after: 0;
+  }
+  div#formContainer div.inputEx-ListField fieldset fieldset {
+    border: none;
+  }
+  div#formContainer div.inputEx-ListField div.inputEx-label {
+    width: auto;
+  }
+  div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper {
+    white-space: nowrap;
+  }
+  div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper > div {
+    float: none;
+    display: inline-block;
+    vertical-align: top;
+  }
+  div.inputEx-ListField-childContainer > div {
+    white-space: nowrap;
+  }
+  div.inputEx-ListField-Arrow {
+    float: none;
+    display: inline-block;
+  }
+  a.inputEx-List-link {
+    display: none;
   }
 </style>
 
@@ -226,7 +270,7 @@
       builder = new Y.inputEx.JsonSchema.Builder({
         'schemaIdentifierMap': schema
       });
-      inputExDefinition = builder.schemaToInputEx(schema.root);
+      var inputExDefinition = builder.schemaToInputEx(schema.root);
 
       // bind buttons
       inputExDefinition.buttons = [
@@ -381,11 +425,8 @@
       inputExDefinition.parentEl = 'formContainer';
       cb_global.form = new Y.inputEx.Form(inputExDefinition);
 
-      // async get data from the sever and push it into the form when ready
-      var url = cb_global.get_url;
-
-      // request data for object being edited
-      Y.io(url, {
+      // async request data for the object being edited
+      Y.io(cb_global.get_url, {
         method: 'GET',
         timeout : ajaxRpcTimeoutMillis,
         on: {
