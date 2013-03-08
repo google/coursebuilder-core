@@ -16,15 +16,25 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import json
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
+from models import roles
 from models import transforms
 from modules.oeditor import oeditor
 
 
 UNIT_LESSON_REST_HANDLER_URI = '/rest/unit_lesson/title'
+
+
+# The editor has severe limitations for editing nested lists of objects. First,
+# it does not allow one to move a lesson from one unit to another. We need a way
+# of doing that. Second, JSON schema specification does not seem to support a
+# type-safe array, which has objects of different types. We also want that
+# badly :). All in all - using generic schema-based object editor for editing
+# nested arrayable polymorphic attributes is a pain...
 
 EDIT_UNIT_LESSON_SCHEMA_JSON = """
     {
@@ -33,21 +43,18 @@ EDIT_UNIT_LESSON_SCHEMA_JSON = """
         "properties": {
             "outline": {
                 "type": "array",
-                "description": "Course Outline",
                 "items": {
                     "type": "object",
-                    "description": "Unit",
                     "properties": {
-                        "title": {"type": "string"},
                         "id": {"type": "string"},
+                        "title": {"type": "string"},
                         "lessons": {
                             "type": "array",
                             "items": {
                                 "type": "object",
-                                "description": "Lesson",
                                 "properties": {
-                                    "title": {"type": "string"},
-                                    "id": {"type": "string"}
+                                    "id": {"type": "string"},
+                                    "title": {"type": "string"}
                                 }
                             }
                         }
@@ -58,14 +65,18 @@ EDIT_UNIT_LESSON_SCHEMA_JSON = """
     }
     """
 
+EDIT_UNIT_LESSON_SCHEMA_DICT = json.loads(EDIT_UNIT_LESSON_SCHEMA_JSON)
+
+
 EDIT_UNIT_LESSON_SCHEMA_ANNOTATIONS_DICT = [
+    (['title'], 'Course Outline'),
     (['properties', 'outline', '_inputex'], {
         'sortable': 'true',
-        'label': 'Units'}),
+        'label': ''}),
     (['properties', 'outline', 'items', 'properties', 'title', '_inputex'], {
         '_type': 'uneditable',
         'name': 'name',
-        'label': ''}),
+        'label': 'Unit'}),
     (['properties', 'outline', 'items', 'properties', 'id', '_inputex'], {
         '_type': 'hidden',
         'name': 'id'}),
@@ -87,6 +98,26 @@ EDIT_UNIT_LESSON_SCHEMA_ANNOTATIONS_DICT = [
     ]
 
 
+class CourseOutlineRights(object):
+    """Manages view/edit rights for course outline."""
+
+    @classmethod
+    def can_view(cls, handler):
+        return cls.can_edit(handler)
+
+    @classmethod
+    def can_edit(cls, handler):
+        return roles.Roles.is_course_admin(handler.app_context)
+
+    @classmethod
+    def can_delete(cls, handler):
+        return cls.can_edit(handler)
+
+    @classmethod
+    def can_add(cls, handler):
+        return cls.can_edit(handler)
+
+
 class UnitLessonEditor(ApplicationHandler):
     """An editor for the unit and lesson titles."""
 
@@ -104,6 +135,7 @@ class UnitLessonEditor(ApplicationHandler):
             key, rest_url, exit_url)
 
         template_values = {}
+        template_values['page_title'] = self.format_title('Edit Course Outline')
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -113,8 +145,14 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
+
+        if not CourseOutlineRights.can_view(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
         course = courses.Course(self)
         outline_data = []
+        unit_index = 1
         for unit in course.get_units():
             # TODO(jorr): Need to handle other course objects than just units
             if unit.type == 'U':
@@ -124,9 +162,10 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
                         'name': lesson.title,
                         'id': lesson.id})
                 outline_data.append({
-                    'name': unit.title,
+                    'name': '%s - %s' % (unit_index, unit.title),
                     'id': unit.unit_id,
                     'lessons': lesson_data})
+                unit_index += 1
 
         transforms.send_json_response(
             self, 200, 'Success.',
@@ -137,7 +176,9 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
     def put(self):
         """Handles REST PUT verb with JSON payload."""
 
-        # TODO(jorr) Need to actually save the stuff we're sent
+        if not CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
 
-        # Send reply.
-        transforms.send_json_response(self, 200, 'Saved.')
+        # TODO(jorr) Need to actually save the stuff we're sent.
+        transforms.send_json_response(self, 405, 'Not yet implemented.', {})
