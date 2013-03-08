@@ -283,7 +283,7 @@
   // If this value is '', deletions are not allowed
   cb_global.delete_url = '{{ delete_url|safe }}';
   cb_global.delete_method = '{{ delete_method }}';
-  
+
   // button captions
   cb_global.save_button_caption = '{{ save_button_caption }}'
 
@@ -299,8 +299,10 @@
       // must be a member of window and should accept Y and the value of the
       // target field as its parameters. It should return the correct inputEx
       // widget initialized to render the given data.
-      Y.inputEx.visus.funcName = function(options, value) {
-        return window[options.funcName](Y, value);
+      if (Y.inputEx.visus) {
+        Y.inputEx.visus.funcName = function(options, value) {
+          return window[options.funcName](Y, value);
+        }
       }
 
       // here is the object schema

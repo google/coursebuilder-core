@@ -148,8 +148,13 @@ class UnitLessonEditor(ApplicationHandler):
         self.redirect(
             self.get_action_url('edit_assessment', key=assessment.unit_id))
 
-    def _render_edit_form_for(self, rest_handler_cls, title):
+    def _render_edit_form_for(
+        self, rest_handler_cls, title, annotations_dict=None,
+        delete_xsrf_token='delete-unit'):
         """Renders an editor form for a given REST handler class."""
+        if not annotations_dict:
+            annotations_dict = rest_handler_cls.SCHEMA_ANNOTATIONS_DICT
+
         key = self.request.get('key')
 
         exit_url = self.canonicalize_url('/dashboard')
@@ -158,13 +163,14 @@ class UnitLessonEditor(ApplicationHandler):
             self.canonicalize_url(rest_handler_cls.URI),
             urllib.urlencode({
                 'key': key,
-                'xsrf_token': cgi.escape(self.create_xsrf_token('delete-unit'))
+                'xsrf_token': cgi.escape(
+                    self.create_xsrf_token(delete_xsrf_token))
                 }))
 
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             rest_handler_cls.SCHEMA_JSON,
-            rest_handler_cls.SCHEMA_ANNOTATIONS_DICT,
+            annotations_dict,
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
             read_only=not filer.is_editable_fs(self.app_context),
@@ -187,6 +193,14 @@ class UnitLessonEditor(ApplicationHandler):
     def get_edit_assessment(self):
         """Shows assessment editor."""
         self._render_edit_form_for(AssessmentRESTHandler, 'Assessment')
+
+    def get_edit_lesson(self):
+        """Shows the lesson/activity editor."""
+        self._render_edit_form_for(
+            LessonRESTHandler, 'Lessons and Activities',
+            annotations_dict=LessonRESTHandler.get_schema_annotations_dict(
+                courses.Course(self).get_units()),
+            delete_xsrf_token='delete-lesson')
 
 
 class CommonUnitRESTHandler(BaseRESTHandler):
@@ -543,7 +557,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         unit.now_available = not updated_unit_dict.get('is_draft')
         courses.Course(
             None, app_context=self.app_context).set_assessment_content(
-                unit, updated_unit_dict.get('content'), errors)
+                unit, updated_unit_dict.get('content'), errors=errors)
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):
@@ -661,3 +675,169 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         course.save()
 
         transforms.send_json_response(self, 200, 'Saved.')
+
+
+class LessonRESTHandler(BaseRESTHandler):
+    """Provides REST API to handle lessons and activities."""
+
+    URI = '/rest/course/lesson'
+
+    SCHEMA_JSON = """
+    {
+        "id": "Lesson Entity",
+        "type": "object",
+        "description": "Lesson",
+        "properties": {
+            "key" : {"type": "string"},
+            "title" : {"type": "string"},
+            "unit_id": {"type": "string"},
+            "video" : {"type": "string", "optional": true},
+            "objectives" : {
+                "type": "string", "format": "html", "optional": true},
+            "notes" : {"type": "string", "optional": true},
+            "activity_title" : {"type": "string", "optional": true},
+            "activity": {"type": "string", "format": "text", "optional": true}
+            }
+    }
+    """
+
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-rte', 'inputex-select', 'inputex-textarea',
+        'inputex-uneditable']
+
+    @classmethod
+    def get_schema_annotations_dict(cls, units):
+        unit_list = []
+        for unit in units:
+            if unit.type == 'U':
+                unit_list.append({'label': unit.title, 'value': unit.id})
+
+        return [
+            (['title'], 'Unit'),
+            (['properties', 'key', '_inputex'], {
+                'label': 'ID', '_type': 'uneditable'}),
+            (['properties', 'title', '_inputex'], {'label': 'Title'}),
+            (['properties', 'unit_id', '_inputex'], {
+                'label': 'Parent Unit', '_type': 'select',
+                'choices': unit_list}),
+            (['properties', 'objectives', '_inputex'], {
+                'label': 'Objectives', 'editorType': 'simple'}),
+            (['properties', 'video', '_inputex'], {'label': 'Video ID'}),
+            (['properties', 'notes', '_inputex'], {'label': 'Notes'}),
+            (['properties', 'activity_title', '_inputex'], {
+                'label': 'Activity Title'}),
+            (['properties', 'activity', '_inputex'], {
+                'label': 'Activity'})]
+
+    def get(self):
+        """Handles GET REST verb and returns lesson object as JSON payload."""
+
+        if not CourseOutlineRights.can_view(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        key = self.request.get('key')
+        course = courses.Course(self)
+        lesson = course.find_lesson_by_id(None, key)
+        assert lesson
+
+        fs = self.app_context.fs
+        path = fs.impl.physical_to_logical(course.get_activity_filename(
+            lesson.unit_id, lesson.id))
+        if lesson.has_activity and fs.isfile(path):
+            activity = fs.get(path)
+        else:
+            activity = ''
+
+        payload_dict = {
+            'key': key,
+            'title': lesson.title,
+            'unit_id': lesson.unit_id,
+            'objectives': lesson.objectives,
+            'video': lesson.video,
+            'notes': lesson.notes,
+            'activity_title': lesson.activity_title,
+            'activity': activity}
+
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict=payload_dict,
+            xsrf_token=XsrfTokenManager.create_xsrf_token('lesson-edit'))
+
+    def put(self):
+        """Handles PUT REST verb to save lesson and associated activity."""
+        request = transforms.loads(self.request.get('request'))
+        key = request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'lesson-edit', {'key': key}):
+            return
+
+        if not CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        course = courses.Course(self)
+        lesson = course.find_lesson_by_id(None, key)
+        if not lesson:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
+            return
+
+        payload = request.get('payload')
+        updates_dict = transforms.json_to_dict(
+            transforms.loads(payload), self.SCHEMA_DICT)
+        lesson.title = updates_dict['title']
+        lesson.unit_id = updates_dict['unit_id']
+        lesson.objectives = updates_dict['objectives']
+        lesson.video = updates_dict['video']
+        lesson.notes = updates_dict['notes']
+        lesson.activity_title = updates_dict['activity_title']
+
+        activity = updates_dict.get('activity', '').strip()
+        errors = []
+        if activity:
+            lesson.has_activity = True
+            course.set_activity_content(lesson, activity, errors=errors)
+        else:
+            lesson.has_activity = False
+            fs = self.app_context.fs
+            path = fs.impl.physical_to_logical(course.get_activity_filename(
+                lesson.unit_id, lesson.id))
+            if fs.isfile(path):
+                fs.delete(path)
+
+        if not errors:
+            assert course.update_lesson(lesson)
+            course.save()
+            transforms.send_json_response(self, 200, 'Saved.')
+        else:
+            transforms.send_json_response(self, 412, '\n'.join(errors))
+
+    def delete(self):
+        """Handles REST DELETE verb with JSON payload."""
+        key = self.request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, 'delete-lesson', {'key': key}):
+            return
+
+        if not CourseOutlineRights.can_delete(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        course = courses.Course(self)
+        lesson = course.find_lesson_by_id(None, key)
+        if not lesson:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
+            return
+
+        assert course.delete_lesson(lesson)
+        course.save()
+
+        transforms.send_json_response(self, 200, 'Deleted.')

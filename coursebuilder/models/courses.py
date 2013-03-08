@@ -398,14 +398,14 @@ class CourseModel13(object):
         unit = self.find_unit_by_id(unit_id)
         assert unit
         assert verify.UNIT_TYPE_ASSESSMENT == unit.type
-        return 'assets/js/assessment-%s.js' % unit.id
+        return '/assets/js/assessment-%s.js' % unit.id
 
     def get_activity_filename(self, unused_unit_id, lesson_id):
         """Returns activity base filename."""
         lesson = self.find_lesson_by_id(None, lesson_id)
         assert lesson
         if lesson.has_activity:
-            return 'assets/js/activity-%s.js' % lesson_id
+            return '/assets/js/activity-%s.js' % lesson_id
         return None
 
     def find_unit_by_id(self, unit_id):
@@ -511,7 +511,7 @@ class CourseModel13(object):
     def update_unit(self, unit):
         """Updates an existing unit."""
         existing_unit = self.find_unit_by_id(unit.id)
-        if not unit:
+        if not existing_unit:
             return False
         existing_unit.title = unit.title
         existing_unit.release_date = unit.release_date
@@ -521,6 +521,21 @@ class CourseModel13(object):
             existing_unit.href = unit.href
 
         return existing_unit
+
+    def update_lesson(self, lesson):
+        """Updates an existing lesson."""
+        existing_lesson = self.find_lesson_by_id(lesson.unit_id, lesson.id)
+        if not existing_lesson:
+            return False
+        existing_lesson.title = lesson.title
+        existing_lesson.unit_id = lesson.unit_id
+        existing_lesson.objectives = lesson.objectives
+        existing_lesson.video = lesson.video
+        existing_lesson.notes = lesson.notes
+        existing_lesson.activity_title = lesson.activity_title
+
+        self._index(self._lessons)
+        return existing_lesson
 
     def reorder_units(self, order_data):
         """Reorder the units and lessons based on the order data given.
@@ -566,7 +581,7 @@ class CourseModel13(object):
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         """Updates the content of an assessment."""
-        if not errors:
+        if errors is None:
             errors = []
 
         path = self._app_context.fs.impl.physical_to_logical(
@@ -595,6 +610,38 @@ class CourseModel13(object):
         fs.put(
             path, vfs.string_to_stream(assessment_content),
             is_draft=not unit.now_available)
+
+    def set_activity_content(self, lesson, activity_content, errors=None):
+        """Updates the content of an activity."""
+        if errors is None:
+            errors = []
+
+        path = self._app_context.fs.impl.physical_to_logical(
+            self.get_activity_filename(lesson.unit_id, lesson.id))
+        root_name = 'activity'
+
+        try:
+            content, noverify_text = verify.convert_javascript_to_python(
+                activity_content, root_name)
+            activity = verify.evaluate_python_expression_from_text(
+                content, root_name, verify.Activity().scope, noverify_text)
+        except Exception:  # pylint: disable-msg=broad-except
+            errors.append('Unable to parse %s:\n%s' % (
+                root_name,
+                str(sys.exc_info()[1])))
+            return
+
+        verifier = verify.Verifier()
+        try:
+            verifier.verify_activity_instance(activity, path)
+        except verify.SchemaException:
+            errors.append('Error validating %s\n' % root_name)
+            return
+
+        fs = self.app_context.fs
+        fs.put(
+            path, vfs.string_to_stream(activity_content),
+            is_draft=False)
 
     def import_from(self, src_course, errors):
         """Imports a content of another course into this course."""
@@ -784,11 +831,17 @@ class Course(object):
     def update_unit(self, unit):
         return self._model.update_unit(unit)
 
+    def update_lesson(self, lesson):
+        return self._model.update_lesson(lesson)
+
     def move_lesson_to(self, lesson, unit):
         return self._model.move_lesson_to(lesson, unit)
 
     def delete_unit(self, unit):
         return self._model.delete_unit(unit)
+
+    def delete_lesson(self, lesson):
+        return self._model.delete_lesson(lesson)
 
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)
@@ -802,6 +855,10 @@ class Course(object):
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(
             unit, assessment_content, errors)
+
+    def set_activity_content(self, lesson, activity_content, errors=None):
+        return self._model.set_activity_content(
+            lesson, activity_content, errors)
 
     def is_valid_assessment_id(self, assessment_id):
         """Tests whether the given assessment id is valid."""

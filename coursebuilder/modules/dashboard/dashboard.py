@@ -37,6 +37,7 @@ from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
+from unit_lesson_editor import LessonRESTHandler
 from unit_lesson_editor import LinkRESTHandler
 from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
@@ -54,8 +55,8 @@ class DashboardHandler(
     get_actions = [
         default_action, 'assets', 'settings', 'students',
         'edit_settings', 'edit_unit_lesson', 'edit_unit', 'edit_link',
-        'edit_assessment', 'add_asset', 'delete_asset', 'import_course']
-    post_actions = ['compute_student_stats', 'create_or_edit_settings']
+        'edit_lesson', 'edit_assessment', 'add_asset', 'delete_asset',
+        'import_course']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson']
@@ -70,6 +71,7 @@ class DashboardHandler(
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
             (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
+            (LessonRESTHandler.URI, LessonRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler)
@@ -206,12 +208,16 @@ class DashboardHandler(
                         url, unit.unit_id, cgi.escape(unit.title)))
 
                 lines.append('<ol>')
-                for lesson in course.get_lessons(unit.unit_id):
-                    href = 'unit?unit=%s&lesson=%s' % (
-                        unit.unit_id, lesson.id)
+                for lesson in course.get_lessons(unit.id):
+                    if filer.is_editable_fs(self.app_context):
+                        action_url = self.get_action_url(
+                            'edit_lesson', key=lesson.id)
+                    else:
+                        action_url = 'unit?unit=%s&lesson=%s' % (
+                            unit.unit_id, lesson.id)
                     lines.append(
                         '<li><a href="%s">%s</a></li>\n' % (
-                            href, cgi.escape(lesson.title)))
+                            action_url, cgi.escape(lesson.title)))
                 lines.append('</ol>')
                 lines.append('</li>\n')
                 continue
