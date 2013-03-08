@@ -135,6 +135,35 @@
     elem.style.display = "none";
   }
 
+  /**
+   * Compare two JS objects for equality by value.
+   */
+  function deepEquals(x, y) {
+    if (typeof(x) != "object") {
+      return x === y;
+    }
+    if (typeof(y) != "object" || propertyCount(x) != propertyCount(y)) {
+      return false;
+    }
+    for (e in x) {
+      if (x.hasOwnProperty(e) && (typeof(y[e]) == "undefined" || !deepEquals(x[e], y[e]))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function propertyCount(x) {
+    var count = 0;
+    for (e in x) {
+      if (x.hasOwnProperty(e)) {
+        ++count;
+      }
+    }
+    return count;
+  }
+
+
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
   cbShowMsg("Loading...");
@@ -230,12 +259,10 @@
         }},
 
         {type: 'link', value: 'Close', onClick:function(e) {
-          lastSavedFormValue = cb_global.lastSavedFormValue.toPrettyJSONString(true);
-          now = cb_global.form.getValue().toPrettyJSONString(true);
-          if (lastSavedFormValue == now || confirm("Abandon all changes?")) {
+          if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
+              confirm("Abandon all changes?")) {
             window.location = cb_global.exit_url;
           }
-
         }}
       ];
 
@@ -319,3 +346,4 @@
 
   });
 </script>
+
