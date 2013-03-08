@@ -24,7 +24,7 @@
 
   <div class="gcb-nav" id="gcb-nav-y">
     <ul>
-      {{course_info.unit.after_leftnav_begins}}
+      {{course_info.unit.after_leftnav_begins | safe}}
       {% for lesson in lessons %}
       <li
         {% if lesson.lesson_id == lesson_id %}
@@ -68,12 +68,12 @@
         {% endif %}
       </li>
       {% endfor %}
-      {{course_info.unit.before_leftnav_ends}}
+      {{course_info.unit.before_leftnav_ends | safe}}
     </ul>
   </div>
 
   <div class="gcb-article tab-content" role="main">
-    {{course_info.unit.after_content_begins}}
+    {{course_info.unit.after_content_begins | safe}}
     {% for lesson in lessons %}
       {% if lesson.lesson_id == lesson_id %}
 
@@ -86,7 +86,7 @@
                 </h1>
                 {% if lesson.objectives %}
                   <div class="lesson_objective">
-                    {{ lesson.objectives }}
+                    {{ lesson.objectives | safe }}
                   </div>
                 {% endif %}
                 </div>
@@ -129,7 +129,7 @@
         </div>
       {% endif %}
     {% endfor %}
-    {{course_info.unit.before_content_ends}}
+    {{course_info.unit.before_content_ends | safe}}
   </div>
 </div>
 

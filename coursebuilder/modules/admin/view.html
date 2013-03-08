@@ -3,7 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>{{ page_title }}</title>
+    <title>{{ page_title | safe }}</title>
     <link rel="icon" href="" />
     <style>
         body {
@@ -108,15 +108,15 @@
   </head>
   <body>
   <div id='gcb-user-bar'>
-    {{ user_nav }}
+    {{ user_nav | safe }}
   </div>
-  <h2>{{ page_title }}</h2>
+  <h2>{{ page_title | safe }}</h2>
   <div id='gcb-nav-bar'>
-    {{ top_nav }}
+    {{ top_nav | safe }}
   </div>
   <div id='gcb-main-area'>
     <div id='gcb-main-content'>
-        {{ main_content }}
+      {{ main_content | safe }}
     </div>
   </div>
   <div id='gcb-footer'>

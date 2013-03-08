@@ -10,7 +10,7 @@
     <div class="gcb-aside">
 
       <p>
-        {{course_info.reg_form.header_text}}
+        {{course_info.reg_form.header_text | safe}}
       </p>
 
       <form action="register" method='post'>
@@ -23,7 +23,7 @@
               </label>
               <input name="form01" type="text">
             </li>
-            {{course_info.reg_form.additional_registration_fields}}
+            {{course_info.reg_form.additional_registration_fields | safe}}
           </ol>
         </fieldset>
 

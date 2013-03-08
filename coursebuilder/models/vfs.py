@@ -125,6 +125,7 @@ class LocalReadOnlyFileSystem(object):
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
         return jinja2.Environment(
+            autoescape=True,
             extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(physical_dir_names))
 

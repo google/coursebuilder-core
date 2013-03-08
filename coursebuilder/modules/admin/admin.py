@@ -123,6 +123,7 @@ class AdminHandler(
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
         jinja_environment = jinja2.Environment(
+            autoescape=True,
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 

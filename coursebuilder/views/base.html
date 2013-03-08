@@ -55,11 +55,11 @@
       <script type="text/javascript" src="https://apis.google.com/js/plusone.js"></script>
     {% endif %}
 
-    {{course_info.base.before_head_tag_ends}}
+    {{course_info.base.before_head_tag_ends | safe}}
   </head>
 
   <body>
-    {{course_info.base.after_body_tag_begins}}
+    {{course_info.base.after_body_tag_begins | safe}}
 
     <!-- logo bar -->
     <div class="gcb-header" id="gcb-header">
@@ -100,7 +100,7 @@
     <div class="gcb-nav gcb-complex" id="gcb-nav-x">
       <div class="gcb-aux">
         <ul>
-          {{course_info.base.after_navbar_begins}}
+          {{course_info.base.after_navbar_begins | safe}}
           <li {% if navbar.announcements %}class='active'{% endif %}>
             <a href="announcements">
               {% trans %} Announcements {% endtrans %}
@@ -123,7 +123,7 @@
               {% trans %} My Profile {% endtrans %}
             </a>
           </li>
-          {{course_info.base.before_navbar_ends}}
+          {{course_info.base.before_navbar_ends | safe}}
           {% if is_super_admin %}
           <li class="pull-right">
             <a href="/admin">Admin</a>
@@ -143,11 +143,11 @@
     <div class="is-wrapper">
       <div class="gcb-aux">
         {% block top_content %}{% endblock %}
-        {{course_info.base.after_top_content_ends}}
+        {{course_info.base.after_top_content_ends | safe}}
 
         <!-- main section -->
         {% block main_content %}{% endblock %}
-        {{course_info.base.after_main_content_ends}}
+        {{course_info.base.after_main_content_ends | safe}}
       </div>
     </div>
 
@@ -173,6 +173,6 @@
         </div>
       </div>
     </div>
-    {{course_info.base.before_body_tag_ends}}
+    {{course_info.base.before_body_tag_ends | safe}}
  </body>
 </html>

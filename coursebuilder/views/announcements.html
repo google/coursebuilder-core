@@ -44,7 +44,7 @@
           </h2>
           <p>{{ item.date }}</p>
           <p "margin: 20px 0px;">
-          {{ item.html }}
+          {{ item.html | safe }}
         {% endfor %}
       {% endif %}
     </div>
