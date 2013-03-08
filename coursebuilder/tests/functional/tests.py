@@ -452,11 +452,11 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Tests outline view.
         response = self.get('dashboard')
         assert_contains('Unit 3 - Advanced techniques', response.body)
+        assert_contains('data/lesson.csv', response.body)
 
         # Test assets view.
         response = self.get('dashboard?action=assets')
         assert_contains('Google &gt; Dashboard &gt; Assets', response.body)
-        assert_contains('data/lesson.csv', response.body)
         assert_contains('assets/css/main.css', response.body)
         assert_contains('assets/img/Image1.5.png', response.body)
         assert_contains('assets/js/activity-3.2.js', response.body)

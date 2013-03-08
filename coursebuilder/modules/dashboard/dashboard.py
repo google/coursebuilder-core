@@ -118,11 +118,12 @@ class DashboardHandler(
         template_values = {}
         template_values['page_title'] = self.format_title('Outline')
 
-        course = courses.Course(self)
-
         lines = []
+        lines += self.list_and_format_file_list('Data Files', '/data/')
+
+        course = courses.Course(self)
         lines.append(
-            '<h3>Course Units, Lessons, Activities and Assessments</h3>')
+            '<h3>Course Outline</h3>')
         lines.append('<ul style="list-style: none;">')
         if not course.get_units():
             lines.append('<pre>&lt; empty course &gt;</pre>')
@@ -236,8 +237,9 @@ class DashboardHandler(
 
         self.render_page(template_values)
 
-    def list_and_format_file_list(self, subfolder, links=False):
-        """Walks files in folders and renders their names."""
+    def list_and_format_file_list(
+        self, title, subfolder, links=False, prefix=None):
+        """Walks files in folders and renders their names in a section."""
 
         home = sites.abspath(self.app_context.get_home_folder(), '/')
         files = self.app_context.fs.list(
@@ -246,13 +248,25 @@ class DashboardHandler(
         lines = []
         for abs_filename in sorted(files):
             filename = os.path.relpath(abs_filename, home)
+            if prefix and not filename.startswith(prefix):
+                continue
             if links:
                 lines.append(
-                    '<li><a href="%s">%s</a></li>\n' % (filename, filename))
+                    '<li><a href="%s">%s</a></li>\n' % (
+                        cgi.escape(filename), cgi.escape(filename)))
             else:
-                lines.append('<li>%s</li>\n' % filename)
+                lines.append('<li>%s</li>\n' % cgi.escape(filename))
 
-        return lines
+        output = []
+        count = len(lines)
+        output.append('<h3>%s (%s)</h3>' % (cgi.escape(title), count))
+        if lines:
+            output.append('<ol>')
+            output += lines
+            output.append('</ol>')
+        else:
+            output.append('<blockquote>&lt; no files &gt;</blockquote>')
+        return output
 
     def get_assets(self):
         """Renders course assets view."""
@@ -261,22 +275,19 @@ class DashboardHandler(
         template_values['page_title'] = self.format_title('Assets')
 
         lines = []
-
-        lines.append('<h3>Data Files</h3>')
-        lines.append('<ol>')
-        lines += self.list_and_format_file_list('/data/')
-        lines.append('</ol>')
-
-        lines.append('<h3>Assets</h3>')
-        lines.append('<ol>')
-        lines += self.list_and_format_file_list('/assets/', True)
-        lines.append('</ol>')
-
-        lines.append('<h3>View Templates</h3>')
-        lines.append('<ol>')
-        lines += self.list_and_format_file_list('/views/', False)
-        lines.append('</ol>')
-
+        lines += self.list_and_format_file_list(
+            'Cascading Style Sheets', '/assets/css/', True)
+        lines += self.list_and_format_file_list(
+            'Assessments', '/assets/js/', True,
+            prefix='assets/js/assessment-')
+        lines += self.list_and_format_file_list(
+            'Activities', '/assets/js/', True,
+            prefix='assets/js/activity-')
+        lines += self.list_and_format_file_list(
+            'Images & Documents', '/assets/img/', True)
+        lines += self.list_and_format_file_list(
+            'JavaScript Libraries', '/assets/lib/', True)
+        lines += self.list_and_format_file_list('View Templates', '/views/')
         lines = ''.join(lines)
 
         template_values['main_content'] = lines
