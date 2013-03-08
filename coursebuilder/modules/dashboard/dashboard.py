@@ -241,9 +241,7 @@ class DashboardHandler(
 
         data_info = self.list_files('/data/')
 
-        template_values = {}
-        template_values['page_title'] = self.format_title('Outline')
-        template_values['sections'] = [
+        sections = [
             {
                 'title': 'Data Files',
                 'children': data_info},
@@ -254,6 +252,16 @@ class DashboardHandler(
                 'title': 'Course Outline',
                 'actions': outline_actions,
                 'pre': self.render_course_outline_to_html()}]
+
+        if roles.Roles.is_super_admin():
+            sections.append({
+                'title': 'Debug',
+                'children': [cgi.escape(
+                    courses.Course(self).to_json()).replace('\n', '<br>')]})
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Outline')
+        template_values['sections'] = sections
         self.render_page(template_values)
 
     def get_action_url(self, action, key=None):

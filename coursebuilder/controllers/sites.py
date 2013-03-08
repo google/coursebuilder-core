@@ -568,9 +568,9 @@ class ApplicationContext(object):
     def get_environ(self):
         return Course.get_environ(self)
 
-    def get_asset_home(self):
-        """Returns absolute location of a course asset folder."""
-        path = abspath(self.get_home_folder(), GCB_ASSETS_FOLDER_NAME)
+    def get_home(self):
+        """Returns absolute location of a course folder."""
+        path = abspath(self.get_home_folder(), '')
         return path
 
     def get_template_home(self):

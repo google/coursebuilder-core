@@ -19,7 +19,6 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
 import logging
-import os
 import sys
 import urllib
 from controllers import sites
@@ -499,9 +498,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
-            os.path.join(
-                'assets/js',
-                courses.Course.get_assessment_filename(unit)))
+            courses.Course(self).get_assessment_filename(unit.id))
 
     def unit_to_dict(self, unit):
         """Assemble a dict with the unit data fields."""
