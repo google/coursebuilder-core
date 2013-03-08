@@ -34,6 +34,7 @@ from models import jobs
 from models import models
 from models import transforms
 from models import vfs
+from models.courses import Course
 from models.utils import get_all_scores
 from models.utils import get_score
 from modules.announcements.announcements import AnnouncementEntity
@@ -970,6 +971,103 @@ class ActivityTest(actions.TestBase):
                 u'id="progress-inprogress-%s"' % unit_id, response.body)
         finally:
             namespace_manager.set_namespace(old_namespace)
+
+    def test_progress(self):
+        """Test student activity progress in detail, using the sample course."""
+
+        class FakeHandler(object):
+            def __init__(self, app_context):
+                self.app_context = app_context
+
+        course = Course(FakeHandler(sites.get_all_courses()[0]))
+        tracker = course.get_progress_tracker()
+        student = models.Student(key_name='key-test-student')
+
+        # Initially, all progress entries should be set to zero.
+        unit_progress = tracker.get_unit_progress(student)
+        for key in unit_progress:
+            assert unit_progress[key] == 0
+        lesson_progress = tracker.get_lesson_progress(student, 1)
+        for key in lesson_progress:
+            assert lesson_progress[key] == 0
+
+        # The blocks in Lesson 1.2 with activities are blocks 3 and 6.
+        # Submitting block 3 should trigger an in-progress update.
+        tracker.put_block_completed(student, 1, 2, 3)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        assert tracker.get_lesson_progress(student, 1)[2] == 1
+
+        # Submitting block 6 should trigger a completion update for Lesson 1.2.
+        tracker.put_block_completed(student, 1, 2, 6)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        assert tracker.get_lesson_progress(student, 1)[2] == 2
+
+        # Test a lesson with no interactive blocks in its activity. It should
+        # change its status to 'completed' once it is accessed.
+        tracker.put_activity_accessed(student, 2, 1)
+        assert tracker.get_unit_progress(student)['2'] == 1
+        assert tracker.get_lesson_progress(student, 2)[1] == 2
+
+        # Test that a lesson without activities (Lesson 1.1) doesn't count.
+        # Complete lessons 1.3, 1.4, 1.5 and 1.6; unit 1 should then be marked
+        # as 'completed' even though we have no events associated with
+        # Lesson 1.1.
+        tracker.put_activity_completed(student, 1, 3)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        tracker.put_activity_completed(student, 1, 4)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        tracker.put_activity_completed(student, 1, 5)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        tracker.put_activity_completed(student, 1, 6)
+        assert tracker.get_unit_progress(student)['1'] == 2
+
+        # Test that a unit is not completed until all activity pages have been,
+        # at least, visited. Unit 6 has 3 lessons; the last one has no
+        # activity block.
+        tracker.put_activity_completed(student, 6, 1)
+        tracker.put_activity_completed(student, 6, 2)
+        assert tracker.get_unit_progress(student)['6'] == 1
+        tracker.put_activity_accessed(student, 6, 3)
+        assert tracker.get_unit_progress(student)['6'] == 2
+
+        # Test assessment counters.
+        pre_id = 'Pre'
+        tracker.put_assessment_completed(student, pre_id)
+        progress = tracker.get_or_create_progress(student)
+        assert tracker.is_assessment_completed(progress, pre_id)
+        assert tracker.get_assessment_status(progress, pre_id) == 1
+
+        tracker.put_assessment_completed(student, pre_id)
+        progress = tracker.get_or_create_progress(student)
+        assert tracker.is_assessment_completed(progress, pre_id)
+        assert tracker.get_assessment_status(progress, pre_id) == 2
+
+        tracker.put_assessment_completed(student, pre_id)
+        progress = tracker.get_or_create_progress(student)
+        assert tracker.is_assessment_completed(progress, pre_id)
+        assert tracker.get_assessment_status(progress, pre_id) == 3
+
+        # Test that invalid keys do not lead to any updates.
+        # Invalid assessment id.
+        fake_id = 'asdf'
+        tracker.put_assessment_completed(student, fake_id)
+        progress = tracker.get_or_create_progress(student)
+        assert not tracker.is_assessment_completed(progress, fake_id)
+        assert tracker.get_assessment_status(progress, fake_id) is None
+        # Invalid unit id.
+        tracker.put_activity_completed(student, fake_id, 1)
+        progress = tracker.get_or_create_progress(student)
+        assert tracker.get_activity_status(progress, fake_id, 1) is None
+        # Invalid lesson id.
+        fake_numeric_id = 22
+        tracker.put_activity_completed(student, 1, fake_numeric_id)
+        progress = tracker.get_or_create_progress(student)
+        assert tracker.get_activity_status(progress, 1, fake_numeric_id) is None
+        # Invalid block id.
+        tracker.put_block_completed(student, 5, 2, fake_numeric_id)
+        progress = tracker.get_or_create_progress(student)
+        assert not tracker.is_block_completed(
+            progress, 5, 2, fake_numeric_id)
 
 
 class AssessmentTest(actions.TestBase):

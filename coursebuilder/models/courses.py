@@ -196,7 +196,7 @@ class Course(object):
         self._app_context = app_context if app_context else handler.app_context
         self._loaded = False
         self._student_progress_tracker = (
-            progress.UnitLessonProgressTracker(self))
+            progress.UnitLessonCompletionTracker(self))
         self._namespace = self._app_context.get_namespace_name()
         self._version = COURSE_MODEL_VERSION_1_3
 
@@ -325,6 +325,22 @@ class Course(object):
     def get_progress_tracker(self):
         self._materialize()
         return self._student_progress_tracker
+
+    def is_valid_assessment_id(self, assessment_id):
+        """Tests whether the given assessment id is valid."""
+        for unit in self.get_units():
+            if unit.type == 'A' and assessment_id == unit.unit_id:
+                return True
+        return False
+
+    def is_valid_unit_lesson_id(self, unit_id, lesson_id):
+        """Tests whether the given unit id and lesson id are valid."""
+        for unit in self.get_units():
+            if str(unit.id) == str(unit_id):
+                for lesson in self.get_lessons(unit_id):
+                    if str(lesson.id) == str(lesson_id):
+                        return True
+        return False
 
     def find_unit_by_id(self, uid):
         """Finds a unit given its unique id."""

@@ -24,10 +24,10 @@ from models import StudentPropertyEntity
 import transforms
 
 
-class UnitLessonProgressTracker(object):
-    """Progress tracker for a unit/lesson-based linear course."""
+class UnitLessonCompletionTracker(object):
+    """Tracks student completion for a unit/lesson-based linear course."""
 
-    PROPERTY_KEY = 'linear-course-progress'
+    PROPERTY_KEY = 'linear-course-completion'
 
     # Here are representative examples of the keys for the various entities
     # used in this class:
@@ -103,6 +103,19 @@ class UnitLessonProgressTracker(object):
     def _get_assessment_key(self, assessment_id):
         return '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'], assessment_id)
 
+    def get_valid_block_ids(self, unit_id, lesson_id):
+        """Returns a list of block ids representing interactive activities."""
+        valid_block_ids = []
+
+        # Get the activity corresponding to this unit/lesson combination.
+        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
+        for block_id in range(len(activity['activity'])):
+            block = activity['activity'][block_id]
+            if isinstance(block, dict):
+                valid_block_ids.append(block_id)
+
+        return valid_block_ids
+
     def _update_unit(self, progress, event_key):
         """Updates a unit's progress if all its lessons have been completed."""
         split_event_key = event_key.split('.')
@@ -121,7 +134,7 @@ class UnitLessonProgressTracker(object):
             # Skip lessons that do not have activities associated with them.
             if not lesson.activity:
                 continue
-            if not (self._get_lesson_status(
+            if not (self.get_lesson_status(
                     progress, unit_id, lesson.id) == self.COMPLETED_STATE):
                 return
 
@@ -143,8 +156,8 @@ class UnitLessonProgressTracker(object):
 
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
-            if str(lesson.id) == lesson_id and lesson.activity:
-                if not (self._get_activity_status(
+            if str(lesson.id) == lesson_id and lesson:
+                if not (self.get_activity_status(
                         progress, unit_id, lesson_id) == self.COMPLETED_STATE):
                     return
 
@@ -164,14 +177,11 @@ class UnitLessonProgressTracker(object):
         # Record that at least one block in this activity has been completed.
         self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
 
-        # Get the activity corresponding to this unit/lesson combination.
-        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
-        for block_id in range(len(activity['activity'])):
-            block = activity['activity'][block_id]
-            if isinstance(block, dict):
-                if not self.is_block_completed(
-                        progress, unit_id, lesson_id, block_id):
-                    return
+        valid_block_ids = self.get_valid_block_ids(unit_id, lesson_id)
+        for block_id in valid_block_ids:
+            if not self.is_block_completed(
+                    progress, unit_id, lesson_id, block_id):
+                return
 
         # Record that all blocks in this activity have been completed.
         self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
@@ -210,42 +220,42 @@ class UnitLessonProgressTracker(object):
 
     def put_video_completed(self, student, unit_id, lesson_id):
         """Records that the given student has completed a video."""
+        if not self._get_course().is_valid_unit_lesson_id(unit_id, lesson_id):
+            return
         self._put_event(
             student, 'video', self._get_video_key(unit_id, lesson_id, 0))
 
     def put_activity_completed(self, student, unit_id, lesson_id):
         """Records that the given student has completed an activity."""
+        if not self._get_course().is_valid_unit_lesson_id(unit_id, lesson_id):
+            return
         self._put_event(
             student, 'activity', self._get_activity_key(unit_id, lesson_id, 0))
 
     def put_block_completed(self, student, unit_id, lesson_id, block_id):
         """Records that the given student has completed an activity block."""
+        if not self._get_course().is_valid_unit_lesson_id(unit_id, lesson_id):
+            return
+        if not block_id in self.get_valid_block_ids(unit_id, lesson_id):
+            return
         self._put_event(
             student,
             'block',
             self._get_block_key(unit_id, lesson_id, 0, block_id)
         )
 
-    def put_assessment_completed(self, student, assessment_type):
+    def put_assessment_completed(self, student, assessment_id):
         """Records that the given student has completed the given assessment."""
+        if not self._get_course().is_valid_assessment_id(assessment_id):
+            return
         self._put_event(
-            student, 'assessment', self._get_assessment_key(assessment_type))
+            student, 'assessment', self._get_assessment_key(assessment_id))
 
     def put_activity_accessed(self, student, unit_id, lesson_id):
         """Records that the given student has accessed this activity."""
         # This method currently exists because we need to mark activities
         # without interactive blocks as 'completed' when they are accessed.
-
-        # Get the activity corresponding to this unit/lesson combination.
-        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
-        interactive = False
-        for block_id in range(len(activity['activity'])):
-            block = activity['activity'][block_id]
-            if isinstance(block, dict):
-                interactive = True
-                break
-
-        if not interactive:
+        if not self.get_valid_block_ids(unit_id, lesson_id):
             self.put_activity_completed(student, unit_id, lesson_id)
 
     def _put_event(self, student, event_entity, event_key):
@@ -292,35 +302,42 @@ class UnitLessonProgressTracker(object):
                     event_key=derived_event['generate_new_id'](event_key),
                 )
 
-    def _get_entity_value(self, progress, event_key):
-        if not progress.value:
-            return None
-        return transforms.loads(progress.value).get(event_key)
-
-    def _get_unit_status(self, progress, unit_id):
+    def get_unit_status(self, progress, unit_id):
         return self._get_entity_value(progress, self._get_unit_key(unit_id))
 
-    def _get_lesson_status(self, progress, unit_id, lesson_id):
+    def get_lesson_status(self, progress, unit_id, lesson_id):
         return self._get_entity_value(
             progress, self._get_lesson_key(unit_id, lesson_id))
+
+    def get_video_status(self, progress, unit_id, lesson_id):
+        return self._get_entity_value(
+            progress, self._get_video_key(unit_id, lesson_id, 0))
+
+    def get_activity_status(self, progress, unit_id, lesson_id):
+        return self._get_entity_value(
+            progress, self._get_activity_key(unit_id, lesson_id, 0))
+
+    def get_block_status(self, progress, unit_id, lesson_id, block_id):
+        return self._get_entity_value(
+            progress, self._get_block_key(unit_id, lesson_id, 0, block_id))
+
+    def get_assessment_status(self, progress, assessment_id):
+        return self._get_entity_value(
+            progress, self._get_assessment_key(assessment_id))
 
     def is_video_completed(self, progress, unit_id, lesson_id):
         value = self._get_entity_value(
             progress, self._get_video_key(unit_id, lesson_id, 0))
         return value is not None and value > 0
 
-    def _get_activity_status(self, progress, unit_id, lesson_id):
-        return self._get_entity_value(
-            progress, self._get_activity_key(unit_id, lesson_id, 0))
-
     def is_block_completed(self, progress, unit_id, lesson_id, block_id):
         value = self._get_entity_value(
             progress, self._get_block_key(unit_id, lesson_id, 0, block_id))
         return value is not None and value > 0
 
-    def is_assessment_completed(self, progress, assessment_type):
+    def is_assessment_completed(self, progress, assessment_id):
         value = self._get_entity_value(
-            progress, self._get_assessment_key(assessment_type))
+            progress, self._get_assessment_key(assessment_id))
         return value is not None and value > 0
 
     @classmethod
@@ -343,7 +360,7 @@ class UnitLessonProgressTracker(object):
                 result[unit.unit_id] = self.is_assessment_completed(
                     progress, unit.unit_id)
             elif unit.type == 'U':
-                value = self._get_unit_status(progress, unit.unit_id)
+                value = self.get_unit_status(progress, unit.unit_id)
                 if value is None:
                     value = 0
                 result[unit.unit_id] = value
@@ -357,12 +374,17 @@ class UnitLessonProgressTracker(object):
 
         result = {}
         for lesson in lessons:
-            value = self._get_lesson_status(progress, unit_id, lesson.id)
+            value = self.get_lesson_status(progress, unit_id, lesson.id)
             if value is None:
                 value = 0
             result[lesson.id] = value
 
         return result
+
+    def _get_entity_value(self, progress, event_key):
+        if not progress.value:
+            return None
+        return transforms.loads(progress.value).get(event_key)
 
     def _set_entity_value(self, student_property, key, value):
         """Sets the integer value of a student property.
