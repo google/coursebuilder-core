@@ -17,7 +17,7 @@
         form {
           display: inline;
         }
-        html, body, p, table, td, th {
+        html, body, table, td, th {
           font-family: arial,sans-serif;
           font-size: 13px;
         }
@@ -77,6 +77,16 @@
         h3 {
           border-bottom: solid 1px #999999;
         }
+        p.page-description {
+          margin: 0;
+          padding: 0.4em 0 0 1em;
+          width: 40em;
+          text-align: left;
+        }
+        p.page-description, p.description {
+          font-size: 80%;
+          color: #666;
+        }
         div#gcb-readonly-bar {
           background-color: rgb(255, 255, 128);
           background-color: rgba(255, 255, 128, 0.5);
@@ -100,6 +110,9 @@
         }
         div#gcb-nav-bar a.selected {
           text-decoration: underline;
+        }
+        div#formContainer {
+          margin: 0;
         }
         .gcb-button {
           font-family: "open sans",arial,sans-serif;
@@ -142,6 +155,11 @@
         {{ readonly|safe }}
       </div>
     {% endif %}
+    {% if page_description %}
+      <p class="page-description">
+        {{ page_description|safe }}
+      </p>
+    {% endif %}
     {% if sections %}
     <div id='gcb-main-content'>
       {% for section in sections %}
@@ -161,6 +179,11 @@
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
         <h3>{{ section.title }}</h3>
+        {% if section.description %}
+          <p class="description">
+            {{ section.description|safe }}
+          </p>
+        {% endif %}
         {% if section.pre %}
         {{ section.pre|safe }}
         {% else %}

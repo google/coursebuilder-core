@@ -36,6 +36,7 @@ from filer import AssetItemRESTHandler
 from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
+import messages
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
@@ -131,6 +132,11 @@ class DashboardHandler(
 
         if roles.Roles.is_super_admin():
             nav.append('<a href="/admin">Admin</a>')
+
+        nav.append(
+            '<a href="https://code.google.com/p/course-builder/wiki/Dashboard"'
+            ' target="_blank">'
+            'Help</a>')
 
         return '\n'.join(nav)
 
@@ -291,13 +297,16 @@ class DashboardHandler(
         sections = [
             {
                 'title': 'Pages',
+                'description': messages.PAGES_DESCRIPTION,
                 'children': pages_info},
             {
                 'title': 'Course Outline',
+                'description': messages.COURSE_OUTLINE_DESCRIPTION,
                 'actions': outline_actions,
                 'pre': self.render_course_outline_to_html()},
             {
                 'title': 'Data Files',
+                'description': messages.DATA_FILES_DESCRIPTION,
                 'children': data_info}]
 
         if roles.Roles.is_super_admin():
@@ -359,12 +368,15 @@ class DashboardHandler(
         # Prepare template values.
         template_values = {}
         template_values['page_title'] = self.format_title('Settings')
+        template_values['page_description'] = messages.SETTINGS_DESCRIPTION
         template_values['sections'] = [
             {
                 'title': 'About the Course',
+                'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
                 'children': course_info},
             {
                 'title': 'Contents of course.yaml file',
+                'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
                 'actions': yaml_actions,
                 'children': yaml_info}]
 
@@ -459,6 +471,7 @@ class DashboardHandler(
 
         template_values = {}
         template_values['page_title'] = self.format_title('Assets')
+        template_values['page_description'] = messages.ASSETS_DESCRIPTION
         template_values['main_content'] = lines
         self.render_page(template_values)
 

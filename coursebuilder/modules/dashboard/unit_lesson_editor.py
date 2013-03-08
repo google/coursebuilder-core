@@ -30,6 +30,7 @@ from models import transforms
 from modules.oeditor import oeditor
 from tools import verify
 import filer
+import messages
 
 
 DRAFT_TEXT = 'Private'
@@ -99,6 +100,7 @@ class UnitLessonEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Import Course')
+        template_values['page_description'] = messages.IMPORT_COURSE_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -119,6 +121,8 @@ class UnitLessonEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Course Outline')
+        template_values[
+            'page_description'] = messages.COURSE_OUTLINE_EDITOR_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -163,7 +167,7 @@ class UnitLessonEditor(ApplicationHandler):
 
     def _render_edit_form_for(
         self, rest_handler_cls, title, annotations_dict=None,
-        delete_xsrf_token='delete-unit'):
+        delete_xsrf_token='delete-unit', page_description=None):
         """Renders an editor form for a given REST handler class."""
         if not annotations_dict:
             annotations_dict = rest_handler_cls.SCHEMA_ANNOTATIONS_DICT
@@ -191,22 +195,29 @@ class UnitLessonEditor(ApplicationHandler):
             required_modules=rest_handler_cls.REQUIRED_MODULES)
 
         template_values = {}
-        template_values['page_title'] = self.format_title(
-            'Edit %s' % title)
+        template_values['page_title'] = self.format_title('Edit %s' % title)
+        if page_description:
+            template_values['page_description'] = page_description
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
     def get_edit_unit(self):
         """Shows unit editor."""
-        self._render_edit_form_for(UnitRESTHandler, 'Unit')
+        self._render_edit_form_for(
+            UnitRESTHandler, 'Unit',
+            page_description=messages.UNIT_EDITOR_DESCRIPTION)
 
     def get_edit_link(self):
         """Shows link editor."""
-        self._render_edit_form_for(LinkRESTHandler, 'Link')
+        self._render_edit_form_for(
+            LinkRESTHandler, 'Link',
+            page_description=messages.LINK_EDITOR_DESCRIPTION)
 
     def get_edit_assessment(self):
         """Shows assessment editor."""
-        self._render_edit_form_for(AssessmentRESTHandler, 'Assessment')
+        self._render_edit_form_for(
+            AssessmentRESTHandler, 'Assessment',
+            page_description=messages.ASSESSMENT_EDITOR_DESCRIPTION)
 
     def get_edit_lesson(self):
         """Shows the lesson/activity editor."""
@@ -384,7 +395,9 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        (['properties', 'url', '_inputex'], {'label': 'URL'}),
+        (['properties', 'url', '_inputex'], {
+            'label': 'URL',
+            'description': messages.LINK_EDITOR_URL_DESCRIPTION}),
         create_status_annotation()]
 
     REQUIRED_MODULES = [
@@ -749,13 +762,21 @@ class LessonRESTHandler(BaseRESTHandler):
                 'label': 'Parent Unit', '_type': 'select',
                 'choices': unit_list}),
             (['properties', 'objectives', '_inputex'], {
-                'label': 'Objectives', 'editorType': 'simple'}),
-            (['properties', 'video', '_inputex'], {'label': 'Video ID'}),
-            (['properties', 'notes', '_inputex'], {'label': 'Notes'}),
+                'label': 'Objectives',
+                'editorType': 'simple',
+                'description': messages.LESSON_OBJECTIVES_DESCRIPTION}),
+            (['properties', 'video', '_inputex'], {
+                'label': 'Video ID',
+                'description': messages.LESSON_VIDEO_ID_DESCRIPTION}),
+            (['properties', 'notes', '_inputex'], {
+                'label': 'Notes',
+                'description': messages.LESSON_NOTES_DESCRIPTION}),
             (['properties', 'activity_title', '_inputex'], {
-                'label': 'Activity Title'}),
+                'label': 'Activity Title',
+                'description': messages.LESSON_ACTIVITY_TITLE_DESCRIPTION}),
             (['properties', 'activity', '_inputex'], {
-                'label': 'Activity'}),
+                'label': 'Activity',
+                'description': messages.LESSON_ACTIVITY_DESCRIPTION}),
             create_status_annotation()]
 
     def get(self):

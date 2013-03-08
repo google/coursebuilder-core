@@ -14,7 +14,7 @@
         form {
           display: inline;
         }
-        html, body, p, table, td, th {
+        html, body, table, td, th {
           font-family: arial,sans-serif;
           font-size: 13px;
         }
@@ -76,6 +76,16 @@
           padding-right: 4px;
           color: #0000FF;
         }
+        p.page-description {
+          margin: 0;
+          padding: 0.4em 0 0 1em;
+          width: 40em;
+          text-align: left;
+        }
+        p.page-description, p.description {
+          font-size: 80%;
+          color: #666;
+        }
         div#gcb-nav-bar a {
           padding-left: 8px;
           padding-right: 8px;
@@ -115,6 +125,11 @@
     {{ top_nav | safe }}
   </div>
   <div id='gcb-main-area'>
+    {% if page_description %}
+      <p class="page-description">
+        {{ page_description|safe }}
+      </p>
+    {% endif %}
     <div id='gcb-main-content'>
       {{ main_content | safe }}
     </div>

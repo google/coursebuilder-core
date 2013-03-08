@@ -33,6 +33,7 @@ from models import roles
 from models.config import ConfigProperty
 from modules.admin.config import ConfigPropertyEditor
 import webapp2
+import messages
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
 
@@ -155,6 +156,11 @@ class AdminHandler(
             nav.append(
                 '<a target="_blank" href="/_ah/admin">Google App Engine</a>')
 
+        nav.append(
+            '<a href="https://code.google.com/p/course-builder/wiki/AdminPage"'
+            ' target="_blank">'
+            'Help</a>')
+
         return '\n'.join(nav)
 
     def render_page(self, template_values):
@@ -193,6 +199,7 @@ class AdminHandler(
         """Shows server performance counters page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Metrics')
+        template_values['page_description'] = messages.METRICS_DESCRIPTION
 
         perf_counters = {}
 
@@ -222,6 +229,7 @@ class AdminHandler(
         """Shows server environment and deployment information page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Deployment')
+        template_values['page_description'] = messages.DEPLOYMENT_DESCRIPTION
 
         # Yaml file content.
         yaml_content = []
@@ -252,6 +260,7 @@ class AdminHandler(
         """Shows configuration properties information page."""
         template_values = {}
         template_values['page_title'] = self.format_title('Settings')
+        template_values['page_description'] = messages.SETTINGS_DESCRIPTION
 
         content = []
         content.append("""
@@ -379,6 +388,7 @@ class AdminHandler(
         """Shows a list of all courses available on this site."""
         template_values = {}
         template_values['page_title'] = self.format_title('Courses')
+        template_values['page_description'] = messages.COURSES_DESCRIPTION
 
         content = []
         content.append(

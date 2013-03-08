@@ -30,6 +30,7 @@ from models import transforms
 from models import vfs
 from modules.oeditor import oeditor
 import yaml
+import messages
 import unit_lesson_editor
 from google.appengine.api import users
 
@@ -96,6 +97,7 @@ class FileManagerAndEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
+        template_values['page_description'] = messages.EDIT_SETTINGS_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -116,6 +118,7 @@ class FileManagerAndEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Upload Asset')
+        template_values['page_description'] = messages.UPLOAD_ASSET_DESCRIPTION
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
