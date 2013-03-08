@@ -49,6 +49,76 @@ from google.appengine.api import namespace_manager
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_datastore_backed_file_system(self):
+        """Tests store backed file system operations."""
+        fs = vfs.AbstractFileSystem(vfs.DatastoreBackedFileSystem('/'))
+
+        # Check binary file.
+        src = os.path.join(appengine_config.BUNDLE_ROOT, 'course.yaml')
+        dst = os.path.join('/', 'course.yaml')
+
+        fs.put(dst, open(src, 'rb'))
+        stored = fs.open(dst)
+        assert stored.metadata.size == len(open(src, 'rb').read())
+        assert stored.metadata.is_draft
+        assert stored.read() == open(src, 'rb').read()
+
+        # Check draft.
+        fs.put(dst, open(src, 'rb'), is_draft=False)
+        stored = fs.open(dst)
+        assert not stored.metadata.is_draft
+
+        # Check text files with non-ASCII characters and encoding.
+        foo_js = os.path.join('/', 'assets/js/foo.js')
+        foo_text = u'This is a test text (тест данные).'
+        fs.put(foo_js, vfs.string_to_stream(foo_text))
+        stored = fs.open(foo_js)
+        assert vfs.stream_to_string(stored) == foo_text
+
+        # Check delete.
+        for can_use_memcache in [True, False]:
+            del_file = os.path.join('/', 'memcache.test')
+            config.Registry.test_overrides[
+                models.CAN_USE_MEMCACHE.name] = can_use_memcache
+            fs.put(del_file, vfs.string_to_stream(u'test'))
+            assert fs.isfile(del_file)
+            fs.delete(del_file)
+            assert not fs.isfile(del_file)
+            config.Registry.test_overrides = {}
+
+        # Check open or delete of non-existent does not fail.
+        assert not fs.open('/foo/bar/baz')
+        assert not fs.delete('/foo/bar/baz')
+
+        # Check new content fully overrides old (with and without memcache).
+        test_file = os.path.join('/', 'memcache.test')
+        for can_use_memcache in [True, False]:
+            config.Registry.test_overrides[
+                models.CAN_USE_MEMCACHE.name] = can_use_memcache
+            test_text = u'yes memcache' if can_use_memcache else u'no memcache'
+            fs.put(test_file, vfs.string_to_stream(test_text))
+            stored = fs.open(test_file)
+            assert vfs.stream_to_string(stored) == test_text
+            config.Registry.test_overrides = {}
+        fs.delete(test_file)
+
+        # Check file existence.
+        assert not fs.isfile('/foo/bar')
+        assert fs.isfile('/course.yaml')
+        assert fs.isfile('/assets/js/foo.js')
+
+        # Check file listing.
+        bar_js = os.path.join('/', 'assets/js/bar.js')
+        fs.put(bar_js, vfs.string_to_stream(foo_text))
+        baz_js = os.path.join('/', 'assets/js/baz.js')
+        fs.put(baz_js, vfs.string_to_stream(foo_text))
+        assert fs.list('/') == sorted([
+            u'/course.yaml',
+            u'/assets/js/foo.js', u'/assets/js/bar.js', u'/assets/js/baz.js'])
+        assert fs.list('/assets') == sorted([
+            u'/assets/js/foo.js', u'/assets/js/bar.js', u'/assets/js/baz.js'])
+        assert not fs.list('/foo/bar')
+
     def test_utf8_datastore(self):
         """Test writing to and reading from datastore using UTF-8 content."""
         event = models.EventEntity()
@@ -1301,9 +1371,10 @@ class VirtualFileSystemTest(
         # Modify app_context filesystem to map /data-v to /data-vfs.
         def after_create(unused_cls, instance):
             # pylint: disable-msg=protected-access
-            instance._fs = vfs.LocalReadOnlyFileSystem(
-                os.path.join(GeneratedCourse.data_home, 'data-vfs'),
-                home_folder)
+            instance._fs = vfs.AbstractFileSystem(
+                vfs.LocalReadOnlyFileSystem(
+                    os.path.join(GeneratedCourse.data_home, 'data-vfs'),
+                    home_folder))
 
         sites.ApplicationContext.after_create = after_create
 
@@ -1312,3 +1383,16 @@ class VirtualFileSystemTest(
         sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
         super(VirtualFileSystemTest, self).tearDown()
+
+
+class DatastoreBackedFileSystemTest(actions.TestBase):
+    """Test a course running on datastore backed file system."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        """Configure the test."""
+        self.namespace = 'dsbfs'
+        sites.setup_courses('course:/::%s' % self.namespace)
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        """Clean up."""
+        sites.reset_courses()
