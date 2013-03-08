@@ -62,6 +62,7 @@ class ObjectEditor(object):
     def get_html_for(
         cls, handler, schema_json, annotations, object_key,
         rest_url, exit_url,
+        extra_args=None,
         save_method='put',
         delete_url=None, delete_method='post',
         auto_return=False, read_only=False,
@@ -79,6 +80,7 @@ class ObjectEditor(object):
             object_key: a key of an object being edited
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
+            extra_args: extra request params passed back in GET and POST
             save_method: how the data should be saved to the server (put|upload)
             delete_url: optional URL for delete operation
             delete_method: optional HTTP method for delete operation
@@ -103,6 +105,10 @@ class ObjectEditor(object):
         get_args = {'key': object_key}
         post_url = rest_url
         post_args = {'key': object_key}
+
+        if extra_args:
+            get_args.update(extra_args)
+            post_args.update(extra_args)
 
         if read_only:
             post_url = ''

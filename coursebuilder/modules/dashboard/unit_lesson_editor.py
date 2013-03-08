@@ -136,8 +136,9 @@ class UnitLessonEditor(ApplicationHandler):
             lesson = course.add_lesson(first_unit)
             course.save()
             # TODO(psimakov): complete 'edit_lesson' view
-            self.redirect(
-                self.get_action_url('edit_lesson', key=lesson.lesson_id))
+            self.redirect(self.get_action_url(
+                'edit_lesson', key=lesson.lesson_id,
+                extra_args={'is_newly_created': 1}))
         else:
             self.redirect('/dashboard')
 
@@ -146,22 +147,25 @@ class UnitLessonEditor(ApplicationHandler):
         course = courses.Course(self)
         unit = course.add_unit()
         course.save()
-        self.redirect(self.get_action_url('edit_unit', key=unit.unit_id))
+        self.redirect(self.get_action_url(
+            'edit_unit', key=unit.unit_id, extra_args={'is_newly_created': 1}))
 
     def post_add_link(self):
         """Adds new link to a course."""
         course = courses.Course(self)
         link = course.add_link()
         course.save()
-        self.redirect(self.get_action_url('edit_link', key=link.unit_id))
+        self.redirect(self.get_action_url(
+            'edit_link', key=link.unit_id, extra_args={'is_newly_created': 1}))
 
     def post_add_assessment(self):
         """Adds new assessment to a course."""
         course = courses.Course(self)
         assessment = course.add_assessment()
         course.save()
-        self.redirect(
-            self.get_action_url('edit_assessment', key=assessment.unit_id))
+        self.redirect(self.get_action_url(
+            'edit_assessment', key=assessment.unit_id,
+            extra_args={'is_newly_created': 1}))
 
     def _render_edit_form_for(
         self, rest_handler_cls, title, annotations_dict=None,
@@ -171,6 +175,10 @@ class UnitLessonEditor(ApplicationHandler):
             annotations_dict = rest_handler_cls.SCHEMA_ANNOTATIONS_DICT
 
         key = self.request.get('key')
+
+        extra_args = {}
+        if self.request.get('is_newly_created'):
+            extra_args['is_newly_created'] = 1
 
         exit_url = self.canonicalize_url('/dashboard')
         rest_url = self.canonicalize_url(rest_handler_cls.URI)
@@ -187,6 +195,7 @@ class UnitLessonEditor(ApplicationHandler):
             rest_handler_cls.SCHEMA_JSON,
             annotations_dict,
             key, rest_url, exit_url,
+            extra_args=extra_args,
             delete_url=delete_url, delete_method='delete',
             read_only=not filer.is_editable_fs(self.app_context),
             required_modules=rest_handler_cls.REQUIRED_MODULES)
@@ -252,8 +261,14 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 self, 404, 'Object not found.', {'key': key})
             return
 
+        message = ['Success.']
+        if self.request.get('is_newly_created'):
+            unit_type = verify.UNIT_TYPE_NAMES[unit.type].lower()
+            message.append(
+                'New %s has been created and saved.' % unit_type)
+
         transforms.send_json_response(
-            self, 200, 'Success.',
+            self, 200, '\n'.join(message),
             payload_dict=self.unit_to_dict(unit),
             xsrf_token=XsrfTokenManager.create_xsrf_token('put-unit'))
 
@@ -808,8 +823,12 @@ class LessonRESTHandler(BaseRESTHandler):
             'is_draft': not lesson.now_available
             }
 
+        message = ['Success.']
+        if self.request.get('is_newly_created'):
+            message.append('New lesson has been created and saved.')
+
         transforms.send_json_response(
-            self, 200, 'Success.',
+            self, 200, '\n'.join(message),
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token('lesson-edit'))
 

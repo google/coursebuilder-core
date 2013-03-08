@@ -12,17 +12,20 @@
 
 <!-- TODO(psimakov): take styles out into a separate file -->
 <style>
+  div.oeditor-container {
+    position: relative;
+  }
   div.status-popup {
     width:400px;   /* adjust */
-    top:15%;
+    top:-45px;
     left:50%;
     margin-left: -200px;  /* half of the width */
-    position:fixed;
+    position:absolute;
     background-color: #ffffB7;
     border: solid #cccca0 1px;
-    border-radius: 10px;
+    border-radius: 5px;
     text-align: center;
-    padding: 5px;
+    padding: 2px;
     z-index: 999;
   }
   div.status-controlbar {
@@ -34,7 +37,7 @@
     padding: 0 0.2em;
   }
   div.status-message {
-    padding: 10px;
+    padding: 0.2em;
   }
 
   div.form {
@@ -180,15 +183,16 @@
   }
 </style>
 
-<div class='status-popup' id='formStatusPopup' style='display: none;'>
-  <div class='status-controlbar'>
-    <button onclick='cbHideMsg()'>X</button>
+<div class='oeditor-container'>
+  <div class='status-popup' id='formStatusPopup' style='display: none;'>
+    <div class='status-controlbar'>
+      <button onclick='cbHideMsg()'>X</button>
+    </div>
+    <div class='status-message' id='formStatusMessage'></div>
   </div>
-  <div class='status-message' id='formStatusMessage'></div>
-</div>
-
-<div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
-  <div class='form' id='formContainer'></div>
+  <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
+    <div class='form' id='formContainer'></div>
+  </div>
 </div>
 
 <!-- TODO(psimakov): take most of JS out into a separate file -->
@@ -409,7 +413,7 @@
                       if (cb_global.auto_return) {
                         window.location = cb_global.exit_url;
                       }
-                    }, 750);
+                    }, 2000);
                   }
               }
             };
@@ -612,7 +616,7 @@
               // update ui state
               document.getElementById("formContainer").style.display = "block";
               cbShowMsg(json.message);
-              setTimeout(function(){ cbHideMsg(); }, 750);
+              setTimeout(function(){ cbHideMsg(); }, 2000);
             },
             failure : function (x,o) {
                 cbShowMsg("Server did not respond. Please reload the page to try again.");

@@ -319,10 +319,12 @@ class DashboardHandler(
         template_values['sections'] = sections
         self.render_page(template_values)
 
-    def get_action_url(self, action, key=None):
+    def get_action_url(self, action, key=None, extra_args=None):
         args = {'action': action}
         if key:
             args['key'] = key
+        if extra_args:
+            args.update(extra_args)
         url = '/dashboard?%s' % urllib.urlencode(args)
         return self.canonicalize_url(url)
 
