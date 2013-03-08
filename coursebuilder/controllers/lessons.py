@@ -187,6 +187,9 @@ class ActivityHandler(BaseHandler):
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
+        # Set template value for event recording
+        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
+
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value)
