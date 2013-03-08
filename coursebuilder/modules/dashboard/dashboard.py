@@ -147,7 +147,9 @@ class DashboardHandler(
         template_values['top_nav'] = self._get_top_nav()
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
-            users.get_current_user().email(), users.create_logout_url('/'))
+            users.get_current_user().email(),
+            users.create_logout_url(self.request.uri)
+        )
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
 

@@ -207,7 +207,8 @@ class BaseHandler(ApplicationHandler):
         user = self.get_user()
         if user:
             self.template_value['email'] = user.email()
-            self.template_value['logoutUrl'] = users.create_logout_url('/')
+            self.template_value['logoutUrl'] = (
+                users.create_logout_url(self.request.uri))
         return user
 
     def personalize_page_and_get_enrolled(self):
@@ -260,10 +261,12 @@ class PreviewHandler(BaseHandler):
         """Handles GET requests."""
         user = users.get_current_user()
         if not user:
-            self.template_value['loginUrl'] = users.create_login_url('/')
+            self.template_value['loginUrl'] = (
+                users.create_login_url(self.request.uri))
         else:
             self.template_value['email'] = user.email()
-            self.template_value['logoutUrl'] = users.create_logout_url('/')
+            self.template_value['logoutUrl'] = (
+                users.create_logout_url(self.request.uri))
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['units'] = self.get_units()
