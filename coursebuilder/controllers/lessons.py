@@ -101,7 +101,8 @@ class UnitHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        if not self.personalize_page_and_get_enrolled():
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
         # Extract incoming args
@@ -138,6 +139,10 @@ class UnitHandler(BaseHandler):
         else:
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+
+        # Set template values for student progress
+        self.template_value['progress'] = (
+            self.get_progress_tracker().get_lesson_progress(student, unit_id))
 
         self.render('unit.html')
 
@@ -176,13 +181,18 @@ class ActivityHandler(BaseHandler):
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
-        # Mark this page as accessed.
-        self.get_course().get_progress_tracker().put_activity_accessed(
-            student, unit_id, lesson_id)
-
+        # Set template values for student progress
+        self.template_value['progress'] = (
+            self.get_progress_tracker().get_lesson_progress(student, unit_id))
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
+
+        # Mark this page as accessed. This is done after setting the student
+        # progress template value, so that the mark only shows up after the
+        # student visits the page for the first time.
+        self.get_course().get_progress_tracker().put_activity_accessed(
+            student, unit_id, lesson_id)
 
         self.render('activity.html')
 

@@ -124,7 +124,7 @@ th, td {
 }
 
 #gcb-nav-y li li {
-  margin: 0 0 0 18px;
+  margin: 0 0 0 0;
 }
 
 #gcb-nav-y + .gcb-article {
@@ -818,8 +818,7 @@ h1.product-headers {
   margin: 10px 7px;
 }
 
-.tick {
-  color: green;
-  font-size: 22px;
-  padding-left: 20px;
+img.progress {
+  margin: 2px 7px 0 0;
+  opacity: 0.7;
 }

@@ -622,6 +622,7 @@ class StudentAspectTest(actions.TestBase):
 
     def test_view_announcements(self):
         """Test student aspect of announcements."""
+
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
@@ -915,6 +916,7 @@ class AssessmentTest(actions.TestBase):
 
     def test_assessments(self):
         """Test assessment scores are properly submitted and summarized."""
+
         email = 'test_assessments@google.com'
         name = 'Test Assessments'
 
@@ -934,7 +936,8 @@ class AssessmentTest(actions.TestBase):
         # Navigate to the course overview page.
         response = self.get('course')
         assert_equals(response.status_int, 200)
-        assert_does_not_contain(u'✔', response.body)
+        assert_does_not_contain(u'id="progress-completed-Mid', response.body)
+        assert_contains(u'id="progress-notstarted-Mid', response.body)
 
         old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.namespace)
@@ -955,9 +958,7 @@ class AssessmentTest(actions.TestBase):
             # Navigate to the course overview page.
             response = self.get('course')
             assert_equals(response.status_int, 200)
-            assert_contains(
-                u"""Mid-course assessment</a>\n                      \n  """
-                """                      <span class="tick">""", response.body)
+            assert_contains(u'id="progress-completed-Mid', response.body)
 
             # Submit the final assessment.
             self.submit_assessment('Fin', fin)

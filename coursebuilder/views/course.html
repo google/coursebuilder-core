@@ -26,19 +26,41 @@
                 {% if unit.now_available %}
                   {% if unit.type == 'A' %}
                     <li><p class="top_content">
-                      <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
-                      {% if unit.unit_id in progress %}
-                        <span class="tick">✔</span>
+                      {% if progress[unit.unit_id] > 0 %}
+                        <img src="assets/lib/completed.png"
+                             alt="{% trans %} Completed {% endtrans %}"
+                             class="progress"
+                             id="progress-completed-{{unit.unit_id}}">
+                      {% else %}
+                        <img src="assets/lib/not_started.png"
+                             alt="{% trans %} Not Yet Submitted {% endtrans %}"
+                             class="progress"
+                             id="progress-notstarted-{{unit.unit_id}}">
                       {% endif %}
+                      <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
                     </p></li>
                   {% elif unit.type == 'U' %}
                     <li><p class="top_content">
+                      {% if progress[unit.unit_id] == 2 %}
+                        <img src="assets/lib/completed.png"
+                             alt="{% trans %} Completed {% endtrans %}"
+                             class="progress"
+                             id="progress-completed-{{unit.unit_id}}">
+                      {% elif progress[unit.unit_id] == 1 %}
+                        <img src="assets/lib/in_progress.png"
+                             alt="{% trans %} In Progress {% endtrans %}"
+                             class="progress"
+                             id="progress-inprogress-{{unit.unit_id}}">
+                      {% else %}
+                        <img src="assets/lib/not_started.png"
+                             alt="{% trans %} Not Yet Started {% endtrans %}"
+                             class="progress"
+                             id="progress-notstarted-{{unit.unit_id}}">
+                      {% endif %}
+
                       <a href="unit?unit={{ unit.unit_id }}">
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.unit_id, title=unit.title) }}
                       </a>
-                      {% if unit.unit_id in progress %}
-                        <span class="tick">✔</span>
-                      {% endif %}
                     </p></li>
                   {% elif unit.type == 'O' %}
                     <li><p class="top_content">
