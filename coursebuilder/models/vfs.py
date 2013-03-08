@@ -41,6 +41,14 @@ class AbstractFileSystem(object):
     def impl(self):
         return self._impl
 
+    @classmethod
+    def normpath(cls, path):
+        """Make Windows and Linux filenames to have the same separator '/'."""
+        # Replace '\' into '/' and force Unicode.
+        if not path:
+            return path
+        return u'' + path.replace('\\', '/')
+
     def isfile(self, filename):
         """Checks if file exists, similar to os.path.isfile(...)."""
         return self._impl.isfile(filename)
@@ -93,22 +101,28 @@ class LocalReadOnlyFileSystem(object):
         Returns:
             A new instance of the object.
         """
-        self._logical_home_folder = logical_home_folder
-        self._physical_home_folder = physical_home_folder
+        self._logical_home_folder = AbstractFileSystem.normpath(
+            logical_home_folder)
+        self._physical_home_folder = AbstractFileSystem.normpath(
+            physical_home_folder)
 
     def _logical_to_physical(self, filename):
+        filename = AbstractFileSystem.normpath(filename)
         if not (self._logical_home_folder and self._physical_home_folder):
             return filename
-        return os.path.join(
+        filename = os.path.join(
             self._physical_home_folder,
             os.path.relpath(filename, self._logical_home_folder))
+        return AbstractFileSystem.normpath(filename)
 
     def _physical_to_logical(self, filename):
+        filename = AbstractFileSystem.normpath(filename)
         if not (self._logical_home_folder and self._physical_home_folder):
             return filename
-        return os.path.join(
+        filename = os.path.join(
             self._logical_home_folder,
             os.path.relpath(filename, self._physical_home_folder))
+        return AbstractFileSystem.normpath(filename)
 
     def isfile(self, filename):
         return os.path.isfile(self._logical_to_physical(filename))
@@ -209,12 +223,17 @@ class VirtualFileSystemTemplateLoader(jinja2.BaseLoader):
 
     def __init__(self, fs, logical_home_folder, dir_names):
         self._fs = fs
-        self._logical_home_folder = logical_home_folder
-        self._dir_names = dir_names
+        self._logical_home_folder = AbstractFileSystem.normpath(
+            logical_home_folder)
+        self._dir_names = []
+        if dir_names:
+            for dir_name in dir_names:
+                self._dir_names.append(AbstractFileSystem.normpath(dir_name))
 
     def get_source(self, unused_environment, template):
         for dir_name in self._dir_names:
-            filename = os.path.join(dir_name, template)
+            filename = AbstractFileSystem.normpath(
+                os.path.join(dir_name, template))
             if self._fs.isfile(filename):
                 return self._fs.get(
                     filename).read().decode('utf-8'), filename, True
@@ -258,9 +277,15 @@ class DatastoreBackedFileSystem(object):
             raise Exception('Can only inherit from LocalReadOnlyFileSystem.')
 
         self._ns = ns
-        self._logical_home_folder = logical_home_folder
+        self._logical_home_folder = AbstractFileSystem.normpath(
+            logical_home_folder)
         self._inherits_from = inherits_from
-        self._inheritable_folders = inheritable_folders
+        self._inheritable_folders = []
+
+        if inheritable_folders:
+            for folder in inheritable_folders:
+                self._inheritable_folders.append(AbstractFileSystem.normpath(
+                    folder))
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
@@ -287,6 +312,8 @@ class DatastoreBackedFileSystem(object):
         return attr
 
     def _logical_to_physical(self, filename):
+        filename = AbstractFileSystem.normpath(filename)
+
         # For now we only support '/' as a physical folder name.
         if self._logical_home_folder == '/':
             return filename
@@ -319,6 +346,8 @@ class DatastoreBackedFileSystem(object):
         return self._physical_to_logical(filename)
 
     def _physical_to_logical(self, filename):
+        filename = AbstractFileSystem.normpath(filename)
+
         # For now we only support '/' as a physical folder name.
         if filename and not filename.startswith('/'):
             filename = '/' + filename

@@ -390,7 +390,7 @@ class DashboardHandler(
         result = []
         for abs_filename in sorted(files):
             filename = os.path.relpath(abs_filename, home)
-            result.append(filename)
+            result.append(vfs.AbstractFileSystem.normpath(filename))
         return result
 
     def list_and_format_file_list(

@@ -27,6 +27,9 @@ PRODUCTION_MODE = not os.environ.get(
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
 
+# make all Windows and Linux paths have the same separator '/'
+BUNDLE_ROOT = BUNDLE_ROOT.replace('\\', '/')
+
 # Default namespace name is '' and not None.
 DEFAULT_NAMESPACE_NAME = ''
 

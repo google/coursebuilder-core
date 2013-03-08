@@ -437,7 +437,7 @@ def path_join(base, path):
         unused_drive, path_no_drive = os.path.splitdrive(path)
         # Remove leading path separator.
         path = path_no_drive[1:]
-    return os.path.join(base, path)
+    return AbstractFileSystem.normpath(os.path.join(base, path))
 
 
 def abspath(home_folder, filename):
@@ -1109,14 +1109,15 @@ def test_url_to_handler_mapping_for_course_type():
 
     # Test assets mapping.
     handler = assert_handled('/a/b/assets/img/foo.png', AssetHandler)
-    assert os.path.normpath(handler.app_context.get_template_home()).endswith(
-        os.path.normpath('/coursebuilder/c/d/views'))
+    assert AbstractFileSystem.normpath(
+        handler.app_context.get_template_home()).endswith(
+            AbstractFileSystem.normpath('/c/d/views'))
 
     # This is allowed as we don't go out of /assets/...
     handler = assert_handled(
         '/a/b/assets/foo/../models/models.py', AssetHandler)
-    assert os.path.normpath(handler.filename).endswith(
-        os.path.normpath('/coursebuilder/c/d/assets/models/models.py'))
+    assert AbstractFileSystem.normpath(handler.filename).endswith(
+        AbstractFileSystem.normpath('/c/d/assets/models/models.py'))
 
     # This is not allowed as we do go out of /assets/...
     assert_handled('/a/b/assets/foo/../../models/models.py', None)
@@ -1138,8 +1139,9 @@ def test_url_to_handler_mapping_for_course_type():
     assert_handled('/foo', FakeHandler1)
     assert_handled('/bar', FakeHandler2)
     handler = assert_handled('/assets/js/main.js', AssetHandler)
-    assert os.path.normpath(handler.app_context.get_template_home()).endswith(
-        os.path.normpath('/coursebuilder/views'))
+    assert AbstractFileSystem.normpath(
+        handler.app_context.get_template_home()).endswith(
+            AbstractFileSystem.normpath('/views'))
 
     # Negative cases
     assert_handled('/favicon.ico', None)

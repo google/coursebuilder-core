@@ -2241,7 +2241,9 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains(
             'assets', [self.course_ru.title])
         assert_page_contains(
-            'settings', [self.course_ru.title, self.course_ru.home])
+            'settings', [
+                self.course_ru.title,
+                vfs.AbstractFileSystem.normpath(self.course_ru.home)])
 
         # Clean up.
         actions.logout()
@@ -2363,8 +2365,15 @@ class DatastoreBackedCourseTest(actions.TestBase):
         try:
             namespace_manager.set_namespace(self.namespace)
             upload_files(files_added)
+
+            # Normalize paths to be identical for Windows and Linux.
+            files_added_normpath = []
+            for file_added in files_added:
+                files_added_normpath.append(
+                    vfs.AbstractFileSystem.normpath(file_added))
+
             assert self.app_context.fs.list(
-                appengine_config.BUNDLE_ROOT) == sorted(files_added)
+                appengine_config.BUNDLE_ROOT) == sorted(files_added_normpath)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
