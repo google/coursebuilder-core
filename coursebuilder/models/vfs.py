@@ -188,20 +188,24 @@ def stream_to_string(stream):
 class VirtualFileSystemTemplateLoader(jinja2.BaseLoader):
     """Loader of jinja2 templates from a virtual file system."""
 
-    def __init__(self, fs, logical_home_folder):
+    def __init__(self, fs, logical_home_folder, dir_names):
         self._fs = fs
         self._logical_home_folder = logical_home_folder
+        self._dir_names = dir_names
 
     def get_source(self, unused_environment, template):
-        filename = os.path.join(os.path.join(
-            self._logical_home_folder, 'views'), template)
-        stream = self._fs.get(filename)
-        if not stream:
-            raise jinja2.TemplateNotFound(template)
-        return stream.read().decode('utf-8'), filename, True
+        for dir_name in self._dir_names:
+            filename = os.path.join(dir_name, template)
+            if self._fs.isfile(filename):
+                return self._fs.get(
+                    filename).read().decode('utf-8'), filename, True
+        raise jinja2.TemplateNotFound(template)
 
     def list_templates(self):
-        return self._fs.list(os.path.join(self._logical_home_folder, 'views'))
+        all_templates = []
+        for dir_name in self._dir_names:
+            all_templates += self._fs.list(dir_name)
+        return all_templates
 
 
 class DatastoreBackedFileSystem(object):
@@ -375,11 +379,11 @@ class DatastoreBackedFileSystem(object):
                 result.append(self._physical_to_logical(filename))
         return sorted(result)
 
-    def get_jinja_environ(self, unused_dir_names):
+    def get_jinja_environ(self, dir_names):
         return jinja2.Environment(
             extensions=['jinja2.ext.i18n'],
             loader=VirtualFileSystemTemplateLoader(
-                self, self._logical_home_folder))
+                self, self._logical_home_folder, dir_names))
 
 
 def run_all_unit_tests():

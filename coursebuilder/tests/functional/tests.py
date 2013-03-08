@@ -548,6 +548,11 @@ class CourseAuthorAspectTest(actions.TestBase):
         response = self.submit(add_form)
         assert_equals(response.status_int, 302)
 
+        # check edit form rendering
+        response = self.testapp.get(response.location)
+        assert_equals(response.status_int, 200)
+        assert_contains('/rest/announcements/item?key=', response.body)
+
         # check added
         response = actions.view_announcements(self)
         assert_contains('Sample Announcement (Draft)', response.body)

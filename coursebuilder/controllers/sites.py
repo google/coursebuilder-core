@@ -132,11 +132,15 @@ GCB_VIEWS_FOLDER_NAME = os.path.normpath('/views/')
 GCB_DATA_FOLDER_NAME = os.path.normpath('/data/')
 GCB_CONFIG_FILENAME = os.path.normpath('/course.yaml')
 
+# modules do have files that must be inheritable, like oeditor.html
+GCB_MODULES_FOLDER_NAME = os.path.normpath('/modules/')
+
 # Files in these folders are inheritable between file systems.
 GCB_INHERITABLE_FOLDER_NAMES = [
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'css/'),
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'lib/'),
-    GCB_VIEWS_FOLDER_NAME]
+    GCB_VIEWS_FOLDER_NAME,
+    GCB_MODULES_FOLDER_NAME]
 
 # supported site types
 SITE_TYPE_COURSE = 'course'
@@ -356,7 +360,8 @@ def get_all_courses(rules_text=None):
 
         all_contexts.append(ApplicationContext(
             site_type, slug, folder, namespace,
-            AbstractFileSystem(create_fs(namespace))))
+            AbstractFileSystem(create_fs(namespace)),
+            raw=rule))
 
     validate_appcontext_list(all_contexts)
 
@@ -510,7 +515,7 @@ class ApplicationContext(object):
         """Override this method to manipulate freshly created instance."""
         pass
 
-    def __init__(self, site_type, slug, homefolder, namespace, fs):
+    def __init__(self, site_type, slug, homefolder, namespace, fs, raw=None):
         """Creates new application context.
 
         Args:
@@ -519,6 +524,7 @@ class ApplicationContext(object):
             homefolder: A folder with the assets belonging to this context.
             namespace: A name of a datastore namespace for use by this context.
             fs: A file system object to be used for accessing homefolder.
+            raw: A raw representation of this course rule (course:/:/).
 
         Returns:
             The new instance of namespace object.
@@ -528,12 +534,20 @@ class ApplicationContext(object):
         self.homefolder = homefolder
         self.namespace = namespace
         self._fs = fs
+        self._raw = raw
 
         self.after_create(self)
 
     @ property
+    def raw(self):
+        return self._raw
+
+    @ property
     def fs(self):
         return self._fs
+
+    def get_title(self):
+        return self.get_environ()['course']['title']
 
     def get_namespace_name(self):
         return self.namespace
