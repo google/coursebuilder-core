@@ -182,16 +182,6 @@ COUNTER_BY_HTTP_CODE = {
     500: HTTP_STATUS_500}
 
 
-GCB_COURSES_CONFIG = ConfigProperty(
-    'gcb_courses_config', str, (
-        'A \',\' or newline separated list of course entries. '
-        'Each course entry has four \':\' separated parts: the word '
-        '\'course\', the URL prefix, and the file system location for the site '
-        'files. If the third part is empty, the course assets are stored '
-        'in a datastore instead of the file system. The fourth, optional part, '
-        'is the name of the course namespace.'), 'course:/:/', True)
-
-
 def count_stats(handler):
     """Records statistics about the request and the response."""
     try:
@@ -258,9 +248,12 @@ def debug(message):
         logging.info(message)
 
 
-def get_all_courses():
+def get_all_courses(rules_text=None):
     """Reads all course rewrite rule definitions from environment variable."""
-    rules = GCB_COURSES_CONFIG.value.replace(',', '\n').split('\n')
+    if not rules_text:
+        rules_text = GCB_COURSES_CONFIG.value
+    rules = rules_text.replace(',', '\n').split('\n')
+
     slugs = {}
     namespaces = {}
     all_contexts = []
@@ -530,6 +523,25 @@ class ApplicationContext(object):
         jinja_environment.install_gettext_translations(i18n)
 
         return jinja_environment
+
+
+def courses_config_validator(value, errors):
+    """Validates configuration of courses."""
+    try:
+        get_all_courses(value)
+    except Exception as e:  # pylint: disable-msg=broad-except
+        errors.append(str(e))
+
+
+GCB_COURSES_CONFIG = ConfigProperty(
+    'gcb_courses_config', str, (
+        'A \',\' or newline separated list of course entries. '
+        'Each course entry has four \':\' separated parts: the word '
+        '\'course\', the URL prefix, and the file system location for the site '
+        'files. If the third part is empty, the course assets are stored '
+        'in a datastore instead of the file system. The fourth, optional part, '
+        'is the name of the course namespace.'),
+    'course:/:/', multiline=True, validator=courses_config_validator)
 
 
 class ApplicationRequestHandler(webapp2.RequestHandler):
