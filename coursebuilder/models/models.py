@@ -173,3 +173,42 @@ class StudentAnswersEntity(BaseEntity):
 
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)
+
+
+class StudentPropertyEntity(BaseEntity):
+    """A property of a student, keyed by the string STUDENT_ID-PROPERTY_NAME."""
+
+    updated_on = db.DateTimeProperty(indexed=True)
+
+    name = db.StringProperty()
+    # Each of the following is a string representation of a JSON dict.
+    value = db.TextProperty()
+
+    @classmethod
+    def create_key(cls, student_id, property_name):
+        return '%s-%s' % (student_id, property_name)
+
+    @classmethod
+    def create(cls, student, property_name):
+        return StudentPropertyEntity(
+            key_name=cls.create_key(student.user_id, property_name),
+            name=property_name)
+
+    def put(self):
+        """Do the normal put() and also add the object to memcache."""
+        result = super(StudentPropertyEntity, self).put()
+        MemcacheManager.set(self.key().name(), self)
+        return result
+
+    def delete(self):
+        """Do the normal delete() and also remove the object from memcache."""
+        super(Student, self).delete()
+        MemcacheManager.delete(self.key().name())
+
+    @classmethod
+    def get(cls, student, property_name):
+        key = cls.create_key(student.user_id, property_name)
+        value = MemcacheManager.get(key)
+        if not value:
+            value = cls.get_by_key_name(key)
+        return value

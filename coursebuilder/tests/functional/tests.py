@@ -920,6 +920,11 @@ class AssessmentTest(actions.TestBase):
         actions.login(email)
         actions.register(self, name)
 
+        # Navigate to the course overview page.
+        response = self.get('course')
+        assert_equals(response.status_int, 200)
+        assert_does_not_contain(u'✔', response.body)
+
         old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.namespace)
         try:
@@ -936,6 +941,14 @@ class AssessmentTest(actions.TestBase):
             student = models.Student.get_enrolled_student_by_email(email)
             assert len(get_all_scores(student)) == 2
 
+            # Navigate to the course overview page.
+            response = self.get('course')
+            assert_equals(response.status_int, 200)
+            assert_contains(
+                u"""Mid-course assessment</a>\n                      \n  """
+                """                      <span class="tick">""", response.body)
+
+            # Submit the final assessment.
             self.submit_assessment('Post', post)
             student = models.Student.get_enrolled_student_by_email(email)
 

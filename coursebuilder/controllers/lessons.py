@@ -76,10 +76,13 @@ class CourseHandler(BaseHandler):
             self.redirect('/preview')
             return None
 
-        if not self.personalize_page_and_get_enrolled():
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
         self.template_value['units'] = self.get_units()
+        self.template_value['progress'] = (
+            self.get_progress_tracker().get_unit_progress(student))
         self.template_value['navbar'] = {'course': True}
         self.render('course.html')
 

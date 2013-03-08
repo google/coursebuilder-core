@@ -178,6 +178,10 @@ class BaseHandler(ApplicationHandler):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
 
+    def get_progress_tracker(self):
+        """Gets the progress tracker for the course."""
+        return self.get_course().get_progress_tracker()
+
     def get_user(self):
         """Validate user exists."""
         user = users.get_current_user()

@@ -16,10 +16,14 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import datetime
+import json
 import logging
 import os
 from tools import verify
+
 from models import MemcacheManager
+from models import StudentPropertyEntity
 
 
 class Course(object):
@@ -37,6 +41,7 @@ class Course(object):
         self._units = []
         self._lessons = []
         self._unit_id_to_lessons = {}
+        self._student_progress_tracker = UnitLessonProgressTracker(self)
 
     def _reindex(self):
         """Groups all lessons by unit_id."""
@@ -90,6 +95,9 @@ class Course(object):
     def get_lessons(self, unit_id):
         self._materialize()
         return self._unit_id_to_lessons[str(unit_id)]
+
+    def get_progress_tracker(self):
+        return self._student_progress_tracker
 
 
 class SerializableCourseEnvelope(object):
@@ -173,3 +181,173 @@ def load_csv_course(app_context):
         new_lessons.append(entity)
 
     return new_units, new_lessons
+
+
+class UnitLessonProgressTracker(object):
+    """Progress tracker for a unit/lesson-based linear course."""
+
+    PROPERTY_KEY = 'linear-course-progress'
+
+    EVENT_CODE_MAPPING = {'activity': 'a',
+                          'assessment': 's',
+                          'lesson': 'l',
+                          'unit': 'u',
+                          'video': 'v'}
+
+    # Dependencies for recording derived events. The key is the current
+    # event, and the value is a tuple, each element of which contains:
+    # - the name of the derived event
+    # - the transformation to apply to the id of the current event to get the
+    #       id for the new event
+    DERIVED_EVENTS = {
+        'activity': (
+            {
+                'type': 'lesson',
+                'generate_new_id': (lambda s: s),
+            },
+        ),
+        'lesson': (
+            {
+                'type': 'unit',
+                'generate_new_id': (lambda s: '.'.join(s.split('.')[:-2])),
+            },
+        ),
+    }
+
+    def __init__(self, course):
+        self._course = course
+
+    def get_course(self):
+        return self._course
+
+    def update_lesson(self, student, event_key):
+        """Update this lesson if its activity has been completed."""
+        # TODO(sll): Implement this.
+        pass
+
+    def update_unit(self, student, event_key):
+        """Updates a unit's progress if all its lessons have been completed."""
+
+        unit_id = event_key.split('.')[1]
+
+        progress = self.get_progress(student)
+        if not progress:
+            progress = StudentPropertyEntity.create(
+                student=student, property_name=self.PROPERTY_KEY)
+
+        # Check that all lessons in this unit have been completed.
+        for lesson in self.get_course().get_lessons(unit_id):
+            lesson_key = '%s.%s.%s.%s' % (
+                self.EVENT_CODE_MAPPING['unit'],
+                unit_id,
+                self.EVENT_CODE_MAPPING['lesson'],
+                lesson.id,
+            )
+            lesson_progress = progress.get(lesson_key)
+            if lesson_progress is None or lesson_progress <= 0:
+                return
+
+        self._inc(
+            progress,
+            '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id))
+
+    DERIVED_EVENT_UPDATER = {'lesson': update_lesson,
+                             'unit': update_unit}
+
+    def _inc(self, student_property, key, value=1):
+        """Increments the integer value of a student property.
+
+        Note: this method does not commit the change. The calling method should
+        call put() on the StudentPropertyEntity.
+
+        Args:
+          student_property: the StudentPropertyEntity
+          key: the student property whose value should be incremented
+          value: the value to increment this property by
+        """
+
+        try:
+            progress_dict = json.loads(student_property.value)
+        except TypeError:
+            progress_dict = {}
+
+        if key not in progress_dict:
+            progress_dict[key] = 0
+
+        progress_dict[key] += value
+        student_property.value = json.dumps(progress_dict)
+
+    def put_completion_event(self, student, event_type, unit_id=None,
+                             event_source_id=None):
+        """Records an event when part of a course is completed."""
+        if event_type not in ['video', 'activity', 'assessment']:
+            return
+
+        if event_type == 'assessment':
+            event_key = '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'],
+                                   event_source_id)
+        elif event_type in ['video', 'activity']:
+            event_key = '%s.%s.%s.%s' % (
+                self.EVENT_CODE_MAPPING['unit'],
+                unit_id,
+                self.EVENT_CODE_MAPPING[event_type],
+                event_source_id
+            )
+
+        student_progress = self.get_progress(student)
+        if not student_progress:
+            student_progress = StudentPropertyEntity.create(
+                student=student, property_name=self.PROPERTY_KEY)
+
+        self._inc(student_progress, event_key)
+
+        if event_type in self.DERIVED_EVENTS:
+            for derived_event in self.DERIVED_EVENTS[event_type]:
+                self.update_derived_events(
+                    student,
+                    derived_event['type'],
+                    derived_event['generate_new_id'](event_key))
+
+        student_progress.updated_on = datetime.datetime.now()
+        student_progress.put()
+
+    def put_assessment_completed(self, student, assessment_type):
+        """Records that the given student has completed the given assessment."""
+        self.put_completion_event(
+            student, 'assessment', None, assessment_type)
+
+    def update_derived_events(self, student, event_type, event_key):
+        if event_type in self.DERIVED_EVENT_UPDATER:
+            self.DERIVED_EVENT_UPDATER[event_type](
+                self, student, event_key)
+
+            if event_type in self.DERIVED_EVENTS:
+                for derived_event in self.DERIVED_EVENTS[event_type]:
+                    self.update_derived_events(
+                        student,
+                        derived_event['type'],
+                        derived_event['generate_new_id'](event_key))
+
+    def is_assessment_completed(self, progress, assessment_type):
+        assessment_event_key = '%s.%s' % (
+            self.EVENT_CODE_MAPPING['assessment'], assessment_type)
+        value = json.loads(progress.value).get(assessment_event_key)
+        return value is not None and value > 0
+
+    @classmethod
+    def get_progress(cls, student):
+        return StudentPropertyEntity.get(student, cls.PROPERTY_KEY)
+
+    def get_unit_progress(self, student):
+        """Returns a dict saying which units are completed."""
+        units = self.get_course().get_units()
+        progress = self.get_progress(student)
+        if progress is None:
+            return {}
+
+        result = {}
+        for unit in units:
+            if (unit.type == 'A' and
+                self.is_assessment_completed(progress, unit.unit_id)):
+                result[unit.unit_id] = True
+        return result

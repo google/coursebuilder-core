@@ -113,10 +113,6 @@ th, td {
   color: #15C;
 }
 
-#gcb-nav-y li a {
-  display: block;
-}
-
 #gcb-nav-y li {
   border-bottom: 1px solid #e0e0e0;
   font-size: 13px;
@@ -820,4 +816,10 @@ h1.product-headers {
   color: #dd4b39;
   font-weight: normal;
   margin: 10px 7px;
+}
+
+.tick {
+  color: green;
+  font-size: 22px;
+  padding-left: 20px;
 }

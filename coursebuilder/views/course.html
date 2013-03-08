@@ -27,6 +27,9 @@
                   {% if unit.type == 'A' %}
                     <li><p class="top_content">
                       <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
+                      {% if unit.unit_id in progress %}
+                        <span class="tick">✔</span>
+                      {% endif %}
                     </p></li>
                   {% elif unit.type == 'U' %}
                     <li><p class="top_content">

@@ -172,25 +172,33 @@ def to_unicode(text):
 
 
 def assert_contains(needle, haystack):
-    if not to_unicode(needle) in to_unicode(haystack):
+    needle = to_unicode(needle)
+    haystack = to_unicode(haystack)
+    if not needle in haystack:
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_contains_all_of(needles, haystack):
+    haystack = to_unicode(haystack)
     for needle in needles:
-        if not to_unicode(needle) in to_unicode(haystack):
+        needle = to_unicode(needle)
+        if not needle in haystack:
             raise Exception(
                 'Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_does_not_contain(needle, haystack):
-    if to_unicode(needle) in to_unicode(haystack):
+    needle = to_unicode(needle)
+    haystack = to_unicode(haystack)
+    if needle in haystack:
         raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
 
 def assert_contains_none_of(needles, haystack):
+    haystack = to_unicode(haystack)
     for needle in needles:
-        if to_unicode(needle) in to_unicode(haystack):
+        needle = to_unicode(needle)
+        if needle in haystack:
             raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
 

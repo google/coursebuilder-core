@@ -79,6 +79,16 @@ def store_score(student, assessment_type, score):
 class AnswerHandler(BaseHandler):
     """Handler for saving assessment answers."""
 
+    # Maps the assessment_type to its unit_id.
+    # TODO(sll): Get rid of this conversion; in the future, everything should
+    # rely on a single unit_id.
+    ASSESSMENT_TYPE_TO_ID_MAPPING = {
+        'precourse': 'Pre',
+        'midcourse': 'Mid',
+        'postcourse_pass': 'Fin',
+        'postcourse_fail': 'Fin'
+    }
+
     # Find student entity and save answers
     @db.transactional(xg=True)
     def update_assessment_transaction(
@@ -135,6 +145,11 @@ class AnswerHandler(BaseHandler):
         # Record score.
         (student, assessment_type) = self.update_assessment_transaction(
             student.key().name(), assessment_type, answers, score)
+
+        # Record completion event in progress tracker.
+        # TODO(sll): Remove the id conversion. Just validate it is not null.
+        self.get_course().get_progress_tracker().put_assessment_completed(
+            student, self.ASSESSMENT_TYPE_TO_ID_MAPPING[assessment_type])
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment'] = assessment_type
