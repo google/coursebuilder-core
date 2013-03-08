@@ -1311,7 +1311,7 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains('', [
             title_ru, self.course_ru.unit_title, self.course_ru.lesson_title])
         assert_page_contains(
-            'assets', [self.course_ru.title, self.course_ru.home])
+            'assets', [self.course_ru.title])
         assert_page_contains(
             'settings', [self.course_ru.title, self.course_ru.home])
 

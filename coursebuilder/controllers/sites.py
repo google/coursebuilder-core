@@ -492,8 +492,10 @@ class ApplicationContext(object):
         """Returns a dict of course configuration variables."""
         course_data_filename = self.get_config_filename()
         try:
-            return yaml.load(
-                self.fs.get(course_data_filename).decode('utf-8'))
+            course_yaml = self.fs.open(course_data_filename)
+            if not course_yaml:
+                return {'course': {'title': 'EMPTY COURSE'}}
+            return yaml.safe_load(course_yaml.read().decode('utf-8'))
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',
                          course_data_filename)

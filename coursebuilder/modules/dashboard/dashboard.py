@@ -27,6 +27,7 @@ import jinja2
 from models import courses
 from models import jobs
 from models import roles
+from models import vfs
 from models.models import Student
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -97,6 +98,8 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         lines.append(
             '<h3>Course Units, Lessons, Activities and Assessments</h3>')
         lines.append('<ul style="list-style: none;">')
+        if not course.get_units():
+            lines.append('<pre>&lt; empty course &gt;</pre>')
         for unit in course.get_units():
             if unit.type == 'A':
                 lines.append('<li>')
@@ -144,24 +147,27 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Settings')
 
-        # Course identity.
-        title = self.app_context.get_environ()['course']['title']
-        location = sites.abspath(self.app_context.get_home_folder(), '/')
-        yaml = self.app_context.get_config_filename()
-        slug = self.app_context.get_slug()
-        namespace = self.app_context.get_namespace_name()
-
         course_info = []
         course_info.append('<h3>About the Course</h3>')
-        course_info.append("""
-            <ol>
-            <li>Course Title: %s</li>
-            <li>Content Location: %s</li>
-            <li>config.yaml: %s</li>
-            <li>Context Path: %s</li>
-            <li>Datastore Namespace: %s</li>
-            </ol>
-            """ % (title, location, yaml, slug, namespace))
+        course_info.append('<ol>')
+
+        # Course info.
+        course_info.append('<li>Course Title: %s</li>' % (
+            cgi.escape(self.app_context.get_environ()['course']['title'])))
+        course_info.append('<li>Context Path: %s</li>' % (
+            self.app_context.get_slug()))
+        course_info.append('<li>Datastore Namespace: %s</li>' % (
+            self.app_context.get_namespace_name()))
+
+        # Course file system.
+        fs = self.app_context.fs.impl
+        course_info.append('<li>File system: %s</li>' % fs.__class__.__name__)
+        if fs.__class__ == vfs.LocalReadOnlyFileSystem:
+            course_info.append('<li>Home folder: %s</li>' % sites.abspath(
+                self.app_context.get_home_folder(), '/'))
+
+        course_info.append('</ol>')
+
         course_info = ''.join(course_info)
 
         # Yaml file content.
@@ -169,10 +175,14 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         yaml_content.append(
             '<h3>Contents of <code>course.yaml</code> file</h3>')
         yaml_content.append('<ol>')
-        yaml_lines = self.app_context.fs.open(
-            self.app_context.get_config_filename()).read().decode('utf-8')
-        for line in yaml_lines.split('\n'):
-            yaml_content.append('<li>%s</li>\n' % cgi.escape(line))
+        yaml_stream = self.app_context.fs.open(
+            self.app_context.get_config_filename())
+        if yaml_stream:
+            yaml_lines = yaml_stream.read().decode('utf-8')
+            for line in yaml_lines.split('\n'):
+                yaml_content.append('<li>%s</li>\n' % cgi.escape(line))
+        else:
+            yaml_content.append('<pre>&lt; empty file &gt;</pre>\n')
         yaml_content.append('</ol>')
         yaml_content = ''.join(yaml_content)
 
@@ -205,18 +215,19 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
 
         lines = []
 
-        lines.append('<h3>Content Location</h3>')
-        lines.append('<blockquote>%s</blockquote>' % sites.abspath(
-            self.app_context.get_home_folder(), '/'))
-
-        lines.append('<h3>Course Data Files</h3>')
+        lines.append('<h3>Data Files</h3>')
         lines.append('<ol>')
         lines += self.list_and_format_file_list('/data/')
         lines.append('</ol>')
 
-        lines.append('<h3>Course Assets</h3>')
+        lines.append('<h3>Assets</h3>')
         lines.append('<ol>')
         lines += self.list_and_format_file_list('/assets/', True)
+        lines.append('</ol>')
+
+        lines.append('<h3>View Templates</h3>')
+        lines.append('<ol>')
+        lines += self.list_and_format_file_list('/views/', False)
         lines.append('</ol>')
 
         lines = ''.join(lines)

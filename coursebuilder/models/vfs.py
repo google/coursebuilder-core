@@ -31,6 +31,10 @@ class AbstractFileSystem(object):
     def __init__(self, impl):
         self._impl = impl
 
+    @property
+    def impl(self):
+        return self._impl
+
     def isfile(self, filename):
         """Checks if file exists, similar to os.path.isfile(...)."""
         return self._impl.isfile(filename)
@@ -213,6 +217,12 @@ class DatastoreBackedFileSystem(object):
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
+
+        # Don't intercept access to private methods and attributes.
+        if name.startswith('_'):
+            return attr
+
+        # Do intercept all methods.
         if hasattr(attr, '__call__'):
 
             def newfunc(*args, **kwargs):
@@ -225,8 +235,9 @@ class DatastoreBackedFileSystem(object):
                     namespace_manager.set_namespace(old_namespace)
 
             return newfunc
-        else:
-            return attr
+
+        # Don't intercept access to non-method attributes.
+        return attr
 
     def _logical_to_physical(self, filename):
         # For now we only support '/' as a physical folder name.

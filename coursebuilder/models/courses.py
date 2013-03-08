@@ -153,10 +153,15 @@ def load_csv_course(app_context):
     lesson_file = os.path.join(app_context.get_data_home(), 'lesson.csv')
 
     # Load and validate data from CSV files.
+    unit_stream = app_context.fs.open(unit_file)
+    lesson_stream = app_context.fs.open(lesson_file)
+    if not unit_stream and not lesson_stream:
+        return [], []
+
     units = verify.read_objects_from_csv_stream(
-        app_context.fs.open(unit_file), verify.UNITS_HEADER, verify.Unit)
+        unit_stream, verify.UNITS_HEADER, verify.Unit)
     lessons = verify.read_objects_from_csv_stream(
-        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, verify.Lesson)
+        lesson_stream, verify.LESSONS_HEADER, verify.Lesson)
     verifier = verify.Verifier()
     verifier.verify_unit_fields(units)
     verifier.verify_lesson_fields(lessons)
