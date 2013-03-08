@@ -78,9 +78,9 @@ class ReflectiveRequestHandler(object):
         """Handles GET."""
         action = self.request.get('action')
         if not action:
-            action = self.__class__.default_action
+            action = self.default_action
 
-        if not action in self.__class__.get_actions:
+        if not action in self.get_actions:
             self.error(404)
             return
 
@@ -94,7 +94,7 @@ class ReflectiveRequestHandler(object):
     def post(self):
         """Handles POST."""
         action = self.request.get('action')
-        if not action or not action in self.__class__.post_actions:
+        if not action or not action in self.post_actions:
             self.error(404)
             return
 
