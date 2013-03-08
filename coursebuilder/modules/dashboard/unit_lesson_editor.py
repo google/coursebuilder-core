@@ -72,7 +72,7 @@ class UnitLessonEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('Import Course')
 
-        annotations = ImportCourseRESTHandler.SCHEMA_ANNOTATIONS_DICT
+        annotations = ImportCourseRESTHandler.SCHEMA_ANNOTATIONS_DICT()
         if not annotations:
             template_values['main_content'] = 'No courses to import from.'
             self.render_page(template_values)
