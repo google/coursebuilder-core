@@ -442,6 +442,14 @@
         inputExDefinition.buttons.push(delete_button);
       }
 
+      // Disable the animated highlighting of list fields on reordering
+      if (Y.inputEx.ListField) {
+        Y.inputEx.ListField.prototype.arrowAnimColors = {
+          'from': '',
+          'to': ''
+        };
+      }
+
       if (Y.inputEx.RTEField) {
         // Override the inputEx.RTEField.renderComponent method to insert
         // a control to toggle between showing the RTE and a raw text editor
