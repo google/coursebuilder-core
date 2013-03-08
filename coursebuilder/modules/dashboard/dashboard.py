@@ -164,16 +164,15 @@ class DashboardHandler(
                 (cgi.escape(title), text))
 
     def _get_edit_link(self, url):
-        return '&nbsp;<a href="%s">[Edit]</a>' % url
+        return '&nbsp;<a href="%s">Edit</a>' % url
 
     def _get_availability(self, resource):
         if not hasattr(resource, 'now_available'):
             return ''
         if resource.now_available:
-            return ' <span class="published-label">%s</span>' % (
-                unit_lesson_editor.PUBLISHED_TEXT)
+            return ''
         else:
-            return ' <span class="draft-label">%s</span>' % (
+            return ' <span class="draft-label">(%s)</span>' % (
                 unit_lesson_editor.DRAFT_TEXT)
 
     def render_course_outline_to_html(self):
