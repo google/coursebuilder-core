@@ -45,6 +45,56 @@ def assert_fails(function):
         pass
 
 
+class SwapTestObject(object):
+
+    def __init__(self):
+        self.member = 'member_value'
+
+    def method(self):
+        return 'method_value'
+
+
+class SuiteTestCaseTest(suite.TestBase):
+    """Sanity check of Suite.TestBase utilities."""
+
+    def setUp(self):
+        super(SuiteTestCaseTest, self).setUp()
+        self.swap_test_object = SwapTestObject()
+        self.old_member = self.swap_test_object.member
+        self.old_method = self.swap_test_object.method
+
+    def tearDown(self):
+        super(SuiteTestCaseTest, self).tearDown()
+        self.assert_unswapped()
+
+    def assert_unswapped(self):
+        self.assertIs(self.old_member, self.swap_test_object.member)
+        self.assertEqual(self.old_method(), self.swap_test_object.method())
+
+    def test_swaps_against_different_symbols_apply_and_are_unswappable(self):
+        self.assertEqual('member_value', self.swap_test_object.member)
+        self.assertEqual('method_value', self.swap_test_object.method())
+        self.swap(self.swap_test_object, 'member', 'new_member_value')
+        self.swap(self.swap_test_object, 'method', lambda: 'new_method_value')
+        self.assertEqual('new_member_value', self.swap_test_object.member)
+        self.assertEqual('new_method_value', self.swap_test_object.method())
+        self._unswap_all()
+        self.assert_unswapped()
+
+    def test_tear_down_unswapps_automatically(self):
+        # Create a swap to for tearDown to unswap via assert_unswapped.
+        self.swap(self.swap_test_object, 'member', 'new_member_value')
+        self.assertEqual('new_member_value', self.swap_test_object.member)
+
+    def test_unswap_restores_original_after_multiple_swaps(self):
+        self.assertEqual('method_value', self.swap_test_object.method())
+        self.swap(self.swap_test_object, 'method', lambda: 'first_swap')
+        self.swap(self.swap_test_object, 'method', lambda: 'second_swap')
+        self.assertEqual('second_swap', self.swap_test_object.method())
+        self._unswap_all()
+        self.assert_unswapped()
+
+
 class InvokeExistingUnitTest(suite.TestBase):
     """Run all units tests declared elsewhere."""
 

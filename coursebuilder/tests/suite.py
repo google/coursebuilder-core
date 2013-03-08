@@ -72,6 +72,46 @@ def empty_environ():
 class TestBase(unittest.TestCase):
     """Base class for all Course Builder tests."""
 
+    def setUp(self):
+        super(TestBase, self).setUp()
+        # Map of object -> {symbol_string: original_value}
+        self._originals = {}
+
+    def tearDown(self):
+        self._unswap_all()
+        super(TestBase, self).tearDown()
+
+    def swap(self, source, symbol, new):
+        """Swaps out source.symbol for a new value.
+
+        Allows swapping of members and methods:
+
+            myobject.foo = 'original_foo'
+            self.swap(myobject, 'foo', 'bar')
+            self.assertEqual('bar', myobject.foo)
+            myobject.baz()  # -> 'original_baz'
+            self.swap(myobject, 'baz', lambda: 'quux')
+            self.assertEqual('quux', myobject.bar())
+
+        Swaps are automatically undone in tearDown().
+
+        Args:
+            source: object. The source object to swap from.
+            symbol: string. The name of the symbol to swap.
+            new: object. The new value to swap in.
+        """
+        if source not in self._originals:
+            self._originals[source] = {}
+        if not self._originals[source].get(symbol, None):
+            self._originals[source][symbol] = getattr(source, symbol)
+        setattr(source, symbol, new)
+
+    # Allow protected method names. pylint: disable-msg=g-bad-name
+    def _unswap_all(self):
+        for source, symbol_to_value in self._originals.iteritems():
+            for symbol, value in symbol_to_value.iteritems():
+                setattr(source, symbol, value)
+
     def shortDescription(self):
         """Additional information logged during unittest invocation."""
         # Suppress default logging of docstrings. Instead log name/status only.
@@ -86,6 +126,7 @@ class AppEngineTestBase(TestBase):
         raise Exception('Not implemented.')
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(AppEngineTestBase, self).setUp()
         empty_environ()
 
         # setup an app to be tested
@@ -108,6 +149,7 @@ class AppEngineTestBase(TestBase):
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.testbed.deactivate()
+        super(AppEngineTestBase, self).tearDown()
 
     def execute_all_deferred_tasks(self, queue_name='default'):
         """Executes all pending deferred tasks."""
