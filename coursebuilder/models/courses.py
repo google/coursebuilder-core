@@ -91,6 +91,9 @@ course:
   now_available: False
 """
 
+# Here are the default assessment weights corresponding to the sample course.
+DEFAULT_LEGACY_ASSESSMENT_WEIGHTS = {'Pre': 0, 'Mid': 30, 'Fin': 70}
+
 
 def is_editable_fs(app_context):
     return isinstance(app_context.fs.impl, vfs.DatastoreBackedFileSystem)
@@ -288,6 +291,9 @@ class Unit13(object):
 
         # Only valid for the unit.type == verify.UNIT_TYPE_LINK.
         self.href = None
+
+        # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
+        self.weight = 0
 
     @property
     def index(self):
@@ -584,6 +590,9 @@ class CourseModel13(object):
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href
 
+        if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
+            existing_unit.weight = unit.weight
+
         return existing_unit
 
     def update_lesson(self, lesson):
@@ -713,17 +722,23 @@ class CourseModel13(object):
 
         def copy_unit12_into_unit13(src_unit, dst_unit):
             """Copies unit object attributes between versions."""
+            assert dst_unit.type == src_unit.type
+
             dst_unit.title = src_unit.title
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
 
-            if verify.UNIT_TYPE_LINK == src_unit.type:
+            if verify.UNIT_TYPE_LINK == dst_unit.type:
                 dst_unit.href = src_unit.href
 
             # Copy over the assessment. Note that we copy files directly and
-            # avoid all logical validations of their content. This is done for a
-            # purpose - at this layer we don't care what is in those files.
+            # avoid all logical validations of their content. This is done for
+            # a purpose - at this layer we don't care what is in those files.
             if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
+                if dst_unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
+                    dst_unit.weight = (
+                        DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[dst_unit.unit_id])
+
                 src_filename = os.path.join(
                     src_course.app_context.get_home(),
                     src_course.get_assessment_filename(src_unit.unit_id))
@@ -925,20 +940,24 @@ class Course(object):
 
     def get_overall_score(self, student):
         """Gets the overall course score for a student."""
-        # This can be replaced with a custom definition of an overall score.
-        # TODO(sll): If the unit id is not 'Mid' or 'Fin', this is not going to
-        # work. Fix this more generically.
         score_list = self.get_all_scores(student)
         overall_score = 0
+        total_weight = 0
         for unit in score_list:
-            if unit['id'] == 'Mid' and unit['score']:
-                overall_score += 0.3 * unit['score']
-            if unit['id'] == 'Fin' and unit['score']:
-                overall_score += 0.7 * unit['score']
-        return int(overall_score)
+            total_weight += unit['weight']
+            overall_score += unit['weight'] * unit['score']
+
+        if total_weight == 0:
+            return None
+
+        return int(float(overall_score) / total_weight)
 
     def get_overall_result(self, student):
         """Gets the overall result based on a student's score profile."""
+        score = self.get_overall_score(student)
+        if score is None:
+            return None
+
         # This can be replaced with a custom definition for an overall result
         # string.
         return 'pass' if self.get_overall_score(student) >= 70 else 'fail'
@@ -951,18 +970,30 @@ class Course(object):
 
         Returns:
             an array of dicts, each representing an assessment. Each dict has
-            the keys 'id', 'title' and 'score' (if available), representing the
-            unit id, the assessment title, and the assessment score.
+            the keys 'id', 'title', 'weight' and 'score' (if available),
+            representing the unit id, the assessment title, the weight
+            contributed by the assessment to the final score, and the
+            assessment score.
         """
         assessment_list = self.get_assessment_list()
         scores = transforms.loads(student.scores) if student.scores else {}
 
-        assessment_score_list = [{
-            'id': str(unit.unit_id),
-            'title': unit.title,
-            'score': (scores[str(unit.unit_id)]
-                      if str(unit.unit_id) in scores else 0),
-        } for unit in assessment_list]
+        assessment_score_list = []
+        for unit in assessment_list:
+            # Compute the weight for this assessment.
+            weight = 0
+            if hasattr(unit, 'weight'):
+                weight = unit.weight
+            elif unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
+                weight = DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[unit.unit_id]
+
+            assessment_score_list.append({
+                'id': str(unit.unit_id),
+                'title': unit.title,
+                'weight': weight,
+                'score': (scores[str(unit.unit_id)]
+                          if str(unit.unit_id) in scores else 0),
+            })
 
         return assessment_score_list
 

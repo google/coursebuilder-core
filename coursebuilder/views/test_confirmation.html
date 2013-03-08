@@ -11,22 +11,18 @@
   <div class="gcb-col-7 gcb-aside gcb-button-box">
 
     <p class="top_content">
-      {% if 'assessment_confirmations' in course_info and is_last_assessment %}
-        <!-- Displays special text for the final assessment. -->
-        {{course_info.assessment_confirmations[assessment]['text'] % overall_score}}
-
-        <!-- Displays further confirmation text for the final assessment. -->
-        {% if result %}
-          {{course_info.assessment_confirmations[assessment]['result_text'][result]}}
-        {% endif %}
-
-      {% else %}
-
-        Thank you for taking the {{assessment_name | lower}}. Your score is {{score}}%.
-        If you wish, you may return to this assessment and take it again.
-
-      {% endif %}
+      Thank you for taking the {{assessment_name | lower}}. Your score for this assessment
+      is {{score}}%. If you wish, you may return to the assessment and take it again.
     </p>
+
+    <br>
+
+    {% if 'assessment_confirmations' in course_info and is_last_assessment and overall_score != None and result %}
+      <!-- Displays result-specific text for the final assessment. -->
+      <p class="top_content">
+        {{course_info.assessment_confirmations['result_text'][result] % overall_score}}
+      </p>
+    {% endif %}
 
     <p>
       <a class="gcb-button" href="course">

@@ -54,12 +54,14 @@
           </tr>
         {% endfor %}
 
-        <tr>
-          <th align="left">{% trans %} Overall course score {% endtrans %}</th>
-          <td>
-            {{ overall_score }}
-          </td>
-        </tr>
+        {% if overall_score != None %}
+          <tr>
+            <th align="left">{% trans %} Overall course score {% endtrans %}</th>
+            <td>
+              {{ overall_score }}
+            </td>
+          </tr>
+        {% endif %}
       </table>
 
       <form action='student/editstudent' method='post'>

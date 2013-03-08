@@ -1470,7 +1470,7 @@ class AssessmentTest(actions.TestBase):
         # Submit answer.
         response = self.submit_assessment('Fin', post)
         assert_equals(response.status_int, 200)
-        assert_contains('Your score is 70%', response.body)
+        assert_contains('your overall course score of 70%', response.body)
         assert_contains('you have passed the course', response.body)
 
         # Check that the result shows up on the profile page.

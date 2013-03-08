@@ -154,26 +154,22 @@ reg_form:
 # Assessment confirmation page
 ##############################
 
-# HTML to be displayed on the test confirmation page (which is displayed when
-# the student has completed an assessment). You can optionally add code here
-# to load or generate a Certificate of Completion image. Note that the
-# 'Fin' (postcourse) assessment texts include a '%s', which will be substituted
+# HTML to be displayed on the final assessment's confirmation page (which is
+# displayed when the student has completed the final assessment). You can
+# optionally add code here to load or generate a Certificate of Completion
+# image. Note that the result text includes a '%s', which will be substituted
 # with the student's actual score. ('%%' results in a single '%'.)
 assessment_confirmations:
-  Fin:
-    text: |
-      Thank you for taking the post-course assessment. Your score is %s%%.
-    result_text:
-      pass: |
-        Based on your overall course score (which includes the mid-course and
-        post-course assessments), you have passed the course. Congratulations!
-      fail: |
-        Unfortunately, based on your overall course score (which includes the
-        mid-course and post-course assessments), you did not receive a
-        sufficiently high score to obtain a certificate of completion. We
-        encourage you to review the lessons noted and to attempt the
-        assessment again before it closes. Certificate or not, we hope you
-        enjoyed taking the course and learned new skills!
+  result_text:
+    pass: |
+      Based on your overall course score of %s%%, you have passed the course.
+      Congratulations!
+    fail: |
+      Unfortunately, based on your overall course score of %s%%, you did not
+      receive a sufficiently high score to obtain a certificate of completion.
+      We encourage you to review the lessons noted and to attempt the
+      assessment again before it closes. Certificate or not, we hope you
+      enjoyed taking the course and learned new skills!
 
 
 ########################
