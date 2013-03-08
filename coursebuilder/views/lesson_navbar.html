@@ -1,0 +1,102 @@
+<div class="gcb-nav" id="gcb-nav-y">
+  <ul>
+    {{course_info.unit.after_leftnav_begins | safe}}
+
+    {% for lesson in lessons %}
+
+      {% if lesson.now_available or is_course_admin %}
+
+        {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
+          <li class="active">
+            {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
+        {% else %}
+          <li>
+            <a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
+              {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
+            </a>
+        {% endif %}
+
+        {% if not lesson.now_available and is_course_admin %}
+          <span class="grayed">
+            (Private)
+          </span>
+        {% endif %}
+
+        {% if lesson.activity %}
+          <ul>
+            {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
+              <li class="active">
+            {% else %}
+              <li>
+            {% endif %}
+                {% if is_progress_recorded %}
+                  {% if progress[lesson.lesson_id] == 2 %}
+                    <img src="assets/lib/completed.png"
+                         alt="{% trans %} Completed {% endtrans %}"
+                         title="{% trans %} Completed {% endtrans %}"
+                         class="progress"
+                         id="progress-completed-{{lesson.lesson_id}}">
+                  {% elif progress[lesson.lesson_id] == 1 %}
+                    <img src="assets/lib/in_progress.png"
+                         alt="{% trans %} In progress {% endtrans %}"
+                         title="{% trans %} In progress {% endtrans %}"
+                         class="progress"
+                         id="progress-inprogress-{{lesson.lesson_id}}">
+                  {% else %}
+                    <img src="assets/lib/not_started.png"
+                         alt="{% trans %} Not yet started {% endtrans %}"
+                         title="{% trans %} Not yet started {% endtrans %}"
+                         class="progress"
+                         id="progress-notstarted-{{lesson.lesson_id}}">
+                  {% endif %}
+                {% else %}
+                  <span class="progress-empty"></span>
+                {% endif %}
+
+                {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
+                  {% trans %} Activity {% endtrans %}
+                {% else %}
+                  <a href="activity?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
+                    {% trans %} Activity {% endtrans %}
+                  </a>
+                {% endif %}
+              </li>
+          </ul>
+        {% endif %}
+
+        </li>
+
+      {% else %}
+        <li>
+          {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
+            <span class="grayed-active">
+          {% else %}
+            <span class="grayed">
+          {% endif %}
+
+            {{ unit.index}}.{{ lesson.index }} {{ lesson.title }}
+          </span>
+
+          {% if lesson.activity %}
+            <ul>
+              <li>
+                <span class="progress-empty"></span>
+                {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
+                  <span class="grayed-active">
+                {% else %}
+                  <span class="grayed">
+                {% endif %}
+
+                  {% trans %} Activity {% endtrans %}
+                </span>
+              </li>
+            </ul>
+          {% endif %}
+        </li>
+      {% endif %}
+
+    {% endfor %}
+
+    {{course_info.unit.before_leftnav_ends | safe}}
+  </ul>
+</div>

@@ -253,6 +253,154 @@ class InfrastructureTest(actions.TestBase):
         # Clean up.
         sites.reset_courses()
 
+    def test_unit_lesson_not_available(self):
+        """Tests that unavailable units and lessons behave correctly."""
+
+        # Setup a new course.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        app_context = sites.get_all_courses()[0]
+        course = courses.Course(None, app_context=app_context)
+
+        # This test requires a read-write file system. If the tests are running
+        # on a read-only file system, we can't run this test.
+        if not app_context.fs.is_read_write():
+            return
+
+        # Add a unit that is not available.
+        unit_1 = course.add_unit()
+        unit_1.now_available = False
+        lesson_1_1 = course.add_lesson(unit_1)
+        lesson_1_1.title = 'Lesson 1.1'
+        course.update_unit(unit_1)
+
+        # Add a unit with some lessons available and some lessons not available.
+        unit_2 = course.add_unit()
+        unit_2.now_available = True
+        lesson_2_1 = course.add_lesson(unit_2)
+        lesson_2_1.title = 'Lesson 2.1'
+        lesson_2_1.now_available = False
+        lesson_2_2 = course.add_lesson(unit_2)
+        lesson_2_2.title = 'Lesson 2.2'
+        lesson_2_2.now_available = True
+        course.update_unit(unit_2)
+
+        # Add a unit with all lessons not available.
+        unit_3 = course.add_unit()
+        unit_3.now_available = True
+        lesson_3_1 = course.add_lesson(unit_3)
+        lesson_3_1.title = 'Lesson 3.1'
+        lesson_3_1.now_available = False
+        course.update_unit(unit_3)
+
+        # Add a unit that is available.
+        unit_4 = course.add_unit()
+        unit_4.now_available = True
+        lesson_4_1 = course.add_lesson(unit_4)
+        lesson_4_1.title = 'Lesson 4.1'
+        lesson_4_1.now_available = True
+        course.update_unit(unit_4)
+
+        course.save()
+
+        assert [lesson_1_1] == course.get_lessons(unit_1.unit_id)
+        assert [lesson_2_1, lesson_2_2] == course.get_lessons(unit_2.unit_id)
+        assert [lesson_3_1] == course.get_lessons(unit_3.unit_id)
+
+        # Make the course available.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['now_available'] = True
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        private_tag = 'id="lesson-title-private"'
+
+        # Simulate a student traversing the course.
+        email = 'test_unit_lesson_not_available@example.com'
+        name = 'Test Unit Lesson Not Available'
+
+        actions.login(email, is_admin=False)
+        actions.register(self, name)
+
+        # Accessing a unit that is not available redirects to the main page.
+        response = self.get('/test/unit?unit=%s' % unit_1.unit_id)
+        assert_equals(response.status_int, 302)
+
+        response = self.get('/test/unit?unit=%s' % unit_2.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 2.1', response.body)
+        assert_contains('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s&lesson=%s' % (
+            unit_2.unit_id, lesson_2_2.lesson_id))
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 2.2', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_3.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 3.1', response.body)
+        assert_contains('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_4.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 4.1', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        actions.logout()
+
+        # Simulate an admin traversing the course.
+        email = 'test_unit_lesson_not_available@example.com_admin'
+        name = 'Test Unit Lesson Not Available Admin'
+
+        actions.login(email, is_admin=True)
+        actions.register(self, name)
+
+        # The course admin can access a unit that is not available.
+        response = self.get('/test/unit?unit=%s' % unit_1.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 1.1', response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_2.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 2.1', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_contains(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s&lesson=%s' % (
+            unit_2.unit_id, lesson_2_2.lesson_id))
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 2.2', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_3.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 3.1', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_contains(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_4.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_contains('Lesson 4.1', response.body)
+        assert_does_not_contain('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        actions.logout()
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
     def test_datastore_backed_file_system(self):
         """Tests datastore-backed file system operations."""
         fs = vfs.AbstractFileSystem(vfs.DatastoreBackedFileSystem('', '/'))
@@ -994,7 +1142,7 @@ class StudentAspectTest(actions.TestBase):
         actions.check_profile(self, name3)
 
     def test_course_not_available(self):
-        """Tests course is only accessinble to author when incomplete."""
+        """Tests course is only accessible to author when incomplete."""
 
         email = 'test_course_not_available@example.com'
         name = 'Test Course Not Available'

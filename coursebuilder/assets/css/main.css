@@ -829,3 +829,12 @@ span.progress-empty {
   margin: 2px 7px 0 0;
   width: 15px;
 }
+
+.grayed {
+  color: gray;
+  font-weight: normal;
+}
+
+.grayed-active {
+  font-weight: bold;
+}

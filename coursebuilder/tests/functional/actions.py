@@ -164,7 +164,7 @@ class TestBase(suite.AppEngineTestBase):
         return self.hook_response(response)
 
 
-def assert_equals(expected, actual):
+def assert_equals(actual, expected):
     if not expected == actual:
         raise Exception('Expected \'%s\', does not match actual \'%s\'.' %
                         (expected, actual))

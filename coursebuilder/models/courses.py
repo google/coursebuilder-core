@@ -204,6 +204,10 @@ class Lesson12(object):
         self._index = None
 
     @property
+    def now_available(self):
+        return True
+
+    @property
     def index(self):
         return self._index
 

@@ -21,6 +21,7 @@ from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
+from models.roles import Roles
 from tools import verify
 from utils import BaseHandler
 from utils import BaseRESTHandler
@@ -44,6 +45,9 @@ COURSE_EVENTS_RECEIVED = PerfCounter(
 COURSE_EVENTS_RECORDED = PerfCounter(
     'gcb-course-events-recorded',
     'A number of activity/assessment events recorded in a datastore.')
+
+UNIT_PAGE_TYPE = 'unit'
+ACTIVITY_PAGE_TYPE = 'activity'
 
 
 def extract_unit_and_lesson(handler):
@@ -121,14 +125,24 @@ class UnitHandler(BaseHandler):
         # Extract incoming args
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
+
+        # If the unit is not currently available, and the user is not an admin,
+        # redirect to the main page.
+        if (not unit.now_available and
+            not Roles.is_course_admin(self.app_context)):
+            self.redirect('/')
+            return
+
+        lessons = self.get_lessons(unit_id)
+
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson.lesson_id
+        self.template_value['page_type'] = UNIT_PAGE_TYPE
 
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
         self.template_value['lesson'] = lesson
 
-        lessons = self.get_lessons(unit_id)
         index = lesson.index - 1  # indexes are 1-based
         self.template_value['lessons'] = lessons
 
@@ -186,8 +200,19 @@ class ActivityHandler(BaseHandler):
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
         lesson_id = lesson.lesson_id
+
+        # If the unit is not currently available, and the user is not an admin,
+        # redirect to the main page.
+        if (not unit.now_available and
+            not Roles.is_course_admin(self.app_context)):
+            self.redirect('/')
+            return
+
+        lessons = self.get_lessons(unit_id)
+
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson_id
+        self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
 
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
@@ -195,7 +220,6 @@ class ActivityHandler(BaseHandler):
         self.template_value['activity_script_src'] = (
             self.get_course().get_activity_filename(unit_id, lesson_id))
 
-        lessons = self.get_lessons(unit_id)
         index = lesson.index - 1  # indexes are 1-based
         self.template_value['lessons'] = lessons
 

@@ -28,58 +28,7 @@
     </h1>
   </div>
 
-  <div class="gcb-nav" id="gcb-nav-y">
-    <ul>
-      {{course_info.unit.after_leftnav_begins | safe}}
-      {% for lesson in lessons %}
-      <li
-        {% if lesson.lesson_id == lesson_id %}
-        class="active"> {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
-        {% else %}
-        >
-        <a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}" >
-          {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
-        </a>
-        {% endif %}
-
-        {% if lesson.activity %}
-          <ul>
-            <li>
-              {% if is_progress_recorded %}
-                {% if progress[lesson.lesson_id] == 2 %}
-                  <img src="assets/lib/completed.png"
-                       alt="{% trans %} Completed {% endtrans %}"
-                       title="{% trans %} Completed {% endtrans %}"
-                       class="progress"
-                       id="progress-completed-{{lesson.lesson_id}}">
-                {% elif progress[lesson.lesson_id] == 1 %}
-                  <img src="assets/lib/in_progress.png"
-                       alt="{% trans %} In progress {% endtrans %}"
-                       title="{% trans %} In progress {% endtrans %}"
-                       class="progress"
-                       id="progress-inprogress-{{lesson.lesson_id}}">
-                {% else %}
-                  <img src="assets/lib/not_started.png"
-                       alt="{% trans %} Not yet started {% endtrans %}"
-                       title="{% trans %} Not yet started {% endtrans %}"
-                       class="progress"
-                       id="progress-notstarted-{{lesson.lesson_id}}">
-                {% endif %}
-              {% else %}
-                <span class="progress-empty"></span>
-              {% endif %}
-
-              <a href="activity?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
-                {% trans %} Activity {% endtrans %}
-              </a>
-            </li>
-          </ul>
-        {% endif %}
-      </li>
-      {% endfor %}
-      {{course_info.unit.before_leftnav_ends | safe}}
-    </ul>
-  </div>
+  {% include 'lesson_navbar.html' %}
 
   <div class="gcb-article tab-content" role="main">
     {{course_info.unit.after_content_begins | safe}}
@@ -88,30 +37,54 @@
 
         <div style="padding-bottom: 20px;">
           <div class="gcb-aside gcb-button-box">
-            <div class="gcb-cols">
-              <div class="gcb-col-7">
-                <h1 class="lesson_title">
-                  {{ lesson.title }}
-                </h1>
-                {% if lesson.objectives %}
-                  <div class="lesson_objective">
-                    {{ lesson.objectives | safe }}
-                  </div>
-                {% endif %}
+            {% if lesson.now_available or is_course_admin %}
+              <div class="gcb-cols">
+                <div class="gcb-col-7">
+                  <h1 class="lesson_title">
+                    {{ lesson.title }}
+                    {% if not lesson.now_available and is_course_admin %}
+                      <span id="lesson-title-private">
+                        (Private)
+                      </span>
+                    {% endif %}
+                  </h1>
+
+                  {% if lesson.objectives %}
+                    <div class="lesson_objective">
+                      {{ lesson.objectives | safe }}
+                    </div>
+                  {% endif %}
+
                 </div>
-              <div class="gcb-col-3">
-                <p style="float:right; margin-top: 0px;">
-                  <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
-                    {% trans %} Text Version {% endtrans %}
-                  </a>
+                <div class="gcb-col-3">
+                  <p style="float:right; margin-top: 0px;">
+                    <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
+                      {% trans %} Text Version {% endtrans %}
+                    </a>
+                  </p>
+                </div>
+              </div><!-- /gcb-cols -->
+              {% if lesson.video %}
+                <p class="video-container">
+                  <iframe class="youtube-player" title="{% trans %} YouTube Video Player {% endtrans %}"
+                          type="text/html" width="650" height="400" frameborder="0" allowfullscreen
+                          src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
+                  </iframe>
                 </p>
+              {% endif %}
+
+            {% else %}
+
+              <h1 class="lesson_title">
+                {{ lesson.title }}
+              </h1>
+
+              <br><br>
+
+              <div>
+                {% trans %} This lesson is not available. {% endtrans %}
               </div>
-            </div><!-- /gcb-cols -->
-            {% if lesson.video %}
-              <p class="video-container">
-                <iframe class="youtube-player" title="{% trans %} YouTube Video Player {% endtrans %}" type="text/html" width="650" height="400"
-                 src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0" frameborder="0" allowfullscreen></iframe>
-              </p>
+
             {% endif %}
           </div><!-- /gcb-aside -->
 
