@@ -400,6 +400,7 @@ class DashboardHandler(
         """Walks files in folders and renders their names in a section."""
 
         lines = []
+        count = 0
         for filename in self.list_files(subfolder):
             if prefix and not filename.startswith(prefix):
                 continue
@@ -413,9 +414,9 @@ class DashboardHandler(
                 lines.append('</li>\n')
             else:
                 lines.append('<li>%s</li>\n' % cgi.escape(filename))
+            count += 1
 
         output = []
-        count = len(lines)
 
         if filer.is_editable_fs(self.app_context) and upload:
             output.append(
