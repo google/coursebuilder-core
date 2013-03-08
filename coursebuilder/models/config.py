@@ -118,9 +118,8 @@ class ConfigProperty(object):
                 del os.environ[name]
         return False, None
 
-    @property
-    def value(self):
-        """Get the latest value from datastore, environment or use default."""
+    def get_value(self, db_overrides=None):
+        """Gets value from overrides (datastore, environment) or default."""
 
         # Try testing overrides.
         overrides = Registry.test_overrides
@@ -128,9 +127,8 @@ class ConfigProperty(object):
             return overrides[self.name]
 
         # Try datastore overrides.
-        overrides = Registry.get_overrides()
-        if overrides and self.name in overrides:
-            return overrides[self.name]
+        if db_overrides and self.name in db_overrides:
+            return db_overrides[self.name]
 
         # Try environment variable overrides.
         has_value, environ_value = self.get_environ_value()
@@ -140,13 +138,16 @@ class ConfigProperty(object):
         # Use default value as last resort.
         return self._default_value
 
+    @property
+    def value(self):
+        return self.get_value(Registry.get_overrides())
+
 
 class Registry(object):
-    """Holds all registered properties."""
+    """Holds all registered properties and their various overrides."""
     registered = {}
     test_overrides = {}
     db_overrides = {}
-    update_interval = DEFAULT_UPDATE_INTERVAL_SEC
     last_update_time = 0
     update_index = 0
 
@@ -154,16 +155,16 @@ class Registry(object):
     def get_overrides(cls, force_update=False):
         """Returns current property overrides, maybe cached."""
 
-        # Check if datastore property overrides are enabled at all.
-        has_value, environ_value = UPDATE_INTERVAL_SEC.get_environ_value()
-        if (has_value and environ_value == 0) or (
-                UPDATE_INTERVAL_SEC.default_value == 0):
-            return
-
-        # Check if cached values are still fresh.
         now = long(time.time())
         age = now - cls.last_update_time
-        if force_update or age < 0 or age >= cls.update_interval:
+        max_age = UPDATE_INTERVAL_SEC.get_value(cls.db_overrides)
+        if force_update or age < 0 or age >= max_age:
+            # Value of '0' disables all datastore overrides.
+            if UPDATE_INTERVAL_SEC.get_value() == 0:
+                cls.db_overrides = {}
+                return cls.db_overrides
+
+            # Load overrides from a datastore.
             try:
                 old_namespace = namespace_manager.get_namespace()
                 try:
