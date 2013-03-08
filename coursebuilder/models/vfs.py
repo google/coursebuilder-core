@@ -72,6 +72,13 @@ class AbstractFileSystem(object):
     def is_read_write(self):
         return self._impl.is_read_write()
 
+    def is_draft(self, stream):
+        if not hasattr(stream, 'metadata'):
+            return False
+        if not stream.metadata:
+            return False
+        return stream.metadata.is_draft
+
 
 class LocalReadOnlyFileSystem(object):
     """A read-only file system serving only local files."""
@@ -349,6 +356,7 @@ class DatastoreBackedFileSystem(object):
                 return result
 
         result = None
+        metadata = None
 
         # Load from parent fs.
         if self._inherits_from and self._can_inherit(filename):
@@ -366,25 +374,27 @@ class DatastoreBackedFileSystem(object):
         return result
 
     @db.transactional(xg=True)
-    def put(self, filename, stream, is_draft=True):
+    def put(self, filename, stream, is_draft=False, metadata_only=False):
         """Puts a file stream to a database. Raw bytes stream, no encodings."""
         filename = self._logical_to_physical(filename)
-
-        # We operate with raw bytes. The consumer must deal with encoding.
-        raw_bytes = stream.read()
 
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if not metadata:
             metadata = FileMetadataEntity(key_name=filename)
         metadata.updated_on = datetime.datetime.now()
         metadata.is_draft = is_draft
-        metadata.size = len(raw_bytes)
 
-        data = FileDataEntity(key_name=filename)
-        data.data = raw_bytes
+        if not metadata_only:
+            # We operate with raw bytes. The consumer must deal with encoding.
+            raw_bytes = stream.read()
+
+            metadata.size = len(raw_bytes)
+
+            data = FileDataEntity(key_name=filename)
+            data.data = raw_bytes
+            data.put()
 
         metadata.put()
-        data.put()
 
         MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
 
