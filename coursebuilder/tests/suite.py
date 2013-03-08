@@ -32,6 +32,7 @@ Good luck!
 __author__ = 'Sean Lip'
 
 import base64
+import getopt
 import os
 import sys
 import unittest
@@ -43,9 +44,6 @@ import webtest
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext import deferred
 from google.appengine.ext import testbed
-
-
-EXPECTED_TEST_COUNT = 95
 
 
 def empty_environ():
@@ -96,16 +94,28 @@ class BaseTestClass(unittest.TestCase):
 
 def create_test_suite():
     """Loads all test classes from appropriate modules."""
-    import tests.functional.tests as functional_tests  # pylint: disable=C6204
-    import tests.unit.tests as unit_tests  # pylint: disable=C6204
-
     tests = []
-    for item in [unit_tests, functional_tests]:
-        tests += unittest.TestLoader().loadTestsFromModule(item)
 
-    # Here is how to test just one test case:
-    #    tests = unittest.TestLoader().loadTestsFromTestCase(
-    #        functional_tests.MultipleCoursesTest)
+    # Check if a specific test class was requested.
+    opts, unused_args = getopt.getopt(sys.argv[1:], '', ['test_class_name='])
+    for opt, val in opts:
+        if opt == '--test_class_name':
+            print 'Loading tests from: %s.' % val
+            amodule = __import__('tests.functional.tests', fromlist=[val])
+            aclass = getattr(amodule, val)
+            tests += unittest.TestLoader().loadTestsFromTestCase(aclass)
+            continue
+        raise Exception('Unknown option: %s.' % opt)
+
+    # Load all test classes if none were explicitly requested.
+    if not tests:
+        print 'Loading all tests.'
+        import tests.functional.tests as functional_tests  # pylint: disable=C6204
+        tests += unittest.TestLoader().loadTestsFromModule(functional_tests)
+
+    # Add unit tests.
+    import tests.unit.tests as unit_tests  # pylint: disable=C6204
+    tests += unittest.TestLoader().loadTestsFromModule(unit_tests)
 
     return unittest.TestLoader().suiteClass(tests)
 
@@ -126,10 +136,6 @@ def main():
     fix_sys_path()
     result = unittest.TextTestRunner(verbosity=2).run(create_test_suite())
 
-    if result.testsRun != EXPECTED_TEST_COUNT:
-        raise Exception('Expected %s tests to be run, not %s.' %
-                        (EXPECTED_TEST_COUNT, result.testsRun))
-
     if result.errors or result.failures:
         raise Exception(
             'Functional test suite failed: %s errors, %s failures of '
@@ -140,7 +146,7 @@ def main():
 
     count = len(actions.UNIQUE_URLS_FOUND.keys())
     result.stream.writeln('INFO: Unique URLs found: %s' % count)
-    result.stream.writeln('INFO: All %s tests PASSED!' % EXPECTED_TEST_COUNT)
+    result.stream.writeln('INFO: All %s tests PASSED!' % result.testsRun)
 
 
 if __name__ == '__main__':
