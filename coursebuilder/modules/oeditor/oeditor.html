@@ -163,6 +163,18 @@
     return count;
   }
 
+  function formatServerErrorMessage(status, message) {
+    var msg = "Unknown error (" + status + ").";
+    if (message) {
+      msg = message;
+    }
+    switch (status) {
+      case 412:
+        return msg;
+      default:
+        return "Server error; error code " + status + ". " + msg;
+    }
+  }
 
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
@@ -234,12 +246,8 @@
                     var json = JSON.parse(o.responseText);
 
                     if (json.status != 200) {
-                      msg = "Unknown error (" + json.status + ").";
-                      if (json.message) {
-                        msg = json.message;
-                      }
-                      cbShowMsg("Server error; error code " + json.status + ". " + msg);
-                      return
+                      cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                      return;
                     }
 
                     // save lastSavedFormValue
@@ -300,12 +308,8 @@
 
               // check status code
               if (json.status != 200) {
-                msg = "Unknown error (" + json.status + ").";
-                if (json.message) {
-                  msg = json.message;
-                }
-                cbShowMsg("Server error; error code " + json.status + ". " + msg);
-                return
+                cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                return;
               }
 
               // check payload

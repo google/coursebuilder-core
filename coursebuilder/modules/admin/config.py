@@ -270,7 +270,7 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
         if item.validator:
             item.validator(new_value, errors)
         if errors:
-            transforms.send_json_response(self, 412, str(errors))
+            transforms.send_json_response(self, 412, '\n'.join(errors))
             return
 
         # Update entity.
