@@ -715,7 +715,7 @@ class LessonRESTHandler(BaseRESTHandler):
                 unit_list.append({'label': unit.title, 'value': unit.id})
 
         return [
-            (['title'], 'Unit'),
+            (['title'], 'Lesson'),
             (['properties', 'key', '_inputex'], {
                 'label': 'ID', '_type': 'uneditable'}),
             (['properties', 'title', '_inputex'], {'label': 'Title'}),
