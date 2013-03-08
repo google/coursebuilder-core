@@ -12,21 +12,27 @@
 
 <!-- TODO(psimakov): take styles out into a separate file -->
 <style>
-  div.oeditor-container {
+  div#oeditor-container {
     position: relative;
   }
   div.status-popup {
     width:400px;   /* adjust */
-    top:-45px;
     left:50%;
     margin-left: -200px;  /* half of the width */
-    position:absolute;
     background-color: #ffffB7;
     border: solid #cccca0 1px;
     border-radius: 5px;
     text-align: center;
     padding: 2px;
     z-index: 999;
+  }
+  .status-popup.fixed {
+    position: fixed;
+    top: 10px;
+  }
+  .status-popup.absolute {
+    position: absolute;
+    top: -45px;
   }
   div.status-controlbar {
     float: right;
@@ -185,8 +191,8 @@
   }
 </style>
 
-<div class='oeditor-container'>
-  <div class='status-popup' id='formStatusPopup' style='display: none;'>
+<div id='oeditor-container'>
+  <div class='status-popup absolute' id='formStatusPopup' style='display: none;'>
     <div class='status-controlbar'>
       <button onclick='cbHideMsg()'>X</button>
     </div>
@@ -309,6 +315,22 @@
     }
   }
 
+  function keepPopupInView(Y) {
+    var container = Y.one('#oeditor-container');
+    var popup = Y.one('#formStatusPopup');
+    // The 'absolute' style positions the popup 45px above the top of the
+    // container and we want 'fixed' to pin it at 10px below the top of the
+    // window, so check that the container isn't less than 55px from the top of
+    // the window.
+    if (container.getY() - container.get('docScrollY') <= 55) {
+      popup.addClass('fixed');
+      popup.removeClass('absolute');
+    } else {
+      popup.removeClass('fixed');
+      popup.addClass('absolute');
+    }
+  }
+
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
   cbShowMsg("Loading...");
@@ -349,6 +371,10 @@
           return window[options.funcName](Y, value);
         }
       }
+
+      Y.on('scroll', function(e) {
+        keepPopupInView(Y);
+      });
 
       // here is the object schema
       var schema = {
@@ -415,7 +441,7 @@
                       if (cb_global.auto_return) {
                         window.location = cb_global.exit_url;
                       }
-                    }, 2000);
+                    }, 5000);
                   }
               }
             };
@@ -618,7 +644,7 @@
               // update ui state
               document.getElementById("formContainer").style.display = "block";
               cbShowMsg(json.message);
-              setTimeout(function(){ cbHideMsg(); }, 2000);
+              setTimeout(function(){ cbHideMsg(); }, 5000);
             },
             failure : function (x,o) {
                 cbShowMsg("Server did not respond. Please reload the page to try again.");
