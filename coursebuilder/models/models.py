@@ -21,6 +21,7 @@ from config import ConfigProperty
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
+from google.appengine.api import namespace_manager
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -56,11 +57,21 @@ class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
 
     @classmethod
-    def get(cls, key):
+    def get(cls, key, namespace=None):
         """Gets an item from memcache if memcache is enabled."""
         if not CAN_USE_MEMCACHE.value:
             return None
-        value = memcache.get(key)
+        if not namespace:
+            namespace = appengine_config.DEFAULT_NAMESPACE_NAME
+        if namespace == namespace_manager.get_namespace():
+            value = memcache.get(key)
+        else:
+            old_namespace = namespace_manager.get_namespace()
+            namespace_manager.set_namespace(namespace)
+            try:
+                value = memcache.get(key)
+            finally:
+                namespace_manager.set_namespace(old_namespace)
         if value:
             CACHE_HIT.inc()
         else:
@@ -68,18 +79,38 @@ class MemcacheManager(object):
         return value
 
     @classmethod
-    def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS):
+    def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets an item in memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
             CACHE_PUT.inc()
-            memcache.set(key, value, ttl)
+            if not namespace:
+                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
+            if namespace == namespace_manager.get_namespace():
+                memcache.set(key, value, ttl)
+            else:
+                old_namespace = namespace_manager.get_namespace()
+                namespace_manager.set_namespace(namespace)
+                try:
+                    memcache.set(key, value, ttl)
+                finally:
+                    namespace_manager.set_namespace(old_namespace)
 
     @classmethod
-    def delete(cls, key):
+    def delete(cls, key, namespace=None):
         """Deletes an item from memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
             CACHE_DELETE.inc()
-            memcache.delete(key)
+            if not namespace:
+                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
+            if namespace == namespace_manager.get_namespace():
+                memcache.delete(key)
+            else:
+                old_namespace = namespace_manager.get_namespace()
+                namespace_manager.set_namespace(namespace)
+                try:
+                    memcache.delete(key)
+                finally:
+                    namespace_manager.set_namespace(old_namespace)
 
 
 class Student(BaseEntity):
