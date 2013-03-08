@@ -2290,24 +2290,10 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.test_environ = copy.deepcopy(os.environ)
         # In etl.main, use test auth scheme to avoid interactive login.
         self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
+        self.sdk_path = os.environ.get('GOOGLE_APP_ENGINE_HOME')
         self.swap(os, 'environ', self.test_environ)
-        self.sdk_path = os.path.join(
-            os.path.dirname(__file__), 'test_sdk_path')
-        self.create_fake_sdk_filesystem(
-            list(etl._SUPPORTED_APP_ENGINE_SDK_VERSIONS)[0])
         self.common_args = [
             'myapp', 'localhost:8080', '--sdk_path', self.sdk_path]
-
-    def tearDown(self):
-        shutil.rmtree(self.sdk_path)
-        super(EtlMainTestCase, self).tearDown()
-
-    def create_fake_sdk_filesystem(self, version):
-        if os.path.exists(self.sdk_path):
-            shutil.rmtree(self.sdk_path)
-        os.makedirs(self.sdk_path)
-        with open(os.path.join(self.sdk_path, 'VERSION'), 'w') as f:
-            f.write('release: ' + version)
 
     def test_download(self):
         # TODO(johncox): add verification of download once method is written.
