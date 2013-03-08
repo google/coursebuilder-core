@@ -475,10 +475,10 @@ class AssetHandler(webapp2.RequestHandler):
 class ApplicationContext(object):
     """An application context for a request/response."""
 
-    # Here we store a map of a text definition of the courses to the parsed and
-    # fully validated array of ApplicationContext objects that they define. This
-    # is cached in process and automatically recomputed when text definition
-    # changes.
+    # Here we store a map of a text definition of the courses to be parsed, and
+    # a fully validated array of ApplicationContext objects that they define.
+    # This is cached in process and automatically recomputed when text
+    # definition changes.
     ALL_COURSE_CONTEXTS_CACHE = {}
 
     @classmethod
@@ -783,7 +783,7 @@ def test_rule_validations():
     setup_courses('course:/a:/nsa, course:/a:/nsb')
     assert_fails(get_all_courses)
 
-    # Check namespace collisions are allowed.
+    # Check namespace collisions are not allowed.
     setup_courses('course:/a:/nsx, course:/b:/nsx')
     assert_fails(get_all_courses)
 
