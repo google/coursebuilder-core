@@ -637,12 +637,19 @@ def courses_config_validator(value, errors):
 GCB_COURSES_CONFIG = ConfigProperty(
     'gcb_courses_config', str, (
         'A newline separated list of course entries. '
-        'Each course entry has four \':\' separated parts: the word '
-        '\'course\', the URL prefix, and the file system location for the site '
-        'files. If the third part is empty, the course assets are stored '
-        'in a datastore instead of the file system. The fourth, optional part, '
-        'is the name of the course namespace. A line that starts with \'#\' is '
-        'ignored.'),
+        'Each course entry has four parts, separated by colons (\':\'). '
+        'The four parts are: (1)course:/(2)URL prefix:(3)file system '
+        'location:(4) course namespace.'
+        '<ol>'
+        '<li>course:/ is a required element.</li>'
+        '<li>A unique URL prefix is needed for each course. Examples could '
+        'be /cs101 or /art. Default: /</li>'
+        '<li>If the file system location is left empty, the course assets are '
+        'stored in a datastore instead of the file system.</li>'
+        '<li>Location where course data is stored in App Engine. Note: this '
+        'value cannot be changed after the course is created.</li>'
+        '</ol>'
+        'A line that starts with \'#\' is ignored.'),
     'course:/:/', multiline=True, validator=courses_config_validator)
 
 

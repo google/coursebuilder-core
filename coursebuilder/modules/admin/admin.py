@@ -309,12 +309,11 @@ class AdminHandler(
         def get_doc_string(item, default_value):
             """Formats an item documentation string for display."""
             doc_string = item.doc_string
-            if doc_string:
-                doc_string = escape(doc_string)
-            else:
+            if not doc_string:
                 doc_string = 'No documentation available.'
-            doc_string = ' %s Default: "%s".' % (doc_string, default_value)
-            return escape(doc_string)
+            doc_string = ' %s Default: \'%s\'.' % (
+                doc_string, escape(default_value))
+            return doc_string
 
         overrides = config.Registry.get_overrides(True)
         registered = config.Registry.registered.copy()
@@ -341,6 +340,9 @@ class AdminHandler(
 
             style_current = get_style_for(value, item.value_type)
 
+            # Enable proper value wrapping.
+            escaped_value = escape(str(value)).replace('\n', '<br/>')
+
             content.append("""
                 <tr>
                 <td style='white-space: nowrap;'>%s</td>
@@ -350,7 +352,7 @@ class AdminHandler(
                 </tr>
                 """ % (
                     escape(item.name), class_current, style_current,
-                    escape(value), get_actions(name, name in overrides),
+                    escaped_value, get_actions(name, name in overrides),
                     get_doc_string(item, default_value)))
 
         content.append("""
