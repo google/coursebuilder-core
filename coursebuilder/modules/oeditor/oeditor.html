@@ -236,6 +236,8 @@
   cb_global.save_url = '{{ save_url|safe }}';
   cb_global.save_args = {{ save_args|safe }};
   cb_global.exit_url = '{{ exit_url|safe }}';
+  cb_global.save_method = '{{ save_method }}';
+  cb_global.auto_return = {% if auto_return %}true{% else %}false{% endif %};
 
   // If this value is '', deletions are not allowed
   cb_global.delete_url = '{{ delete_url|safe }}';
@@ -264,7 +266,7 @@
 
       // bind buttons
       inputExDefinition.buttons = [
-        {type: 'submit-link', value: 'Save', onClick:function() {
+        {type: 'submit-link', value: 'Save', onClick: function() {
             cbShowMsg("Saving...");
 
             // record current state
@@ -285,13 +287,19 @@
             // async post data to the server
             var url = cb_global.save_url;
 
-            Y.io(url, {
+            yioConfig = {
               method: 'PUT',
               data: request_data,
               timeout : ajaxRpcTimeoutMillis,
               on: {
-                  success: function(id, o, args) {
-                    var json = JSON.parse(o.responseText);
+                  complete: function(transactionId, response, args) {
+                    var json;
+                    if (response && response.responseText) {
+                      json = JSON.parse(response.responseText);
+                    } else {
+                      cbShowMsg("Server did not respond. Please reload the page to try again.");
+                      return;
+                    }
 
                     if (json.status != 200) {
                       cbShowMsg(formatServerErrorMessage(json.status, json.message));
@@ -303,14 +311,25 @@
 
                     // update UI
                     cbShowMsg(json.message);
-                    setTimeout(function(){ cbHideMsg(); }, 750);
-                  },
-                  failure : function (x,o) {
-                      cbShowMsg("Server did not respond. Please reload the page to try again.");
+                    setTimeout(function(){
+                      cbHideMsg();
+                      if (cb_global.auto_return) {
+                        window.location = cb_global.exit_url;
+                      }
+                    }, 750);
                   }
               }
-            });
+            };
 
+            if (cb_global.save_method == 'upload') {
+              yioConfig.method = 'POST';
+              yioConfig.form = {
+                id: 'cb-oeditor-form',
+                upload: true
+              };
+            }
+
+            Y.io(url, yioConfig);
             return false;
         }},
 
@@ -414,6 +433,7 @@
       // create form and bind it to DOM
       inputExDefinition.parentEl = 'formContainer';
       cb_global.form = new Y.inputEx.Form(inputExDefinition);
+      cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
 
       // async request data for the object being edited
       Y.io(cb_global.get_url, {

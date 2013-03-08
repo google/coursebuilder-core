@@ -31,6 +31,7 @@ from models import roles
 from models import vfs
 from models.models import Student
 import filer
+from filer import AssetItemRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from unit_lesson_editor import UNIT_LESSON_REST_HANDLER_URI
@@ -48,15 +49,16 @@ class DashboardHandler(
     default_action = 'outline'
     get_actions = [
         default_action, 'assets', 'settings', 'students', 'edit_settings',
-        'edit_unit_lesson']
+        'edit_unit_lesson', 'add_asset']
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
 
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
         return [
-            ('/rest/files/item', FilesItemRESTHandler),
-            (UNIT_LESSON_REST_HANDLER_URI, UnitLessonTitleRESTHandler)]
+            (FilesItemRESTHandler.URI, FilesItemRESTHandler),
+            (UNIT_LESSON_REST_HANDLER_URI, UnitLessonTitleRESTHandler),
+            (AssetItemRESTHandler.URI, AssetItemRESTHandler)]
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -252,7 +254,7 @@ class DashboardHandler(
 
     def list_and_format_file_list(
         self, title, subfolder,
-        links=False, prefix=None, caption_if_empty='< none >'):
+        links=False, upload=False, prefix=None, caption_if_empty='< none >'):
         """Walks files in folders and renders their names in a section."""
 
         home = sites.abspath(self.app_context.get_home_folder(), '/')
@@ -273,6 +275,14 @@ class DashboardHandler(
 
         output = []
         count = len(lines)
+
+        if filer.is_editable_fs(self.app_context) and upload:
+            output.append(
+                '<a class="gcb-button pull-right" href="dashboard?%s">'
+                'Upload</a>' % urllib.urlencode(
+                    {'action': 'add_asset', 'base': subfolder}))
+            output.append('<div style=\"clear: both; padding-top: 2px;\" />')
+
         output.append('<h3>%s' % cgi.escape(title))
         if count:
             output.append(' (%s)' % count)
@@ -297,18 +307,18 @@ class DashboardHandler(
 
         lines = []
         lines += self.list_and_format_file_list(
-            'Assessments', '/assets/js/', True,
+            'Assessments', '/assets/js/', links=True,
             prefix='assets/js/assessment-')
         lines += self.list_and_format_file_list(
-            'Activities', '/assets/js/', True,
+            'Activities', '/assets/js/', links=True,
             prefix='assets/js/activity-')
         lines += self.list_and_format_file_list(
-            'Images & Documents', '/assets/img/', True)
+            'Images & Documents', '/assets/img/', links=True, upload=True)
         lines += self.list_and_format_file_list(
-            'Cascading Style Sheets', '/assets/css/', True,
+            'Cascading Style Sheets', '/assets/css/', links=True,
             caption_if_empty=inherits_from('/assets/css/'))
         lines += self.list_and_format_file_list(
-            'JavaScript Libraries', '/assets/lib/', True,
+            'JavaScript Libraries', '/assets/lib/', links=True,
             caption_if_empty=inherits_from('/assets/lib/'))
         lines += self.list_and_format_file_list(
             'View Templates', '/views/',

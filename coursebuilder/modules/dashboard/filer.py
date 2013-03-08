@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import base64
 import json
+import os
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -35,34 +36,10 @@ course:
   title: 'New Course by %s'
 """
 
-# general text file object schema
-TEXT_FILE_SCHEMA_JSON = """
-    {
-        "id": "Text File",
-        "type": "object",
-        "description": "Text File",
-        "properties": {
-            "key" : {"type": "string"},
-            "encoding" : {"type": "string"},
-            "content": {"type": "text"},
-            "is_draft": {"type": "boolean"}
-            }
-    }
-    """
 
-TEXT_FILE_SCHEMA_DICT = json.loads(TEXT_FILE_SCHEMA_JSON)
+ALLOWED_ASSET_UPLOAD_BASE = 'assets/img'
 
-# inputex specific schema annotations to control editor look and feel
-TEXT_FILE_SCHEMA_ANNOTATIONS_DICT = [
-    (['title'], 'Text File'),
-    (['properties', 'key', '_inputex'], {
-        'label': 'ID', '_type': 'uneditable'}),
-    (['properties', 'encoding', '_inputex'], {
-        'label': 'Encoding', '_type': 'uneditable'}),
-    (['properties', 'content', '_inputex'], {
-        'label': 'Content', '_type': 'text'}),
-    oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+MAX_ASSET_UPLOAD_SIZE_K = 500
 
 
 def is_editable_fs(app_context):
@@ -114,7 +91,9 @@ class FileManagerAndEditor(ApplicationHandler):
         exit_url = self.canonicalize_url('/dashboard?action=settings')
         rest_url = self.canonicalize_url('/rest/files/item')
         form_html = oeditor.ObjectEditor.get_html_for(
-            self, TEXT_FILE_SCHEMA_JSON, TEXT_FILE_SCHEMA_ANNOTATIONS_DICT,
+            self,
+            FilesItemRESTHandler.SCHEMA_JSON,
+            FilesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url)
 
         template_values = {}
@@ -122,10 +101,55 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
+    def get_add_asset(self):
+        """Show an upload dialog for assets."""
+
+        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        rest_url = self.canonicalize_url(
+            AssetItemRESTHandler.URI)
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self,
+            AssetItemRESTHandler.SCHEMA_JSON,
+            AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            '', rest_url, exit_url, save_method='upload', auto_return=True)
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Upload Asset')
+        template_values['main_content'] = form_html
+        self.render_page(template_values)
+
 
 class FilesItemRESTHandler(BaseRESTHandler):
     """Provides REST API for a file."""
 
+    SCHEMA_JSON = """
+        {
+            "id": "Text File",
+            "type": "object",
+            "description": "Text File",
+            "properties": {
+                "key" : {"type": "string"},
+                "encoding" : {"type": "string"},
+                "content": {"type": "text"},
+                "is_draft": {"type": "boolean"}
+                }
+        }
+        """
+
+    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+
+    SCHEMA_ANNOTATIONS_DICT = [
+        (['title'], 'Text File'),
+        (['properties', 'key', '_inputex'], {
+            'label': 'ID', '_type': 'uneditable'}),
+        (['properties', 'encoding', '_inputex'], {
+            'label': 'Encoding', '_type': 'uneditable'}),
+        (['properties', 'content', '_inputex'], {
+            'label': 'Content', '_type': 'text'}),
+        oeditor.create_bool_select_annotation(
+            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+
+    URI = '/rest/files/item'
     FILE_ENCODING_TEXT = 'text/utf-8'
     FILE_ENCODING_BINARY = 'binary/base64'
     FILE_EXTENTION_TEXT = ['.js', '.css', '.yaml', '.html', '.csv']
@@ -176,7 +200,9 @@ class FilesItemRESTHandler(BaseRESTHandler):
             entity['content'] = base64.b64encode(stream.read())
 
         # Render JSON response.
-        json_payload = transforms.dict_to_json(entity, TEXT_FILE_SCHEMA_DICT)
+        json_payload = transforms.dict_to_json(
+            entity,
+            FilesItemRESTHandler.SCHEMA_DICT)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
@@ -228,4 +254,77 @@ class FilesItemRESTHandler(BaseRESTHandler):
         fs.put(filename, content_stream, is_draft=entity['is_draft'])
 
         # Send reply.
+        transforms.send_json_response(self, 200, 'Saved.')
+
+
+class AssetItemRESTHandler(BaseRESTHandler):
+    """Provides REST API for managing assets."""
+
+    URI = '/rest/assets/item'
+
+    SCHEMA_JSON = """
+        {
+            "id": "Asset",
+            "type": "object",
+            "description": "Asset",
+            "properties": {
+                "base": {"type": "string"},
+                "file": {"type": "string"}
+                }
+        }
+        """
+
+    SCHEMA_ANNOTATIONS_DICT = [
+        (['title'], 'Add Asset'),
+        (['properties', 'base', '_inputex'], {
+            'label': 'Base', '_type': 'uneditable'}),
+        (['properties', 'file', '_inputex'], {
+            'label': 'File', '_type': 'file'})]
+
+    def get(self):
+        """Provides empty initial content for asset upload editor."""
+        # TODO(jorr): Pass base URI through as request param when generalized.
+        json_payload = {'file': '', 'base': ALLOWED_ASSET_UPLOAD_BASE}
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict=json_payload,
+            xsrf_token=XsrfTokenManager.create_xsrf_token('asset-upload'))
+
+    def post(self):
+        """Handles asset uploads."""
+        assert is_editable_fs(self.app_context)
+
+        if not FilesRights.can_add(self):
+            transforms.send_json_response(self, 401, 'Access denied.', None)
+            return
+
+        request = json.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(request, 'asset-upload', None):
+            return
+
+        payload = json.loads(request['payload'])
+        base = payload['base']
+        assert base == ALLOWED_ASSET_UPLOAD_BASE
+
+        upload = self.request.POST['file']
+        filename = os.path.split(upload.filename)[1]
+        assert filename
+        physical_path = os.path.join(base, filename)
+
+        fs = self.app_context.fs.impl
+        path = fs.physical_to_logical(physical_path)
+        if fs.isfile(path):
+            transforms.send_json_response(
+                self, 403, 'Cannot overwrite existing file.', None)
+            return
+
+        content = upload.file.read()
+        upload.file.seek(0)
+        if len(content) > MAX_ASSET_UPLOAD_SIZE_K * 1024:
+            transforms.send_json_response(
+                self, 403,
+                'Max allowed file upload size is %dK' % MAX_ASSET_UPLOAD_SIZE_K,
+                None)
+            return
+
+        fs.put(path, upload.file)
         transforms.send_json_response(self, 200, 'Saved.')

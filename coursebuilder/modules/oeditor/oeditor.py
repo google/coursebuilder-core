@@ -28,7 +28,7 @@ REQUIRED_MODULES = """
     "inputex-radio", "inputex-date", "inputex-datepicker", "inputex-jsonschema",
     "inputex-checkbox", "inputex-list", "inputex-color", "inputex-rte",
     "inputex-textarea", "inputex-uneditable", "inputex-integer",
-    "inputex-hidden"
+    "inputex-hidden", "inputex-file", "io-upload-iframe"
     """
 
 
@@ -61,7 +61,7 @@ class ObjectEditor(object):
     @classmethod
     def get_html_for(
         cls, handler, schema_json, annotations, object_key, rest_url, exit_url,
-        delete_url=None):
+        delete_url=None, save_method='put', auto_return=False):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -75,6 +75,8 @@ class ObjectEditor(object):
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
             delete_url: optional URL for delete POST operation
+            save_method: how the data should be saved to the server (put|upload)
+            auto_return: whether to return to the exit_url on successful save
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
@@ -99,7 +101,9 @@ class ObjectEditor(object):
             'save_args': json.dumps(post_args),
             'exit_url': exit_url,
             'required_modules': REQUIRED_MODULES,
-            'schema_annotations': cls.format_annotations(annotations)
+            'schema_annotations': cls.format_annotations(annotations),
+            'save_method': save_method,
+            'auto_return': auto_return
             }
 
         if delete_url:
