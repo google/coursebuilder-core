@@ -636,6 +636,11 @@ class CourseModel13(object):
         self._lessons = []
         self._unit_id_to_lesson_ids = {}
 
+        # These array keep dirty object in current transaction.
+        # TODO(psimakov): can we similarly delay delete_...() till save()?
+        self._dirty_units = []
+        self._dirty_lessons = []
+
         # Set provided values.
         if next_id:
             self._next_id = next_id
@@ -680,11 +685,50 @@ class CourseModel13(object):
             self._lessons)
         index_units_and_lessons(self)
 
+    def is_dirty(self):
+        """Checks if course object has been modified and needs to be saved."""
+        return self._dirty_units or self._dirty_lessons
+
+    def _update_related_files(self):
+        """Updates standalone files owned by course."""
+
+        fs = self.app_context.fs
+
+        # Update state of owned assessments.
+        for unit in self._dirty_units:
+            unit = self.find_unit_by_id(unit.unit_id)
+            if not unit or verify.UNIT_TYPE_ASSESSMENT != unit.type:
+                continue
+            path = fs.impl.physical_to_logical(
+                self.get_assessment_filename(unit.unit_id))
+            if fs.isfile(path):
+                fs.put(
+                    path, None, metadata_only=True,
+                    is_draft=not unit.now_available)
+
+        # Update state of owned activities.
+        for lesson in self._dirty_lessons:
+            lesson = self.find_lesson_by_id(None, lesson.lesson_id)
+            if not lesson or not lesson.has_activity:
+                continue
+            path = fs.impl.physical_to_logical(
+                self.get_activity_filename(None, lesson.lesson_id))
+            if fs.isfile(path):
+                fs.put(
+                    path, None, metadata_only=True,
+                    is_draft=not lesson.now_available)
+
     def save(self):
         """Saves course to datastore and memcache."""
         self._index()
         PersistentCourse13.save(self._app_context, self)
         CachedCourse13.delete(self._app_context)
+
+        self._update_related_files()
+
+        # Transaction is over; remove all dirty objects.
+        self._dirty_units = []
+        self._dirty_lessons = []
 
     def get_units(self):
         return self._units[:]
@@ -739,6 +783,7 @@ class CourseModel13(object):
         self._units.append(unit)
         self._index()
 
+        self._dirty_units.append(unit)
         return unit
 
     def add_lesson(self, unit, title):
@@ -755,6 +800,7 @@ class CourseModel13(object):
         self._lessons.append(lesson)
         self._index()
 
+        self._dirty_lessons.append(lesson)
         return lesson
 
     def move_lesson_to(self, lesson, unit):
@@ -798,6 +844,7 @@ class CourseModel13(object):
             self._delete_activity(lesson)
         self._lessons.remove(lesson)
         self._index()
+        self._dirty_lessons.append(lesson)
         return True
 
     def delete_unit(self, unit):
@@ -811,6 +858,7 @@ class CourseModel13(object):
             self._delete_assessment(unit)
         self._units.remove(unit)
         self._index()
+        self._dirty_units.append(unit)
         return True
 
     def update_unit(self, unit):
@@ -828,6 +876,7 @@ class CourseModel13(object):
         if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
             existing_unit.weight = unit.weight
 
+        self._dirty_units.append(existing_unit)
         return existing_unit
 
     def update_lesson(self, lesson):
@@ -844,6 +893,8 @@ class CourseModel13(object):
         existing_lesson.activity_title = lesson.activity_title
 
         self._index()
+
+        self._dirty_lessons.append(existing_lesson)
         return existing_lesson
 
     def reorder_units(self, order_data):
@@ -950,7 +1001,7 @@ class CourseModel13(object):
         fs = self.app_context.fs
         fs.put(
             path, vfs.string_to_stream(activity_content),
-            is_draft=False)
+            is_draft=not lesson.now_available)
 
     def import_from(self, src_course, errors):
         """Imports a content of another course into this course."""

@@ -247,6 +247,51 @@ class InfrastructureTest(actions.TestBase):
         assert [lesson_b] == course.get_lessons(another_unit.unit_id)
         course.delete_unit(another_unit)
 
+        # Make the course available.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['now_available'] = True
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        # Test public/private assessment.
+        assert not assessment.now_available
+        response = self.get(
+            '/test/' + course.get_assessment_filename(assessment.unit_id),
+            expect_errors=True)
+        assert_equals(response.status_int, 403)
+        assessment = course.find_unit_by_id(assessment.unit_id)
+        assessment.now_available = True
+        course.update_unit(assessment)
+        course.save()
+        response = self.get(
+            '/test/' + course.get_assessment_filename(assessment.unit_id))
+        assert_equals(response.status_int, 200)
+
+        # Test public/private activity.
+        lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
+        lesson_a.now_available = False
+        lesson_a.has_activity = True
+        course.update_lesson(lesson_a)
+        errors = []
+        course.set_activity_content(lesson_a, u'var activity = []', errors)
+        assert not errors
+        response = self.get(
+            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id),
+            expect_errors=True)
+        assert_equals(response.status_int, 403)
+        lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
+        lesson_a.now_available = True
+        course.update_lesson(lesson_a)
+        course.save()
+        response = self.get(
+            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id),
+            expect_errors=True)
+        assert_equals(response.status_int, 200)
+
         # Test delete.
         course.delete_unit(link)
         course.delete_unit(unit)
@@ -257,6 +302,7 @@ class InfrastructureTest(actions.TestBase):
             course.app_context.get_home(), 'assets/js/'))
 
         # Clean up.
+        sites.ApplicationContext.get_environ = get_environ_old
         sites.reset_courses()
 
     def test_unit_lesson_not_available(self):
@@ -560,13 +606,13 @@ class InfrastructureTest(actions.TestBase):
         fs.put(dst, open(src, 'rb'))
         stored = fs.open(dst)
         assert stored.metadata.size == len(open(src, 'rb').read())
-        assert stored.metadata.is_draft
+        assert not stored.metadata.is_draft
         assert stored.read() == open(src, 'rb').read()
 
         # Check draft.
-        fs.put(dst, open(src, 'rb'), is_draft=False)
+        fs.put(dst, open(src, 'rb'), is_draft=True)
         stored = fs.open(dst)
-        assert not stored.metadata.is_draft
+        assert stored.metadata.is_draft
 
         # Check text files with non-ASCII characters and encoding.
         foo_js = os.path.join('/', 'assets/js/foo.js')

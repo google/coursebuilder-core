@@ -912,7 +912,7 @@ def evaluate_python_expression_from_text(content, root_name, scope,
     if noverify_text:
         restricted_scope['noverify'] = noverify_text
 
-    if not restricted_scope[root_name]:
+    if restricted_scope[root_name] is None:
         raise Exception('Unable to find \'%s\'' % root_name)
     return restricted_scope
 

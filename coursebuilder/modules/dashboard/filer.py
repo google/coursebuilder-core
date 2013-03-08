@@ -31,7 +31,6 @@ from models import vfs
 from modules.oeditor import oeditor
 import yaml
 import messages
-import unit_lesson_editor
 from google.appengine.api import users
 
 
@@ -158,8 +157,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
             "properties": {
                 "key" : {"type": "string"},
                 "encoding" : {"type": "string"},
-                "content": {"type": "text"},
-                "is_draft": {"type": "boolean"}
+                "content": {"type": "text"}
                 }
         }
         """
@@ -173,8 +171,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
         (['properties', 'encoding', '_inputex'], {
             'label': 'Encoding', '_type': 'uneditable'}),
         (['properties', 'content', '_inputex'], {
-            'label': 'Content', '_type': 'text'}),
-        unit_lesson_editor.create_status_annotation()]
+            'label': 'Content', '_type': 'text'})]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-textarea', 'inputex-select',
@@ -222,7 +219,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
             return
 
         # Prepare data.
-        entity = {'key': key, 'is_draft': stream.metadata.is_draft}
+        entity = {'key': key}
         if self.is_text_file(key):
             entity['encoding'] = self.FILE_ENCODING_TEXT
             entity['content'] = vfs.stream_to_string(stream)
@@ -282,7 +279,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
         # Store new file content.
         fs = self.app_context.fs.impl
         filename = fs.physical_to_logical(key)
-        fs.put(filename, content_stream, is_draft=entity['is_draft'])
+        fs.put(filename, content_stream)
 
         # Send reply.
         transforms.send_json_response(self, 200, 'Saved.')

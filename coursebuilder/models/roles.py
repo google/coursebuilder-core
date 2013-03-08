@@ -42,7 +42,7 @@ class Roles(object):
     @classmethod
     def is_direct_super_admin(cls):
         """Checks if current user is a super admin, without delegation."""
-        return users.is_current_user_admin()
+        return users.get_current_user() and users.is_current_user_admin()
 
     @classmethod
     def is_super_admin(cls):

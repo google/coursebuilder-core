@@ -512,6 +512,11 @@ class AssetHandler(webapp2.RequestHandler):
             return default
         return guess
 
+    def _can_view(self, fs, stream):
+        """Checks if current user can view stream."""
+        public = not fs.is_draft(stream)
+        return public or Roles.is_course_admin(self.app_context)
+
     def get(self):
         """Handles GET requests."""
         debug('File: %s' % self.filename)
@@ -520,19 +525,15 @@ class AssetHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
-        stream = self.app_context.fs.get(self.filename)
-
-        # Check the object is published.
-        if (hasattr(stream, 'metadata') and
-            stream.metadata.is_draft and
-            not Roles.is_course_admin(self.app_context)):
+        stream = self.app_context.fs.open(self.filename)
+        if not self._can_view(self.app_context.fs, stream):
             self.error(403)
             return
 
         set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
-        self.response.write(stream)
+        self.response.write(stream.read())
 
 
 class ApplicationContext(object):
