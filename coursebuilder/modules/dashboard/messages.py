@@ -62,7 +62,8 @@ The course.yaml file contains many course settings.
 
 IMPORT_COURSE_DESCRIPTION = admin_messages.format_msg("""
 Import the contents of another course into this course. Both courses must be on
-the same Google App Engine instance. This will only import into an empty course.
+the same Google App Engine instance.
+<strong>This will only import into an empty course</strong>.
 """, None)
 
 LESSON_ACTIVITY_DESCRIPTION = """

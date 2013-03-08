@@ -87,13 +87,12 @@
           font-size: 80%;
           color: #666;
         }
-        div#gcb-readonly-bar {
-          background-color: rgb(255, 255, 128);
-          background-color: rgba(255, 255, 128, 0.5);
-          transparency: 50%;
+        div#gcb-alerts-bar {
+          background-color: #ffffB7;
+          border: solid #cccca0 1px;
           display: inline-block;
           padding: 0.4em;
-          border-radius: 0.8em;
+          border-radius: 5px;
           margin-top: 4px;
         }
         div#gcb-nav-bar a {
@@ -146,9 +145,9 @@
     {{ top_nav|safe }}
   </div>
   <div id='gcb-main-area'>
-    {% if readonly %}
-      <div id="gcb-readonly-bar">
-        {{ readonly|safe }}
+    {% if alerts %}
+      <div id="gcb-alerts-bar">
+        {{ alerts|safe }}
       </div>
     {% endif %}
     {% if page_description %}
