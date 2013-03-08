@@ -662,16 +662,19 @@ def _courses_config_validator(rules_text, errors):
 def validate_new_course_entry_attributes(name, title, admin_email, errors):
     """Validates new course attributes."""
     if not name or len(name) < 3:
-        errors.append('Unique name is to short.')
+        errors.append(
+            'The unique name associated with the course must be at least '
+            'three characters long.')
     if not re.match('[_a-z0-9]+$', name, re.IGNORECASE):
         errors.append(
-            'Unique name must have only ASCII letters, numbers or underscore.')
+            'The unique name associated with the course should contain only '
+            'lowercase letters, numbers, or underscores.')
 
     if not title or len(title) < 3:
-        errors.append('Course title is to short.')
+        errors.append('The course title is too short.')
 
     if not admin_email or not '@' in admin_email:
-        errors.append('Please enter valid email.')
+        errors.append('Please enter a valid email address.')
 
 
 @db.transactional()
