@@ -173,6 +173,10 @@ class BaseHandler(ApplicationHandler):
             self.course = Course(self)
         return self.course
 
+    def find_unit_by_id(self, unit_id):
+        """Gets a unit with a specific id or fails with an exception."""
+        return self.get_course().find_unit_by_id(unit_id)
+
     def get_units(self):
         """Gets all units in the course."""
         return self.get_course().get_units()
@@ -180,6 +184,13 @@ class BaseHandler(ApplicationHandler):
     def get_lessons(self, unit_id):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
+
+    def get_lesson_index(self, unit, lesson):
+        """Returns an index of a lesson in the lesson array."""
+        for idx, current in enumerate(self.get_lessons(unit.unit_id)):
+            if lesson.id == current.id:
+                return idx
+        raise Exception('Lesson does not belong to the unit.')
 
     def get_progress_tracker(self):
         """Gets the progress tracker for the course."""
@@ -224,6 +235,7 @@ class BaseHandler(ApplicationHandler):
         return True
 
     def render(self, template_file):
+        """Renders a template."""
         template = self.get_template(template_file)
         self.response.out.write(template.render(self.template_value))
 

@@ -38,7 +38,11 @@ DEFAULT_COURSE_YAML_DICT = {
     'base': {'show_gplus_button': True},
     'institution': {'logo': {}, 'url': ''},
     'preview': {},
-    'reg_form': {'can_register': True}
+    'unit': {},
+    'reg_form': {
+        'can_register': True,
+        'additional_registration_fields': (
+            '<!-- reg_form.additional_registration_fields -->')}
 }
 
 
@@ -138,6 +142,11 @@ class Unit12(object):
         self.release_date = ''
         self.now_available = False
 
+    @property
+    def href(self):
+        assert verify.UNIT_TYPE_LINK == self.type
+        return self.unit_id
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -210,6 +219,11 @@ class CourseModel12(object):
     def get_activity_filename(self, unit_id, lesson_id):
         """Returns activity base filename."""
         return 'assets/js/activity-%s.%s.js' % (unit_id, lesson_id)
+
+    def find_lesson_by_id(self, unit, lesson_id):
+        """Finds a lesson given its id (or 1-based index in this model)."""
+        index = int(lesson_id) - 1
+        return self.get_lessons(unit.unit_id)[index]
 
 
 class Unit13(object):
@@ -376,7 +390,7 @@ class CourseModel13(object):
         lessons = []
         if lesson_ids:
             for lesson_id in lesson_ids:
-                lessons.append(self.find_lesson_by_id(lesson_id))
+                lessons.append(self.find_lesson_by_id(None, lesson_id))
         return lessons
 
     def get_assessment_filename(self, unit_id):
@@ -388,7 +402,7 @@ class CourseModel13(object):
 
     def get_activity_filename(self, unused_unit_id, lesson_id):
         """Returns activity base filename."""
-        lesson = self.find_lesson_by_id(lesson_id)
+        lesson = self.find_lesson_by_id(None, lesson_id)
         assert lesson
         if lesson.has_activity:
             return 'assets/js/activity-%s.js' % lesson_id
@@ -401,7 +415,7 @@ class CourseModel13(object):
                 return unit
         return None
 
-    def find_lesson_by_id(self, lesson_id):
+    def find_lesson_by_id(self, unused_unit, lesson_id):
         """Finds a lesson given its id."""
         for lesson in self._lessons:
             if str(lesson.id) == str(lesson_id):
@@ -444,7 +458,7 @@ class CourseModel13(object):
         assert unit
         assert verify.UNIT_TYPE_UNIT == unit.type
 
-        lesson = self.find_lesson_by_id(lesson.id)
+        lesson = self.find_lesson_by_id(None, lesson.id)
         assert lesson
         lesson.unit_id = unit.id
 
@@ -472,7 +486,7 @@ class CourseModel13(object):
 
     def delete_lesson(self, lesson):
         """Delete a lesson."""
-        lesson = self.find_lesson_by_id(lesson.id)
+        lesson = self.find_lesson_by_id(None, lesson.id)
         if not lesson:
             return False
         if lesson.has_activity:
@@ -543,7 +557,7 @@ class CourseModel13(object):
             for lesson_data in unit_data['lessons']:
                 lesson_id = lesson_data['id']
                 reordered_lessons.append(
-                    self.find_lesson_by_id(lesson_id))
+                    self.find_lesson_by_id(None, lesson_id))
                 lesson_ids.add((unit_id, lesson_id))
         assert len(lesson_ids) == len(self._lessons)
         self._lessons = reordered_lessons
@@ -592,7 +606,7 @@ class CourseModel13(object):
             dst_unit.now_available = src_unit.now_available
 
             if verify.UNIT_TYPE_LINK == src_unit.type:
-                dst_unit.href = src_unit.unit_id
+                dst_unit.href = src_unit.href
 
             # Copy over the assessment. Note that we copy files directly and
             # avoid all logical validations of their content. This is done for a
@@ -748,6 +762,9 @@ class Course(object):
 
     def find_unit_by_id(self, unit_id):
         return self._model.find_unit_by_id(unit_id)
+
+    def find_lesson_by_id(self, unit, lesson_id):
+        return self._model.find_lesson_by_id(unit, lesson_id)
 
     def add_unit(self):
         """Adds new unit to a course."""

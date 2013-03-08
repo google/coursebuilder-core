@@ -16,11 +16,13 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import logging
 import urlparse
 from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
+from tools import verify
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import XsrfTokenManager
@@ -45,21 +47,31 @@ COURSE_EVENTS_RECORDED = PerfCounter(
     'A number of activity/assessment events recorded in a datastore.')
 
 
-def extract_unit_and_lesson_id(handler):
-    """Extracts unit and lesson ids from a request."""
-    c = handler.request.get('unit')
-    if not c:
-        unit_id = 1
-    else:
-        unit_id = int(c)
+def extract_unit_and_lesson(handler):
+    """Loads unit and lesson specified in the request."""
 
+    # Finds unit requested or a first unit in the course.
+    u = handler.request.get('unit')
+    unit = handler.get_course().find_unit_by_id(u)
+    if not unit:
+        units = handler.get_course().get_units()
+        for current_unit in units:
+            if verify.UNIT_TYPE_UNIT == current_unit.type:
+                unit = current_unit
+                break
+    if not unit:
+        return None, None
+
+    # Find lesson requested or a first lesson in the unit.
     l = handler.request.get('lesson')
+    lesson = None
+    lessons = handler.get_course().get_lessons(unit.unit_id)
     if not l:
-        lesson_id = 1
+        if lessons:
+            lesson = lessons[0]
     else:
-        lesson_id = int(l)
-
-    return unit_id, lesson_id
+        lesson = handler.get_course().find_lesson_by_id(unit, l)
+    return unit, lesson
 
 
 def get_unit_and_lesson_id_from_url(url):
@@ -108,14 +120,14 @@ class UnitHandler(BaseHandler):
             return
 
         # Extract incoming args
-        unit_id, lesson_id = extract_unit_and_lesson_id(self)
+        unit, lesson = extract_unit_and_lesson(self)
+        unit_id = unit.unit_id
+        index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
-        self.template_value['lesson_id'] = lesson_id
+        self.template_value['lesson_id'] = lesson.id
 
         # Set template values for a unit and its lesson entities
-        for unit in self.get_units():
-            if unit.unit_id == str(unit_id):
-                self.template_value['units'] = unit
+        self.template_value['units'] = unit
 
         lessons = self.get_lessons(unit_id)
         self.template_value['lessons'] = lessons
@@ -123,24 +135,29 @@ class UnitHandler(BaseHandler):
         # Set template values for nav bar
         self.template_value['navbar'] = {'course': True}
 
-        # Set template values for back and next nav buttons
-        if lesson_id == 1:
+        # Format back button.
+        if index == 0:
             self.template_value['back_button_url'] = ''
-        elif lessons[lesson_id - 2].activity:
-            self.template_value['back_button_url'] = (
-                'activity?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
         else:
-            self.template_value['back_button_url'] = (
-                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id - 1))
+            prev_lesson = lessons[index - 1]
+            if prev_lesson.activity:
+                self.template_value['back_button_url'] = (
+                    'activity?unit=%s&lesson=%s' % (unit_id, prev_lesson.id))
+            else:
+                self.template_value['back_button_url'] = (
+                    'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.id))
 
-        if lessons[lesson_id - 1].activity:
-            self.template_value['next_button_url'] = (
-                'activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
-        elif lesson_id == len(lessons):
+        # Format next button.
+        if not index < len(lessons) - 1:
             self.template_value['next_button_url'] = ''
         else:
-            self.template_value['next_button_url'] = (
-                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+            next_lesson = lessons[index + 1]
+            if next_lesson.activity:
+                self.template_value['next_button_url'] = (
+                    'activity?unit=%s&lesson=%s' % (unit_id, next_lesson.id))
+            else:
+                self.template_value['next_button_url'] = (
+                    'unit?unit=%s&lesson=%s' % (unit_id, next_lesson.id))
 
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
@@ -163,14 +180,17 @@ class ActivityHandler(BaseHandler):
             return
 
         # Extract incoming args
-        unit_id, lesson_id = extract_unit_and_lesson_id(self)
+        unit, lesson = extract_unit_and_lesson(self)
+        unit_id = unit.unit_id
+        lesson_id = lesson.id
+        index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
-        for unit in self.get_units():
-            if unit.unit_id == str(unit_id):
-                self.template_value['units'] = unit
+        self.template_value['units'] = unit
+        self.template_value['activity_script_src'] = (
+            self.get_course().get_activity_filename(unit_id, lesson_id))
 
         lessons = self.get_lessons(unit_id)
         self.template_value['lessons'] = lessons
@@ -181,7 +201,7 @@ class ActivityHandler(BaseHandler):
         # Set template values for back and next nav buttons
         self.template_value['back_button_url'] = (
             'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
-        if lesson_id == len(lessons):
+        if not index < len(lessons) - 1:
             self.template_value['next_button_url'] = ''
         else:
             self.template_value['next_button_url'] = (
@@ -204,8 +224,11 @@ class ActivityHandler(BaseHandler):
         # Mark this page as accessed. This is done after setting the student
         # progress template value, so that the mark only shows up after the
         # student visits the page for the first time.
-        self.get_course().get_progress_tracker().put_activity_accessed(
-            student, unit_id, lesson_id)
+        try:
+            self.get_course().get_progress_tracker().put_activity_accessed(
+                student, unit_id, lesson_id)
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error('Failed to get student progress: %s', e)
 
         self.render('activity.html')
 
@@ -219,11 +242,10 @@ class AssessmentHandler(BaseHandler):
             return
 
         # Extract incoming args
-        n = self.request.get('name')
-        if not n:
-            n = 'Pre'
-        self.template_value['name'] = n
+        unit_id = self.request.get('name')
         self.template_value['navbar'] = {'course': True}
+        self.template_value['assessment_script_src'] = (
+            self.get_course().get_assessment_filename(unit_id))
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))

@@ -10,7 +10,7 @@
 {% block main_content %}
 <div class="gcb-main">
   <div class="gcb-article">
-    <script src="assets/js/assessment-{{ name }}.js"></script>
+    <script src="{{ assessment_script_src }}"></script>
     <script>
       assessmentXsrfToken = '{{ assessment_xsrf_token }}';
 

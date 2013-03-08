@@ -1892,6 +1892,10 @@ class DatastoreBackedCourseTest(actions.TestBase):
         self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
         files_added.append(course_yaml)
 
+
+class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
+    """Prepares a sample course running on datastore-backed file system."""
+
     def test_course_import(self):
         """Test importing of the course."""
 
@@ -1948,10 +1952,6 @@ class DatastoreBackedCourseTest(actions.TestBase):
         sites.reset_courses()
         config.Registry.test_overrides = {}
 
-
-class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
-    """Prepares a sample course running on datastore-backed file system."""
-
     def test_get_put_file(self):
         """Test that one can put/get file via REST interface."""
         self.init_course_data(self.upload_all_sample_course_files)
@@ -2000,6 +2000,79 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         response = self.testapp.get(
             '/assets/js/activity-1.3.js', expect_errors=True)
         assert_equals(response.status_int, 404)
+
+    def _import_sample_course(self):
+        # Setup courses.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+
+        # Import sample course.
+        dst_app_context = sites.get_all_courses()[0]
+        src_app_context = sites.get_all_courses()[1]
+        dst_course = courses.Course(None, app_context=dst_app_context)
+
+        errors = []
+        src_course_out, dst_course_out = dst_course.import_from(
+            src_app_context, errors)
+        if errors:
+            raise Exception(errors)
+        assert len(
+            src_course_out.get_units()) == len(dst_course_out.get_units())
+        dst_course_out.save()
+
+        # Clean up.
+        sites.reset_courses()
+
+    def test_imported_course(self):
+        """Tests various pages of the imported course."""
+        # TODO(psimakov): Ideally, this test class should run all aspect tests
+        # and they all should pass. However, the id's in the cloned course
+        # do not match the id's of source sample course and we fetch pages
+        # and assert page content using id's. For now, we will check the minimal
+        # set of pages manually. Later, we have to make it run all known tests.
+
+        self._import_sample_course()
+
+        # Install a clone on the '/' so all the tests will treat it as normal
+        # sample course.
+        sites.setup_courses('course:/::ns_test')
+        self.namespace = 'ns_test'
+
+        email = 'test_units_lessons@google.com'
+        name = 'Test Units Lessons'
+
+        response = self.get('preview')
+        assert_contains('Putting it all together', response.body)
+
+        actions.login(email)
+        actions.register(self, name)
+        actions.check_profile(self, name)
+        actions.view_announcements(self)
+
+        # Check unit page without lesson specified.
+        response = self.get('unit?unit=9')
+        assert_contains('Interpreting results', response.body)
+        assert_contains(
+            'When search results suggest something new', response.body)
+
+        # Check unit page with a lessons.
+        response = self.get('unit?unit=9&lesson=12')
+        assert_contains('Interpreting results', response.body)
+        assert_contains(
+            'Understand options for different media', response.body)
+
+        # Check assesment page.
+        response = self.get('assessment?name=21')
+        assert_contains(
+            '<script src="assets/js/assessment-21.js"></script>', response.body)
+
+        # Check activity page.
+        response = self.get('activity?unit=9&lesson=13')
+        assert_contains(
+            '<script src="assets/js/activity-13.js"></script>',
+            response.body)
+
+        # Clean up.
+        sites.reset_courses()
 
 
 class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):

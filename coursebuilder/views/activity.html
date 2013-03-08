@@ -9,7 +9,7 @@
 
 {% block main_content %}
 
-<script src="assets/js/activity-{{ units.unit_id }}.{{ lesson_id }}.js"></script>
+<script src="{{ activity_script_src }}"></script>
 
 {% if record_events %}
 <script>
