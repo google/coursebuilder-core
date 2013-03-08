@@ -104,7 +104,7 @@ UNIT_CSV_TO_DB_CONVERTER = {
     'unit_id': ('unit_id', unicode),
     'title': ('title', unicode),
     'release_date': ('release_date', unicode),
-    'now_available': ('now_available', bool)
+    'now_available': ('now_available', lambda value: value == 'True')
 }
 LESSON_CSV_TO_DB_CONVERTER = {
     'unit_id': ('unit_id', int),
@@ -750,13 +750,20 @@ def text_to_line_numbered_text(text):
     return '\n  '.join(results)
 
 
-def set_object_attributes(target_object, names, values):
+def set_object_attributes(target_object, names, values, converter=None):
     """Sets object attributes from provided values."""
 
     if len(names) != len(values):
         raise SchemaException(
             'The number of elements must match: %s and %s' % (names, values))
-    for i in range(0, len(names)):
+    for i in range(len(names)):
+        if converter:
+            target_def = converter.get(names[i])
+            if target_def:
+                target_name = target_def[0]
+                target_type = target_def[1]
+                setattr(target_object, target_name, target_type(values[i]))
+                continue
         if is_integer(values[i]):
             # if we are setting an attribute of an object that support
             # metadata, try to infer the target type and convert 'int' into
@@ -779,16 +786,17 @@ def set_object_attributes(target_object, names, values):
         setattr(target_object, names[i], values[i])
 
 
-def read_objects_from_csv_stream(stream, header, new_object):
+def read_objects_from_csv_stream(stream, header, new_object, converter=None):
     return read_objects_from_csv(
-        csv.reader(StringIO(stream.read())), header, new_object)
+        csv.reader(StringIO(stream.read())), header, new_object,
+        converter=converter)
 
 
 def read_objects_from_csv_file(fname, header, new_object):
     return read_objects_from_csv_stream(open(fname), header, new_object)
 
 
-def read_objects_from_csv(value_rows, header, new_object):
+def read_objects_from_csv(value_rows, header, new_object, converter=None):
     """Reads objects from the rows of a CSV file."""
 
     values = []
@@ -824,7 +832,7 @@ def read_objects_from_csv(value_rows, header, new_object):
             decoded_values.append(value)
 
         item = new_object()
-        set_object_attributes(item, names, decoded_values)
+        set_object_attributes(item, names, decoded_values, converter=converter)
         items.append(item)
     return items
 
@@ -1378,6 +1386,15 @@ def run_all_schema_helper_unit_tests():
         return ret['x']
 
     # CSV tests
+    units = read_objects_from_csv(
+        [
+            ['id', 'type', 'now_available'],
+            [1, 'U', 'True'],
+            [1, 'U', 'False']],
+        'id,type,now_available', Unit, converter=UNIT_CSV_TO_DB_CONVERTER)
+    assert units[0].now_available
+    assert not units[1].now_available
+
     read_objects_from_csv(
         [['id', 'type'], [1, 'none']], 'id,type', Unit)
 

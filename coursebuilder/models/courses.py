@@ -33,19 +33,6 @@ COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
 
 
-DEFAULT_COURSE_YAML_DICT = {
-    'course': {'title': 'UNTITLED COURSE', 'locale': 'en_US', 'main_image': {}},
-    'base': {'show_gplus_button': True},
-    'institution': {'logo': {}, 'url': ''},
-    'preview': {},
-    'unit': {},
-    'reg_form': {
-        'can_register': True,
-        'additional_registration_fields': (
-            '<!-- reg_form.additional_registration_fields -->')}
-}
-
-
 def deep_dict_merge(real_values_dict, default_values_dict):
     """Merges default and real value dictionaries recursively."""
 
@@ -69,6 +56,40 @@ def deep_dict_merge(real_values_dict, default_values_dict):
         result = copy.deepcopy(real_values_dict)
     _deep_merge(result, default_values_dict)
     return result
+
+
+# Here are the defaults for a new course.
+DEFAULT_COURSE_YAML_DICT = {
+    'course': {
+        'title': 'UNTITLED COURSE',
+        'locale': 'en_US',
+        'main_image': {},
+        'now_available': False},
+    'base': {
+        'show_gplus_button': True},
+    'institution': {
+        'logo': {},
+        'url': ''},
+    'preview': {},
+    'unit': {},
+    'reg_form': {
+        'can_register': True,
+        'additional_registration_fields': (
+            '<!-- reg_form.additional_registration_fields -->')}
+}
+
+# Here are the defaults for an existing course.
+DEFAULT_EXISTING_COURSE_YAML_DICT = deep_dict_merge(
+    {'course': {
+        'now_available': True}},
+    DEFAULT_COURSE_YAML_DICT)
+
+# Here is the default course.yaml for a new course.
+EMPTY_COURSE_YAML = u"""# my new course.yaml
+course:
+  title: 'New Course by %s'
+  now_available: False
+"""
 
 
 def is_editable_fs(app_context):
@@ -97,10 +118,10 @@ def load_csv_course(app_context):
         not app_context.fs.isfile(lesson_file)):
         return None, None
 
-    # Load files.
     unit_stream = app_context.fs.open(unit_file)
     lesson_stream = app_context.fs.open(lesson_file)
 
+    # Verify CSV file integrity.
     units = verify.read_objects_from_csv_stream(
         unit_stream, verify.UNITS_HEADER, verify.Unit)
     lessons = verify.read_objects_from_csv_stream(
@@ -113,22 +134,13 @@ def load_csv_course(app_context):
     assert verifier.warnings == 0
 
     # Load data from CSV files into a datastore.
-    new_units = []
-    new_lessons = []
     units = verify.read_objects_from_csv_stream(
-        app_context.fs.open(unit_file), verify.UNITS_HEADER, Unit12)
+        app_context.fs.open(unit_file), verify.UNITS_HEADER, Unit12,
+        converter=verify.UNIT_CSV_TO_DB_CONVERTER)
     lessons = verify.read_objects_from_csv_stream(
-        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, Lesson12)
-    for unit in units:
-        entity = Unit12()
-        copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)
-        new_units.append(entity)
-    for lesson in lessons:
-        entity = Lesson12()
-        copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
-        new_lessons.append(entity)
-
-    return new_units, new_lessons
+        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, Lesson12,
+        converter=verify.LESSON_CSV_TO_DB_CONVERTER)
+    return units, lessons
 
 
 class Unit12(object):
@@ -737,7 +749,8 @@ class Course(object):
                 course_yaml.read().decode('utf-8'))
             if not course_yaml_dict:
                 return DEFAULT_COURSE_YAML_DICT
-            return deep_dict_merge(course_yaml_dict, DEFAULT_COURSE_YAML_DICT)
+            return deep_dict_merge(
+                course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT)
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',
                          course_data_filename)
