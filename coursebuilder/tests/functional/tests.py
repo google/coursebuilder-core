@@ -868,6 +868,99 @@ class StaticHandlerTest(actions.TestBase):
         assert_does_not_contain('no-cache', response.headers['Cache-Control'])
 
 
+class ActivityTest(actions.TestBase):
+    """Test for activities."""
+
+    def get_activity(self, unit_id, lesson_id, args):
+        """Retrieve the activity page for a given unit and lesson id."""
+
+        response = self.get('activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
+        assert_equals(response.status_int, 200)
+        assert_contains(
+            '<script src="assets/lib/activity-generic-%s.%s.js"></script>' %
+            (unit_id, lesson_id), response.body)
+
+        js_response = self.get('assets/lib/activity-generic-1.2.js')
+        assert_equals(js_response.status_int, 200)
+
+        # Extract XSRF token from the page.
+        match = re.search(r'eventXsrfToken = [\']([^\']+)', response.body)
+        assert match
+        xsrf_token = match.group(1)
+        args['xsrf_token'] = xsrf_token
+
+        return response, args
+
+    def test_activities(self):
+        """Test that activity submissions are handled and recorded correctly."""
+
+        email = 'test_activities@google.com'
+        name = 'Test Activities'
+        unit_id = 1
+        lesson_id = 2
+        activity_submissions = {
+            '1.2': {
+                'index': 3,
+                'type': 'activity-choice',
+                'value': 3,
+                'correct': True,
+            },
+        }
+
+        # Register.
+        actions.login(email)
+        actions.register(self, name)
+
+        # Enable event recording.
+        config.Registry.test_overrides[
+            lessons.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+
+        # Navigate to the course overview page, and check that the unit shows
+        # no progress yet.
+        response = self.get('course')
+        assert_equals(response.status_int, 200)
+        assert_contains(u'id="progress-notstarted-%s"' % unit_id, response.body)
+
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.namespace)
+        try:
+            response, args = self.get_activity(unit_id, lesson_id, {})
+
+            # Check that the current activity shows no progress yet.
+            assert_contains(
+                u'id="progress-notstarted-%s"' % lesson_id, response.body)
+
+            # Prepare activity submission event.
+            args['source'] = 'attempt-activity'
+            lesson_key = '%s.%s' % (unit_id, lesson_id)
+            assert lesson_key in activity_submissions
+            args['payload'] = activity_submissions[lesson_key]
+            args['payload']['location'] = (
+                'http://localhost:8080/activity?unit=%s&lesson=%s' %
+                (unit_id, lesson_id))
+            args['payload'] = json.dumps(args['payload'])
+
+            # Submit the request to the backend.
+            response = self.post('rest/events?%s' % urllib.urlencode(
+                {'request': json.dumps(args)}), {})
+            assert_equals(response.status_int, 200)
+            assert not response.body
+
+            # Check that the current activity shows partial progress.
+            response, args = self.get_activity(unit_id, lesson_id, {})
+            assert_contains(
+                u'id="progress-inprogress-%s"' % lesson_id, response.body)
+
+            # Navigate to the course overview page and check that the unit shows
+            # partial progress.
+            response = self.get('course')
+            assert_equals(response.status_int, 200)
+            assert_contains(
+                u'id="progress-inprogress-%s"' % unit_id, response.body)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+
 class AssessmentTest(actions.TestBase):
     """Test for assessments."""
 
@@ -958,11 +1051,18 @@ class AssessmentTest(actions.TestBase):
             # Navigate to the course overview page.
             response = self.get('course')
             assert_equals(response.status_int, 200)
+            assert_contains(u'id="progress-completed-Pre', response.body)
             assert_contains(u'id="progress-completed-Mid', response.body)
+            assert_contains(u'id="progress-notstarted-Fin', response.body)
 
             # Submit the final assessment.
             self.submit_assessment('Fin', fin)
             student = models.Student.get_enrolled_student_by_email(email)
+
+            # Navigate to the course overview page.
+            response = self.get('course')
+            assert_equals(response.status_int, 200)
+            assert_contains(u'id="progress-completed-Fin', response.body)
 
             # Check final score also includes overall_score.
             assert len(get_all_scores(student)) == 4
@@ -1237,6 +1337,13 @@ class MultipleCoursesTestBase(actions.TestBase):
         # Check lesson page.
         response = self.testapp.get(
             '/courses/%s/unit?unit=1&lesson=5' % course.path)
+        assert_contains(course.title, response.body)
+        assert_contains(course.lesson_title, response.body)
+        assert_contains(course.head, response.body)
+
+        # Check activity page.
+        response = self.testapp.get(
+            '/courses/%s/activity?unit=1&lesson=5' % course.path)
         assert_contains(course.title, response.body)
         assert_contains(course.lesson_title, response.body)
         assert_contains(course.head, response.body)

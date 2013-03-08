@@ -179,8 +179,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
             '<input type="radio" name="' + radioButtonGroupName + '" ' +
             'id="' + buttonId + '" value="correct"> ' +
             '<label for="' + buttonId + '">' + choiceLabel + '</label></span>');
-      }
-      else {
+      } else {
         domRoot.append(
             '<input type="radio" name="' + radioButtonGroupName + '" ' +
             'id="' + buttonId + '"> ' +
