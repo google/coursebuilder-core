@@ -981,3 +981,21 @@ class Course(object):
                 self.app_context.raw, self.version))
 
         return None, None
+
+    def init_new_course_settings(self, title, admin_email):
+        """Initializes new course.yaml file if it does not yet exists."""
+        fs = self.app_context.fs.impl
+        course_yaml = fs.physical_to_logical('/course.yaml')
+        if fs.isfile(course_yaml):
+            return False
+
+        title = title.replace('\'', '\'\'')
+        course_yaml_text = u"""# my new course.yaml
+course:
+  title: '%s'
+  admin_user_emails: '[%s]'
+  now_available: False
+""" % (title, admin_email)
+
+        fs.put(course_yaml, vfs.string_to_stream(course_yaml_text))
+        return True

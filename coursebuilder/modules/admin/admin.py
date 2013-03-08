@@ -84,7 +84,7 @@ class AdminHandler(
     def get_actions(self):
         actions = [
             self.default_action, 'settings', 'deployment', 'perf',
-            'config_edit']
+            'config_edit', 'add_course']
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             actions.append('console')
         return actions
@@ -380,6 +380,10 @@ class AdminHandler(
         template_values['page_title'] = self.format_title('Courses')
 
         content = []
+        content.append(
+            '<a id="add_course" class="gcb-button pull-right" '
+            'role="button" href="admin?action=add_course">Add Course</a>'
+            '<div style="clear: both; padding-top: 2px;" />')
         content.append('<h3>All Courses</h3>')
         content.append('<table>')
         content.append("""

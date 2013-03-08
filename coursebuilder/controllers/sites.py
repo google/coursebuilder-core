@@ -107,11 +107,13 @@ Good luck!
 import logging
 import mimetypes
 import os
+import re
 import threading
 import urlparse
 
 import appengine_config
 from models.config import ConfigProperty
+from models.config import ConfigPropertyEntity
 from models.config import Registry
 from models.counters import PerfCounter
 from models.courses import Course
@@ -125,6 +127,7 @@ from webapp2_extras import i18n
 import utils
 
 from google.appengine.api import namespace_manager
+from google.appengine.ext import db
 from google.appengine.ext import zipserve
 
 
@@ -626,12 +629,102 @@ class ApplicationContext(object):
         return jinja_environment
 
 
-def courses_config_validator(value, errors):
-    """Validates configuration of courses."""
+def courses_config_validator(rules_text, errors):
+    """Validates a textual definition of courses entries."""
     try:
-        get_all_courses(value)
+        get_all_courses(rules_text)
     except Exception as e:  # pylint: disable-msg=broad-except
         errors.append(str(e))
+
+
+def validate_new_course_entry_attributes(name, title, admin_email, errors):
+    """Validates new course attributes."""
+    if not name or len(name) < 3:
+        errors.append('Unique name is to short.')
+    if not re.match('[_a-z0-9]+$', name, re.IGNORECASE):
+        errors.append(
+            'Unique name must have only ASCII letters, numbers or underscore.')
+
+    if not title or len(title) < 3:
+        errors.append('Course title is to short.')
+
+    if not admin_email or not '@' in admin_email:
+        errors.append('Please enter valid email.')
+
+
+@db.transactional()
+def _add_new_course_entry_to_persistent_configuration(raw):
+    """Adds new raw course entry definition to the datastore settings.
+
+    This loads all current datastore course entries and adds a new one. It
+    also find the best place to add the new entry at the further down the list
+    the better, because entries are applied in the order of declaration.
+
+    Args:
+        raw: The course entry rule: 'course:/foo::ns_foo'.
+
+    Returns:
+        True if added, False if not. False almost always means a duplicate rule.
+    """
+
+    # Get all current entries from a datastore.
+    entity = ConfigPropertyEntity.get_by_key_name(GCB_COURSES_CONFIG.name)
+    if not entity:
+        entity = ConfigPropertyEntity(key_name=GCB_COURSES_CONFIG.name)
+        entity.is_draft = False
+    if not entity.value:
+        entity.value = ''
+    lines = entity.value.splitlines()
+
+    # Add new entry to the rest of the entries. Since entries are matched
+    # in the order of declaration, try to find insertion point further down.
+    final_lines_text = None
+    for index in reversed(range(0, len(lines) + 1)):
+        # Create new rule list putting new item at index position.
+        new_lines = lines[:]
+        new_lines.insert(index, raw)
+        new_lines_text = '\n'.join(new_lines)
+
+        # Validate the rule list definition.
+        errors = []
+        courses_config_validator(new_lines_text, errors)
+        if not errors:
+            final_lines_text = new_lines_text
+            break
+
+    # Save updated course entries.
+    if final_lines_text:
+        entity.value = final_lines_text
+        entity.put()
+        return True
+    return False
+
+
+def add_new_course_entry(unique_name, title, admin_email, errors):
+    """Validates course attributes and adds the course."""
+
+    # Validate.
+    validate_new_course_entry_attributes(
+        unique_name, title, admin_email, errors)
+    if errors:
+        return
+
+    # Create new entry and check it is valid.
+    raw = 'course:/%s::ns_%s' % (unique_name, unique_name)
+    try:
+        get_all_courses(raw)
+    except Exception as e:  # pylint: disable-msg=broad-except
+        errors.add('Failed to add entry: %s.\n%s' % (raw, e))
+    if errors:
+        return
+
+    # Add new entry to persistence.
+    if not _add_new_course_entry_to_persistent_configuration(raw):
+        errors.append(
+            'Unable to add new entry \'%s\'. Entry with the '
+            'same name \'%s\' already exists.' % (raw, unique_name))
+        return
+    return raw
 
 
 GCB_COURSES_CONFIG = ConfigProperty(

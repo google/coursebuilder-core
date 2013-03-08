@@ -18,9 +18,11 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import urllib
+from controllers import sites
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import config
+from models import courses
 from models import models
 from models import roles
 from models import transforms
@@ -109,6 +111,24 @@ class ConfigPropertyEditor(object):
         """Gets JSON schema for configuration property."""
         return SCHEMA_JSON_TEMPLATE % cls.get_value_type(config_property)
 
+    def get_add_course(self):
+        """Handles 'add_course' action and renders new course entry editor."""
+
+        exit_url = '/admin?action=courses'
+        rest_url = CoursesItemRESTHandler.URI
+
+        template_values = {}
+        template_values[
+            'page_title'] = 'Course Builder - Add Course'
+        template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
+            self, CoursesItemRESTHandler.SCHEMA_JSON,
+            CoursesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            None, rest_url, exit_url,
+            auto_return=True,
+            save_button_caption='Add New Course')
+
+        self.render_page(template_values)
+
     def get_config_edit(self):
         """Handles 'edit' property action."""
 
@@ -194,6 +214,94 @@ class ConfigPropertyEditor(object):
             pass
 
         self.redirect('/admin?action=settings')
+
+
+class CoursesItemRESTHandler(BaseRESTHandler):
+    """Provides REST API for course entries."""
+
+    URI = '/rest/courses/item'
+
+    SCHEMA_JSON = """
+        {
+            "id": "Course Entry",
+            "type": "object",
+            "description": "Course Entry",
+            "properties": {
+                "name": {"type": "string"},
+                "title": {"type": "string"},
+                "admin_email": {"type": "string"}
+                }
+        }
+        """
+
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
+
+    SCHEMA_ANNOTATIONS_DICT = [
+        (['title'], 'New Course Entry'),
+        (['properties', 'name', '_inputex'], {'label': 'Unique Name'}),
+        (['properties', 'title', '_inputex'], {'label': 'Course Title'}),
+        (['properties', 'admin_email', '_inputex'], {
+            'label': 'Course Admin Email'})]
+
+    def get(self):
+        """Handles HTTP GET verb."""
+        if not ConfigPropertyRights.can_view():
+            transforms.send_json_response(
+                self, 401, 'Access denied.')
+            return
+
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict={
+                'name': 'new_course',
+                'title': 'My New Course',
+                'admin_email': 'admin@test.com'},
+            xsrf_token=XsrfTokenManager.create_xsrf_token(
+                'add-course-put'))
+
+    def put(self):
+        """Handles HTTP PUT verb."""
+        request = transforms.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(
+                request, 'add-course-put', {}):
+            return
+
+        if not ConfigPropertyRights.can_edit():
+            transforms.send_json_response(
+                self, 401, 'Access denied.')
+            return
+
+        payload = request.get('payload')
+        json_object = transforms.loads(payload)
+        name = json_object.get('name')
+        title = json_object.get('title')
+        admin_email = json_object.get('admin_email')
+
+        # Add the new course entry.
+        errors = []
+        entry = sites.add_new_course_entry(name, title, admin_email, errors)
+        if not entry:
+            errors.append('Error adding a new course entry.')
+        if errors:
+            transforms.send_json_response(self, 412, '\n'.join(errors))
+            return
+
+        # We can't expect our new configuration being immediately available due
+        # to datastore queries consistency limitations. So we will instantiate
+        # our new course here and not use the normal sites.get_all_courses().
+        app_context = sites.get_all_courses(entry)[0]
+
+        # Update course with a new title and admin email.
+        new_course = courses.Course(None, app_context=app_context)
+        if not new_course.init_new_course_settings(title, admin_email):
+            transforms.send_json_response(
+                self, 500,
+                'Failed to update title and admin email. '
+                'The course.yaml already exists and must be updated manually.')
+            return
+
+        transforms.send_json_response(
+            self, 200, 'Added.', {'entry': entry})
 
 
 class ConfigPropertyItemRESTHandler(BaseRESTHandler):

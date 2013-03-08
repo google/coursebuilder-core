@@ -52,7 +52,8 @@ inputex_handler = (
 
 admin_handlers = [
     ('/admin', admin.AdminHandler),
-    ('/rest/config/item', config.ConfigPropertyItemRESTHandler)]
+    ('/rest/config/item', config.ConfigPropertyItemRESTHandler),
+    ('/rest/courses/item', config.CoursesItemRESTHandler)]
 
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 

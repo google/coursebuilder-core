@@ -547,6 +547,11 @@ class AdminAspectTest(actions.TestBase):
         assert json_dict['status'] == 401
         assert json_dict['message'] == 'Access denied.'
 
+        # Here are the endpoints we want to test: (uri, xsrf_action_name).
+        endpoints = [
+            ('/rest/config/item', 'config-property-put'),
+            ('/rest/courses/item', 'add-course-put')]
+
         # Check user has no rights to PUT verb.
         payload_dict = {}
         payload_dict['value'] = '666'
@@ -555,22 +560,22 @@ class AdminAspectTest(actions.TestBase):
         request['key'] = 'gcb_config_update_interval_sec'
         request['payload'] = transforms.dumps(payload_dict)
 
-        # Check XSRF token is required.
-        response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
-            {'request': transforms.dumps(request)}), {})
-        assert_equals(response.status_int, 200)
-        assert_contains('"status": 403', response.body)
+        for uri, unused_action in endpoints:
+            response = self.testapp.put(uri + '?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            assert_contains('"status": 403', response.body)
 
         # Check user still has no rights to PUT verb even if he somehow
         # obtained a valid XSRF token.
-        request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
-            'config-property-put')
-        response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
-            {'request': transforms.dumps(request)}), {})
-        assert_equals(response.status_int, 200)
-        json_dict = transforms.loads(response.body)
-        assert json_dict['status'] == 401
-        assert json_dict['message'] == 'Access denied.'
+        for uri, action in endpoints:
+            request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(action)
+            response = self.testapp.put(uri + '?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}), {})
+            assert_equals(response.status_int, 200)
+            json_dict = transforms.loads(response.body)
+            assert json_dict['status'] == 401
+            assert json_dict['message'] == 'Access denied.'
 
     def test_admin_list(self):
         """Test delegation of admin access to another user."""
@@ -683,6 +688,46 @@ class AdminAspectTest(actions.TestBase):
 
         # Clean up.
         sites.reset_courses()
+
+    def test_add_course(self):
+        """Tests adding a new course entry."""
+
+        if not self.supports_editing:
+            return
+
+        email = 'test_add_course@google.com'
+        actions.login(email, True)
+
+        # Prepare request data.
+        payload_dict = {
+            'name': 'add_new',
+            'title': u'new course (тест данные)', 'admin_email': 'foo@bar.com'}
+        request = {}
+        request['payload'] = transforms.dumps(payload_dict)
+        request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+            'add-course-put')
+
+        # Execute action.
+        response = self.testapp.put('/rest/courses/item?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+
+        # Check response.
+        json_dict = transforms.loads(transforms.loads(response.body)['payload'])
+        assert 'course:/add_new::ns_add_new' == json_dict.get('entry')
+
+        # Re-execute action; should fail as this would create a duplicate.
+        response = self.testapp.put('/rest/courses/item?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        assert_equals(412, transforms.loads(response.body)['status'])
+
+        # Load the course and check its title.
+        new_app_context = sites.get_all_courses(
+            'course:/add_new::ns_add_new')[0]
+        assert_equals(u'new course (тест данные)', new_app_context.get_title())
+        new_course = courses.Course(None, app_context=new_app_context)
+        assert not new_course.get_units()
 
 
 class CourseAuthorAspectTest(actions.TestBase):
