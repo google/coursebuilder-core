@@ -92,7 +92,7 @@
         .gcb-button {
           font-family: "open sans",arial,sans-serif;
           font-weight: bold;
-          margin: 0px 0px 0px 4px;
+          margin: 0px 0px 0px 8px;
           padding: 4px 8px 4px 8px;
           background-color: #404040;
           color: #FFFFFF;
@@ -135,16 +135,23 @@
         {% if section.actions %}
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
-        <h3>{{ section.title|safe }}</h3>
+        <h3>{{ section.title }}</h3>
+        {% if section.pre %}
+        {{ section.pre|safe }}
+        {% else %}
         <ol>
+          {% if not section.children %}
+          &lt; none &gt;
+          {% endif %}
           {% for item in section.children %}
           {% if 2 == (item|count) %}
           <li>{{ item[0] }}: {{ item[1] }}</li>
           {% else %}
-          <li><pre>{{ item }}</pre></li>
+          <li>{{ item|safe }}</li>
           {% endif %}
           {% endfor %}
         </ol>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

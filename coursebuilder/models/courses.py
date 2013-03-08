@@ -16,12 +16,15 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import copy
 import logging
 import os
+import pickle
 from tools import verify
 import yaml
 from models import MemcacheManager
 import progress
+import vfs
 
 
 DEFAULT_COURSE_YAML_DICT = {
@@ -53,13 +56,20 @@ def deep_dict_merge(real_values_dict, default_values_dict):
 
     result = {}
     if real_values_dict:
-        result = dict(real_values_dict.items())
+        result = copy.deepcopy(real_values_dict)
     _deep_merge(result, default_values_dict)
     return result
 
 
+def is_editable_fs(app_context):
+    return isinstance(app_context.fs.impl, vfs.DatastoreBackedFileSystem)
+
+
 class Course(object):
     """Manages a course and all of its components."""
+
+    # A logical filename where we persist courses data."""
+    COURSES_FILENAME = '/data/course.pickle'
 
     # The course content files may change between deployment. To avoid reading
     # old cached values by the new version of the application we add deployment
@@ -78,7 +88,7 @@ class Course(object):
             course_yaml_dict = yaml.safe_load(
                 course_yaml.read().decode('utf-8'))
             if not course_yaml_dict:
-                course_yaml_dict = {}
+                return DEFAULT_COURSE_YAML_DICT
             return deep_dict_merge(course_yaml_dict, DEFAULT_COURSE_YAML_DICT)
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',
@@ -102,33 +112,61 @@ class Course(object):
                 self._unit_id_to_lessons[key] = []
             self._unit_id_to_lessons[key].append(lesson)
 
+    def _serialize(self):
+        """Creates bytes of a serialized representation of this instance."""
+        envelope = SerializableCourseEnvelope()
+        envelope.units = self._units
+        envelope.lessons = self._lessons
+        return pickle.dumps(envelope)
+
+    def _deserialize(self, binary_data):
+        """Populates this instance with a serialized representation data."""
+        envelope = pickle.loads(binary_data)
+        self._units = envelope.units
+        self._lessons = envelope.lessons
+
+        self._reindex()
+
+    def _rebuild_from_csv_files(self):
+        """Rebuilds this instance from CSV files."""
+        self._units, self._lessons = load_csv_course(self._app_context)
+        self._reindex()
+
+    def _init_new(self):
+        """Units new empty instance."""
+        self._units = []
+        self._lessons = []
+        self._reindex()
+
+    def _rebuild_from_source(self):
+        """Loads course data from persistence storage into this instance."""
+        units, lessons = load_csv_course(self._app_context)
+        if units and lessons:
+            self._units = units
+            self._lessons = lessons
+            self._reindex()
+            return
+
+        if is_editable_fs(self._app_context):
+            fs = self._app_context.fs.impl
+            filename = fs.physical_to_logical(self.COURSES_FILENAME)
+            if self._app_context.fs.isfile(filename):
+                self._deserialize(self._app_context.fs.get(filename))
+                return
+
+        self._init_new()
+
     def _load_from_memcache(self):
         """Loads course representation from memcache."""
         try:
-            envelope = MemcacheManager.get(self.memcache_key)
-            if envelope:
-                self._units = envelope.units
-                self._lessons = envelope.lessons
-                self._reindex()
-
+            binary_data = MemcacheManager.get(self.memcache_key)
+            if binary_data:
+                self._deserialize(binary_data)
                 self._loaded = True
         except Exception as e:  # pylint: disable-msg=broad-except
             logging.error(
                 'Failed to load course \'%s\' from memcache. %s',
                 self.memcache_key, e)
-
-    def _save_to_memcache(self):
-        """Saves course representation into memcache."""
-        envelope = SerializableCourseEnvelope()
-        envelope.units = self._units
-        envelope.lessons = self._lessons
-        MemcacheManager.set(self.memcache_key, envelope)
-
-    def _rebuild_from_source(self):
-        """Loads course data from persistence storage into this instance."""
-        self._units, self._lessons = load_csv_course(self._app_context)
-        self._reindex()
-        self._loaded = True
 
     def _materialize(self):
         """Loads data from persistence into this instance."""
@@ -136,8 +174,17 @@ class Course(object):
             self._load_from_memcache()
             if not self._loaded:
                 self._rebuild_from_source()
-                self._save_to_memcache()
-                # TODO(psimakov): and if loading fails, then what?
+                MemcacheManager.set(self.memcache_key, self._serialize())
+                self._loaded = True
+
+    def _save(self):
+        """Save data from this instance into persistence."""
+        binary_data = self._serialize()
+        fs = self._app_context.fs.impl
+        filename = fs.physical_to_logical(self.COURSES_FILENAME)
+        self._app_context.fs.put(
+            filename, vfs.FileStreamWrapped(None, binary_data))
+        MemcacheManager.delete(self.memcache_key)
 
     def get_units(self):
         self._materialize()
@@ -145,10 +192,73 @@ class Course(object):
 
     def get_lessons(self, unit_id):
         self._materialize()
-        return self._unit_id_to_lessons[str(unit_id)]
+        lessons = self._unit_id_to_lessons.get(str(unit_id))
+        if not lessons:
+            return []
+        return lessons
 
     def get_progress_tracker(self):
         return self._student_progress_tracker
+
+    def find_unit_by_id(self, uid):
+        """Finds a unit given its unique id."""
+        for unit in self.get_units():
+            if str(unit.id) == str(uid):
+                return unit
+        return None
+
+    def _get_max_id_used(self):
+        """Finds max id used by a unit of the course."""
+        max_id = 0
+        for unit in self.get_units():
+            if unit.id > max_id:
+                max_id = unit.id
+        return max_id
+
+    def _add_generic_unit(self, unit_type, title=None):
+        assert unit_type in verify.UNIT_TYPES
+
+        unit = Unit()
+        unit.type = unit_type
+        unit.id = self._get_max_id_used() + 1
+        unit.title = title
+        unit.now_available = False
+
+        self.get_units().append(unit)
+        self._save()
+
+        return unit
+
+    def add_unit(self):
+        """Adds new unit to a course."""
+        return self._add_generic_unit('U', 'New Unit')
+
+    def add_link(self):
+        """Adds new link (other) to a course."""
+        return self._add_generic_unit('O', 'New Link')
+
+    def add_assessment(self):
+        """Adds new assessment to a course."""
+        return self._add_generic_unit('A', 'New Assessment')
+
+    def delete_unit(self, unit):
+        """Deletes existing unit."""
+        unit = self.find_unit_by_id(unit.id)
+        if unit:
+            self.get_units().remove(unit)
+            self._save()
+            return True
+        return False
+
+    def put_unit(self, unit):
+        """Updates existing unit."""
+        units = self.get_units()
+        for index, current in enumerate(units):
+            if str(unit.id) == str(current.id):
+                units[index] = unit
+                self._save()
+                return True
+        return False
 
 
 class SerializableCourseEnvelope(object):
@@ -207,7 +317,7 @@ def load_csv_course(app_context):
     unit_stream = app_context.fs.open(unit_file)
     lesson_stream = app_context.fs.open(lesson_file)
     if not unit_stream and not lesson_stream:
-        return [], []
+        return None, None
 
     units = verify.read_objects_from_csv_stream(
         unit_stream, verify.UNITS_HEADER, verify.Unit)

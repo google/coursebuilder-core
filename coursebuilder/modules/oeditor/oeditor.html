@@ -241,6 +241,7 @@
 
   // If this value is '', deletions are not allowed
   cb_global.delete_url = '{{ delete_url|safe }}';
+  cb_global.delete_method = '{{ delete_method }}';
 
   // set home folder
   YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
@@ -264,28 +265,27 @@
       });
       var inputExDefinition = builder.schemaToInputEx(schema.root);
 
-      // bind buttons
-      inputExDefinition.buttons = [
-        {type: 'submit-link', value: 'Save', onClick: function() {
+      // save button
+      save_button = {type: 'submit-link', value: 'Save', onClick: function() {
             cbShowMsg("Saving...");
 
-            // record current state
-            var lastSavedFormValue = cb_global.form.getValue();
+          // record current state
+          var lastSavedFormValue = cb_global.form.getValue();
 
-            // format request
-            var request_save = cb_global.save_args;
-            request_save.payload = JSON.stringify(lastSavedFormValue);
+          // format request
+          var request_save = cb_global.save_args;
+          request_save.payload = JSON.stringify(lastSavedFormValue);
 
-            // append xsrf_token if provided
-            if (cb_global.xsrf_token) {
-                request_save.xsrf_token = cb_global.xsrf_token;
-            }
+          // append xsrf_token if provided
+          if (cb_global.xsrf_token) {
+              request_save.xsrf_token = cb_global.xsrf_token;
+          }
 
-            // format request
-            request_data = {"request": JSON.stringify(request_save)};
+          // format request
+          request_data = {"request": JSON.stringify(request_save)};
 
-            // async post data to the server
-            var url = cb_global.save_url;
+          // async post data to the server
+          var url = cb_global.save_url;
 
             yioConfig = {
               method: 'PUT',
@@ -301,13 +301,13 @@
                       return;
                     }
 
-                    if (json.status != 200) {
-                      cbShowMsg(formatServerErrorMessage(json.status, json.message));
-                      return;
-                    }
+                  if (json.status != 200) {
+                    cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                    return;
+                  }
 
-                    // save lastSavedFormValue
-                    cb_global.lastSavedFormValue = lastSavedFormValue;
+                  // save lastSavedFormValue
+                  cb_global.lastSavedFormValue = lastSavedFormValue;
 
                     // update UI
                     cbShowMsg(json.message);
@@ -331,31 +331,61 @@
 
             Y.io(url, yioConfig);
             return false;
-        }},
+      }};
 
-        {type: 'link', value: 'Close', onClick:function(e) {
+      // close button
+      close_button = {type: 'link', value: 'Close', onClick:function(e) {
           if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
               confirm("Abandon all changes?")) {
             window.location = cb_global.exit_url;
           }
-        }}
-      ];
+      }};
 
-      // optional delete button
-      if (cb_global.delete_url != '') {
-           delete_button = {type: 'link', value: 'Delete',
-              className: 'inputEx-Button inputEx-Button-Link pull-right',
-              onClick:function(e) {
-                  if (confirm("Are you sure you want to delete this {{ type_label|safe }}?")) {
-                      var form = document.createElement('form');
-                      form.method = 'post';
-                      form.action = cb_global.delete_url;
-                      document.body.appendChild(form);
-                      form.submit();
+      // delete button
+      delete_button = {type: 'link', value: 'Delete',
+          className: 'inputEx-Button inputEx-Button-Link pull-right',
+          onClick:function(e) {
+              if (confirm("Are you sure you want to delete this {{ type_label|safe }}?")) {
+                  if (cb_global.delete_method == 'delete') {
+                    // async delete
+                    Y.io(cb_global.delete_url, {
+                      method: 'DELETE',
+                      timeout : ajaxRpcTimeoutMillis,
+                      on: {
+                        success: function(id, o, args) {
+                          var json = JSON.parse(o.responseText);
+                          if (json.status != 200) {
+                            cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                            return;
+                          } else {
+                            window.location = cb_global.exit_url;
+                          }
+                        },
+                        failure : function (x,o) {
+                          cbShowMsg("Server did not respond. Please reload the page to try again.");
+                        }
+                      }
+                    });
+                  } else {
+                    // form delete
+                    var form = document.createElement('form');
+                    form.method = cb_global.delete_method;
+                    form.action = cb_global.delete_url;
+                    document.body.appendChild(form);
+                    form.submit();
                   }
               }
-           };
-           inputExDefinition.buttons.push(delete_button)
+          }
+      };
+
+      // choose buttons to show
+      inputExDefinition.buttons = [];
+      if (cb_global.save_url != '') {
+        inputExDefinition.buttons.push(save_button);
+      }
+      inputExDefinition.buttons.push(close_button);
+      if (cb_global.delete_url != '') {
+        inputExDefinition.buttons.push(delete_button);
       }
 
       // Override the inputEx.RTEField.renderComponent method to insert

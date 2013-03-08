@@ -82,6 +82,16 @@ SCHEMA = {
             'outputHeight': STRING
         }]}
 
+UNIT_TYPE_UNIT = 'U'
+UNIT_TYPE_LINK = 'O'
+UNIT_TYPE_ASSESSMENT = 'A'
+UNIT_TYPES = [UNIT_TYPE_UNIT, UNIT_TYPE_LINK, UNIT_TYPE_ASSESSMENT]
+
+UNIT_TYPE_NAMES = {
+    UNIT_TYPE_UNIT: 'Unit',
+    UNIT_TYPE_LINK: 'Link',
+    UNIT_TYPE_ASSESSMENT: 'Assessment'}
+
 UNITS_HEADER = (
     'id,type,unit_id,title,release_date,now_available')
 LESSONS_HEADER = (
@@ -931,10 +941,10 @@ class Verifier(object):
                     'Bad now_available \'%s\' for unit id %s; expected '
                     '\'True\' or \'False\'' % (unit.now_available, unit.id))
 
-            if not is_one_of(unit.type, ['U', 'A', 'O']):
+            if not is_one_of(unit.type, UNIT_TYPES):
                 self.error(
                     'Bad type \'%s\' for unit id %s; '
-                    'expected \'U\', \'A\', or \'O\'' % (unit.type, unit.id))
+                    'expected: %s.' % (unit.type, unit.id, UNIT_TYPES))
 
             if unit.type == 'A':
                 if not is_one_of(unit.unit_id, ('Pre', 'Mid', 'Fin')):

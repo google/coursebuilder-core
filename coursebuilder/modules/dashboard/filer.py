@@ -80,8 +80,7 @@ class FileManagerAndEditor(ApplicationHandler):
             fs.put(course_yaml, vfs.string_to_stream(
                 EMPTY_COURSE_YAML % users.get_current_user().email()))
 
-        self.redirect(self.get_action_url(
-            'edit_settings', key='/course.yaml', canonicalize=False))
+        self.redirect(self.get_action_url('edit_settings', key='/course.yaml'))
 
     def get_edit_settings(self):
         """Shows editor for course.yaml."""

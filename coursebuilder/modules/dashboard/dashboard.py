@@ -34,9 +34,11 @@ import filer
 from filer import AssetItemRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
-from unit_lesson_editor import UNIT_LESSON_REST_HANDLER_URI
+from unit_lesson_editor import AssessmentRESTHandler
+from unit_lesson_editor import LinkRESTHandler
 from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
+from unit_lesson_editor import UnitRESTHandler
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -48,17 +50,25 @@ class DashboardHandler(
 
     default_action = 'outline'
     get_actions = [
-        default_action, 'assets', 'settings', 'students', 'edit_settings',
-        'edit_unit_lesson', 'add_asset']
+        default_action, 'assets', 'settings', 'students',
+        'edit_settings', 'edit_unit_lesson', 'edit_unit', 'edit_link',
+        'edit_assessment', 'add_asset']
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
+    post_actions = [
+        'compute_student_stats', 'create_or_edit_settings', 'add_unit',
+        'add_link', 'add_assessment']
 
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
         return [
+            (AssessmentRESTHandler.URI, AssessmentRESTHandler),
+            (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
-            (UNIT_LESSON_REST_HANDLER_URI, UnitLessonTitleRESTHandler),
-            (AssetItemRESTHandler.URI, AssetItemRESTHandler)]
+            (LinkRESTHandler.URI, LinkRESTHandler),
+            (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
+            (UnitRESTHandler.URI, UnitRESTHandler)
+        ]
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -122,75 +132,118 @@ class DashboardHandler(
         return ('Course Builder &gt; %s &gt; Dashboard &gt; %s' %
                 (cgi.escape(title), text))
 
-    def get_outline(self):
-        """Renders course outline view."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Outline')
+    def render_course_outline_to_html(self):
+        """Renders course outline to HTML."""
+        course = courses.Course(self)
+        if not course.get_units():
+            return []
 
         lines = []
-        lines += self.list_and_format_file_list('Data Files', '/data/')
-
-        course = courses.Course(self)
-        lines.append(
-            '<a id=\"edit_unit_lesson\"'
-            ' class=\"gcb-button pull-right\"'
-            ' role=\"button\"'
-            ' href=\"dashboard?action=edit_unit_lesson\">Edit</a>')
-        lines.append('<div style=\"clear: both; padding-top: 2px;\" />')
-        lines.append(
-            '<h3>Course Outline</h3>')
         lines.append('<ul style="list-style: none;">')
-        if not course.get_units():
-            lines.append('<pre>&lt; empty course &gt;</pre>')
         for unit in course.get_units():
             if unit.type == 'A':
+                edit_url = self.canonicalize_url(
+                    '/dashboard?%s') % urllib.urlencode({
+                        'action': 'edit_assessment',
+                        'key': unit.id})
                 lines.append('<li>')
                 lines.append(
-                    '<strong><a href="assessment?name=%s">%s</a></strong>' % (
-                        unit.unit_id, cgi.escape(unit.title)))
+                    '<strong><a href="%s">%s</a></strong>' % (
+                        edit_url, cgi.escape(unit.title)))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'O':
+                edit_url = self.canonicalize_url(
+                    '/dashboard?%s') % urllib.urlencode({
+                        'action': 'edit_link',
+                        'key': unit.id})
                 lines.append('<li>')
                 lines.append(
                     '<strong><a href="%s">%s</a></strong>' % (
-                        unit.unit_id, cgi.escape(unit.title)))
+                        edit_url, cgi.escape(unit.title)))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'U':
+                edit_url = self.canonicalize_url(
+                    '/dashboard?%s') % urllib.urlencode({
+                        'action': 'edit_unit',
+                        'key': unit.id})
                 lines.append('<li>')
-                lines.append('<strong>Unit %s - %s</strong>' % (
-                    unit.unit_id, cgi.escape(unit.title)))
-                if unit.type == 'U':
-                    lines.append('<ol>')
-                    for lesson in course.get_lessons(unit.unit_id):
-                        href = 'unit?unit=%s&lesson=%s' % (
-                            unit.unit_id, lesson.id)
-                        lines.append(
-                            '<li><a href="%s">%s</a></li>\n' % (
-                                href, lesson.title))
-                    lines.append('</ol>')
+                lines.append(
+                    '<strong><a href="%s">Unit %s - %s</a></strong>' % (
+                        edit_url, unit.unit_id, cgi.escape(unit.title)))
+
+                lines.append('<ol>')
+                for lesson in course.get_lessons(unit.unit_id):
+                    href = 'unit?unit=%s&lesson=%s' % (
+                        unit.unit_id, lesson.id)
+                    lines.append(
+                        '<li><a href="%s">%s</a></li>\n' % (
+                            href, cgi.escape(lesson.title)))
+                lines.append('</ol>')
                 lines.append('</li>\n')
                 continue
 
             raise Exception('Unknown unit type: %s.' % unit.type)
 
         lines.append('</ul>')
-        lines = ''.join(lines)
+        return ''.join(lines)
 
-        template_values['main_content'] = lines
+    def get_outline(self):
+        """Renders course outline view."""
+
+        pages_info = [
+            '<a href="%s">Announcements</a>' % self.canonicalize_url(
+                '/announcements'),
+            '<a href="%s">Course</a>' % self.canonicalize_url('/course')]
+
+        outline_actions = []
+        if filer.is_editable_fs(self.app_context):
+            outline_actions.append({
+                'id': 'edit_unit_lesson',
+                'caption': 'Organize',
+                'href': self.get_action_url('edit_unit_lesson')})
+            outline_actions.append({
+                'id': 'add_unit',
+                'caption': 'Add Unit',
+                'action': self.get_action_url('add_unit'),
+                'xsrf_token': self.create_xsrf_token('add_unit')})
+            outline_actions.append({
+                'id': 'add_link',
+                'caption': 'Add Link',
+                'action': self.get_action_url('add_link'),
+                'xsrf_token': self.create_xsrf_token('add_link')})
+            outline_actions.append({
+                'id': 'add_assessment',
+                'caption': 'Add Assessment',
+                'action': self.get_action_url('add_assessment'),
+                'xsrf_token': self.create_xsrf_token('add_assessment')})
+
+        data_info = self.list_files('/data/')
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Outline')
+        template_values['sections'] = [
+            {
+                'title': 'Data Files',
+                'children': data_info},
+            {
+                'title': 'Pages',
+                'children': pages_info},
+            {
+                'title': 'Course Outline',
+                'actions': outline_actions,
+                'pre': self.render_course_outline_to_html()}]
         self.render_page(template_values)
 
-    def get_action_url(self, action, key=None, canonicalize=True):
+    def get_action_url(self, action, key=None):
         args = {'action': action}
         if key:
             args['key'] = key
         url = '/dashboard?%s' % urllib.urlencode(args)
-        if canonicalize:
-            return self.canonicalize_url(url)
-        return url
+        return self.canonicalize_url(url)
 
     def get_settings(self):
         """Renders course settings view."""
@@ -252,18 +305,24 @@ class DashboardHandler(
 
         self.render_page(template_values)
 
+    def list_files(self, subfolder):
+        """Makes a list of files in a subfolder."""
+        home = sites.abspath(self.app_context.get_home_folder(), '/')
+        files = self.app_context.fs.list(
+            sites.abspath(self.app_context.get_home_folder(), subfolder))
+        result = []
+        for abs_filename in sorted(files):
+            filename = os.path.relpath(abs_filename, home)
+            result.append(filename)
+        return result
+
     def list_and_format_file_list(
         self, title, subfolder,
         links=False, upload=False, prefix=None, caption_if_empty='< none >'):
         """Walks files in folders and renders their names in a section."""
 
-        home = sites.abspath(self.app_context.get_home_folder(), '/')
-        files = self.app_context.fs.list(
-            sites.abspath(self.app_context.get_home_folder(), subfolder))
-
         lines = []
-        for abs_filename in sorted(files):
-            filename = os.path.relpath(abs_filename, home)
+        for filename in self.list_files(subfolder):
             if prefix and not filename.startswith(prefix):
                 continue
             if links:
@@ -282,11 +341,11 @@ class DashboardHandler(
                 'Upload</a>' % urllib.urlencode(
                     {'action': 'add_asset', 'base': subfolder}))
             output.append('<div style=\"clear: both; padding-top: 2px;\" />')
-
-        output.append('<h3>%s' % cgi.escape(title))
-        if count:
-            output.append(' (%s)' % count)
-        output.append('</h3>')
+        if title:
+            output.append('<h3>%s' % cgi.escape(title))
+            if count:
+                output.append(' (%s)' % count)
+            output.append('</h3>')
         if lines:
             output.append('<ol>')
             output += lines
@@ -301,9 +360,6 @@ class DashboardHandler(
 
         def inherits_from(folder):
             return '< inherited from %s >' % folder
-
-        template_values = {}
-        template_values['page_title'] = self.format_title('Assets')
 
         lines = []
         lines += self.list_and_format_file_list(
@@ -325,6 +381,8 @@ class DashboardHandler(
             caption_if_empty=inherits_from('/views/'))
         lines = ''.join(lines)
 
+        template_values = {}
+        template_values['page_title'] = self.format_title('Assets')
         template_values['main_content'] = lines
         self.render_page(template_values)
 

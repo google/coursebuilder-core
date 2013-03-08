@@ -147,10 +147,13 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""
-        if not self.is_absolute(location):
-            if (self.app_context.get_slug() and
-                self.app_context.get_slug() != '/'):
-                location = '%s%s' % (self.app_context.get_slug(), location)
+        is_relative = (
+            not self.is_absolute(location) and
+            not location.startswith(self.app_context.get_slug()))
+        has_slug = (
+            self.app_context.get_slug() and self.app_context.get_slug() != '/')
+        if is_relative and has_slug:
+            location = '%s%s' % (self.app_context.get_slug(), location)
         return location
 
     def redirect(self, location):

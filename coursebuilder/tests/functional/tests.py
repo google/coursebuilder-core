@@ -467,8 +467,8 @@ class CourseAuthorAspectTest(actions.TestBase):
             'Google &gt; Dashboard &gt; Settings', response.body)
         assert_contains('course.yaml', response.body)
         assert_contains(
-            'title: &#39;Power Searching with Google&#39;', response.body)
-        assert_contains('locale: &#39;en_US&#39;', response.body)
+            'title: \'Power Searching with Google\'', response.body)
+        assert_contains('locale: \'en_US\'', response.body)
 
         # Check editability.
         if self.supports_editing:

@@ -60,8 +60,11 @@ class ObjectEditor(object):
 
     @classmethod
     def get_html_for(
-        cls, handler, schema_json, annotations, object_key, rest_url, exit_url,
-        delete_url=None, save_method='put', auto_return=False):
+        cls, handler, schema_json, annotations, object_key,
+        rest_url, exit_url,
+        save_method='put',
+        delete_url=None, delete_method='post',
+        auto_return=False, read_only=False):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -74,9 +77,11 @@ class ObjectEditor(object):
             object_key: a key of an object being edited
             rest_url: a REST endpoint for object GET/PUT operation
             exit_url: a URL to go to after the editor form is dismissed
-            delete_url: optional URL for delete POST operation
             save_method: how the data should be saved to the server (put|upload)
+            delete_url: optional URL for delete operation
+            delete_method: optional HTTP method for delete operation
             auto_return: whether to return to the exit_url on successful save
+            read_only: optional flag; if set, removes Save and Delete operations
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
@@ -93,6 +98,10 @@ class ObjectEditor(object):
         post_url = rest_url
         post_args = {'key': object_key}
 
+        if read_only:
+            post_url = ''
+            post_args = ''
+
         template_values = {
             'schema': schema_json,
             'type_label': type_label,
@@ -106,8 +115,10 @@ class ObjectEditor(object):
             'auto_return': auto_return
             }
 
-        if delete_url:
+        if delete_url and not read_only:
             template_values['delete_url'] = delete_url
+        if delete_method:
+            template_values['delete_method'] = delete_method
 
         return handler.get_template(
             'oeditor.html', [os.path.dirname(__file__)]).render(template_values)
