@@ -692,6 +692,17 @@ class CourseModel13(object):
 
     def _flush_deleted_objects(self):
         """Delete files owned by deleted objects."""
+
+        # TODO(psimakov): handle similarly add_unit() and set_assessment()
+
+        # To delete an activity/assessment one must look up its filename. This
+        # requires a valid unit/lesson. If unit was deleted it's no longer
+        # found in _units, same for lesson. So we temporarily install deleted
+        # unit/lesson array instead of actual. We also temporarily empty
+        # so _unit_id_to_lesson_ids is not accidentally used. This is a hack,
+        # and we will improve it as object model gets more complex, but for
+        # now it works fine.
+
         units = self._units
         lessons = self._lessons
         unit_id_to_lesson_ids = self._unit_id_to_lesson_ids
