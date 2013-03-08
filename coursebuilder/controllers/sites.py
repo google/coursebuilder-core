@@ -272,7 +272,7 @@ def debug(message):
         logging.info(message)
 
 
-def validate_appcontext_list(contexts):
+def _validate_appcontext_list(contexts, strict=False):
     """Validates a list of application contexts."""
 
     # Check rule order is enforced. If we allowed any order and '/a' was before
@@ -286,6 +286,17 @@ def validate_appcontext_list(contexts):
                     'Please reorder course entries to have '
                     '\'%s\' before \'%s\'.' % (
                         below.get_slug(), above.get_slug()))
+
+    # Make sure '/' is mapped.
+    if strict:
+        is_root_mapped = False
+        for context in contexts:
+            if context.slug == '/':
+                is_root_mapped = True
+                break
+        if not is_root_mapped:
+            raise Exception(
+                'Please add an entry with \'/\' as course URL prefix.')
 
 
 def get_all_courses(rules_text=None):
@@ -328,11 +339,12 @@ def get_all_courses(rules_text=None):
         if slug != slug_parts[2]:
             raise Exception(
                 'Bad rule: \'%s\'. '
-                'Slug \'%s\' must be a simple URL fragment.' % (rule, slug))
+                'Course URL prefix \'%s\' must be a simple URL fragment.' % (
+                    rule, slug))
         if slug in slugs:
             raise Exception(
                 'Bad rule: \'%s\'. '
-                'Slug \'%s\' is already defined.' % (rule, slug))
+                'Course URL prefix \'%s\' is already defined.' % (rule, slug))
         slugs[slug] = True
 
         # validate folder name
@@ -376,7 +388,7 @@ def get_all_courses(rules_text=None):
             AbstractFileSystem(create_fs(namespace)),
             raw=rule))
 
-    validate_appcontext_list(all_contexts)
+    _validate_appcontext_list(all_contexts)
 
     # Cache result to avoid re-parsing over and over.
     ApplicationContext.ALL_COURSE_CONTEXTS_CACHE = {rules_text: all_contexts}
@@ -508,10 +520,19 @@ class AssetHandler(webapp2.RequestHandler):
             self.error(404)
             return
 
+        stream = self.app_context.fs.get(self.filename)
+
+        # Check the object is published.
+        if (hasattr(stream, 'metadata') and
+            stream.metadata.is_draft and
+            not Roles.is_course_admin(self.app_context)):
+            self.error(403)
+            return
+
         set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
-        self.response.write(self.app_context.fs.get(self.filename))
+        self.response.write(stream)
 
 
 class ApplicationContext(object):
@@ -629,10 +650,10 @@ class ApplicationContext(object):
         return jinja_environment
 
 
-def courses_config_validator(rules_text, errors):
+def _courses_config_validator(rules_text, errors):
     """Validates a textual definition of courses entries."""
     try:
-        get_all_courses(rules_text)
+        _validate_appcontext_list(get_all_courses(rules_text), strict=True)
     except Exception as e:  # pylint: disable-msg=broad-except
         errors.append(str(e))
 
@@ -687,7 +708,7 @@ def _add_new_course_entry_to_persistent_configuration(raw):
 
         # Validate the rule list definition.
         errors = []
-        courses_config_validator(new_lines_text, errors)
+        _courses_config_validator(new_lines_text, errors)
         if not errors:
             final_lines_text = new_lines_text
             break
@@ -714,7 +735,7 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
     try:
         get_all_courses(raw)
     except Exception as e:  # pylint: disable-msg=broad-except
-        errors.add('Failed to add entry: %s.\n%s' % (raw, e))
+        errors.append('Failed to add entry: %s.\n%s' % (raw, e))
     if errors:
         return
 
@@ -755,7 +776,7 @@ stored in the '/' folder of the installation and its data stored in the default
 empty datastore namespace.</p>
 <p>A line that starts with '#' is ignored. Course entries are applied in the
 order they are defined.</p>"""),
-    'course:/:/:', multiline=True, validator=courses_config_validator)
+    'course:/:/:', multiline=True, validator=_courses_config_validator)
 
 
 class ApplicationRequestHandler(webapp2.RequestHandler):
