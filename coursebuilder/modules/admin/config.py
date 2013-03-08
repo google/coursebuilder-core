@@ -263,8 +263,19 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         json_object = json.loads(payload)
+        new_value = item.value_type(json_object['value'])
+
+        # Validate the value.
+        errors = []
+        if item.validator:
+            item.validator(new_value, errors)
+        if errors:
+            transforms.send_json_response(self, 412, str(errors))
+            return
+
+        # Update entity.
         old_value = entity.value
-        entity.value = str(item.value_type(json_object['value']))
+        entity.value = str(new_value)
         entity.is_draft = json_object['is_draft']
         entity.put()
 

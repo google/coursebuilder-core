@@ -34,10 +34,10 @@ from google.appengine.ext import db
 
 
 # The default update interval supported.
-DEFAULT_UPDATE_INTERVAL = 60
+DEFAULT_UPDATE_INTERVAL_SEC = 60
 
 # The longest update interval supported.
-MAX_UPDATE_INTERVAL = 60 * 5
+MAX_UPDATE_INTERVAL_SEC = 60 * 5
 
 
 # Allowed property types.
@@ -52,19 +52,29 @@ class ConfigProperty(object):
 
     def __init__(
         self, name, value_type, doc_string,
-        default_value=None, multiline=False):
+        default_value=None, multiline=False, validator=None):
 
         if not value_type in ALLOWED_TYPES:
             raise Exception('Bad value type: %s' % value_type)
 
+        self._validator = validator
         self._multiline = multiline
         self._name = name
         self._type = value_type
         self._doc_string = doc_string
         self._default_value = value_type(default_value)
-        self._value = None
+
+        errors = []
+        if self._validator and self._default_value:
+            self._validator(self._default_value, errors)
+        if errors:
+            raise Exception('Default value is invalid: %s.' % errors)
 
         Registry.registered[name] = self
+
+    @property
+    def validator(self):
+        return self._validator
 
     @property
     def multiline(self):
@@ -136,7 +146,7 @@ class Registry(object):
     registered = {}
     test_overrides = {}
     db_overrides = {}
-    update_interval = DEFAULT_UPDATE_INTERVAL
+    update_interval = DEFAULT_UPDATE_INTERVAL_SEC
     last_update_time = 0
     update_index = 0
 
@@ -198,14 +208,20 @@ class Registry(object):
                         target.name, target.value_type)
                     continue
 
-                # Don't allow disabling of update interval from a database.
-                if name == UPDATE_INTERVAL_SEC.name:
-                    if value == 0 or value < 0 or value > MAX_UPDATE_INTERVAL:
+                # Enforce value validator.
+                if target.validator:
+                    errors = []
+                    try:
+                        target.validator(value, errors)
+                    except Exception as e:  # pylint: disable-msg=broad-except
+                        errors.append(
+                            'Error validating property %s.\n%s',
+                            (target.name, e))
+                    if errors:
                         logging.error(
-                            'Bad value %s for %s; discarded.', name, value)
+                            'Property %s has invalid value:\n%s',
+                            target.name, '\n'.join(errors))
                         continue
-                    else:
-                        cls.update_interval = value
 
                 overrides[name] = value
 
@@ -250,6 +266,14 @@ def run_all_unit_tests():
     assert int_prop.value == int_prop.default_value
 
 
+def validate_update_interval(value, errors):
+    value = int(value)
+    if value <= 0 or value >= MAX_UPDATE_INTERVAL_SEC:
+        errors.append(
+            'Expected a value between 0 and %s, exclusive.' % (
+                MAX_UPDATE_INTERVAL_SEC))
+
+
 UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties '
@@ -257,8 +281,9 @@ UPDATE_INTERVAL_SEC = ConfigProperty(
         'integer between 1 and 300. To completely disable  reloading '
         'properties from a datastore, you must set the value to 0. However, '
         'you can only set the value to 0 by directly modifying the app.yaml '
-        'file. Maximum value is "%s".' % MAX_UPDATE_INTERVAL),
-    DEFAULT_UPDATE_INTERVAL)
+        'file. Maximum value is "%s".' % MAX_UPDATE_INTERVAL_SEC),
+    default_value=DEFAULT_UPDATE_INTERVAL_SEC,
+    validator=validate_update_interval)
 
 if __name__ == '__main__':
     run_all_unit_tests()

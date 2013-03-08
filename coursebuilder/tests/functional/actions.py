@@ -23,6 +23,7 @@ import appengine_config
 from controllers import sites
 from controllers import utils
 import main
+from models import config
 import suite
 from google.appengine.api import namespace_manager
 
@@ -73,6 +74,9 @@ class TestBase(suite.BaseTestClass):
         self.assert_default_namespace()
         self.namespace = ''
         self.base = '/'
+
+        # Reload all properties now to flush the values modified in other tests.
+        config.Registry.get_overrides(True)
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.assert_default_namespace()
