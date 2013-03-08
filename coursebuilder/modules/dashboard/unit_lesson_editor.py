@@ -16,8 +16,11 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+
 import cgi
 import json
+import os
+import sys
 import urllib
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
@@ -25,6 +28,7 @@ from controllers.utils import XsrfTokenManager
 from models import courses
 from models import roles
 from models import transforms
+from models import vfs
 from modules.oeditor import oeditor
 from tools import verify
 import filer
@@ -151,6 +155,10 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         """Applies changes to a unit; modifies unit input argument."""
         raise Exception('Not implemented')
 
+    def pre_delete(self, unused_unit):
+        """Performs actions required before deletion."""
+        raise Exception('Not implemented')
+
     def get(self):
         """A GET REST method shared by all unit types."""
         key = self.request.get('key')
@@ -180,7 +188,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 request, 'put-unit', {'key': key}):
             return
 
-        if not CourseOutlineRights.can_view(self):
+        if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -222,6 +230,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 self, 404, 'Object not found.', {'key': key})
             return
 
+        self.pre_delete(unit)
         assert courses.Course(self).delete_unit(unit)
         transforms.send_json_response(self, 200, 'Deleted.')
 
@@ -338,6 +347,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             "key" : {"type": "string"},
             "type": {"type": "string"},
             "title": {"optional": true, "type": "string"},
+            "content": {"optional": true, "type": "text"},
             "is_draft": {"type": "boolean"}
             }
     }
@@ -352,23 +362,71 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
+        (['properties', 'content', '_inputex'], {'label': 'Content'}),
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable']
 
+    def _get_assessment_path(self, unit):
+        return self.app_context.fs.impl.physical_to_logical(
+            os.path.join(
+                'assets/js',
+                courses.Course.get_assessment_filename(unit)))
+
     def unit_to_dict(self, unit):
+        """Assemble a dict with the unit data fields."""
         assert unit.type == 'A'
+
+        path = self._get_assessment_path(unit)
+        fs = self.app_context.fs
+        if fs.isfile(path):
+            content = fs.get(path)
+        else:
+            content = ''
+
         return {
             'key': unit.id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
+            'content': content,
             'is_draft': not unit.now_available}
 
-    def apply_updates(self, unit, updated_unit_dict, unused_errors):
+    def apply_updates(self, unit, updated_unit_dict, errors):
+        """Store the updated assignment."""
+        root_name = 'assessment'
         unit.title = updated_unit_dict.get('title')
         unit.now_available = not updated_unit_dict.get('is_draft')
+
+        path = self._get_assessment_path(unit)
+
+        try:
+            (content, noverify_text) = verify.convert_javascript_to_python(
+                updated_unit_dict.get('content'), root_name)
+            assessment = verify.evaluate_python_expression_from_text(
+                content, root_name, verify.Assessment().scope, noverify_text)
+        except Exception:  # pylint: disable-msg=broad-except
+            errors.append('Unable to parse %s:\n%s' % (
+                root_name,
+                str(sys.exc_info()[1])))
+            return
+
+        verifier = verify.Verifier()
+        try:
+            verifier.verify_assessment_instance(assessment, path)
+        except verify.SchemaException:
+            errors.append('Error validating %s\n' % root_name)
+            return
+
+        fs = self.app_context.fs
+        fs.put(
+            path, vfs.string_to_stream(content),
+            is_draft=not unit.now_available)
+
+    def pre_delete(self, unit):
+        path = self._get_assessment_path(unit)
+        self.app_context.fs.delete(path)
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):

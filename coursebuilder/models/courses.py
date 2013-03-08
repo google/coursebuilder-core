@@ -241,6 +241,11 @@ class Course(object):
         """Adds new assessment to a course."""
         return self._add_generic_unit('A', 'New Assessment')
 
+    @staticmethod
+    def get_assessment_filename(unit):
+        """Returns the filename for the assessment JS in the VFS."""
+        return 'assessment-%d.js' % unit.id
+
     def delete_unit(self, unit):
         """Deletes existing unit."""
         unit = self.find_unit_by_id(unit.id)
