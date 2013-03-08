@@ -22,8 +22,13 @@ Here is how to use the script:
           http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip
     - update your Python path:
           PYTHONPATH=$PYTHONPATH:/tmp/webtest
-    - run this command from a command line:
+    - invoke this test suite from the command line:
+          # Automatically find and run all Python tests in tests/*.
           python tests/suite.py
+          # Run only tests matching shell glob *_functional_test.py in tests/*.
+          python tests/suite.py --pattern *_functional_test.py
+          # Run test method baz in unittest.TestCase Bar found in tests/foo.py.
+          python tests/suite.py --test_class_name tests.foo.Bar.baz
     - review the output to make sure there are no errors or warnings
 
 Good luck!
@@ -31,8 +36,8 @@ Good luck!
 
 __author__ = 'Sean Lip'
 
+import argparse
 import base64
-import getopt
 import os
 import sys
 import unittest
@@ -44,6 +49,15 @@ import webtest
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext import deferred
 from google.appengine.ext import testbed
+
+
+_PARSER = argparse.ArgumentParser()
+_PARSER.add_argument(
+    '--pattern', default='*.py',
+    help='shell pattern for discovering files containing tests', type=str)
+_PARSER.add_argument(
+    '--test_class_name',
+    help='optional dotted module name of the test(s) to run', type=str)
 
 
 def empty_environ():
@@ -101,32 +115,24 @@ class AppEngineTestBase(TestBase):
             deferred.run(base64.b64decode(task['body']))
 
 
-def create_test_suite():
-    """Loads all test classes from appropriate modules."""
-    tests = []
+def create_test_suite(parsed_args):
+    """Loads all requested test suites.
 
-    # Check if a specific test class was requested.
-    opts, unused_args = getopt.getopt(sys.argv[1:], '', ['test_class_name='])
-    for opt, val in opts:
-        if opt == '--test_class_name':
-            print 'Loading tests from: %s.' % val
-            amodule = __import__('tests.functional.tests', fromlist=[val])
-            aclass = getattr(amodule, val)
-            tests += unittest.TestLoader().loadTestsFromTestCase(aclass)
-            continue
-        raise Exception('Unknown option: %s.' % opt)
+    By default, loads all unittest.TestCases found under the project root's
+    tests/ directory.
 
-    # Load all test classes if none were explicitly requested.
-    if not tests:
-        print 'Loading all tests.'
-        import tests.functional.tests as functional_tests  # pylint: disable=C6204
-        tests += unittest.TestLoader().loadTestsFromModule(functional_tests)
+    Args:
+        parsed_args: argparse.Namespace. Processed command-line arguments.
 
-    # Add unit tests.
-    import tests.unit.tests as unit_tests  # pylint: disable=C6204
-    tests += unittest.TestLoader().loadTestsFromModule(unit_tests)
-
-    return unittest.TestLoader().suiteClass(tests)
+    Returns:
+        unittest.TestSuite. The test suite populated with all tests to run.
+    """
+    loader = unittest.TestLoader()
+    if parsed_args.test_class_name:
+        return loader.loadTestsFromName(parsed_args.test_class_name)
+    else:
+        return loader.discover(
+            os.path.dirname(__file__), pattern=parsed_args.pattern)
 
 
 def fix_sys_path():
@@ -143,11 +149,14 @@ def fix_sys_path():
 def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
-    result = unittest.TextTestRunner(verbosity=2).run(create_test_suite())
+    parsed_args = _PARSER.parse_args()
+
+    result = unittest.TextTestRunner(verbosity=2).run(
+        create_test_suite(parsed_args))
 
     if result.errors or result.failures:
         raise Exception(
-            'Functional test suite failed: %s errors, %s failures of '
+            'Test suite failed: %s errors, %s failures of '
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
 
