@@ -32,6 +32,7 @@ from models import vfs
 from models.models import Student
 import filer
 from filer import AssetItemRESTHandler
+from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from unit_lesson_editor import AssessmentRESTHandler
@@ -52,7 +53,7 @@ class DashboardHandler(
     get_actions = [
         default_action, 'assets', 'settings', 'students',
         'edit_settings', 'edit_unit_lesson', 'edit_unit', 'edit_link',
-        'edit_assessment', 'add_asset']
+        'edit_assessment', 'add_asset', 'delete_asset']
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
@@ -65,6 +66,8 @@ class DashboardHandler(
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
+            (AssetItemRESTHandler.URI, AssetItemRESTHandler),
+            (AssetUriRESTHandler.URI, AssetUriRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler)
@@ -318,7 +321,8 @@ class DashboardHandler(
 
     def list_and_format_file_list(
         self, title, subfolder,
-        links=False, upload=False, prefix=None, caption_if_empty='< none >'):
+        links=False, upload=False, prefix=None, caption_if_empty='< none >',
+        href_template='%s'):
         """Walks files in folders and renders their names in a section."""
 
         lines = []
@@ -326,9 +330,10 @@ class DashboardHandler(
             if prefix and not filename.startswith(prefix):
                 continue
             if links:
+                href = href_template % urllib.quote(filename)
                 lines.append(
                     '<li><a href="%s">%s</a></li>\n' % (
-                        cgi.escape(filename), cgi.escape(filename)))
+                        href, cgi.escape(filename)))
             else:
                 lines.append('<li>%s</li>\n' % cgi.escape(filename))
 
@@ -369,7 +374,8 @@ class DashboardHandler(
             'Activities', '/assets/js/', links=True,
             prefix='assets/js/activity-')
         lines += self.list_and_format_file_list(
-            'Images & Documents', '/assets/img/', links=True, upload=True)
+            'Images & Documents', '/assets/img/', links=True, upload=True,
+            href_template='dashboard?action=delete_asset&uri=%s')
         lines += self.list_and_format_file_list(
             'Cascading Style Sheets', '/assets/css/', links=True,
             caption_if_empty=inherits_from('/assets/css/'))

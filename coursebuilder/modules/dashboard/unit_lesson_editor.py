@@ -209,7 +209,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 self.request, 'delete-unit', {'key': key}):
             return
 
-        if not CourseOutlineRights.can_view(self):
+        if not CourseOutlineRights.can_delete(self):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return

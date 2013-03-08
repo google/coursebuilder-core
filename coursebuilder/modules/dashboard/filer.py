@@ -18,8 +18,10 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import base64
+import cgi
 import json
 import os
+import urllib
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -111,6 +113,32 @@ class FileManagerAndEditor(ApplicationHandler):
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             '', rest_url, exit_url, save_method='upload', auto_return=True)
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Upload Asset')
+        template_values['main_content'] = form_html
+        self.render_page(template_values)
+
+    def get_delete_asset(self):
+        """Show an review/delete page for assets."""
+
+        uri = self.request.get('uri')
+
+        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        rest_url = self.canonicalize_url(
+            AssetUriRESTHandler.URI)
+        delete_url = '%s?%s' % (
+            self.canonicalize_url(FilesItemRESTHandler.URI),
+            urllib.urlencode({
+                'key': uri,
+                'xsrf_token': cgi.escape(self.create_xsrf_token('delete-asset'))
+                }))
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self,
+            AssetUriRESTHandler.SCHEMA_JSON,
+            AssetUriRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            uri, rest_url, exit_url,
+            delete_url=delete_url, delete_method='delete')
 
         template_values = {}
         template_values['page_title'] = self.format_title('Upload Asset')
@@ -255,6 +283,30 @@ class FilesItemRESTHandler(BaseRESTHandler):
         # Send reply.
         transforms.send_json_response(self, 200, 'Saved.')
 
+    def delete(self):
+        """Handles REST DELETE verb."""
+
+        key = self.request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, 'delete-asset', {'key': key}):
+            return
+
+        if not FilesRights.can_delete(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        fs = self.app_context.fs.impl
+        path = fs.physical_to_logical(key)
+        if not fs.isfile(path):
+            transforms.send_json_response(
+                self, 403, 'File does not exist.', None)
+            return
+
+        fs.delete(path)
+        transforms.send_json_response(self, 200, 'Deleted.')
+
 
 class AssetItemRESTHandler(BaseRESTHandler):
     """Provides REST API for managing assets."""
@@ -327,3 +379,46 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
         fs.put(path, upload.file)
         transforms.send_json_response(self, 200, 'Saved.')
+
+
+class AssetUriRESTHandler(BaseRESTHandler):
+    """Provides REST API for managing asserts by means of their URIs."""
+
+    # TODO(jorr): Refactor the asset management classes to have more meaningful
+    # REST URI's and class names
+    URI = '/rest/assets/uri'
+
+    SCHEMA_JSON = """
+        {
+            "id": "Asset",
+            "type": "object",
+            "description": "Asset",
+            "properties": {
+                "uri": {"type": "string"}
+                }
+        }
+        """
+
+    SCHEMA_ANNOTATIONS_DICT = [
+        (['title'], 'Delete Asset'),
+        (['properties', 'uri', '_inputex'], {
+            'label': 'Asset',
+            '_type': 'uneditable',
+            'visu': {
+                'visuType': 'funcName',
+                'funcName': 'renderAsset'}})]
+
+    def get(self):
+        """Handles REST GET verb and returns the uri of the asset."""
+
+        uri = self.request.get('key')
+
+        if not FilesRights.can_view(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': uri})
+            return
+
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict={'uri': uri},
+            xsrf_token=XsrfTokenManager.create_xsrf_token('asset-delete'))

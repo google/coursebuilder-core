@@ -158,6 +158,11 @@
   a.inputEx-List-link {
     display: none;
   }
+  img.framed {
+    border: 1px solid #ccc;
+    padding: 3px;
+    max-width: 400px;
+  }
 </style>
 
 <div class='status-message' id='formStatusMessage' style='display: none;'>&nbsp;</div>
@@ -224,6 +229,22 @@
     }
   }
 
+  /**
+   * Render an asset as an image if it is a recognized image type; otherwise
+   * simply expose a link to the asset.
+   */
+  function renderAsset(Y, uri) {
+    imageExts = ['png', 'jpg', 'jpeg', 'gif'];
+    for (i in imageExts) {
+      var ext = imageExts[i];
+      if (uri.length >= ext.length &&
+          uri.substring(uri.length - ext.length).toLowerCase() == ext) {
+        return Y.inputEx.cn('img', {src: uri, class: 'framed'});
+      }
+    }
+    return Y.inputEx.cn('a', {href: uri}, {}, escape(uri));
+  }
+
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
   cbShowMsg("Loading...");
@@ -250,6 +271,14 @@
   YUI({filter: "raw"}).use(
     {{ required_modules|safe }},
     function (Y) {
+
+      // Add a new visu handler to inputEx, to look for a named function. The
+      // must be a member of window and should accept Y and the value of the
+      // target field as its parameters. It should return the correct inputEx
+      // widget initialized to render the given data.
+      Y.inputEx.visus.funcName = function(options, value) {
+        return window[options.funcName](Y, value);
+      }
 
       // here is the object schema
       var schema = {
@@ -486,7 +515,7 @@
               }
 
               // push payload into form
-              payload = JSON.parse(json.payload);
+              var payload = JSON.parse(json.payload);
               cb_global.form.setValue(payload);
 
               // record xsrf token if provided
