@@ -822,3 +822,10 @@ img.progress {
   margin: 2px 7px 0 0;
   opacity: 0.7;
 }
+
+span.progress-empty {
+  display: inline-block;
+  height: 14px;
+  margin: 2px 7px 0 0;
+  width: 15px;
+}

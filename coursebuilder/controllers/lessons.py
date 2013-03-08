@@ -92,6 +92,8 @@ class CourseHandler(BaseHandler):
         self.template_value['units'] = self.get_units()
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
+        self.template_value['is_progress_recorded'] = (
+            CAN_PERSIST_ACTIVITY_EVENTS.value)
         self.template_value['navbar'] = {'course': True}
         self.render('course.html')
 
@@ -141,8 +143,12 @@ class UnitHandler(BaseHandler):
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         # Set template values for student progress
-        self.template_value['progress'] = (
-            self.get_progress_tracker().get_lesson_progress(student, unit_id))
+        self.template_value['is_progress_recorded'] = (
+            CAN_PERSIST_ACTIVITY_EVENTS.value)
+        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+            self.template_value['progress'] = (
+                self.get_progress_tracker().get_lesson_progress(
+                    student, unit_id))
 
         self.render('unit.html')
 
@@ -182,9 +188,13 @@ class ActivityHandler(BaseHandler):
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
 
         # Set template values for student progress
-        self.template_value['progress'] = (
-            self.get_progress_tracker().get_lesson_progress(student, unit_id))
-        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
+        self.template_value['is_progress_recorded'] = (
+            CAN_PERSIST_ACTIVITY_EVENTS.value)
+        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+            self.template_value['progress'] = (
+                self.get_progress_tracker().get_lesson_progress(
+                    student, unit_id))
+
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
 

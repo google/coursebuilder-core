@@ -50,42 +50,50 @@
             <ul>
               {% if lesson.id == lesson_id %}
                 <li class="active">
-                  {% if progress[lesson.id] == 2 %}
-                    <img src="assets/lib/completed.png"
-                         alt="{% trans %} Completed {% endtrans %}"
-                         class="progress"
-                         id="progress-completed-{{lesson.id}}">
-                  {% elif progress[lesson.id] == 1 %}
-                    <img src="assets/lib/in_progress.png"
-                         alt="{% trans %} In Progress {% endtrans %}"
-                         class="progress"
-                         id="progress-inprogress-{{lesson.id}}">
+                  {% if is_progress_recorded %}
+                    {% if progress[lesson.id] == 2 %}
+                      <img src="assets/lib/completed.png"
+                           alt="{% trans %} Completed {% endtrans %}"
+                           class="progress"
+                           id="progress-completed-{{lesson.id}}">
+                    {% elif progress[lesson.id] == 1 %}
+                      <img src="assets/lib/in_progress.png"
+                           alt="{% trans %} In Progress {% endtrans %}"
+                           class="progress"
+                           id="progress-inprogress-{{lesson.id}}">
+                    {% else %}
+                      <img src="assets/lib/not_started.png"
+                           alt="{% trans %} Not Yet Started {% endtrans %}"
+                           class="progress"
+                           id="progress-notstarted-{{lesson.id}}">
+                    {% endif %}
                   {% else %}
-                    <img src="assets/lib/not_started.png"
-                         alt="{% trans %} Not Yet Started {% endtrans %}"
-                         class="progress"
-                         id="progress-notstarted-{{lesson.id}}">
+                    <span class="progress-empty"></span>
                   {% endif %}
 
                   {% trans %} Activity {% endtrans %}
                 </li>
               {% else %}
                 <li>
-                  {% if progress[lesson.id] == 2 %}
-                    <img src="assets/lib/completed.png"
-                         alt="{% trans %} Completed {% endtrans %}"
-                         class="progress"
-                         id="progress-completed-{{lesson.id}}">
-                  {% elif progress[lesson.id] == 1 %}
-                    <img src="assets/lib/in_progress.png"
-                         alt="{% trans %} In Progress {% endtrans %}"
-                         class="progress"
-                         id="progress-inprogress-{{lesson.id}}">
+                  {% if is_progress_recorded %}
+                    {% if progress[lesson.id] == 2 %}
+                      <img src="assets/lib/completed.png"
+                           alt="{% trans %} Completed {% endtrans %}"
+                           class="progress"
+                           id="progress-completed-{{lesson.id}}">
+                    {% elif progress[lesson.id] == 1 %}
+                      <img src="assets/lib/in_progress.png"
+                           alt="{% trans %} In Progress {% endtrans %}"
+                           class="progress"
+                           id="progress-inprogress-{{lesson.id}}">
+                    {% else %}
+                      <img src="assets/lib/not_started.png"
+                           alt="{% trans %} Not Yet Started {% endtrans %}"
+                           class="progress"
+                           id="progress-notstarted-{{lesson.id}}">
+                    {% endif %}
                   {% else %}
-                    <img src="assets/lib/not_started.png"
-                         alt="{% trans %} Not Yet Started {% endtrans %}"
-                         class="progress"
-                         id="progress-notstarted-{{lesson.id}}">
+                    <span class="progress-empty"></span>
                   {% endif %}
 
                   <a href="activity?unit={{ unit_id }}&lesson={{ lesson.id }}">

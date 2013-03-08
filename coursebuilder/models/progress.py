@@ -47,6 +47,12 @@ class UnitLessonProgressTracker(object):
     # If it is not a composite entity (video, block, assessment), then the value
     # is just the number of times the event has been triggered.
 
+    # Constants for recording the state of composite entities.
+    # TODO(sll): Change these to enums.
+    NOT_STARTED_STATE = 0
+    IN_PROGRESS_STATE = 1
+    COMPLETED_STATE = 2
+
     EVENT_CODE_MAPPING = {
         'unit': 'u',
         'lesson': 'l',
@@ -102,11 +108,11 @@ class UnitLessonProgressTracker(object):
         assert len(split_event_key) == 2
         unit_id = split_event_key[1]
 
-        if self._get_entity_value(progress, event_key) == 2:
+        if self._get_entity_value(progress, event_key) == self.COMPLETED_STATE:
             return
 
         # Record that at least one lesson in this unit has been completed.
-        self._set_entity_value(progress, event_key, 1)
+        self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
 
         # Check if all lessons in this unit have been completed.
         lessons = self._get_course().get_lessons(unit_id)
@@ -114,11 +120,12 @@ class UnitLessonProgressTracker(object):
             # Skip lessons that do not have activities associated with them.
             if lesson.activity != 'yes':
                 continue
-            if not self._get_lesson_status(progress, unit_id, lesson.id) == 2:
+            if not (self._get_lesson_status(
+                    progress, unit_id, lesson.id) == self.COMPLETED_STATE):
                 return
 
         # Record that all lessons in this unit have been completed.
-        self._set_entity_value(progress, event_key, 2)
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
     def _update_lesson(self, progress, event_key):
         """Updates a lesson's progress if its activities have been completed."""
@@ -127,21 +134,21 @@ class UnitLessonProgressTracker(object):
         unit_id = split_event_key[1]
         lesson_id = split_event_key[3]
 
-        if self._get_entity_value(progress, event_key) == 2:
+        if self._get_entity_value(progress, event_key) == self.COMPLETED_STATE:
             return
 
         # Record that at least one activity in this lesson has been completed.
-        self._set_entity_value(progress, event_key, 1)
+        self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
 
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
             if str(lesson.id) == lesson_id and lesson.activity == 'yes':
-                if not self._get_activity_status(
-                        progress, unit_id, lesson_id) == 2:
+                if not (self._get_activity_status(
+                        progress, unit_id, lesson_id) == self.COMPLETED_STATE):
                     return
 
         # Record that all activities in this lesson have been completed.
-        self._set_entity_value(progress, event_key, 2)
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
     def _update_activity(self, progress, event_key):
         """Updates activity's progress when all interactive blocks are done."""
@@ -150,11 +157,11 @@ class UnitLessonProgressTracker(object):
         unit_id = split_event_key[1]
         lesson_id = split_event_key[3]
 
-        if self._get_entity_value(progress, event_key) == 2:
+        if self._get_entity_value(progress, event_key) == self.COMPLETED_STATE:
             return
 
         # Record that at least one block in this activity has been completed.
-        self._set_entity_value(progress, event_key, 1)
+        self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
 
         # Get the activity corresponding to this unit/lesson combination.
         activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
@@ -166,7 +173,7 @@ class UnitLessonProgressTracker(object):
                     return
 
         # Record that all blocks in this activity have been completed.
-        self._set_entity_value(progress, event_key, 2)
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
     UPDATER_MAPPING = {
         'activity': _update_activity,
@@ -265,7 +272,13 @@ class UnitLessonProgressTracker(object):
               if it is being auto-updated.
         """
         if direct_update or event_entity not in self.UPDATER_MAPPING:
-            self._inc(progress, event_key)
+            if event_entity in self.UPDATER_MAPPING:
+                # This is a derived event, so directly mark it as completed.
+                self._set_entity_value(
+                    progress, event_key, self.COMPLETED_STATE)
+            else:
+                # This is not a derived event, so increment its counter by one.
+                self._inc(progress, event_key)
         else:
             self.UPDATER_MAPPING[event_entity](self, progress, event_key)
 
