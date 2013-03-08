@@ -11,13 +11,17 @@
   <div class="gcb-col-7 gcb-aside gcb-button-box">
 
     <p class="top_content">
-      <!-- Displays the student's score. -->
-      {% if assessment == 'postcourse_pass' or assessment == 'postcourse_fail' %}
-        {{course_info.assessment_confirmations.postcourse_header % student_score}}
+      <!-- Displays generic text to confirm submission of the assessment. -->
+      {% if assessment == 'Fin' %}
+        {{course_info.assessment_confirmations[assessment]['text'] % student_score}}
+      {% else %}
+        {{course_info.assessment_confirmations[assessment]['text']}}
       {% endif %}
 
       <!-- Displays further confirmation text relevant to the specific assessment. -->
-      {{course_info.assessment_confirmations[assessment]}}
+      {% if result %}
+        {{course_info.assessment_confirmations[assessment]['result_text'][result]}}
+      {% endif %}
     </p>
 
     <p>

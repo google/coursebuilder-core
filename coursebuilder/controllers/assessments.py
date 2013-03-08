@@ -18,6 +18,7 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
 import json
+import logging
 from models import models
 from models import utils
 from models.models import Student
@@ -35,8 +36,7 @@ def store_score(student, assessment_type, score):
         score: the student's score on this assessment.
 
     Returns:
-        the (possibly modified) assessment_type, which the caller can
-        use to render an appropriate response page.
+        the result of the assessment, if appropriate.
     """
     # FIXME: Course creators can edit this code to implement custom
     # assessment scoring and storage behavior
@@ -48,9 +48,11 @@ def store_score(student, assessment_type, score):
     if (existing_score is None) or (score > int(existing_score)):
         utils.set_score(student, assessment_type, score)
 
+    result = None
+
     # special handling for computing final score:
-    if assessment_type == 'postcourse':
-        midcourse_score = utils.get_score(student, 'midcourse')
+    if assessment_type == 'Fin':
+        midcourse_score = utils.get_score(student, 'Mid')
         if midcourse_score is None:
             midcourse_score = 0
         else:
@@ -65,35 +67,30 @@ def store_score(student, assessment_type, score):
 
         # Calculate overall score based on a formula
         overall_score = int((0.3 * midcourse_score) + (0.7 * postcourse_score))
-
-        # TODO(pgbovine): this changing of assessment_type is ugly ...
-        if overall_score >= 70:
-            assessment_type = 'postcourse_pass'
-        else:
-            assessment_type = 'postcourse_fail'
+        result = 'pass' if overall_score >= 70 else 'fail'
         utils.set_score(student, 'overall_score', overall_score)
 
-    return assessment_type
+    return result
 
 
 class AnswerHandler(BaseHandler):
     """Handler for saving assessment answers."""
 
-    # Maps the assessment_type to its unit_id.
-    # TODO(sll): Get rid of this conversion; in the future, everything should
-    # rely on a single unit_id.
-    ASSESSMENT_TYPE_TO_ID_MAPPING = {
-        'precourse': 'Pre',
-        'midcourse': 'Mid',
-        'postcourse_pass': 'Fin',
-        'postcourse_fail': 'Fin'
-    }
-
     # Find student entity and save answers
     @db.transactional(xg=True)
     def update_assessment_transaction(
         self, email, assessment_type, new_answers, score):
-        """Stores answer and updates user scores."""
+        """Stores answer and updates user scores.
+
+        Args:
+            email: the student's email address.
+            assessment_type: the type of the assessment (as stated in unit.csv).
+            new_answers: the latest set of answers supplied by the student.
+            score: the numerical assessment score.
+
+        Returns:
+            the result of the assessment, if appropriate.
+        """
         student = Student.get_by_email(email)
 
         # It may be that old Student entities don't have user_id set; fix it.
@@ -107,7 +104,7 @@ class AnswerHandler(BaseHandler):
 
         utils.set_answer(answers, assessment_type, new_answers)
 
-        assessment_type = store_score(student, assessment_type, score)
+        result = store_score(student, assessment_type, score)
 
         student.put()
         answers.put()
@@ -119,7 +116,7 @@ class AnswerHandler(BaseHandler):
                 'type': 'assessment-%s' % assessment_type,
                 'values': new_answers, 'location': 'AnswerHandler'}))
 
-        return (student, assessment_type)
+        return student, result
 
     def post(self):
         """Handles POST requests."""
@@ -131,6 +128,9 @@ class AnswerHandler(BaseHandler):
             return
 
         assessment_type = self.request.get('assessment_type')
+        if not assessment_type:
+            logging.error('No assessment type supplied.')
+            return
 
         # Convert answers from JSON to dict.
         answers = self.request.get('answers')
@@ -143,16 +143,16 @@ class AnswerHandler(BaseHandler):
         score = int(round(float(self.request.get('score'))))
 
         # Record score.
-        (student, assessment_type) = self.update_assessment_transaction(
+        student, result = self.update_assessment_transaction(
             student.key().name(), assessment_type, answers, score)
 
         # Record completion event in progress tracker.
-        # TODO(sll): Remove the id conversion. Just validate it is not null.
         self.get_course().get_progress_tracker().put_assessment_completed(
-            student, self.ASSESSMENT_TYPE_TO_ID_MAPPING[assessment_type])
+            student, assessment_type)
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment'] = assessment_type
+        self.template_value['result'] = result
         self.template_value['student_score'] = utils.get_score(
             student, 'overall_score')
         self.render('test_confirmation.html')

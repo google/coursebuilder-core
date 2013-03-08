@@ -16,7 +16,7 @@
 // When the assessment page loads, activity-generic.js will render the contents
 // of the 'assessment' variable into the enclosing HTML webpage.
 
-// For information on modifying this page, see 
+// For information on modifying this page, see
 // https://code.google.com/p/course-builder/wiki/CreateAssessments.
 
 
@@ -73,7 +73,7 @@ var assessment = {
      lesson: '2.2'}
   ],
 
-  assessmentName: 'postcourse', // unique name submitted along with all of the answers
-  checkAnswers: true            // render a "Check your Answers" button to allow students to check answers prior to submitting?
+  assessmentName: 'Fin', // unique name submitted along with all of the answers
+  checkAnswers: true     // render a "Check your Answers" button to allow students to check answers prior to submitting?
 }
 

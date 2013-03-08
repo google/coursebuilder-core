@@ -45,7 +45,7 @@
         <tr>
           <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Pre-class {% endtrans %}</th>
           <td>
-            {% if scores.has_key('precourse') %}
+            {% if 'Pre' in scores %}
               {% trans %} Completed {% endtrans %}
             {% endif %}
           </td>
@@ -53,23 +53,23 @@
         <tr>
           <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Mid-class {% endtrans %}</th>
           <td>
-            {% if scores.has_key('midcourse') %}
-              {{ scores['midcourse'] }}
+            {% if 'Mid' in scores %}
+              {{ scores['Mid'] }}
             {% endif %}
           </td>
         </tr>
         <tr>
           <th align="left">&nbsp;&nbsp;&nbsp;{% trans %} Post-class {% endtrans %}</th>
           <td>
-            {% if scores.has_key('postcourse') %}
-              {{ scores['postcourse'] }}
+            {% if 'Fin' in scores %}
+              {{ scores['Fin'] }}
             {% endif %}
           </td>
         </tr>
         <tr>
           <th align="left">{% trans %} Overall course score {% endtrans %}</th>
           <td>
-            {% if scores.has_key('overall_score') %}
+            {% if 'overall_score' in scores %}
               {{ scores['overall_score'] }}
             {% endif %}
           </td>

@@ -870,6 +870,9 @@ class AssessmentTest(actions.TestBase):
             '<script src="assets/js/assessment-%s.js"></script>' % name,
             response.body)
 
+        js_response = self.get('assets/js/assessment-%s.js' % name)
+        assert_equals(js_response.status_int, 200)
+
         # Extract XSRF token from the page.
         match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)
         assert match
@@ -885,14 +888,14 @@ class AssessmentTest(actions.TestBase):
         email = 'test_pass@google.com'
         name = 'Test Pass'
 
-        post = {'assessment_type': 'postcourse', 'score': '100.00'}
+        post = {'assessment_type': 'Fin', 'score': '100.00'}
 
         # Register.
         actions.login(email)
         actions.register(self, name)
 
         # Submit answer.
-        response = self.submit_assessment('Post', post)
+        response = self.submit_assessment('Fin', post)
         assert_equals(response.status_int, 200)
         assert_contains('Your score is 70%', response.body)
         assert_contains('you have passed the course', response.body)
@@ -909,12 +912,12 @@ class AssessmentTest(actions.TestBase):
 
         pre_answers = [{'foo': 'bar'}, {'Alice': u'Bob (тест данные)'}]
         pre = {
-            'assessment_type': 'precourse', 'score': '1.00',
+            'assessment_type': 'Pre', 'score': '1.00',
             'answers': json.dumps(pre_answers)}
-        mid = {'assessment_type': 'midcourse', 'score': '2.00'}
-        post = {'assessment_type': 'postcourse', 'score': '3.00'}
-        second_mid = {'assessment_type': 'midcourse', 'score': '1.00'}
-        second_post = {'assessment_type': 'postcourse', 'score': '100000'}
+        mid = {'assessment_type': 'Mid', 'score': '2.00'}
+        fin = {'assessment_type': 'Fin', 'score': '3.00'}
+        second_mid = {'assessment_type': 'Mid', 'score': '1.00'}
+        second_fin = {'assessment_type': 'Fin', 'score': '100000'}
 
         # Register.
         actions.login(email)
@@ -949,7 +952,7 @@ class AssessmentTest(actions.TestBase):
                 """                      <span class="tick">""", response.body)
 
             # Submit the final assessment.
-            self.submit_assessment('Post', post)
+            self.submit_assessment('Fin', fin)
             student = models.Student.get_enrolled_student_by_email(email)
 
             # Check final score also includes overall_score.
@@ -959,18 +962,18 @@ class AssessmentTest(actions.TestBase):
             answers = json.loads(
                 models.StudentAnswersEntity.get_by_key_name(
                     student.user_id).data)
-            assert pre_answers == answers['precourse']
+            assert pre_answers == answers['Pre']
 
             # pylint: disable-msg=g-explicit-bool-comparison
-            assert [] == answers['midcourse']
-            assert [] == answers['postcourse']
+            assert [] == answers['Mid']
+            assert [] == answers['Fin']
             # pylint: enable-msg=g-explicit-bool-comparison
 
             # Check that scores are recorded properly.
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'precourse')) == 1
-            assert int(get_score(student, 'midcourse')) == 2
-            assert int(get_score(student, 'postcourse')) == 3
+            assert int(get_score(student, 'Pre')) == 1
+            assert int(get_score(student, 'Mid')) == 2
+            assert int(get_score(student, 'Fin')) == 3
             assert (int(get_score(student, 'overall_score')) ==
                     int((0.30 * 2) + (0.70 * 3)))
 
@@ -978,19 +981,19 @@ class AssessmentTest(actions.TestBase):
             # nothing should change.
             self.submit_assessment('Mid', second_mid)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'precourse')) == 1
-            assert int(get_score(student, 'midcourse')) == 2
-            assert int(get_score(student, 'postcourse')) == 3
+            assert int(get_score(student, 'Pre')) == 1
+            assert int(get_score(student, 'Mid')) == 2
+            assert int(get_score(student, 'Fin')) == 3
             assert (int(get_score(student, 'overall_score')) ==
                     int((0.30 * 2) + (0.70 * 3)))
 
             # Now try posting a postcourse exam with a higher score and note
             # the changes.
-            self.submit_assessment('Post', second_post)
+            self.submit_assessment('Fin', second_fin)
             student = models.Student.get_enrolled_student_by_email(email)
-            assert int(get_score(student, 'precourse')) == 1
-            assert int(get_score(student, 'midcourse')) == 2
-            assert int(get_score(student, 'postcourse')) == 100000
+            assert int(get_score(student, 'Pre')) == 1
+            assert int(get_score(student, 'Mid')) == 2
+            assert int(get_score(student, 'Fin')) == 100000
             assert (int(get_score(student, 'overall_score')) ==
                     int((0.30 * 2) + (0.70 * 100000)))
         finally:
