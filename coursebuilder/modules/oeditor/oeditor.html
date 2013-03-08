@@ -283,6 +283,9 @@
   // If this value is '', deletions are not allowed
   cb_global.delete_url = '{{ delete_url|safe }}';
   cb_global.delete_method = '{{ delete_method }}';
+  
+  // button captions
+  cb_global.save_button_caption = '{{ save_button_caption }}'
 
   // set home folder
   YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
@@ -315,7 +318,7 @@
       var inputExDefinition = builder.schemaToInputEx(schema.root);
 
       // save button
-      save_button = {type: 'submit-link', value: 'Save', onClick: function() {
+      save_button = {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
             cbShowMsg("Saving...");
 
           // record current state

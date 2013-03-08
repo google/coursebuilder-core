@@ -138,6 +138,7 @@ GCB_MODULES_FOLDER_NAME = os.path.normpath('/modules/')
 # Files in these folders are inheritable between file systems.
 GCB_INHERITABLE_FOLDER_NAMES = [
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'css/'),
+    os.path.join(GCB_ASSETS_FOLDER_NAME, 'img/'),
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'lib/'),
     GCB_VIEWS_FOLDER_NAME,
     GCB_MODULES_FOLDER_NAME]
@@ -567,16 +568,19 @@ class ApplicationContext(object):
     def get_environ(self):
         return Course.get_environ(self)
 
+    def get_asset_home(self):
+        """Returns absolute location of a course asset folder."""
+        path = abspath(self.get_home_folder(), GCB_ASSETS_FOLDER_NAME)
+        return path
+
     def get_template_home(self):
         """Returns absolute location of a course template folder."""
         path = abspath(self.get_home_folder(), GCB_VIEWS_FOLDER_NAME)
-        debug('Template home: %s' % path)
         return path
 
     def get_data_home(self):
         """Returns absolute location of a course data folder."""
         path = abspath(self.get_home_folder(), GCB_DATA_FOLDER_NAME)
-        debug('Data home: %s' % path)
         return path
 
     def get_template_environ(self, locale, additional_dirs):

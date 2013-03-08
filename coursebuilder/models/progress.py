@@ -119,7 +119,7 @@ class UnitLessonProgressTracker(object):
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
             # Skip lessons that do not have activities associated with them.
-            if lesson.activity != 'yes':
+            if not lesson.activity:
                 continue
             if not (self._get_lesson_status(
                     progress, unit_id, lesson.id) == self.COMPLETED_STATE):
@@ -143,7 +143,7 @@ class UnitLessonProgressTracker(object):
 
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
-            if str(lesson.id) == lesson_id and lesson.activity == 'yes':
+            if str(lesson.id) == lesson_id and lesson.activity:
                 if not (self._get_activity_status(
                         progress, unit_id, lesson_id) == self.COMPLETED_STATE):
                     return

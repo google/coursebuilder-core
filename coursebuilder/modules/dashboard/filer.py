@@ -113,7 +113,8 @@ class FileManagerAndEditor(ApplicationHandler):
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             '', rest_url, exit_url, save_method='upload', auto_return=True,
-            required_modules=AssetItemRESTHandler.REQUIRED_MODULES)
+            required_modules=AssetItemRESTHandler.REQUIRED_MODULES,
+            save_button_caption='Upload')
 
         template_values = {}
         template_values['page_title'] = self.format_title('Upload Asset')

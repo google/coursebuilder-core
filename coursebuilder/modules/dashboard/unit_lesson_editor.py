@@ -18,9 +18,11 @@ __author__ = 'John Orr (jorr@google.com)'
 
 
 import cgi
+import logging
 import os
 import sys
 import urllib
+from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -63,6 +65,34 @@ class CourseOutlineRights(object):
 
 class UnitLessonEditor(ApplicationHandler):
     """An editor for the unit and lesson titles."""
+
+    def get_import_course(self):
+        """Shows setup form for course import."""
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Import Course')
+
+        annotations = ImportCourseRESTHandler.SCHEMA_ANNOTATIONS_DICT
+        if not annotations:
+            template_values['main_content'] = 'No courses to import from.'
+            self.render_page(template_values)
+            return
+
+        exit_url = self.canonicalize_url('/dashboard')
+        rest_url = self.canonicalize_url(ImportCourseRESTHandler.URI)
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self,
+            ImportCourseRESTHandler.SCHEMA_JSON,
+            annotations,
+            None, rest_url, exit_url,
+            auto_return=True,
+            save_button_caption='Import',
+            required_modules=ImportCourseRESTHandler.REQUIRED_MODULES)
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Import Course')
+        template_values['main_content'] = form_html
+        self.render_page(template_values)
 
     def get_edit_unit_lesson(self):
         """Shows editor for the list of unit and lesson titles."""
@@ -155,8 +185,8 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         raise Exception('Not implemented')
 
     def pre_delete(self, unused_unit):
-        """Performs actions required before deletion."""
-        raise Exception('Not implemented')
+        """Override to perform actions required before deletion."""
+        pass
 
     def get(self):
         """A GET REST method shared by all unit types."""
@@ -330,6 +360,104 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         unit.title = updated_unit_dict.get('title')
         unit.unit_id = updated_unit_dict.get('url')
         unit.now_available = not updated_unit_dict.get('is_draft')
+
+
+class ImportCourseRESTHandler(CommonUnitRESTHandler):
+    """Provides REST API to course import."""
+
+    URI = '/rest/course/import'
+
+    SCHEMA_JSON = """
+    {
+        "id": "Import Course Entity",
+        "type": "object",
+        "description": "Import Course",
+        "properties": {
+            "course" : {"type": "string"}
+            }
+    }
+    """
+
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-uneditable']
+
+    @classmethod
+    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable-msg=g-bad-name
+        """Schema annotations are dynamic and include a list of courses."""
+
+        # Make a list of courses user has the rights to.
+        course_list = []
+        for acourse in sites.get_all_courses():
+            if not roles.Roles.is_course_admin(acourse):
+                continue
+            if acourse == sites.get_course_for_current_request():
+                continue
+            course_list.append({
+                'value': acourse.raw,
+                'label': acourse.get_title()})
+
+        if not course_list:
+            return None
+
+        # Format annotations.
+        return [
+            (['title'], 'Import Course'),
+            (
+                ['properties', 'course', '_inputex'],
+                {
+                    'label': 'Available Courses',
+                    '_type': 'select',
+                    'choices': course_list})]
+
+    def get(self):
+        """Handles REST GET verb and returns an object as JSON payload."""
+        if not CourseOutlineRights.can_view(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict={'course': None},
+            xsrf_token=XsrfTokenManager.create_xsrf_token(
+                'unit-lesson-reorder'))
+
+    def put(self):
+        """Handles REST PUT verb with JSON payload."""
+        if not CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
+        request = transforms.loads(self.request.get('request'))
+        payload = request.get('payload')
+        course_raw = transforms.json_to_dict(
+            transforms.loads(payload), self.SCHEMA_DICT)['course']
+
+        source = None
+        for acourse in sites.get_all_courses():
+            if acourse.raw == course_raw:
+                source = acourse
+                break
+
+        if not source:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'raw': course_raw})
+            return
+
+        errors = []
+        try:
+            courses.ImportExport.import_course(
+                source, sites.get_course_for_current_request(), errors)
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.exception(e)
+            errors.append('Import failed: %s' % e)
+
+        if errors:
+            transforms.send_json_response(self, 412, '\n'.join(errors))
+            return
+
+        transforms.send_json_response(self, 200, 'Imported.')
 
 
 class AssessmentRESTHandler(CommonUnitRESTHandler):

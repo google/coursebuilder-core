@@ -36,6 +36,7 @@ from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from unit_lesson_editor import AssessmentRESTHandler
+from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LinkRESTHandler
 from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
@@ -53,7 +54,7 @@ class DashboardHandler(
     get_actions = [
         default_action, 'assets', 'settings', 'students',
         'edit_settings', 'edit_unit_lesson', 'edit_unit', 'edit_link',
-        'edit_assessment', 'add_asset', 'delete_asset']
+        'edit_assessment', 'add_asset', 'delete_asset', 'import_course']
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
@@ -68,6 +69,7 @@ class DashboardHandler(
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
+            (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler)
@@ -223,6 +225,11 @@ class DashboardHandler(
                 'caption': 'Add Assessment',
                 'action': self.get_action_url('add_assessment'),
                 'xsrf_token': self.create_xsrf_token('add_assessment')})
+            outline_actions.append({
+                'id': 'import_course',
+                'caption': 'Import',
+                'href': self.get_action_url('import_course')
+                })
 
         data_info = self.list_files('/data/')
 
@@ -274,14 +281,6 @@ class DashboardHandler(
                 'action': self.get_action_url('create_or_edit_settings'),
                 'xsrf_token': self.create_xsrf_token(
                     'create_or_edit_settings')})
-        else:
-            message = (
-                'This course is deployed on read-only media '
-                'and can\'t be edited.')
-            yaml_actions.append({
-                'id': 'edit_course_yaml',
-                'caption': 'Edit',
-                'href': 'javascript: alert("%s"); return false;' % message})
 
         # Yaml file content.
         yaml_info = []
@@ -302,7 +301,7 @@ class DashboardHandler(
                 'title': 'About the Course',
                 'children': course_info},
             {
-                'title': 'Contents of <code>course.yaml</code> file',
+                'title': 'Contents of course.yaml file',
                 'actions': yaml_actions,
                 'children': yaml_info}]
 
@@ -322,7 +321,7 @@ class DashboardHandler(
     def list_and_format_file_list(
         self, title, subfolder,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
-        href_template='%s'):
+        href_template='%s', sub_title=None):
         """Walks files in folders and renders their names in a section."""
 
         lines = []
@@ -351,13 +350,17 @@ class DashboardHandler(
             if count:
                 output.append(' (%s)' % count)
             output.append('</h3>')
+        if sub_title:
+            output.append('<blockquote>%s</blockquote>' % cgi.escape(sub_title))
         if lines:
             output.append('<ol>')
             output += lines
             output.append('</ol>')
         else:
-            output.append(
-                '<blockquote>%s</blockquote>' % cgi.escape(caption_if_empty))
+            if caption_if_empty:
+                output.append(
+                    '<blockquote>%s</blockquote>' % cgi.escape(
+                        caption_if_empty))
         return output
 
     def get_assets(self):
@@ -375,7 +378,8 @@ class DashboardHandler(
             prefix='assets/js/activity-')
         lines += self.list_and_format_file_list(
             'Images & Documents', '/assets/img/', links=True, upload=True,
-            href_template='dashboard?action=delete_asset&uri=%s')
+            href_template='dashboard?action=delete_asset&uri=%s',
+            sub_title='< inherited from /assets/img/ >', caption_if_empty=None)
         lines += self.list_and_format_file_list(
             'Cascading Style Sheets', '/assets/css/', links=True,
             caption_if_empty=inherits_from('/assets/css/'))

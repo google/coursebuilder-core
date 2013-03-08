@@ -65,7 +65,7 @@ class ObjectEditor(object):
         save_method='put',
         delete_url=None, delete_method='post',
         auto_return=False, read_only=False,
-        required_modules=None):
+        required_modules=None, save_button_caption='Save'):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -84,6 +84,7 @@ class ObjectEditor(object):
             auto_return: whether to return to the exit_url on successful save
             read_only: optional flag; if set, removes Save and Delete operations
             required_modules: list of inputex modules required for this editor
+            save_button_caption: a caption for the 'Save' button
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
@@ -116,7 +117,8 @@ class ObjectEditor(object):
                 COMMON_REQUIRED_MODULES + required_modules),
             'schema_annotations': cls.format_annotations(annotations),
             'save_method': save_method,
-            'auto_return': auto_return
+            'auto_return': auto_return,
+            'save_button_caption': save_button_caption
             }
 
         if delete_url and not read_only:

@@ -27,6 +27,10 @@ import progress
 import vfs
 
 
+COURSE_MODEL_VERSION_1_2 = '1.2'
+COURSE_MODEL_VERSION_1_3 = '1.3'
+
+
 DEFAULT_COURSE_YAML_DICT = {
     'course': {'title': 'UNTITLED COURSE', 'locale': 'en_US', 'main_image': {}},
     'base': {'show_gplus_button': True},
@@ -65,6 +69,94 @@ def is_editable_fs(app_context):
     return isinstance(app_context.fs.impl, vfs.DatastoreBackedFileSystem)
 
 
+class ImportExport(object):
+    """All migration routines are here."""
+
+    @classmethod
+    def upgrade_1_2_to_1_3(cls, course):
+        """Upgrades 1.2 course structure into 1.3."""
+
+        # This upgrade has no steps.
+
+        # pylint: disable-msg=protected-access
+        course._version = COURSE_MODEL_VERSION_1_3
+
+    @classmethod
+    def copy_activities(cls, src_course, dst_course):
+        """Copies activities from one course to another."""
+        next_id = 1
+        for aunit in src_course.get_units():
+            if verify.UNIT_TYPE_UNIT != aunit.type:
+                continue
+            for alesson in src_course.get_lessons(aunit.id):
+                if not alesson.activity:
+                    continue
+                src_filename = os.path.join(
+                    src_course.app_context.get_asset_home(),
+                    'js/activity-%s.%s.js' % (aunit.id, alesson.id))
+                if not src_course.app_context.fs.isfile(src_filename):
+                    continue
+                assessment_stream = src_course.app_context.fs.open(src_filename)
+                if assessment_stream:
+                    dst_filename = os.path.join(
+                        dst_course.app_context.get_asset_home(),
+                        'js/activity-%s.js' % next_id)
+                    dst_course.app_context.fs.put(
+                        dst_filename, assessment_stream)
+                    alesson.activity_resource_id = next_id
+                    next_id += 1
+
+    @classmethod
+    def copy_assessments(cls, src_course, dst_course):
+        """Copies assessments from one course to another."""
+        for aunit in src_course.get_units():
+            if verify.UNIT_TYPE_ASSESSMENT != aunit.type:
+                continue
+            src_filename = os.path.join(
+                src_course.app_context.get_asset_home(),
+                'js/assessment-%s.js' % aunit.unit_id)
+            if not src_course.app_context.fs.isfile(src_filename):
+                continue
+            assessment_stream = src_course.app_context.fs.open(src_filename)
+            if assessment_stream:
+                dst_filename = os.path.join(
+                    dst_course.app_context.get_asset_home(),
+                    'js/assessment-%s.js' % aunit.id)
+                dst_course.app_context.fs.put(
+                    dst_filename, assessment_stream)
+                aunit.assessment_resource_id = aunit.id
+
+    @classmethod
+    def copy_linked_assets(cls, src_course, dst_course):
+        """Copies linked assets from one course to another."""
+        cls.copy_assessments(src_course, dst_course)
+        cls.copy_activities(src_course, dst_course)
+
+    @classmethod
+    def import_course(cls, src, dst, errors):
+        """Import course from one application context into another."""
+
+        src_course = Course(None, app_context=src)
+        dst_course = Course(None, app_context=dst)
+
+        if not is_editable_fs(dst):
+            errors.append(
+                'Target course %s must be on read-write media.' % dst.raw)
+            return
+
+        if dst_course.get_units():
+            errors.append('Target course %s must be empty.' % dst.raw)
+            return
+
+        # pylint: disable-msg=protected-access
+        src_course._materialize()
+        # pylint: disable-msg=protected-access
+        dst_course._deserialize(src_course._serialize())
+        cls.copy_linked_assets(src_course, dst_course)
+        # pylint: disable-msg=protected-access
+        dst_course._save()
+
+
 class Course(object):
     """Manages a course and all of its components."""
 
@@ -95,14 +187,25 @@ class Course(object):
                          course_data_filename)
             raise
 
-    def __init__(self, handler):
-        self._app_context = handler.app_context
+    def __init__(self, handler, app_context=None):
+        self._app_context = app_context if app_context else handler.app_context
         self._loaded = False
+        self._student_progress_tracker = (
+            progress.UnitLessonProgressTracker(self))
+        self._namespace = self._app_context.get_namespace_name()
+        self._version = COURSE_MODEL_VERSION_1_3
+
         self._units = []
         self._lessons = []
         self._unit_id_to_lessons = {}
-        self._student_progress_tracker = (
-            progress.UnitLessonProgressTracker(self))
+
+    @property
+    def app_context(self):
+        return self._app_context
+
+    @property
+    def version(self):
+        return self._version
 
     def _reindex(self):
         """Groups all lessons by unit_id."""
@@ -115,7 +218,11 @@ class Course(object):
 
     def _serialize(self):
         """Creates bytes of a serialized representation of this instance."""
+        if COURSE_MODEL_VERSION_1_3 != self._version:
+            raise Exception('Unsupported course version %s, expected %s.' % (
+                self._version, COURSE_MODEL_VERSION_1_3))
         envelope = SerializableCourseEnvelope()
+        envelope.version = self._version
         envelope.units = self._units
         envelope.lessons = self._lessons
         return pickle.dumps(envelope)
@@ -123,29 +230,22 @@ class Course(object):
     def _deserialize(self, binary_data):
         """Populates this instance with a serialized representation data."""
         envelope = pickle.loads(binary_data)
+        if COURSE_MODEL_VERSION_1_3 != envelope.version:
+            raise Exception('Unsupported course version %s, expected %s.' % (
+                envelope.version, COURSE_MODEL_VERSION_1_3))
         self._units = envelope.units
         self._lessons = envelope.lessons
-
-        self._reindex()
-
-    def _rebuild_from_csv_files(self):
-        """Rebuilds this instance from CSV files."""
-        self._units, self._lessons = load_csv_course(self._app_context)
-        self._reindex()
-
-    def _init_new(self):
-        """Units new empty instance."""
-        self._units = []
-        self._lessons = []
         self._reindex()
 
     def _rebuild_from_source(self):
         """Loads course data from persistence storage into this instance."""
         units, lessons = load_csv_course(self._app_context)
         if units and lessons:
+            self._version = COURSE_MODEL_VERSION_1_2
             self._units = units
             self._lessons = lessons
             self._reindex()
+            ImportExport.upgrade_1_2_to_1_3(self)
             return
 
         if is_editable_fs(self._app_context):
@@ -155,12 +255,16 @@ class Course(object):
                 self._deserialize(self._app_context.fs.get(filename))
                 return
 
-        self._init_new()
+        # Init new empty instance.
+        self._units = []
+        self._lessons = []
+        self._reindex()
 
     def _load_from_memcache(self):
         """Loads course representation from memcache."""
         try:
-            binary_data = MemcacheManager.get(self.memcache_key)
+            binary_data = MemcacheManager.get(
+                self.memcache_key, namespace=self._namespace)
             if binary_data:
                 self._deserialize(binary_data)
                 self._loaded = True
@@ -175,7 +279,9 @@ class Course(object):
             self._load_from_memcache()
             if not self._loaded:
                 self._rebuild_from_source()
-                MemcacheManager.set(self.memcache_key, self._serialize())
+                MemcacheManager.set(
+                    self.memcache_key, self._serialize(),
+                    namespace=self._namespace)
                 self._loaded = True
 
     def _save(self):
@@ -185,7 +291,7 @@ class Course(object):
         filename = fs.physical_to_logical(self.COURSES_FILENAME)
         self._app_context.fs.put(
             filename, vfs.FileStreamWrapped(None, binary_data))
-        MemcacheManager.delete(self.memcache_key)
+        MemcacheManager.delete(self.memcache_key, namespace=self._namespace)
 
     def get_units(self):
         self._materialize()
@@ -310,17 +416,37 @@ class Course(object):
         self._reindex()
         self._save()
 
+    def get_assessment_url(self, unit_id):
+        """Returns assessment URL for direct fetching."""
+        unit = self.find_unit_by_id(unit_id)
+        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        if unit.assessment_resource_id:
+            resource_id = unit.assessment_resource_id
+        else:
+            resource_id = unit.unit_id
+        return 'assets/js/assessment-%s.js' % resource_id
+
+    def get_activity_url(self, unit_id, lesson_id):
+        """Returns activity URL for direct fetching."""
+        lesson = self.find_lesson_by_id(unit_id, lesson_id)
+        if lesson.activity_resource_id:
+            return 'assets/js/activity-%s.js' % lesson.activity_resource_id
+        else:
+            return 'assets/js/activity-%s.%s.js' % (
+                unit_id, lesson_id)
+
 
 class SerializableCourseEnvelope(object):
     """A serializable, data-only representation of a Course."""
 
     def __init__(self):
+        self.version = None
         self.units = []
         self.lessons = []
 
 
 class Unit(object):
-    """An object to represent a Unit."""
+    """An object to represent a Unit, Assessment or Link."""
 
     def __init__(self):
         self.id = 0
@@ -329,6 +455,7 @@ class Unit(object):
         self.title = ''
         self.release_date = ''
         self.now_available = False
+        self.assessment_resource_id = None
 
 
 class Lesson(object):
@@ -344,6 +471,7 @@ class Lesson(object):
         self.duration = ''
         self.activity = ''
         self.activity_title = ''
+        self.activity_resource_id = None
 
 
 def copy_attributes(source, target, converter):

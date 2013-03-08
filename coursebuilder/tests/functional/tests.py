@@ -454,6 +454,12 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains('Unit 3 - Advanced techniques', response.body)
         assert_contains('data/lesson.csv', response.body)
 
+        # Check editability.
+        if self.supports_editing:
+            assert_contains('Add Assessment', response.body)
+        else:
+            assert_does_not_contain('Add Assessment', response.body)
+
         # Test assets view.
         response = self.get('dashboard?action=assets')
         assert_contains('Google &gt; Dashboard &gt; Assets', response.body)
@@ -475,7 +481,6 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_contains('create_or_edit_settings', response.body)
         else:
             assert_does_not_contain('create_or_edit_settings', response.body)
-            assert_contains('deployed on read-only media', response.body)
 
         # Tests student statistics view.
         response = self.get('dashboard?action=students')
@@ -1575,6 +1580,66 @@ class DatastoreBackedCourseTest(actions.TestBase):
             appengine_config.BUNDLE_ROOT, 'course.yaml')
         self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
         files_added.append(course_yaml)
+
+    def test_course_import(self):
+        """Test importing of the course."""
+
+        # Setup courses.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        self.namespace = 'ns_test'
+        self.base = '/test'
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # Format import payload and URL.
+        payload_dict = {}
+        payload_dict['course'] = 'course:/:/'
+        request = {}
+        request['payload'] = transforms.dumps(payload_dict)
+        import_put_url = (
+            '/test/rest/course/import?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}))
+
+        # Check non-logged user has no rights.
+        response = self.testapp.put(import_put_url, {}, expect_errors=True)
+        assert_equals(200, response.status_int)
+        assert_contains('Access denied.', response.body)
+
+        # Login as admin.
+        email = 'test_course_import@google.com'
+        actions.login(email, is_admin=True)
+
+        # Check course is empty.
+        response = self.get('/test/dashboard')
+        assert_equals(200, response.status_int)
+        assert_does_not_contain('Filter image results by color', response.body)
+
+        # Import sample course.
+        response = self.put(import_put_url, {})
+        assert_equals(200, response.status_int)
+        assert_contains('Imported.', response.body)
+
+        # Check course is not empty.
+        response = self.get('/test/dashboard')
+        assert_contains('Filter image results by color', response.body)
+
+        # Check assessment is copied.
+        response = self.get('/test/assets/js/assessment-5.js')
+        assert_equals(200, response.status_int)
+        assert_contains('Humane Society website', response.body)
+
+        # Check activity is copied.
+        response = self.get('/test/assets/js/activity-15.js')
+        assert_equals(200, response.status_int)
+        assert_contains('household spending site', response.body)
+
+        # Clean up.
+        sites.reset_courses()
+        config.Registry.test_overrides = {}
+
+        # TODO(psimakov): we need more tests for 1.2 -> 1.3 and 1.3 -> 1.3
+        # migrations and upgrades including 1.3 -> unknown and unknown -> 1.3
+        # error scenarious
 
 
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):

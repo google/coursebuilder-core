@@ -114,7 +114,7 @@ LESSON_CSV_TO_DB_CONVERTER = {
     'unit_title': None,
     'lesson_id': ('id', int),
     'lesson_title': ('title', unicode),
-    'lesson_activity': ('activity', unicode),
+    'lesson_activity': ('activity', lambda value: value == 'yes'),
     'lesson_activity_name': ('activity_title', unicode),
     'lesson_video_id': ('video', unicode),
     'lesson_objectives': ('objectives', unicode),
