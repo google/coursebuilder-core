@@ -104,21 +104,29 @@ class DashboardHandler(
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 
+    def _get_top_nav(self):
+        current_action = self.request.get('action')
+        nav_mappings = [
+            ('', 'Outline'),
+            ('assets', 'Assets'),
+            ('settings', 'Settings'),
+            ('students', 'Students')]
+        nav = []
+        for action, title in nav_mappings:
+            class_attr = 'class="selected"' if action == current_action else ''
+            nav.append(
+                '<a href="dashboard?action=%s" %s>%s</a>' % (
+                    action, class_attr, title))
+
+        if roles.Roles.is_super_admin():
+            nav.append('<a href="/admin">Admin</a>')
+
+        return '\n'.join(nav)
+
     def render_page(self, template_values):
         """Renders a page using provided template values."""
 
-        admin_menu = ''
-        if roles.Roles.is_super_admin():
-            admin_menu = '<a href="/admin">Admin</a>'
-
-        template_values['top_nav'] = """
-          <a href="dashboard">Outline</a>
-          <a href="dashboard?action=assets">Assets</a>
-          <a href="dashboard?action=settings">Settings</a>
-          <a href="dashboard?action=students">Students</a>
-          %s
-          """ % admin_menu
-
+        template_values['top_nav'] = self._get_top_nav()
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
             users.get_current_user().email(), users.create_logout_url('/'))

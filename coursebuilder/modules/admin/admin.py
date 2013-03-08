@@ -103,30 +103,39 @@ class AdminHandler(
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 
-    def render_page(self, template_values):
-        """Renders a page using provided template values."""
+    def _get_user_nav(self):
+        current_action = self.request.get('action')
+        nav_mappings = [
+            ('', 'Courses'),
+            ('settings', 'Settings'),
+            ('perf', 'Metrics'),
+            ('deployment', 'Deployment'),
+            ('console', 'Console')]
+        nav = []
+        for action, title in nav_mappings:
+            class_attr = 'class="selected"' if action == current_action else ''
+            nav.append(
+                '<a href="/admin?action=%s" %s>%s</a>' % (
+                    action, class_attr, title))
 
         if PRODUCTION_MODE:
             app_id = app.get_application_id()
-            console_link = """
+            nav.append("""
                 <a target="_blank"
                   href="https://appengine.google.com/dashboard?app_id=s~%s">
                   Google App Engine
                 </a>
-                """ % app_id
+                """ % app_id)
         else:
-            console_link = """
-                <a target="_blank" href="/_ah/admin">Google App Engine</a>
-                """
+            nav.append(
+                '<a target="_blank" href=" /_ah/ admin">Google App Engine</a>')
 
-        template_values['top_nav'] = """
-          <a href="/admin">Courses</a>
-          <a href="/admin?action=settings">Settings</a>
-          <a href="/admin?action=perf">Metrics</a>
-          <a href="/admin?action=deployment">Deployment</a>
-          <a href="/admin?action=console">Console</a>
-          %s
-          """ % console_link
+        return '\n'.join(nav)
+
+    def render_page(self, template_values):
+        """Renders a page using provided template values."""
+
+        template_values['top_nav'] = self._get_user_nav()
         template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
             users.get_current_user().email(), users.create_logout_url('/'))
         template_values[
