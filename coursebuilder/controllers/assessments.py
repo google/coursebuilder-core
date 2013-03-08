@@ -23,6 +23,7 @@ from models import transforms
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
+from tools import verify
 from utils import BaseHandler
 from google.appengine.ext import db
 
@@ -127,9 +128,14 @@ class AnswerHandler(BaseHandler):
         if not self.assert_xsrf_token_or_fail(self.request, 'assessment-post'):
             return
 
+        course = self.get_course()
         assessment_type = self.request.get('assessment_type')
+        unit = course.find_unit_by_id(assessment_type)
         if not assessment_type:
             logging.error('No assessment type supplied.')
+            return
+        if unit is None or not unit.type == verify.UNIT_TYPE_ASSESSMENT:
+            logging.error('No assessment named %s exists.', assessment_type)
             return
 
         # Convert answers from JSON to dict.
@@ -147,12 +153,18 @@ class AnswerHandler(BaseHandler):
             student.key().name(), assessment_type, answers, score)
 
         # Record completion event in progress tracker.
-        self.get_course().get_progress_tracker().put_assessment_completed(
+        course.get_progress_tracker().put_assessment_completed(
             student, assessment_type)
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment'] = assessment_type
         self.template_value['result'] = result
+        self.template_value['score'] = score
+
+        self.template_value['assessment_name'] = unit.title
+        self.template_value['is_last_assessment'] = (
+            course.is_last_assessment(unit))
+
         self.template_value['student_score'] = utils.get_score(
             student, 'overall_score')
         self.render('test_confirmation.html')

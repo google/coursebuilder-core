@@ -60,6 +60,13 @@ function gcbAudit(dict, source) {
   }
 }
 
+// Returns the value of a URL parameter, if it exists.
+function getParamFromUrlByName(name) {
+  return decodeURI(
+      (RegExp(name + '=' + '(.+?)(&|$)').exec(location.search)||[,null])[1]
+  );
+}
+
 // 'choices' is a list of choices, where each element is:
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
@@ -551,7 +558,7 @@ function renderAssessment(assessment, domRoot) {
 
     var score = ((numCorrect / numQuestions) * 100).toFixed(2);
 
-    var assessmentType = assessment.assessmentName || 'unnamed assessment';
+    var assessmentType = getParamFromUrlByName('name') || 'unnamed assessment';
     if (submitAnswers) {
       // create a new hidden form, submit it via POST, and then delete it
 

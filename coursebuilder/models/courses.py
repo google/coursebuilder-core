@@ -826,6 +826,13 @@ class Course(object):
     def find_lesson_by_id(self, unit, lesson_id):
         return self._model.find_lesson_by_id(unit, lesson_id)
 
+    def is_last_assessment(self, unit):
+        """Checks whether the given unit is the last of all the assessments."""
+        for current_unit in reversed(self.get_units()):
+            if current_unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                return current_unit.id == unit.id
+        return False
+
     def add_unit(self):
         """Adds new unit to a course."""
         return self._model.add_unit('U', 'New Unit')

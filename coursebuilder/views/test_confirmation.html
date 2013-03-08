@@ -11,16 +11,20 @@
   <div class="gcb-col-7 gcb-aside gcb-button-box">
 
     <p class="top_content">
-      <!-- Displays generic text to confirm submission of the assessment. -->
-      {% if assessment == 'Fin' %}
+      {% if 'assessment_confirmations' in course_info and is_last_assessment %}
+        <!-- Displays special text for the final assessment. -->
         {{course_info.assessment_confirmations[assessment]['text'] % student_score}}
-      {% else %}
-        {{course_info.assessment_confirmations[assessment]['text']}}
-      {% endif %}
 
-      <!-- Displays further confirmation text relevant to the specific assessment. -->
-      {% if result %}
-        {{course_info.assessment_confirmations[assessment]['result_text'][result]}}
+        <!-- Displays further confirmation text for the final assessment. -->
+        {% if result %}
+          {{course_info.assessment_confirmations[assessment]['result_text'][result]}}
+        {% endif %}
+
+      {% else %}
+
+        Thank you for taking the {{assessment_name | lower}}. Your score is {{score}}%.
+        If you wish, you may return to this assessment and take it again.
+
       {% endif %}
     </p>
 

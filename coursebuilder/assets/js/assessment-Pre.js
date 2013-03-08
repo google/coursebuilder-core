@@ -48,7 +48,10 @@ var assessment = {
     }
   ],
 
+  // The assessmentName key is deprecated in v1.3 of Course Builder, and no
+  // longer used. The assessment name should be set in the unit.csv file or via
+  // the course editor interface.
   assessmentName: 'Pre', // unique name submitted along with all of the answers
+
   checkAnswers: false    // render a "Check your Answers" button to allow students to check answers prior to submitting?
 }
-
