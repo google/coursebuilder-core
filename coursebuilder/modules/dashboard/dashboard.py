@@ -312,12 +312,6 @@ class DashboardHandler(
                 'description': messages.DATA_FILES_DESCRIPTION,
                 'children': data_info}]
 
-        if roles.Roles.is_super_admin():
-            sections.append({
-                'title': 'Debug',
-                'children': [cgi.escape(
-                    courses.Course(self).to_json()).replace('\n', '<br>')]})
-
         template_values = {}
         template_values['page_title'] = self.format_title('Outline')
         template_values['alerts'] = self._get_alerts()
