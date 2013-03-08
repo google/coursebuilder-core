@@ -1054,6 +1054,22 @@ class StudentAspectTest(actions.TestBase):
         response = response.form.submit(expect_errors=True)
         assert_equals(response.status_int, 403)
 
+    def test_response_headers(self):
+        """Test dynamically-generated responses use proper headers."""
+
+        email = 'test_response_headers@example.com'
+        name = 'Test Response Headers'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = self.get('student/home')
+        assert_equals(response.status_int, 200)
+        assert_contains('must-revalidate', response.headers['Cache-Control'])
+        assert_contains('no-cache', response.headers['Cache-Control'])
+        assert_contains('no-cache', response.headers['Pragma'])
+        assert_contains('Mon, 01 Jan 1990', response.headers['Expires'])
+
 
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""

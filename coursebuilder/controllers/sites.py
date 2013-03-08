@@ -150,6 +150,10 @@ SITE_TYPE_COURSE = 'course'
 DEFAULT_CACHE_CONTROL_MAX_AGE = 600
 DEFAULT_CACHE_CONTROL_PUBLIC = 'public'
 
+# default HTTP headers for dynamic responses
+DEFAULT_EXPIRY_DATE = 'Mon, 01 Jan 1990 00:00:00 GMT'
+DEFAULT_PRAGMA = 'no-cache'
+
 # enable debug output
 DEBUG_INFO = False
 
@@ -441,6 +445,14 @@ def set_static_resource_cache_control(handler):
     handler.response.cache_control.max_age = DEFAULT_CACHE_CONTROL_MAX_AGE
 
 
+def set_dynamic_response_headers(handler):
+    """Properly sets response headers for a dynamically-generated response."""
+    handler.response.cache_control.no_cache = True
+    handler.response.cache_control.must_revalidate = True
+    handler.response.expires = DEFAULT_EXPIRY_DATE
+    handler.response.pragma = DEFAULT_PRAGMA
+
+
 def make_zip_handler(zipfilename):
     """Creates a handler that serves files from a zip file."""
 
@@ -675,6 +687,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             handler.app_context = context
             handler.request = self.request
             handler.response = self.response
+
+            # This conditional is needed for the unit tests to pass.
+            if handler.response:
+                set_dynamic_response_headers(handler)
 
             debug('Handler: %s > %s' % (path, handler.__class__.__name__))
             DYNAMIC_HANDLER_COUNT.inc()
