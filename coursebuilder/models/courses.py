@@ -19,7 +19,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import copy
 import logging
 import os
-import pickle
 import sys
 from tools import verify
 import yaml
@@ -274,6 +273,15 @@ class CourseModel12(object):
         index = int(lesson_id) - 1
         return self.get_lessons(unit.unit_id)[index]
 
+    def to_json(self):
+        """Creates JSON representation of this instance."""
+        adict = copy.deepcopy(self)
+        del adict._app_context
+        return transforms.dumps(
+            adict,
+            indent=4, sort_keys=True,
+            default=lambda o: o.__dict__)
+
 
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
@@ -330,7 +338,7 @@ class Lesson13(object):
         return self.has_activity
 
 
-class SerializableCourseEnvelope(object):
+class SerializableCourseEnvelope13(object):
     """A serializable, data-only representation of a Course."""
 
     def __init__(self):
@@ -338,7 +346,52 @@ class SerializableCourseEnvelope(object):
         self.next_id = None
         self.units = None
         self.lessons = None
-        self.unit_id_to_lesson_ids = None
+
+    @classmethod
+    def envelope_to_dict(cls, envelope):
+        """Saves an envelope into a dict."""
+        result = {}
+        result['version'] = str(envelope.version)
+        result['next_id'] = int(envelope.next_id)
+
+        units = []
+        for unit in envelope.units:
+            units.append(transforms.instance_to_dict(unit))
+        result['units'] = units
+
+        lessons = []
+        for lesson in envelope.lessons:
+            lessons.append(transforms.instance_to_dict(lesson))
+        result['lessons'] = lessons
+
+        return result
+
+    @classmethod
+    def dict_to_envelope(cls, adict):
+        """Loads envelope data from the dict."""
+        envelope = SerializableCourseEnvelope13()
+        envelope.version = str(adict.get('version'))
+        envelope.next_id = int(adict.get('next_id'))
+
+        envelope.units = []
+        unit_dicts = adict.get('units')
+        if unit_dicts:
+            for unit_dict in unit_dicts:
+                unit = Unit13()
+                transforms.dict_to_instance(unit_dict, unit)
+                envelope.units.append(unit)
+
+        envelope.lessons = []
+        lesson_dicts = adict.get('lessons')
+        if lesson_dicts:
+            for lesson_dict in lesson_dicts:
+                lesson = Lesson13()
+                transforms.dict_to_instance(lesson_dict, lesson)
+                envelope.lessons.append(lesson)
+
+        envelope.unit_id_to_lesson_ids = adict.get('unit_id_to_lesson_ids')
+
+        return envelope
 
 
 class CourseModel13(object):
@@ -347,7 +400,7 @@ class CourseModel13(object):
     VERSION = COURSE_MODEL_VERSION_1_3
 
     # A logical filename where we persist courses data."""
-    COURSES_FILENAME = 'data/course.pickle'
+    COURSES_FILENAME = 'data/course.json'
 
     # The course content files may change between deployment. To avoid reading
     # old cached values by the new version of the application we add deployment
@@ -370,7 +423,7 @@ class CourseModel13(object):
             binary_data = MemcacheManager.get(
                 cls.memcache_key, namespace=app_context.get_namespace_name())
             if binary_data:
-                envelope = pickle.loads(binary_data)
+                envelope = cls._deserialize(binary_data)
                 cls.assert_envelope_version(envelope)
         except Exception as e:  # pylint: disable-msg=broad-except
             logging.error(
@@ -381,7 +434,8 @@ class CourseModel13(object):
             fs = app_context.fs.impl
             filename = fs.physical_to_logical(cls.COURSES_FILENAME)
             if app_context.fs.isfile(filename):
-                envelope = pickle.loads(app_context.fs.get(filename))
+                envelope = envelope = cls._deserialize(
+                    app_context.fs.get(filename))
                 cls.assert_envelope_version(envelope)
                 if envelope:
                     return CourseModel13(app_context, envelope)
@@ -414,7 +468,8 @@ class CourseModel13(object):
             self._next_id = envelope.next_id
             self._units = envelope.units
             self._lessons = envelope.lessons
-            self._unit_id_to_lesson_ids = envelope.unit_id_to_lesson_ids
+
+        self._index()
 
     def _get_next_id(self):
         """Allocates next id in sequence."""
@@ -423,21 +478,38 @@ class CourseModel13(object):
         return next_id
 
     def _index(self):
+        """Indexes units and lessons."""
         self._unit_id_to_lesson_ids = self._make_unit_id_to_lessons_lookup_dict(
             self._lessons)
         index_units_and_lessons(self)
 
-    def save(self):
-        """Saves this model to fs."""
-        envelope = SerializableCourseEnvelope()
+    @classmethod
+    def _serialize(cls, envelope):
+        """Saves envelope to a binary representation."""
+        adict = SerializableCourseEnvelope13.envelope_to_dict(envelope)
+        json_text = transforms.dumps(adict)
+        return json_text.encode('utf-8')
+
+    @classmethod
+    def _deserialize(cls, binary_data):
+        """Loads an envelope from a binary representation."""
+        json_text = binary_data.decode('utf-8')
+        adict = transforms.loads(json_text)
+        return SerializableCourseEnvelope13.dict_to_envelope(adict)
+
+    def _make_envelope(self):
+        """Create an envelop for current object instance."""
+        envelope = SerializableCourseEnvelope13()
         envelope.version = self.VERSION
         envelope.next_id = self._next_id
         envelope.units = self._units
         envelope.lessons = self._lessons
         envelope.unit_id_to_lesson_ids = self._unit_id_to_lesson_ids
+        return envelope
 
-        # TODO(psimakov): we really should use JSON, not binary format
-        binary_data = pickle.dumps(envelope)
+    def save(self):
+        """Saves this model to fs."""
+        binary_data = self._serialize(self._make_envelope())
 
         fs = self._app_context.fs.impl
         filename = fs.physical_to_logical(self.COURSES_FILENAME)
@@ -503,6 +575,7 @@ class CourseModel13(object):
         unit.now_available = False
 
         self._units.append(unit)
+        self._index()
 
         return unit
 
@@ -802,6 +875,15 @@ class CourseModel13(object):
 
         return src_course, self
 
+    def to_json(self):
+        """Creates JSON representation of this instance."""
+        adict = SerializableCourseEnvelope13.envelope_to_dict(
+            self._make_envelope())
+        return transforms.dumps(
+            adict,
+            indent=4, sort_keys=True,
+            default=lambda o: o.__dict__)
+
 
 class Course(object):
     """Manages a course and all of its components."""
@@ -867,13 +949,7 @@ class Course(object):
         return self._app_context
 
     def to_json(self):
-        """Creates JSON representation of this instance."""
-        model = copy.deepcopy(self._model)
-        del model._app_context
-        return transforms.dumps(
-            model,
-            indent=4, sort_keys=True,
-            default=lambda o: o.__dict__)
+        return self._model.to_json()
 
     def get_progress_tracker(self):
         if not self._tracker:

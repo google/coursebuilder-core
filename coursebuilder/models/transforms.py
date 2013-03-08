@@ -174,6 +174,22 @@ def value_to_string(value, value_type):
         raise ValueError('Unknown type: %s' % value_type)
 
 
+def dict_to_instance(adict, instance):
+    """Populates instance attributes using data dictionary."""
+    for key, unused_value in instance.__dict__.iteritems():
+        if not key.startswith('_'):
+            setattr(instance, key, adict[key])
+
+
+def instance_to_dict(instance):
+    """Populates data dictionary from instance attrs."""
+    adict = {}
+    for key, unused_value in instance.__dict__.iteritems():
+        if not key.startswith('_'):
+            adict[key] = getattr(instance, key)
+    return adict
+
+
 def send_json_response(
     handler, status_code, message, payload_dict=None, xsrf_token=None):
     """Formats and sends out a JSON REST response envelope and body."""
