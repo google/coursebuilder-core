@@ -27,40 +27,40 @@
       {{course_info.unit.after_leftnav_begins}}
       {% for lesson in lessons %}
       <li
-        {% if lesson.id == lesson_id %}
-        class="active"> {{ unit_id }}.{{ lesson.id }}<br>{{ lesson.title }}
+        {% if lesson.lesson_id == lesson_id %}
+        class="active"> {{ unit_id }}.{{ lesson.lesson_id }}<br>{{ lesson.title }}
         {% else %}
-        ><a href="unit?unit={{ unit_id }}&lesson={{ lesson.id }}" >{{ unit_id }}.{{ lesson.id }} {{ lesson.title }}</a>
+        ><a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}" >{{ unit_id }}.{{ lesson.lesson_id }} {{ lesson.title }}</a>
         {% endif %}
 
         {% if lesson.activity %}
           <ul>
             <li>
               {% if is_progress_recorded %}
-                {% if progress[lesson.id] == 2 %}
+                {% if progress[lesson.lesson_id] == 2 %}
                   <img src="assets/lib/completed.png"
                        alt="{% trans %} Completed {% endtrans %}"
                        title="{% trans %} Completed {% endtrans %}"
                        class="progress"
-                       id="progress-completed-{{lesson.id}}">
-                {% elif progress[lesson.id] == 1 %}
+                       id="progress-completed-{{lesson.lesson_id}}">
+                {% elif progress[lesson.lesson_id] == 1 %}
                   <img src="assets/lib/in_progress.png"
                        alt="{% trans %} In progress {% endtrans %}"
                        title="{% trans %} In progress {% endtrans %}"
                        class="progress"
-                       id="progress-inprogress-{{lesson.id}}">
+                       id="progress-inprogress-{{lesson.lesson_id}}">
                 {% else %}
                   <img src="assets/lib/not_started.png"
                        alt="{% trans %} Not yet started {% endtrans %}"
                        title="{% trans %} Not yet started {% endtrans %}"
                        class="progress"
-                       id="progress-notstarted-{{lesson.id}}">
+                       id="progress-notstarted-{{lesson.lesson_id}}">
                 {% endif %}
               {% else %}
                 <span class="progress-empty"></span>
               {% endif %}
 
-              <a href="activity?unit={{ unit_id }}&lesson={{ lesson.id }}">
+              <a href="activity?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
                 {% trans %} Activity {% endtrans %}
               </a>
             </li>
@@ -75,7 +75,7 @@
   <div class="gcb-article tab-content" role="main">
     {{course_info.unit.after_content_begins}}
     {% for lesson in lessons %}
-      {% if lesson.id == lesson_id %}
+      {% if lesson.lesson_id == lesson_id %}
 
         <div style="padding-bottom: 20px;">
           <div class="gcb-aside gcb-button-box">

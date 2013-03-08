@@ -150,7 +150,8 @@ class UnitLessonCompletionTracker(object):
             if not lesson.activity:
                 continue
             if not (self.get_lesson_status(
-                    progress, unit_id, lesson.id) == self.COMPLETED_STATE):
+                    progress,
+                    unit_id, lesson.lesson_id) == self.COMPLETED_STATE):
                 return
 
         # Record that all lessons in this unit have been completed.
@@ -171,7 +172,7 @@ class UnitLessonCompletionTracker(object):
 
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
-            if str(lesson.id) == lesson_id and lesson:
+            if str(lesson.lesson_id) == lesson_id and lesson:
                 if not (self.get_activity_status(
                         progress, unit_id, lesson_id) == self.COMPLETED_STATE):
                     return
@@ -389,10 +390,10 @@ class UnitLessonCompletionTracker(object):
 
         result = {}
         for lesson in lessons:
-            value = self.get_lesson_status(progress, unit_id, lesson.id)
+            value = self.get_lesson_status(progress, unit_id, lesson.lesson_id)
             if value is None:
                 value = 0
-            result[lesson.id] = value
+            result[lesson.lesson_id] = value
 
         return result
 

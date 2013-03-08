@@ -179,21 +179,21 @@ class InfrastructureTest(actions.TestBase):
         unit = course.add_unit()
         assessment = course.add_assessment()
         course.save()
-        assert course.find_unit_by_id(link.id)
-        assert course.find_unit_by_id(unit.id)
-        assert course.find_unit_by_id(assessment.id)
+        assert course.find_unit_by_id(link.unit_id)
+        assert course.find_unit_by_id(unit.unit_id)
+        assert course.find_unit_by_id(assessment.unit_id)
         assert 3 == len(course.get_units())
-        assert assessment.id == 3
+        assert assessment.unit_id == 3
 
         # Check unit can be found.
-        assert unit == course.find_unit_by_id(unit.id)
+        assert unit == course.find_unit_by_id(unit.unit_id)
         assert not course.find_unit_by_id(999)
 
         # Update unit.
         unit.title = 'Test Title'
         course.update_unit(unit)
         course.save()
-        assert 'Test Title' == course.find_unit_by_id(unit.id).title
+        assert 'Test Title' == course.find_unit_by_id(unit.unit_id).title
 
         # Update assessment.
         assessment_content = open(os.path.join(
@@ -214,29 +214,31 @@ class InfrastructureTest(actions.TestBase):
         lesson_b = course.add_lesson(unit)
         lesson_c = course.add_lesson(unit)
         course.save()
-        assert [lesson_a, lesson_b, lesson_c] == course.get_lessons(unit.id)
-        assert lesson_c.id == 6
+        assert [lesson_a, lesson_b, lesson_c] == course.get_lessons(
+            unit.unit_id)
+        assert lesson_c.lesson_id == 6
 
         # Reorder lessons.
         new_order = [
-            {'id': link.id},
+            {'id': link.unit_id},
             {
-                'id': unit.id,
+                'id': unit.unit_id,
                 'lessons': [
-                    {'id': lesson_b.id},
-                    {'id': lesson_a.id},
-                    {'id': lesson_c.id}]},
-            {'id': assessment.id}]
+                    {'id': lesson_b.lesson_id},
+                    {'id': lesson_a.lesson_id},
+                    {'id': lesson_c.lesson_id}]},
+            {'id': assessment.unit_id}]
         course.reorder_units(new_order)
         course.save()
-        assert [lesson_b, lesson_a, lesson_c] == course.get_lessons(unit.id)
+        assert [lesson_b, lesson_a, lesson_c] == course.get_lessons(
+            unit.unit_id)
 
         # Move lesson to another unit.
         another_unit = course.add_unit()
         course.move_lesson_to(lesson_b, another_unit)
         course.save()
-        assert [lesson_a, lesson_c] == course.get_lessons(unit.id)
-        assert [lesson_b] == course.get_lessons(another_unit.id)
+        assert [lesson_a, lesson_c] == course.get_lessons(unit.unit_id)
+        assert [lesson_b] == course.get_lessons(another_unit.unit_id)
         course.delete_unit(another_unit)
 
         # Test delete.
@@ -2103,9 +2105,9 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_contains('Humane Society website', response.body)
 
         # Check activity is copied.
-        response = self.get('/test/assets/js/activity-23.js')
+        response = self.get('/test/assets/js/activity-37.js')
         assert_equals(200, response.status_int)
-        assert_contains('household spending site', response.body)
+        assert_contains('explore ways to keep yourself updated', response.body)
 
         # Clean up.
         sites.reset_courses()

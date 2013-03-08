@@ -147,9 +147,8 @@ class Unit12(object):
     """An object to represent a Unit, Assessment or Link (version 1.2)."""
 
     def __init__(self):
-        self.id = 0
+        self.unit_id = ''  # primary key
         self.type = ''
-        self.unit_id = ''
         self.title = ''
         self.release_date = ''
         self.now_available = False
@@ -164,8 +163,8 @@ class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
 
     def __init__(self):
-        self.unit_id = 0
-        self.id = 0
+        self.lesson_id = 0  # primary key
+        self.unit_id = 0  # unit.unit_id of parent
         self.title = ''
         self.objectives = ''
         self.video = ''
@@ -242,7 +241,7 @@ class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
 
     def __init__(self):
-        self.id = 0
+        self.unit_id = 0  # primary key
         self.type = ''
         self.title = ''
         self.release_date = ''
@@ -251,18 +250,13 @@ class Unit13(object):
         # Only valid for the unit.type == verify.UNIT_TYPE_LINK.
         self.href = None
 
-    @property
-    def unit_id(self):
-        """The unit.unit_id and unit.id are identical in this model."""
-        return self.id
-
 
 class Lesson13(object):
     """An object to represent a Lesson (version 1.3)."""
 
     def __init__(self):
-        self.id = 0
-        self.unit_id = 0  # unit.id of parent
+        self.lesson_id = 0  # primary key
+        self.unit_id = 0  # unit.unit_id of parent
         self.title = ''
         self.objectives = ''
         self.video = ''
@@ -366,7 +360,7 @@ class CourseModel13(object):
             key = str(lesson.unit_id)
             if not key in unit_id_to_lesson_ids:
                 unit_id_to_lesson_ids[key] = []
-            unit_id_to_lesson_ids[key].append(str(lesson.id))
+            unit_id_to_lesson_ids[key].append(str(lesson.lesson_id))
         self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
 
     def save(self):
@@ -410,7 +404,7 @@ class CourseModel13(object):
         unit = self.find_unit_by_id(unit_id)
         assert unit
         assert verify.UNIT_TYPE_ASSESSMENT == unit.type
-        return 'assets/js/assessment-%s.js' % unit.id
+        return 'assets/js/assessment-%s.js' % unit.unit_id
 
     def get_activity_filename(self, unused_unit_id, lesson_id):
         """Returns activity base filename."""
@@ -423,14 +417,14 @@ class CourseModel13(object):
     def find_unit_by_id(self, unit_id):
         """Finds a unit given its id."""
         for unit in self._units:
-            if str(unit.id) == str(unit_id):
+            if str(unit.unit_id) == str(unit_id):
                 return unit
         return None
 
     def find_lesson_by_id(self, unused_unit, lesson_id):
         """Finds a lesson given its id."""
         for lesson in self._lessons:
-            if str(lesson.id) == str(lesson_id):
+            if str(lesson.lesson_id) == str(lesson_id):
                 return lesson
         return None
 
@@ -440,7 +434,7 @@ class CourseModel13(object):
 
         unit = Unit13()
         unit.type = unit_type
-        unit.id = self._get_next_id()
+        unit.unit_id = self._get_next_id()
         unit.title = title
         unit.now_available = False
 
@@ -450,12 +444,12 @@ class CourseModel13(object):
 
     def add_lesson(self, unit, title):
         """Adds brand new lesson to a unit."""
-        unit = self.find_unit_by_id(unit.id)
+        unit = self.find_unit_by_id(unit.unit_id)
         assert unit
 
         lesson = Lesson13()
-        lesson.id = self._get_next_id()
-        lesson.unit_id = unit.id
+        lesson.lesson_id = self._get_next_id()
+        lesson.unit_id = unit.unit_id
         lesson.title = title
         lesson.now_available = False
 
@@ -466,13 +460,13 @@ class CourseModel13(object):
 
     def move_lesson_to(self, lesson, unit):
         """Moves a lesson to another unit."""
-        unit = self.find_unit_by_id(unit.id)
+        unit = self.find_unit_by_id(unit.unit_id)
         assert unit
         assert verify.UNIT_TYPE_UNIT == unit.type
 
-        lesson = self.find_lesson_by_id(None, lesson.id)
+        lesson = self.find_lesson_by_id(None, lesson.lesson_id)
         assert lesson
-        lesson.unit_id = unit.id
+        lesson.unit_id = unit.unit_id
 
         self._index(self._lessons)
 
@@ -481,7 +475,7 @@ class CourseModel13(object):
     def _delete_activity(self, lesson):
         """Deletes activity."""
         filename = self._app_context.fs.impl.physical_to_logical(
-            self.get_activity_filename(None, lesson.id))
+            self.get_activity_filename(None, lesson.lesson_id))
         if self.app_context.fs.isfile(filename):
             self.app_context.fs.delete(filename)
             return True
@@ -490,7 +484,7 @@ class CourseModel13(object):
     def _delete_assessment(self, unit):
         """Deletes assessment."""
         filename = self._app_context.fs.impl.physical_to_logical(
-            self.get_assessment_filename(unit.id))
+            self.get_assessment_filename(unit.unit_id))
         if self.app_context.fs.isfile(filename):
             self.app_context.fs.delete(filename)
             return True
@@ -498,7 +492,7 @@ class CourseModel13(object):
 
     def delete_lesson(self, lesson):
         """Delete a lesson."""
-        lesson = self.find_lesson_by_id(None, lesson.id)
+        lesson = self.find_lesson_by_id(None, lesson.lesson_id)
         if not lesson:
             return False
         if lesson.has_activity:
@@ -509,10 +503,10 @@ class CourseModel13(object):
 
     def delete_unit(self, unit):
         """Deletes a unit."""
-        unit = self.find_unit_by_id(unit.id)
+        unit = self.find_unit_by_id(unit.unit_id)
         if not unit:
             return False
-        for lesson in self.get_lessons(unit.id):
+        for lesson in self.get_lessons(unit.unit_id):
             self.delete_lesson(lesson)
         if verify.UNIT_TYPE_ASSESSMENT == unit.type:
             self._delete_assessment(unit)
@@ -522,7 +516,7 @@ class CourseModel13(object):
 
     def update_unit(self, unit):
         """Updates an existing unit."""
-        existing_unit = self.find_unit_by_id(unit.id)
+        existing_unit = self.find_unit_by_id(unit.unit_id)
         if not existing_unit:
             return False
         existing_unit.title = unit.title
@@ -536,7 +530,8 @@ class CourseModel13(object):
 
     def update_lesson(self, lesson):
         """Updates an existing lesson."""
-        existing_lesson = self.find_lesson_by_id(lesson.unit_id, lesson.id)
+        existing_lesson = self.find_lesson_by_id(
+            lesson.unit_id, lesson.lesson_id)
         if not existing_lesson:
             return False
         existing_lesson.title = lesson.title
@@ -597,7 +592,7 @@ class CourseModel13(object):
             errors = []
 
         path = self._app_context.fs.impl.physical_to_logical(
-            self.get_assessment_filename(unit.id))
+            self.get_assessment_filename(unit.unit_id))
         root_name = 'assessment'
 
         try:
@@ -629,7 +624,7 @@ class CourseModel13(object):
             errors = []
 
         path = self._app_context.fs.impl.physical_to_logical(
-            self.get_activity_filename(lesson.unit_id, lesson.id))
+            self.get_activity_filename(lesson.unit_id, lesson.lesson_id))
         root_name = 'activity'
 
         try:
@@ -679,7 +674,7 @@ class CourseModel13(object):
                     if astream:
                         dst_filename = os.path.join(
                             self.app_context.get_home(),
-                            self.get_assessment_filename(dst_unit.id))
+                            self.get_assessment_filename(dst_unit.unit_id))
                         self.app_context.fs.put(dst_filename, astream)
 
         def copy_lesson12_into_lesson13(
@@ -702,13 +697,14 @@ class CourseModel13(object):
                 src_filename = os.path.join(
                     src_course.app_context.get_home(),
                     src_course.get_activity_filename(
-                        src_unit.id, src_lesson.id))
+                        src_unit.unit_id, src_lesson.lesson_id))
                 if src_course.app_context.fs.isfile(src_filename):
                     astream = src_course.app_context.fs.open(src_filename)
                     if astream:
                         dst_filename = os.path.join(
                             self.app_context.get_home(),
-                            self.get_activity_filename(None, dst_lesson.id))
+                            self.get_activity_filename(
+                                None, dst_lesson.lesson_id))
                         self.app_context.fs.put(dst_filename, astream)
 
         if not is_editable_fs(self._app_context):
@@ -830,7 +826,7 @@ class Course(object):
         """Checks whether the given unit is the last of all the assessments."""
         for current_unit in reversed(self.get_units()):
             if current_unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                return current_unit.id == unit.id
+                return current_unit.unit_id == unit.unit_id
         return False
 
     def add_unit(self):
@@ -950,9 +946,9 @@ class Course(object):
     def is_valid_unit_lesson_id(self, unit_id, lesson_id):
         """Tests whether the given unit id and lesson id are valid."""
         for unit in self.get_units():
-            if str(unit.id) == str(unit_id):
+            if str(unit.unit_id) == str(unit_id):
                 for lesson in self.get_lessons(unit_id):
-                    if str(lesson.id) == str(lesson_id):
+                    if str(lesson.lesson_id) == str(lesson_id):
                         return True
         return False
 

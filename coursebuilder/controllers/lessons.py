@@ -123,7 +123,7 @@ class UnitHandler(BaseHandler):
         unit_id = unit.unit_id
         index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
-        self.template_value['lesson_id'] = lesson.id
+        self.template_value['lesson_id'] = lesson.lesson_id
 
         # Set template values for a unit and its lesson entities
         self.template_value['units'] = unit
@@ -141,10 +141,11 @@ class UnitHandler(BaseHandler):
             prev_lesson = lessons[index - 1]
             if prev_lesson.activity:
                 self.template_value['back_button_url'] = (
-                    'activity?unit=%s&lesson=%s' % (unit_id, prev_lesson.id))
+                    'activity?unit=%s&lesson=%s' % (
+                        unit_id, prev_lesson.lesson_id))
             else:
                 self.template_value['back_button_url'] = (
-                    'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.id))
+                    'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.lesson_id))
 
         # Format next button.
         if not index < len(lessons) - 1:
@@ -153,10 +154,12 @@ class UnitHandler(BaseHandler):
             next_lesson = lessons[index + 1]
             if next_lesson.activity:
                 self.template_value['next_button_url'] = (
-                    'activity?unit=%s&lesson=%s' % (unit_id, next_lesson.id))
+                    'activity?unit=%s&lesson=%s' % (
+                        unit_id, next_lesson.lesson_id))
             else:
                 self.template_value['next_button_url'] = (
-                    'unit?unit=%s&lesson=%s' % (unit_id, next_lesson.id))
+                    'unit?unit=%s&lesson=%s' % (
+                        unit_id, next_lesson.lessons_id))
 
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
@@ -181,7 +184,7 @@ class ActivityHandler(BaseHandler):
         # Extract incoming args
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
-        lesson_id = lesson.id
+        lesson_id = lesson.lesson_id
         index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson_id

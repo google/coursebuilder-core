@@ -99,7 +99,7 @@ LESSONS_HEADER = (
     'lesson_activity_name,lesson_notes,lesson_video_id,lesson_objectives')
 
 UNIT_CSV_TO_DB_CONVERTER = {
-    'id': ('id', int),
+    'id': None,
     'type': ('type', unicode),
     'unit_id': ('unit_id', unicode),
     'title': ('title', unicode),
@@ -112,7 +112,7 @@ LESSON_CSV_TO_DB_CONVERTER = {
     # Field 'unit_title' is a duplicate of Unit.title. We enforce that both
     # values are the same and ignore this value altogether.
     'unit_title': None,
-    'lesson_id': ('id', int),
+    'lesson_id': ('lesson_id', int),
     'lesson_title': ('title', unicode),
     'lesson_activity': ('activity', lambda value: value == 'yes'),
     'lesson_activity_name': ('activity_title', unicode),

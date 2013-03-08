@@ -176,7 +176,7 @@ class DashboardHandler(
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_assessment',
-                            'key': unit.id})
+                            'key': unit.unit_id})
                     lines.append(self._get_edit_link(url))
                 lines.append('</li>\n')
                 continue
@@ -190,7 +190,7 @@ class DashboardHandler(
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_link',
-                            'key': unit.id})
+                            'key': unit.unit_id})
                     lines.append(self._get_edit_link(url))
                 lines.append('</li>\n')
                 continue
@@ -205,16 +205,18 @@ class DashboardHandler(
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_unit',
-                            'key': unit.id})
+                            'key': unit.unit_id})
                     lines.append(self._get_edit_link(url))
 
                 lines.append('<ol>')
                 for lesson in course.get_lessons(unit.unit_id):
                     lines.append(
                         '<li><a href="unit?unit=%s&lesson=%s">%s</a>\n' % (
-                            unit.unit_id, lesson.id, cgi.escape(lesson.title)))
+                            unit.unit_id, lesson.lesson_id,
+                            cgi.escape(lesson.title)))
                     if is_editable:
-                        url = self.get_action_url('edit_lesson', key=lesson.id)
+                        url = self.get_action_url(
+                            'edit_lesson', key=lesson.lesson_id)
                         lines.append(self._get_edit_link(url))
                     lines.append('</li>')
                 lines.append('</ol>')

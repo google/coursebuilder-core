@@ -191,7 +191,7 @@ class BaseHandler(ApplicationHandler):
     def get_lesson_index(self, unit, lesson):
         """Returns an index of a lesson in the lesson array."""
         for idx, current in enumerate(self.get_lessons(unit.unit_id)):
-            if lesson.id == current.id:
+            if lesson.lesson_id == current.lesson_id:
                 return idx
         raise Exception('Lesson does not belong to the unit.')
 

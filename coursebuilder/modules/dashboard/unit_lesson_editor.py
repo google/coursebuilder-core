@@ -122,7 +122,8 @@ class UnitLessonEditor(ApplicationHandler):
             lesson = course.add_lesson(first_unit)
             course.save()
             # TODO(psimakov): complete 'edit_lesson' view
-            self.redirect(self.get_action_url('edit_lesson', key=lesson.id))
+            self.redirect(
+                self.get_action_url('edit_lesson', key=lesson.lesson_id))
         else:
             self.redirect('/dashboard')
 
@@ -642,7 +643,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
             for lesson in course.get_lessons(unit.unit_id):
                 lesson_data.append({
                     'title': lesson.title,
-                    'id': lesson.id})
+                    'id': lesson.lesson_id})
             outline_data.append({
                 'title': '%s - %s' % (unit_index, unit.title),
                 'id': unit.unit_id,
@@ -712,7 +713,7 @@ class LessonRESTHandler(BaseRESTHandler):
         unit_list = []
         for unit in units:
             if unit.type == 'U':
-                unit_list.append({'label': unit.title, 'value': unit.id})
+                unit_list.append({'label': unit.title, 'value': unit.unit_id})
 
         return [
             (['title'], 'Lesson'),
@@ -745,7 +746,7 @@ class LessonRESTHandler(BaseRESTHandler):
 
         fs = self.app_context.fs
         path = fs.impl.physical_to_logical(course.get_activity_filename(
-            lesson.unit_id, lesson.id))
+            lesson.unit_id, lesson.lesson_id))
         if lesson.has_activity and fs.isfile(path):
             activity = fs.get(path)
         else:
@@ -806,7 +807,7 @@ class LessonRESTHandler(BaseRESTHandler):
             lesson.has_activity = False
             fs = self.app_context.fs
             path = fs.impl.physical_to_logical(course.get_activity_filename(
-                lesson.unit_id, lesson.id))
+                lesson.unit_id, lesson.lesson_id))
             if fs.isfile(path):
                 fs.delete(path)
 
