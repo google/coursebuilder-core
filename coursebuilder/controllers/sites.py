@@ -635,22 +635,34 @@ def courses_config_validator(value, errors):
 
 
 GCB_COURSES_CONFIG = ConfigProperty(
-    'gcb_courses_config', str, (
-        'A newline separated list of course entries. '
-        'Each course entry has four parts, separated by colons (\':\'). '
-        'The four parts are: (1)course:/(2)URL prefix:(3)file system '
-        'location:(4) course namespace.'
-        '<ol>'
-        '<li>course:/ is a required element.</li>'
-        '<li>A unique URL prefix is needed for each course. Examples could '
-        'be /cs101 or /art. Default: /</li>'
-        '<li>If the file system location is left empty, the course assets are '
-        'stored in a datastore instead of the file system.</li>'
-        '<li>Location where course data is stored in App Engine. Note: this '
-        'value cannot be changed after the course is created.</li>'
-        '</ol>'
-        'A line that starts with \'#\' is ignored.'),
-    'course:/:/', multiline=True, validator=courses_config_validator)
+    'gcb_courses_config', str,
+    ("""<p>A newline separated list of course entries. Each course entry has
+four parts, separated by colons (':'). The four parts are:</p>
+<ol>
+<li>The word 'course', which is a required element.</li>
+<li>A unique course URL prefix. Examples could be '/cs101' or '/art'.
+Default: '/'</li>
+<li>A file system location of course asset files. If location is left empty,
+the course assets are stored in a datastore instead of the file system. A course
+with assets in a datastore can be edited online. A course with assets on file
+system must be re-deployed to Google App Engine manually.</li>
+<li>A course datastore namespace where course data is stored in App Engine.
+Note: this value cannot be changed after the course is created.</li>
+</ol>
+For example, consider the following two course entries:<br />
+<blockquote>
+course:/cs101::/ns_cs101<br/>
+course:/:/
+</blockquote>
+<p>Assuming you are hosting Course Builder on http:/www.example.com, the first
+entry defines a course on a http://www.example.com/cs101 and both its assets
+and student data are stored in the datastore namespace 'ns_cs101'. The second
+entry defines a course hosted on http://www.example.com/, with its assets
+stored in the '/' folder of the installation and its data stored in the default
+empty datastore namespace.</p>
+<p>A line that starts with '#' is ignored. Course entries are applied in the
+order they are defined.</p>"""),
+    'course:/:/:', multiline=True, validator=courses_config_validator)
 
 
 class ApplicationRequestHandler(webapp2.RequestHandler):
