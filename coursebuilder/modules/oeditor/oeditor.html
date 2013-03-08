@@ -235,14 +235,25 @@
    */
   function renderAsset(Y, uri) {
     imageExts = ['png', 'jpg', 'jpeg', 'gif'];
+    var div = document.createElement('div');
     for (i in imageExts) {
       var ext = imageExts[i];
       if (uri.length >= ext.length &&
           uri.substring(uri.length - ext.length).toLowerCase() == ext) {
-        return Y.inputEx.cn('img', {src: uri, class: 'framed'});
+        var img = document.createElement('img');
+        img.setAttribute('src', uri);
+        img.setAttribute('class', 'framed');
+        div.appendChild(img);
+        div.appendChild(document.createElement('br'));
+        break;
       }
     }
-    return Y.inputEx.cn('a', {href: uri}, {}, escape(uri));
+    var link = document.createElement('a');
+    link.setAttribute('href', uri);
+    link.setAttribute('target', '_blank');
+    link.appendChild(document.createTextNode(uri));
+    div.appendChild(link);
+    return div;
   }
 
   // set initial UI state
@@ -409,7 +420,7 @@
 
       // choose buttons to show
       inputExDefinition.buttons = [];
-      if (cb_global.save_url != '') {
+      if (cb_global.save_url && cb_global.save_method) {
         inputExDefinition.buttons.push(save_button);
       }
       inputExDefinition.buttons.push(close_button);

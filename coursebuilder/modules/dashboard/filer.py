@@ -139,11 +139,11 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             AssetUriRESTHandler.SCHEMA_JSON,
             AssetUriRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            uri, rest_url, exit_url,
+            uri, rest_url, exit_url, save_method='',
             delete_url=delete_url, delete_method='delete')
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Upload Asset')
+        template_values['page_title'] = self.format_title('View Asset')
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
@@ -332,7 +332,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         """
 
     SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Add Asset'),
+        (['title'], 'Upload Asset'),
         (['properties', 'base', '_inputex'], {
             'label': 'Base', '_type': 'uneditable'}),
         (['properties', 'file', '_inputex'], {
@@ -410,7 +410,7 @@ class AssetUriRESTHandler(BaseRESTHandler):
         """
 
     SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Delete Asset'),
+        (['title'], 'Image or Document'),
         (['properties', 'uri', '_inputex'], {
             'label': 'Asset',
             '_type': 'uneditable',
