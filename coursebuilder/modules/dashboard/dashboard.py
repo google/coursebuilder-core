@@ -251,7 +251,8 @@ class DashboardHandler(
         self.render_page(template_values)
 
     def list_and_format_file_list(
-        self, title, subfolder, links=False, prefix=None):
+        self, title, subfolder,
+        links=False, prefix=None, caption_if_empty='< none >'):
         """Walks files in folders and renders their names in a section."""
 
         home = sites.abspath(self.app_context.get_home_folder(), '/')
@@ -272,24 +273,29 @@ class DashboardHandler(
 
         output = []
         count = len(lines)
-        output.append('<h3>%s (%s)</h3>' % (cgi.escape(title), count))
+        output.append('<h3>%s' % cgi.escape(title))
+        if count:
+            output.append(' (%s)' % count)
+        output.append('</h3>')
         if lines:
             output.append('<ol>')
             output += lines
             output.append('</ol>')
         else:
-            output.append('<blockquote>&lt; no files &gt;</blockquote>')
+            output.append(
+                '<blockquote>%s</blockquote>' % cgi.escape(caption_if_empty))
         return output
 
     def get_assets(self):
         """Renders course assets view."""
 
+        def inherits_from(folder):
+            return '< inherited from %s >' % folder
+
         template_values = {}
         template_values['page_title'] = self.format_title('Assets')
 
         lines = []
-        lines += self.list_and_format_file_list(
-            'Cascading Style Sheets', '/assets/css/', True)
         lines += self.list_and_format_file_list(
             'Assessments', '/assets/js/', True,
             prefix='assets/js/assessment-')
@@ -299,8 +305,14 @@ class DashboardHandler(
         lines += self.list_and_format_file_list(
             'Images & Documents', '/assets/img/', True)
         lines += self.list_and_format_file_list(
-            'JavaScript Libraries', '/assets/lib/', True)
-        lines += self.list_and_format_file_list('View Templates', '/views/')
+            'Cascading Style Sheets', '/assets/css/', True,
+            caption_if_empty=inherits_from('/assets/css/'))
+        lines += self.list_and_format_file_list(
+            'JavaScript Libraries', '/assets/lib/', True,
+            caption_if_empty=inherits_from('/assets/lib/'))
+        lines += self.list_and_format_file_list(
+            'View Templates', '/views/',
+            caption_if_empty=inherits_from('/views/'))
         lines = ''.join(lines)
 
         template_values['main_content'] = lines

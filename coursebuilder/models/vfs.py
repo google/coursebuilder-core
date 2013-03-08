@@ -68,7 +68,7 @@ class LocalReadOnlyFileSystem(object):
     """A read-only file system serving only local files."""
 
     def __init__(self, logical_home_folder=None, physical_home_folder=None):
-        """Create a new instance of the object.
+        """Creates a new instance of the disk-backed read-only file system.
 
         Args:
             logical_home_folder: A logical home dir of all files (/a/b/c/...).
@@ -211,9 +211,24 @@ class DatastoreBackedFileSystem(object):
     def make_key(cls, filename):
         return 'vfs:dsbfs:%s' % filename
 
-    def __init__(self, ns, logical_home_folder):
+    def __init__(
+        self, ns, logical_home_folder,
+        inherits_from=None, inheritable_folders=None):
+        """Creates a new instance of the datastore-backed file system.
+
+        Args:
+            ns: A datastore namespace to use for storing all data and metadata.
+            logical_home_folder: A logical home dir of all files (/a/b/c/...).
+            inherits_from: A file system to use for the inheritance.
+            inheritable_folders: A list of folders that support inheritance.
+
+        Returns:
+            A new instance of the object.
+        """
         self._ns = ns
         self._logical_home_folder = logical_home_folder
+        self._inherits_from = inherits_from
+        self._inheritable_folders = inheritable_folders
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
@@ -262,21 +277,36 @@ class DatastoreBackedFileSystem(object):
             return filename
         return '%s%s' % (self._logical_home_folder, filename)
 
-    def get(self, filename):
-        """Gets a file from a datastore. Raw bytes stream, no encodings."""
-        filename = self._logical_to_physical(filename)
+    def _can_inherit(self, filename):
+        """Checks if a file can be inherited from a parent file system."""
+        for prefix in self._inheritable_folders:
+            if filename.startswith(prefix):
+                return True
+        return False
 
+    def get(self, afilename):
+        """Gets a file from a datastore. Raw bytes stream, no encodings."""
+        filename = self._logical_to_physical(afilename)
+
+        # Load from cache.
         result = MemcacheManager.get(self.make_key(filename))
-        if not result:
-            metadata = FileMetadataEntity.get_by_key_name(filename)
-            if not metadata:
-                return None
+        if result:
+            return result
+
+        # Load from a datastore.
+        metadata = FileMetadataEntity.get_by_key_name(filename)
+        if metadata:
             data = FileDataEntity.get_by_key_name(filename)
-            if not data:
-                return None
-            result = FileStreamWrapped(metadata, data.data)
-            MemcacheManager.set(self.make_key(filename), result)
-        return result
+            if data:
+                result = FileStreamWrapped(metadata, data.data)
+                MemcacheManager.set(self.make_key(filename), result)
+                return result
+
+        # Load from parent fs.
+        if self._inherits_from and self._can_inherit(filename):
+            return self._inherits_from.get(afilename)
+
+        return None
 
     @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=True):
@@ -313,16 +343,24 @@ class DatastoreBackedFileSystem(object):
             data.delete()
         MemcacheManager.delete(self.make_key(filename))
 
-    def isfile(self, filename):
+    def isfile(self, afilename):
         """Checks file existence by looking up the datastore row."""
-        filename = self._logical_to_physical(filename)
+        filename = self._logical_to_physical(afilename)
 
+        # Check cache.
         result = MemcacheManager.get(self.make_key(filename))
         if result:
             return True
+
+        # Check datastore.
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             return True
+
+        # Check with parent fs.
+        if self._inherits_from and self._can_inherit(filename):
+            return self._inherits_from.isfile(afilename)
+
         return False
 
     def list(self, dir_name):

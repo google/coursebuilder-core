@@ -132,6 +132,12 @@ GCB_VIEWS_FOLDER_NAME = os.path.normpath('/views/')
 GCB_DATA_FOLDER_NAME = os.path.normpath('/data/')
 GCB_CONFIG_FILENAME = os.path.normpath('/course.yaml')
 
+# Files in these folders are inheritable between file systems.
+GCB_INHERITABLE_FOLDER_NAMES = [
+    os.path.join(GCB_ASSETS_FOLDER_NAME, 'css/'),
+    os.path.join(GCB_ASSETS_FOLDER_NAME, 'lib/'),
+    GCB_VIEWS_FOLDER_NAME]
+
 # supported site types
 SITE_TYPE_COURSE = 'course'
 
@@ -322,7 +328,10 @@ def get_all_courses(rules_text=None):
             folder = '/'
             # pylint: disable-msg=g-long-lambda
             create_fs = lambda ns: DatastoreBackedFileSystem(
-                ns=ns, logical_home_folder=appengine_config.BUNDLE_ROOT)
+                ns=ns,
+                logical_home_folder=appengine_config.BUNDLE_ROOT,
+                inherits_from=LocalReadOnlyFileSystem(logical_home_folder='/'),
+                inheritable_folders=GCB_INHERITABLE_FOLDER_NAMES)
 
         # validate or derive namespace
         namespace = appengine_config.DEFAULT_NAMESPACE_NAME
@@ -547,7 +556,7 @@ class ApplicationContext(object):
         try:
             course_yaml = self.fs.open(course_data_filename)
             if not course_yaml:
-                return {'course': {'title': 'EMPTY COURSE'}}
+                return {'course': {'title': 'UNTITLED COURSE'}}
             return yaml.safe_load(course_yaml.read().decode('utf-8'))
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',

@@ -1410,8 +1410,25 @@ class VirtualFileSystemTestBase(actions.TestBase):
         super(VirtualFileSystemTestBase, self).tearDown()
 
 
-class DatastoreBackedFileSystemTestBase(actions.TestBase):
-    """Prepares a course running on datastore backed file system."""
+class DatastoreBackedCourseTest(actions.TestBase):
+    """Prepares an empty course running on datastore-backed file system."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        """Configure the test."""
+        super(DatastoreBackedCourseTest, self).setUp()
+
+        self.supports_editing = True
+        self.namespace = 'dsbfs'
+        sites.setup_courses('course:/::%s' % self.namespace)
+
+        courses = sites.get_all_courses()
+        assert len(courses) == 1
+        self.app_context = courses[0]
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        """Clean up."""
+        sites.reset_courses()
+        super(DatastoreBackedCourseTest, self).tearDown()
 
     def upload_all_in_dir(self, dir_name, files_added):
         """Uploads all files in a folder to vfs."""
@@ -1422,47 +1439,54 @@ class DatastoreBackedFileSystemTestBase(actions.TestBase):
                 self.app_context.fs.put(filename, open(filename, 'rb'))
                 files_added.append(filename)
 
-    def init_course_data(self):
-        """Uploads all course data files into vfs."""
+    def init_course_data(self, upload_files):
+        """Uploads required course data files into vfs."""
         files_added = []
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(self.namespace)
-            self.upload_all_in_dir('assets', files_added)
-            self.upload_all_in_dir('views', files_added)
-            self.upload_all_in_dir('data', files_added)
-
-            course_yaml = os.path.join(
-                appengine_config.BUNDLE_ROOT, 'course.yaml')
-            self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
-            files_added.append(course_yaml)
-
+            upload_files(files_added)
             assert self.app_context.fs.list(
                 appengine_config.BUNDLE_ROOT) == sorted(files_added)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
-        """Configure the test."""
-        super(DatastoreBackedFileSystemTestBase, self).setUp()
+    def upload_all_sample_course_files(self, files_added):
+        """Uploads all sample course data files into vfs."""
+        self.upload_all_in_dir('assets', files_added)
+        self.upload_all_in_dir('views', files_added)
+        self.upload_all_in_dir('data', files_added)
 
-        self.supports_editing = True
-        self.namespace = 'dsbfs'
-        sites.setup_courses('course:/::%s' % self.namespace)
+        course_yaml = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'course.yaml')
+        self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
+        files_added.append(course_yaml)
 
-        courses = sites.get_all_courses()
-        assert len(courses) == 1
-        self.app_context = courses[0]
 
-        self.init_course_data()
+class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
+    """Prepares a sample course running on datastore-backed file system."""
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
-        """Clean up."""
-        sites.reset_courses()
-        super(DatastoreBackedFileSystemTestBase, self).tearDown()
+    def upload_minimal_course_yaml_only(self, files_added):
+        """Uploads only the simplest possible course.yaml and nothing else."""
+        course_yaml = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'course.yaml')
+        self.app_context.fs.put(course_yaml, vfs.string_to_stream(
+            u"""
+            course:
+              title: 'My Course (тест данные)'
+              locale: 'ru'
+              main_image: {}
+            base:
+              show_gplus_button : False
+            institution:
+              logo: {}
+            preview: {}
+            """))
+        files_added.append(course_yaml)
 
     def test_get_put_file(self):
         """Test that one can put/get file via REST interface."""
+        self.init_course_data(self.upload_all_sample_course_files)
 
         email = 'test_get_put_file@google.com'
 
@@ -1489,6 +1513,34 @@ class DatastoreBackedFileSystemTestBase(actions.TestBase):
             appengine_config.BUNDLE_ROOT, 'course.yaml')).read(
                 ) == json_dict['content'])
 
+    def test_empty_course(self):
+        """Test course with no assets and the simlest possible course.yaml."""
+        self.init_course_data(self.upload_minimal_course_yaml_only)
+
+        # Check minimal preview page comes up.
+        response = self.get('preview')
+        assert_contains('My Course (тест данные)', response.body)
+        assert_contains('Регистрация', response.body)
+
+        # Check inheritable files are accessible.
+        response = self.get('/assets/css/main.css')
+        assert (open(os.path.join(
+            appengine_config.BUNDLE_ROOT, 'assets/css/main.css')).read(
+                ) == response.body)
+
+        # Check non-inheritable files are not inherited.
+        response = self.testapp.get(
+            '/assets/js/activity-1.3.js', expect_errors=True)
+        assert_equals(response.status_int, 404)
+
+
+class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
+    """Run all existing tests using datastore-backed file system."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(DatastoreBackedSampleCourseTest, self).setUp()
+        self.init_course_data(self.upload_all_sample_course_files)
+
 
 class CourseUrlRewritingTest(CourseUrlRewritingTestBase):
     """Run all existing tests using '/courses/pswg' base URL rewrite rules."""
@@ -1498,10 +1550,6 @@ class VirtualFileSystemTest(VirtualFileSystemTestBase):
     """Run all existing tests using virtual local file system."""
 
 
-class DatastoreBackedFileSystemTest(DatastoreBackedFileSystemTestBase):
-    """Run all existing tests datastore-backed file system."""
-
-
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
     StaticHandlerTest, AdminAspectTest)
@@ -1509,4 +1557,4 @@ ALL_COURSE_TESTS = (
 
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS
 VirtualFileSystemTest.__bases__ += ALL_COURSE_TESTS
-DatastoreBackedFileSystemTest.__bases__ += ALL_COURSE_TESTS
+DatastoreBackedSampleCourseTest.__bases__ += ALL_COURSE_TESTS
