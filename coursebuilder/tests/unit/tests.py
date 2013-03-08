@@ -27,6 +27,7 @@ from controllers import utils
 from models import config
 from models import courses
 from models import transforms
+import suite
 from tools import verify
 
 
@@ -47,7 +48,7 @@ def assert_fails(function):
         pass
 
 
-class InvokeExistingUnitTest(unittest.TestCase):
+class InvokeExistingUnitTest(suite.TestBase):
     """Run all units tests declared elsewhere."""
 
     def test_existing_unit_tests(self):

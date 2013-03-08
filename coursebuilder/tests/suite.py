@@ -55,8 +55,17 @@ def empty_environ():
     os.environ['USER_ID'] = ''
 
 
-class BaseTestClass(unittest.TestCase):
-    """Base class for setting up and tearing down test cases."""
+class TestBase(unittest.TestCase):
+    """Base class for all Course Builder tests."""
+
+    def shortDescription(self):
+        """Additional information logged during unittest invocation."""
+        # Suppress default logging of docstrings. Instead log name/status only.
+        return None
+
+
+class AppEngineTestBase(TestBase):
+    """Base class for tests that require App Engine services."""
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
         """Returns the main application to be tested."""

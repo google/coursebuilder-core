@@ -56,8 +56,8 @@ class ShouldHaveFailedByNow(Exception):
     pass
 
 
-class TestBase(suite.BaseTestClass):
-    """Contains methods common to all tests."""
+class TestBase(suite.AppEngineTestBase):
+    """Contains methods common to all functional tests."""
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
         main.debug = True
