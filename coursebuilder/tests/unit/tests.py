@@ -25,6 +25,7 @@ import appengine_config
 from controllers import sites
 from controllers import utils
 from models import config
+from models import courses
 from models import transforms
 from tools import verify
 
@@ -161,6 +162,36 @@ class InvokeExistingUnitTest(unittest.TestCase):
 
         # Clean up.
         appengine_config.gcb_force_default_encoding(original_encoding)
+
+    def test_dict_merge(self):
+        real_values = {'foo': 'bar', 'baz': {'alice': 'john'}}
+        real_original = dict(real_values.items())
+        default_values = {'foo': 'baz', 'baz': {'alice': 'ana', 'bob': 'sue'}}
+        default_original = dict(default_values.items())
+
+        # Check merge.
+        assert {'foo': 'bar', 'baz': {'bob': 'sue', 'alice': 'john'}} == (
+            courses.deep_dict_merge(real_values, default_values))
+
+        # Check originals dicts are intact.
+        assert real_original == real_values
+        assert default_original == default_values
+
+        # Check merge into an empty dict.
+        assert courses.DEFAULT_COURSE_YAML_DICT == courses.deep_dict_merge(
+            {}, courses.DEFAULT_COURSE_YAML_DICT)
+
+        # Check value does not merge into dictionary.
+        real_values = {'foo': 'bar'}
+        default_values = {'foo': {'bar': 'baz'}}
+        assert {'foo': 'bar'} == (
+            courses.deep_dict_merge(real_values, default_values))
+
+        # Test array element.
+        real_values = {'foo': [1, 2, 3]}
+        default_values = {'baz': [4, 5, 6]}
+        assert {'foo': [1, 2, 3], 'baz': [4, 5, 6]} == (
+            courses.deep_dict_merge(real_values, default_values))
 
 
 if __name__ == '__main__':

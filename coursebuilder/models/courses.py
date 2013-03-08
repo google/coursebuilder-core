@@ -19,9 +19,43 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import logging
 import os
 from tools import verify
-
+import yaml
 from models import MemcacheManager
 import progress
+
+
+DEFAULT_COURSE_YAML_DICT = {
+    'course': {'title': 'UNTITLED COURSE', 'locale': 'en_US', 'main_image': {}},
+    'base': {'show_gplus_button': True},
+    'institution': {'logo': {}, 'url': ''},
+    'preview': {},
+    'reg_form': {'can_register': True}
+}
+
+
+def deep_dict_merge(real_values_dict, default_values_dict):
+    """Merges default and real value dictionaries recursively."""
+
+    def _deep_merge(real_values, default_values):
+        """Updates real with default values recursively."""
+
+        # Recursively merge dictionaries.
+        for key, value in real_values.items():
+            default_value = default_values.get(key)
+            if (default_value and isinstance(
+                    value, dict) and isinstance(default_value, dict)):
+                _deep_merge(value, default_value)
+
+        # Copy over other values.
+        for key, value in default_values.items():
+            if not key in real_values:
+                real_values[key] = value
+
+    result = {}
+    if real_values_dict:
+        result = dict(real_values_dict.items())
+    _deep_merge(result, default_values_dict)
+    return result
 
 
 class Course(object):
@@ -32,6 +66,24 @@ class Course(object):
     # version to the key. Now each version of the application can put/get its
     # own version of the course.
     memcache_key = 'course-%s' % os.environ.get('CURRENT_VERSION_ID')
+
+    @classmethod
+    def get_environ(cls, app_context):
+        """Returns currently defined course settings as a dictionary."""
+        course_data_filename = app_context.get_config_filename()
+        try:
+            course_yaml = app_context.fs.open(course_data_filename)
+            if not course_yaml:
+                return DEFAULT_COURSE_YAML_DICT
+            course_yaml_dict = yaml.safe_load(
+                course_yaml.read().decode('utf-8'))
+            if not course_yaml_dict:
+                course_yaml_dict = {}
+            return deep_dict_merge(course_yaml_dict, DEFAULT_COURSE_YAML_DICT)
+        except Exception:
+            logging.info('Error: course.yaml file at %s not accessible',
+                         course_data_filename)
+            raise
 
     def __init__(self, handler):
         self._app_context = handler.app_context

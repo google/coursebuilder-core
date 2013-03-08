@@ -1467,24 +1467,6 @@ class DatastoreBackedCourseTest(actions.TestBase):
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
     """Prepares a sample course running on datastore-backed file system."""
 
-    def upload_minimal_course_yaml_only(self, files_added):
-        """Uploads only the simplest possible course.yaml and nothing else."""
-        course_yaml = os.path.join(
-            appengine_config.BUNDLE_ROOT, 'course.yaml')
-        self.app_context.fs.put(course_yaml, vfs.string_to_stream(
-            u"""
-            course:
-              title: 'My Course (тест данные)'
-              locale: 'ru'
-              main_image: {}
-            base:
-              show_gplus_button : False
-            institution:
-              logo: {}
-            preview: {}
-            """))
-        files_added.append(course_yaml)
-
     def test_get_put_file(self):
         """Test that one can put/get file via REST interface."""
         self.init_course_data(self.upload_all_sample_course_files)
@@ -1516,12 +1498,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
     def test_empty_course(self):
         """Test course with no assets and the simlest possible course.yaml."""
-        self.init_course_data(self.upload_minimal_course_yaml_only)
 
         # Check minimal preview page comes up.
         response = self.get('preview')
-        assert_contains('My Course (тест данные)', response.body)
-        assert_contains('Регистрация', response.body)
+        assert_contains('UNTITLED COURSE', response.body)
+        assert_contains('Registration', response.body)
 
         # Check inheritable files are accessible.
         response = self.get('/assets/css/main.css')

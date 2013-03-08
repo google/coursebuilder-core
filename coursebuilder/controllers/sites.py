@@ -113,12 +113,12 @@ import appengine_config
 from models.config import ConfigProperty
 from models.config import Registry
 from models.counters import PerfCounter
+from models.courses import Course
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
 import webapp2
 from webapp2_extras import i18n
-import yaml
 from google.appengine.api import namespace_manager
 from google.appengine.ext import zipserve
 
@@ -551,17 +551,7 @@ class ApplicationContext(object):
         return filename
 
     def get_environ(self):
-        """Returns a dict of course configuration variables."""
-        course_data_filename = self.get_config_filename()
-        try:
-            course_yaml = self.fs.open(course_data_filename)
-            if not course_yaml:
-                return {'course': {'title': 'UNTITLED COURSE'}}
-            return yaml.safe_load(course_yaml.read().decode('utf-8'))
-        except Exception:
-            logging.info('Error: course.yaml file at %s not accessible',
-                         course_data_filename)
-            raise
+        return Course.get_environ(self)
 
     def get_template_home(self):
         """Returns absolute location of a course template folder."""
