@@ -251,6 +251,7 @@ class AssessmentHandler(BaseHandler):
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment_script_src'] = (
             self.get_course().get_assessment_filename(unit_id))
+        self.template_value['unit_id'] = unit_id
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))

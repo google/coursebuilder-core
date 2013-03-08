@@ -8,6 +8,12 @@
 {% endblock %}
 
 {% block main_content %}
+
+{% if is_read_write_course and is_course_admin %}
+  <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
+    class="gcb-button gcb-button-action">Edit</a>
+{% endif %}
+
 <div class="gcb-main">
   <div class="gcb-article">
     <script src="{{ assessment_script_src }}"></script>

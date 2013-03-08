@@ -141,6 +141,8 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
+        self.template_value[
+            'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
         return self.app_context.get_template_environ(

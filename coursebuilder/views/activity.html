@@ -9,6 +9,11 @@
 
 {% block main_content %}
 
+{% if is_read_write_course and is_course_admin %}
+  <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
+    class="gcb-button gcb-button-action">Edit</a>
+{% endif %}
+
 <script src="{{ activity_script_src }}"></script>
 
 {% if record_events %}

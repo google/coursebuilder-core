@@ -10,6 +10,12 @@
 {% block main_content %}
 
 <div class="gcb-main">
+  {% if is_read_write_course and is_course_admin %}
+    <a href="dashboard?action=edit_unit&key={{ unit_id }}" 
+      class="gcb-button gcb-button-action">Edit unit</a>
+    <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
+      class="gcb-button gcb-button-action">Edit lesson</a>
+  {% endif %}
   <ul class="gcb-breadcrumb">
     <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
     <li><a href="unit?unit={{ unit.unit_id }}">
