@@ -290,15 +290,15 @@ class DashboardHandler(
 
         sections = [
             {
-                'title': 'Data Files',
-                'children': data_info},
-            {
                 'title': 'Pages',
                 'children': pages_info},
             {
                 'title': 'Course Outline',
                 'actions': outline_actions,
-                'pre': self.render_course_outline_to_html()}]
+                'pre': self.render_course_outline_to_html()},
+            {
+                'title': 'Data Files',
+                'children': data_info}]
 
         if roles.Roles.is_super_admin():
             sections.append({
