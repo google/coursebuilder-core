@@ -17,6 +17,8 @@
 
 __author__ = 'Sean Lip'
 
+import __builtin__
+import copy
 import csv
 import datetime
 import logging
@@ -40,6 +42,8 @@ from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
+from tools.etl import etl
+from tools.etl import remote
 import actions
 from actions import assert_contains
 from actions import assert_contains_all_of
@@ -2146,7 +2150,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         response = self.get('/rest/course/link?key=4')
         assert_equals(response.status_int, 200)
 
-    def _import_sample_course(self):
+    def import_sample_course(self):
+        """Imports a sample course."""
         # Setup courses.
         sites.setup_courses('course:/test::ns_test, course:/:/')
 
@@ -2175,7 +2180,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # and assert page content using id's. For now, we will check the minimal
         # set of pages manually. Later, we have to make it run all known tests.
 
-        self._import_sample_course()
+        self.import_sample_course()
 
         # Install a clone on the '/' so all the tests will treat it as normal
         # sample course.
@@ -2227,6 +2232,73 @@ class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(DatastoreBackedSampleCourseTest, self).setUp()
         self.init_course_data(self.upload_all_sample_course_files)
+
+
+class EtlMainTestCase(DatastoreBackedCourseTest):
+    """Tests tools/etl/etl.py's main()."""
+
+    # Allow access to protected members under test.
+    # pylint: disable-msg=protected-access
+    def setUp(self):
+        """Configures EtlMainTestCase."""
+        super(EtlMainTestCase, self).setUp()
+        self.test_environ = copy.deepcopy(os.environ)
+        # In etl.main, use test auth scheme to avoid interactive login.
+        self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
+        self.swap(os, 'environ', self.test_environ)
+        self.sdk_path = os.path.join(
+            os.path.dirname(__file__), 'test_sdk_path')
+        self.create_fake_sdk_filesystem(
+            list(etl._SUPPORTED_APP_ENGINE_SDK_VERSIONS)[0])
+        self.common_args = [
+            'myapp', 'localhost:8080', '--sdk_path', self.sdk_path]
+
+    def tearDown(self):
+        shutil.rmtree(self.sdk_path)
+        super(EtlMainTestCase, self).tearDown()
+
+    def create_fake_sdk_filesystem(self, version):
+        if os.path.exists(self.sdk_path):
+            shutil.rmtree(self.sdk_path)
+        os.makedirs(self.sdk_path)
+        with open(os.path.join(self.sdk_path, 'VERSION'), 'w') as f:
+            f.write('release: ' + version)
+
+    def test_download(self):
+        # TODO(johncox): add verification of download once method is written.
+        args = etl._PARSER.parse_args(['download'] + self.common_args)
+        self.assertRaisesRegexp(
+            NotImplementedError, 'download.*', etl.main, args)
+
+    def test_upload(self):
+        # TODO(johncox): add verification of upload once method is written.
+        args = etl._PARSER.parse_args(['upload'] + self.common_args)
+        self.assertRaisesRegexp(
+            NotImplementedError, 'upload.*', etl.main, args)
+
+
+class EtlRemoteEnvironmentTestCase(actions.TestBase):
+    """Tests tools/etl/remote.py."""
+
+    # Method name determined by superclass. pylint: disable-msg=g-bad-name
+    def setUp(self):
+        super(EtlRemoteEnvironmentTestCase, self).setUp()
+        self.test_environ = copy.deepcopy(os.environ)
+
+    # Allow access to protected members under test.
+    # pylint: disable-msg=protected-access
+    def test_can_establish_environment_in_dev_mode(self):
+        # Stub the call that requires user input so the test runs unattended.
+        self.swap(__builtin__, 'raw_input', lambda _: 'username')
+        self.assertEqual(os.environ['SERVER_SOFTWARE'], remote.SERVER_SOFTWARE)
+        # establish() performs RPC. If it doesn't throw, we're good.
+        remote.Environment('mycourse', 'localhost:8080').establish()
+
+    def test_can_establish_environment_in_test_mode(self):
+        self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
+        self.swap(os, 'environ', self.test_environ)
+        # establish() performs RPC. If it doesn't throw, we're good.
+        remote.Environment('mycourse', 'localhost:8080').establish()
 
 
 class SecurityTest(actions.TestBase):
