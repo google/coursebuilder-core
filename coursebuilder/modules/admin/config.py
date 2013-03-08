@@ -295,9 +295,10 @@ class CoursesItemRESTHandler(BaseRESTHandler):
         new_course = courses.Course(None, app_context=app_context)
         if not new_course.init_new_course_settings(title, admin_email):
             transforms.send_json_response(
-                self, 500,
-                'Failed to update title and admin email. '
-                'The course.yaml already exists and must be updated manually.')
+                self, 412,
+                'Added new course entry, but failed to update title and/or '
+                'admin email. The course.yaml already exists and must be '
+                'updated manually.')
             return
 
         transforms.send_json_response(

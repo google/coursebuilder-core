@@ -673,7 +673,7 @@ def _add_new_course_entry_to_persistent_configuration(raw):
         entity = ConfigPropertyEntity(key_name=GCB_COURSES_CONFIG.name)
         entity.is_draft = False
     if not entity.value:
-        entity.value = ''
+        entity.value = GCB_COURSES_CONFIG.default_value
     lines = entity.value.splitlines()
 
     # Add new entry to the rest of the entries. Since entries are matched
