@@ -95,7 +95,6 @@ class UnitLessonEditor(ApplicationHandler):
             None, rest_url, exit_url,
             auto_return=True,
             save_button_caption='Import',
-            exit_button_caption='Cancel',
             required_modules=ImportCourseRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
@@ -116,8 +115,7 @@ class UnitLessonEditor(ApplicationHandler):
             UnitLessonTitleRESTHandler.SCHEMA_JSON,
             UnitLessonTitleRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url,
-            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES,
-            exit_button_caption='Cancel')
+            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Course Outline')
@@ -190,7 +188,6 @@ class UnitLessonEditor(ApplicationHandler):
             annotations_dict,
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
-            exit_button_caption='Cancel',
             read_only=not filer.is_editable_fs(self.app_context),
             required_modules=rest_handler_cls.REQUIRED_MODULES)
 

@@ -92,8 +92,7 @@ class FileManagerAndEditor(ApplicationHandler):
             FilesItemRESTHandler.SCHEMA_JSON,
             FilesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url,
-            required_modules=FilesItemRESTHandler.REQUIRED_MODULES,
-            exit_button_caption='Cancel')
+            required_modules=FilesItemRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
@@ -111,8 +110,7 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            '', rest_url, exit_url, save_method='upload',
-            exit_button_caption='Cancel', auto_return=True,
+            '', rest_url, exit_url, save_method='upload', auto_return=True,
             required_modules=AssetItemRESTHandler.REQUIRED_MODULES,
             save_button_caption='Upload')
 
