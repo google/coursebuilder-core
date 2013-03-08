@@ -930,6 +930,47 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name3)
         actions.check_profile(self, name3)
 
+    def test_course_not_available(self):
+        """Tests course is only accessinble to author when incomplete."""
+
+        email = 'test_course_not_available@example.com'
+        name = 'Test Course Not Available'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        # Check preview and static resources are available.
+        response = self.get('course')
+        assert_equals(response.status_int, 200)
+        response = self.get('assets/js/activity-1.4.js')
+        assert_equals(response.status_int, 200)
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['now_available'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        # Check preview and static resources are not available to Student.
+        response = self.get('course', expect_errors=True)
+        assert_equals(response.status_int, 404)
+        response = self.get('assets/js/activity-1.4.js', expect_errors=True)
+        assert_equals(response.status_int, 404)
+
+        # Check preview and static resources are still available to author.
+        actions.login(email, True)
+        response = self.get('course')
+        assert_equals(response.status_int, 200)
+        response = self.get('assets/js/activity-1.4.js')
+        assert_equals(response.status_int, 200)
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
     def test_registration_closed(self):
         """Test student registration when course is full."""
 
@@ -1962,8 +2003,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Check non-logged user has no rights.
         response = self.testapp.put(import_put_url, {}, expect_errors=True)
-        assert_equals(200, response.status_int)
-        assert_contains('Access denied.', response.body)
+        assert_equals(404, response.status_int)
 
         # Login as admin.
         email = 'test_course_import@google.com'
@@ -2029,6 +2069,9 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
     def test_empty_course(self):
         """Test course with no assets and the simlest possible course.yaml."""
+
+        email = 'test_empty_course@google.com'
+        actions.login(email, True)
 
         # Check minimal preview page comes up.
         response = self.get('preview')
@@ -2117,10 +2160,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         email = 'test_units_lessons@google.com'
         name = 'Test Units Lessons'
 
+        actions.login(email, True)
+
         response = self.get('preview')
         assert_contains('Putting it all together', response.body)
 
-        actions.login(email)
         actions.register(self, name)
         actions.check_profile(self, name)
         actions.view_announcements(self)

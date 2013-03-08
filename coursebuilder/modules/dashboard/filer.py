@@ -24,18 +24,13 @@ import urllib
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
+from models import courses
 from models import roles
 from models import transforms
 from models import vfs
 from modules.oeditor import oeditor
 import yaml
 from google.appengine.api import users
-
-
-EMPTY_COURSE_YAML = u"""# my new course.yaml
-course:
-  title: 'New Course by %s'
-"""
 
 
 ALLOWED_ASSET_UPLOAD_BASE = 'assets/img'
@@ -79,7 +74,7 @@ class FileManagerAndEditor(ApplicationHandler):
         course_yaml = fs.physical_to_logical('/course.yaml')
         if not fs.isfile(course_yaml):
             fs.put(course_yaml, vfs.string_to_stream(
-                EMPTY_COURSE_YAML % users.get_current_user().email()))
+                courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
 
         self.redirect(self.get_action_url('edit_settings', key='/course.yaml'))
 

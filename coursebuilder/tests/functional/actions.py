@@ -135,10 +135,10 @@ class TestBase(suite.AppEngineTestBase):
 
             self.audit_url(self.canonicalize(url, response))
 
-    def get(self, url):
+    def get(self, url, **kwargs):
         url = self.canonicalize(url)
         logging.info('HTTP Get: %s', url)
-        response = self.testapp.get(url)
+        response = self.testapp.get(url, **kwargs)
         return self.hook_response(response)
 
     def post(self, url, params):

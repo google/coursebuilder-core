@@ -115,6 +115,7 @@ from models.config import ConfigProperty
 from models.config import Registry
 from models.counters import PerfCounter
 from models.courses import Course
+from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
@@ -570,6 +571,11 @@ class ApplicationContext(object):
     def fs(self):
         return self._fs
 
+    @property
+    def now_available(self):
+        course = self.get_environ().get('course')
+        return course and course.get('now_available')
+
     def get_title(self):
         return self.get_environ()['course']['title']
 
@@ -674,8 +680,16 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         return self.get_handler_for_course_type(
             course, unprefix(path, course.get_slug()))
 
+    def can_handle_course_requests(self, context):
+        """Reject all, but authors requests, to an unpublished course."""
+        return context.now_available or Roles.is_course_admin(context)
+
     def get_handler_for_course_type(self, context, path):
         """Gets the right handler for the given context and path."""
+
+        if not self.can_handle_course_requests(context):
+            return None
+
         # TODO(psimakov): Add docs (including args and returns).
         norm_path = os.path.normpath(path)
 
@@ -774,7 +788,13 @@ def assert_mapped(src, dest):
 def assert_handled(src, target_handler):
     try:
         set_path_info(src)
-        handler = ApplicationRequestHandler().get_handler()
+        app_handler = ApplicationRequestHandler()
+
+        # For unit tests to work we want all requests to be handled regardless
+        # of course.now_available flag value. Here we patch for that.
+        app_handler.can_handle_course_requests = lambda context: True
+
+        handler = app_handler.get_handler()
         if handler is None and target_handler is None:
             return None
         assert isinstance(handler, target_handler)
