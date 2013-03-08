@@ -2001,6 +2001,38 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             '/assets/js/activity-1.3.js', expect_errors=True)
         assert_equals(response.status_int, 404)
 
+        # Login as admin.
+        email = 'test_empty_course@google.com'
+        actions.login(email, True)
+        response = self.get('dashboard')
+
+        # Add unit.
+        compute_form = response.forms['add_unit']
+        response = self.submit(compute_form)
+        response = self.get('/rest/course/unit?key=1')
+        assert_equals(response.status_int, 200)
+
+        # Add lessons.
+        response = self.get('dashboard')
+        compute_form = response.forms['add_lesson']
+        response = self.submit(compute_form)
+        response = self.get('/rest/course/lesson?key=2')
+        assert_equals(response.status_int, 200)
+
+        # Add assessment.
+        response = self.get('dashboard')
+        compute_form = response.forms['add_assessment']
+        response = self.submit(compute_form)
+        response = self.get('/rest/course/assessment?key=3')
+        assert_equals(response.status_int, 200)
+
+        # Add link.
+        response = self.get('dashboard')
+        compute_form = response.forms['add_link']
+        response = self.submit(compute_form)
+        response = self.get('/rest/course/link?key=4')
+        assert_equals(response.status_int, 200)
+
     def _import_sample_course(self):
         # Setup courses.
         sites.setup_courses('course:/test::ns_test, course:/:/')
