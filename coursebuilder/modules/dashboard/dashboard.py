@@ -24,6 +24,7 @@ from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
+from models import config
 from models import courses
 from models import jobs
 from models import roles
@@ -90,6 +91,8 @@ class DashboardHandler(
         if not self.can_view():
             self.redirect(self.app_context.get_slug())
             return
+        # Force reload of properties. It is expensive, but admin deserves it!
+        config.Registry.get_overrides(force_update=True)
         return super(DashboardHandler, self).get()
 
     def post(self):
