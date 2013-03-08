@@ -14,7 +14,8 @@
 
 """Extract-transform-load utility.
 
-Currently only download of Course Builder 1.3 data is implemented. Example use:
+Currently only download and upload of Course Builder 1.3 data is implemented.
+Example use:
 
 $ python etl.py download course /cs101 myapp server.appspot.com \
     archive.zip --sdk_path=/path/to/my/appengine/sdk
@@ -24,6 +25,11 @@ the Course Builder 1.3 course found at the URL /cs101 on the application with id
 myapp running on the server named server.appspot.com.  archive.zip will contain
 assets and data from the course along with a manifest.json enumerating them.
 The format of archive.zip will change and should not be relied upon.
+
+For upload,
+
+$ python etl.py upload course /cs101 myapp server.appspot.com \
+    archive.zip --sdk_path/path/to/my_appengine/sdk
 
 In order to run this script, you must first ensure all third-party libraries
 required by Course Builder are installed and importable.
@@ -51,8 +57,12 @@ sites = None
 transforms = None
 vfs = None
 
-# Paths from local disk that will be included in the archive.
-_LOCAL_WHITELIST = frozenset(['course.yaml', 'assets', 'data'])
+# String. Path to course.json in an archive.
+_COURSE_JSON_PATH = 'data/course.json'
+# String. Path to course.yaml in an archive.
+_COURSE_YAML_PATH = 'course.yaml'
+# Path strings from local disk that will be included in the archive.
+_LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH, 'assets', 'data'])
 # logging.Logger. Module logger.
 _LOG = logging.getLogger('coursebuilder.tools.etl')
 # String. Name of the manifest file.
@@ -139,9 +149,32 @@ class _Archive(object):
         self._zipfile.testzip()
         self._zipfile.close()
 
-    def open(self):
+    def get(self, path):
+        """Return the raw bytes of the archive entity found at path.
+
+        Returns None if path is not in the archive.
+
+        Args:
+            path: string. Path of file to retrieve from the archive.
+
+        Returns:
+            Bytes of file contents.
+        """
+        assert self._zipfile
+        try:
+            return self._zipfile.read(path)
+        except KeyError:
+            pass
+
+    def open(self, mode):
+        """Opens archive in the mode given by mode string ('r', 'w', 'a')."""
         assert not self._zipfile
-        self._zipfile = zipfile.ZipFile(self._path, 'w')
+        self._zipfile = zipfile.ZipFile(self._path, mode)
+
+    @property
+    def manifest(self):
+        """Returns the archive's manifest."""
+        return _Manifest.from_json(self.get(_MANIFEST_FILENAME))
 
     @property
     def path(self):
@@ -163,12 +196,27 @@ class _Manifest(object):
         self._raw = raw
         self._version = version
 
+    @classmethod
+    def from_json(cls, json):
+        """Returns a manifest for the given JSON string."""
+        parsed = transforms.loads(json)
+        instance = cls(parsed['raw'], parsed['version'])
+        for entity in parsed['entities']:
+            instance.add(_ManifestEntity(entity['path'], entity['is_draft']))
+        return instance
+
     def add(self, entity):
         self._entities.append(entity)
 
+    def get(self, path):
+        """Gets _Entity by path string; returns None if not found."""
+        for entity in self._entities:
+            if entity.path == path:
+                return entity
+
     @property
     def entities(self):
-        return sorted(self._entities)
+        return sorted(self._entities, key=lambda e: e.path)
 
     @property
     def raw(self):
@@ -194,6 +242,21 @@ class _ManifestEntity(object):
     def __init__(self, path, is_draft):
         self.is_draft = is_draft
         self.path = _remove_bundle_root(path)
+
+
+class _ReadWrapper(object):
+    """Wrapper for raw bytes that supports read()."""
+
+    def __init__(self, data):
+        """Constructs a new read wrapper.
+
+        Args:
+            data: bytes. The bytes to return on read().
+        """
+        self._data = data
+
+    def read(self):
+        return self._data
 
 
 def _check_sdk(sdk_path):
@@ -230,7 +293,7 @@ def _download(archive_path, course_url_prefix):
             'Cannot export course with version < %s' % (
                 courses.COURSE_MODEL_VERSION_1_3))
     archive = _Archive(archive_path)
-    archive.open()
+    archive.open('w')
     manifest = _Manifest(context.raw, course.version)
     _LOG.info('Processing course with URL prefix ' + course_url_prefix)
     datastore_files = set(
@@ -336,10 +399,49 @@ def _set_up_sys_path(sdk_path):
             sys.path.insert(0, path)
 
 
-def _upload():
-    """Stub for upload method."""
-    # TODO(johncox): implement uploading.
-    raise NotImplementedError('upload not implemented')
+def _upload(archive_path, course_url_prefix):
+    _LOG.info((
+        'Processing course with URL prefix %s from archive path %s' % (
+            course_url_prefix, archive_path)))
+    context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
+    if not context:
+        _die('No course found with course_url_prefix %s' % course_url_prefix)
+    course = _get_course_from(context)
+    if course.get_units():
+        _die(
+            'Cannot upload to non-empty course with course_url_prefix %s' % (
+                course_url_prefix))
+    archive = _Archive(archive_path)
+    try:
+        archive.open('r')
+    except IOError:
+        _die('Cannot open archive_path ' + archive_path)
+    course_json = archive.get(_COURSE_JSON_PATH)
+    if course_json:
+        try:
+            courses.PersistentCourse13().deserialize(course_json)
+        except (AttributeError, ValueError):
+            _die((
+                'Cannot upload archive at %s containing malformed '
+                'course.json') % archive_path)
+    course_yaml = archive.get(_COURSE_YAML_PATH)
+    if course_yaml:
+        try:
+            yaml.safe_load(course_yaml)
+        except yaml.scanner.ScannerError:
+            _die((
+                'Cannot upload archive at %s containing malformed '
+                'course.yaml') % archive_path)
+    _LOG.info('Validation passed; beginning upload')
+    count = 0
+    for entity in archive.manifest.entities:
+        context.fs.impl.put(
+            os.path.join(appengine_config.BUNDLE_ROOT, entity.path),
+            _ReadWrapper(archive.get(entity.path)), is_draft=entity.is_draft)
+        count += 1
+        _LOG.info('Uploaded ' + entity.path)
+    _LOG.info(
+        'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
 
 
 def _validate_arguments(parsed_args):
@@ -378,7 +480,7 @@ def main(parsed_args, environment_class=None):
     if parsed_args.mode == _MODE_DOWNLOAD:
         _download(parsed_args.archive_path, parsed_args.course_url_prefix)
     elif parsed_args.mode == _MODE_UPLOAD:
-        _upload()
+        _upload(parsed_args.archive_path, parsed_args.course_url_prefix)
 
 
 if __name__ == '__main__':

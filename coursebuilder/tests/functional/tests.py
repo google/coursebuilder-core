@@ -2757,6 +2757,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.common_args = [
             etl._TYPES[0], self.url_prefix, 'myapp', 'localhost:8080',
             self.archive_path, '--sdk_path', self.sdk_path]
+        self.download_args = etl._PARSER.parse_args(
+            ['download'] + self.common_args)
+        self.upload_args = etl._PARSER.parse_args(['upload'] + self.common_args)
         # Set up courses: version 1.3, version 1.2.
         sites.setup_courses(self.raw + ', course:/:/')
         self.reset_filesystem()
@@ -2765,6 +2768,20 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.reset_filesystem(remove_only=True)
         sites.reset_courses()
         super(EtlMainTestCase, self).tearDown()
+
+    def create_archive(self):
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        args = etl._PARSER.parse_args(['download'] + self.common_args)
+        etl.main(args, environment_class=FakeEnvironment)
+        sites.reset_courses()
+
+    def create_empty_course(self, raw):
+        sites.setup_courses(raw)
+        context = etl._get_requested_context(
+            sites.get_all_courses(), self.url_prefix)
+        for entity in context.fs.impl.list(appengine_config.BUNDLE_ROOT):
+            context.fs.impl.delete(entity)
 
     def import_sample_course(self):
         """Imports a sample course."""
@@ -2791,10 +2808,11 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
     def test_download_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
-        args = etl._PARSER.parse_args(['download'] + self.common_args)
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        etl.main(args, environment_class=FakeEnvironment)
+        etl.main(self.download_args, environment_class=FakeEnvironment)
+        # Don't use Archive and Manifest here because we want to test the raw
+        # structure of the emitted zipfile.
         zip_archive = zipfile.ZipFile(self.archive_path)
         manifest = transforms.loads(
             zip_archive.open(etl._MANIFEST_FILENAME).read())
@@ -2807,18 +2825,18 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             self.assertTrue(zip_archive.open(entity['path']))
 
     def test_download_errors_if_archive_path_exists_on_disk(self):
-        args = etl._PARSER.parse_args(['download'] + self.common_args)
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        etl.main(args, environment_class=FakeEnvironment)
+        etl.main(self.download_args, environment_class=FakeEnvironment)
         self.assertRaises(
-            SystemExit, etl.main, args, environment_class=FakeEnvironment)
+            SystemExit, etl.main, self.download_args,
+            environment_class=FakeEnvironment)
 
     def test_download_errors_if_course_url_prefix_does_not_exist(self):
         sites.reset_courses()
-        args = etl._PARSER.parse_args(['download'] + self.common_args)
         self.assertRaises(
-            SystemExit, etl.main, args, environment_class=FakeEnvironment)
+            SystemExit, etl.main, self.download_args,
+            environment_class=FakeEnvironment)
 
     def test_download_errors_if_course_version_is_pre_1_3(self):
         args = etl._PARSER.parse_args(
@@ -2828,12 +2846,68 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertRaises(
             SystemExit, etl.main, args, environment_class=FakeEnvironment)
 
-    def test_upload(self):
-        # TODO(johncox): add verification of upload once method is written.
-        args = etl._PARSER.parse_args(['upload'] + self.common_args)
-        self.assertRaisesRegexp(
-            NotImplementedError, 'upload.*', etl.main, args,
+    def test_upload_fails_if_archive_cannot_be_opened(self):
+        sites.setup_courses(self.raw)
+        self.assertRaises(
+            SystemExit, etl.main, self.upload_args,
             environment_class=FakeEnvironment)
+
+    def test_upload_fails_if_archive_course_json_malformed(self):
+        self.create_archive()
+        self.create_empty_course(self.raw)
+        zip_archive = zipfile.ZipFile(self.archive_path, 'a')
+        zip_archive.writestr(etl._COURSE_JSON_PATH, 'garbage')
+        zip_archive.close()
+        self.assertRaises(
+            SystemExit, etl.main, self.upload_args,
+            environment_class=FakeEnvironment)
+
+    def test_upload_fails_if_archive_course_yaml_malformed(self):
+        self.create_archive()
+        self.create_empty_course(self.raw)
+        zip_archive = zipfile.ZipFile(self.archive_path, 'a')
+        zip_archive.writestr(etl._COURSE_YAML_PATH, 'garbage:\n-contents')
+        zip_archive.close()
+        self.assertRaises(
+            SystemExit, etl.main, self.upload_args,
+            environment_class=FakeEnvironment)
+
+    def test_upload_fails_if_course_with_units_found(self):
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        self.assertRaises(
+            SystemExit, etl.main, self.upload_args,
+            environment_class=FakeEnvironment)
+
+    def test_upload_fails_if_no_course_with_url_prefix_found(self):
+        self.create_archive()
+        self.assertRaises(
+            SystemExit, etl.main, self.upload_args,
+            environment_class=FakeEnvironment)
+
+    def test_upload_succeeds(self):
+        """Tests upload of archive contents."""
+
+        self.create_archive()
+        self.create_empty_course(self.raw)
+        etl.main(self.upload_args, environment_class=FakeEnvironment)
+        context = etl._get_requested_context(
+            sites.get_all_courses(), self.url_prefix)
+        archive = etl._Archive(self.archive_path)
+        archive.open('r')
+        filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
+        self.assertEqual(
+            len(archive.manifest.entities), len(filesystem_contents))
+        course = etl._get_course_from(etl._get_requested_context(
+            sites.get_all_courses(), self.upload_args.course_url_prefix))
+        units = course.get_units()
+        self.assertTrue(units)
+        for unit in units:
+            self.assertTrue(unit.title)
+        for entity in archive.manifest.entities:
+            full_path = os.path.join(appengine_config.BUNDLE_ROOT, entity.path)
+            stream = context.fs.impl.get(full_path)
+            self.assertEqual(entity.is_draft, stream.metadata.is_draft)
 
 
 # TODO(johncox): re-enable these tests once we figure out how to make webtest
