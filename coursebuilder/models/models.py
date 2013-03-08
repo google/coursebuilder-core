@@ -21,7 +21,6 @@ from config import ConfigProperty
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
-from google.appengine.api import namespace_manager
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -63,15 +62,7 @@ class MemcacheManager(object):
             return None
         if not namespace:
             namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-        if namespace == namespace_manager.get_namespace():
-            value = memcache.get(key)
-        else:
-            old_namespace = namespace_manager.get_namespace()
-            namespace_manager.set_namespace(namespace)
-            try:
-                value = memcache.get(key)
-            finally:
-                namespace_manager.set_namespace(old_namespace)
+        value = memcache.get(key, namespace=namespace)
         if value:
             CACHE_HIT.inc()
         else:
@@ -85,15 +76,7 @@ class MemcacheManager(object):
             CACHE_PUT.inc()
             if not namespace:
                 namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-            if namespace == namespace_manager.get_namespace():
-                memcache.set(key, value, ttl)
-            else:
-                old_namespace = namespace_manager.get_namespace()
-                namespace_manager.set_namespace(namespace)
-                try:
-                    memcache.set(key, value, ttl)
-                finally:
-                    namespace_manager.set_namespace(old_namespace)
+            memcache.set(key, value, ttl, namespace=namespace)
 
     @classmethod
     def delete(cls, key, namespace=None):
@@ -102,15 +85,7 @@ class MemcacheManager(object):
             CACHE_DELETE.inc()
             if not namespace:
                 namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-            if namespace == namespace_manager.get_namespace():
-                memcache.delete(key)
-            else:
-                old_namespace = namespace_manager.get_namespace()
-                namespace_manager.set_namespace(namespace)
-                try:
-                    memcache.delete(key)
-                finally:
-                    namespace_manager.set_namespace(old_namespace)
+            memcache.delete(key, namespace=namespace)
 
 
 class Student(BaseEntity):

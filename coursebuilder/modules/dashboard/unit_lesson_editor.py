@@ -19,7 +19,6 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
 import logging
-import sys
 import urllib
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -28,7 +27,6 @@ from controllers.utils import XsrfTokenManager
 from models import courses
 from models import roles
 from models import transforms
-from models import vfs
 from modules.oeditor import oeditor
 from tools import verify
 import filer
@@ -112,23 +110,43 @@ class UnitLessonEditor(ApplicationHandler):
         template_values['main_content'] = form_html
         self.render_page(template_values)
 
+    def post_add_lesson(self):
+        """Adds new lesson to a first unit of the course."""
+        course = courses.Course(self)
+        first_unit = None
+        for unit in course.get_units():
+            if unit.type == verify.UNIT_TYPE_UNIT:
+                first_unit = unit
+                break
+        if first_unit:
+            lesson = course.add_lesson(first_unit)
+            course.save()
+            # TODO(psimakov): complete 'edit_lesson' view
+            self.redirect(self.get_action_url('edit_lesson', key=lesson.id))
+        else:
+            self.redirect('/dashboard')
+
     def post_add_unit(self):
         """Adds new unit to a course."""
-        self.redirect(self.get_action_url(
-            'edit_unit',
-            key=courses.Course(self).add_unit().id))
+        course = courses.Course(self)
+        unit = course.add_unit()
+        course.save()
+        self.redirect(self.get_action_url('edit_unit', key=unit.unit_id))
 
     def post_add_link(self):
         """Adds new link to a course."""
-        self.redirect(self.get_action_url(
-            'edit_link',
-            key=courses.Course(self).add_link().id))
+        course = courses.Course(self)
+        link = course.add_link()
+        course.save()
+        self.redirect(self.get_action_url('edit_link', key=link.unit_id))
 
     def post_add_assessment(self):
         """Adds new assessment to a course."""
-        self.redirect(self.get_action_url(
-            'edit_assessment',
-            key=courses.Course(self).add_assessment().id))
+        course = courses.Course(self)
+        assessment = course.add_assessment()
+        course.save()
+        self.redirect(
+            self.get_action_url('edit_assessment', key=assessment.unit_id))
 
     def _render_edit_form_for(self, rest_handler_cls, title):
         """Renders an editor form for a given REST handler class."""
@@ -183,10 +201,6 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         """Applies changes to a unit; modifies unit input argument."""
         raise Exception('Not implemented')
 
-    def pre_delete(self, unused_unit):
-        """Override to perform actions required before deletion."""
-        pass
-
     def get(self):
         """A GET REST method shared by all unit types."""
         key = self.request.get('key')
@@ -234,7 +248,9 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         errors = []
         self.apply_updates(unit, updated_unit_dict, errors)
         if not errors:
-            assert courses.Course(self).put_unit(unit)
+            course = courses.Course(self)
+            assert course.update_unit(unit)
+            course.save()
             transforms.send_json_response(self, 200, 'Saved.')
         else:
             transforms.send_json_response(self, 412, '\n'.join(errors))
@@ -252,14 +268,16 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': key})
             return
 
-        unit = courses.Course(self).find_unit_by_id(key)
+        course = courses.Course(self)
+        unit = course.find_unit_by_id(key)
         if not unit:
             transforms.send_json_response(
                 self, 404, 'Object not found.', {'key': key})
             return
 
-        self.pre_delete(unit)
-        assert courses.Course(self).delete_unit(unit)
+        course.delete_unit(unit)
+        course.save()
+
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
@@ -300,7 +318,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     def unit_to_dict(self, unit):
         assert unit.type == 'U'
         return {
-            'key': unit.id,
+            'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'is_draft': not unit.now_available}
@@ -349,15 +367,15 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     def unit_to_dict(self, unit):
         assert unit.type == 'O'
         return {
-            'key': unit.id,
+            'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
-            'url': unit.unit_id,
+            'url': unit.href,
             'is_draft': not unit.now_available}
 
     def apply_updates(self, unit, updated_unit_dict, unused_errors):
         unit.title = updated_unit_dict.get('title')
-        unit.unit_id = updated_unit_dict.get('url')
+        unit.href = updated_unit_dict.get('url')
         unit.now_available = not updated_unit_dict.get('is_draft')
 
 
@@ -444,10 +462,10 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
                 self, 404, 'Object not found.', {'raw': course_raw})
             return
 
+        course = courses.Course(self)
         errors = []
         try:
-            courses.ImportExport.import_course(
-                source, sites.get_course_for_current_request(), errors)
+            course.import_from(source, errors)
         except Exception as e:  # pylint: disable-msg=broad-except
             logging.exception(e)
             errors.append('Import failed: %s' % e)
@@ -456,6 +474,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
             transforms.send_json_response(self, 412, '\n'.join(errors))
             return
 
+        course.save()
         transforms.send_json_response(self, 200, 'Imported.')
 
 
@@ -498,7 +517,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
-            courses.Course(self).get_assessment_filename(unit.id))
+            courses.Course(self).get_assessment_filename(unit.unit_id))
 
     def unit_to_dict(self, unit):
         """Assemble a dict with the unit data fields."""
@@ -512,7 +531,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             content = ''
 
         return {
-            'key': unit.id,
+            'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'content': content,
@@ -520,38 +539,11 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
     def apply_updates(self, unit, updated_unit_dict, errors):
         """Store the updated assignment."""
-        root_name = 'assessment'
         unit.title = updated_unit_dict.get('title')
         unit.now_available = not updated_unit_dict.get('is_draft')
-
-        path = self._get_assessment_path(unit)
-
-        try:
-            (content, noverify_text) = verify.convert_javascript_to_python(
-                updated_unit_dict.get('content'), root_name)
-            assessment = verify.evaluate_python_expression_from_text(
-                content, root_name, verify.Assessment().scope, noverify_text)
-        except Exception:  # pylint: disable-msg=broad-except
-            errors.append('Unable to parse %s:\n%s' % (
-                root_name,
-                str(sys.exc_info()[1])))
-            return
-
-        verifier = verify.Verifier()
-        try:
-            verifier.verify_assessment_instance(assessment, path)
-        except verify.SchemaException:
-            errors.append('Error validating %s\n' % root_name)
-            return
-
-        fs = self.app_context.fs
-        fs.put(
-            path, vfs.string_to_stream(content),
-            is_draft=not unit.now_available)
-
-    def pre_delete(self, unit):
-        path = self._get_assessment_path(unit)
-        self.app_context.fs.delete(path)
+        courses.Course(
+            None, app_context=self.app_context).set_assessment_content(
+                unit, updated_unit_dict.get('content'), errors)
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):
@@ -633,13 +625,13 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         unit_index = 1
         for unit in course.get_units():
             lesson_data = []
-            for lesson in course.get_lessons(unit.id):
+            for lesson in course.get_lessons(unit.unit_id):
                 lesson_data.append({
                     'title': lesson.title,
                     'id': lesson.id})
             outline_data.append({
                 'title': '%s - %s' % (unit_index, unit.title),
-                'id': unit.id,
+                'id': unit.unit_id,
                 'lessons': lesson_data})
             unit_index += 1
 
@@ -664,6 +656,8 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         payload = request.get('payload')
         payload_dict = transforms.json_to_dict(
             transforms.loads(payload), self.SCHEMA_DICT)
-        courses.Course(self).reorder_units(payload_dict['outline'])
+        course = courses.Course(self)
+        course.reorder_units(payload_dict['outline'])
+        course.save()
 
         transforms.send_json_response(self, 200, 'Saved.')

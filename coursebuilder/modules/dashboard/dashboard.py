@@ -58,7 +58,7 @@ class DashboardHandler(
     post_actions = ['compute_student_stats', 'create_or_edit_settings']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
-        'add_link', 'add_assessment']
+        'add_link', 'add_assessment', 'add_lesson']
 
     @classmethod
     def get_child_routes(cls):
@@ -155,38 +155,48 @@ class DashboardHandler(
         lines.append('<ul style="list-style: none;">')
         for unit in course.get_units():
             if unit.type == 'A':
-                edit_url = self.canonicalize_url(
-                    '/dashboard?%s') % urllib.urlencode({
-                        'action': 'edit_assessment',
-                        'key': unit.id})
+                if filer.is_editable_fs(self.app_context):
+                    url = self.canonicalize_url(
+                        '/dashboard?%s') % urllib.urlencode({
+                            'action': 'edit_assessment',
+                            'key': unit.id})
+                else:
+                    url = 'assessment?name=%s' % unit.unit_id
                 lines.append('<li>')
                 lines.append(
                     '<strong><a href="%s">%s</a></strong>' % (
-                        edit_url, cgi.escape(unit.title)))
+                        url, cgi.escape(unit.title)))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'O':
-                edit_url = self.canonicalize_url(
-                    '/dashboard?%s') % urllib.urlencode({
-                        'action': 'edit_link',
-                        'key': unit.id})
+                if filer.is_editable_fs(self.app_context):
+                    url = self.canonicalize_url(
+                        '/dashboard?%s') % urllib.urlencode({
+                            'action': 'edit_link',
+                            'key': unit.id})
+                else:
+                    url = unit.unit_id
                 lines.append('<li>')
                 lines.append(
                     '<strong><a href="%s">%s</a></strong>' % (
-                        edit_url, cgi.escape(unit.title)))
+                        url, cgi.escape(unit.title)))
                 lines.append('</li>\n')
                 continue
 
             if unit.type == 'U':
-                edit_url = self.canonicalize_url(
-                    '/dashboard?%s') % urllib.urlencode({
-                        'action': 'edit_unit',
-                        'key': unit.id})
+                if filer.is_editable_fs(self.app_context):
+                    url = self.canonicalize_url(
+                        '/dashboard?%s') % urllib.urlencode({
+                            'action': 'edit_unit',
+                            'key': unit.id})
+                else:
+                    url = 'unit?unit=%s' % unit.unit_id
+
                 lines.append('<li>')
                 lines.append(
                     '<strong><a href="%s">Unit %s - %s</a></strong>' % (
-                        edit_url, unit.unit_id, cgi.escape(unit.title)))
+                        url, unit.unit_id, cgi.escape(unit.title)))
 
                 lines.append('<ol>')
                 for lesson in course.get_lessons(unit.unit_id):
@@ -218,6 +228,11 @@ class DashboardHandler(
                 'id': 'edit_unit_lesson',
                 'caption': 'Organize',
                 'href': self.get_action_url('edit_unit_lesson')})
+            outline_actions.append({
+                'id': 'add_lesson',
+                'caption': 'Add Lesson',
+                'action': self.get_action_url('add_lesson'),
+                'xsrf_token': self.create_xsrf_token('add_lesson')})
             outline_actions.append({
                 'id': 'add_unit',
                 'caption': 'Add Unit',

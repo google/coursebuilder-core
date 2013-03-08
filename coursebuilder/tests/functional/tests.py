@@ -30,6 +30,7 @@ from controllers import sites
 from controllers import utils
 from controllers.utils import XsrfTokenManager
 from models import config
+from models import courses
 from models import jobs
 from models import models
 from models import transforms
@@ -51,8 +52,156 @@ from google.appengine.api import namespace_manager
 COURSE_FILE_COUNT = 70
 
 
+# There is an expectation in our tests of automatic import of data/*.csv files,
+# which is achieved below by selecting an alternative factory method.
+courses.Course.create_new_default_course = (
+    courses.Course.custom_new_default_course_for_test)
+
+
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
+
+    def test_import_course(self):
+        """Tests importing one course into another."""
+
+        # Setup courses.
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # Validate the courses before import.
+        all_courses = sites.get_all_courses()
+        dst_app_context_a = all_courses[0]
+        dst_app_context_b = all_courses[1]
+        src_app_context = all_courses[2]
+
+        dst_course_a = courses.Course(None, app_context=dst_app_context_a)
+        dst_course_b = courses.Course(None, app_context=dst_app_context_b)
+        src_course = courses.Course(None, app_context=src_app_context)
+
+        assert not dst_course_a.get_units()
+        assert not dst_course_b.get_units()
+        assert 11 == len(src_course.get_units())
+
+        # Import 1.2 course into 1.3.
+        errors = []
+        src_course_out, dst_course_out_a = dst_course_a.import_from(
+            src_app_context, errors)
+        if errors:
+            raise Exception(errors)
+        assert len(
+            src_course.get_units()) == len(src_course_out.get_units())
+        assert len(
+            src_course_out.get_units()) == len(dst_course_out_a.get_units())
+
+        # Import 1.3 course into 1.3.
+        errors = []
+        src_course_out_a, dst_course_out_b = dst_course_b.import_from(
+            dst_app_context_a, errors)
+        if errors:
+            raise Exception(errors)
+        assert src_course_out_a.get_units() == dst_course_out_b.get_units()
+
+        # Test delete.
+        units_to_delete = dst_course_a.get_units()
+        deleted_count = 0
+        for unit in units_to_delete:
+            assert dst_course_a.delete_unit(unit)
+            deleted_count += 1
+        dst_course_a.save()
+        assert deleted_count == len(units_to_delete)
+        assert not dst_course_a.get_units()
+        assert not dst_course_a.app_context.fs.list(os.path.join(
+            dst_course_a.app_context.get_home(), 'assets/js/'))
+
+        # Clean up.
+        sites.reset_courses()
+
+    def test_create_new_course(self):
+        """Tests creating a new course."""
+
+        # Setup courses.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # Add several units.
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        link = course.add_link()
+        unit = course.add_unit()
+        assessment = course.add_assessment()
+        course.save()
+        assert course.find_unit_by_id(link.id)
+        assert course.find_unit_by_id(unit.id)
+        assert course.find_unit_by_id(assessment.id)
+        assert 3 == len(course.get_units())
+        assert assessment.id == 3
+
+        # Check unit can be found.
+        assert unit == course.find_unit_by_id(unit.id)
+        assert not course.find_unit_by_id(999)
+
+        # Update unit.
+        unit.title = 'Test Title'
+        course.update_unit(unit)
+        course.save()
+        assert 'Test Title' == course.find_unit_by_id(unit.id).title
+
+        # Update assessment.
+        assessment_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Pre.js'), 'rb').readlines()
+        assessment_content = u''.join(assessment_content)
+        errors = []
+        course.set_assessment_content(assessment, assessment_content, errors)
+        course.save()
+        assert not errors
+        assessment_content_stored = course.app_context.fs.get(os.path.join(
+            course.app_context.get_home(),
+            course.get_assessment_filename(assessment.unit_id)))
+        assert assessment_content == assessment_content_stored
+
+        # Test adding lessons.
+        lesson_a = course.add_lesson(unit)
+        lesson_b = course.add_lesson(unit)
+        lesson_c = course.add_lesson(unit)
+        course.save()
+        assert [lesson_a, lesson_b, lesson_c] == course.get_lessons(unit.id)
+        assert lesson_c.id == 6
+
+        # Reorder lessons.
+        new_order = [
+            {'id': link.id},
+            {
+                'id': unit.id,
+                'lessons': [
+                    {'id': lesson_b.id},
+                    {'id': lesson_a.id},
+                    {'id': lesson_c.id}]},
+            {'id': assessment.id}]
+        course.reorder_units(new_order)
+        course.save()
+        assert [lesson_b, lesson_a, lesson_c] == course.get_lessons(unit.id)
+
+        # Move lesson to another unit.
+        another_unit = course.add_unit()
+        course.move_lesson_to(lesson_b, another_unit)
+        course.save()
+        assert [lesson_a, lesson_c] == course.get_lessons(unit.id)
+        assert [lesson_b] == course.get_lessons(another_unit.id)
+        course.delete_unit(another_unit)
+
+        # Test delete.
+        course.delete_unit(link)
+        course.delete_unit(unit)
+        course.delete_unit(assessment)
+        course.save()
+        assert not course.get_units()
+        assert not course.app_context.fs.list(os.path.join(
+            course.app_context.get_home(), 'assets/js/'))
+
+        # Clean up.
+        sites.reset_courses()
 
     def test_datastore_backed_file_system(self):
         """Tests datastore-backed file system operations."""
@@ -218,6 +367,54 @@ class InfrastructureTest(actions.TestBase):
 
 class AdminAspectTest(actions.TestBase):
     """Test site from the Admin perspective."""
+
+    def test_courses_page_for_multiple_courses(self):
+        """Tests /admin page showing multiple courses."""
+        # Setup courses.
+        sites.setup_courses('course:/aaa::ns_a, course:/bbb::ns_b, course:/:/')
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # Validate the courses before import.
+        all_courses = sites.get_all_courses()
+        dst_app_context_a = all_courses[0]
+        dst_app_context_b = all_courses[1]
+        src_app_context = all_courses[2]
+
+        # This test requires a read-write file system. If test runs on read-
+        # only one, we can't run this test :(
+        if (not dst_app_context_a.fs.is_read_write() or
+            not dst_app_context_a.fs.is_read_write()):
+            return
+
+        course_a = courses.Course(None, app_context=dst_app_context_a)
+        course_b = courses.Course(None, app_context=dst_app_context_b)
+
+        unused_course, course_a = course_a.import_from(src_app_context)
+        unused_course, course_b = course_b.import_from(src_app_context)
+
+        # Rename courses.
+        dst_app_context_a.fs.put(
+            dst_app_context_a.get_config_filename(),
+            vfs.string_to_stream(u'course:\n  title: \'Course AAA\''))
+        dst_app_context_b.fs.put(
+            dst_app_context_b.get_config_filename(),
+            vfs.string_to_stream(u'course:\n  title: \'Course BBB\''))
+
+        # Login.
+        email = 'test_courses_page_for_multiple_courses@google.com'
+        actions.login(email, True)
+
+        # Check the course listing page.
+        response = self.testapp.get('/admin')
+        assert_contains_all_of([
+            'Course AAA',
+            '/aaa/dashboard',
+            'Course BBB',
+            '/bbb/dashboard'], response.body)
+
+        # Clean up.
+        sites.reset_courses()
 
     def test_python_console(self):
         """Test access rights to the Python console."""
@@ -1638,9 +1835,9 @@ class DatastoreBackedCourseTest(actions.TestBase):
         self.namespace = 'dsbfs'
         sites.setup_courses('course:/::%s' % self.namespace)
 
-        courses = sites.get_all_courses()
-        assert len(courses) == 1
-        self.app_context = courses[0]
+        all_courses = sites.get_all_courses()
+        assert len(all_courses) == 1
+        self.app_context = all_courses[0]
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         """Clean up."""
@@ -1722,22 +1919,18 @@ class DatastoreBackedCourseTest(actions.TestBase):
         assert_contains('Filter image results by color', response.body)
 
         # Check assessment is copied.
-        response = self.get('/test/assets/js/assessment-5.js')
+        response = self.get('/test/assets/js/assessment-21.js')
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
         # Check activity is copied.
-        response = self.get('/test/assets/js/activity-15.js')
+        response = self.get('/test/assets/js/activity-23.js')
         assert_equals(200, response.status_int)
         assert_contains('household spending site', response.body)
 
         # Clean up.
         sites.reset_courses()
         config.Registry.test_overrides = {}
-
-        # TODO(psimakov): we need more tests for 1.2 -> 1.3 and 1.3 -> 1.3
-        # migrations and upgrades including 1.3 -> unknown and unknown -> 1.3
-        # error scenarious
 
 
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):

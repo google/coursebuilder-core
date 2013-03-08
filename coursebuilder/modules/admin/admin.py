@@ -45,6 +45,13 @@ You must be an actual admin user to continue.
 Users with the delegated admin rights are not allowed."""
 
 
+def escape(text):
+    """Escapes HTML in text."""
+    if text:
+        return cgi.escape(text)
+    return text
+
+
 def evaluate_python_code(code):
     """Compiles and evaluates a Python script in a restricted environment."""
 
@@ -116,7 +123,7 @@ class AdminHandler(
             class_attr = 'class="selected"' if action == current_action else ''
             nav.append(
                 '<a href="/admin?action=%s" %s>%s</a>' % (
-                    action, class_attr, title))
+                    action, class_attr, escape(title)))
 
         if PRODUCTION_MODE:
             app_id = app.get_application_id()
@@ -125,10 +132,10 @@ class AdminHandler(
                   href="https://appengine.google.com/dashboard?app_id=s~%s">
                   Google App Engine
                 </a>
-                """ % app_id)
+                """ % escape(app_id))
         else:
             nav.append(
-                '<a target="_blank" href=" /_ah/ admin">Google App Engine</a>')
+                '<a target="_blank" href="/_ah/admin">Google App Engine</a>')
 
         return '\n'.join(nav)
 
@@ -149,20 +156,20 @@ class AdminHandler(
         keys = sorted(source_dict.keys())
 
         content = []
-        content.append('<h3>%s</h3>' % title)
+        content.append('<h3>%s</h3>' % escape(title))
         content.append('<ol>')
         for key in keys:
             value = source_dict[key]
             if isinstance(value, ConfigProperty):
                 value = value.value
             content.append(
-                '<li>%s: %s</li>' % (cgi.escape(key), cgi.escape(str(value))))
+                '<li>%s: %s</li>' % (escape(key), escape(str(value))))
         content.append('</ol>')
         return '\n'.join(content)
 
     def format_title(self, text):
         """Formats standard title."""
-        return 'Course Builder &gt; Admin &gt; %s' % text
+        return 'Course Builder &gt; Admin &gt; %s' % escape(text)
 
     def get_perf(self):
         """Shows server performance counters page."""
@@ -205,15 +212,16 @@ class AdminHandler(
         yaml_lines = open(os.path.join(os.path.dirname(
             __file__), '../../app.yaml'), 'r').readlines()
         for line in yaml_lines:
-            yaml_content.append('<li>%s</li>' % cgi.escape(line))
+            yaml_content.append('<li>%s</li>' % escape(line))
         yaml_content.append('</ol>')
         yaml_content = ''.join(yaml_content)
 
         # Application identity.
         app_id = app.get_application_id()
         app_dict = {}
-        app_dict['application_id'] = app_id
-        app_dict['default_ver_hostname'] = app.get_default_version_hostname()
+        app_dict['application_id'] = escape(app_id)
+        app_dict['default_ver_hostname'] = escape(
+            app.get_default_version_hostname())
 
         template_values['main_content'] = self.render_dict(
             app_dict,
@@ -237,10 +245,8 @@ class AdminHandler(
                   background-color: #A0A0FF;
               }
             </style>
-            """)
-        content.append('<h3>All Settings</h3>')
-        content.append('<table class="gcb-config">')
-        content.append("""
+            <h3>All Settings</h3>
+            <table class="gcb-config">
             <tr>
             <th>Name</th>
             <th>Current Value</th>
@@ -262,7 +268,7 @@ class AdminHandler(
             if onclick:
                 handler = 'onclick="%s"' % onclick
             return '<a %s class="gcb-button" href="/admin?%s">%s</a>' % (
-                handler, urllib.urlencode(args), cgi.escape(caption))
+                handler, urllib.urlencode(args), escape(caption))
 
         def get_actions(name, override):
             """Creates actions appropriate to an item."""
@@ -279,7 +285,7 @@ class AdminHandler(
                     </button></form>""" % (
                         urllib.urlencode(
                             {'action': 'config_override', 'name': name}),
-                        cgi.escape(self.create_xsrf_token('config_override'))
+                        escape(self.create_xsrf_token('config_override'))
                     ))
             return ''.join(actions)
 
@@ -287,11 +293,11 @@ class AdminHandler(
             """Formats an item documentation string for display."""
             doc_string = item.doc_string
             if doc_string:
-                doc_string = cgi.escape(doc_string)
+                doc_string = escape(doc_string)
             else:
                 doc_string = 'No documentation available.'
             doc_string = ' %s Default: "%s".' % (doc_string, default_value)
-            return doc_string
+            return escape(doc_string)
 
         overrides = config.Registry.get_overrides(True)
         registered = config.Registry.registered.copy()
@@ -312,9 +318,9 @@ class AdminHandler(
                 class_current = 'class="gcb-env-diff"'
 
             if default_value:
-                default_value = cgi.escape(str(default_value))
+                default_value = str(default_value)
             if value:
-                value = cgi.escape(str(value))
+                value = str(value)
 
             style_current = get_style_for(value, item.value_type)
 
@@ -326,8 +332,8 @@ class AdminHandler(
                 <td>%s</td>
                 </tr>
                 """ % (
-                    item.name, class_current, style_current, value,
-                    get_actions(name, name in overrides),
+                    escape(item.name), class_current, style_current,
+                    escape(value), get_actions(name, name in overrides),
                     get_doc_string(item, default_value)))
 
         content.append("""
@@ -362,7 +368,7 @@ class AdminHandler(
               <th>Course Title</th>
               <th>Context Path</th>
               <th>Content Location</th>
-              <th>Datastore Namespace</th>
+              <th>Student Data Location</th>
             </tr>
             """)
         courses = sites.get_all_courses()
@@ -371,15 +377,20 @@ class AdminHandler(
             count += 1
             error = ''
             slug = course.get_slug()
-            location = sites.abspath(course.get_home_folder(), '/')
             try:
-                name = cgi.escape(course.get_environ()['course']['title'])
+                name = escape(course.get_title())
             except Exception as e:  # pylint: disable-msg=broad-except
                 name = 'UNKNOWN COURSE'
                 error = (
                     '<p>Error in <strong>course.yaml</strong> file:<br/>'
                     '<pre>\n%s\n%s\n</pre></p>' % (
-                        e.__class__.__name__, cgi.escape(str(e))))
+                        e.__class__.__name__, escape(str(e))))
+
+            if course.fs.is_read_write():
+                location = 'namespace: %s' % course.get_namespace_name()
+            else:
+                location = 'disk: %s' % sites.abspath(
+                    course.get_home_folder(), '/')
 
             if slug == '/':
                 link = '/dashboard'
@@ -395,7 +406,10 @@ class AdminHandler(
                   <td>%s</td>
                 </tr>
                 """ % (
-                    link, error, slug, location, course.get_namespace_name()))
+                    link, escape(error), escape(slug),
+                    escape(location),
+                    escape(
+                        'namespace: %s' % course.get_namespace_name())))
 
         content.append("""
             <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
@@ -433,7 +447,7 @@ class AdminHandler(
             <p align='center'>
                 <button class="gcb-button" type="submit">Run Program</button>
             </p>
-            </form>""" % cgi.escape(self.create_xsrf_token('console_run')))
+            </form>""" % escape(self.create_xsrf_token('console_run')))
 
         template_values['main_content'] = ''.join(content)
         self.render_page(template_values)
@@ -463,7 +477,7 @@ class AdminHandler(
         content.append('<h3>Submitted Python Code</h3>')
         content.append('<ol>')
         for line in code.split('\n'):
-            content.append('<li>%s</li>' % cgi.escape(line))
+            content.append('<li>%s</li>' % escape(line))
         content.append('</ol>')
 
         content.append("""
@@ -476,8 +490,7 @@ class AdminHandler(
 
         content.append('<h3>Program Output</h3>')
         content.append(
-            '<blockquote><pre>%s</pre></blockquote>' % cgi.escape(
-                output))
+            '<blockquote><pre>%s</pre></blockquote>' % escape(output))
 
         template_values['main_content'] = ''.join(content)
         self.render_page(template_values)

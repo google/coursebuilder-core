@@ -20,6 +20,7 @@ import copy
 import logging
 import os
 import pickle
+import sys
 from tools import verify
 import yaml
 from models import MemcacheManager
@@ -70,100 +71,202 @@ def is_editable_fs(app_context):
     return isinstance(app_context.fs.impl, vfs.DatastoreBackedFileSystem)
 
 
-class ImportExport(object):
-    """All migration routines are here."""
+def copy_attributes(source, target, converter):
+    """Copies source object attributes into a target using a converter."""
+    for source_name, value in converter.items():
+        if value:
+            target_name = value[0]
+            target_type = value[1]
+            setattr(
+                target, target_name, target_type(getattr(source, source_name)))
+
+
+def load_csv_course(app_context):
+    """Loads course data from the CSV files."""
+    logging.info('Initializing datastore from CSV files.')
+
+    unit_file = os.path.join(app_context.get_data_home(), 'unit.csv')
+    lesson_file = os.path.join(app_context.get_data_home(), 'lesson.csv')
+
+    # Check files exist.
+    if (not app_context.fs.isfile(unit_file) or
+        not app_context.fs.isfile(lesson_file)):
+        return None, None
+
+    # Load files.
+    unit_stream = app_context.fs.open(unit_file)
+    lesson_stream = app_context.fs.open(lesson_file)
+
+    units = verify.read_objects_from_csv_stream(
+        unit_stream, verify.UNITS_HEADER, verify.Unit)
+    lessons = verify.read_objects_from_csv_stream(
+        lesson_stream, verify.LESSONS_HEADER, verify.Lesson)
+    verifier = verify.Verifier()
+    verifier.verify_unit_fields(units)
+    verifier.verify_lesson_fields(lessons)
+    verifier.verify_unit_lesson_relationships(units, lessons)
+    assert verifier.errors == 0
+    assert verifier.warnings == 0
+
+    # Load data from CSV files into a datastore.
+    new_units = []
+    new_lessons = []
+    units = verify.read_objects_from_csv_stream(
+        app_context.fs.open(unit_file), verify.UNITS_HEADER, Unit12)
+    lessons = verify.read_objects_from_csv_stream(
+        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, Lesson12)
+    for unit in units:
+        entity = Unit12()
+        copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)
+        new_units.append(entity)
+    for lesson in lessons:
+        entity = Lesson12()
+        copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
+        new_lessons.append(entity)
+
+    return new_units, new_lessons
+
+
+class Unit12(object):
+    """An object to represent a Unit, Assessment or Link (version 1.2)."""
+
+    def __init__(self):
+        self.id = 0
+        self.type = ''
+        self.unit_id = ''
+        self.title = ''
+        self.release_date = ''
+        self.now_available = False
+
+
+class Lesson12(object):
+    """An object to represent a Lesson (version 1.2)."""
+
+    def __init__(self):
+        self.unit_id = 0
+        self.id = 0
+        self.title = ''
+        self.objectives = ''
+        self.video = ''
+        self.notes = ''
+        self.duration = ''
+        self.activity = ''
+        self.activity_title = ''
+
+
+class CourseModel12(object):
+    """A course defined in terms of CSV files (version 1.2)."""
+
+    VERSION = COURSE_MODEL_VERSION_1_2
 
     @classmethod
-    def upgrade_1_2_to_1_3(cls, course):
-        """Upgrades 1.2 course structure into 1.3."""
-
-        # This upgrade has no steps.
-
-        # pylint: disable-msg=protected-access
-        course._version = COURSE_MODEL_VERSION_1_3
-
-    @classmethod
-    def _copy_activities(cls, src_course, dst_course):
-        """Copies activities from one course to another."""
-        next_id = 1
-        for unit in dst_course.get_units():
-            if verify.UNIT_TYPE_UNIT != unit.type:
-                continue
-            for lesson in dst_course.get_lessons(unit.id):
-                if not lesson.activity:
-                    continue
-                src_filename = os.path.join(
-                    src_course.app_context.get_home(),
-                    src_course.get_activity_filename(unit.id, lesson.id))
-                if not src_course.app_context.fs.isfile(src_filename):
-                    continue
-                astream = src_course.app_context.fs.open(src_filename)
-                if astream:
-                    lesson.activity_resource_id = next_id
-                    next_id += 1
-                    dst_filename = os.path.join(
-                        dst_course.app_context.get_home(),
-                        dst_course.get_activity_filename(unit.id, lesson.id))
-                    dst_course.app_context.fs.put(dst_filename, astream)
+    def load(cls, app_context):
+        """Loads course data into a model."""
+        units, lessons = load_csv_course(app_context)
+        if units and lessons:
+            return CourseModel12(app_context, units, lessons)
+        return None
 
     @classmethod
-    def _copy_assessments(cls, src_course, dst_course):
-        """Copies assessments from one course to another."""
-        for unit in dst_course.get_units():
-            if verify.UNIT_TYPE_ASSESSMENT != unit.type:
-                continue
-            src_filename = os.path.join(
-                src_course.app_context.get_home(),
-                src_course.get_assessment_filename(unit.id))
-            if not src_course.app_context.fs.isfile(src_filename):
-                continue
-            astream = src_course.app_context.fs.open(src_filename)
-            if astream:
-                unit.assessment_resource_id = unit.id
-                dst_filename = os.path.join(
-                    dst_course.app_context.get_home(),
-                    dst_course.get_assessment_filename(unit.id))
-                dst_course.app_context.fs.put(dst_filename, astream)
+    def index_lessons(cls, lessons):
+        """Creates an index of unit.unit_id to unit.lessons."""
+        unit_id_to_lessons = {}
+        for lesson in lessons:
+            key = str(lesson.unit_id)
+            if not key in unit_id_to_lessons:
+                unit_id_to_lessons[key] = []
+            unit_id_to_lessons[key].append(lesson)
+        return unit_id_to_lessons
 
-    @classmethod
-    def _make_ids_globally_unique(cls, unused_course):
-        """Makes ids of units and lessons globally unique in scope of course."""
-        # TODO(psimakov): incomplete
+    def __init__(self, app_context, units, lessons):
+        self._app_context = app_context
+        self._units = units
+        self._lessons = lessons
+        self._unit_id_to_lessons = self.index_lessons(self._lessons)
 
-    @classmethod
-    def _copy_linked_assets(cls, src_course, dst_course):
-        """Copies linked assets from one course to another."""
-        cls._copy_assessments(src_course, dst_course)
-        cls._copy_activities(src_course, dst_course)
+    @property
+    def app_context(self):
+        return self._app_context
 
-    @classmethod
-    def import_course(cls, src, dst, errors):
-        """Import course from one application context into another."""
+    def get_units(self):
+        return self._units[:]
 
-        src_course = Course(None, app_context=src)
-        dst_course = Course(None, app_context=dst)
+    def get_lessons(self, unit_id):
+        return self._unit_id_to_lessons.get(str(unit_id), [])
 
-        if not is_editable_fs(dst):
-            errors.append(
-                'Target course %s must be on read-write media.' % dst.raw)
-            return
+    def find_unit_by_id(self, unit_id):
+        """Finds a unit given its id."""
+        for unit in self._units:
+            if str(unit.unit_id) == str(unit_id):
+                return unit
+        return None
 
-        if dst_course.get_units():
-            errors.append('Target course %s must be empty.' % dst.raw)
-            return
+    def get_assessment_filename(self, unit_id):
+        """Returns assessment base filename."""
+        unit = self.find_unit_by_id(unit_id)
+        assert unit and verify.UNIT_TYPE_ASSESSMENT == unit.type
+        return 'assets/js/assessment-%s.js' % unit.unit_id
 
-        # pylint: disable-msg=protected-access
-        src_course._materialize()
-        # pylint: disable-msg=protected-access
-        dst_course._deserialize(src_course._serialize())
-        cls._copy_linked_assets(src_course, dst_course)
-        cls._make_ids_globally_unique(dst_course)
-        # pylint: disable-msg=protected-access
-        dst_course._save()
+    def get_activity_filename(self, unit_id, lesson_id):
+        """Returns activity base filename."""
+        return 'assets/js/activity-%s.%s.js' % (unit_id, lesson_id)
 
 
-class Course(object):
-    """Manages a course and all of its components."""
+class Unit13(object):
+    """An object to represent a Unit, Assessment or Link (version 1.3)."""
+
+    def __init__(self):
+        self.id = 0
+        self.type = ''
+        self.title = ''
+        self.release_date = ''
+        self.now_available = False
+
+        # Only valid for the unit.type == verify.UNIT_TYPE_LINK.
+        self.href = None
+
+    @property
+    def unit_id(self):
+        """The unit.unit_id and unit.id are identical in this model."""
+        return self.id
+
+
+class Lesson13(object):
+    """An object to represent a Lesson (version 1.3)."""
+
+    def __init__(self):
+        self.id = 0
+        self.unit_id = 0  # unit.id of parent
+        self.title = ''
+        self.objectives = ''
+        self.video = ''
+        self.notes = ''
+        self.duration = ''
+        self.now_available = False
+        self.has_activity = False
+        self.activity_title = ''
+
+    @property
+    def activity(self):
+        """A symbolic name to old attribute."""
+        return self.has_activity
+
+
+class SerializableCourseEnvelope(object):
+    """A serializable, data-only representation of a Course."""
+
+    def __init__(self):
+        self.version = None
+        self.next_id = None
+        self.units = None
+        self.lessons = None
+        self.unit_id_to_lesson_ids = None
+
+
+class CourseModel13(object):
+    """A course defined in terms of objects (version 1.3)."""
+
+    VERSION = COURSE_MODEL_VERSION_1_3
 
     # A logical filename where we persist courses data."""
     COURSES_FILENAME = '/data/course.pickle'
@@ -173,6 +276,393 @@ class Course(object):
     # version to the key. Now each version of the application can put/get its
     # own version of the course.
     memcache_key = 'course-%s' % os.environ.get('CURRENT_VERSION_ID')
+
+    @classmethod
+    def assert_envelope_version(cls, envelope):
+        if cls.VERSION != envelope.version:
+            raise Exception(
+                'Unsupported course version %s, expected %s.' % (
+                    envelope.version, cls.VERSION))
+
+    @classmethod
+    def load(cls, app_context):
+        """Loads course from memcache or the fs."""
+        envelope = None
+        try:
+            binary_data = MemcacheManager.get(
+                cls.memcache_key, namespace=app_context.get_namespace_name())
+            if binary_data:
+                envelope = pickle.loads(binary_data)
+                cls.assert_envelope_version(envelope)
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to load course \'%s\' from memcache. %s',
+                cls.memcache_key, e)
+
+        if not envelope:
+            fs = app_context.fs.impl
+            filename = fs.physical_to_logical(cls.COURSES_FILENAME)
+            if app_context.fs.isfile(filename):
+                envelope = pickle.loads(app_context.fs.get(filename))
+                cls.assert_envelope_version(envelope)
+                if envelope:
+                    return CourseModel13(app_context, envelope)
+
+        return None
+
+    def __init__(self, app_context, envelope=None):
+        self._app_context = app_context
+        self._units = []
+        self._lessons = []
+        self._unit_id_to_lesson_ids = {}
+
+        # a counter for creating sequential entity ids
+        self._next_id = 1
+
+        if envelope:
+            self.assert_envelope_version(envelope)
+
+            self._next_id = envelope.next_id
+            self._units = envelope.units
+            self._lessons = envelope.lessons
+            self._unit_id_to_lesson_ids = envelope.unit_id_to_lesson_ids
+
+    def _get_next_id(self):
+        """Allocates next id in sequence."""
+        next_id = self._next_id
+        self._next_id += 1
+        return next_id
+
+    def _index(self, lessons):
+        """Creates an index of unit.unit_id to unit.lessons."""
+        unit_id_to_lesson_ids = {}
+        for lesson in lessons:
+            key = str(lesson.unit_id)
+            if not key in unit_id_to_lesson_ids:
+                unit_id_to_lesson_ids[key] = []
+            unit_id_to_lesson_ids[key].append(str(lesson.id))
+        self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
+
+    def save(self):
+        """Saves this model to fs."""
+        envelope = SerializableCourseEnvelope()
+        envelope.version = self.VERSION
+        envelope.next_id = self._next_id
+        envelope.units = self._units
+        envelope.lessons = self._lessons
+        envelope.unit_id_to_lesson_ids = self._unit_id_to_lesson_ids
+
+        # TODO(psimakov): we really should use JSON, not binary format
+        binary_data = pickle.dumps(envelope)
+
+        fs = self._app_context.fs.impl
+        filename = fs.physical_to_logical(self.COURSES_FILENAME)
+        self._app_context.fs.put(
+            filename, vfs.FileStreamWrapped(None, binary_data))
+
+        MemcacheManager.delete(
+            self.memcache_key,
+            namespace=self._app_context.get_namespace_name())
+
+    @property
+    def app_context(self):
+        return self._app_context
+
+    def get_units(self):
+        return self._units[:]
+
+    def get_lessons(self, unit_id):
+        lesson_ids = self._unit_id_to_lesson_ids.get(str(unit_id))
+        lessons = []
+        if lesson_ids:
+            for lesson_id in lesson_ids:
+                lessons.append(self.find_lesson_by_id(lesson_id))
+        return lessons
+
+    def get_assessment_filename(self, unit_id):
+        """Returns assessment base filename."""
+        unit = self.find_unit_by_id(unit_id)
+        assert unit
+        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        return 'assets/js/assessment-%s.js' % unit.id
+
+    def get_activity_filename(self, unused_unit_id, lesson_id):
+        """Returns activity base filename."""
+        lesson = self.find_lesson_by_id(lesson_id)
+        assert lesson
+        if lesson.has_activity:
+            return 'assets/js/activity-%s.js' % lesson_id
+        return None
+
+    def find_unit_by_id(self, unit_id):
+        """Finds a unit given its id."""
+        for unit in self._units:
+            if str(unit.id) == str(unit_id):
+                return unit
+        return None
+
+    def find_lesson_by_id(self, lesson_id):
+        """Finds a lesson given its id."""
+        for lesson in self._lessons:
+            if str(lesson.id) == str(lesson_id):
+                return lesson
+        return None
+
+    def add_unit(self, unit_type, title):
+        """Adds a brand new unit."""
+        assert unit_type in verify.UNIT_TYPES
+
+        unit = Unit13()
+        unit.type = unit_type
+        unit.id = self._get_next_id()
+        unit.title = title
+        unit.now_available = False
+
+        self._units.append(unit)
+
+        return unit
+
+    def add_lesson(self, unit, title):
+        """Adds brand new lesson to a unit."""
+        unit = self.find_unit_by_id(unit.id)
+        assert unit
+
+        lesson = Lesson13()
+        lesson.id = self._get_next_id()
+        lesson.unit_id = unit.id
+        lesson.title = title
+        lesson.now_available = False
+
+        self._lessons.append(lesson)
+        self._index(self._lessons)
+
+        return lesson
+
+    def move_lesson_to(self, lesson, unit):
+        """Moves a lesson to another unit."""
+        unit = self.find_unit_by_id(unit.id)
+        assert unit
+        assert verify.UNIT_TYPE_UNIT == unit.type
+
+        lesson = self.find_lesson_by_id(lesson.id)
+        assert lesson
+        lesson.unit_id = unit.id
+
+        self._index(self._lessons)
+
+        return lesson
+
+    def _delete_activity(self, lesson):
+        """Deletes activity."""
+        filename = self._app_context.fs.impl.physical_to_logical(
+            self.get_activity_filename(None, lesson.id))
+        if self.app_context.fs.isfile(filename):
+            self.app_context.fs.delete(filename)
+            return True
+        return False
+
+    def _delete_assessment(self, unit):
+        """Deletes assessment."""
+        filename = self._app_context.fs.impl.physical_to_logical(
+            self.get_assessment_filename(unit.id))
+        if self.app_context.fs.isfile(filename):
+            self.app_context.fs.delete(filename)
+            return True
+        return False
+
+    def delete_lesson(self, lesson):
+        """Delete a lesson."""
+        lesson = self.find_lesson_by_id(lesson.id)
+        if not lesson:
+            return False
+        if lesson.has_activity:
+            self._delete_activity(lesson)
+        self._lessons.remove(lesson)
+        self._index(self._lessons)
+        return True
+
+    def delete_unit(self, unit):
+        """Deletes a unit."""
+        unit = self.find_unit_by_id(unit.id)
+        if not unit:
+            return False
+        for lesson in self.get_lessons(unit.id):
+            self.delete_lesson(lesson)
+        if verify.UNIT_TYPE_ASSESSMENT == unit.type:
+            self._delete_assessment(unit)
+        self._units.remove(unit)
+        self._index(self._lessons)
+        return True
+
+    def update_unit(self, unit):
+        """Updates an existing unit."""
+        existing_unit = self.find_unit_by_id(unit.id)
+        if not unit:
+            return False
+        existing_unit.title = unit.title
+        existing_unit.release_date = unit.release_date
+        existing_unit.now_available = unit.now_available
+
+        if verify.UNIT_TYPE_LINK == existing_unit.type:
+            existing_unit.href = unit.href
+
+        return existing_unit
+
+    def reorder_units(self, order_data):
+        """Reorder the units and lessons based on the order data given.
+
+        Args:
+            order_data: list of dict. Format is
+                The order_data is in the following format:
+                [
+                    {'id': 0, 'lessons': [{'id': 0}, {'id': 1}, {'id': 2}]},
+                    {'id': 1},
+                    {'id': 2, 'lessons': [{'id': 0}, {'id': 1}]}
+                    ...
+                ]
+        """
+        reordered_units = []
+        unit_ids = set()
+        for unit_data in order_data:
+            unit_id = unit_data['id']
+            unit = self.find_unit_by_id(unit_id)
+            assert unit
+            reordered_units.append(self.find_unit_by_id(unit_id))
+            unit_ids.add(unit_id)
+        assert len(unit_ids) == len(self._units)
+        self._units = reordered_units
+
+        reordered_lessons = []
+        lesson_ids = set()
+        for unit_data in order_data:
+            unit_id = unit_data['id']
+            unit = self.find_unit_by_id(unit_id)
+            assert unit
+            if verify.UNIT_TYPE_UNIT != unit.type:
+                continue
+            for lesson_data in unit_data['lessons']:
+                lesson_id = lesson_data['id']
+                reordered_lessons.append(
+                    self.find_lesson_by_id(lesson_id))
+                lesson_ids.add((unit_id, lesson_id))
+        assert len(lesson_ids) == len(self._lessons)
+        self._lessons = reordered_lessons
+
+        self._index(self._lessons)
+
+    def set_assessment_content(self, unit, assessment_content, errors=None):
+        """Updates the content of an assessment."""
+        if not errors:
+            errors = []
+
+        path = self._app_context.fs.impl.physical_to_logical(
+            self.get_assessment_filename(unit.id))
+        root_name = 'assessment'
+
+        try:
+            content, noverify_text = verify.convert_javascript_to_python(
+                assessment_content, root_name)
+            assessment = verify.evaluate_python_expression_from_text(
+                content, root_name, verify.Assessment().scope, noverify_text)
+        except Exception:  # pylint: disable-msg=broad-except
+            errors.append('Unable to parse %s:\n%s' % (
+                root_name,
+                str(sys.exc_info()[1])))
+            return
+
+        verifier = verify.Verifier()
+        try:
+            verifier.verify_assessment_instance(assessment, path)
+        except verify.SchemaException:
+            errors.append('Error validating %s\n' % root_name)
+            return
+
+        fs = self.app_context.fs
+        fs.put(
+            path, vfs.string_to_stream(assessment_content),
+            is_draft=not unit.now_available)
+
+    def import_from(self, src_course, errors):
+        """Imports a content of another course into this course."""
+
+        def copy_unit12_into_unit13(src_unit, dst_unit):
+            """Copies unit object attributes between versions."""
+            dst_unit.title = src_unit.title
+            dst_unit.release_date = src_unit.release_date
+            dst_unit.now_available = src_unit.now_available
+
+            if verify.UNIT_TYPE_LINK == src_unit.type:
+                dst_unit.href = src_unit.unit_id
+
+            # Copy over the assessment. Note that we copy files directly and
+            # avoid all logical validations of their content. This is done for a
+            # purpose - at this layer we don't care what is in those files.
+            if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
+                src_filename = os.path.join(
+                    src_course.app_context.get_home(),
+                    src_course.get_assessment_filename(src_unit.unit_id))
+                if src_course.app_context.fs.isfile(src_filename):
+                    astream = src_course.app_context.fs.open(src_filename)
+                    if astream:
+                        dst_filename = os.path.join(
+                            self.app_context.get_home(),
+                            self.get_assessment_filename(dst_unit.id))
+                        self.app_context.fs.put(dst_filename, astream)
+
+        def copy_lesson12_into_lesson13(
+            src_unit, src_lesson, unused_dst_unit, dst_lesson):
+            """Copies lessons object attributes between versions."""
+            dst_lesson.objectives = src_lesson.objectives
+            dst_lesson.video = src_lesson.video
+            dst_lesson.notes = src_lesson.notes
+            dst_lesson.duration = src_lesson.duration
+            dst_lesson.has_activity = src_lesson.activity
+            dst_lesson.activity_title = src_lesson.activity_title
+
+            # Old model does not have this flag, but all lessons are available.
+            dst_lesson.now_available = True
+
+            # Copy over the activity. Note that we copy files directly and
+            # avoid all logical validations of their content. This is done for a
+            # purpose - at this layer we don't care what is in those files.
+            if src_lesson.activity:
+                src_filename = os.path.join(
+                    src_course.app_context.get_home(),
+                    src_course.get_activity_filename(
+                        src_unit.id, src_lesson.id))
+                if src_course.app_context.fs.isfile(src_filename):
+                    astream = src_course.app_context.fs.open(src_filename)
+                    if astream:
+                        dst_filename = os.path.join(
+                            self.app_context.get_home(),
+                            self.get_activity_filename(None, dst_lesson.id))
+                        self.app_context.fs.put(dst_filename, astream)
+
+        if not is_editable_fs(self._app_context):
+            errors.append(
+                'Target course %s must be '
+                'on read-write media.' % self.app_context.raw)
+            return None, None
+
+        if self.get_units():
+            errors.append(
+                'Target course %s must be '
+                'empty.' % self.app_context.raw)
+            return None, None
+
+        # Iterate over course structure and assets and import each item.
+        for unit in src_course.get_units():
+            new_unit = self.add_unit(unit.type, unit.title)
+            copy_unit12_into_unit13(unit, new_unit)
+            for lesson in src_course.get_lessons(unit.unit_id):
+                new_lesson = self.add_lesson(new_unit, lesson.title)
+                copy_lesson12_into_lesson13(unit, lesson, new_unit, new_lesson)
+
+        return src_course, self
+
+
+class Course(object):
+    """Manages a course and all of its components."""
 
     @classmethod
     def get_environ(cls, app_context):
@@ -192,144 +682,115 @@ class Course(object):
                          course_data_filename)
             raise
 
+    @property
+    def version(self):
+        return self._model.VERSION
+
+    @classmethod
+    def create_new_default_course(cls, app_context):
+        return CourseModel13(app_context)
+
+    @classmethod
+    def custom_new_default_course_for_test(cls, app_context):
+        # There is an expectation in our tests of automatic import
+        # of data/*.csv files. This method can be used in tests to achieve
+        # exactly that.
+        model = CourseModel12.load(app_context)
+        if model:
+            return model
+        return CourseModel13(app_context)
+
+    @classmethod
+    def _load(cls, app_context):
+        """Loads course data from persistence storage into this instance."""
+        if not is_editable_fs(app_context):
+            model = CourseModel12.load(app_context)
+            if model:
+                return model
+        else:
+            model = CourseModel13.load(app_context)
+            if model:
+                return model
+        return cls.create_new_default_course(app_context)
+
     def __init__(self, handler, app_context=None):
         self._app_context = app_context if app_context else handler.app_context
-        self._loaded = False
-        self._student_progress_tracker = (
-            progress.UnitLessonCompletionTracker(self))
         self._namespace = self._app_context.get_namespace_name()
-        self._version = COURSE_MODEL_VERSION_1_3
-
-        self._units = []
-        self._lessons = []
-        self._unit_id_to_lessons = {}
+        self._model = self._load(self._app_context)
+        self._tracker = None
 
     @property
     def app_context(self):
         return self._app_context
 
-    @property
-    def version(self):
-        return self._version
-
-    def _reindex(self):
-        """Groups all lessons by unit_id."""
-        self._unit_id_to_lessons = {}
-        for lesson in self._lessons:
-            key = str(lesson.unit_id)
-            if not key in self._unit_id_to_lessons:
-                self._unit_id_to_lessons[key] = []
-            self._unit_id_to_lessons[key].append(lesson)
-
-    def _serialize_to_object(self):
-        """Creates object with a serialized representation of this instance."""
-        if COURSE_MODEL_VERSION_1_3 != self._version:
-            raise Exception('Unsupported course version %s, expected %s.' % (
-                self._version, COURSE_MODEL_VERSION_1_3))
-        envelope = SerializableCourseEnvelope()
-        envelope.version = self._version
-        envelope.units = self._units
-        envelope.lessons = self._lessons
-        return envelope
-
-    def _serialize(self):
-        """Creates bytes of a serialized representation of this instance."""
-        # TODO(psimakov): we really should use JSON, not binary format
-        return pickle.dumps(self._serialize_to_object())
-
     def to_json(self):
         """Creates JSON representation of this instance."""
-        self._materialize()
+        model = copy.deepcopy(self._model)
+        del model._app_context
         return transforms.dumps(
-            self._serialize_to_object(),
+            model,
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
 
-    def _deserialize(self, binary_data):
-        """Populates this instance with a serialized representation data."""
-        envelope = pickle.loads(binary_data)
-        if COURSE_MODEL_VERSION_1_3 != envelope.version:
-            raise Exception('Unsupported course version %s, expected %s.' % (
-                envelope.version, COURSE_MODEL_VERSION_1_3))
-        self._units = envelope.units
-        self._lessons = envelope.lessons
-        self._reindex()
-
-    def _rebuild_from_source(self):
-        """Loads course data from persistence storage into this instance."""
-        units, lessons = load_csv_course(self._app_context)
-        if units and lessons:
-            self._version = COURSE_MODEL_VERSION_1_2
-            self._units = units
-            self._lessons = lessons
-            self._reindex()
-            ImportExport.upgrade_1_2_to_1_3(self)
-            return
-
-        if is_editable_fs(self._app_context):
-            fs = self._app_context.fs.impl
-            filename = fs.physical_to_logical(self.COURSES_FILENAME)
-            if self._app_context.fs.isfile(filename):
-                self._deserialize(self._app_context.fs.get(filename))
-                return
-
-        # Init new empty instance.
-        self._units = []
-        self._lessons = []
-        self._reindex()
-
-    def _load_from_memcache(self):
-        """Loads course representation from memcache."""
-        try:
-            binary_data = MemcacheManager.get(
-                self.memcache_key, namespace=self._namespace)
-            if binary_data:
-                self._deserialize(binary_data)
-                self._loaded = True
-        except Exception as e:  # pylint: disable-msg=broad-except
-            logging.error(
-                'Failed to load course \'%s\' from memcache. %s',
-                self.memcache_key, e)
-
-    def _materialize(self):
-        """Loads data from persistence into this instance."""
-        if not self._loaded:
-            self._load_from_memcache()
-            if not self._loaded:
-                self._rebuild_from_source()
-                MemcacheManager.set(
-                    self.memcache_key, self._serialize(),
-                    namespace=self._namespace)
-                self._loaded = True
-
-    def _save(self):
-        """Save data from this instance into persistence."""
-        binary_data = self._serialize()
-        fs = self._app_context.fs.impl
-        filename = fs.physical_to_logical(self.COURSES_FILENAME)
-        self._app_context.fs.put(
-            filename, vfs.FileStreamWrapped(None, binary_data))
-        MemcacheManager.delete(self.memcache_key, namespace=self._namespace)
+    def get_progress_tracker(self):
+        if not self._tracker:
+            self._tracker = progress.UnitLessonCompletionTracker(self)
+        return self._tracker
 
     def get_units(self):
-        self._materialize()
-        return self._units
+        return self._model.get_units()
 
     def get_lessons(self, unit_id):
-        self._materialize()
-        lessons = self._unit_id_to_lessons.get(str(unit_id))
-        if not lessons:
-            return []
-        return lessons
+        return self._model.get_lessons(unit_id)
 
-    def get_progress_tracker(self):
-        self._materialize()
-        return self._student_progress_tracker
+    def save(self):
+        return self._model.save()
+
+    def find_unit_by_id(self, unit_id):
+        return self._model.find_unit_by_id(unit_id)
+
+    def add_unit(self):
+        """Adds new unit to a course."""
+        return self._model.add_unit('U', 'New Unit')
+
+    def add_link(self):
+        """Adds new link (other) to a course."""
+        return self._model.add_unit('O', 'New Link')
+
+    def add_assessment(self):
+        """Adds new assessment to a course."""
+        return self._model.add_unit('A', 'New Assessment')
+
+    def add_lesson(self, unit):
+        return self._model.add_lesson(unit, 'New Lesson')
+
+    def update_unit(self, unit):
+        return self._model.update_unit(unit)
+
+    def move_lesson_to(self, lesson, unit):
+        return self._model.move_lesson_to(lesson, unit)
+
+    def delete_unit(self, unit):
+        return self._model.delete_unit(unit)
+
+    def get_assessment_filename(self, unit_id):
+        return self._model.get_assessment_filename(unit_id)
+
+    def get_activity_filename(self, unit_id, lesson_id):
+        return self._model.get_activity_filename(unit_id, lesson_id)
+
+    def reorder_units(self, order_data):
+        return self._model.reorder_units(order_data)
+
+    def set_assessment_content(self, unit, assessment_content, errors=None):
+        return self._model.set_assessment_content(
+            unit, assessment_content, errors)
 
     def is_valid_assessment_id(self, assessment_id):
         """Tests whether the given assessment id is valid."""
         for unit in self.get_units():
-            if unit.type == 'A' and assessment_id == unit.unit_id:
+            if (verify.UNIT_TYPE_ASSESSMENT == unit.type and
+                assessment_id == unit.unit_id):
                 return True
         return False
 
@@ -342,227 +803,28 @@ class Course(object):
                         return True
         return False
 
-    def find_unit_by_id(self, uid):
-        """Finds a unit given its unique id."""
-        self._materialize()
-        for unit in self.get_units():
-            if str(unit.id) == str(uid):
-                return unit
-        return None
+    def import_from(self, app_context, errors=None):
+        """Import course structure and assets from another courses."""
+        src_course = Course(None, app_context=app_context)
+        if not errors:
+            errors = []
 
-    def find_lesson_by_id(self, unit_id, lesson_id):
-        """Find a given lesson by its id and the id of its parent unit."""
-        self._materialize()
-        for lesson in self.get_lessons(unit_id):
-            if str(lesson.id) == str(lesson_id):
-                return lesson
-        return None
+        # Import 1.2 -> 1.3
+        if (src_course.version == CourseModel12.VERSION and
+            self.version == CourseModel13.VERSION):
+            return self._model.import_from(src_course, errors)
 
-    def _get_max_id_used(self):
-        """Finds max id used by a unit of the course."""
-        max_id = 0
-        for unit in self.get_units():
-            if unit.id > max_id:
-                max_id = unit.id
-        return max_id
+        # import 1.3 -> 1.3
+        if (src_course.version == CourseModel13.VERSION and
+            self.version == CourseModel13.VERSION):
+            return self._model.import_from(src_course, errors)
 
-    def _add_generic_unit(self, unit_type, title=None):
-        assert unit_type in verify.UNIT_TYPES
+        errors.append(
+            'Import of '
+            'course %s (version %s) into '
+            'course %s (version %s) '
+            'is not supported.' % (
+                app_context.raw, src_course.version,
+                self.app_context.raw, self.version))
 
-        unit = Unit()
-        unit.type = unit_type
-        unit.id = self._get_max_id_used() + 1
-        unit.title = title
-        unit.now_available = False
-
-        self.get_units().append(unit)
-        self._save()
-
-        return unit
-
-    def add_unit(self):
-        """Adds new unit to a course."""
-        self._materialize()
-        return self._add_generic_unit('U', 'New Unit')
-
-    def add_link(self):
-        """Adds new link (other) to a course."""
-        self._materialize()
-        return self._add_generic_unit('O', 'New Link')
-
-    def add_assessment(self):
-        """Adds new assessment to a course."""
-        self._materialize()
-        return self._add_generic_unit('A', 'New Assessment')
-
-    def delete_unit(self, unit):
-        """Deletes existing unit."""
-        self._materialize()
-        unit = self.find_unit_by_id(unit.id)
-        if unit:
-            self.get_units().remove(unit)
-            self._save()
-            return True
-        return False
-
-    def put_unit(self, unit):
-        """Updates existing unit."""
-        self._materialize()
-        units = self.get_units()
-        for index, current in enumerate(units):
-            if str(unit.id) == str(current.id):
-                units[index] = unit
-                self._save()
-                return True
-        return False
-
-    def reorder_units(self, order_data):
-        """Reorder the units and lessons based on the order data given.
-
-        Args:
-            order_data: list of dict. Format is
-                The order_data is in the following format:
-                [
-                    {'id': 0, 'lessons': [{'id': 0}, {'id': 1}, {'id': 2}]},
-                    {'id': 0, 'lessons': []},
-                    {'id': 0, 'lessons': [{'id': 0}, {'id': 1}]}
-                    ...
-                ]
-        """
-        self._materialize()
-        reordered_units = []
-        unit_ids = set()
-        for unit_data in order_data:
-            unit_id = unit_data['id']
-            reordered_units.append(self.find_unit_by_id(unit_id))
-            unit_ids.add(unit_id)
-        assert len(unit_ids) == len(self._units)
-        self._units = reordered_units
-
-        reordered_lessons = []
-        lesson_ids = set()
-        for unit_data in order_data:
-            unit_id = unit_data['id']
-            for lesson_data in unit_data['lessons']:
-                lesson_id = lesson_data['id']
-                reordered_lessons.append(
-                    self.find_lesson_by_id(unit_id, lesson_id))
-                lesson_ids.add((unit_id, lesson_id))
-        assert len(lesson_ids) == len(self._lessons)
-        self._lessons = reordered_lessons
-
-        self._reindex()
-        self._save()
-
-    def get_assessment_filename(self, unit_id):
-        """Returns assessment URL for direct fetching."""
-        self._materialize()
-        unit = self.find_unit_by_id(unit_id)
-        assert unit and verify.UNIT_TYPE_ASSESSMENT == unit.type
-        if unit.assessment_resource_id:
-            resource_id = unit.assessment_resource_id
-        else:
-            resource_id = unit.unit_id
-        return 'assets/js/assessment-%s.js' % resource_id
-
-    def get_activity_filename(self, unit_id, lesson_id):
-        """Returns activity URL for direct fetching."""
-        self._materialize()
-        lesson = self.find_lesson_by_id(unit_id, lesson_id)
-        assert lesson
-        if lesson.activity_resource_id:
-            return 'assets/js/activity-%s.js' % lesson.activity_resource_id
-        else:
-            return 'assets/js/activity-%s.%s.js' % (
-                unit_id, lesson_id)
-
-
-class SerializableCourseEnvelope(object):
-    """A serializable, data-only representation of a Course."""
-
-    def __init__(self):
-        self.version = None
-        self.units = []
-        self.lessons = []
-
-
-class Unit(object):
-    """An object to represent a Unit, Assessment or Link."""
-
-    def __init__(self):
-        self.id = 0
-        self.type = ''
-        self.unit_id = ''
-        self.title = ''
-        self.release_date = ''
-        self.now_available = False
-        self.assessment_resource_id = None
-
-
-class Lesson(object):
-    """An object to represent a Lesson."""
-
-    def __init__(self):
-        self.unit_id = 0
-        self.id = 0
-        self.title = ''
-        self.objectives = ''
-        self.video = ''
-        self.notes = ''
-        self.duration = ''
-        self.activity = ''
-        self.activity_title = ''
-        self.activity_resource_id = None
-
-
-def copy_attributes(source, target, converter):
-    """Copies source object attributes into a target using a converter."""
-    for source_name, value in converter.items():
-        if value:
-            target_name = value[0]
-            target_type = value[1]
-            setattr(
-                target, target_name, target_type(getattr(source, source_name)))
-
-
-def load_csv_course(app_context):
-    """Loads course data from the CSV files."""
-    logging.info('Initializing datastore from CSV files')
-
-    unit_file = os.path.join(app_context.get_data_home(), 'unit.csv')
-    lesson_file = os.path.join(app_context.get_data_home(), 'lesson.csv')
-
-    # Load and validate data from CSV files.
-    unit_stream = app_context.fs.open(unit_file)
-    lesson_stream = app_context.fs.open(lesson_file)
-    if not unit_stream and not lesson_stream:
         return None, None
-
-    units = verify.read_objects_from_csv_stream(
-        unit_stream, verify.UNITS_HEADER, verify.Unit)
-    lessons = verify.read_objects_from_csv_stream(
-        lesson_stream, verify.LESSONS_HEADER, verify.Lesson)
-    verifier = verify.Verifier()
-    verifier.verify_unit_fields(units)
-    verifier.verify_lesson_fields(lessons)
-    verifier.verify_unit_lesson_relationships(units, lessons)
-    assert verifier.errors == 0
-    assert verifier.warnings == 0
-
-    # Load data from CSV files into a datastore.
-    new_units = []
-    new_lessons = []
-    units = verify.read_objects_from_csv_stream(
-        app_context.fs.open(unit_file), verify.UNITS_HEADER, Unit)
-    lessons = verify.read_objects_from_csv_stream(
-        app_context.fs.open(lesson_file), verify.LESSONS_HEADER, Lesson)
-    for unit in units:
-        entity = Unit()
-        copy_attributes(unit, entity, verify.UNIT_CSV_TO_DB_CONVERTER)
-        new_units.append(entity)
-    for lesson in lessons:
-        entity = Lesson()
-        copy_attributes(lesson, entity, verify.LESSON_CSV_TO_DB_CONVERTER)
-        new_lessons.append(entity)
-
-    return new_units, new_lessons

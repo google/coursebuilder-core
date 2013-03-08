@@ -63,6 +63,9 @@ class AbstractFileSystem(object):
         """Configures jinja environment loaders for this file system."""
         return self._impl.get_jinja_environ(dir_names)
 
+    def is_read_write(self):
+        return self._impl.is_read_write()
+
 
 class LocalReadOnlyFileSystem(object):
     """A read-only file system serving only local files."""
@@ -124,6 +127,9 @@ class LocalReadOnlyFileSystem(object):
         return jinja2.Environment(
             extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(physical_dir_names))
+
+    def is_read_write(self):
+        return False
 
 
 class FileMetadataEntity(BaseEntity):
@@ -293,7 +299,8 @@ class DatastoreBackedFileSystem(object):
         filename = self._logical_to_physical(afilename)
 
         # Load from cache.
-        result = MemcacheManager.get(self.make_key(filename))
+        result = MemcacheManager.get(
+            self.make_key(filename), namespace=self._ns)
         if result:
             return result
 
@@ -303,7 +310,8 @@ class DatastoreBackedFileSystem(object):
             data = FileDataEntity.get_by_key_name(filename)
             if data:
                 result = FileStreamWrapped(metadata, data.data)
-                MemcacheManager.set(self.make_key(filename), result)
+                MemcacheManager.set(
+                    self.make_key(filename), result, namespace=self._ns)
                 return result
 
         # Load from parent fs.
@@ -333,7 +341,7 @@ class DatastoreBackedFileSystem(object):
         metadata.put()
         data.put()
 
-        MemcacheManager.delete(self.make_key(filename))
+        MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
 
     @db.transactional(xg=True)
     def delete(self, filename):
@@ -345,14 +353,15 @@ class DatastoreBackedFileSystem(object):
         data = FileDataEntity(key_name=filename)
         if data:
             data.delete()
-        MemcacheManager.delete(self.make_key(filename))
+        MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
 
     def isfile(self, afilename):
         """Checks file existence by looking up the datastore row."""
         filename = self._logical_to_physical(afilename)
 
         # Check cache.
-        result = MemcacheManager.get(self.make_key(filename))
+        result = MemcacheManager.get(
+            self.make_key(filename), namespace=self._ns)
         if result:
             return True
 
@@ -384,6 +393,9 @@ class DatastoreBackedFileSystem(object):
             extensions=['jinja2.ext.i18n'],
             loader=VirtualFileSystemTemplateLoader(
                 self, self._logical_home_folder, dir_names))
+
+    def is_read_write(self):
+        return True
 
 
 def run_all_unit_tests():
