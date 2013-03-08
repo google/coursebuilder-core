@@ -12,18 +12,32 @@
 
 <!-- TODO(psimakov): take styles out into a separate file -->
 <style>
-  div.status-message {
+  div.status-popup {
     width:400px;   /* adjust */
     top:15%;
     left:50%;
     margin-left: -200px;  /* half of the width */
     position:fixed;
-    background-color: rgb(255, 255, 128);
-    background-color: rgba(255, 255, 128, 0.5);
-    transparency: 50%;
+    background-color: #ffffB7;
+    border: solid #cccca0 1px;
+    border-radius: 10px;
     text-align: center;
-    padding: 16px;
+    padding: 5px;
     z-index: 999;
+  }
+  div.status-controlbar {
+    float: right;
+  }
+  div.status-controlbar button {
+    color: white;
+    font-weight: bold;
+    background-color: #c00;
+    text-decoration: none;
+    padding: 0 0.2em;
+    border: solid #800 1px;
+  }
+  div.status-message {
+    padding: 10px;
   }
 
   div.form {
@@ -169,7 +183,12 @@
   }
 </style>
 
-<div class='status-message' id='formStatusMessage' style='display: none;'>&nbsp;</div>
+<div class='status-popup' id='formStatusPopup' style='display: none;'>
+  <div class='status-controlbar'>
+    <button onclick='cbHideMsg()'>X</button>
+  </div>
+  <div class='status-message' id='formStatusMessage'></div>
+</div>
 
 <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
   <div class='form' id='formContainer'></div>
@@ -183,14 +202,15 @@
   var xssiPrefix = ")]}'\n";
 
   function cbShowMsg(text){
-    elem = document.getElementById("formStatusMessage");
-    elem.textContent = text;  // FF, Chrome
-    elem.innerText = text;    // IE
-    elem.style.display = "block";
+    var popup = document.getElementById("formStatusPopup");
+    var message = document.getElementById("formStatusMessage");
+    message.textContent = text;  // FF, Chrome
+    message.innerText = text;    // IE
+    popup.style.display = "block";
   }
 
   function cbHideMsg(){
-  elem = document.getElementById("formStatusMessage");
+  elem = document.getElementById("formStatusPopup");
     elem.style.display = "none";
   }
 
