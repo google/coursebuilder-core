@@ -108,7 +108,15 @@ def _upload():
     raise NotImplementedError('upload not implemented')
 
 
-def main(parsed_args):
+def main(parsed_args, environment_class=None):
+    """Performs the requested ETL operation.
+
+    Args:
+        parsed_args: argparse.Namespace. Parsed command-line arguments.
+        environment_class: None or remote.Environment. Environment setup class
+            used to configure the service stub map. Injectable for tests only;
+            defaults to remote.Environment if not specified.
+    """
     _set_up_sys_path(parsed_args.sdk_path)
     logging.basicConfig()
     _LOG.setLevel(parsed_args.log_level.upper())
@@ -116,11 +124,13 @@ def main(parsed_args):
     # Must do Course Builder/App Engine imports after _set_up_sys_path().
     # pylint: disable-msg=g-import-not-at-top
     from tools.etl import remote
+    if not environment_class:
+        environment_class = remote.Environment
     _LOG.info('Mode is %s' % parsed_args.mode)
     _LOG.info(
         'Target is application_id %s on server %s' % (
             parsed_args.application_id, parsed_args.server))
-    remote.Environment(
+    environment_class(
         parsed_args.application_id, parsed_args.server).establish()
     if parsed_args.mode == _MODE_DOWNLOAD:
         _download()

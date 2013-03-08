@@ -2281,6 +2281,26 @@ class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
         self.init_course_data(self.upload_all_sample_course_files)
 
 
+class FakeEnvironment(object):
+    """Temporary fake tools.etl.remote.Evironment.
+
+    Bypasses making a remote_api connection because webtest can't handle it and
+    we don't want to bring up a local server for our functional tests. When this
+    fake is used, the in-process datastore stub will handle RPCs.
+
+    TODO(johncox): find a way to make webtest successfully emulate the
+    remote_api endpoint and get rid of this fake.
+    """
+
+    def __init__(self, application_id, server, path=None):
+        self._appication_id = application_id
+        self._path = path
+        self._server = server
+
+    def establish(self):
+        pass
+
+
 class EtlMainTestCase(DatastoreBackedCourseTest):
     """Tests tools/etl/etl.py's main()."""
 
@@ -2297,20 +2317,23 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.common_args = [
             'myapp', 'localhost:8080', '--sdk_path', self.sdk_path]
 
-    # TODO(johncox): re-enable these once webtest knows about remote_api.
-    def disabled_test_download(self):
+    def test_download(self):
         # TODO(johncox): add verification of download once method is written.
         args = etl._PARSER.parse_args(['download'] + self.common_args)
         self.assertRaisesRegexp(
-            NotImplementedError, 'download.*', etl.main, args)
+            NotImplementedError, 'download.*', etl.main, args,
+            environment_class=FakeEnvironment)
 
-    def disabled_test_upload(self):
+    def test_upload(self):
         # TODO(johncox): add verification of upload once method is written.
         args = etl._PARSER.parse_args(['upload'] + self.common_args)
         self.assertRaisesRegexp(
-            NotImplementedError, 'upload.*', etl.main, args)
+            NotImplementedError, 'upload.*', etl.main, args,
+            environment_class=FakeEnvironment)
 
 
+# TODO(johncox): re-enable these tests once we figure out how to make webtest
+# play nice with remote_api.
 class EtlRemoteEnvironmentTestCase(actions.TestBase):
     """Tests tools/etl/remote.py."""
 
