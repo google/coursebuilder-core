@@ -367,6 +367,28 @@ def view_assessments(browser):
         assert_contains(get_current_user_email(), response.body)
 
 
+def submit_assessment(browser, unit_id, args, base=''):
+    """Submits an assessment."""
+    response = browser.get('%s/assessment?name=%s' % (base, unit_id))
+    assert_contains(
+        '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
+        response.body)
+
+    js_response = browser.get(
+        '%s/assets/js/assessment-%s.js' % (base, unit_id))
+    assert_equals(js_response.status_int, 200)
+
+    # Extract XSRF token from the page.
+    match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)
+    assert match
+    xsrf_token = match.group(1)
+    args['xsrf_token'] = xsrf_token
+
+    response = browser.post('%s/answer' % base, args)
+    assert_equals(response.status_int, 200)
+    return response
+
+
 def change_name(browser, new_name):
     response = browser.get('student/home')
 

@@ -270,11 +270,6 @@ class InfrastructureTest(actions.TestBase):
         app_context = sites.get_all_courses()[0]
         course = courses.Course(None, app_context=app_context)
 
-        # This test requires a read-write file system. If the tests are running
-        # on a read-only file system, we can't run this test.
-        if not app_context.fs.is_read_write():
-            return
-
         # Add a unit that is not available.
         unit_1 = course.add_unit()
         unit_1.now_available = False
@@ -401,6 +396,153 @@ class InfrastructureTest(actions.TestBase):
         assert_contains('Lesson 4.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
+
+        actions.logout()
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
+    def test_custom_assessments(self):
+        """Tests that custom assessments are evaluated correctly."""
+
+        # Setup a new course.
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        app_context = sites.get_all_courses()[0]
+        course = courses.Course(None, app_context=app_context)
+
+        email = 'test_assessments@google.com'
+        name = 'Test Assessments'
+
+        assessment_1 = course.add_assessment()
+        assessment_1.title = 'first'
+        assessment_1.now_available = True
+        assessment_1.weight = 0
+        assessment_2 = course.add_assessment()
+        assessment_2.title = 'second'
+        assessment_2.now_available = True
+        assessment_2.weight = 0
+        course.save()
+        assert course.find_unit_by_id(assessment_1.unit_id)
+        assert course.find_unit_by_id(assessment_2.unit_id)
+        assert 2 == len(course.get_units())
+
+        # Make the course available.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['now_available'] = True
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        first = {'score': '1.00', 'assessment_type': assessment_1.unit_id}
+        second = {'score': '3.00', 'assessment_type': assessment_2.unit_id}
+
+        # Update assessment 1.
+        assessment_1_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Pre.js'), 'rb').readlines()
+        assessment_1_content = u''.join(assessment_1_content)
+        errors = []
+        course.set_assessment_content(
+            assessment_1, assessment_1_content, errors)
+        course.save()
+        assert not errors
+
+        # Update assessment 2.
+        assessment_2_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Mid.js'), 'rb').readlines()
+        assessment_2_content = u''.join(assessment_2_content)
+        errors = []
+        course.set_assessment_content(
+            assessment_2, assessment_2_content, errors)
+        course.save()
+        assert not errors
+
+        # Register.
+        actions.login(email)
+        actions.register(self, name)
+
+        # Submit assessment 1.
+        actions.submit_assessment(
+            self, assessment_1.unit_id, first, base='/test')
+        student = models.Student.get_enrolled_student_by_email(email)
+        student_scores = course.get_all_scores(student)
+
+        assert len(student_scores) == 2
+
+        assert student_scores[0]['id'] == str(assessment_1.unit_id)
+        assert student_scores[0]['score'] == 1
+        assert student_scores[0]['title'] == 'first'
+        assert student_scores[0]['weight'] == 0
+
+        assert student_scores[1]['id'] == str(assessment_2.unit_id)
+        assert student_scores[1]['score'] == 0
+        assert student_scores[1]['title'] == 'second'
+        assert student_scores[1]['weight'] == 0
+
+        # The overall score is None if there are no weights assigned to any of
+        # the assessments.
+        overall_score = course.get_overall_score(student)
+        assert overall_score is None
+
+        # View the student profile page.
+        response = self.get('/test/student/home')
+        assert_does_not_contain('Overall course score', response.body)
+
+        # Add a weight to the first assessment.
+        assessment_1.weight = 10
+        overall_score = course.get_overall_score(student)
+        assert overall_score == 1
+
+        # Submit assessment 2.
+        actions.submit_assessment(
+            self, assessment_2.unit_id, second, base='/test')
+        # We need to reload the student instance, because its properties have
+        # changed.
+        student = models.Student.get_enrolled_student_by_email(email)
+        student_scores = course.get_all_scores(student)
+
+        assert len(student_scores) == 2
+        assert student_scores[1]['score'] == 3
+        overall_score = course.get_overall_score(student)
+        assert overall_score == 1
+
+        # Change the weight of assessment 2.
+        assessment_2.weight = 30
+        overall_score = course.get_overall_score(student)
+        assert overall_score == int((1 * 10 + 3 * 30) / 40)
+
+        # Save all changes.
+        course.save()
+
+        # View the student profile page.
+        response = self.get('/test/student/home')
+        assert_contains('assessment-score-first">1</span>', response.body)
+        assert_contains('assessment-score-second">3</span>', response.body)
+        assert_contains('Overall course score', response.body)
+        assert_contains('assessment-score-overall">2</span>', response.body)
+
+        # Submitting a lower score for any assessment does not change any of
+        # the scores, since the system records the maximum score that has ever
+        # been achieved on any assessment.
+        first_retry = {'score': '0', 'assessment_type': assessment_1.unit_id}
+        actions.submit_assessment(
+            self, assessment_1.unit_id, first_retry, base='/test')
+        student = models.Student.get_enrolled_student_by_email(email)
+        student_scores = course.get_all_scores(student)
+
+        assert len(student_scores) == 2
+        assert student_scores[0]['id'] == str(assessment_1.unit_id)
+        assert student_scores[0]['score'] == 1
+
+        overall_score = course.get_overall_score(student)
+        assert overall_score == int((1 * 10 + 3 * 30) / 40)
 
         actions.logout()
 
@@ -1580,27 +1722,6 @@ class ActivityTest(actions.TestBase):
 class AssessmentTest(actions.TestBase):
     """Test for assessments."""
 
-    def submit_assessment(self, name, args):
-        """Test student taking an assessment."""
-
-        response = self.get('assessment?name=%s' % name)
-        assert_contains(
-            '<script src="assets/js/assessment-%s.js"></script>' % name,
-            response.body)
-
-        js_response = self.get('assets/js/assessment-%s.js' % name)
-        assert_equals(js_response.status_int, 200)
-
-        # Extract XSRF token from the page.
-        match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)
-        assert match
-        xsrf_token = match.group(1)
-        args['xsrf_token'] = xsrf_token
-
-        response = self.post('answer', args)
-        assert_equals(response.status_int, 200)
-        return response
-
     def test_course_pass(self):
         """Test student passing final exam."""
         email = 'test_pass@google.com'
@@ -1613,7 +1734,7 @@ class AssessmentTest(actions.TestBase):
         actions.register(self, name)
 
         # Submit answer.
-        response = self.submit_assessment('Fin', post)
+        response = actions.submit_assessment(self, 'Fin', post)
         assert_equals(response.status_int, 200)
         assert_contains('your overall course score of 70%', response.body)
         assert_contains('you have passed the course', response.body)
@@ -1664,7 +1785,7 @@ class AssessmentTest(actions.TestBase):
                 assert assessment['score'] == 0
 
             # Submit assessments and check that the score is updated.
-            self.submit_assessment('Pre', pre)
+            actions.submit_assessment(self, 'Pre', pre)
             student = models.Student.get_enrolled_student_by_email(email)
             student_scores = course.get_all_scores(student)
             assert len(student_scores) == 3
@@ -1674,7 +1795,7 @@ class AssessmentTest(actions.TestBase):
                 else:
                     assert assessment['score'] == 0
 
-            self.submit_assessment('Mid', mid)
+            actions.submit_assessment(self, 'Mid', mid)
             student = models.Student.get_enrolled_student_by_email(email)
 
             # Navigate to the course overview page.
@@ -1685,7 +1806,7 @@ class AssessmentTest(actions.TestBase):
             assert_contains(u'id="progress-notstarted-Fin', response.body)
 
             # Submit the final assessment.
-            self.submit_assessment('Fin', fin)
+            actions.submit_assessment(self, 'Fin', fin)
             student = models.Student.get_enrolled_student_by_email(email)
 
             # Navigate to the course overview page.
@@ -1717,7 +1838,7 @@ class AssessmentTest(actions.TestBase):
 
             # Try posting a new midcourse exam with a lower score;
             # nothing should change.
-            self.submit_assessment('Mid', second_mid)
+            actions.submit_assessment(self, 'Mid', second_mid)
             student = models.Student.get_enrolled_student_by_email(email)
             assert int(course.get_score(student, 'Pre')) == 1
             assert int(course.get_score(student, 'Mid')) == 2
@@ -1727,7 +1848,7 @@ class AssessmentTest(actions.TestBase):
 
             # Now try posting a postcourse exam with a higher score and note
             # the changes.
-            self.submit_assessment('Fin', second_fin)
+            actions.submit_assessment(self, 'Fin', second_fin)
             student = models.Student.get_enrolled_student_by_email(email)
             assert int(course.get_score(student, 'Pre')) == 1
             assert int(course.get_score(student, 'Mid')) == 2

@@ -48,7 +48,7 @@
             <th align="left">&nbsp;&nbsp;&nbsp;{{ assessment['title'] }}</th>
             <td>
               {% if 'score' in assessment and assessment['score'] is defined %}
-                {{ assessment['score'] }}
+                <span id="assessment-score-{{assessment['title']}}">{{ assessment['score'] }}</span>
               {% endif %}
             </td>
           </tr>
@@ -58,7 +58,7 @@
           <tr>
             <th align="left">{% trans %} Overall course score {% endtrans %}</th>
             <td>
-              {{ overall_score }}
+              <span id="assessment-score-overall">{{ overall_score }}</span>
             </td>
           </tr>
         {% endif %}

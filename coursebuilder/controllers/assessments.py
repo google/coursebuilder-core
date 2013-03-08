@@ -71,7 +71,7 @@ class AnswerHandler(BaseHandler):
         Returns:
             the result of the assessment, if appropriate.
         """
-        student = Student.get_by_email(email)
+        student = Student.get_enrolled_student_by_email(email)
         course = self.get_course()
 
         # It may be that old Student entities don't have user_id set; fix it.
