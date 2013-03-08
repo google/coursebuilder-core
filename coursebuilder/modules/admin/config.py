@@ -255,7 +255,7 @@ class CoursesItemRESTHandler(BaseRESTHandler):
             payload_dict={
                 'name': 'new_course',
                 'title': 'My New Course',
-                'admin_email': 'admin@test.com'},
+                'admin_email': self.get_user().email()},
             xsrf_token=XsrfTokenManager.create_xsrf_token(
                 'add-course-put'))
 
