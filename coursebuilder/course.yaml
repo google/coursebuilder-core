@@ -69,7 +69,8 @@ course:
   #     http://code.google.com/p/course-builder/wiki/CreateEmailList
   announcement_list_url: //groups.google.com/group/My-Course-Announce
 
-  # Locale for internationalization.
+  # Locale for internationalization. See modules/i18n/resources/locale for
+  # available locales.
   locale: 'en_US'
 
 

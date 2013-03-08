@@ -1157,7 +1157,7 @@ class MultipleCoursesTestBase(actions.TestBase):
         self.modify_file(
             os.path.join(self.course_ru.home, 'course.yaml'),
             'locale: \'en_US\'',
-            'locale: \'ru_RU\'')
+            'locale: \'ru\'')
 
         # Configure courses.
         sites.setup_courses('%s, %s, %s' % (
@@ -1309,7 +1309,7 @@ class I18NTest(MultipleCoursesTestBase):
         """Test course is properly internationalized."""
         response = self.get('/courses/%s/preview' % self.course_ru.path)
         assert_contains_all_of(
-            [u'Вход', u'Регистрация', u'Расписание', u'Курс'], response.body)
+            [u'Войти', u'Регистрация', u'Расписание', u'Курс'], response.body)
 
 
 class CourseUrlRewritingTestBase(actions.TestBase):
