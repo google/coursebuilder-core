@@ -17,6 +17,7 @@
 __author__ = 'Sean Lip (sll@google.com)'
 
 import datetime
+import os
 
 from tools import verify
 from models import StudentPropertyEntity
@@ -69,6 +70,20 @@ class UnitLessonCompletionTracker(object):
     def _get_course(self):
         return self._course
 
+    def get_activity_as_python(self, unit_id, lesson_id):
+        """Gets the corresponding activity as a Python object."""
+        root_name = 'activity'
+        course = self._get_course()
+        activity_text = course.app_context.fs.get(
+            os.path.join(course.app_context.get_home(),
+                         course.get_activity_filename(unit_id, lesson_id)))
+
+        content, noverify_text = verify.convert_javascript_to_python(
+            activity_text, root_name)
+        activity = verify.evaluate_python_expression_from_text(
+            content, root_name, verify.Activity().scope, noverify_text)
+        return activity
+
     def _get_unit_key(self, unit_id):
         return '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id)
 
@@ -108,7 +123,7 @@ class UnitLessonCompletionTracker(object):
         valid_block_ids = []
 
         # Get the activity corresponding to this unit/lesson combination.
-        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
+        activity = self.get_activity_as_python(unit_id, lesson_id)
         for block_id in range(len(activity['activity'])):
             block = activity['activity'][block_id]
             if isinstance(block, dict):

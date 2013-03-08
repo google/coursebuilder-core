@@ -16,7 +16,6 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-import logging
 import urlparse
 from models import models
 from models import transforms
@@ -224,11 +223,8 @@ class ActivityHandler(BaseHandler):
         # Mark this page as accessed. This is done after setting the student
         # progress template value, so that the mark only shows up after the
         # student visits the page for the first time.
-        try:
-            self.get_course().get_progress_tracker().put_activity_accessed(
-                student, unit_id, lesson_id)
-        except Exception as e:  # pylint: disable-msg=broad-except
-            logging.error('Failed to get student progress: %s', e)
+        self.get_course().get_progress_tracker().put_activity_accessed(
+            student, unit_id, lesson_id)
 
         self.render('activity.html')
 
