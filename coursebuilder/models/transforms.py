@@ -26,7 +26,7 @@ SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 
 SUPPORTED_TYPES = (db.GeoPt, datetime.date)
 
-JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer']
+JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array']
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
 
@@ -61,6 +61,12 @@ def json_to_dict(source_dict, schema):
         if attr_type == 'date':
             output[key] = datetime.datetime.strptime(
                 source_dict[key], JSON_DATE_FORMAT).date()
+        elif attr_type == 'array':
+            subschema = attr['items']
+            array = []
+            for item in source_dict[key]:
+                array.append(json_to_dict(item, subschema))
+            output[key] = array
         else:
             output[key] = source_dict[key]
     return output

@@ -106,6 +106,7 @@ class Course(object):
 
     def _reindex(self):
         """Groups all lessons by unit_id."""
+        self._unit_id_to_lessons = {}
         for lesson in self._lessons:
             key = str(lesson.unit_id)
             if not key in self._unit_id_to_lessons:
@@ -207,6 +208,13 @@ class Course(object):
                 return unit
         return None
 
+    def find_lesson_by_id(self, unit_id, lesson_id):
+        """Find a given lesson by its id and the id of its parent unit."""
+        for lesson in self.get_lessons(unit_id):
+            if str(lesson.id) == str(lesson_id):
+                return lesson
+        return None
+
     def _get_max_id_used(self):
         """Finds max id used by a unit of the course."""
         max_id = 0
@@ -264,6 +272,43 @@ class Course(object):
                 self._save()
                 return True
         return False
+
+    def reorder_units(self, order_data):
+        """Reorder the units and lessons based on the order data given.
+
+        Args:
+            order_data: list of dict. Format is
+                The order_data is in the following format:
+                [
+                    {'id': 0, 'lessons': [{'id': 0}, {'id': 1}, {'id': 2}]},
+                    {'id': 0, 'lessons': []},
+                    {'id': 0, 'lessons': [{'id': 0}, {'id': 1}]}
+                    ...
+                ]
+        """
+        reordered_units = []
+        unit_ids = set()
+        for unit_data in order_data:
+            unit_id = unit_data['id']
+            reordered_units.append(self.find_unit_by_id(unit_id))
+            unit_ids.add(unit_id)
+        assert len(unit_ids) == len(self._units)
+        self._units = reordered_units
+
+        reordered_lessons = []
+        lesson_ids = set()
+        for unit_data in order_data:
+            unit_id = unit_data['id']
+            for lesson_data in unit_data['lessons']:
+                lesson_id = lesson_data['id']
+                reordered_lessons.append(
+                    self.find_lesson_by_id(unit_id, lesson_id))
+                lesson_ids.add((unit_id, lesson_id))
+        assert len(lesson_ids) == len(self._lessons)
+        self._lessons = reordered_lessons
+
+        self._reindex()
+        self._save()
 
 
 class SerializableCourseEnvelope(object):

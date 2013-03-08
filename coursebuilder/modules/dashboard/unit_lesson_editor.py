@@ -475,26 +475,22 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
             'properties', 'outline', 'items',
             'properties', 'title', '_inputex'], {
                 '_type': 'uneditable',
-                'name': 'name',
                 'label': 'Unit'}),
         (['properties', 'outline', 'items', 'properties', 'id', '_inputex'], {
-            '_type': 'hidden',
-            'name': 'id'}),
+            '_type': 'hidden'}),
         (['properties', 'outline', 'items', 'properties', 'lessons',
           '_inputex'], {
               'sortable': 'true',
-              'label': 'Lessons',
+              'label': '',
               'listAddLabel': 'Add  a new lesson',
               'listRemoveLabel': 'Delete'}),
         (['properties', 'outline', 'items', 'properties', 'lessons', 'items',
           'properties', 'title', '_inputex'], {
               '_type': 'uneditable',
-              'name': 'name',
               'label': ''}),
         (['properties', 'outline', 'items', 'properties', 'lessons', 'items',
           'properties', 'id', '_inputex'], {
-              '_type': 'hidden',
-              'name': 'id'})
+              '_type': 'hidden'})
         ]
 
     REQUIRED_MODULES = [
@@ -512,18 +508,16 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         outline_data = []
         unit_index = 1
         for unit in course.get_units():
-            # TODO(jorr): Need to handle other course objects than just units
-            if unit.type == 'U':
-                lesson_data = []
-                for lesson in course.get_lessons(unit.unit_id):
-                    lesson_data.append({
-                        'name': lesson.title,
-                        'id': lesson.id})
-                outline_data.append({
-                    'name': '%s - %s' % (unit_index, unit.title),
-                    'id': unit.unit_id,
-                    'lessons': lesson_data})
-                unit_index += 1
+            lesson_data = []
+            for lesson in course.get_lessons(unit.id):
+                lesson_data.append({
+                    'title': lesson.title,
+                    'id': lesson.id})
+            outline_data.append({
+                'title': '%s - %s' % (unit_index, unit.title),
+                'id': unit.id,
+                'lessons': lesson_data})
+            unit_index += 1
 
         transforms.send_json_response(
             self, 200, 'Success.',
@@ -533,10 +527,19 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
+        request = json.loads(self.request.get('request'))
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'unit-lesson-reorder', {'key': None}):
+            return
 
         if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
-        # TODO(jorr) Need to actually save the stuff we're sent.
-        transforms.send_json_response(self, 405, 'Not yet implemented.', {})
+        payload = request.get('payload')
+        payload_dict = transforms.json_to_dict(
+            json.loads(payload), self.SCHEMA_DICT)
+        courses.Course(self).reorder_units(payload_dict['outline'])
+
+        transforms.send_json_response(self, 200, 'Saved.')
