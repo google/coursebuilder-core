@@ -507,6 +507,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             "key" : {"type": "string"},
             "type": {"type": "string"},
             "title": {"optional": true, "type": "string"},
+            "weight": {"optional": true, "type": "string"},
             "content": {"optional": true, "type": "text"},
             "is_draft": {"type": "boolean"}
             }
@@ -522,6 +523,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
+        (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
         (['properties', 'content', '_inputex'], {'label': 'Content'}),
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
@@ -549,12 +551,21 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
+            'weight': unit.weight if hasattr(unit, 'weight') else 0,
             'content': content,
             'is_draft': not unit.now_available}
 
     def apply_updates(self, unit, updated_unit_dict, errors):
         """Store the updated assignment."""
         unit.title = updated_unit_dict.get('title')
+
+        try:
+            unit.weight = int(updated_unit_dict.get('weight'))
+            if unit.weight < 0:
+                errors.append('The weight must be a non-negative integer.')
+        except ValueError:
+            errors.append('The weight must be an integer.')
+
         unit.now_available = not updated_unit_dict.get('is_draft')
         courses.Course(
             None, app_context=self.app_context).set_assessment_content(
