@@ -203,7 +203,7 @@ class DashboardHandler(
                 lines.append(
                     ('<strong><a href="unit?unit=%s">Unit %s - %s</a>'
                      '</strong>') % (
-                         unit.unit_id, unit.unit_id, cgi.escape(unit.title)))
+                         unit.unit_id, unit.index, cgi.escape(unit.title)))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({

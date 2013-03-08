@@ -623,7 +623,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
             'properties', 'outline', 'items',
             'properties', 'title', '_inputex'], {
                 '_type': 'uneditable',
-                'label': 'Unit'}),
+                'label': ''}),
         (['properties', 'outline', 'items', 'properties', 'id', '_inputex'], {
             '_type': 'hidden'}),
         (['properties', 'outline', 'items', 'properties', 'lessons',
@@ -654,18 +654,19 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
         course = courses.Course(self)
         outline_data = []
-        unit_index = 1
         for unit in course.get_units():
             lesson_data = []
             for lesson in course.get_lessons(unit.unit_id):
                 lesson_data.append({
                     'title': lesson.title,
                     'id': lesson.lesson_id})
+            unit_title = unit.title
+            if verify.UNIT_TYPE_UNIT == unit.type:
+                unit_title = 'Unit %s - %s' % (unit.index, unit.title)
             outline_data.append({
-                'title': '%s - %s' % (unit_index, unit.title),
+                'title': unit_title,
                 'id': unit.unit_id,
                 'lessons': lesson_data})
-            unit_index += 1
 
         transforms.send_json_response(
             self, 200, 'Success.',
@@ -731,7 +732,9 @@ class LessonRESTHandler(BaseRESTHandler):
         unit_list = []
         for unit in units:
             if unit.type == 'U':
-                unit_list.append({'label': unit.title, 'value': unit.unit_id})
+                unit_list.append({
+                    'label': 'Unit %s - %s' % (unit.index, unit.title),
+                    'value': unit.unit_id})
 
         return [
             (['title'], 'Lesson'),
