@@ -22,20 +22,16 @@
   <ul class="gcb-breadcrumb">
     <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
     <li>
-      <a href="unit?unit={{ units.unit_id }}">
-        {% trans %} Unit {% endtrans %} {{ units.unit_id }}
-      </a>
-    </li>
+      <a href="unit?unit={{ unit.unit_id }}">
+        {% trans %} Unit {% endtrans %}{{ unit.index }}</a></li>
     <li>
-      <a href="unit?unit={{ units.unit_id }}&lesson={{ lesson_id }}">
-        {% trans %} Lesson {% endtrans %} {{ lesson_id }}
-      </a>
-    </li>
+      <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
+        {% trans %} Lesson {% endtrans %}{{ lesson.index }}</a></li>
     <li>{% trans %} Activity {% endtrans %}</li>
   </ul>
   <div>
     <h1 class="class_header">
-      {{ gettext('Unit %(id)s - %(title)s', id=units.unit_id, title=units.title) }}
+      {{ gettext('Unit %(index)s - %(title)s', index=unit.index, title=unit.title) }}
     </h1>
   </div>
   <div class="gcb-nav" id="gcb-nav-y">
@@ -43,7 +39,7 @@
       {% for lesson in lessons %}
         <li>
           <a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}" >
-            {{ unit_id}}.{{ lesson.lesson_id }} {{ lesson.title }}
+            {{ unit.index}}.{{ lesson.index }} {{ lesson.title }}
           </a>
 
           {% if lesson.activity %}

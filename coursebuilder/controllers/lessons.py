@@ -121,14 +121,15 @@ class UnitHandler(BaseHandler):
         # Extract incoming args
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
-        index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson.lesson_id
 
         # Set template values for a unit and its lesson entities
-        self.template_value['units'] = unit
+        self.template_value['unit'] = unit
+        self.template_value['lesson'] = lesson
 
         lessons = self.get_lessons(unit_id)
+        index = lesson.index - 1  # indexes are 1-based
         self.template_value['lessons'] = lessons
 
         # Set template values for nav bar
@@ -148,18 +149,18 @@ class UnitHandler(BaseHandler):
                     'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.lesson_id))
 
         # Format next button.
-        if not index < len(lessons) - 1:
-            self.template_value['next_button_url'] = ''
+        if lesson.activity:
+            self.template_value['next_button_url'] = (
+                'activity?unit=%s&lesson=%s' % (
+                    unit_id, lesson.lesson_id))
         else:
-            next_lesson = lessons[index + 1]
-            if next_lesson.activity:
-                self.template_value['next_button_url'] = (
-                    'activity?unit=%s&lesson=%s' % (
-                        unit_id, next_lesson.lesson_id))
+            if not index < len(lessons) - 1:
+                self.template_value['next_button_url'] = ''
             else:
+                next_lesson = lessons[index + 1]
                 self.template_value['next_button_url'] = (
                     'unit?unit=%s&lesson=%s' % (
-                        unit_id, next_lesson.lessons_id))
+                        unit_id, next_lesson.lesson_id))
 
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
@@ -185,29 +186,34 @@ class ActivityHandler(BaseHandler):
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
         lesson_id = lesson.lesson_id
-        index = self.get_lesson_index(unit, lesson)
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson_id'] = lesson_id
 
         # Set template values for a unit and its lesson entities
-        self.template_value['units'] = unit
+        self.template_value['unit'] = unit
+        self.template_value['lesson'] = unit
         self.template_value['activity_script_src'] = (
             self.get_course().get_activity_filename(unit_id, lesson_id))
 
         lessons = self.get_lessons(unit_id)
+        index = lesson.index - 1  # indexes are 1-based
         self.template_value['lessons'] = lessons
 
         # Set template values for nav bar
         self.template_value['navbar'] = {'course': True}
 
-        # Set template values for back and next nav buttons
+        # Format back button.
         self.template_value['back_button_url'] = (
             'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
+
+        # Format next button.
         if not index < len(lessons) - 1:
             self.template_value['next_button_url'] = ''
         else:
+            next_lesson = lessons[index + 1]
             self.template_value['next_button_url'] = (
-                'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+                'unit?unit=%s&lesson=%s' % (
+                    unit_id, next_lesson.lesson_id))
 
         # Set template value for event recording
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value

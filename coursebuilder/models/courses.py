@@ -143,6 +143,21 @@ def load_csv_course(app_context):
     return units, lessons
 
 
+def index_units_and_lessons(course):
+    """Index all 'U' type units and their lessons. Indexes are 1-based."""
+    unit_index = 1
+    for unit in course.get_units():
+        if verify.UNIT_TYPE_UNIT == unit.type:
+            unit._index = unit_index  # pylint: disable-msg=protected-access
+            unit_index += 1
+
+            lesson_index = 1
+            for lesson in course.get_lessons(unit.unit_id):
+                lesson._index = (  # pylint: disable-msg=protected-access
+                    lesson_index)
+                lesson_index += 1
+
+
 class Unit12(object):
     """An object to represent a Unit, Assessment or Link (version 1.2)."""
 
@@ -153,10 +168,19 @@ class Unit12(object):
         self.release_date = ''
         self.now_available = False
 
+        # Units of 'U' types have 1-based index. An index is automatically
+        # computed.
+        self._index = None
+
     @property
     def href(self):
         assert verify.UNIT_TYPE_LINK == self.type
         return self.unit_id
+
+    @property
+    def index(self):
+        assert verify.UNIT_TYPE_UNIT == self.type
+        return self._index
 
 
 class Lesson12(object):
@@ -173,6 +197,14 @@ class Lesson12(object):
         self.activity = ''
         self.activity_title = ''
 
+        # Lessons have 1-based index inside the unit they belong to. An index
+        # is automatically computed.
+        self._index = None
+
+    @property
+    def index(self):
+        return self._index
+
 
 class CourseModel12(object):
     """A course defined in terms of CSV files (version 1.2)."""
@@ -188,7 +220,7 @@ class CourseModel12(object):
         return None
 
     @classmethod
-    def index_lessons(cls, lessons):
+    def _make_unit_id_to_lessons_lookup_dict(cls, lessons):
         """Creates an index of unit.unit_id to unit.lessons."""
         unit_id_to_lessons = {}
         for lesson in lessons:
@@ -202,7 +234,10 @@ class CourseModel12(object):
         self._app_context = app_context
         self._units = units
         self._lessons = lessons
-        self._unit_id_to_lessons = self.index_lessons(self._lessons)
+        self._unit_id_to_lessons = self._make_unit_id_to_lessons_lookup_dict(
+            self._lessons)
+
+        index_units_and_lessons(self)
 
     @property
     def app_context(self):
@@ -247,8 +282,17 @@ class Unit13(object):
         self.release_date = ''
         self.now_available = False
 
+        # Units of 'U' types have 1-based index. An index is automatically
+        # computed.
+        self._index = None
+
         # Only valid for the unit.type == verify.UNIT_TYPE_LINK.
         self.href = None
+
+    @property
+    def index(self):
+        assert verify.UNIT_TYPE_UNIT == self.type
+        return self._index
 
 
 class Lesson13(object):
@@ -265,6 +309,14 @@ class Lesson13(object):
         self.now_available = False
         self.has_activity = False
         self.activity_title = ''
+
+        # Lessons have 1-based index inside the unit they belong to. An index
+        # is automatically computed.
+        self._index = None
+
+    @property
+    def index(self):
+        return self._index
 
     @property
     def activity(self):
@@ -330,6 +382,17 @@ class CourseModel13(object):
 
         return None
 
+    @classmethod
+    def _make_unit_id_to_lessons_lookup_dict(cls, lessons):
+        """Creates an index of unit.unit_id to unit.lessons."""
+        unit_id_to_lesson_ids = {}
+        for lesson in lessons:
+            key = str(lesson.unit_id)
+            if not key in unit_id_to_lesson_ids:
+                unit_id_to_lesson_ids[key] = []
+            unit_id_to_lesson_ids[key].append(str(lesson.lesson_id))
+        return unit_id_to_lesson_ids
+
     def __init__(self, app_context, envelope=None):
         self._app_context = app_context
         self._units = []
@@ -353,15 +416,10 @@ class CourseModel13(object):
         self._next_id += 1
         return next_id
 
-    def _index(self, lessons):
-        """Creates an index of unit.unit_id to unit.lessons."""
-        unit_id_to_lesson_ids = {}
-        for lesson in lessons:
-            key = str(lesson.unit_id)
-            if not key in unit_id_to_lesson_ids:
-                unit_id_to_lesson_ids[key] = []
-            unit_id_to_lesson_ids[key].append(str(lesson.lesson_id))
-        self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
+    def _index(self):
+        self._unit_id_to_lesson_ids = self._make_unit_id_to_lessons_lookup_dict(
+            self._lessons)
+        index_units_and_lessons(self)
 
     def save(self):
         """Saves this model to fs."""
@@ -454,7 +512,7 @@ class CourseModel13(object):
         lesson.now_available = False
 
         self._lessons.append(lesson)
-        self._index(self._lessons)
+        self._index()
 
         return lesson
 
@@ -468,7 +526,7 @@ class CourseModel13(object):
         assert lesson
         lesson.unit_id = unit.unit_id
 
-        self._index(self._lessons)
+        self._index()
 
         return lesson
 
@@ -498,7 +556,7 @@ class CourseModel13(object):
         if lesson.has_activity:
             self._delete_activity(lesson)
         self._lessons.remove(lesson)
-        self._index(self._lessons)
+        self._index()
         return True
 
     def delete_unit(self, unit):
@@ -511,7 +569,7 @@ class CourseModel13(object):
         if verify.UNIT_TYPE_ASSESSMENT == unit.type:
             self._delete_assessment(unit)
         self._units.remove(unit)
-        self._index(self._lessons)
+        self._index()
         return True
 
     def update_unit(self, unit):
@@ -541,7 +599,7 @@ class CourseModel13(object):
         existing_lesson.notes = lesson.notes
         existing_lesson.activity_title = lesson.activity_title
 
-        self._index(self._lessons)
+        self._index()
         return existing_lesson
 
     def reorder_units(self, order_data):
@@ -584,7 +642,7 @@ class CourseModel13(object):
         assert len(lesson_ids) == len(self._lessons)
         self._lessons = reordered_lessons
 
-        self._index(self._lessons)
+        self._index()
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         """Updates the content of an assessment."""

@@ -2083,6 +2083,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Login as admin.
         email = 'test_course_import@google.com'
+        name = 'Test Course Import'
         actions.login(email, is_admin=True)
 
         # Check course is empty.
@@ -2108,6 +2109,41 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         response = self.get('/test/assets/js/activity-37.js')
         assert_equals(200, response.status_int)
         assert_contains('explore ways to keep yourself updated', response.body)
+
+        unit_2_title = 'Unit 2 - Interpreting results'
+        lesson_2_1_title = '2.1 When search results suggest something new'
+        lesson_2_2_title = '2.2 Thinking more deeply about your search'
+
+        # Check units and lessons are indexed correctly.
+        response = self.get('/test/preview')
+        assert_contains(unit_2_title, response.body)
+        actions.register(self, name)
+        response = self.get('/test/course')
+        assert_contains(unit_2_title, response.body)
+
+        # Unit page.
+        response = self.get('/test/unit?unit=9')
+        assert_contains(  # A unit title.
+            unit_2_title, response.body)
+        assert_contains(  # First child lesson without link.
+            lesson_2_1_title, response.body)
+        assert_contains(  # Second child lesson with link.
+            lesson_2_2_title, response.body)
+        assert_contains_all_of(  # Breabcrubms.
+            ['Unit 2</a></li>', 'Lesson 1</li>'], response.body)
+
+        # Unit page.
+        response = self.get('/test/activity?unit=9&lesson=10')
+        assert_contains(  # A unit title.
+            unit_2_title, response.body)
+        assert_contains(  # An activity title.
+            'Lesson 2.1 Activity', response.body)
+        assert_contains(  # First child lesson without link.
+            lesson_2_1_title, response.body)
+        assert_contains(  # Second child lesson with link.
+            lesson_2_2_title, response.body)
+        assert_contains_all_of(  # Breabcrubms.
+            ['Unit 2</a></li>', 'Lesson 2</a></li>'], response.body)
 
         # Clean up.
         sites.reset_courses()

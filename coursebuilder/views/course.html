@@ -68,7 +68,7 @@
                       {% endif %}
 
                       <a href="unit?unit={{ unit.unit_id }}">
-                        {{ gettext('Unit %(id)s - %(title)s', id=unit.unit_id, title=unit.title) }}
+                        {{ gettext('Unit %(index)s - %(title)s', index=unit.index, title=unit.title) }}
                       </a>
                     </p></li>
                   {% elif unit.type == 'O' %}

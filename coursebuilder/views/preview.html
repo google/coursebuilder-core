@@ -36,7 +36,7 @@
                   <li><p class="top_content">{{ unit.title }}</p></li>
                 {% elif unit.type == 'U' %}
                   <li><p class="top_content">
-                    {{ gettext('Unit %(id)s - %(title)s', id=unit.unit_id, title=unit.title) }}
+                    {{ gettext('Unit %(index)s - %(title)s', index=unit.index, title=unit.title) }}
                     <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">{{ unit.release_date }}</span>
                   </p></li>
                 {% elif unit.type == 'O' %}

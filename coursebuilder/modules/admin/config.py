@@ -297,7 +297,7 @@ class CoursesItemRESTHandler(BaseRESTHandler):
             transforms.send_json_response(
                 self, 412,
                 'Added new course entry, but failed to update title and/or '
-                'admin email. The course.yaml already exists and must be '
+                'admin email. The course.yaml file already exists and must be '
                 'updated manually.')
             return
 

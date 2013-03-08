@@ -188,13 +188,6 @@ class BaseHandler(ApplicationHandler):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
 
-    def get_lesson_index(self, unit, lesson):
-        """Returns an index of a lesson in the lesson array."""
-        for idx, current in enumerate(self.get_lessons(unit.unit_id)):
-            if lesson.lesson_id == current.lesson_id:
-                return idx
-        raise Exception('Lesson does not belong to the unit.')
-
     def get_progress_tracker(self):
         """Gets the progress tracker for the course."""
         return self.get_course().get_progress_tracker()
