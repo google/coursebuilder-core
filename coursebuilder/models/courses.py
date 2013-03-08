@@ -193,22 +193,138 @@ class UnitLessonProgressTracker(object):
 
     PROPERTY_KEY = 'linear-course-progress'
 
-    EVENT_CODE_MAPPING = {'activity': 'a',
-                          'assessment': 's',
-                          'lesson': 'l',
-                          'unit': 'u',
-                          'video': 'v'}
+    # Here are representative examples of the keys for the various entities
+    # used in this class:
+    #   Unit 1: u.1
+    #   Unit 1, Lesson 1: u.1.l.1
+    #   Unit 1, Lesson 1, Video 1: u.1.l.1.v.1
+    #   Unit 1, Lesson 1, Activity 2: u.1.l.1.a.2
+    #   Unit 1, Lesson 1, Activity 2, Block 4: u.1.l.1.a.2.b.4
+    #   Assessment 'Pre': s.Pre
+    # At the moment, we do not divide assessments into blocks.
+    EVENT_CODE_MAPPING = {
+        'unit': 'u',
+        'lesson': 'l',
+        'video': 'v',
+        'activity': 'a',
+        'block': 'b',
+        'assessment': 's',
+    }
+
+    def __init__(self, course):
+        self._course = course
+
+    def _get_course(self):
+        return self._course
+
+    def _get_unit_key(self, unit_id):
+        return '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id)
+
+    def _get_lesson_key(self, unit_id, lesson_id):
+        return '%s.%s.%s.%s' % (
+            self.EVENT_CODE_MAPPING['unit'], unit_id,
+            self.EVENT_CODE_MAPPING['lesson'], lesson_id
+        )
+
+    def _get_video_key(self, unit_id, lesson_id, video_id):
+        return '%s.%s.%s.%s.%s.%s' % (
+            self.EVENT_CODE_MAPPING['unit'], unit_id,
+            self.EVENT_CODE_MAPPING['lesson'], lesson_id,
+            self.EVENT_CODE_MAPPING['video'], video_id
+        )
+
+    def _get_activity_key(self, unit_id, lesson_id, activity_id):
+        return '%s.%s.%s.%s.%s.%s' % (
+            self.EVENT_CODE_MAPPING['unit'], unit_id,
+            self.EVENT_CODE_MAPPING['lesson'], lesson_id,
+            self.EVENT_CODE_MAPPING['activity'], activity_id
+        )
+
+    def _get_block_key(self, unit_id, lesson_id, activity_id, block_id):
+        return '%s.%s.%s.%s.%s.%s.%s.%s' % (
+            self.EVENT_CODE_MAPPING['unit'], unit_id,
+            self.EVENT_CODE_MAPPING['lesson'], lesson_id,
+            self.EVENT_CODE_MAPPING['activity'], activity_id,
+            self.EVENT_CODE_MAPPING['block'], block_id
+        )
+
+    def _get_assessment_key(self, assessment_id):
+        return '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'], assessment_id)
+
+    def update_unit(self, progress, event_key):
+        """Updates a unit's progress if all its lessons have been completed."""
+        split_event_key = event_key.split('.')
+        assert len(split_event_key) == 2
+        unit_id = split_event_key[1]
+
+        # Check that all lessons in this unit have been completed.
+        lessons = self._get_course().get_lessons(unit_id)
+        for lesson in lessons:
+            # Skip lessons that do not have activities associated with them.
+            if lesson.activity != 'yes':
+                continue
+            if not self.is_lesson_completed(progress, unit_id, lesson.id):
+                return
+
+        self._inc(progress, self._get_unit_key(unit_id))
+
+    def update_lesson(self, progress, event_key):
+        """Updates a lesson's progress if its activities have been completed."""
+        split_event_key = event_key.split('.')
+        assert len(split_event_key) == 4
+        unit_id = split_event_key[1]
+        lesson_id = int(split_event_key[3])
+
+        lessons = self._get_course().get_lessons(unit_id)
+        for lesson in lessons:
+            if lesson.id == lesson_id and lesson.activity == 'yes':
+                if not self.is_activity_completed(progress, unit_id, lesson_id):
+                    return
+
+        self._inc(progress, self._get_lesson_key(unit_id, lesson_id))
+
+    def update_activity(self, progress, event_key):
+        """Updates activity's progress when all interactive blocks are done."""
+        split_event_key = event_key.split('.')
+        assert len(split_event_key) == 6
+        unit_id = split_event_key[1]
+        lesson_id = split_event_key[3]
+        activity_id = 0
+
+        # Get the activity corresponding to this unit/lesson combination.
+        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
+        for block_id in range(len(activity['activity'])):
+            block = activity['activity'][block_id]
+            if isinstance(block, dict):
+                if not self.is_block_completed(
+                        progress, unit_id, lesson_id, block_id):
+                    return
+        self._inc(progress, self._get_activity_key(
+            unit_id, lesson_id, activity_id))
+
+    UPDATER_MAPPING = {
+        'activity': update_activity,
+        'lesson': update_lesson,
+        'unit': update_unit
+    }
 
     # Dependencies for recording derived events. The key is the current
     # event, and the value is a tuple, each element of which contains:
-    # - the name of the derived event
+    # - the type of the derived event to be updated
+    # - the event updating function to be called
     # - the transformation to apply to the id of the current event to get the
     #       id for the new event
     DERIVED_EVENTS = {
+        'block': (
+            {
+                'type': 'activity',
+                'generate_new_id': (lambda s: '.'.join(s.split('.')[:-2])),
+            },
+        ),
         'activity': (
             {
                 'type': 'lesson',
-                'generate_new_id': (lambda s: s),
+                'generate_new_id': (lambda s: '.'.join(s.split('.')[:-2])),
             },
         ),
         'lesson': (
@@ -219,45 +335,140 @@ class UnitLessonProgressTracker(object):
         ),
     }
 
-    def __init__(self, course):
-        self._course = course
+    def _put_completion_event(self, student, event_type, event_key):
+        """Records an event when part of a course is completed."""
+        if event_type not in self.EVENT_CODE_MAPPING:
+            return
 
-    def get_course(self):
-        return self._course
+        progress = self.get_or_create_progress(student)
 
-    def update_lesson(self, student, event_key):
-        """Update this lesson if its activity has been completed."""
-        # TODO(sll): Implement this.
-        pass
+        self.update_event(student, progress, event_type, event_key, True)
 
-    def update_unit(self, student, event_key):
-        """Updates a unit's progress if all its lessons have been completed."""
+        progress.updated_on = datetime.datetime.now()
+        progress.put()
 
-        unit_id = event_key.split('.')[1]
+    def put_video_completed(self, student, unit_id, lesson_id):
+        """Records that the given student has completed a video."""
+        self._put_completion_event(
+            student, 'video', self._get_video_key(unit_id, lesson_id, 0))
 
-        progress = self.get_progress(student)
+    def put_activity_completed(self, student, unit_id, lesson_id):
+        """Records that the given student has completed an activity."""
+        self._put_completion_event(
+            student, 'activity', self._get_activity_key(unit_id, lesson_id, 0))
+
+    def put_block_completed(self, student, unit_id, lesson_id, block_id):
+        """Records that the given student has completed an activity block."""
+        self._put_completion_event(
+            student, 'block', self._get_block_key(
+                unit_id, lesson_id, 0, block_id))
+
+    def put_assessment_completed(self, student, assessment_type):
+        """Records that the given student has completed the given assessment."""
+        self._put_completion_event(
+            student, 'assessment', self._get_assessment_key(assessment_type))
+
+    def put_activity_accessed(self, student, unit_id, lesson_id):
+        """Records that the given student has accessed this activity."""
+        # TODO(sll): This method currently exists because (in the two-state
+        # completed-or-not model) we need to mark activities without
+        # interactive blocks as 'completed' when they are accessed. Change this
+        # to also mark activities as accessed.
+
+        # Get the activity corresponding to this unit/lesson combination.
+        activity = verify.Verifier().get_activity_as_python(unit_id, lesson_id)
+        interactive = False
+        for block_id in range(len(activity['activity'])):
+            block = activity['activity'][block_id]
+            if isinstance(block, dict):
+                interactive = True
+                break
+        if not interactive:
+            self.put_activity_completed(student, unit_id, lesson_id)
+
+    def update_event(self, student, progress, event_type, event_key,
+                     direct_update=False):
+        """Updates statistics for the given event, and for derived events.
+
+        Args:
+          student: the student
+          progress: the StudentProgressEntity for the student
+          event_type: the name of the recorded event
+          event_key: the key for the recorded event
+          direct_update: True if this event is being updated explicitly; False
+              if it is being auto-updated.
+        """
+        if direct_update or event_type not in self.UPDATER_MAPPING:
+            self._inc(progress, event_key)
+        else:
+            self.UPDATER_MAPPING[event_type](self, progress, event_key)
+
+        if event_type in self.DERIVED_EVENTS:
+            for derived_event in self.DERIVED_EVENTS[event_type]:
+                self.update_event(
+                    student,
+                    progress,
+                    derived_event['type'],
+                    derived_event['generate_new_id'](event_key),
+                )
+
+    def _is_entity_completed(self, progress, event_key):
+        if not progress.value:
+            return None
+        value = json.loads(progress.value).get(event_key)
+        return value is not None and value > 0
+
+    def is_unit_completed(self, progress, unit_id):
+        return self._is_entity_completed(progress, self._get_unit_key(unit_id))
+
+    def is_lesson_completed(self, progress, unit_id, lesson_id):
+        return self._is_entity_completed(
+            progress, self._get_lesson_key(unit_id, lesson_id))
+
+    def is_video_completed(self, progress, unit_id, lesson_id):
+        return self._is_entity_completed(
+            progress, self._get_video_key(unit_id, lesson_id, 0))
+
+    def is_activity_completed(self, progress, unit_id, lesson_id):
+        return self._is_entity_completed(
+            progress, self._get_activity_key(unit_id, lesson_id, 0))
+
+    def is_block_completed(self, progress, unit_id, lesson_id, block_id):
+        return self._is_entity_completed(
+            progress, self._get_block_key(unit_id, lesson_id, 0, block_id))
+
+    def is_assessment_completed(self, progress, assessment_type):
+        return self._is_entity_completed(
+            progress, self._get_assessment_key(assessment_type))
+
+    @classmethod
+    def get_or_create_progress(cls, student):
+        progress = StudentPropertyEntity.get(student, cls.PROPERTY_KEY)
         if not progress:
             progress = StudentPropertyEntity.create(
-                student=student, property_name=self.PROPERTY_KEY)
+                student=student, property_name=cls.PROPERTY_KEY)
+            progress.put()
+        return progress
 
-        # Check that all lessons in this unit have been completed.
-        for lesson in self.get_course().get_lessons(unit_id):
-            lesson_key = '%s.%s.%s.%s' % (
-                self.EVENT_CODE_MAPPING['unit'],
-                unit_id,
-                self.EVENT_CODE_MAPPING['lesson'],
-                lesson.id,
-            )
-            lesson_progress = progress.get(lesson_key)
-            if lesson_progress is None or lesson_progress <= 0:
-                return
+    def get_unit_progress(self, student):
+        """Returns a dict saying which units are completed."""
+        units = self._get_course().get_units()
+        progress = self.get_or_create_progress(student)
 
-        self._inc(
-            progress,
-            '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id))
+        result = {}
+        for unit in units:
+            if (unit.type == 'A' and
+                self.is_assessment_completed(progress, unit.unit_id)):
+                result[unit.unit_id] = True
+            elif (unit.type == 'U' and
+                  self.is_unit_completed(progress, unit.unit_id)):
+                result[unit.unit_id] = True
 
-    DERIVED_EVENT_UPDATER = {'lesson': update_lesson,
-                             'unit': update_unit}
+        return result
+
+    def get_lesson_progress(self, unused_student, unused_unit_id):
+        """Returns a dict saying which lessons in this unit are completed."""
+        raise Exception('Not implemented yet.')
 
     def _inc(self, student_property, key, value=1):
         """Increments the integer value of a student property.
@@ -281,78 +492,3 @@ class UnitLessonProgressTracker(object):
 
         progress_dict[key] += value
         student_property.value = json.dumps(progress_dict)
-
-    def put_completion_event(self, student, event_type, unit_id=None,
-                             event_source_id=None):
-        """Records an event when part of a course is completed."""
-        if event_type not in ['video', 'activity', 'assessment']:
-            return
-
-        if event_type == 'assessment':
-            event_key = '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'],
-                                   event_source_id)
-        elif event_type in ['video', 'activity']:
-            event_key = '%s.%s.%s.%s' % (
-                self.EVENT_CODE_MAPPING['unit'],
-                unit_id,
-                self.EVENT_CODE_MAPPING[event_type],
-                event_source_id
-            )
-
-        student_progress = self.get_progress(student)
-        if not student_progress:
-            student_progress = StudentPropertyEntity.create(
-                student=student, property_name=self.PROPERTY_KEY)
-
-        self._inc(student_progress, event_key)
-
-        if event_type in self.DERIVED_EVENTS:
-            for derived_event in self.DERIVED_EVENTS[event_type]:
-                self.update_derived_events(
-                    student,
-                    derived_event['type'],
-                    derived_event['generate_new_id'](event_key))
-
-        student_progress.updated_on = datetime.datetime.now()
-        student_progress.put()
-
-    def put_assessment_completed(self, student, assessment_type):
-        """Records that the given student has completed the given assessment."""
-        self.put_completion_event(
-            student, 'assessment', None, assessment_type)
-
-    def update_derived_events(self, student, event_type, event_key):
-        if event_type in self.DERIVED_EVENT_UPDATER:
-            self.DERIVED_EVENT_UPDATER[event_type](
-                self, student, event_key)
-
-            if event_type in self.DERIVED_EVENTS:
-                for derived_event in self.DERIVED_EVENTS[event_type]:
-                    self.update_derived_events(
-                        student,
-                        derived_event['type'],
-                        derived_event['generate_new_id'](event_key))
-
-    def is_assessment_completed(self, progress, assessment_type):
-        assessment_event_key = '%s.%s' % (
-            self.EVENT_CODE_MAPPING['assessment'], assessment_type)
-        value = json.loads(progress.value).get(assessment_event_key)
-        return value is not None and value > 0
-
-    @classmethod
-    def get_progress(cls, student):
-        return StudentPropertyEntity.get(student, cls.PROPERTY_KEY)
-
-    def get_unit_progress(self, student):
-        """Returns a dict saying which units are completed."""
-        units = self.get_course().get_units()
-        progress = self.get_progress(student)
-        if progress is None:
-            return {}
-
-        result = {}
-        for unit in units:
-            if (unit.type == 'A' and
-                self.is_assessment_completed(progress, unit.unit_id)):
-                result[unit.unit_id] = True
-        return result

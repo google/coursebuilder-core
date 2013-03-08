@@ -1025,6 +1025,18 @@ class Verifier(object):
                 self.error('Lesson has unknown unit_id %s (%s)' % (
                     lesson.unit_id, lesson.to_id_string()))
 
+    def get_activity_as_python(self, unit_id, lesson_id):
+        fname = os.path.join(
+            os.path.dirname(__file__),
+            '../assets/js/activity-%s.%s.js' % (unit_id, lesson_id))
+        if not os.path.exists(fname):
+            self.error('  Missing activity: %s' % fname)
+        else:
+            activity = evaluate_javascript_expression_from_file(
+                fname, 'activity', Activity().scope, self.error)
+            self.verify_activity_instance(activity, fname)
+            return activity
+
     def verify_activities(self, lessons):
         """Loads and verifies all activities."""
 
@@ -1033,19 +1045,11 @@ class Verifier(object):
         for lesson in lessons:
             if lesson.lesson_activity == 'yes':
                 count += 1
-                fname = os.path.join(
-                    os.path.dirname(__file__),
-                    '../assets/js/activity-' + str(lesson.unit_id) + '.' +
-                    str(lesson.lesson_id) + '.js')
-                if not os.path.exists(fname):
-                    self.error('  Missing activity: %s' % fname)
-                else:
-                    activity = evaluate_javascript_expression_from_file(
-                        fname, 'activity', Activity().scope, self.error)
-                    self.verify_activity_instance(activity, fname)
-                    self.export.append('')
-                    self.encode_activity_json(
-                        activity, lesson.unit_id, lesson.lesson_id)
+                activity = self.get_activity_as_python(
+                    lesson.unit_id, lesson.lesson_id)
+                self.export.append('')
+                self.encode_activity_json(
+                    activity, lesson.unit_id, lesson.lesson_id)
 
         self.info('Read %s activities' % count)
 
@@ -1063,7 +1067,7 @@ class Verifier(object):
                 assessment_name = str(unit.unit_id)
                 fname = os.path.join(
                     os.path.dirname(__file__),
-                    '../assets/js/assessment-' + assessment_name + '.js')
+                    '../assets/js/assessment-%s.js' % assessment_name)
                 if not os.path.exists(fname):
                     self.error('  Missing assessment: %s' % fname)
                 else:

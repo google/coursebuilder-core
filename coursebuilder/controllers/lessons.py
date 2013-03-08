@@ -17,6 +17,7 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import json
+import urlparse
 from models import models
 from models.config import ConfigProperty
 from models.counters import PerfCounter
@@ -45,7 +46,7 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 
 
 def extract_unit_and_lesson_id(handler):
-    """Extracts unit and lesson id from the request."""
+    """Extracts unit and lesson ids from a request."""
     c = handler.request.get('unit')
     if not c:
         unit_id = 1
@@ -58,6 +59,14 @@ def extract_unit_and_lesson_id(handler):
     else:
         lesson_id = int(l)
 
+    return unit_id, lesson_id
+
+
+def get_unit_and_lesson_id_from_url(url):
+    """Extracts unit and lesson ids from a URL."""
+    url_components = urlparse.urlparse(url)
+    query_dict = urlparse.parse_qs(url_components.query)
+    unit_id, lesson_id = query_dict['unit'][0], query_dict['lesson'][0]
     return unit_id, lesson_id
 
 
@@ -138,7 +147,8 @@ class ActivityHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        if not self.personalize_page_and_get_enrolled():
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
         # Extract incoming args
@@ -165,6 +175,10 @@ class ActivityHandler(BaseHandler):
         else:
             self.template_value['next_button_url'] = (
                 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id + 1))
+
+        # Mark this page as accessed.
+        self.get_course().get_progress_tracker().put_activity_accessed(
+            student, unit_id, lesson_id)
 
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['event_xsrf_token'] = (
@@ -214,10 +228,24 @@ class EventsRESTHandler(BaseRESTHandler):
         if not user:
             return
 
-        student = models.Student.get_enrolled_student_by_email(user.email())
-        if not student:
-            return
+        source = request.get('source')
+        payload_json = request.get('payload')
 
-        models.EventEntity.record(
-            request.get('source'), user, request.get('payload'))
+        models.EventEntity.record(source, user, payload_json)
         COURSE_EVENTS_RECORDED.inc()
+
+        self.process_event(user, source, payload_json)
+
+    def process_event(self, user, source, payload_json):
+        """Processes an event after it has been recorded in the event stream."""
+
+        if source == 'attempt-activity':
+            student = models.Student.get_enrolled_student_by_email(user.email())
+            if not student:
+                return
+            payload = json.loads(payload_json)
+            source_url = payload['location']
+            unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
+            if unit_id is not None and lesson_id is not None:
+                self.get_course().get_progress_tracker().put_block_completed(
+                    student, unit_id, lesson_id, payload['index'])

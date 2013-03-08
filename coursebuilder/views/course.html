@@ -36,6 +36,9 @@
                       <a href="unit?unit={{ unit.unit_id }}">
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.unit_id, title=unit.title) }}
                       </a>
+                      {% if unit.unit_id in progress %}
+                        <span class="tick">✔</span>
+                      {% endif %}
                     </p></li>
                   {% elif unit.type == 'O' %}
                     <li><p class="top_content">
