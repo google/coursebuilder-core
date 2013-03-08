@@ -36,6 +36,7 @@ import csv
 import json
 import os
 import re
+from StringIO import StringIO
 import sys
 
 
@@ -769,7 +770,8 @@ def set_object_attributes(target_object, names, values):
 
 
 def read_objects_from_csv_stream(stream, header, new_object):
-    return read_objects_from_csv(csv.reader(stream), header, new_object)
+    return read_objects_from_csv(
+        csv.reader(StringIO(stream.read())), header, new_object)
 
 
 def read_objects_from_csv_file(fname, header, new_object):

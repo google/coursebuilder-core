@@ -46,12 +46,16 @@ from actions import assert_equals
 from google.appengine.api import namespace_manager
 
 
+# A number of data files in a test course.
+COURSE_FILE_COUNT = 70
+
+
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
     def test_datastore_backed_file_system(self):
-        """Tests store backed file system operations."""
-        fs = vfs.AbstractFileSystem(vfs.DatastoreBackedFileSystem('/'))
+        """Tests datastore-backed file system operations."""
+        fs = vfs.AbstractFileSystem(vfs.DatastoreBackedFileSystem('', '/'))
 
         # Check binary file.
         src = os.path.join(appengine_config.BUNDLE_ROOT, 'course.yaml')
@@ -847,7 +851,7 @@ class StaticHandlerTest(actions.TestBase):
         assert_does_not_contain('no-cache', response.headers['Cache-Control'])
 
         # Check zip file handler.
-        response = self.get(
+        response = self.testapp.get(
             '/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css')
         assert_equals(response.status_int, 200)
         assert_contains('max-age=600', response.headers['Cache-Control'])
@@ -980,42 +984,6 @@ class AssessmentTest(actions.TestBase):
             namespace_manager.set_namespace(old_namespace)
 
 
-# TODO(psimakov): if mixin method names overlap, we don't run them all; must fix
-class CourseUrlRewritingTest(
-    StudentAspectTest, AssessmentTest, CourseAuthorAspectTest, AdminAspectTest):
-    """Run existing tests using rewrite rules for '/courses/pswg' base URL."""
-
-    def setUp(self):  # pylint: disable-msg=g-bad-name
-        super(CourseUrlRewritingTest, self).setUp()
-        self.base = '/courses/pswg'
-        self.namespace = 'gcb-courses-pswg-tests-ns'
-        sites.setup_courses('course:%s:/:%s' % (self.base, self.namespace))
-
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
-        sites.reset_courses()
-        super(CourseUrlRewritingTest, self).tearDown()
-
-    def canonicalize(self, href, response=None):
-        """Canonicalize URL's using either <base> or self.base."""
-        # Check if already canonicalized.
-        if href.startswith(
-                self.base) or utils.ApplicationHandler.is_absolute(href):
-            pass
-        else:
-            # Look for <base> tag in the response to compute the canonical URL.
-            if response:
-                return super(CourseUrlRewritingTest, self).canonicalize(
-                    href, response)
-
-            # Prepend self.base to compute the canonical URL.
-            if not href.startswith('/'):
-                href = '/%s' % href
-            href = '%s%s' % (self.base, href)
-
-        self.audit_url(href)
-        return href
-
-
 def remove_dir(dir_name):
     """Delete a directory."""
 
@@ -1079,15 +1047,15 @@ class GeneratedCourse(object):
 
     @property
     def title(self):
-        return u'Power title-%s Searching with Google (тест данные)' % self.path
+        return u'Power Searching with Google title-%s (тест данные)' % self.path
 
     @property
     def unit_title(self):
-        return u'Interpreting unit-title-%s results (тест данные)' % self.path
+        return u'Interpreting results unit-title-%s (тест данные)' % self.path
 
     @property
     def lesson_title(self):
-        return u'Word lesson-title-%s order matters (тест данные)' % self.path
+        return u'Word order matters lesson-title-%s (тест данные)' % self.path
 
     @property
     def head(self):
@@ -1344,15 +1312,47 @@ class I18NTest(MultipleCoursesTestBase):
             [u'Вход', u'Регистрация', u'Расписание', u'Курс'], response.body)
 
 
-class VirtualFileSystemTest(
-    StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
-    StaticHandlerTest):
-    """Run existing tests using virtual local file system."""
+class CourseUrlRewritingTestBase(actions.TestBase):
+    """Prepare course for using rewrite rules and '/courses/pswg' base URL."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(CourseUrlRewritingTestBase, self).setUp()
+        self.base = '/courses/pswg'
+        self.namespace = 'gcb-courses-pswg-tests-ns'
+        sites.setup_courses('course:%s:/:%s' % (self.base, self.namespace))
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        sites.reset_courses()
+        super(CourseUrlRewritingTestBase, self).tearDown()
+
+    def canonicalize(self, href, response=None):
+        """Canonicalize URL's using either <base> or self.base."""
+        # Check if already canonicalized.
+        if href.startswith(
+                self.base) or utils.ApplicationHandler.is_absolute(href):
+            pass
+        else:
+            # Look for <base> tag in the response to compute the canonical URL.
+            if response:
+                return super(CourseUrlRewritingTestBase, self).canonicalize(
+                    href, response)
+
+            # Prepend self.base to compute the canonical URL.
+            if not href.startswith('/'):
+                href = '/%s' % href
+            href = '%s%s' % (self.base, href)
+
+        self.audit_url(href)
+        return href
+
+
+class VirtualFileSystemTestBase(actions.TestBase):
+    """Prepares a course running on a virtual local file system."""
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         """Configure the test."""
 
-        super(VirtualFileSystemTest, self).setUp()
+        super(VirtualFileSystemTestBase, self).setUp()
 
         GeneratedCourse.set_data_home(self)
 
@@ -1382,17 +1382,77 @@ class VirtualFileSystemTest(
         """Clean up."""
         sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
-        super(VirtualFileSystemTest, self).tearDown()
+        super(VirtualFileSystemTestBase, self).tearDown()
 
 
-class DatastoreBackedFileSystemTest(actions.TestBase):
-    """Test a course running on datastore backed file system."""
+class DatastoreBackedFileSystemTestBase(actions.TestBase):
+    """Prepares a course running on datastore backed file system."""
+
+    def upload_all_in_dir(self, dir_name, files_added):
+        """Uploads all files in a folder to vfs."""
+        root_dir = os.path.join(appengine_config.BUNDLE_ROOT, dir_name)
+        for root, unused_dirs, files in os.walk(root_dir):
+            for afile in files:
+                filename = os.path.join(root, afile)
+                self.app_context.fs.put(filename, open(filename, 'rb'))
+                files_added.append(filename)
+
+    def init_course_data(self):
+        """Uploads all course data files into vfs."""
+        files_added = []
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(self.namespace)
+            self.upload_all_in_dir('assets', files_added)
+            self.upload_all_in_dir('views', files_added)
+            self.upload_all_in_dir('data', files_added)
+
+            course_yaml = os.path.join(
+                appengine_config.BUNDLE_ROOT, 'course.yaml')
+            self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
+            files_added.append(course_yaml)
+
+            assert self.app_context.fs.list(
+                appengine_config.BUNDLE_ROOT) == sorted(files_added)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         """Configure the test."""
+        super(DatastoreBackedFileSystemTestBase, self).setUp()
+
         self.namespace = 'dsbfs'
         sites.setup_courses('course:/::%s' % self.namespace)
+
+        courses = sites.get_all_courses()
+        assert len(courses) == 1
+        self.app_context = courses[0]
+
+        self.init_course_data()
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         """Clean up."""
         sites.reset_courses()
+        super(DatastoreBackedFileSystemTestBase, self).tearDown()
+
+
+class CourseUrlRewritingTest(CourseUrlRewritingTestBase):
+    """Run all existing tests using '/courses/pswg' base URL rewrite rules."""
+
+
+class VirtualFileSystemTest(VirtualFileSystemTestBase):
+    """Run all existing tests using virtual local file system."""
+
+
+class DatastoreBackedFileSystemTest(DatastoreBackedFileSystemTestBase):
+    """Run all existing tests datastore-backed file system."""
+
+
+ALL_COURSE_TESTS = (
+    StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
+    StaticHandlerTest, AdminAspectTest)
+
+
+CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS
+VirtualFileSystemTest.__bases__ += ALL_COURSE_TESTS
+DatastoreBackedFileSystemTest.__bases__ += ALL_COURSE_TESTS

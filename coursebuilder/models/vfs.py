@@ -21,6 +21,7 @@ import os
 import jinja2
 from entities import BaseEntity
 from models import MemcacheManager
+from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 
@@ -37,6 +38,10 @@ class AbstractFileSystem(object):
     def open(self, filename):
         """Returns a stream with the file content, similar to open(...)."""
         return self._impl.get(filename)
+
+    def get(self, filename):
+        """Returns bytes with the file content, but no metadata."""
+        return self._impl.get(filename).read()
 
     def put(self, filename, stream, **kwargs):
         """Replaces the contents of the file with the bytes in the stream."""
@@ -176,6 +181,25 @@ def stream_to_string(stream):
     return stream.read().decode('utf-8')
 
 
+class VirtualFileSystemTemplateLoader(jinja2.BaseLoader):
+    """Loader of jinja2 templates from a virtual file system."""
+
+    def __init__(self, fs, logical_home_folder):
+        self._fs = fs
+        self._logical_home_folder = logical_home_folder
+
+    def get_source(self, unused_environment, template):
+        filename = os.path.join(os.path.join(
+            self._logical_home_folder, 'views'), template)
+        stream = self._fs.get(filename)
+        if not stream:
+            raise jinja2.TemplateNotFound(template)
+        return stream.read().decode('utf-8'), filename, True
+
+    def list_templates(self):
+        return self._fs.list(os.path.join(self._logical_home_folder, 'views'))
+
+
 class DatastoreBackedFileSystem(object):
     """A read-write file system backed by a datastore."""
 
@@ -183,12 +207,50 @@ class DatastoreBackedFileSystem(object):
     def make_key(cls, filename):
         return 'vfs:dsbfs:%s' % filename
 
-    def __init__(self, logical_home_folder=None):
+    def __init__(self, ns, logical_home_folder):
+        self._ns = ns
         self._logical_home_folder = logical_home_folder
+
+    def __getattribute__(self, name):
+        attr = object.__getattribute__(self, name)
+        if hasattr(attr, '__call__'):
+
+            def newfunc(*args, **kwargs):
+                """Set proper namespace for each method call."""
+                old_namespace = namespace_manager.get_namespace()
+                try:
+                    namespace_manager.set_namespace(self._ns)
+                    return attr(*args, **kwargs)
+                finally:
+                    namespace_manager.set_namespace(old_namespace)
+
+            return newfunc
+        else:
+            return attr
+
+    def _logical_to_physical(self, filename):
+        # For now we only support '/' as a physical folder name.
+        if self._logical_home_folder == '/':
+            return filename
+        if not filename.startswith(self._logical_home_folder):
+            raise Exception(
+                'Expected path \'%s\' to start with a prefix \'%s\'.' % (
+                    filename, self._logical_home_folder))
+
+        rel_path = filename[len(self._logical_home_folder):]
+        if not rel_path.startswith('/'):
+            rel_path = '/%s' % rel_path
+        return rel_path
+
+    def _physical_to_logical(self, filename):
+        # For now we only support '/' as a physical folder name.
+        if self._logical_home_folder == '/':
+            return filename
+        return '%s%s' % (self._logical_home_folder, filename)
 
     def get(self, filename):
         """Gets a file from a datastore. Raw bytes stream, no encodings."""
-        assert filename.startswith(self._logical_home_folder)
+        filename = self._logical_to_physical(filename)
 
         result = MemcacheManager.get(self.make_key(filename))
         if not result:
@@ -205,9 +267,9 @@ class DatastoreBackedFileSystem(object):
     @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=True):
         """Puts a file stream to a database. Raw bytes stream, no encodings."""
-        assert filename.startswith(self._logical_home_folder)
+        filename = self._logical_to_physical(filename)
 
-        # TODO(psimakov): enforce encoding from MIME type or specify explicitly
+        # We operate with raw bytes. The consumer must deal with encoding.
         raw_bytes = stream.read()
 
         metadata = FileMetadataEntity.get_by_key_name(filename)
@@ -227,6 +289,8 @@ class DatastoreBackedFileSystem(object):
 
     @db.transactional(xg=True)
     def delete(self, filename):
+        filename = self._logical_to_physical(filename)
+
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             metadata.delete()
@@ -237,6 +301,8 @@ class DatastoreBackedFileSystem(object):
 
     def isfile(self, filename):
         """Checks file existence by looking up the datastore row."""
+        filename = self._logical_to_physical(filename)
+
         result = MemcacheManager.get(self.make_key(filename))
         if result:
             return True
@@ -247,16 +313,21 @@ class DatastoreBackedFileSystem(object):
 
     def list(self, dir_name):
         """Lists all files in a directory by using datastore query."""
+        dir_name = self._logical_to_physical(dir_name)
+
         result = []
         keys = FileMetadataEntity.all(keys_only=True)
         for key in keys.fetch(1000):
             filename = key.name()
             if filename.startswith(dir_name):
-                result.append(filename)
+                result.append(self._physical_to_logical(filename))
         return sorted(result)
 
     def get_jinja_environ(self, unused_dir_names):
-        raise Exception('Not implemented.')
+        return jinja2.Environment(
+            extensions=['jinja2.ext.i18n'],
+            loader=VirtualFileSystemTemplateLoader(
+                self, self._logical_home_folder))
 
 
 def run_all_unit_tests():

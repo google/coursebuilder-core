@@ -290,12 +290,14 @@ def get_all_courses():
         # validate folder name
         if parts[2]:
             folder = parts[2]
-            fs = AbstractFileSystem(
-                LocalReadOnlyFileSystem(logical_home_folder=folder))
+            # pylint: disable-msg=g-long-lambda
+            create_fs = lambda unused_ns: LocalReadOnlyFileSystem(
+                logical_home_folder=folder)
         else:
             folder = '/'
-            fs = AbstractFileSystem(
-                DatastoreBackedFileSystem(logical_home_folder=folder))
+            # pylint: disable-msg=g-long-lambda
+            create_fs = lambda ns: DatastoreBackedFileSystem(
+                ns=ns, logical_home_folder=appengine_config.BUNDLE_ROOT)
 
         # validate or derive namespace
         namespace = appengine_config.DEFAULT_NAMESPACE_NAME
@@ -310,7 +312,8 @@ def get_all_courses():
         namespaces[namespace] = True
 
         all_contexts.append(ApplicationContext(
-            site_type, slug, folder, namespace, fs))
+            site_type, slug, folder, namespace,
+            AbstractFileSystem(create_fs(namespace))))
     return all_contexts
 
 
@@ -426,8 +429,7 @@ class AssetHandler(webapp2.RequestHandler):
         set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(
             self.filename)
-        self.response.write(
-            self.app_context.fs.open(self.filename).read())
+        self.response.write(self.app_context.fs.get(self.filename))
 
 
 class ApplicationContext(object):
@@ -497,7 +499,8 @@ class ApplicationContext(object):
         """Returns a dict of course configuration variables."""
         course_data_filename = self.get_config_filename()
         try:
-            return yaml.load(self.fs.open(course_data_filename))
+            return yaml.load(
+                self.fs.get(course_data_filename).decode('utf-8'))
         except Exception:
             logging.info('Error: course.yaml file at %s not accessible',
                          course_data_filename)
