@@ -27,6 +27,7 @@ import re
 import shutil
 import time
 import urllib
+import zipfile
 import appengine_config
 from controllers import lessons
 from controllers import sites
@@ -55,6 +56,8 @@ from google.appengine.api import namespace_manager
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
+# Base filesystem location for test data.
+TEST_DATA_BASE = '/tmp/experimental/coursebuilder/test-data/'
 
 
 # There is an expectation in our tests of automatic import of data/*.csv files,
@@ -1786,8 +1789,7 @@ class GeneratedCourse(object):
     @classmethod
     def set_data_home(cls, test):
         """All data for this test will be placed here."""
-        cls.data_home = '/tmp/experimental/coursebuilder/test-data/%s' % (
-            test.__class__.__name__)
+        cls.data_home = os.path.join(TEST_DATA_BASE, test.__class__.__name__)
 
     def __init__(self, ns):
         self.path = ns
@@ -2565,17 +2567,85 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.test_environ = copy.deepcopy(os.environ)
         # In etl.main, use test auth scheme to avoid interactive login.
         self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
+        self.test_tempdir = os.path.join(TEST_DATA_BASE, 'EtlMainTestCase')
+        self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.sdk_path = os.environ.get('GOOGLE_APP_ENGINE_HOME')
+        self.url_prefix = '/test'
+        self.raw = 'course:%s::ns_test' % self.url_prefix
         self.swap(os, 'environ', self.test_environ)
         self.common_args = [
-            'myapp', 'localhost:8080', '--sdk_path', self.sdk_path]
+            etl._TYPES[0], self.url_prefix, 'myapp', 'localhost:8080',
+            self.archive_path, '--sdk_path', self.sdk_path]
+        # Set up courses: version 1.3, version 1.2.
+        sites.setup_courses(self.raw + ', course:/:/')
+        self.reset_filesystem()
 
-    def test_download(self):
-        # TODO(johncox): add verification of download once method is written.
+    def tearDown(self):
+        self.reset_filesystem(remove_only=True)
+        sites.reset_courses()
+        super(EtlMainTestCase, self).tearDown()
+
+    def import_sample_course(self):
+        """Imports a sample course."""
+
+        # Import sample course.
+        dst_app_context = sites.get_all_courses()[0]
+        src_app_context = sites.get_all_courses()[1]
+        dst_course = courses.Course(None, app_context=dst_app_context)
+
+        errors = []
+        src_course_out, dst_course_out = dst_course.import_from(
+            src_app_context, errors)
+        if errors:
+            raise Exception(errors)
+        assert len(
+            src_course_out.get_units()) == len(dst_course_out.get_units())
+        dst_course_out.save()
+
+    def reset_filesystem(self, remove_only=False):
+        if os.path.exists(self.test_tempdir):
+            shutil.rmtree(self.test_tempdir)
+        if not remove_only:
+            os.makedirs(self.test_tempdir)
+
+    def test_download_creates_valid_archive(self):
+        """Tests download of course data and archive creation."""
         args = etl._PARSER.parse_args(['download'] + self.common_args)
-        self.assertRaisesRegexp(
-            NotImplementedError, 'download.*', etl.main, args,
-            environment_class=FakeEnvironment)
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        etl.main(args, environment_class=FakeEnvironment)
+        zip_archive = zipfile.ZipFile(self.archive_path)
+        manifest = transforms.loads(
+            zip_archive.open(etl._MANIFEST_FILENAME).read())
+        self.assertGreaterEqual(
+            courses.COURSE_MODEL_VERSION_1_3, manifest['version'])
+        self.assertEqual(
+            'course:%s::ns_test' % self.url_prefix, manifest['raw'])
+        for entity in manifest['entities']:
+            self.assertTrue(entity.has_key('is_draft'))
+            self.assertTrue(zip_archive.open(entity['path']))
+
+    def test_download_errors_if_archive_path_exists_on_disk(self):
+        args = etl._PARSER.parse_args(['download'] + self.common_args)
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        etl.main(args, environment_class=FakeEnvironment)
+        self.assertRaises(
+            SystemExit, etl.main, args, environment_class=FakeEnvironment)
+
+    def test_download_errors_if_course_url_prefix_does_not_exist(self):
+        sites.reset_courses()
+        args = etl._PARSER.parse_args(['download'] + self.common_args)
+        self.assertRaises(
+            SystemExit, etl.main, args, environment_class=FakeEnvironment)
+
+    def test_download_errors_if_course_version_is_pre_1_3(self):
+        args = etl._PARSER.parse_args(
+            ['download', 'course', '/'] + self.common_args[2:])
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        self.assertRaises(
+            SystemExit, etl.main, args, environment_class=FakeEnvironment)
 
     def test_upload(self):
         # TODO(johncox): add verification of upload once method is written.

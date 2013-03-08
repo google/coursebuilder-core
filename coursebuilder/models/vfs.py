@@ -131,7 +131,6 @@ class LocalReadOnlyFileSystem(object):
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
         return jinja2.Environment(
-            autoescape=True,
             extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(physical_dir_names))
 
@@ -431,17 +430,30 @@ class DatastoreBackedFileSystem(object):
 
         return result
 
-    def list(self, dir_name):
-        """Lists all files in a directory by using datastore query."""
-        dir_name = self._logical_to_physical(dir_name)
+    def list(self, dir_name, include_inherited=False):
+        """Lists all files in a directory by using datastore query.
 
-        result = []
+        Args:
+            dir_name: string. Directory to list contents of.
+            include_inherited: boolean. If True, includes all inheritable files
+                from the parent filesystem.
+
+        Returns:
+            List of string. Lexicographically-sorted unique filenames
+            recursively found in dir_name.
+        """
+        dir_name = self._logical_to_physical(dir_name)
+        result = set()
         keys = FileMetadataEntity.all(keys_only=True)
         for key in keys.fetch(1000):
             filename = key.name()
             if filename.startswith(dir_name):
-                result.append(self._physical_to_logical(filename))
-        return sorted(result)
+                result.add(self._physical_to_logical(filename))
+        if include_inherited and self._inherits_from:
+            for inheritable_folder in self._inheritable_folders:
+                result.update(set(self._inherits_from.list(
+                    self._physical_to_logical(inheritable_folder))))
+        return sorted(list(result))
 
     def get_jinja_environ(self, dir_names):
         return jinja2.Environment(
