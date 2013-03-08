@@ -32,44 +32,6 @@ from modules.oeditor import oeditor
 from google.appengine.ext import db
 
 
-# TODO(psimakov): we should really use an ordered dictionary, not plain text; it
-# can't be just a normal dict because a dict iterates its items in undefined
-# order;  thus when we render a dict to JSON an order of fields will not match
-# what we specify here; the final editor will also show the fields in an
-# undefined order; for now we use the raw JSON, rather than the dict, but will
-# move to an ordered dict later
-SCHEMA_JSON = """
-    {
-        "id": "Announcement Entity",
-        "type": "object",
-        "description": "Announcement",
-        "properties": {
-            "key" : {"type": "string"},
-            "title": {"optional": true, "type": "string"},
-            "date": {"optional": true, "type": "date"},
-            "html": {"optional": true, "type": "html"},
-            "is_draft": {"type": "boolean"}
-            }
-    }
-    """
-
-SCHEMA_DICT = json.loads(SCHEMA_JSON)
-
-# inputex specific schema annotations to control editor look and feel
-SCHEMA_ANNOTATIONS_DICT = [
-    (['title'], 'Announcement'),
-    (['properties', 'key', '_inputex'], {
-        'label': 'ID', '_type': 'uneditable'}),
-    (['properties', 'date', '_inputex'], {
-        'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
-        'valueFormat': 'Y/m/d'}),
-    (['properties', 'title', '_inputex'], {'label': 'Title'}),
-    (['properties', 'html', '_inputex'], {
-        'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
-    oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
-
-
 class AnnouncementsRights(object):
     """Manages view/edit rights for announcements."""
 
@@ -186,8 +148,11 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = oeditor.ObjectEditor.get_html_for(
-            self, SCHEMA_JSON, SCHEMA_ANNOTATIONS_DICT,
-            key, rest_url, exit_url)
+            self,
+            AnnouncementsItemRESTHandler.SCHEMA_JSON,
+            AnnouncementsItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            key, rest_url, exit_url,
+            required_modules=AnnouncementsItemRESTHandler.REQUIRED_MODULES)
         self.template_value['navbar'] = {'announcements': True}
         self.template_value['content'] = form_html
         self.render('bare.html')
@@ -222,6 +187,47 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
 
+    # TODO(psimakov): we should really use an ordered dictionary, not plain
+    # text; it can't be just a normal dict because a dict iterates its items in
+    # undefined order;  thus when we render a dict to JSON an order of fields
+    # will not match what we specify here; the final editor will also show the
+    # fields in an undefined order; for now we use the raw JSON, rather than the
+    # dict, but will move to an ordered dict late.
+    SCHEMA_JSON = """
+        {
+            "id": "Announcement Entity",
+            "type": "object",
+            "description": "Announcement",
+            "properties": {
+                "key" : {"type": "string"},
+                "title": {"optional": true, "type": "string"},
+                "date": {"optional": true, "type": "date"},
+                "html": {"optional": true, "type": "html"},
+                "is_draft": {"type": "boolean"}
+                }
+        }
+        """
+
+    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+
+    # inputex specific schema annotations to control editor look and feel
+    SCHEMA_ANNOTATIONS_DICT = [
+        (['title'], 'Announcement'),
+        (['properties', 'key', '_inputex'], {
+            'label': 'ID', '_type': 'uneditable'}),
+        (['properties', 'date', '_inputex'], {
+            'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
+            'valueFormat': 'Y/m/d'}),
+        (['properties', 'title', '_inputex'], {'label': 'Title'}),
+        (['properties', 'html', '_inputex'], {
+            'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
+        oeditor.create_bool_select_annotation(
+            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+
+    REQUIRED_MODULES = [
+        'inputex-date', 'inputex-rte', 'inputex-select', 'inputex-string',
+        'inputex-uneditable']
+
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
         key = self.request.get('key')
@@ -244,7 +250,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         entity = viewable[0]
 
         json_payload = transforms.dict_to_json(transforms.entity_to_dict(
-            entity), SCHEMA_DICT)
+            entity), AnnouncementsItemRESTHandler.SCHEMA_DICT)
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
@@ -273,7 +279,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         transforms.dict_to_entity(entity, transforms.json_to_dict(
-            json.loads(payload), SCHEMA_DICT))
+            json.loads(payload), AnnouncementsItemRESTHandler.SCHEMA_DICT))
         entity.put()
 
         transforms.send_json_response(self, 200, 'Saved.')

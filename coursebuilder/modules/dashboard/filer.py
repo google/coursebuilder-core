@@ -95,7 +95,8 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             FilesItemRESTHandler.SCHEMA_JSON,
             FilesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            key, rest_url, exit_url)
+            key, rest_url, exit_url,
+            required_modules=FilesItemRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Settings')
@@ -112,7 +113,8 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            '', rest_url, exit_url, save_method='upload', auto_return=True)
+            '', rest_url, exit_url, save_method='upload', auto_return=True,
+            required_modules=AssetItemRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title('Upload Asset')
@@ -175,6 +177,10 @@ class FilesItemRESTHandler(BaseRESTHandler):
             'label': 'Content', '_type': 'text'}),
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-textarea', 'inputex-select',
+        'inputex-uneditable']
 
     URI = '/rest/files/item'
     FILE_ENCODING_TEXT = 'text/utf-8'
@@ -331,6 +337,10 @@ class AssetItemRESTHandler(BaseRESTHandler):
             'label': 'Base', '_type': 'uneditable'}),
         (['properties', 'file', '_inputex'], {
             'label': 'File', '_type': 'file'})]
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-uneditable', 'inputex-file',
+        'io-upload-iframe']
 
     def get(self):
         """Provides empty initial content for asset upload editor."""

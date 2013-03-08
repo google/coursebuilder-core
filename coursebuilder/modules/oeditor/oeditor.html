@@ -417,77 +417,79 @@
         inputExDefinition.buttons.push(delete_button);
       }
 
-      // Override the inputEx.RTEField.renderComponent method to insert
-      // a control to toggle between showing the RTE and a raw text editor
-      var superRteFieldRenderer = Y.inputEx.RTEField.prototype.renderComponent;
-      Y.inputEx.RTEField.prototype.renderComponent = function() {
-        superRteFieldRenderer.apply(this);
-        var showRteText = "Rich Text";
-        var hideRteText = "Plain Text";
-        var Dom = Y.DOM;
-        var showRteFlag = true;
-        var toggle = document.createElement("div");
-        var toggleText = document.createTextNode(hideRteText);
-        toggle.appendChild(toggleText);
-        Dom.addClass(toggle, "rte-control");
-        var rteField = this;
+      if (Y.inputEx.RTEField) {
+        // Override the inputEx.RTEField.renderComponent method to insert
+        // a control to toggle between showing the RTE and a raw text editor
+        var superRteFieldRenderer = Y.inputEx.RTEField.prototype.renderComponent;
+        Y.inputEx.RTEField.prototype.renderComponent = function() {
+          superRteFieldRenderer.apply(this);
+          var showRteText = "Rich Text";
+          var hideRteText = "Plain Text";
+          var Dom = Y.DOM;
+          var showRteFlag = true;
+          var toggle = document.createElement("div");
+          var toggleText = document.createTextNode(hideRteText);
+          toggle.appendChild(toggleText);
+          Dom.addClass(toggle, "rte-control");
+          var rteField = this;
 
-        toggle.onclick = function() {
-          showRteFlag = !showRteFlag;
-          if (showRteFlag) {
-            showRte(rteField);
-            toggleText.nodeValue = hideRteText;
-          } else {
-            hideRte(rteField);
-            toggleText.nodeValue = showRteText;
+          toggle.onclick = function() {
+            showRteFlag = !showRteFlag;
+            if (showRteFlag) {
+              showRte(rteField);
+              toggleText.nodeValue = hideRteText;
+            } else {
+              hideRte(rteField);
+              toggleText.nodeValue = showRteText;
+            }
+          };
+          rteField.divEl.appendChild(toggle);
+
+          function showRte(rteField) {
+            var editor = rteField.editor,
+                rteDiv = editor.get('element').previousSibling,
+                textArea = editor.get('element');
+
+            if (rteField._cbGetValue) {
+              rteField.getValue = rteField._cbGetValue;
+            }
+
+            Dom.setStyle(rteDiv, 'position', 'static');
+            Dom.setStyle(rteDiv, 'top', '0');
+            Dom.setStyle(rteDiv, 'left', '0');
+            Dom.setStyle(textArea, 'visibility', 'hidden');
+            Dom.setStyle(textArea, 'top', '-9999px');
+            Dom.setStyle(textArea, 'left', '-9999px');
+            Dom.setStyle(textArea, 'position', 'absolute');
+            editor.get('element_cont').addClass('yui-editor-container');
+            editor._setDesignMode('on');
+            editor.setEditorHTML(editor.get('textarea').value);
+          }
+
+          function hideRte(rteField) {
+            var editor = rteField.editor,
+                rteDiv = editor.get('element').previousSibling,
+                textArea = editor.get('element');
+
+            editor.saveHTML();
+
+            rteField._cbGetValue = rteField.getValue;
+            rteField.getValue = function() {
+              return editor.get('textarea').value;
+            };
+
+            Dom.setStyle(rteDiv, 'position', 'absolute');
+            Dom.setStyle(rteDiv, 'top', '-9999px');
+            Dom.setStyle(rteDiv, 'left', '-9999px');
+            editor.get('element_cont').removeClass('yui-editor-container');
+            Dom.setStyle(textArea, 'visibility', 'visible');
+            Dom.setStyle(textArea, 'top', '');
+            Dom.setStyle(textArea, 'left', '');
+            Dom.setStyle(textArea, 'position', 'static');
+            Dom.addClass(textArea, 'raw-text-editor');
           }
         };
-        rteField.divEl.appendChild(toggle);
-
-        function showRte(rteField) {
-          var editor = rteField.editor,
-              rteDiv = editor.get('element').previousSibling,
-              textArea = editor.get('element');
-
-          if (rteField._cbGetValue) {
-            rteField.getValue = rteField._cbGetValue;
-          }
-
-          Dom.setStyle(rteDiv, 'position', 'static');
-          Dom.setStyle(rteDiv, 'top', '0');
-          Dom.setStyle(rteDiv, 'left', '0');
-          Dom.setStyle(textArea, 'visibility', 'hidden');
-          Dom.setStyle(textArea, 'top', '-9999px');
-          Dom.setStyle(textArea, 'left', '-9999px');
-          Dom.setStyle(textArea, 'position', 'absolute');
-          editor.get('element_cont').addClass('yui-editor-container');
-          editor._setDesignMode('on');
-          editor.setEditorHTML(editor.get('textarea').value);
-        }
-
-        function hideRte(rteField) {
-          var editor = rteField.editor,
-              rteDiv = editor.get('element').previousSibling,
-              textArea = editor.get('element');
-
-          editor.saveHTML();
-
-          rteField._cbGetValue = rteField.getValue;
-          rteField.getValue = function() {
-            return editor.get('textarea').value;
-          };
-
-          Dom.setStyle(rteDiv, 'position', 'absolute');
-          Dom.setStyle(rteDiv, 'top', '-9999px');
-          Dom.setStyle(rteDiv, 'left', '-9999px');
-          editor.get('element_cont').removeClass('yui-editor-container');
-          Dom.setStyle(textArea, 'visibility', 'visible');
-          Dom.setStyle(textArea, 'top', '');
-          Dom.setStyle(textArea, 'left', '');
-          Dom.setStyle(textArea, 'position', 'static');
-          Dom.addClass(textArea, 'raw-text-editor');
-        }
-      };
+      }
 
       // create form and bind it to DOM
       inputExDefinition.parentEl = 'formContainer';

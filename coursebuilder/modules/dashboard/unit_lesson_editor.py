@@ -72,7 +72,8 @@ class UnitLessonEditor(ApplicationHandler):
             self,
             UnitLessonTitleRESTHandler.SCHEMA_JSON,
             UnitLessonTitleRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            key, rest_url, exit_url)
+            key, rest_url, exit_url,
+            required_modules=UnitLessonTitleRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Course Outline')
@@ -116,7 +117,8 @@ class UnitLessonEditor(ApplicationHandler):
             rest_handler_cls.SCHEMA_ANNOTATIONS_DICT,
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
-            read_only=not filer.is_editable_fs(self.app_context))
+            read_only=not filer.is_editable_fs(self.app_context),
+            required_modules=rest_handler_cls.REQUIRED_MODULES)
 
         template_values = {}
         template_values['page_title'] = self.format_title(
@@ -255,6 +257,9 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-uneditable']
+
     def unit_to_dict(self, unit):
         assert unit.type == 'U'
         return {
@@ -301,6 +306,9 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-uneditable']
+
     def unit_to_dict(self, unit):
         assert unit.type == 'O'
         return {
@@ -346,6 +354,9 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         oeditor.create_bool_select_annotation(
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-uneditable']
 
     def unit_to_dict(self, unit):
         assert unit.type == 'A'
@@ -426,6 +437,10 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
               '_type': 'hidden',
               'name': 'id'})
         ]
+
+    REQUIRED_MODULES = [
+        'inputex-hidden', 'inputex-list', 'inputex-string',
+        'inputex-uneditable']
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""

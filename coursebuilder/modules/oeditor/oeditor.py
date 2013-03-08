@@ -20,16 +20,16 @@ import json
 import os
 import urllib
 
-# a set of YUI and inputex modules required by the editor; need to be optimized
-# to load what is needed for a specific schema; for now we use a static list
-REQUIRED_MODULES = """
-    "querystring-stringify-simple",
-    "inputex-group", "inputex-select", "inputex-string", "inputex-form",
-    "inputex-radio", "inputex-date", "inputex-datepicker", "inputex-jsonschema",
-    "inputex-checkbox", "inputex-list", "inputex-color", "inputex-rte",
-    "inputex-textarea", "inputex-uneditable", "inputex-integer",
-    "inputex-hidden", "inputex-file", "io-upload-iframe"
-    """
+# a set of YUI and inputex modules required by the editor
+COMMON_REQUIRED_MODULES = [
+    'inputex-group', 'inputex-form', 'inputex-jsonschema']
+
+ALL_MODULES = [
+    'querystring-stringify-simple', 'inputex-select', 'inputex-string',
+    'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
+    'inputex-list', 'inputex-color', 'inputex-rte', 'inputex-textarea',
+    'inputex-uneditable', 'inputex-integer', 'inputex-hidden', 'inputex-file',
+    'io-upload-iframe']
 
 
 class ObjectEditor(object):
@@ -64,7 +64,8 @@ class ObjectEditor(object):
         rest_url, exit_url,
         save_method='put',
         delete_url=None, delete_method='post',
-        auto_return=False, read_only=False):
+        auto_return=False, read_only=False,
+        required_modules=None):
         """Creates an HTML code needed to embed and operate this form.
 
         This method creates an HTML, JS and CSS  required to embed JSON
@@ -82,10 +83,12 @@ class ObjectEditor(object):
             delete_method: optional HTTP method for delete operation
             auto_return: whether to return to the exit_url on successful save
             read_only: optional flag; if set, removes Save and Delete operations
+            required_modules: list of inputex modules required for this editor
 
         Returns:
             The HTML, JS and CSS text that will instantiate an object editor.
         """
+        required_modules = required_modules or ALL_MODULES
 
         # extract label
         type_label = json.loads(schema_json)['description']
@@ -109,7 +112,8 @@ class ObjectEditor(object):
             'save_url': post_url,
             'save_args': json.dumps(post_args),
             'exit_url': exit_url,
-            'required_modules': REQUIRED_MODULES,
+            'required_modules': '"%s"' % '","'.join(
+                COMMON_REQUIRED_MODULES + required_modules),
             'schema_annotations': cls.format_annotations(annotations),
             'save_method': save_method,
             'auto_return': auto_return
