@@ -47,7 +47,7 @@ SCHEMA_JSON = """
             "key" : {"type": "string"},
             "title": {"optional": true, "type": "string"},
             "date": {"optional": true, "type": "date"},
-            "html": {"optional": true, "type": "text"},
+            "html": {"optional": true, "type": "html"},
             "is_draft": {"type": "boolean"}
             }
     }
@@ -64,7 +64,8 @@ SCHEMA_ANNOTATIONS_DICT = [
         'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
         'valueFormat': 'Y/m/d'}),
     (['properties', 'title', '_inputex'], {'label': 'Title'}),
-    (['properties', 'html', '_inputex'], {'label': 'Body', '_type': 'text'}),
+    (['properties', 'html', '_inputex'], {
+        'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
     oeditor.create_bool_select_annotation(
         ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 

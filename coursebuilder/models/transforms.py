@@ -26,7 +26,7 @@ SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 
 SUPPORTED_TYPES = (db.GeoPt, datetime.date)
 
-JSON_TYPES = ['string', 'date', 'text', 'boolean', 'integer']
+JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer']
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
 
