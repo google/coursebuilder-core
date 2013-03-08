@@ -279,10 +279,27 @@ class DatastoreBackedFileSystem(object):
         return rel_path
 
     def physical_to_logical(self, filename):
+        """Converts an internal filename to and external filename."""
+
+        # This class receives and stores absolute file names. The logical
+        # filename is the external file name. The physical filename is an
+        # internal filename. This function does the convertions.
+
+        # Let's say you want to store a file named '/assets/img/foo.png'.
+        # This would be a physical filename in the VFS. But the put() operation
+        # expects an absolute filename from the root of the app installation,
+        # i.e. something like '/dev/apps/coursebuilder/assets/img/foo.png',
+        # which is called a logical filename. This is a legacy expectation from
+        # the days the course was defined as files on the file system.
+        #
+        # This function will do the conversion you need.
+
         return self._physical_to_logical(filename)
 
     def _physical_to_logical(self, filename):
         # For now we only support '/' as a physical folder name.
+        if not filename.startswith('/'):
+            filename = '/' + filename
         if self._logical_home_folder == '/':
             return filename
         return '%s%s' % (self._logical_home_folder, filename)

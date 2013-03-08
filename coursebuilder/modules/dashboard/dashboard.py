@@ -207,7 +207,7 @@ class DashboardHandler(
                         url, unit.unit_id, cgi.escape(unit.title)))
 
                 lines.append('<ol>')
-                for lesson in course.get_lessons(unit.id):
+                for lesson in course.get_lessons(unit.unit_id):
                     if filer.is_editable_fs(self.app_context):
                         action_url = self.get_action_url(
                             'edit_lesson', key=lesson.id)

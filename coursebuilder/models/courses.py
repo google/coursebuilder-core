@@ -283,7 +283,7 @@ class CourseModel13(object):
     VERSION = COURSE_MODEL_VERSION_1_3
 
     # A logical filename where we persist courses data."""
-    COURSES_FILENAME = '/data/course.pickle'
+    COURSES_FILENAME = 'data/course.pickle'
 
     # The course content files may change between deployment. To avoid reading
     # old cached values by the new version of the application we add deployment
@@ -398,14 +398,14 @@ class CourseModel13(object):
         unit = self.find_unit_by_id(unit_id)
         assert unit
         assert verify.UNIT_TYPE_ASSESSMENT == unit.type
-        return '/assets/js/assessment-%s.js' % unit.id
+        return 'assets/js/assessment-%s.js' % unit.id
 
     def get_activity_filename(self, unused_unit_id, lesson_id):
         """Returns activity base filename."""
         lesson = self.find_lesson_by_id(None, lesson_id)
         assert lesson
         if lesson.has_activity:
-            return '/assets/js/activity-%s.js' % lesson_id
+            return 'assets/js/activity-%s.js' % lesson_id
         return None
 
     def find_unit_by_id(self, unit_id):
