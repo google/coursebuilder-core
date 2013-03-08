@@ -36,6 +36,7 @@ from filer import AssetItemRESTHandler
 from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
+import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
@@ -159,6 +160,16 @@ class DashboardHandler(
     def _get_edit_link(self, url):
         return '&nbsp;<a href="%s">[Edit]</a>' % url
 
+    def _get_availability(self, resource):
+        if not hasattr(resource, 'now_available'):
+            return ''
+        if resource.now_available:
+            return ' <span class="published-label">%s</span>' % (
+                unit_lesson_editor.PUBLISHED_TEXT)
+        else:
+            return ' <span class="draft-label">%s</span>' % (
+                unit_lesson_editor.DRAFT_TEXT)
+
     def render_course_outline_to_html(self):
         """Renders course outline to HTML."""
         course = courses.Course(self)
@@ -175,6 +186,7 @@ class DashboardHandler(
                 lines.append(
                     '<strong><a href="assessment?name=%s">%s</a></strong>' % (
                         unit.unit_id, cgi.escape(unit.title)))
+                lines.append(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
@@ -189,6 +201,7 @@ class DashboardHandler(
                 lines.append(
                     '<strong><a href="%s">%s</a></strong>' % (
                         unit.href, cgi.escape(unit.title)))
+                lines.append(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
@@ -204,6 +217,7 @@ class DashboardHandler(
                     ('<strong><a href="unit?unit=%s">Unit %s - %s</a>'
                      '</strong>') % (
                          unit.unit_id, unit.index, cgi.escape(unit.title)))
+                lines.append(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
@@ -217,6 +231,7 @@ class DashboardHandler(
                         '<li><a href="unit?unit=%s&lesson=%s">%s</a>\n' % (
                             unit.unit_id, lesson.lesson_id,
                             cgi.escape(lesson.title)))
+                    lines.append(self._get_availability(lesson))
                     if is_editable:
                         url = self.get_action_url(
                             'edit_lesson', key=lesson.lesson_id)

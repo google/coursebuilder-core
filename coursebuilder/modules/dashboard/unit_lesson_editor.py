@@ -32,6 +32,10 @@ from tools import verify
 import filer
 
 
+DRAFT_TEXT = 'Private'
+PUBLISHED_TEXT = 'Public'
+
+
 # The editor has severe limitations for editing nested lists of objects. First,
 # it does not allow one to move a lesson from one unit to another. We need a way
 # of doing that. Second, JSON schema specification does not seem to support a
@@ -42,8 +46,8 @@ import filer
 
 def create_status_annotation():
     return oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', 'Private', 'Public',
-        class_name='split-from-main-group')
+        ['properties', 'is_draft'], 'Status', DRAFT_TEXT,
+        PUBLISHED_TEXT, class_name='split-from-main-group')
 
 
 class CourseOutlineRights(object):
