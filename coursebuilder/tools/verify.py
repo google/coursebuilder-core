@@ -33,11 +33,11 @@ Good luck!
 """
 
 import csv
+import json
 import os
 import re
 from StringIO import StringIO
 import sys
-from models import transforms
 
 
 BOOLEAN = object()
@@ -1146,7 +1146,7 @@ class Verifier(object):
 
         # N.B.: make sure to get the string quoting right!
         code_str = "units[%s]['lessons'][%s]['activity'] = " % (
-            unit_id, lesson_id) + repr(transforms.dumps(output)) + ';'
+            unit_id, lesson_id) + repr(json.dumps(output)) + ';'
         self.export.append(code_str)
 
         if 'noverify' in activity_dict:
@@ -1197,7 +1197,7 @@ class Verifier(object):
 
         # N.B.: make sure to get the string quoting right!
         code_str = 'assessments[\'' + assessment_name + '\'] = ' + repr(
-            transforms.dumps(output)) + ';'
+            json.dumps(output)) + ';'
         self.export.append(code_str)
 
         if 'noverify' in assessment_dict:
