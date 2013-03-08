@@ -4,12 +4,14 @@
     <base href="{{ gcb_course_base }}" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>{{ page_title }}</title>
+    <title>{{ page_title|safe }}</title>
     <link rel="icon" href="" />
     <style>
-        body {
+        body, h1, h2, h3 {
           margin: 0px;
           padding: 0px;
+        }
+        body {
           background-color: #f5f5f5;
         }
         form {
@@ -56,6 +58,9 @@
           background-color: #FFFFFF;
           text-align: center;
         }
+        div#gcb-section {
+          padding-bottom: 4px;
+        }
         div#gcb-main-content {
           padding: 32px;
           text-align: left;
@@ -83,7 +88,7 @@
         }
         div#gcb-nav-bar a:focus, div#gcb-nav-bar a:hover, div#gcb-nav-bar a:active {
           text-decoration: underline;
-        }        
+        }
         .gcb-button {
           font-family: "open sans",arial,sans-serif;
           font-weight: bold;
@@ -94,21 +99,61 @@
           text-decoration: none;
           border: none;
         }
-
+        .pull-right {
+          float: right;
+        }
+        #gcb-section pre {
+          padding: 0px;
+          margin: 0px;
+        }
     </style>
   </head>
   <body>
   <div id='gcb-user-bar'>
-    {{ user_nav }}
+    {{ user_nav|safe }}
   </div>
-  <h2>{{ page_title }}</h2>
+  <h2>{{ page_title|safe }}</h2>
   <div id='gcb-nav-bar'>
-    {{ top_nav }}
+    {{ top_nav|safe }}
   </div>
   <div id='gcb-main-area'>
+    {% if sections %}
     <div id='gcb-main-content'>
-        {{ main_content }}
+      {% for section in sections %}
+      <div id='gcb-section'>
+        {% for action in section.actions %}
+          {% if action.href %}
+          <a id='{{ action.id }}' class="gcb-button pull-right" role="button"
+              href="{{ action.href }}" >{{ action.caption }}</a>
+          {% else %}
+          <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
+            <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
+            <button class="gcb-button pull-right" type="submit">{{ action.caption }}</button>
+          </form>
+          {% endif %}
+        {% endfor %}
+        {% if section.actions %}
+          <div style='clear: both; padding-top: 2px;' />
+        {% endif %}
+        <h3>{{ section.title|safe }}</h3>
+        <ol>
+          {% for item in section.children %}
+          {% if 2 == (item|count) %}
+          <li>{{ item[0] }}: {{ item[1] }}</li>
+          {% else %}
+          <li><pre>{{ item }}</pre></li>
+          {% endif %}
+          {% endfor %}
+        </ol>
+      </div>
+      {% endfor %}
     </div>
+    {% endif %}
+    {% if main_content %}
+    <div id='gcb-main-content'>
+        {{ main_content|safe }}
+    </div>
+    {% endif %}
   </div>
   <div id='gcb-footer'>
     Powered by

@@ -20,6 +20,7 @@ import cgi
 import datetime
 import json
 import os
+import urllib
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
@@ -29,20 +30,34 @@ from models import jobs
 from models import roles
 from models import vfs
 from models.models import Student
+import filer
+from filer import FileManagerAndEditor
+from filer import FilesItemRESTHandler
 from google.appengine.api import users
 from google.appengine.ext import db
 
 
-class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
+class DashboardHandler(
+    FileManagerAndEditor, ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
-    get_actions = [default_action, 'assets', 'settings', 'students']
-    post_actions = ['compute_student_stats']
+    get_actions = [
+        default_action, 'assets', 'settings', 'students', 'edit_settings']
+    post_actions = ['compute_student_stats', 'create_or_edit_settings']
+
+    @classmethod
+    def get_child_routes(cls):
+        """Add child handlers for REST."""
+        return [('/rest/files/item', FilesItemRESTHandler)]
 
     def can_view(self):
         """Checks if current user has viewing rights."""
-        return roles.Roles.is_super_admin()
+        return roles.Roles.is_course_admin(self.app_context)
+
+    def can_edit(self):
+        """Checks if current user has editing rights."""
+        return roles.Roles.is_course_admin(self.app_context)
 
     def get(self):
         """Enforces rights to all GET operations."""
@@ -51,9 +66,17 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
             return
         return super(DashboardHandler, self).get()
 
+    def post(self):
+        """Enforces rights to all POST operations."""
+        if not self.can_edit():
+            self.redirect(self.app_context.get_slug())
+            return
+        return super(DashboardHandler, self).post()
+
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
         jinja_environment = jinja2.Environment(
+            autoescape=True,
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 
@@ -77,6 +100,9 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
             users.get_current_user().email(), users.create_logout_url('/'))
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
+
+        if not template_values.get('sections'):
+            template_values['sections'] = []
 
         self.response.write(
             self.get_template('view.html', []).render(template_values))
@@ -141,52 +167,73 @@ class DashboardHandler(ApplicationHandler, ReflectiveRequestHandler):
         template_values['main_content'] = lines
         self.render_page(template_values)
 
+    def get_action_url(self, action, key=None, canonicalize=True):
+        args = {'action': action}
+        if key:
+            args['key'] = key
+        url = '/dashboard?%s' % urllib.urlencode(args)
+        if canonicalize:
+            return self.canonicalize_url(url)
+        return url
+
     def get_settings(self):
         """Renders course settings view."""
 
-        template_values = {}
-        template_values['page_title'] = self.format_title('Settings')
+        yaml_actions = []
 
-        course_info = []
-        course_info.append('<h3>About the Course</h3>')
-        course_info.append('<ol>')
-
-        # Course info.
-        course_info.append('<li>Course Title: %s</li>' % (
-            cgi.escape(self.app_context.get_environ()['course']['title'])))
-        course_info.append('<li>Context Path: %s</li>' % (
-            self.app_context.get_slug()))
-        course_info.append('<li>Datastore Namespace: %s</li>' % (
-            self.app_context.get_namespace_name()))
+        # Basic course info.
+        course_info = [
+            ('Course Title', self.app_context.get_environ()['course']['title']),
+            ('Context Path', self.app_context.get_slug()),
+            ('Datastore Namespace', self.app_context.get_namespace_name())]
 
         # Course file system.
         fs = self.app_context.fs.impl
-        course_info.append('<li>File system: %s</li>' % fs.__class__.__name__)
+        course_info.append(('File system', fs.__class__.__name__))
         if fs.__class__ == vfs.LocalReadOnlyFileSystem:
-            course_info.append('<li>Home folder: %s</li>' % sites.abspath(
-                self.app_context.get_home_folder(), '/'))
+            course_info.append(('Home folder', sites.abspath(
+                self.app_context.get_home_folder(), '/')))
 
-        course_info.append('</ol>')
-
-        course_info = ''.join(course_info)
+        # Enable editing if supported.
+        if filer.is_editable_fs(self.app_context):
+            yaml_actions.append({
+                'id': 'edit_course_yaml',
+                'caption': 'Edit',
+                'action': self.get_action_url('create_or_edit_settings'),
+                'xsrf_token': self.create_xsrf_token(
+                    'create_or_edit_settings')})
+        else:
+            message = (
+                'This course is deployed on read-only media '
+                'and can\'t be edited.')
+            yaml_actions.append({
+                'id': 'edit_course_yaml',
+                'caption': 'Edit',
+                'href': 'javascript: alert("%s"); return false;' % message})
 
         # Yaml file content.
-        yaml_content = []
-        yaml_content.append(
-            '<h3>Contents of <code>course.yaml</code> file</h3>')
-        yaml_content.append('<ol>')
+        yaml_info = []
         yaml_stream = self.app_context.fs.open(
             self.app_context.get_config_filename())
         if yaml_stream:
             yaml_lines = yaml_stream.read().decode('utf-8')
             for line in yaml_lines.split('\n'):
-                yaml_content.append('<li>%s</li>\n' % cgi.escape(line))
+                yaml_info.append(line)
         else:
-            yaml_content.append('<pre>&lt; empty file &gt;</pre>\n')
-        yaml_content.append('</ol>')
-        yaml_content = ''.join(yaml_content)
+            yaml_info.append('< empty file >')
 
-        template_values['main_content'] = course_info + yaml_content
+        # Prepare template values.
+        template_values = {}
+        template_values['page_title'] = self.format_title('Settings')
+        template_values['sections'] = [
+            {
+                'title': 'About the Course',
+                'children': course_info},
+            {
+                'title': 'Contents of <code>course.yaml</code> file',
+                'actions': yaml_actions,
+                'children': yaml_info}]
+
         self.render_page(template_values)
 
     def list_and_format_file_list(self, subfolder, links=False):

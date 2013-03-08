@@ -71,6 +71,8 @@ class TestBase(suite.BaseTestClass):
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
+
+        self.supports_editing = False
         self.assert_default_namespace()
         self.namespace = ''
         self.base = '/'

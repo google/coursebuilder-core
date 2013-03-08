@@ -466,8 +466,16 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             'Google &gt; Dashboard &gt; Settings', response.body)
         assert_contains('course.yaml', response.body)
-        assert_contains('title: \'Power Searching with Google\'', response.body)
-        assert_contains('locale: \'en_US\'', response.body)
+        assert_contains(
+            'title: &#39;Power Searching with Google&#39;', response.body)
+        assert_contains('locale: &#39;en_US&#39;', response.body)
+
+        # Check editability.
+        if self.supports_editing:
+            assert_contains('create_or_edit_settings', response.body)
+        else:
+            assert_does_not_contain('create_or_edit_settings', response.body)
+            assert_contains('deployed on read-only media', response.body)
 
         # Tests student statistics view.
         response = self.get('dashboard?action=students')
@@ -1333,6 +1341,7 @@ class CourseUrlRewritingTestBase(actions.TestBase):
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(CourseUrlRewritingTestBase, self).setUp()
+
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
         sites.setup_courses('course:%s:/:%s' % (self.base, self.namespace))
@@ -1437,6 +1446,7 @@ class DatastoreBackedFileSystemTestBase(actions.TestBase):
         """Configure the test."""
         super(DatastoreBackedFileSystemTestBase, self).setUp()
 
+        self.supports_editing = True
         self.namespace = 'dsbfs'
         sites.setup_courses('course:/::%s' % self.namespace)
 
@@ -1450,6 +1460,34 @@ class DatastoreBackedFileSystemTestBase(actions.TestBase):
         """Clean up."""
         sites.reset_courses()
         super(DatastoreBackedFileSystemTestBase, self).tearDown()
+
+    def test_get_put_file(self):
+        """Test that one can put/get file via REST interface."""
+
+        email = 'test_get_put_file@google.com'
+
+        actions.login(email, True)
+        response = self.get('dashboard?action=settings')
+
+        # Check course.yaml edit form.
+        compute_form = response.forms['edit_course_yaml']
+        response = self.submit(compute_form)
+        assert_equals(response.status_int, 302)
+        assert_contains(
+            'dashboard?action=edit_settings&key=%2Fcourse.yaml',
+            response.location)
+        response = self.get(response.location)
+        assert_contains('rest/files/item?key=%2Fcourse.yaml', response.body)
+
+        # Get text file.
+        response = self.get('rest/files/item?key=%2Fcourse.yaml')
+        assert_equals(response.status_int, 200)
+        json_dict = json.loads(json.loads(response.body)['payload'])
+        assert '/course.yaml' == json_dict['key']
+        assert 'text/utf-8' == json_dict['encoding']
+        assert (open(os.path.join(
+            appengine_config.BUNDLE_ROOT, 'course.yaml')).read(
+                ) == json_dict['content'])
 
 
 class CourseUrlRewritingTest(CourseUrlRewritingTestBase):

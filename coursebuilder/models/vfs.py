@@ -253,6 +253,9 @@ class DatastoreBackedFileSystem(object):
             rel_path = '/%s' % rel_path
         return rel_path
 
+    def physical_to_logical(self, filename):
+        return self._physical_to_logical(filename)
+
     def _physical_to_logical(self, filename):
         # For now we only support '/' as a physical folder name.
         if self._logical_home_folder == '/':
