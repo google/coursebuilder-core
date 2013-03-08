@@ -19,7 +19,6 @@ __author__ = 'Sean Lip'
 
 import csv
 import datetime
-import json
 import logging
 import os
 import re
@@ -33,6 +32,7 @@ from controllers.utils import XsrfTokenManager
 from models import config
 from models import jobs
 from models import models
+from models import transforms
 from models import vfs
 from models.utils import get_all_scores
 from models.utils import get_score
@@ -284,7 +284,7 @@ class AdminAspectTest(actions.TestBase):
         response = self.testapp.get(
             '/rest/config/item?key=gcb_config_update_interval_sec')
         assert_equals(response.status_int, 200)
-        json_dict = json.loads(response.body)
+        json_dict = transforms.loads(response.body)
         assert json_dict['status'] == 401
         assert json_dict['message'] == 'Access denied.'
 
@@ -294,11 +294,11 @@ class AdminAspectTest(actions.TestBase):
         payload_dict['is_draft'] = False
         request = {}
         request['key'] = 'gcb_config_update_interval_sec'
-        request['payload'] = json.dumps(payload_dict)
+        request['payload'] = transforms.dumps(payload_dict)
 
         # Check XSRF token is required.
         response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
-            {'request': json.dumps(request)}), {})
+            {'request': transforms.dumps(request)}), {})
         assert_equals(response.status_int, 200)
         assert_contains('"status": 403', response.body)
 
@@ -307,9 +307,9 @@ class AdminAspectTest(actions.TestBase):
         request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
             'config-property-put')
         response = self.testapp.put('/rest/config/item?%s' % urllib.urlencode(
-            {'request': json.dumps(request)}), {})
+            {'request': transforms.dumps(request)}), {})
         assert_equals(response.status_int, 200)
-        json_dict = json.loads(response.body)
+        json_dict = transforms.loads(response.body)
         assert json_dict['status'] == 401
         assert json_dict['message'] == 'Access denied.'
 
@@ -505,7 +505,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             for i in range(5):
                 student = models.Student(key_name='key-%s' % i)
                 student.is_enrolled = True
-                student.scores = json.dumps({'test-assessment': i})
+                student.scores = transforms.dumps({'test-assessment': i})
                 student.put()
         finally:
             namespace_manager.set_namespace(old_namespace)
@@ -581,12 +581,12 @@ class CourseAuthorAspectTest(actions.TestBase):
         items = AnnouncementEntity.all().fetch(1)
         for item in items:
             response = self.get('rest/announcements/item?key=%s' % item.key())
-            json_dict = json.loads(response.body)
+            json_dict = transforms.loads(response.body)
             assert json_dict['status'] == 200
             assert 'message' in json_dict
             assert 'payload' in json_dict
 
-            payload_dict = json.loads(json_dict['payload'])
+            payload_dict = transforms.loads(json_dict['payload'])
             assert 'title' in payload_dict
             assert 'date' in payload_dict
 
@@ -596,18 +596,18 @@ class CourseAuthorAspectTest(actions.TestBase):
             payload_dict['is_draft'] = True
             request = {}
             request['key'] = str(item.key())
-            request['payload'] = json.dumps(payload_dict)
+            request['payload'] = transforms.dumps(payload_dict)
 
             # Check XSRF is required.
             response = self.put('rest/announcements/item?%s' % urllib.urlencode(
-                {'request': json.dumps(request)}), {})
+                {'request': transforms.dumps(request)}), {})
             assert_equals(response.status_int, 200)
             assert_contains('"status": 403', response.body)
 
             # Check PUT works.
             request['xsrf_token'] = json_dict['xsrf_token']
             response = self.put('rest/announcements/item?%s' % urllib.urlencode(
-                {'request': json.dumps(request)}), {})
+                {'request': transforms.dumps(request)}), {})
             assert_equals(response.status_int, 200)
             assert_contains('"status": 200', response.body)
 
@@ -618,7 +618,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # REST GET not-existing item
         response = self.get('rest/announcements/item?key=not_existent_key')
-        json_dict = json.loads(response.body)
+        json_dict = transforms.loads(response.body)
         assert json_dict['status'] == 404
 
 
@@ -659,7 +659,7 @@ class StudentAspectTest(actions.TestBase):
         for item in items:
             response = self.get('rest/announcements/item?key=%s' % item.key())
             if item.is_draft:
-                json_dict = json.loads(response.body)
+                json_dict = transforms.loads(response.body)
                 assert json_dict['status'] == 401
             else:
                 assert_equals(response.status_int, 200)
@@ -779,11 +779,11 @@ class StudentAspectTest(actions.TestBase):
         # Prepare event.
         request = {}
         request['source'] = 'test-source'
-        request['payload'] = json.dumps({'Alice': u'Bob (тест данные)'})
+        request['payload'] = transforms.dumps({'Alice': u'Bob (тест данные)'})
 
         # Check XSRF token is required.
         response = self.post('rest/events?%s' % urllib.urlencode(
-            {'request': json.dumps(request)}), {})
+            {'request': transforms.dumps(request)}), {})
         assert_equals(response.status_int, 200)
         assert_contains('"status": 403', response.body)
 
@@ -791,7 +791,7 @@ class StudentAspectTest(actions.TestBase):
         request['xsrf_token'] = XsrfTokenManager.create_xsrf_token(
             'event-post')
         response = self.post('rest/events?%s' % urllib.urlencode(
-            {'request': json.dumps(request)}), {})
+            {'request': transforms.dumps(request)}), {})
         assert_equals(response.status_int, 200)
         assert not response.body
 
@@ -802,7 +802,8 @@ class StudentAspectTest(actions.TestBase):
             events = models.EventEntity.all().fetch(1000)
             assert 1 == len(events)
             assert_contains(
-                u'Bob (тест данные)', json.loads(events[0].data)['Alice'])
+                u'Bob (тест данные)',
+                transforms.loads(events[0].data)['Alice'])
         finally:
             namespace_manager.set_namespace(old_namespace)
 
@@ -943,11 +944,11 @@ class ActivityTest(actions.TestBase):
             args['payload']['location'] = (
                 'http://localhost:8080/activity?unit=%s&lesson=%s' %
                 (unit_id, lesson_id))
-            args['payload'] = json.dumps(args['payload'])
+            args['payload'] = transforms.dumps(args['payload'])
 
             # Submit the request to the backend.
             response = self.post('rest/events?%s' % urllib.urlencode(
-                {'request': json.dumps(args)}), {})
+                {'request': transforms.dumps(args)}), {})
             assert_equals(response.status_int, 200)
             assert not response.body
 
@@ -1021,7 +1022,7 @@ class AssessmentTest(actions.TestBase):
         pre_answers = [{'foo': 'bar'}, {'Alice': u'Bob (тест данные)'}]
         pre = {
             'assessment_type': 'Pre', 'score': '1.00',
-            'answers': json.dumps(pre_answers)}
+            'answers': transforms.dumps(pre_answers)}
         mid = {'assessment_type': 'Mid', 'score': '2.00'}
         fin = {'assessment_type': 'Fin', 'score': '3.00'}
         second_mid = {'assessment_type': 'Mid', 'score': '1.00'}
@@ -1073,7 +1074,7 @@ class AssessmentTest(actions.TestBase):
             assert len(get_all_scores(student)) == 4
 
             # Check assessment answers.
-            answers = json.loads(
+            answers = transforms.loads(
                 models.StudentAnswersEntity.get_by_key_name(
                     student.user_id).data)
             assert pre_answers == answers['Pre']
@@ -1601,7 +1602,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # Get text file.
         response = self.get('rest/files/item?key=%2Fcourse.yaml')
         assert_equals(response.status_int, 200)
-        json_dict = json.loads(json.loads(response.body)['payload'])
+        json_dict = transforms.loads(
+            transforms.loads(response.body)['payload'])
         assert '/course.yaml' == json_dict['key']
         assert 'text/utf-8' == json_dict['encoding']
         assert (open(os.path.join(
@@ -1634,6 +1636,16 @@ class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(DatastoreBackedSampleCourseTest, self).setUp()
         self.init_course_data(self.upload_all_sample_course_files)
+
+
+class SecurityTest(actions.TestBase):
+    """Run all security-related tests."""
+
+    def test_response_content_type_is_application_json_in_utf_8(self):
+        response = self.testapp.get(
+            '/rest/config/item?key=gcb_config_update_interval_sec')
+        self.assertEqual(
+            'application/json, charset=utf-8', response.headers['Content-Type'])
 
 
 class CourseUrlRewritingTest(CourseUrlRewritingTestBase):

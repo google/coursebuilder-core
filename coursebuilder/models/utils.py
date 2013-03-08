@@ -17,7 +17,7 @@
 __author__ = 'Sean Lip (sll@google.com)'
 
 
-import json
+import transforms
 
 
 def get_all_scores(student):
@@ -33,14 +33,14 @@ def get_all_scores(student):
     if not student.scores:
         return {}
     else:
-        return json.loads(student.scores)
+        return transforms.loads(student.scores)
 
 
 def dict_get(dict_as_string, my_key):
     if not dict_as_string:
         return None
     else:
-        return json.loads(dict_as_string).get(my_key)
+        return transforms.loads(dict_as_string).get(my_key)
 
 
 def set_answer(answers, assessment_name, answer):
@@ -58,9 +58,9 @@ def set_answer(answers, assessment_name, answer):
     if not answers.data:
         score_dict = {}
     else:
-        score_dict = json.loads(answers.data)
+        score_dict = transforms.loads(answers.data)
     score_dict[assessment_name] = answer
-    answers.data = json.dumps(score_dict)
+    answers.data = transforms.dumps(score_dict)
 
 
 def get_score(student, assessment_name):
@@ -93,6 +93,6 @@ def set_score(student, assessment_name, score):
     if not student.scores:
         score_dict = {}
     else:
-        score_dict = json.loads(student.scores)
+        score_dict = transforms.loads(student.scores)
     score_dict[assessment_name] = score
-    student.scores = json.dumps(score_dict)
+    student.scores = transforms.dumps(score_dict)

@@ -18,7 +18,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import datetime
-import json
 import os
 import urllib
 from controllers import sites
@@ -28,6 +27,7 @@ import jinja2
 from models import courses
 from models import jobs
 from models import roles
+from models import transforms
 from models import vfs
 from models.models import Student
 import filer
@@ -426,7 +426,7 @@ class DashboardHandler(
                 Student statistics have not been calculated yet."""
         else:
             if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                stats = json.loads(job.output)
+                stats = transforms.loads(job.output)
                 enrolled = stats['enrollment']['enrolled']
                 unenrolled = stats['enrollment']['unenrolled']
 
@@ -504,7 +504,7 @@ class ScoresAggregator(object):
 
     def visit(self, student):
         if student.scores:
-            scores = json.loads(student.scores)
+            scores = transforms.loads(student.scores)
             for key in scores.keys():
                 if key in self.name_to_tuple:
                     count = self.name_to_tuple[key][0]

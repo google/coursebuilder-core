@@ -18,7 +18,6 @@ __author__ = 'John Orr (jorr@google.com)'
 
 
 import cgi
-import json
 import os
 import sys
 import urllib
@@ -181,7 +180,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
 
     def put(self):
         """A PUT REST method shared by all unit types."""
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         key = request.get('key')
 
         if not self.assert_xsrf_token_or_fail(
@@ -201,7 +200,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         updated_unit_dict = transforms.json_to_dict(
-            json.loads(payload), self.SCHEMA_DICT)
+            transforms.loads(payload), self.SCHEMA_DICT)
 
         errors = []
         self.apply_updates(unit, updated_unit_dict, errors)
@@ -254,7 +253,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     }
     """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Unit'),
@@ -302,7 +301,7 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     }
     """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Link'),
@@ -353,7 +352,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     }
     """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Assessment'),
@@ -464,7 +463,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
         }
         """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Course Outline'),
@@ -527,7 +526,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
 
         if not self.assert_xsrf_token_or_fail(
                 request, 'unit-lesson-reorder', {'key': None}):
@@ -539,7 +538,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         payload_dict = transforms.json_to_dict(
-            json.loads(payload), self.SCHEMA_DICT)
+            transforms.loads(payload), self.SCHEMA_DICT)
         courses.Course(self).reorder_units(payload_dict['outline'])
 
         transforms.send_json_response(self, 200, 'Saved.')

@@ -16,19 +16,22 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+
 import datetime
-import json
 import urllib
+
 from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
 from models import entities
 from models import roles
+from models import transforms
 from models.models import MemcacheManager
 import models.transforms as transforms
 import modules.announcements.samples as samples
 from modules.oeditor import oeditor
+
 from google.appengine.ext import db
 
 
@@ -208,7 +211,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
         }
         """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     # inputex specific schema annotations to control editor look and feel
     SCHEMA_ANNOTATIONS_DICT = [
@@ -259,7 +262,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         key = request.get('key')
 
         if not self.assert_xsrf_token_or_fail(
@@ -279,7 +282,8 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         transforms.dict_to_entity(entity, transforms.json_to_dict(
-            json.loads(payload), AnnouncementsItemRESTHandler.SCHEMA_DICT))
+            transforms.loads(payload),
+            AnnouncementsItemRESTHandler.SCHEMA_DICT))
         entity.put()
 
         transforms.send_json_response(self, 200, 'Saved.')

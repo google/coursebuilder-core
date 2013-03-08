@@ -16,9 +16,9 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-import json
 import os
 import urllib
+from models import transforms
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -55,7 +55,7 @@ class ObjectEditor(object):
             for element in item[0]:
                 path.append('[\'%s\']' % element)
             annotations_lines.append('schema.root%s = %s;' % (
-                ''.join(path), json.dumps(item[1])))
+                ''.join(path), transforms.dumps(item[1])))
         return '\n'.join(annotations_lines)
 
     @classmethod
@@ -91,7 +91,7 @@ class ObjectEditor(object):
         required_modules = required_modules or ALL_MODULES
 
         # extract label
-        type_label = json.loads(schema_json)['description']
+        type_label = transforms.loads(schema_json)['description']
         if not type_label:
             type_label = 'Generic Object'
 
@@ -110,7 +110,7 @@ class ObjectEditor(object):
             'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
             'save_url': post_url,
-            'save_args': json.dumps(post_args),
+            'save_args': transforms.dumps(post_args),
             'exit_url': exit_url,
             'required_modules': '"%s"' % '","'.join(
                 COMMON_REQUIRED_MODULES + required_modules),

@@ -17,9 +17,9 @@
 __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
-import json
 import logging
 from models import models
+from models import transforms
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
@@ -112,7 +112,7 @@ class AnswerHandler(BaseHandler):
         # Also record the event, which is useful for tracking multiple
         # submissions and history.
         models.EventEntity.record(
-            'submit-assessment', self.get_user(), json.dumps({
+            'submit-assessment', self.get_user(), transforms.dumps({
                 'type': 'assessment-%s' % assessment_type,
                 'values': new_answers, 'location': 'AnswerHandler'}))
 
@@ -135,7 +135,7 @@ class AnswerHandler(BaseHandler):
         # Convert answers from JSON to dict.
         answers = self.request.get('answers')
         if answers:
-            answers = json.loads(answers)
+            answers = transforms.loads(answers)
         else:
             answers = []
 

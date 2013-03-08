@@ -16,9 +16,9 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-import json
 import urlparse
 from models import models
+from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from utils import BaseHandler
@@ -243,7 +243,7 @@ class EventsRESTHandler(BaseRESTHandler):
         if not CAN_PERSIST_ACTIVITY_EVENTS.value:
             return
 
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         if not self.assert_xsrf_token_or_fail(request, 'event-post', {}):
             return
 
@@ -266,7 +266,7 @@ class EventsRESTHandler(BaseRESTHandler):
             student = models.Student.get_enrolled_student_by_email(user.email())
             if not student:
                 return
-            payload = json.loads(payload_json)
+            payload = transforms.loads(payload_json)
             source_url = payload['location']
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
             if unit_id is not None and lesson_id is not None:

@@ -17,11 +17,11 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 from datetime import datetime
-import json
 import logging
 import time
 import traceback
 import entities
+import transforms
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 from google.appengine.ext import deferred
@@ -56,7 +56,7 @@ class DurableJob(object):
             try:
                 result = self.run()
                 DurableJobEntity.complete_job(
-                    self._job_name, json.dumps(result),
+                    self._job_name, transforms.dumps(result),
                     long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
             except Exception as e:

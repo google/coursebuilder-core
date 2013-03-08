@@ -17,7 +17,6 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
-import json
 import urllib
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -162,7 +161,7 @@ class ConfigPropertyEditor(object):
             entity.put()
 
         models.EventEntity.record(
-            'override-property', users.get_current_user(), json.dumps({
+            'override-property', users.get_current_user(), transforms.dumps({
                 'name': name, 'value': str(entity.value)}))
 
         self.redirect('/admin?%s' % urllib.urlencode(
@@ -187,7 +186,8 @@ class ConfigPropertyEditor(object):
                 entity.delete()
 
                 models.EventEntity.record(
-                    'delete-property', users.get_current_user(), json.dumps({
+                    'delete-property', users.get_current_user(),
+                    transforms.dumps({
                         'name': name, 'value': str(old_value)}))
 
         except db.BadKeyError:
@@ -227,7 +227,8 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
                 entity.value, item.value_type)
             json_payload = transforms.dict_to_json(
                 entity_dict,
-                json.loads(ConfigPropertyEditor.get_schema_json(item)))
+                transforms.loads(
+                    ConfigPropertyEditor.get_schema_json(item)))
             transforms.send_json_response(
                 self, 200, 'Success.',
                 payload_dict=json_payload,
@@ -236,7 +237,7 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         key = request.get('key')
 
         if not self.assert_xsrf_token_or_fail(
@@ -262,7 +263,7 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
             return
 
         payload = request.get('payload')
-        json_object = json.loads(payload)
+        json_object = transforms.loads(payload)
         new_value = item.value_type(json_object['value'])
 
         # Validate the value.
@@ -280,7 +281,7 @@ class ConfigPropertyItemRESTHandler(BaseRESTHandler):
         entity.put()
 
         models.EventEntity.record(
-            'put-property', users.get_current_user(), json.dumps({
+            'put-property', users.get_current_user(), transforms.dumps({
                 'name': key,
                 'before': str(old_value), 'after': str(entity.value)}))
 

@@ -175,6 +175,8 @@
 <script type='text/javascript'>
   // server communications timeout
   var ajaxRpcTimeoutMillis = 15 * 1000;
+  // XSSI prefix. Must be kept in sync with models/transforms.py.
+  var xssiPrefix = ")]}'\n";
 
   function cbShowMsg(text){
     elem = document.getElementById("formStatusMessage");
@@ -204,6 +206,13 @@
       }
     }
     return true;
+  }
+
+  /**
+   * Parses JSON string that starts with an XSSI prefix.
+   */
+  function parseJson(s) {
+    return JSON.parse(s.replace(xssiPrefix, ''));
   }
 
   function propertyCount(x) {
@@ -335,7 +344,7 @@
                   complete: function(transactionId, response, args) {
                     var json;
                     if (response && response.responseText) {
-                      json = JSON.parse(response.responseText);
+                      json = parseJson(response.responseText);
                     } else {
                       cbShowMsg("Server did not respond. Please reload the page to try again.");
                       return;
@@ -393,7 +402,7 @@
                       timeout : ajaxRpcTimeoutMillis,
                       on: {
                         success: function(id, o, args) {
-                          var json = JSON.parse(o.responseText);
+                          var json = parseJson(o.responseText);
                           if (json.status != 200) {
                             cbShowMsg(formatServerErrorMessage(json.status, json.message));
                             return;
@@ -513,7 +522,7 @@
         timeout : ajaxRpcTimeoutMillis,
         on: {
             success: function(id, o, args) {
-              var json = JSON.parse(o.responseText);
+              var json = parseJson(o.responseText);
 
               // check status code
               if (json.status != 200) {
@@ -528,7 +537,7 @@
               }
 
               // push payload into form
-              var payload = JSON.parse(json.payload);
+              var payload = parseJson(json.payload);
               cb_global.form.setValue(payload);
 
               // record xsrf token if provided

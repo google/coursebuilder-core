@@ -22,13 +22,13 @@ import json
 from google.appengine.ext import db
 
 
-SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
-
-SUPPORTED_TYPES = (db.GeoPt, datetime.date)
-
-JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array']
-
 JSON_DATE_FORMAT = '%Y/%m/%d'
+JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array']
+# Prefix to add to all JSON responses to guard against XSSI. Must be kept in
+# sync with modules/oeditor/oeditor.html.
+_JSON_XSSI_PREFIX = ")]}'\n"
+SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
+SUPPORTED_TYPES = (db.GeoPt, datetime.date)
 
 
 def dict_to_json(source_dict, unused_schema):
@@ -45,6 +45,44 @@ def dict_to_json(source_dict, unused_schema):
             raise ValueError(
                 'Failed to encode key \'%s\' with value \'%s\'.' % (key, value))
     return output
+
+
+def dumps(*args, **kwargs):
+    """Wrapper around json.dumps.
+
+    No additional behavior; present here so this module is a drop-in replacement
+    for json.dumps|loads. Clients should never use json.dumps|loads directly.
+    See usage docs at http://docs.python.org/2/library/json.html.
+
+    Args:
+        *args: positional arguments delegated to json.dumps.
+        **kwargs: keyword arguments delegated to json.dumps.
+
+    Returns:
+        string. The converted JSON.
+    """
+    return json.dumps(*args, **kwargs)
+
+
+def loads(s, prefix=_JSON_XSSI_PREFIX, **kwargs):
+    """Wrapper around json.loads that handles XSSI-protected responses.
+
+    To prevent XSSI we insert a prefix before our JSON responses during server-
+    side rendering. This loads() removes the prefix and should always be used in
+    place of json.loads. See usage docs at
+    http://docs.python.org/2/library/json.html.
+
+    Args:
+        s: str or unicode. JSON contents to convert.
+        prefix: string. The XSSI prefix we remove before conversion.
+        **kwargs: keyword arguments delegated to json.loads.
+
+    Returns:
+        object. Python object reconstituted from the given JSON string.
+    """
+    if s.startswith(prefix):
+        s = s.lstrip(prefix)
+    return json.loads(s, **kwargs)
 
 
 def json_to_dict(source_dict, schema):
@@ -139,14 +177,15 @@ def value_to_string(value, value_type):
 def send_json_response(
     handler, status_code, message, payload_dict=None, xsrf_token=None):
     """Formats and sends out a JSON REST response envelope and body."""
+    handler.response.headers['Content-Type'] = 'application/json, charset=utf-8'
     response = {}
     response['status'] = status_code
     response['message'] = message
     if payload_dict:
-        response['payload'] = json.dumps(payload_dict)
+        response['payload'] = dumps(payload_dict)
     if xsrf_token:
         response['xsrf_token'] = xsrf_token
-    handler.response.write(json.dumps(response))
+    handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
 
 
 def run_all_unit_tests():

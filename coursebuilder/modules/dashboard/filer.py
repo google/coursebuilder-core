@@ -19,7 +19,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import base64
 import cgi
-import json
 import os
 import urllib
 from controllers.utils import ApplicationHandler
@@ -165,7 +164,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
         }
         """
 
-    SCHEMA_DICT = json.loads(SCHEMA_JSON)
+    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Text File'),
@@ -246,7 +245,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
         """Handles REST PUT verb with JSON payload."""
         assert is_editable_fs(self.app_context)
 
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         key = request.get('key')
 
         if not self.assert_xsrf_token_or_fail(
@@ -260,7 +259,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
             return
 
         payload = request.get('payload')
-        entity = json.loads(payload)
+        entity = transforms.loads(payload)
         encoding = entity['encoding']
         content = entity['content']
 
@@ -358,11 +357,11 @@ class AssetItemRESTHandler(BaseRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.', None)
             return
 
-        request = json.loads(self.request.get('request'))
+        request = transforms.loads(self.request.get('request'))
         if not self.assert_xsrf_token_or_fail(request, 'asset-upload', None):
             return
 
-        payload = json.loads(request['payload'])
+        payload = transforms.loads(request['payload'])
         base = payload['base']
         assert base == ALLOWED_ASSET_UPLOAD_BASE
 

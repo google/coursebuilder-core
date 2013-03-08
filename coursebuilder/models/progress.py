@@ -17,10 +17,11 @@
 __author__ = 'Sean Lip (sll@google.com)'
 
 import datetime
-import json
-from tools import verify
 
+from tools import verify
 from models import StudentPropertyEntity
+
+import transforms
 
 
 class UnitLessonProgressTracker(object):
@@ -294,7 +295,7 @@ class UnitLessonProgressTracker(object):
     def _get_entity_value(self, progress, event_key):
         if not progress.value:
             return None
-        return json.loads(progress.value).get(event_key)
+        return transforms.loads(progress.value).get(event_key)
 
     def _get_unit_status(self, progress, unit_id):
         return self._get_entity_value(progress, self._get_unit_key(unit_id))
@@ -375,12 +376,12 @@ class UnitLessonProgressTracker(object):
           value: the value to increment this property by
         """
         try:
-            progress_dict = json.loads(student_property.value)
-        except TypeError:
+            progress_dict = transforms.loads(student_property.value)
+        except (AttributeError, TypeError):
             progress_dict = {}
 
         progress_dict[key] = value
-        student_property.value = json.dumps(progress_dict)
+        student_property.value = transforms.dumps(progress_dict)
 
     def _inc(self, student_property, key, value=1):
         """Increments the integer value of a student property.
@@ -394,12 +395,12 @@ class UnitLessonProgressTracker(object):
           value: the value to increment this property by
         """
         try:
-            progress_dict = json.loads(student_property.value)
-        except TypeError:
+            progress_dict = transforms.loads(student_property.value)
+        except (AttributeError, TypeError):
             progress_dict = {}
 
         if key not in progress_dict:
             progress_dict[key] = 0
 
         progress_dict[key] += value
-        student_property.value = json.dumps(progress_dict)
+        student_property.value = transforms.dumps(progress_dict)
