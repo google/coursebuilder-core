@@ -39,6 +39,7 @@ from models import vfs
 from models.courses import Course
 from models.utils import get_all_scores
 from models.utils import get_score
+import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
 import actions
@@ -466,6 +467,12 @@ class AdminAspectTest(actions.TestBase):
 
         email = 'test_python_console@google.com'
 
+        # The default is that the console should be turned off
+        self.assertFalse(modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED)
+
+        # Test the console when it is enabled
+        modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = True
+
         # Check normal user has no access.
         actions.login(email)
         response = self.testapp.get('/admin?action=console')
@@ -497,6 +504,13 @@ class AdminAspectTest(actions.TestBase):
         response.form.set('code', 'print "foo" + "bar"')
         response = self.submit(response.form)
         assert_contains('foobar', response.body)
+
+        # Finally, test that the console is not found when it is disabled
+        modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = False
+
+        actions.login(email, True)
+        self.testapp.get('/admin?action=console', status=404)
+        self.testapp.post('/admin?action=console_run', status=404)
 
     def test_non_admin_has_no_access(self):
         """Test non admin has no access to pages or REST endpoints."""

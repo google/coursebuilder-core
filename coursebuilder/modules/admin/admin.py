@@ -37,6 +37,8 @@ from google.appengine.api import users
 import google.appengine.api.app_identity as app
 
 
+DIRECT_CODE_EXECUTION_UI_ENABLED = False
+
 # A time this module was initialized.
 BEGINNING_OF_TIME = time.time()
 
@@ -77,10 +79,22 @@ class AdminHandler(
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
-    get_actions = [
-        default_action, 'settings', 'deployment', 'perf', 'config_edit',
-        'console']
-    post_actions = ['config_reset', 'config_override', 'console_run']
+
+    @property
+    def get_actions(self):
+        actions = [
+            self.default_action, 'settings', 'deployment', 'perf',
+            'config_edit']
+        if DIRECT_CODE_EXECUTION_UI_ENABLED:
+            actions.append('console')
+        return actions
+
+    @property
+    def post_actions(self):
+        actions = ['config_reset', 'config_override']
+        if DIRECT_CODE_EXECUTION_UI_ENABLED:
+            actions.append('console_run')
+        return actions
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -118,8 +132,9 @@ class AdminHandler(
             ('', 'Courses'),
             ('settings', 'Settings'),
             ('perf', 'Metrics'),
-            ('deployment', 'Deployment'),
-            ('console', 'Console')]
+            ('deployment', 'Deployment')]
+        if DIRECT_CODE_EXECUTION_UI_ENABLED:
+            nav_mappings.append(('console', 'Console'))
         nav = []
         for action, title in nav_mappings:
             class_attr = 'class="selected"' if action == current_action else ''
