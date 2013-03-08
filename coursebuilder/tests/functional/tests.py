@@ -2750,6 +2750,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
         self.test_tempdir = os.path.join(TEST_DATA_BASE, 'EtlMainTestCase')
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
+        self.new_course_title = 'New Course Title'
         self.sdk_path = os.environ.get('GOOGLE_APP_ENGINE_HOME')
         self.url_prefix = '/test'
         self.raw = 'course:%s::ns_test' % self.url_prefix
@@ -2789,6 +2790,14 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         # Import sample course.
         dst_app_context = sites.get_all_courses()[0]
         src_app_context = sites.get_all_courses()[1]
+
+        # Patch in a course.yaml.
+        yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
+        yaml['course']['title'] = self.new_course_title
+        dst_app_context.fs.impl.put(
+            os.path.join(appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH),
+            etl._ReadWrapper(str(yaml)), is_draft=False)
+
         dst_course = courses.Course(None, app_context=dst_app_context)
 
         errors = []
@@ -2890,18 +2899,21 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
         self.create_archive()
         self.create_empty_course(self.raw)
-        etl.main(self.upload_args, environment_class=FakeEnvironment)
         context = etl._get_requested_context(
-            sites.get_all_courses(), self.url_prefix)
+            sites.get_all_courses(), self.upload_args.course_url_prefix)
+        self.assertNotEqual(self.new_course_title, context.get_title())
+        etl.main(self.upload_args, environment_class=FakeEnvironment)
         archive = etl._Archive(self.archive_path)
         archive.open('r')
+        context = etl._get_requested_context(
+            sites.get_all_courses(), self.upload_args.course_url_prefix)
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
         self.assertEqual(
             len(archive.manifest.entities), len(filesystem_contents))
-        course = etl._get_course_from(etl._get_requested_context(
-            sites.get_all_courses(), self.upload_args.course_url_prefix))
-        units = course.get_units()
-        self.assertTrue(units)
+        self.assertEqual(self.new_course_title, context.get_title())
+        units = etl._get_course_from(context).get_units()
+        spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
+        self.assertEqual('Interpreting results', spot_check_single_unit.title)
         for unit in units:
             self.assertTrue(unit.title)
         for entity in archive.manifest.entities:

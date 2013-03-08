@@ -376,6 +376,12 @@ class DatastoreBackedFileSystem(object):
     @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=False, metadata_only=False):
         """Puts a file stream to a database. Raw bytes stream, no encodings."""
+        self.non_transactional_put(
+            filename, stream, is_draft=is_draft, metadata_only=metadata_only)
+
+    def non_transactional_put(
+        self, filename, stream, is_draft=False, metadata_only=False):
+        """Non-transactional put; use only when transactions are impossible."""
         filename = self._logical_to_physical(filename)
 
         metadata = FileMetadataEntity.get_by_key_name(filename)

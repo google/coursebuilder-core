@@ -65,6 +65,7 @@ _COURSE_YAML_PATH = 'course.yaml'
 _LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH, 'assets', 'data'])
 # logging.Logger. Module logger.
 _LOG = logging.getLogger('coursebuilder.tools.etl')
+logging.basicConfig()
 # String. Name of the manifest file.
 _MANIFEST_FILENAME = 'manifest.json'
 # String. Identifier for download mode.
@@ -435,11 +436,12 @@ def _upload(archive_path, course_url_prefix):
     _LOG.info('Validation passed; beginning upload')
     count = 0
     for entity in archive.manifest.entities:
-        context.fs.impl.put(
+        context.fs.impl.non_transactional_put(
             os.path.join(appengine_config.BUNDLE_ROOT, entity.path),
             _ReadWrapper(archive.get(entity.path)), is_draft=entity.is_draft)
         count += 1
         _LOG.info('Uploaded ' + entity.path)
+    courses.CachedCourse13.delete(context)  # Force update in UI.
     _LOG.info(
         'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
 
@@ -464,7 +466,6 @@ def main(parsed_args, environment_class=None):
     """
     _validate_arguments(parsed_args)
     _set_up_sys_path(parsed_args.sdk_path)
-    logging.basicConfig()
     _LOG.setLevel(parsed_args.log_level.upper())
     _check_sdk(parsed_args.sdk_path)
     _import_modules_into_global_scope()
