@@ -1140,21 +1140,25 @@ class Course(object):
     @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
+        course_yaml = None
+        course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()
-        try:
+        if app_context.fs.isfile(course_data_filename):
             course_yaml = app_context.fs.open(course_data_filename)
-            if not course_yaml:
-                return DEFAULT_COURSE_YAML_DICT
+        if not course_yaml:
+            return DEFAULT_COURSE_YAML_DICT
+        try:
             course_yaml_dict = yaml.safe_load(
                 course_yaml.read().decode('utf-8'))
-            if not course_yaml_dict:
-                return DEFAULT_COURSE_YAML_DICT
-            return deep_dict_merge(
-                course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT)
-        except Exception:
-            logging.info('Error: course.yaml file at %s not accessible',
-                         course_data_filename)
-            raise
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.info(
+                'Error: course.yaml file at %s not accessible, '
+                'loading defaults. %s', course_data_filename, e)
+
+        if not course_yaml_dict:
+            return DEFAULT_COURSE_YAML_DICT
+        return deep_dict_merge(
+            course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT)
 
     @property
     def version(self):
