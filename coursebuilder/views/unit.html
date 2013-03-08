@@ -11,7 +11,7 @@
 
 <div class="gcb-main">
   {% if is_read_write_course and is_course_admin %}
-    <a href="dashboard?action=edit_unit&key={{ unit_id }}" 
+    <a href="dashboard?action=edit_unit&key={{ unit_id }}"
       class="gcb-button gcb-button-action">Edit unit</a>
     <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
       class="gcb-button gcb-button-action">Edit lesson</a>
@@ -24,7 +24,7 @@
   </ul>
   <div>
     <h1 class="class_header">
-      {{ gettext('Unit %(index)s - %(title)s', index=unit.index, title=unit.title) }}
+      {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
     </h1>
   </div>
 
