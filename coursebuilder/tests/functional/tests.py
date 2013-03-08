@@ -246,6 +246,7 @@ class InfrastructureTest(actions.TestBase):
         assert [lesson_a, lesson_c] == course.get_lessons(unit.unit_id)
         assert [lesson_b] == course.get_lessons(another_unit.unit_id)
         course.delete_unit(another_unit)
+        course.save()
 
         # Make the course available.
         get_environ_old = sites.ApplicationContext.get_environ
@@ -258,18 +259,25 @@ class InfrastructureTest(actions.TestBase):
         sites.ApplicationContext.get_environ = get_environ_new
 
         # Test public/private assessment.
+        assessment_url = (
+            '/test/' + course.get_assessment_filename(assessment.unit_id))
         assert not assessment.now_available
-        response = self.get(
-            '/test/' + course.get_assessment_filename(assessment.unit_id),
-            expect_errors=True)
+        response = self.get(assessment_url, expect_errors=True)
         assert_equals(response.status_int, 403)
         assessment = course.find_unit_by_id(assessment.unit_id)
         assessment.now_available = True
         course.update_unit(assessment)
         course.save()
-        response = self.get(
-            '/test/' + course.get_assessment_filename(assessment.unit_id))
+        response = self.get(assessment_url)
         assert_equals(response.status_int, 200)
+
+        # Check delayed assessment deletion.
+        course.delete_unit(assessment)
+        response = self.get(assessment_url)  # note: file is still available
+        assert_equals(response.status_int, 200)
+        course.save()
+        response = self.get(assessment_url, expect_errors=True)
+        assert_equals(response.status_int, 404)
 
         # Test public/private activity.
         lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
@@ -279,23 +287,29 @@ class InfrastructureTest(actions.TestBase):
         errors = []
         course.set_activity_content(lesson_a, u'var activity = []', errors)
         assert not errors
-        response = self.get(
-            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id),
-            expect_errors=True)
+        activity_url = (
+            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id))
+        response = self.get(activity_url, expect_errors=True)
         assert_equals(response.status_int, 403)
         lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
         lesson_a.now_available = True
         course.update_lesson(lesson_a)
         course.save()
-        response = self.get(
-            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id),
-            expect_errors=True)
+        response = self.get(activity_url)
         assert_equals(response.status_int, 200)
 
-        # Test delete.
+        # Check delayed activity.
+        course.delete_lesson(lesson_a)
+        response = self.get(activity_url)  # note: file is still available
+        assert_equals(response.status_int, 200)
+        course.save()
+        response = self.get(activity_url, expect_errors=True)
+        assert_equals(response.status_int, 404)
+
+        # Test deletes removes all child objects.
         course.delete_unit(link)
         course.delete_unit(unit)
-        course.delete_unit(assessment)
+        assert not course.delete_unit(assessment)
         course.save()
         assert not course.get_units()
         assert not course.app_context.fs.list(os.path.join(

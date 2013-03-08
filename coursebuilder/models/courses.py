@@ -637,9 +637,10 @@ class CourseModel13(object):
         self._unit_id_to_lesson_ids = {}
 
         # These array keep dirty object in current transaction.
-        # TODO(psimakov): can we similarly delay delete_...() till save()?
         self._dirty_units = []
         self._dirty_lessons = []
+        self._deleted_units = []
+        self._deleted_lessons = []
 
         # Set provided values.
         if next_id:
@@ -689,8 +690,32 @@ class CourseModel13(object):
         """Checks if course object has been modified and needs to be saved."""
         return self._dirty_units or self._dirty_lessons
 
-    def _update_related_files(self):
-        """Updates standalone files owned by course."""
+    def _flush_deleted_objects(self):
+        """Delete files owned by deleted objects."""
+        units = self._units
+        lessons = self._lessons
+        unit_id_to_lesson_ids = self._unit_id_to_lesson_ids
+        try:
+            self._units = self._deleted_units
+            self._lessons = self._deleted_lessons
+            self._unit_id_to_lesson_ids = None
+
+            # Delete owned assessments.
+            for unit in self._deleted_units:
+                if verify.UNIT_TYPE_ASSESSMENT == unit.type:
+                    self._delete_assessment(unit)
+
+            # Delete owned activities.
+            for lesson in self._deleted_lessons:
+                if lesson.has_activity:
+                    self._delete_activity(lesson)
+        finally:
+            self._units = units
+            self._lessons = lessons
+            self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
+
+    def _update_dirty_objects(self):
+        """Update files owned by course."""
 
         fs = self.app_context.fs
 
@@ -720,15 +745,17 @@ class CourseModel13(object):
 
     def save(self):
         """Saves course to datastore and memcache."""
+        self._flush_deleted_objects()
+        self._update_dirty_objects()
+
+        self._dirty_units = []
+        self._dirty_lessons = []
+        self._deleted_units = []
+        self._deleted_lessons = []
+
         self._index()
         PersistentCourse13.save(self._app_context, self)
         CachedCourse13.delete(self._app_context)
-
-        self._update_related_files()
-
-        # Transaction is over; remove all dirty objects.
-        self._dirty_units = []
-        self._dirty_lessons = []
 
     def get_units(self):
         return self._units[:]
@@ -840,10 +867,9 @@ class CourseModel13(object):
         lesson = self.find_lesson_by_id(None, lesson.lesson_id)
         if not lesson:
             return False
-        if lesson.has_activity:
-            self._delete_activity(lesson)
         self._lessons.remove(lesson)
         self._index()
+        self._deleted_lessons.append(lesson)
         self._dirty_lessons.append(lesson)
         return True
 
@@ -854,10 +880,9 @@ class CourseModel13(object):
             return False
         for lesson in self.get_lessons(unit.unit_id):
             self.delete_lesson(lesson)
-        if verify.UNIT_TYPE_ASSESSMENT == unit.type:
-            self._delete_assessment(unit)
         self._units.remove(unit)
         self._index()
+        self._deleted_units.append(unit)
         self._dirty_units.append(unit)
         return True
 
