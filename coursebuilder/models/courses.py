@@ -955,7 +955,7 @@ class Course(object):
     def import_from(self, app_context, errors=None):
         """Import course structure and assets from another courses."""
         src_course = Course(None, app_context=app_context)
-        if not errors:
+        if errors is None:
             errors = []
 
         # Import 1.2 -> 1.3
