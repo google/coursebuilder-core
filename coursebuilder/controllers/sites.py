@@ -108,6 +108,7 @@ import logging
 import mimetypes
 import os
 import threading
+import urlparse
 import appengine_config
 from models.config import ConfigProperty
 from models.config import Registry
@@ -248,18 +249,42 @@ def debug(message):
         logging.info(message)
 
 
+def validate_appcontext_list(contexts):
+    """Validates a list of application contexts."""
+
+    # Check rule order is enforced. If we allowed any order and '/a' was before
+    # '/aa', the '/aa' would never match.
+    for i in range(len(contexts)):
+        for j in range(i + 1, len(contexts)):
+            above = contexts[i]
+            below = contexts[j]
+            if below.get_slug().startswith(above.get_slug()):
+                raise Exception(
+                    'Please reorder course entries to have '
+                    '\'%s\' before \'%s\'.' % (
+                        below.get_slug(), above.get_slug()))
+
+
 def get_all_courses(rules_text=None):
     """Reads all course rewrite rule definitions from environment variable."""
+    # Normalize text definition.
     if not rules_text:
         rules_text = GCB_COURSES_CONFIG.value
-    rules = rules_text.replace(',', '\n').split('\n')
+    rules_text = rules_text.replace(',', '\n')
 
+    # Use cached value if exists.
+    cached = ApplicationContext.ALL_COURSE_CONTEXTS_CACHE.get(rules_text)
+    if cached:
+        return cached
+
+    # Compute the list of contexts.
+    rules = rules_text.split('\n')
     slugs = {}
     namespaces = {}
     all_contexts = []
     for rule in rules:
         rule = rule.strip()
-        if not rule:
+        if not rule or rule.startswith('#'):
             continue
         parts = rule.split(':')
 
@@ -275,10 +300,17 @@ def get_all_courses(rules_text=None):
         site_type = parts[0]
 
         # validate slug
-        if parts[1] in slugs:
-            raise Exception('Slug already defined: %s.' % parts[1])
-        slugs[parts[1]] = True
         slug = parts[1]
+        slug_parts = urlparse.urlparse(slug)
+        if slug != slug_parts[2]:
+            raise Exception(
+                'Bad rule: \'%s\'. '
+                'Slug \'%s\' must be a simple URL fragment.' % (rule, slug))
+        if slug in slugs:
+            raise Exception(
+                'Bad rule: \'%s\'. '
+                'Slug \'%s\' is already defined.' % (rule, slug))
+        slugs[slug] = True
 
         # validate folder name
         if parts[2]:
@@ -300,13 +332,28 @@ def get_all_courses(rules_text=None):
             if folder and folder != '/':
                 namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE,
                                       folder.replace('/', '-'))
-            if namespace in namespaces:
-                raise Exception('Namespace already defined: %s.' % namespace)
+        try:
+            namespace_manager.validate_namespace(namespace)
+        except Exception as e:
+            raise Exception(
+                'Error validating namespace "%s" in rule "%s"; %s.' % (
+                    namespace, rule, e))
+
+        if namespace in namespaces:
+            raise Exception(
+                'Bad rule \'%s\'. '
+                'Namespace \'%s\' is already defined.' % (rule, namespace))
         namespaces[namespace] = True
 
         all_contexts.append(ApplicationContext(
             site_type, slug, folder, namespace,
             AbstractFileSystem(create_fs(namespace))))
+
+    validate_appcontext_list(all_contexts)
+
+    # Cache result to avoid re-parsing over and over.
+    ApplicationContext.ALL_COURSE_CONTEXTS_CACHE = {rules_text: all_contexts}
+
     return all_contexts
 
 
@@ -428,6 +475,12 @@ class AssetHandler(webapp2.RequestHandler):
 class ApplicationContext(object):
     """An application context for a request/response."""
 
+    # Here we store a map of a text definition of the courses to the parsed and
+    # fully validated array of ApplicationContext objects that they define. This
+    # is cached in process and automatically recomputed when text definition
+    # changes.
+    ALL_COURSE_CONTEXTS_CACHE = {}
+
     @classmethod
     def get_namespace_name_for_request(cls):
         """Gets the name of the namespace to use for this request.
@@ -537,12 +590,13 @@ def courses_config_validator(value, errors):
 
 GCB_COURSES_CONFIG = ConfigProperty(
     'gcb_courses_config', str, (
-        'A \',\' or newline separated list of course entries. '
+        'A newline separated list of course entries. '
         'Each course entry has four \':\' separated parts: the word '
         '\'course\', the URL prefix, and the file system location for the site '
         'files. If the third part is empty, the course assets are stored '
         'in a datastore instead of the file system. The fourth, optional part, '
-        'is the name of the course namespace.'),
+        'is the name of the course namespace. A line that starts with \'#\' is '
+        'ignored.'),
     'course:/:/', multiline=True, validator=courses_config_validator)
 
 
@@ -693,7 +747,7 @@ def assert_fails(func):
     except Exception:  # pylint: disable=W0703
         pass
     if success:
-        raise Exception()
+        raise Exception('Function \'%s\' was expected to fail.' % func)
 
 
 def setup_courses(course_config):
@@ -712,6 +766,44 @@ def test_unprefix():
     assert unprefix('/a/b/c', '/a/b') == '/c'
     assert unprefix('/a/b/index.html', '/a/b') == '/index.html'
     assert unprefix('/a/b', '/a/b') == '/'
+
+
+def test_rule_validations():
+    """Test rules validator."""
+    courses = get_all_courses('course:/:/')
+    assert 1 == len(courses)
+
+    # Check comments.
+    setup_courses('course:/a:/nsa, course:/b:/nsb')
+    assert 2 == len(get_all_courses())
+    setup_courses('course:/a:/nsa, # course:/a:/nsb')
+    assert 1 == len(get_all_courses())
+
+    # Check slug collisions are not allowed.
+    setup_courses('course:/a:/nsa, course:/a:/nsb')
+    assert_fails(get_all_courses)
+
+    # Check namespace collisions are allowed.
+    setup_courses('course:/a:/nsx, course:/b:/nsx')
+    assert_fails(get_all_courses)
+
+    # Check rule order is enforced. If we allowed any order and '/a' was before
+    # '/aa', the '/aa' would never match.
+    setup_courses('course:/a:/nsa, course:/aa:/nsaa, course:/aaa:/nsaaa')
+    assert_fails(get_all_courses)
+
+    # Check namespace names.
+    setup_courses('course:/a::/nsx')
+    assert_fails(get_all_courses)
+
+    # Check slug validity.
+    setup_courses('course:/a /b::nsa')
+    get_all_courses()
+    setup_courses('course:/a?/b::nsa')
+    assert_fails(get_all_courses)
+
+    # Cleanup.
+    reset_courses()
 
 
 def test_rule_definitions():
@@ -893,6 +985,7 @@ def run_all_unit_tests():
     test_url_to_rule_mapping()
     test_url_to_handler_mapping_for_course_type()
     test_path_construction()
+    test_rule_validations()
 
 if __name__ == '__main__':
     DEBUG_INFO = True
