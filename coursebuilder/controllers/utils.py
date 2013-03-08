@@ -18,16 +18,19 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 
 import base64
 import hmac
+import os
 import time
 import urlparse
+import appengine_config
 from models import transforms
 from models.config import ConfigProperty
+from models.config import ConfigPropertyEntity
 from models.courses import Course
-from models.models import MemcacheManager
 from models.models import Student
 from models.roles import Roles
 from models.utils import get_all_scores
 import webapp2
+from google.appengine.api import namespace_manager
 from google.appengine.api import users
 
 
@@ -37,6 +40,7 @@ COURSE_BASE_KEY = 'gcb_course_base'
 # The name of the template dict key that stores data from course.yaml.
 COURSE_INFO_KEY = 'course_info'
 
+XSRF_SECRET_LENGTH = 20
 
 XSRF_SECRET = ConfigProperty(
     'gcb_xsrf_secret', str, (
@@ -417,12 +421,46 @@ class XsrfTokenManager(object):
     USER_ID_DEFAULT = 'default'
 
     @classmethod
+    def init_xsrf_secret_if_none(cls):
+        """Verifies that non-default XSRF secret exists; creates one if not."""
+
+        # Any non-default value is fine.
+        if XSRF_SECRET.value and XSRF_SECRET.value != XSRF_SECRET.default_value:
+            return
+
+        # All property manipulations must run in the default namespace.
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(
+                appengine_config.DEFAULT_NAMESPACE_NAME)
+
+            # Look in the datastore directly.
+            entity = ConfigPropertyEntity.get_by_key_name(XSRF_SECRET.name)
+            if not entity:
+                entity = ConfigPropertyEntity(key_name=XSRF_SECRET.name)
+
+            # Any non-default non-None value is fine.
+            if (entity.value and not entity.is_draft and
+                (str(entity.value) != str(XSRF_SECRET.default_value))):
+                return
+
+            # Initialize to random value.
+            entity.value = base64.urlsafe_b64encode(
+                os.urandom(XSRF_SECRET_LENGTH))
+            entity.is_draft = False
+            entity.put()
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+    @classmethod
     def _create_token(cls, action_id, issued_on):
         """Creates a string representation (digest) of a token."""
+        cls.init_xsrf_secret_if_none()
 
-        # We have decided to use transient tokens to reduce datastore costs.
-        # The token has 4 parts: hash of the actor user id, hash of the action,
-        # hash if the time issued and the plain text of time issued.
+        # We have decided to use transient tokens stored in memcache to reduce
+        # datastore costs. The token has 4 parts: hash of the actor user id,
+        # hash of the action, hash of the time issued and the plain text of time
+        # issued.
 
         # Lookup user id.
         user = users.get_current_user()
@@ -454,11 +492,10 @@ class XsrfTokenManager(object):
     @classmethod
     def is_xsrf_token_valid(cls, token, action):
         """Validate a given XSRF token by retrieving it from memcache."""
-
         try:
             parts = token.split(cls.DELIMITER_PUBLIC)
             if not len(parts) == 2:
-                raise Exception('Bad token format, expected: a/b.')
+                return False
 
             issued_on = long(parts[0])
             age = time.time() - issued_on
@@ -472,12 +509,3 @@ class XsrfTokenManager(object):
             return False
         except Exception:  # pylint: disable-msg=broad-except
             return False
-
-        user_str = cls._make_user_str()
-        token_obj = MemcacheManager.get(token)
-        if not token_obj:
-            return False
-        token_str, token_action = token_obj
-        if user_str != token_str or action != token_action:
-            return False
-        return True

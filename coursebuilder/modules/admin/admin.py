@@ -95,6 +95,8 @@ class AdminHandler(
         if not self.can_view():
             self.redirect('/')
             return
+        # Force reload of properties. It is expensive, but admin deserves it!
+        config.Registry.get_overrides(force_update=True)
         return super(AdminHandler, self).get()
 
     def post(self):

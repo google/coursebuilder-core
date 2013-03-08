@@ -17,13 +17,10 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-import os
 import sys
-import time
 import unittest
 import appengine_config
 from controllers import sites
-from controllers import utils
 from models import config
 from models import courses
 from models import transforms
@@ -57,47 +54,6 @@ class InvokeExistingUnitTest(suite.TestBase):
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
         transforms.run_all_unit_tests()
-
-    def test_xsrf_token_manager(self):
-        """Test XSRF token operations."""
-
-        os.environ['AUTH_DOMAIN'] = 'test_domain'
-
-        # Issues and verify anonymous user token.
-        action = 'test-action'
-        token = utils.XsrfTokenManager.create_xsrf_token(action)
-        assert '/' in token
-        assert utils.XsrfTokenManager.is_xsrf_token_valid(token, action)
-
-        # Impersonate real user.
-        os.environ['USER_EMAIL'] = 'test_email'
-        os.environ['USER_ID'] = 'test_id'
-
-        # Issues and verify real user token.
-        action = 'test-action'
-        token = utils.XsrfTokenManager.create_xsrf_token(action)
-        assert '/' in token
-        assert utils.XsrfTokenManager.is_xsrf_token_valid(token, action)
-
-        # Check forged time stamp invalidates token.
-        parts = token.split('/')
-        assert len(parts) == 2
-        forgery = '%s/%s' % (long(parts[0]) + 1000, parts[1])
-        assert not forgery == token
-        assert not utils.XsrfTokenManager.is_xsrf_token_valid(forgery, action)
-
-        # Check token properly expires.
-        action = 'test-action'
-        time_in_the_past = long(
-            time.time() - utils.XsrfTokenManager.XSRF_TOKEN_AGE_SECS)
-        old_token = utils.XsrfTokenManager._create_token(
-            action, time_in_the_past)
-        assert not utils.XsrfTokenManager.is_xsrf_token_valid(old_token, action)
-
-        # Clean up.
-        del os.environ['AUTH_DOMAIN']
-        del os.environ['USER_EMAIL']
-        del os.environ['USER_ID']
 
     def test_string_encoding(self):
         """Test our understanding of Python string encoding aspects.
