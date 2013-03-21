@@ -97,6 +97,8 @@ _RETRIES = 3
 _TYPE_COURSE = 'course'
 # List of all types.
 _TYPES = [_TYPE_COURSE]
+# List of string. Valid values for --log_level.
+_LOG_LEVEL_CHOICES = ['DEBUG', 'ERROR', 'INFO', 'WARNING']
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
@@ -121,7 +123,8 @@ PARSER.add_argument(
     'archive_path',
     help='absolute path of the archive file to read or write', type=str)
 PARSER.add_argument(
-    '--log_level', help='Level of logging messages to emit', default='WARNING',
+    '--log_level', choices=_LOG_LEVEL_CHOICES,
+    help='Level of logging messages to emit', default='INFO',
     type=lambda s: s.upper())
 
 
