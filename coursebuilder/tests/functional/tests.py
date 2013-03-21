@@ -1615,10 +1615,11 @@ class ActivityTest(actions.TestBase):
         response = self.get('activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
         assert_equals(response.status_int, 200)
         assert_contains(
-            '<script src="assets/lib/activity-generic-%s.%s.js"></script>' %
+            '<script src="assets/js/activity-%s.%s.js"></script>' %
             (unit_id, lesson_id), response.body)
+        assert_contains('assets/lib/activity-generic-1.3.js', response.body)
 
-        js_response = self.get('assets/lib/activity-generic-1.2.js')
+        js_response = self.get('assets/lib/activity-generic-1.3.js')
         assert_equals(js_response.status_int, 200)
 
         # Extract XSRF token from the page.

@@ -71,9 +71,14 @@ function getParamFromUrlByName(name) {
 //    [choice label, is correct? (boolean), output when this choice is submitted]
 // 'domRoot' is the dom element to append HTML onto
 // 'index' is the index of this activity in the containing list
-function generateMultipleChoiceQuestion(choices, domRoot, index) {
+function generateMultipleChoiceQuestion(params, domRoot, index) {
+  var choices = params.choices;
   var tag = getFreshTag();
   var radioButtonGroupName = 'q' + tag;
+
+  if ("questionHTML" in params) {
+    domRoot.append(params.questionHTML);
+  }
 
   // create radio buttons
   $.each(choices, function(i, elt) {
@@ -163,8 +168,41 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
   var questionsList = params.questionsList;
   var allCorrectOutput = params.allCorrectOutput;
   var someIncorrectOutput = params.someIncorrectOutput;
-
   var used_tags = [];
+
+  if ("questionGroupHTML" in params) {
+    domRoot.append(params.questionGroupHTML);
+  }
+
+  var allCorrectMinCount = questionsList.length;
+  if ("allCorrectMinCount" in params) {
+    var count = params.allCorrectMinCount;
+    if (count >= 0 && count <= questionsList.length) {
+      allCorrectMinCount = count;
+    }
+  }
+
+  // helper function to determine the count of correct answers for a question
+  var correctAnswerCount = function(q) {
+    if (q.correctIndex instanceof Array) {
+      var count = q.correctIndex.length;
+      if (("multiSelect" in q) && !q.multiSelect) {
+        return 1;
+      }
+      return count;
+    } else {
+      return 1;
+    }
+  };
+
+  // helper function to determine if item represents a correct answer
+  var isCorrectAnswer = function(q, index) {
+    if (q.correctIndex instanceof Array) {
+      return $.inArray(index, q.correctIndex) != -1;
+    } else {
+      return index == q.correctIndex;
+    }
+  };
 
   // create questions
   $.each(questionsList, function(i, q) {
@@ -173,6 +211,15 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
 
     var radioButtonGroupName = 'q' + tag;
 
+    // choose item type: radio button or checkbox
+    var itemType = 'radio';
+    if ((q.correctIndex instanceof Array) && (q.correctIndex.length > 1)) {
+      itemType = 'checkbox';
+    }
+    if (("multiSelect" in q) && !q.multiSelect) {
+      itemType = 'radio';
+    }
+
     // create question HTML
     domRoot.append(q.questionHTML);
     domRoot.append('<br>');
@@ -180,15 +227,15 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
     // create radio buttons
     $.each(q.choices, function(j, choiceLabel) {
       var buttonId = radioButtonGroupName + '-' + i + '-' + j;
-      if (j == q.correctIndex) {
+      if (isCorrectAnswer(q, j)) {
         domRoot.append(
             '<span class="correct_' + tag + '">' +
-            '<input type="radio" name="' + radioButtonGroupName + '" ' +
+            '<input type="' + itemType + '" name="' + radioButtonGroupName + '" ' +
             'id="' + buttonId + '" value="correct"> ' +
             '<label for="' + buttonId + '">' + choiceLabel + '</label></span>');
       } else {
         domRoot.append(
-            '<input type="radio" name="' + radioButtonGroupName + '" ' +
+            '<input type="' + itemType + '" name="' + radioButtonGroupName + '" ' +
             'id="' + buttonId + '"> ' +
             '<label for="' + buttonId + '">' + choiceLabel + '</label>');
       }
@@ -196,7 +243,6 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
     });
 
     domRoot.append('<p/>');
-
   });
 
 
@@ -235,8 +281,8 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
 
   // handle question submission
   $('#submit_' + toplevel_tag).click(function() {
-    var numCorrect = 0;
-    var numChecked = 0;
+    var numChecked = 0;  // # of questions where answer was given by the student
+    var numCorrect = 0;  // # of questions where answer was correct
     answers = []
 
     $.each(questionsList, function(ind, q) {
@@ -244,40 +290,54 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
       var radioButtonGroupName = 'q' + tag;
       var choiceInputs = $('input[name=' + radioButtonGroupName + ']');
 
-      var userInputRecorded = false;
+      var numInputChecked = 0;  // # of <input>s that were given by the student
+      var numInputCorrect = 0;  // # of <input>s that were correct
+      var answerIndexes = [];  // indexes of the choices submitted by the student
+
+      // check each <input> for correctness
       for (var i = 0; i < choiceInputs.length; i++) {
         var isChecked = choiceInputs[i].checked;
-        var isCorrect = i == q.correctIndex
+        var isCorrect = isCorrectAnswer(q, i);
         if (isChecked) {
-          numChecked++;
+          numInputChecked++;
           if (isCorrect) {
-             numCorrect++;
+             numInputCorrect++;
           }
-
-          userInputRecorded = true;
-          answers.push({'index': ind, 'value': i, 'correct': isCorrect});
+          answerIndexes.push(i);
         }
       }
 
-      if (!userInputRecorded) {
-        answers.push({'index': ind, 'value': null, 'correct': isCorrect});
+      // decide if all inputs were correct and record the result
+      var allInputsAreCorrect = false;
+      if (
+          numInputChecked == numInputCorrect &&
+          numInputCorrect == correctAnswerCount(q)) {
+        numCorrect++;
+        allInputsAreCorrect = true;
       }
+      answers.push({
+          'index': ind,
+          'value': answerIndexes, 'correct': allInputsAreCorrect});
     });
 
     gcbActivityAudit({
         'index': index, 'type': 'activity-group', 'values': answers,
-        'num_expected': questionsList.length,
+        'num_expected': allCorrectMinCount,
         'num_submitted': numChecked, 'num_correct': numCorrect});
 
-    if (numCorrect == questionsList.length) {
+    if (numCorrect >= allCorrectMinCount) {
+      var verdict = trans.ALL_CORRECT_TEXT;
+      if (numCorrect < questionsList.length) {
+        verdict =
+            trans.NUM_CORRECT_TEXT + ': ' +
+            numCorrect + '/' + questionsList.length + '. ';      
+      }
       $.each(used_tags, function(i, t) {
         $('.correct_' + t).css('background-color', highlightColor);
       });
-      $('#output_' + toplevel_tag).val(
-          trans.ALL_CORRECT_TEXT + ' ' + allCorrectOutput);
+      $('#output_' + toplevel_tag).val(verdict + ' ' + allCorrectOutput);
       $('#output_' + toplevel_tag).focus();
-    }
-    else {
+    } else {
       $('#output_' + toplevel_tag).val(
           trans.NUM_CORRECT_TEXT + ': ' + numCorrect + '/' + questionsList.length +
           '.\n\n' + someIncorrectOutput);
@@ -303,9 +363,11 @@ function generateFreetextQuestion(params, domRoot, index) {
   var showAnswerOutput = params.showAnswerOutput;
   var showAnswerPrompt = params.showAnswerPrompt || trans.SHOW_ANSWER_TEXT; // optional parameter
   var outputHeight = params.outputHeight || '50px'; // optional parameter
-
-
   var tag = getFreshTag();
+
+  if ("questionHTML" in params) {
+    domRoot.append(params.questionHTML);
+  }
 
   domRoot.append(
       '&nbsp;&nbsp;<input type="text" style="width: 400px; ' +
@@ -384,7 +446,7 @@ function renderActivity(contentsLst, domRoot) {
     } else {
       // dispatch on type:
       if (e.questionType == 'multiple choice') {
-        generateMultipleChoiceQuestion(e.choices, domRoot, i);
+        generateMultipleChoiceQuestion(e, domRoot, i);
       }
       else if (e.questionType == 'multiple choice group') {
         generateMultipleChoiceGroupQuestion(e, domRoot, i);
