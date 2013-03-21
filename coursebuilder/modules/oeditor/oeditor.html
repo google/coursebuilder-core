@@ -451,6 +451,9 @@
                 {type: 'cleanHTML', target: this, html: html});
             return html;
           };
+          editor._cleanIncomingHTML = function(html) {
+            return html;
+          };
           editor._fixNodes = function() {};
 
           rteField.editor = editor;
