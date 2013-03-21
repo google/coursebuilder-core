@@ -152,6 +152,7 @@ class LocalReadOnlyFileSystem(object):
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
         return jinja2.Environment(
+            autoescape=True,
             extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(physical_dir_names))
 
@@ -502,6 +503,7 @@ class DatastoreBackedFileSystem(object):
 
     def get_jinja_environ(self, dir_names):
         return jinja2.Environment(
+            autoescape=True,
             extensions=['jinja2.ext.i18n'],
             loader=VirtualFileSystemTemplateLoader(
                 self, self._logical_home_folder, dir_names))
