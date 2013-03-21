@@ -71,9 +71,11 @@
                 </div>
                 <div class="gcb-col-3">
                   <p style="float:right; margin-top: 0px;">
+                    {% if lesson.notes %}
                     <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
                       {% trans %} Text Version {% endtrans %}
                     </a>
+                    {% endif %}
                   </p>
                 </div>
               </div><!-- /gcb-cols -->
