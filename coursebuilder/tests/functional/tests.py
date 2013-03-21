@@ -2761,21 +2761,15 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.test_tempdir = os.path.join(TEST_DATA_BASE, 'EtlMainTestCase')
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.new_course_title = 'New Course Title'
-        self.sdk_path = os.environ.get('GOOGLE_APP_ENGINE_HOME')
-
-        # Find App Engine SDK folder by navigating up four folders from well
-        # known google.appengine.api.memcache.
-        self.sdk_path = os.path.abspath(memcache.__file__).rsplit(os.sep, 5)[0]
-
         self.url_prefix = '/test'
         self.raw = 'course:%s::ns_test' % self.url_prefix
         self.swap(os, 'environ', self.test_environ)
         self.common_args = [
             etl._TYPES[0], self.url_prefix, 'myapp', 'localhost:8080',
-            self.archive_path, '--sdk_path', self.sdk_path]
-        self.download_args = etl._PARSER.parse_args(
+            self.archive_path]
+        self.download_args = etl.PARSER.parse_args(
             ['download'] + self.common_args)
-        self.upload_args = etl._PARSER.parse_args(['upload'] + self.common_args)
+        self.upload_args = etl.PARSER.parse_args(['upload'] + self.common_args)
         # Set up courses: version 1.3, version 1.2.
         sites.setup_courses(self.raw + ', course:/:/')
         self.reset_filesystem()
@@ -2788,7 +2782,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
     def create_archive(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        args = etl._PARSER.parse_args(['download'] + self.common_args)
+        args = etl.PARSER.parse_args(['download'] + self.common_args)
         etl.main(args, environment_class=FakeEnvironment)
         sites.reset_courses()
 
@@ -2862,7 +2856,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             environment_class=FakeEnvironment)
 
     def test_download_errors_if_course_version_is_pre_1_3(self):
-        args = etl._PARSER.parse_args(
+        args = etl.PARSER.parse_args(
             ['download', 'course', '/'] + self.common_args[2:])
         self.upload_all_sample_course_files([])
         self.import_sample_course()

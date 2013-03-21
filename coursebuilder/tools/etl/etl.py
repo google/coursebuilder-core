@@ -17,8 +17,7 @@
 Currently only download and upload of Course Builder 1.3 data is implemented.
 Example use:
 
-$ python etl.py download course /cs101 myapp server.appspot.com \
-    archive.zip --sdk_path=/path/to/my/appengine/sdk
+$ python etl.py download course /cs101 myapp server.appspot.com archive.zip
 
 This will result in a file called archive.zip that contains the contents of
 the Course Builder 1.3 course found at the URL /cs101 on the application with id
@@ -28,11 +27,28 @@ The format of archive.zip will change and should not be relied upon.
 
 For upload,
 
-$ python etl.py upload course /cs101 myapp server.appspot.com \
-    archive.zip --sdk_path/path/to/my_appengine/sdk
+$ python etl.py upload course /cs101 myapp server.appspot.com archive.zip
 
-In order to run this script, you must first ensure all third-party libraries
-required by Course Builder are installed and importable.
+In order to run this script, you must add the following to the head of sys.path:
+
+1. The absolute path of your Course Builder installation.
+2. The absolute path of your App Engine SDK.
+3. The absolute paths of third party libraries from the SDK used by Course
+   Builder:
+
+   fancy_urllib
+   jinja2
+   webapp2
+   webob
+
+   Their locations in the supported 1.7.0 App Engine SDK are
+
+   <sdk_path>/lib/fancy_urllib
+   <sdk_path>/lib/jinja2
+   <sdk_path>/lib/webapp2
+   <sdk_path>/lib/webob_1_1_1
+
+where <sdk_path> is the absolute path of the 1.7.0 App Engine SDK.
 
 Pass --help for additional usage information.
 """
@@ -47,6 +63,7 @@ import os
 import sys
 import zipfile
 import yaml
+
 
 # Placeholders for modules we'll import after setting up sys.path. This allows
 # us to avoid lint suppressions at every callsite.
@@ -74,41 +91,36 @@ _MODE_DOWNLOAD = 'download'
 _MODE_UPLOAD = 'upload'
 # List of all modes.
 _MODES = [_MODE_DOWNLOAD, _MODE_UPLOAD]
-# Frozenset of strings containing App Engine SDK versions we support.
-_SUPPORTED_APP_ENGINE_SDK_VERSIONS = frozenset(['1.7.0'])
 # String. Identifier for type course.
 _TYPE_COURSE = 'course'
 # List of all types.
 _TYPES = [_TYPE_COURSE]
 
 # Command-line argument configuration.
-_PARSER = argparse.ArgumentParser()
-_PARSER.add_argument(
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument(
     'mode', choices=_MODES,
     help='indicates whether we are downloading or uploading data', type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     'type', choices=_TYPES, help='type of entity to download', type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     'course_url_prefix',
     help=(
         "URL prefix of the course you want to download (e.g. '/foo' in "
         "'course:/foo:/directory:namespace'"), type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     'application_id',
     help="the id of the application to read from (e.g. 'myapp')", type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     'server',
     help=('the full name of the source application to read from (e.g. '
           'myapp.appspot.com)'), type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     'archive_path',
     help='absolute path of the archive file to read or write', type=str)
-_PARSER.add_argument(
+PARSER.add_argument(
     '--log_level', help='Level of logging messages to emit', default='WARNING',
     type=lambda s: s.upper())
-_PARSER.add_argument(
-    '--sdk_path', help='absolute path of the App Engine SDK', required=True,
-    type=str)
 
 
 class _Archive(object):
@@ -260,24 +272,6 @@ class _ReadWrapper(object):
         return self._data
 
 
-def _check_sdk(sdk_path):
-    """Ensure that the SDK exists; warn if the version is not supported."""
-    version = None
-    try:
-        with open(os.path.join(sdk_path, 'VERSION')) as f:
-            # Cannot import transforms wrapper yet; use plain yaml module.
-            contents = yaml.load(f.read())
-            version = contents.get('release')
-            if not version:  # SDK is malformed somehow.
-                raise IOError
-    except IOError:
-        _die('Unable to find App Engine SDK at ' + sdk_path)
-    if version not in _SUPPORTED_APP_ENGINE_SDK_VERSIONS:
-        _LOG.warning(
-            ('SDK version %s found at %s is not supported; behavior may be '
-             'unpredictable') % (version, sdk_path))
-
-
 def _die(message):
     _LOG.critical(message)
     sys.exit(1)
@@ -346,14 +340,6 @@ def _get_course_from(app_context):
     return courses.Course(_Adapter(app_context))
 
 
-def _get_root_path():
-    """Finds absolute Course Builder root path."""
-    path = os.path.abspath(__file__)
-    while not path.endswith('coursebuilder'):
-        path = os.path.split(path)[0]
-    return path
-
-
 def _import_modules_into_global_scope():
     """Import helper; run after _set_up_sys_path() for imports to resolve."""
     # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
@@ -364,12 +350,17 @@ def _import_modules_into_global_scope():
     global transforms
     global vfs
     global remote
-    import appengine_config
-    from controllers import sites
-    from models import courses
-    from models import transforms
-    from models import vfs
-    from tools.etl import remote
+    try:
+        import appengine_config
+        from controllers import sites
+        from models import courses
+        from models import transforms
+        from models import vfs
+        from tools.etl import remote
+    except ImportError, e:
+        _die((
+            'Unable to import required modules; see tools/etl/etl.py for docs. '
+            'Error was: ' + str(e)))
 
 
 def _get_requested_context(app_contexts, course_url_prefix):
@@ -390,20 +381,6 @@ def _remove_bundle_root(path):
     if path.startswith('/'):
         path = path[1:]
     return path
-
-
-def _set_up_sys_path(sdk_path):
-    """Sets up sys.path so App Engine/Course Builder imports work."""
-    assert os.path.exists(sdk_path)
-    for path in [
-            # Find course builder root by navigating up two folders from here.
-            os.path.abspath(__file__).rsplit(os.sep, 3)[0],
-            sdk_path,
-            # Add webapp2 so we can find webapp2_extras.
-            os.path.join(sdk_path, 'lib', 'webapp2')]:
-        if path not in sys.path:
-            # Have to insert at head or app engine imports won't resolve.
-            sys.path.insert(0, path)
 
 
 def _upload(archive_path, course_url_prefix):
@@ -471,9 +448,7 @@ def main(parsed_args, environment_class=None):
             defaults to remote.Environment if not specified.
     """
     _validate_arguments(parsed_args)
-    _set_up_sys_path(parsed_args.sdk_path)
     _LOG.setLevel(parsed_args.log_level.upper())
-    _check_sdk(parsed_args.sdk_path)
     _import_modules_into_global_scope()
     if not environment_class:
         environment_class = remote.Environment
@@ -491,4 +466,4 @@ def main(parsed_args, environment_class=None):
 
 
 if __name__ == '__main__':
-    main(_PARSER.parse_args())
+    main(PARSER.parse_args())
