@@ -75,6 +75,7 @@ import logging
 import os
 import re
 import sys
+import traceback
 import zipfile
 import yaml
 
@@ -341,7 +342,11 @@ class _ReadWrapper(object):
         return self._data
 
 
-def _die(message):
+def _die(message, with_trace=False):
+    if with_trace:  # Also logs most recent traceback.
+        message = '%s%s%s' % (
+            message, os.linesep,
+            ''.join(traceback.format_tb(sys.exc_info()[2])))
     _LOG.critical(message)
     sys.exit(1)
 
@@ -492,8 +497,8 @@ def _import_modules_into_global_scope():
         from tools.etl import remote
     except ImportError, e:
         _die((
-            'Unable to import required modules; see tools/etl/etl.py for docs. '
-            'Error was: ' + str(e)))
+            'Unable to import required modules; see tools/etl/etl.py for '
+            'docs.'), with_trace=True)
 
 
 def _get_requested_context(app_contexts, course_url_prefix):
@@ -578,10 +583,10 @@ def _process_models(query_iterator, fn, *args, **kwargs):
             fn(model, *args, **kwargs)
         # Can't be more specific -- we never want to retry if fn() fails.
         # pylint: disable-msg=broad-except
-        except Exception, e:
+        except Exception:
             _die(
-                'Error %s encountered processing entity %s; aborting' % (
-                    e, model))
+                'Error encountered processing entity %s; aborting:' % model,
+                with_trace=True)
 
 
 @_retry(message='Upload failed; retrying')
