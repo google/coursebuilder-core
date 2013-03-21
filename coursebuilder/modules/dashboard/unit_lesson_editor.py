@@ -464,7 +464,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
                 continue
             course_list.append({
                 'value': acourse.raw,
-                'label': acourse.get_title()})
+                'label': cgi.escape(acourse.get_title())})
 
         if not course_list:
             return None
@@ -762,7 +762,8 @@ class LessonRESTHandler(BaseRESTHandler):
         for unit in units:
             if unit.type == 'U':
                 unit_list.append({
-                    'label': 'Unit %s - %s' % (unit.index, unit.title),
+                    'label': cgi.escape(
+                        'Unit %s - %s' % (unit.index, unit.title)),
                     'value': unit.unit_id})
 
         return [
