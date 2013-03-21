@@ -50,6 +50,14 @@ inputex_handler = (
     '/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
         os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip')))
 
+yui_handler = (
+    '/static/yui_3.6.0/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip')))
+
+yui_2in3_handler = (
+    '/static/2in3/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))
+
 admin_handlers = [
     ('/admin', admin.AdminHandler),
     ('/rest/config/item', config.ConfigPropertyItemRESTHandler),
@@ -63,5 +71,6 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 debug = not appengine_config.PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
-    admin_handlers + [inputex_handler] + [app_handler],
+    admin_handlers + [
+        inputex_handler, yui_handler, yui_2in3_handler, app_handler],
     config={'webapp2_extras.i18n': webapp2_i18n_config}, debug=debug)

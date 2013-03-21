@@ -1,8 +1,8 @@
 <!-- TODO(psimakov): use local YUI library -->
 <link rel="stylesheet" type="text/css"
-    href="http://yui.yahooapis.com/3.6.0/build/cssreset-context/cssreset-context-min.css">
+    href="/static/yui_3.6.0/yui/build/cssreset-context/cssreset-context-min.css">
 <script
-    src="http://yui.yahooapis.com/3.6.0/build/yui/yui.js"></script>
+    src="/static/yui_3.6.0/yui/build/yui/yui.js"></script>
 <link rel="stylesheet" type="text/css"
     href="/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css">
 <script
@@ -355,11 +355,32 @@
   // button captions
   cb_global.save_button_caption = '{{ save_button_caption }}'
 
-  // set home folder
-  YUI_config.groups.inputex.base = '/static/inputex-3.1.0/src/';
-
   // here is the main method
-  YUI({filter: "raw"}).use(
+  YUI({
+    filter: "raw",
+    combine: false,
+    base: '/static/yui_3.6.0/yui/build/',
+    groups: {
+      inputex: {
+        base: '/static/inputex-3.1.0/src/'
+      },
+      yui2: {
+        base: '/static/2in3/2in3-master/dist/2.9.0/build/',
+        combine: false,
+        patterns:  {
+          'yui2-': {
+            configFn: function(me) {
+              if(/-skin|reset|fonts|grids|base/.test(me.name)) {
+                me.type = 'css';
+                me.path = me.path.replace(/\.js/, '.css');
+                me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+              }
+            }
+          }
+        }
+      }
+    }
+  }).use(
     {{ required_modules|safe }},
     function (Y) {
 
