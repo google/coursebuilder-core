@@ -16,7 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-
+import base64
 import datetime
 import json
 from google.appengine.ext import db
@@ -110,7 +110,7 @@ def json_to_dict(source_dict, schema):
     return output
 
 
-def entity_to_dict(entity):
+def entity_to_dict(entity, force_utf_8_encoding=False):
     """Puts model object attributes into a Python dictionary."""
     output = {}
     for key, prop in entity.properties().iteritems():
@@ -118,6 +118,17 @@ def entity_to_dict(entity):
         if value is None or isinstance(value, SIMPLE_TYPES) or isinstance(
                 value, SUPPORTED_TYPES):
             output[key] = value
+
+            # some values are raw bytes; force utf-8 or base64 encoding
+            if force_utf_8_encoding and isinstance(value, basestring):
+                try:
+                    output[key] = value.encode('utf-8')
+                except UnicodeDecodeError:
+                    output[key] = {
+                        'type': 'binary',
+                        'encoding': 'base64',
+                        'content': base64.urlsafe_b64encode(value)}
+
         else:
             raise ValueError('Failed to encode: %s' % prop)
 

@@ -82,15 +82,18 @@ import yaml
 
 # Placeholders for modules we'll import after setting up sys.path. This allows
 # us to avoid lint suppressions at every callsite.
+announcements = None
 appengine_config = None
 courses = None
 db = None
+jobs = None
 metadata = None
 namespace_manager = None
 remote = None
 sites = None
 transforms = None
 vfs = None
+
 
 # String. Prefix for files stored in an archive.
 _ARCHIVE_PATH_PREFIX = 'files'
@@ -149,11 +152,16 @@ PARSER.add_argument(
 PARSER.add_argument(
     '--datastore_types',
     help=("When type is '%s', comma-separated list of datastore model types to "
-          'process' % _TYPE_DATASTORE), type=lambda s: s.split(','))
+          'process; all models are processed by '
+          'default' % _TYPE_DATASTORE), type=lambda s: s.split(','))
 PARSER.add_argument(
     '--log_level', choices=_LOG_LEVEL_CHOICES,
     help='Level of logging messages to emit', default='INFO',
     type=lambda s: s.upper())
+PARSER.add_argument(
+    '--batch_size',
+    help='number of results to attempt to retrieve per batch',
+    default=20, type=int)
 
 
 class _Archive(object):
@@ -344,14 +352,19 @@ class _ReadWrapper(object):
 
 def _die(message, with_trace=False):
     if with_trace:  # Also logs most recent traceback.
-        message = '%s%s%s' % (
+        info = sys.exc_info()
+        message = '%s%s%s%s%s%s%s' % (
             message, os.linesep,
-            ''.join(traceback.format_tb(sys.exc_info()[2])))
+            info[0], os.linesep,  # exception class name
+            info[1], os.linesep,  # exception message
+            ''.join(traceback.format_tb(info[2])))  # exception stack
     _LOG.critical(message)
     sys.exit(1)
 
 
-def _download(download_type, archive_path, course_url_prefix, datastore_types):
+def _download(
+    download_type, archive_path, course_url_prefix, datastore_types,
+    batch_size):
     """Validates and dispatches to a specific download method."""
     archive_path = os.path.abspath(archive_path)
     context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
@@ -364,7 +377,8 @@ def _download(download_type, archive_path, course_url_prefix, datastore_types):
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(context.get_namespace_name())
-            _download_datastore(context, course, archive_path, datastore_types)
+            _download_datastore(
+                context, course, archive_path, datastore_types, batch_size)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
@@ -398,8 +412,12 @@ def _download_course(context, course, archive_path, course_url_prefix):
     _finalize_download(archive, manifest)
 
 
-def _download_datastore(context, course, archive_path, datastore_types):
+def _download_datastore(
+    context, course, archive_path, datastore_types, batch_size):
+    _import_entity_modules()
     available_types = set(_get_datastore_kinds())
+    if not datastore_types:
+        datastore_types = available_types
     requested_types = set(datastore_types)
     missing_types = requested_types - available_types
     if missing_types:
@@ -419,9 +437,7 @@ def _download_datastore(context, course, archive_path, datastore_types):
                 found_type, json_path))
         json_file = transforms.JsonFile(json_path)
         json_file.open('w')
-        _process_models(
-            db.class_for_kind(found_type).all().run(),
-            _add_to_json_file, json_file)
+        _process_models(db.class_for_kind(found_type), json_file, batch_size)
         json_file.close()
         internal_path = _Archive.get_internal_path(
             os.path.basename(json_file.name))
@@ -431,11 +447,6 @@ def _download_datastore(context, course, archive_path, datastore_types):
         _LOG.info('Removing temporary file ' + json_file.name)
         os.remove(json_file.name)
     _finalize_download(archive, manifest)
-
-
-def _add_to_json_file(model, json_file):
-    json_file.write(
-        transforms.dict_to_json(transforms.entity_to_dict(model), None))
 
 
 def _filter_filesystem_files(files):
@@ -470,6 +481,26 @@ def _get_course_from(app_context):
             self.app_context = app_context
 
     return courses.Course(_Adapter(app_context))
+
+
+def _import_entity_modules():
+    """Import modules that define persistent datastore entities."""
+
+    # TODO(psimakov): Ideally, we would learn how to load entities from the
+    # datastore without importing their classes; then we wouldn't need any of
+    # these imports below
+
+    # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
+    # pylint: disable-msg=redefined-outer-name,unused-variable
+    global announcements
+    global jobs
+    try:
+        from models import jobs
+        from modules.announcements import announcements
+    except ImportError, e:
+        _die((
+            'Unable to import required modules; see tools/etl/etl.py for '
+            'docs.'), with_trace=True)
 
 
 def _import_modules_into_global_scope():
@@ -541,12 +572,13 @@ def _retry(message=None, times=_RETRIES):
                     return fn(*args, **kwargs)
                 # We can't be more specific by default.
                 # pylint: disable-msg=broad-except
-                except Exception, e:
+                except Exception as e:
                     if message:
                         _LOG.info(message)
                     failures += 1
                     if failures == times:
                         raise e
+
         return wrapped
     return decorator
 
@@ -575,18 +607,44 @@ def _list_all(context, include_inherited=False):
         appengine_config.BUNDLE_ROOT, include_inherited=include_inherited)
 
 
-@_retry(message='Fetching datastore entity failed; retrying')
-def _process_models(query_iterator, fn, *args, **kwargs):
-    """Applies fn with given args and kwargs to each model in query_iterator."""
-    for model in query_iterator:
-        try:
-            fn(model, *args, **kwargs)
-        # Can't be more specific -- we never want to retry if fn() fails.
-        # pylint: disable-msg=broad-except
-        except Exception:
-            _die(
-                'Error encountered processing entity %s; aborting:' % model,
-                with_trace=True)
+def _process_models(kind, json_file, batch_size):
+    """Fetch all rows in batches."""
+    reportable_chunk = batch_size * 10
+    total_count = 0
+    cursor = None
+    while True:
+        batch_count, cursor = _process_models_batch(
+            kind, cursor, batch_size, json_file)
+        if not batch_count:
+            break
+        if not cursor:
+            break
+        total_count += batch_count
+        if not total_count % reportable_chunk:
+            _LOG.info('Loaded records: %s' % total_count)
+
+
+@_retry(message='Fetching datastore entity batch failed; retrying')
+def _process_models_batch(kind, cursor, batch_size, json_file):
+    """Fetch and write out a batch_size number of rows using cursor query."""
+    query = kind.all()
+    if cursor:
+        query.with_cursor(start_cursor=cursor)
+
+    count = 0
+    empty = True
+    for model in query.fetch(limit=batch_size):
+        entity_dict = transforms.entity_to_dict(
+            model, force_utf_8_encoding=True)
+        entity_dict['key.name'] = unicode(model.key().name())
+        json_file.write(transforms.dict_to_json(entity_dict, None))
+        count += 1
+        empty = False
+
+    cursor = None
+    if not empty:
+        cursor = query.cursor()
+    return count, cursor
 
 
 @_retry(message='Upload failed; retrying')
@@ -664,8 +722,6 @@ def _validate_arguments(parsed_args):
         _die(
             'Cannot download to archive path %s; file already exists.' % (
                 parsed_args.archive_path))
-    if parsed_args.type == _TYPE_DATASTORE and not parsed_args.datastore_types:
-        _die('--datastore_types required when type is %s' % _TYPE_DATASTORE)
 
 
 def main(parsed_args, environment_class=None):
@@ -692,7 +748,8 @@ def main(parsed_args, environment_class=None):
     if parsed_args.mode == _MODE_DOWNLOAD:
         _download(
             parsed_args.type, parsed_args.archive_path,
-            parsed_args.course_url_prefix, parsed_args.datastore_types)
+            parsed_args.course_url_prefix, parsed_args.datastore_types,
+            parsed_args.batch_size)
     elif parsed_args.mode == _MODE_UPLOAD:
         _upload(
             parsed_args.type, parsed_args.archive_path,
