@@ -1568,6 +1568,20 @@ class StudentAspectTest(actions.TestBase):
         response = response.form.submit(expect_errors=True)
         assert_equals(response.status_int, 403)
 
+    def test_autoescaping(self):
+        """Test Jinja autoescaping."""
+        email = 'test_autoescaping@example.com'
+        name1 = '<script>alert(1);</script>'
+        name2 = '<script>alert(2);</script>'
+
+        actions.login(email)
+
+        actions.register(self, name1)
+        actions.check_profile(self, name1)
+
+        actions.change_name(self, name2)
+        actions.unregister(self)
+
     def test_response_headers(self):
         """Test dynamically-generated responses use proper headers."""
 

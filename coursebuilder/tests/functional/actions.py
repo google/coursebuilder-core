@@ -16,9 +16,11 @@
 
 """A collection of actions for testing Course Builder pages."""
 
+import cgi
 import logging
 import os
 import re
+
 import appengine_config
 from controllers import sites
 from controllers import utils
@@ -269,7 +271,7 @@ def register(browser, name):
 def check_profile(browser, name):
     response = view_my_profile(browser)
     assert_contains('Email', response.body)
-    assert_contains(name, response.body)
+    assert_contains(cgi.escape(name), response.body)
     assert_contains(get_current_user_email(), response.body)
     return response
 
