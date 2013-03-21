@@ -347,6 +347,7 @@
   cb_global.exit_url = '{{ exit_url|safe }}';
   cb_global.save_method = '{{ save_method }}';
   cb_global.auto_return = {% if auto_return %}true{% else %}false{% endif %};
+  cb_global.bundle_lib_files = {% if bundle_lib_files %}true{% else %}false{% endif %};
 
   // If this value is '', deletions are not allowed
   cb_global.delete_url = '{{ delete_url|safe }}';
@@ -355,32 +356,66 @@
   // button captions
   cb_global.save_button_caption = '{{ save_button_caption }}'
 
-  // here is the main method
-  YUI({
-    filter: "raw",
-    combine: false,
-    base: '/static/yui_3.6.0/yui/build/',
-    groups: {
-      inputex: {
-        base: '/static/inputex-3.1.0/src/'
-      },
-      yui2: {
-        base: '/static/2in3/2in3-master/dist/2.9.0/build/',
-        combine: false,
-        patterns:  {
-          'yui2-': {
-            configFn: function(me) {
-              if(/-skin|reset|fonts|grids|base/.test(me.name)) {
-                me.type = 'css';
-                me.path = me.path.replace(/\.js/, '.css');
-                me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+  if (cb_global.bundle_lib_files) {
+    var yui_config = {
+      filter: "raw",
+      combine: true,
+      comboBase: '/static/combo/yui?',
+      root: 'yui/build/',
+      groups: {
+        inputex: {
+          combine: 'true',
+          comboBase: '/static/combo/inputex?',
+          root: 'src/'
+        },
+        yui2: {
+          combine: true,
+          comboBase: '/static/combo/2in3?',
+          root: '2in3-master/dist/2.9.0/build/',
+          patterns:  {
+            'yui2-': {
+              configFn: function(me) {
+                if(/-skin|reset|fonts|grids|base/.test(me.name)) {
+                  me.type = 'css';
+                  me.path = me.path.replace(/\.js/, '.css');
+                  me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+                }
               }
             }
           }
         }
       }
     }
-  }).use(
+  } else {
+    var yui_config = {
+      filter: "raw",
+      combine: false,
+      base: '/static/yui_3.6.0/yui/build/',
+      groups: {
+        inputex: {
+          base: '/static/inputex-3.1.0/src/'
+        },
+        yui2: {
+          base: '/static/2in3/2in3-master/dist/2.9.0/build/',
+          combine: false,
+          patterns:  {
+            'yui2-': {
+              configFn: function(me) {
+                if(/-skin|reset|fonts|grids|base/.test(me.name)) {
+                  me.type = 'css';
+                  me.path = me.path.replace(/\.js/, '.css');
+                  me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // here is the main method
+  YUI(yui_config).use(
     {{ required_modules|safe }},
     function (Y) {
 

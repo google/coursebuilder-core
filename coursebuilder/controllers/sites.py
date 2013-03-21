@@ -107,9 +107,11 @@ Good luck!
 import logging
 import mimetypes
 import os
+import posixpath
 import re
 import threading
 import urlparse
+import zipfile
 
 import appengine_config
 from models.config import ConfigProperty
@@ -497,6 +499,94 @@ def make_zip_handler(zipfilename):
             set_static_resource_cache_control(self)
 
     return CustomZipHandler
+
+
+class CssComboZipHandler(zipserve.ZipHandler):
+    """A handler which combines a files served from a zip file.
+
+    The paths for the files within the zip file are presented
+    as query parameters.
+    """
+
+    zipfile_cache = {}
+
+    def get(self):
+        raise NotImplementedError()
+
+    def serve_from_zip_file(self, zipfilename, static_file_handler):
+        """Assemble the download by reading file from zip file."""
+        zipfile_object = self.zipfile_cache.get(zipfilename)
+        if zipfile_object is None:
+            try:
+                zipfile_object = zipfile.ZipFile(zipfilename)
+            except (IOError, RuntimeError, zipfile.BadZipfile), err:
+                # If the zipfile can't be opened, that's probably a
+                # configuration error in the app, so it's logged as an error.
+                logging.error('Can\'t open zipfile %s: %s', zipfilename, err)
+                zipfile_object = ''  # Special value to cache negative results.
+            self.zipfile_cache[zipfilename] = zipfile_object
+        if not zipfile_object:
+            self.error(404)
+            self.response.out.write('Not found')
+            return
+
+        all_content_types = set()
+        for name in self.request.GET:
+            all_content_types.add(mimetypes.guess_type(name))
+        if len(all_content_types) == 1:
+            content_type = all_content_types.pop()[0]
+        else:
+            content_type = 'text/plain'
+        self.response.headers['Content-Type'] = content_type
+
+        self.SetCachingHeaders()
+
+        for name in self.request.GET:
+            try:
+                content = zipfile_object.read(name)
+                if content_type == 'text/css':
+                    content = self._fix_css_paths(
+                        name, content, static_file_handler)
+                self.response.out.write(content)
+            except (KeyError, RuntimeError), err:
+                logging.error('Not found %s in %s', name, zipfilename)
+
+    def _fix_css_paths(self, path, css, static_file_handler):
+        """Transform relative url() settings in CSS to absolute.
+
+        This is necessary because a url setting, e.g., url(foo.png), is
+        interpreted as relative to the location of the CSS file. However
+        in the case of a bundled CSS file, obtained from a URL such as
+            http://place.com/cb/combo?a/b/c/foo.css
+        the browser would believe that the location for foo.png was
+            http://place.com/cb/foo.png
+        and not
+            http://place.com/cb/a/b/c/foo.png
+        Thus we transform the url from
+            url(foo.png)
+        to
+            url(/static_file_service/a/b/c/foo.png)
+
+        Args:
+            path: the path to the CSS file within the ZIP file
+            css: the content of the CSS file
+            static_file_handler: the base handler to serve the referenced file
+
+        Returns:
+            The CSS with all relative URIs rewritten to absolute URIs.
+        """
+        base = static_file_handler + posixpath.split(path)[0] + '/'
+        css = css.decode('utf-8')
+        css = re.sub(r'url\(([^http|^https]\S+)\)', r'url(%s\1)' % base, css)
+        return css
+
+
+def make_css_combo_zip_handler(zipfilename, static_file_handler):
+    class CustomCssComboZipHandler(CssComboZipHandler):
+        def get(self):
+            self.serve_from_zip_file(zipfilename, static_file_handler)
+
+    return CustomCssComboZipHandler
 
 
 class AssetHandler(webapp2.RequestHandler):

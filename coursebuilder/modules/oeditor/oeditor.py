@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
 import urllib
+import appengine_config
 from models import transforms
 
 # a set of YUI and inputex modules required by the editor
@@ -134,6 +135,8 @@ class ObjectEditor(object):
             template_values['delete_url'] = delete_url
         if delete_method:
             template_values['delete_method'] = delete_method
+        if appengine_config.BUNDLE_LIB_FILES:
+            template_values['bundle_lib_files'] = True
 
         return handler.get_template(
             'oeditor.html', [os.path.dirname(__file__)]).render(template_values)

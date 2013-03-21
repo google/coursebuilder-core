@@ -27,7 +27,6 @@ from modules.admin import config
 from modules.announcements import announcements
 from modules.dashboard import dashboard
 
-
 urls = [
     ('/', lessons.CourseHandler),
     ('/activity', lessons.ActivityHandler),
@@ -46,17 +45,26 @@ urls = [
 
 sites.ApplicationRequestHandler.bind(urls)
 
-inputex_handler = (
-    '/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip')))
+yui_handlers = [
+    ('/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'))),
+    ('/static/yui_3.6.0/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'))),
+    ('/static/2in3/(.*)', sites.make_zip_handler(
+        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))]
 
-yui_handler = (
-    '/static/yui_3.6.0/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip')))
-
-yui_2in3_handler = (
-    '/static/2in3/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))
+if appengine_config.BUNDLE_LIB_FILES:
+    yui_handlers += [
+        ('/static/combo/inputex', sites.make_css_combo_zip_handler(
+            os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'),
+            '/static/inputex-3.1.0/')),
+        ('/static/combo/yui', sites.make_css_combo_zip_handler(
+            os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'),
+            '/yui/')),
+        ('/static/combo/2in3', sites.make_css_combo_zip_handler(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip'),
+            '/static/2in3/'))]
 
 admin_handlers = [
     ('/admin', admin.AdminHandler),
@@ -71,6 +79,6 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 debug = not appengine_config.PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
-    admin_handlers + [
-        inputex_handler, yui_handler, yui_2in3_handler, app_handler],
-    config={'webapp2_extras.i18n': webapp2_i18n_config}, debug=debug)
+    admin_handlers + yui_handlers + [app_handler],
+    config={'webapp2_extras.i18n': webapp2_i18n_config},
+    debug=debug)

@@ -24,6 +24,9 @@ import sys
 PRODUCTION_MODE = not os.environ.get(
     'SERVER_SOFTWARE', 'Development').startswith('Development')
 
+# Set this flag to true to enable bulk downloads of Javascript/CSS files in lib
+BUNDLE_LIB_FILES = False
+
 # this is the official location of this app for computing of all relative paths
 BUNDLE_ROOT = os.path.dirname(__file__)
 
