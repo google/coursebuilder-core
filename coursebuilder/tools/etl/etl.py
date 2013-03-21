@@ -91,6 +91,8 @@ _MODE_DOWNLOAD = 'download'
 _MODE_UPLOAD = 'upload'
 # List of all modes.
 _MODES = [_MODE_DOWNLOAD, _MODE_UPLOAD]
+# Int. The number of times to retry remote_api calls.
+_RETRIES = 3
 # String. Identifier for type course.
 _TYPE_COURSE = 'course'
 # List of all types.
@@ -291,14 +293,13 @@ def _download(archive_path, course_url_prefix):
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
     _LOG.info('Processing course with URL prefix ' + course_url_prefix)
-    datastore_files = set(
-        context.fs.impl.list(appengine_config.BUNDLE_ROOT))
-    all_files = set(_filter_filesystem_files(context.fs.impl.list(
-        appengine_config.BUNDLE_ROOT, include_inherited=True)))
+    datastore_files = set(_list_all(context))
+    all_files = set(_filter_filesystem_files(_list_all(
+        context, include_inherited=True)))
     filesystem_files = all_files - datastore_files
     _LOG.info('Adding files from datastore')
     for path in datastore_files:
-        stream = context.fs.impl.get(path)
+        stream = _get_stream(context, path)
         entity = _ManifestEntity(path, stream.metadata.is_draft)
         archive.add(path, stream.read())
         manifest.add(entity)
@@ -383,6 +384,59 @@ def _remove_bundle_root(path):
     return path
 
 
+def _retry(message=None, times=_RETRIES):
+    """Returns a decorator that automatically retries functions on error.
+
+    Args:
+        message: string or None. The optional message to log on retry.
+        times: int. Number of times to retry.
+
+    Returns:
+        Function wrapper.
+    """
+    assert times > 0
+    def decorator(fn):
+        """Real decorator."""
+        def wrapped(*args, **kwargs):
+            failures = 0
+            while failures < times:
+                try:
+                    return fn(*args, **kwargs)
+                # We can't be more specific by default.
+                # pylint: disable-msg=broad-except
+                except Exception, e:
+                    if message:
+                        _LOG.info(message)
+                    failures += 1
+                    if failures == times:
+                        raise e
+        return wrapped
+    return decorator
+
+
+@_retry(message='Clearing course cache failed; retrying')
+def _clear_course_cache(context):
+    courses.CachedCourse13.delete(context)  # Force update in UI.
+
+
+@_retry(message='Getting contents for entity failed; retrying')
+def _get_stream(context, path):
+    return context.fs.impl.get(path)
+
+
+@_retry(message='Fetching asset list failed; retrying')
+def _list_all(context, include_inherited=False):
+    return context.fs.impl.list(
+        appengine_config.BUNDLE_ROOT, include_inherited=include_inherited)
+
+
+@_retry(message='Upload failed; retrying')
+def _put(context, content, path, is_draft):
+    context.fs.impl.non_transactional_put(
+        os.path.join(appengine_config.BUNDLE_ROOT, path), content,
+        is_draft=is_draft)
+
+
 def _upload(archive_path, course_url_prefix):
     _LOG.info((
         'Processing course with URL prefix %s from archive path %s' % (
@@ -419,12 +473,12 @@ def _upload(archive_path, course_url_prefix):
     _LOG.info('Validation passed; beginning upload')
     count = 0
     for entity in archive.manifest.entities:
-        context.fs.impl.non_transactional_put(
-            os.path.join(appengine_config.BUNDLE_ROOT, entity.path),
-            _ReadWrapper(archive.get(entity.path)), is_draft=entity.is_draft)
+        _put(
+            context, _ReadWrapper(archive.get(entity.path)), entity.path,
+            entity.is_draft)
         count += 1
         _LOG.info('Uploaded ' + entity.path)
-    courses.CachedCourse13.delete(context)  # Force update in UI.
+    _clear_course_cache(context)
     _LOG.info(
         'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
 

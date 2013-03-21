@@ -26,6 +26,7 @@ from models import courses
 from models import transforms
 import suite
 from tools import verify
+from tools.etl import etl
 
 
 class ShouldHaveFailedByNow(Exception):
@@ -43,6 +44,36 @@ def assert_fails(function):
         raise e
     except Exception:
         pass
+
+
+class EtlRetryTest(suite.TestBase):
+    def setUp(self):
+        super(EtlRetryTest, self).setUp()
+        self.ceiling = 2
+        self.retries = 0
+
+    def test_delegates_args_and_returns(self):
+        @etl._retry()
+        def fn(unused_arg, unused_kwarg=None):
+            return 'value'
+        self.assertEqual('value', fn('arg', unused_kwarg='unused_kwarg'))
+
+    def test_retries_and_then_succeeds_before_hitting_retry_limit(self):
+        @etl._retry()
+        def fail_then_succeed():
+            self.retries += 1
+            if self.retries < self.ceiling:
+                raise Exception
+        fail_then_succeed()
+        self.assertEqual(self.ceiling, self.retries)
+
+    def test_retries_specified_number_of_times_then_throws(self):
+        @etl._retry()
+        def fail():
+            self.retries += 1
+            raise Exception
+        self.assertRaises(Exception, fail)
+        self.assertEqual(etl._RETRIES, self.retries)
 
 
 class SwapTestObject(object):
