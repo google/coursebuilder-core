@@ -70,7 +70,8 @@ class InfrastructureTest(actions.TestBase):
         response = self.testapp.get(
             '/rest/config/item?key=gcb_config_update_interval_sec')
         self.assertEqual(
-            'application/json, charset=utf-8', response.headers['Content-Type'])
+            'application/javascript; charset=utf-8',
+            response.headers['Content-Type'])
 
     def test_xsrf_token_manager(self):
         """Test XSRF token operations."""

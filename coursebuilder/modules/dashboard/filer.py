@@ -350,7 +350,8 @@ class AssetItemRESTHandler(BaseRESTHandler):
         assert is_editable_fs(self.app_context)
 
         if not FilesRights.can_add(self):
-            transforms.send_json_response(self, 401, 'Access denied.', None)
+            transforms.send_json_file_upload_response(
+                self, 401, 'Access denied.')
             return
 
         request = transforms.loads(self.request.get('request'))
@@ -369,8 +370,8 @@ class AssetItemRESTHandler(BaseRESTHandler):
         fs = self.app_context.fs.impl
         path = fs.physical_to_logical(physical_path)
         if fs.isfile(path):
-            transforms.send_json_response(
-                self, 403, 'Cannot overwrite existing file.', None)
+            transforms.send_json_file_upload_response(
+                self, 403, 'Cannot overwrite existing file.')
             return
 
         content = upload.file.read()
@@ -383,7 +384,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
             return
 
         fs.put(path, upload.file)
-        transforms.send_json_response(self, 200, 'Saved.')
+        transforms.send_json_file_upload_response(self, 200, 'Saved.')
 
 
 class AssetUriRESTHandler(BaseRESTHandler):

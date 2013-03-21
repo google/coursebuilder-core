@@ -193,7 +193,10 @@ def instance_to_dict(instance):
 def send_json_response(
     handler, status_code, message, payload_dict=None, xsrf_token=None):
     """Formats and sends out a JSON REST response envelope and body."""
-    handler.response.headers['Content-Type'] = 'application/json, charset=utf-8'
+    handler.response.headers[
+        'Content-Type'] = 'application/javascript; charset=utf-8'
+    handler.response.headers['X-Content-Type-Options'] = 'nosniff'
+    handler.response.headers['Content-Disposition'] = 'attachment'
     response = {}
     response['status'] = status_code
     response['message'] = message
@@ -201,6 +204,33 @@ def send_json_response(
         response['payload'] = dumps(payload_dict)
     if xsrf_token:
         response['xsrf_token'] = xsrf_token
+    handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
+
+
+def send_json_file_upload_response(handler, status_code, message):
+    """Formats and sends out a JSON REST response envelope and body.
+
+    NOTE: This method has lowered protections against XSSI (compared to
+    send_json_response) and so it MUST NOT be used with dynamic data. Use ONLY
+    constant data originating entirely on the server as arguments.
+
+    Args:
+        handler: the request handler.
+        status_code: the HTTP status code for the response.
+        message: the text of the message - must not be dynamic data.
+    """
+
+    # The correct MIME type for JSON is application/json but there are issues
+    # with our AJAX file uploader in MSIE which require text/plain instead.
+    if 'MSIE' in handler.request.headers.get('user-agent'):
+        content_type = 'text/plain; charset=utf-8'
+    else:
+        content_type = 'application/javascript; charset=utf-8'
+    handler.response.headers['Content-Type'] = content_type
+    handler.response.headers['X-Content-Type-Options'] = 'nosniff'
+    response = {}
+    response['status'] = status_code
+    response['message'] = message
     handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
 
 
