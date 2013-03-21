@@ -56,9 +56,6 @@ from google.appengine.api import namespace_manager
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
-# Base filesystem location for test data.
-TEST_DATA_BASE = '/tmp/experimental/coursebuilder/test-data/'
-
 
 # There is an expectation in our tests of automatic import of data/*.csv files,
 # which is achieved below by selecting an alternative factory method.
@@ -1990,7 +1987,7 @@ class GeneratedCourse(object):
     @classmethod
     def set_data_home(cls, test):
         """All data for this test will be placed here."""
-        cls.data_home = os.path.join(TEST_DATA_BASE, test.__class__.__name__)
+        cls.data_home = test.test_tempdir
 
     def __init__(self, ns):
         self.path = ns
@@ -2777,7 +2774,6 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.test_environ = copy.deepcopy(os.environ)
         # In etl.main, use test auth scheme to avoid interactive login.
         self.test_environ['SERVER_SOFTWARE'] = remote.TEST_SERVER_SOFTWARE
-        self.test_tempdir = os.path.join(TEST_DATA_BASE, 'EtlMainTestCase')
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.new_course_title = 'New Course Title'
         self.url_prefix = '/test'
@@ -2791,10 +2787,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.upload_args = etl.PARSER.parse_args(['upload'] + self.common_args)
         # Set up courses: version 1.3, version 1.2.
         sites.setup_courses(self.raw + ', course:/:/')
-        self.reset_filesystem()
 
     def tearDown(self):
-        self.reset_filesystem(remove_only=True)
         sites.reset_courses()
         super(EtlMainTestCase, self).tearDown()
 
@@ -2836,12 +2830,6 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         assert len(
             src_course_out.get_units()) == len(dst_course_out.get_units())
         dst_course_out.save()
-
-    def reset_filesystem(self, remove_only=False):
-        if os.path.exists(self.test_tempdir):
-            shutil.rmtree(self.test_tempdir)
-        if not remove_only:
-            os.makedirs(self.test_tempdir)
 
     def test_download_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
@@ -2999,7 +2987,7 @@ class MemcacheTestBase(actions.TestBase):
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         config.Registry.test_overrides = {}
-        super(MemcacheTestBase, self).setUp()
+        super(MemcacheTestBase, self).tearDown()
 
 
 class MemcacheTest(MemcacheTestBase):

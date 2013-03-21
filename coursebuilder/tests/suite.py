@@ -39,6 +39,7 @@ __author__ = 'Sean Lip'
 import argparse
 import base64
 import os
+import shutil
 import sys
 import unittest
 
@@ -58,6 +59,9 @@ _PARSER.add_argument(
 _PARSER.add_argument(
     '--test_class_name',
     help='optional dotted module name of the test(s) to run', type=str)
+
+# Base filesystem location for test data.
+TEST_DATA_BASE = '/tmp/experimental/coursebuilder/test-data/'
 
 
 def empty_environ():
@@ -118,7 +122,29 @@ class TestBase(unittest.TestCase):
         return None
 
 
-class AppEngineTestBase(TestBase):
+class FunctionalTestBase(TestBase):
+    """Base class for functional tests."""
+
+    def setUp(self):
+        super(FunctionalTestBase, self).setUp()
+        # e.g. TEST_DATA_BASE/tests/functional/tests/MyTestCase.
+        self.test_tempdir = os.path.join(
+            TEST_DATA_BASE, self.__class__.__module__.replace('.', os.sep),
+            self.__class__.__name__)
+        self.reset_filesystem()
+
+    def tearDown(self):
+        self.reset_filesystem(remove_only=True)
+        super(FunctionalTestBase, self).tearDown()
+
+    def reset_filesystem(self, remove_only=False):
+        if os.path.exists(self.test_tempdir):
+            shutil.rmtree(self.test_tempdir)
+        if not remove_only:
+            os.makedirs(self.test_tempdir)
+
+
+class AppEngineTestBase(FunctionalTestBase):
     """Base class for tests that require App Engine services."""
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
