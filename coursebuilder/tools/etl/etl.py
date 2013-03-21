@@ -14,20 +14,33 @@
 
 """Extract-transform-load utility.
 
-Currently only download and upload of Course Builder 1.3 data is implemented.
-Example use:
+There are two features:
+
+1. Download and upload of Course Builder 1.3 data:
 
 $ python etl.py download course /cs101 myapp server.appspot.com archive.zip
 
-This will result in a file called archive.zip that contains the contents of
-the Course Builder 1.3 course found at the URL /cs101 on the application with id
-myapp running on the server named server.appspot.com.  archive.zip will contain
-assets and data from the course along with a manifest.json enumerating them.
-The format of archive.zip will change and should not be relied upon.
+This will result in a file called archive.zip that contains the files that make
+up the Course Builder 1.3 course found at the URL /cs101 on the application with
+id myapp running on the server named server.appspot.com. archive.zip will
+contain assets and data files from the course along with a manifest.json
+enumerating them. The format of archive.zip will change and should not be relied
+upon.
 
 For upload,
 
 $ python etl.py upload course /cs101 myapp server.appspot.com archive.zip
+
+2. Download of datastore entities. This feature is experimental and upload is
+   not supported:
+
+$ python etl.py download datastore /cs101 myapp server.appspot.com archive.zip \
+    --datastore_types model1,model2
+
+This will result in a file called archive.zip that contains a dump of all model1
+and model2 instances found in the specified course, identified as above. The
+archive will contain serialized data along with a manifest. The format of
+archive.zip will change and should not be relied upon.
 
 In order to run this script, you must add the following to the head of sys.path:
 
@@ -60,6 +73,7 @@ __author__ = [
 import argparse
 import logging
 import os
+import re
 import sys
 import zipfile
 import yaml
@@ -69,6 +83,9 @@ import yaml
 # us to avoid lint suppressions at every callsite.
 appengine_config = None
 courses = None
+db = None
+metadata = None
+namespace_manager = None
 remote = None
 sites = None
 transforms = None
@@ -80,6 +97,8 @@ _ARCHIVE_PATH_PREFIX = 'files'
 _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 # String. End of the path to course.yaml in an archive.
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
+# Regex. Format of __internal_names__ used by datastore kinds.
+_INTERNAL_DATASTORE_KIND_REGEX = re.compile(r'^__.*__$')
 # Path prefix strings from local disk that will be included in the archive.
 _LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH_SUFFIX, 'assets', 'data'])
 # logging.Logger. Module logger.
@@ -97,10 +116,12 @@ _MODE_UPLOAD = 'upload'
 _MODES = [_MODE_DOWNLOAD, _MODE_UPLOAD]
 # Int. The number of times to retry remote_api calls.
 _RETRIES = 3
-# String. Identifier for type course.
+# String. Identifier for type corresponding to course definition data.
 _TYPE_COURSE = 'course'
+# String. Identifier for type corresponding to datastore entities.
+_TYPE_DATASTORE = 'datastore'
 # List of all types.
-_TYPES = [_TYPE_COURSE]
+_TYPES = [_TYPE_COURSE, _TYPE_DATASTORE]
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
@@ -124,6 +145,10 @@ PARSER.add_argument(
 PARSER.add_argument(
     'archive_path',
     help='absolute path of the archive file to read or write', type=str)
+PARSER.add_argument(
+    '--datastore_types',
+    help=("When type is '%s', comma-separated list of datastore model types to "
+          'process' % _TYPE_DATASTORE), type=lambda s: s.split(','))
 PARSER.add_argument(
     '--log_level', choices=_LOG_LEVEL_CHOICES,
     help='Level of logging messages to emit', default='INFO',
@@ -191,6 +216,15 @@ class _Archive(object):
             contents: bytes. Contents to add.
         """
         self._zipfile.writestr(filename, contents)
+
+    def add_local_file(self, local_filename, internal_filename):
+        """Adds a file from local disk to the archive.
+
+        Args:
+            local_filename: string. Path on disk of file to add.
+            internal_filename: string. Internal archive path to write to.
+        """
+        self._zipfile.write(local_filename, arcname=internal_filename)
 
     def close(self):
         """Closes archive and test for integrity; must close before read."""
@@ -312,12 +346,25 @@ def _die(message):
     sys.exit(1)
 
 
-def _download(archive_path, course_url_prefix):
-    """Downloads one course to an archive."""
+def _download(download_type, archive_path, course_url_prefix, datastore_types):
+    """Validates and dispatches to a specific download method."""
+    archive_path = os.path.abspath(archive_path)
     context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
     course = _get_course_from(context)
+    if download_type == _TYPE_COURSE:
+        _download_course(context, course, archive_path, course_url_prefix)
+    if download_type == _TYPE_DATASTORE:
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            _download_datastore(context, course, archive_path, datastore_types)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+
+def _download_course(context, course, archive_path, course_url_prefix):
     if course.version < courses.COURSE_MODEL_VERSION_1_3:
         _die(
             'Cannot export course with version < %s' % (
@@ -343,10 +390,47 @@ def _download(archive_path, course_url_prefix):
             internal_path = _Archive.get_internal_path(external_path)
             archive.add(internal_path, f.read())
             manifest.add(_ManifestEntity(internal_path, False))
-    _LOG.info('Adding manifest')
-    archive.add(_MANIFEST_FILENAME, str(manifest))
-    archive.close()
-    _LOG.info('Done; archive saved to ' + archive.path)
+    _finalize_download(archive, manifest)
+
+
+def _download_datastore(context, course, archive_path, datastore_types):
+    available_types = set(_get_datastore_kinds())
+    requested_types = set(datastore_types)
+    missing_types = requested_types - available_types
+    if missing_types:
+        _die(
+            'Requested types not found: %s%sAvailable types are: %s' % (
+                ', '.join(missing_types), os.linesep,
+                ', '.join(available_types)))
+    found_types = requested_types & available_types
+    archive = _Archive(archive_path)
+    archive.open('w')
+    manifest = _Manifest(context.raw, course.version)
+    for found_type in found_types:
+        json_path = os.path.join(
+            os.path.dirname(archive_path), '%s.json' % found_type)
+        _LOG.info(
+            'Adding entities of type %s to temporary file %s' % (
+                found_type, json_path))
+        json_file = transforms.JsonFile(json_path)
+        json_file.open('w')
+        _process_models(
+            db.class_for_kind(found_type).all().run(),
+            _add_to_json_file, json_file)
+        json_file.close()
+        internal_path = _Archive.get_internal_path(
+            os.path.basename(json_file.name))
+        _LOG.info('Adding %s to archive' % internal_path)
+        archive.add_local_file(json_file.name, internal_path)
+        manifest.add(_ManifestEntity(internal_path, False))
+        _LOG.info('Removing temporary file ' + json_file.name)
+        os.remove(json_file.name)
+    _finalize_download(archive, manifest)
+
+
+def _add_to_json_file(model, json_file):
+    json_file.write(
+        transforms.dict_to_json(transforms.entity_to_dict(model), None))
 
 
 def _filter_filesystem_files(files):
@@ -366,6 +450,13 @@ def _filter_filesystem_files(files):
         in _LOCAL_WHITELIST]
 
 
+def _finalize_download(archive, manifest):
+    _LOG.info('Adding manifest')
+    archive.add(_MANIFEST_FILENAME, str(manifest))
+    archive.close()
+    _LOG.info('Done; archive saved to ' + archive.path)
+
+
 def _get_course_from(app_context):
     """Gets a courses.Course from the given sites.ApplicationContext."""
 
@@ -382,6 +473,9 @@ def _import_modules_into_global_scope():
     # pylint: disable-msg=redefined-outer-name,unused-variable
     global appengine_config
     global sites
+    global namespace_manager
+    global db
+    global metadata
     global courses
     global transforms
     global vfs
@@ -389,6 +483,9 @@ def _import_modules_into_global_scope():
     try:
         import appengine_config
         from controllers import sites
+        from google.appengine.api import namespace_manager
+        from google.appengine.ext import db
+        from google.appengine.ext.db import metadata
         from models import courses
         from models import transforms
         from models import vfs
@@ -454,6 +551,14 @@ def _clear_course_cache(context):
     courses.CachedCourse13.delete(context)  # Force update in UI.
 
 
+@_retry(message='Getting list of datastore_types failed; retrying')
+def _get_datastore_kinds():
+    # Return only user-defined names, not __internal_appengine_names__.
+    return [
+        k for k in metadata.get_kinds()
+        if not _INTERNAL_DATASTORE_KIND_REGEX.match(k)]
+
+
 @_retry(message='Getting contents for entity failed; retrying')
 def _get_stream(context, path):
     return context.fs.impl.get(path)
@@ -465,6 +570,20 @@ def _list_all(context, include_inherited=False):
         appengine_config.BUNDLE_ROOT, include_inherited=include_inherited)
 
 
+@_retry(message='Fetching datastore entity failed; retrying')
+def _process_models(query_iterator, fn, *args, **kwargs):
+    """Applies fn with given args and kwargs to each model in query_iterator."""
+    for model in query_iterator:
+        try:
+            fn(model, *args, **kwargs)
+        # Can't be more specific -- we never want to retry if fn() fails.
+        # pylint: disable-msg=broad-except
+        except Exception, e:
+            _die(
+                'Error %s encountered processing entity %s; aborting' % (
+                    e, model))
+
+
 @_retry(message='Upload failed; retrying')
 def _put(context, content, path, is_draft):
     context.fs.impl.non_transactional_put(
@@ -472,13 +591,20 @@ def _put(context, content, path, is_draft):
         is_draft=is_draft)
 
 
-def _upload(archive_path, course_url_prefix):
+def _upload(upload_type, archive_path, course_url_prefix):
     _LOG.info((
         'Processing course with URL prefix %s from archive path %s' % (
             course_url_prefix, archive_path)))
     context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
+    if upload_type == _TYPE_COURSE:
+        _upload_course(context, archive_path, course_url_prefix)
+    elif upload_type == _TYPE_DATASTORE:
+        _upload_datastore()
+
+
+def _upload_course(context, archive_path, course_url_prefix):
     course = _get_course_from(context)
     if course.get_units():
         _die(
@@ -521,6 +647,11 @@ def _upload(archive_path, course_url_prefix):
         'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
 
 
+def _upload_datastore():
+    """Stub for future datastore entity uploader."""
+    raise NotImplementedError
+
+
 def _validate_arguments(parsed_args):
     """Validate parsed args for additional constraints."""
     if (parsed_args.mode == _MODE_DOWNLOAD and
@@ -528,6 +659,8 @@ def _validate_arguments(parsed_args):
         _die(
             'Cannot download to archive path %s; file already exists.' % (
                 parsed_args.archive_path))
+    if parsed_args.type == _TYPE_DATASTORE and not parsed_args.datastore_types:
+        _die('--datastore_types required when type is %s' % _TYPE_DATASTORE)
 
 
 def main(parsed_args, environment_class=None):
@@ -552,9 +685,13 @@ def main(parsed_args, environment_class=None):
     environment_class(
         parsed_args.application_id, parsed_args.server).establish()
     if parsed_args.mode == _MODE_DOWNLOAD:
-        _download(parsed_args.archive_path, parsed_args.course_url_prefix)
+        _download(
+            parsed_args.type, parsed_args.archive_path,
+            parsed_args.course_url_prefix, parsed_args.datastore_types)
     elif parsed_args.mode == _MODE_UPLOAD:
-        _upload(parsed_args.archive_path, parsed_args.course_url_prefix)
+        _upload(
+            parsed_args.type, parsed_args.archive_path,
+            parsed_args.course_url_prefix)
 
 
 if __name__ == '__main__':

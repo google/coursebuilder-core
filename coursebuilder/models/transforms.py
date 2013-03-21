@@ -239,12 +239,12 @@ class JsonFile(object):
 
     Usage:
 
-        writer = _JsonFile('path')
+        writer = JsonFile('path')
         writer.open('w')
         writer.write(json_serializable_python_object)  # We serialize for you.
         writer.write(another_json_serializable_python_object)
         writer.close()  # Must close before read.
-        reader = _JsonFile('path')
+        reader = JsonFile('path')
         reader.open('r')  # Only 'r' and 'w' are supported.
         for entity in reader:
             do_something_with(entity)  # We deserialize back to Python for you.
