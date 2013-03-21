@@ -364,6 +364,11 @@ class InfrastructureTest(actions.TestBase):
         lesson_4_1.now_available = True
         course.update_unit(unit_4)
 
+        # Add an available unit with no lessons.
+        unit_5 = course.add_unit()
+        unit_5.now_available = True
+        course.update_unit(unit_5)
+
         course.save()
 
         assert [lesson_1_1] == course.get_lessons(unit_1.unit_id)
@@ -418,6 +423,13 @@ class InfrastructureTest(actions.TestBase):
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
+        response = self.get('/test/unit?unit=%s' % unit_5.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_does_not_contain('Lesson', response.body)
+        assert_contains(
+            'This unit does not contain any lessons.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
         actions.logout()
 
         # Simulate an admin traversing the course.
@@ -455,6 +467,13 @@ class InfrastructureTest(actions.TestBase):
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 4.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
+        assert_does_not_contain(private_tag, response.body)
+
+        response = self.get('/test/unit?unit=%s' % unit_5.unit_id)
+        assert_equals(response.status_int, 200)
+        assert_does_not_contain('Lesson', response.body)
+        assert_contains(
+            'This unit does not contain any lessons.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
         actions.logout()
@@ -2464,7 +2483,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             lesson_2_1_title, response.body)
         assert_contains(  # Second child lesson with link.
             lesson_2_2_title, response.body)
-        assert_contains_all_of(  # Breabcrubms.
+        assert_contains_all_of(  # Breadcrumbs.
             ['Unit 2</a></li>', 'Lesson 1</li>'], response.body)
 
         # Unit page.
@@ -2477,8 +2496,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             lesson_2_1_title, response.body)
         assert_contains(  # Second child lesson with link.
             lesson_2_2_title, response.body)
-        assert_contains_all_of(  # Breabcrubms.
-            ['Unit 2</a></li>', 'Lesson 2</a></li>'], response.body)
+        assert_contains_all_of(  # Breadcrumbs.
+            ['Unit 2</a></li>', 'Lesson 1</a></li>'], response.body)
 
         # Clean up.
         sites.reset_courses()

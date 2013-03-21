@@ -133,21 +133,27 @@ class UnitHandler(BaseHandler):
             self.redirect('/')
             return
 
-        lessons = self.get_lessons(unit_id)
-
-        self.template_value['unit_id'] = unit_id
-        self.template_value['lesson_id'] = lesson.lesson_id
+        # Set template values for nav bar and page type.
+        self.template_value['navbar'] = {'course': True}
         self.template_value['page_type'] = UNIT_PAGE_TYPE
+
+        lessons = self.get_lessons(unit_id)
 
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
+        self.template_value['unit_id'] = unit_id
         self.template_value['lesson'] = lesson
-
-        index = lesson.index - 1  # indexes are 1-based
         self.template_value['lessons'] = lessons
 
-        # Set template values for nav bar
-        self.template_value['navbar'] = {'course': True}
+        # If this unit contains no lessons, return.
+        if not lesson:
+            self.render('unit.html')
+            return
+
+        lesson_id = lesson.lesson_id
+        self.template_value['lesson_id'] = lesson_id
+
+        index = lesson.index - 1  # indexes are 1-based
 
         # Format back button.
         if index == 0:
@@ -166,7 +172,7 @@ class UnitHandler(BaseHandler):
         if lesson.activity:
             self.template_value['next_button_url'] = (
                 'activity?unit=%s&lesson=%s' % (
-                    unit_id, lesson.lesson_id))
+                    unit_id, lesson_id))
         else:
             if not index < len(lessons) - 1:
                 self.template_value['next_button_url'] = ''
@@ -199,7 +205,6 @@ class ActivityHandler(BaseHandler):
         # Extract incoming args
         unit, lesson = extract_unit_and_lesson(self)
         unit_id = unit.unit_id
-        lesson_id = lesson.lesson_id
 
         # If the unit is not currently available, and the user is not an admin,
         # redirect to the main page.
@@ -208,23 +213,29 @@ class ActivityHandler(BaseHandler):
             self.redirect('/')
             return
 
-        lessons = self.get_lessons(unit_id)
-
-        self.template_value['unit_id'] = unit_id
-        self.template_value['lesson_id'] = lesson_id
+        # Set template values for nav bar and page type.
+        self.template_value['navbar'] = {'course': True}
         self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
+
+        lessons = self.get_lessons(unit_id)
 
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
-        self.template_value['lesson'] = unit
+        self.template_value['unit_id'] = unit_id
+        self.template_value['lesson'] = lesson
+        self.template_value['lessons'] = lessons
+
+        # If this unit contains no lessons, return.
+        if not lesson:
+            self.render('activity.html')
+            return
+
+        lesson_id = lesson.lesson_id
+        self.template_value['lesson_id'] = lesson_id
         self.template_value['activity_script_src'] = (
             self.get_course().get_activity_filename(unit_id, lesson_id))
 
         index = lesson.index - 1  # indexes are 1-based
-        self.template_value['lessons'] = lessons
-
-        # Set template values for nav bar
-        self.template_value['navbar'] = {'course': True}
 
         # Format back button.
         self.template_value['back_button_url'] = (

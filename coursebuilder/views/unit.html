@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  Lesson
+  {% trans %} Unit {% endtrans %} {{ unit.index }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -20,7 +20,9 @@
     <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
     <li><a href="unit?unit={{ unit.unit_id }}">
       {% trans %} Unit {% endtrans %}{{ unit.index }}</a></li>
-    <li>{% trans %} Lesson {% endtrans %}{{ lesson.index }}</li>
+    {% if lesson %}
+      <li>{% trans %} Lesson {% endtrans %}{{ lesson.index }}</li>
+    {% endif %}
   </ul>
   <div>
     <h1 class="class_header">
@@ -28,10 +30,21 @@
     </h1>
   </div>
 
-  {% include 'lesson_navbar.html' %}
+  {% if lessons %}
+    {% include 'lesson_navbar.html' %}
+  {% endif %}
 
   <div class="gcb-article tab-content" role="main">
     {{course_info.unit.after_content_begins | safe}}
+
+    {% if not lesson %}
+      <div style="padding-bottom: 20px;">
+        <div class="gcb-aside gcb-button-box">
+          {% trans %} This unit does not contain any lessons. {% endtrans %}
+        </div>
+      </div>
+    {% endif %}
+
     {% for lesson in lessons %}
       {% if lesson.lesson_id == lesson_id %}
 

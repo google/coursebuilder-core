@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Activity {% endtrans %}
+  {% trans %} Unit {% endtrans %} {{ unit.index }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -31,9 +31,11 @@
     <li>
       <a href="unit?unit={{ unit.unit_id }}">
         {% trans %} Unit {% endtrans %}{{ unit.index }}</a></li>
-    <li>
-      <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
-        {% trans %} Lesson {% endtrans %}{{ lesson.index }}</a></li>
+    {% if lesson %}
+      <li>
+        <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
+          {% trans %} Lesson {% endtrans %}{{ lesson.index }}</a></li>
+    {% endif %}
     <li>{% trans %} Activity {% endtrans %}</li>
   </ul>
   <div>
@@ -42,9 +44,20 @@
     </h1>
   </div>
 
-  {% include 'lesson_navbar.html' %}
+  {% if lessons %}
+    {% include 'lesson_navbar.html' %}
+  {% endif %}
 
   <div class="gcb-article tab-content" role="main">
+
+    {% if not lesson %}
+      <div style="padding-bottom: 20px;">
+        <div class="gcb-aside gcb-button-box">
+          {% trans %} This unit does not contain any lessons. {% endtrans %}
+        </div>
+      </div>
+    {% endif %}
+
     {% for lesson in lessons %}
       {% if lesson.lesson_id == lesson_id %}
 
