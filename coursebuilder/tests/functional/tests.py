@@ -716,7 +716,8 @@ class InfrastructureTest(actions.TestBase):
         # have it. Below we check that all persistent date/datetime properties
         # are indexed.
 
-        self.assert_queriable(AnnouncementEntity, 'date', datetime.date)
+        self.assert_queriable(
+            AnnouncementEntity, 'date', date_type=datetime.date)
         self.assert_queriable(models.EventEntity, 'recorded_on')
         self.assert_queriable(models.Student, 'enrolled_on')
         self.assert_queriable(models.StudentAnswersEntity, 'updated_on')
@@ -2170,8 +2171,8 @@ class MultipleCoursesTest(MultipleCoursesTestBase):
         # Pretend students visit courses.
         self.walk_the_course(self.course_a)
         self.walk_the_course(self.course_b)
-        self.walk_the_course(self.course_a, False)
-        self.walk_the_course(self.course_b, False)
+        self.walk_the_course(self.course_a, first_time=False)
+        self.walk_the_course(self.course_b, first_time=False)
 
         # Check course namespaced data.
         self.validate_course_data(self.course_a)

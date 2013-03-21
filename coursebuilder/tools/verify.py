@@ -444,7 +444,8 @@ class SchemaHelper(object):
         if isinstance(value, dict):
             aname, adict = self.find_compatible_dict(value, maps, context)
             if adict:
-                self.visit_element('dict', value, context.new(aname), False)
+                self.visit_element(
+                    'dict', value, context.new(aname), is_terminal=False)
                 for akey, avalue in value.items():
                     if akey not in adict:
                         raise SchemaException(
@@ -480,7 +481,7 @@ class SchemaHelper(object):
         if all_values_are_lists:
             for i in range(0, len(value)):
                 self.check_value_of_valid_type(value[i], types, context.new(
-                    self.format_name_with_index(value, i)), True)
+                    self.format_name_with_index(value, i)), in_order=True)
         else:
             if len(target) != len(value):
                 raise SchemaException(
@@ -1413,7 +1414,7 @@ def run_all_schema_helper_unit_tests():
                 ('//a/b/c'))
 
     # simple map tests
-    assert_pass({'name': 'Bob'}, {'name': STRING}, None)
+    assert_pass({'name': 'Bob'}, {'name': STRING})
     assert_fail('foo', 'bar')
     assert_fail({'name': 'Bob'}, {'name': INTEGER})
     assert_fail({'name': 12345}, {'name': STRING})

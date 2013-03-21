@@ -154,6 +154,9 @@ class Student(BaseEntity):
             raise Exception('No current user.')
         if new_name:
             student = Student.get_by_email(user.email())
+            if not student:
+                raise Exception('Student instance corresponding to user %s not '
+                                'found.' % user.email())
             student.name = new_name
             student.put()
 
@@ -164,6 +167,9 @@ class Student(BaseEntity):
         if not user:
             raise Exception('No current user.')
         student = Student.get_by_email(user.email())
+        if not student:
+            raise Exception('Student instance corresponding to user %s not '
+                            'found.' % user.email())
         student.is_enrolled = is_enrolled
         student.put()
 

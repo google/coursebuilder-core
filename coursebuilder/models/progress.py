@@ -281,7 +281,8 @@ class UnitLessonCompletionTracker(object):
 
         progress = self.get_or_create_progress(student)
 
-        self._update_event(student, progress, event_entity, event_key, True)
+        self._update_event(
+            student, progress, event_entity, event_key, direct_update=True)
 
         progress.updated_on = datetime.datetime.now()
         progress.put()

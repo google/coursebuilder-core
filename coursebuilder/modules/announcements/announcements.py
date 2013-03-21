@@ -95,11 +95,12 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
             # add 'edit' actions
             if AnnouncementsRights.can_edit(self):
-                item['edit_action'] = self.get_action_url('edit', item['key'])
+                item['edit_action'] = self.get_action_url(
+                    'edit', key=item['key'])
 
                 item['delete_xsrf_token'] = self.create_xsrf_token('delete')
                 item['delete_action'] = self.get_action_url(
-                    'delete', item['key'])
+                    'delete', key=item['key'])
 
             template_items.append(item)
 
@@ -184,7 +185,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         entity.html = 'Here is my announcement!'
         entity.is_draft = True
         entity.put()
-        self.redirect(self.get_action_url('edit', entity.key()))
+        self.redirect(self.get_action_url('edit', key=entity.key()))
 
 
 class AnnouncementsItemRESTHandler(BaseRESTHandler):

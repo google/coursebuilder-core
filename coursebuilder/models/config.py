@@ -140,7 +140,7 @@ class ConfigProperty(object):
 
     @property
     def value(self):
-        return self.get_value(Registry.get_overrides())
+        return self.get_value(db_overrides=Registry.get_overrides())
 
 
 class Registry(object):
@@ -157,7 +157,7 @@ class Registry(object):
 
         now = long(time.time())
         age = now - cls.last_update_time
-        max_age = UPDATE_INTERVAL_SEC.get_value(cls.db_overrides)
+        max_age = UPDATE_INTERVAL_SEC.get_value(db_overrides=cls.db_overrides)
         if force_update or age < 0 or age >= max_age:
             # Value of '0' disables all datastore overrides.
             if UPDATE_INTERVAL_SEC.get_value() == 0:

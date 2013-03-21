@@ -654,7 +654,8 @@ class ApplicationContext(object):
 def _courses_config_validator(rules_text, errors):
     """Validates a textual definition of courses entries."""
     try:
-        _validate_appcontext_list(get_all_courses(rules_text), strict=True)
+        _validate_appcontext_list(
+            get_all_courses(rules_text=rules_text), strict=True)
     except Exception as e:  # pylint: disable-msg=broad-except
         errors.append(str(e))
 
@@ -737,7 +738,7 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
     # Create new entry and check it is valid.
     raw = 'course:/%s::ns_%s' % (unique_name, unique_name)
     try:
-        get_all_courses(raw)
+        get_all_courses(rules_text=raw)
     except Exception as e:  # pylint: disable-msg=broad-except
         errors.append('Failed to add entry: %s.\n%s' % (raw, e))
     if errors:
@@ -971,7 +972,7 @@ def test_unprefix():
 
 def test_rule_validations():
     """Test rules validator."""
-    courses = get_all_courses('course:/:/')
+    courses = get_all_courses(rules_text='course:/:/')
     assert 1 == len(courses)
 
     # Check comments.

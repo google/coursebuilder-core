@@ -133,7 +133,7 @@ class TestBase(suite.AppEngineTestBase):
                     raise Exception('Invalid reference \'%s\' in:\n%s' % (
                         url, response.body))
 
-            self.audit_url(self.canonicalize(url, response))
+            self.audit_url(self.canonicalize(url, response=response))
 
     def get(self, url, **kwargs):
         url = self.canonicalize(url)

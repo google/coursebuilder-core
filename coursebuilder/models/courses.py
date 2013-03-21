@@ -1347,11 +1347,11 @@ class Course(object):
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(
-            unit, assessment_content, errors)
+            unit, assessment_content, errors=errors)
 
     def set_activity_content(self, lesson, activity_content, errors=None):
         return self._model.set_activity_content(
-            lesson, activity_content, errors)
+            lesson, activity_content, errors=errors)
 
     def is_valid_assessment_id(self, assessment_id):
         """Tests whether the given assessment id is valid."""
