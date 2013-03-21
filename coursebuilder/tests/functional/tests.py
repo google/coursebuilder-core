@@ -3010,6 +3010,54 @@ class MemcacheTest(MemcacheTestBase):
     """Executes all tests with memcache enabled."""
 
 
+class TransformsJsonFileTestCase(actions.TestBase):
+    """Tests for models/transforms.py's JsonFile."""
+
+    # Method name determined by superclass. pylint: disable-msg=g-bad-name
+    def setUp(self):
+        super(TransformsJsonFileTestCase, self).setUp()
+        # Treat as module-protected. pylint: disable-msg=protected-access
+        self.path = os.path.join(self.test_tempdir, 'file.json')
+        self.reader = transforms.JsonFile(self.path)
+        self.writer = transforms.JsonFile(self.path)
+        self.first = 1
+        self.second = {'c': 'c_value', 'd': {'nested': 'e'}}
+
+    def tearDown(self):
+        self.reader.close()
+        self.writer.close()
+        super(TransformsJsonFileTestCase, self).tearDown()
+
+    def test_round_trip_of_file_with_zero_records(self):
+        self.writer.open('w')
+        self.writer.close()
+        self.reader.open('r')
+        self.assertEqual([], [entity for entity in self.reader])
+        self.reader.reset()
+        self.assertEqual({'rows': []}, self.reader.read())
+
+    def test_round_trip_of_file_with_one_record(self):
+        self.writer.open('w')
+        self.writer.write(self.first)
+        self.writer.close()
+        self.reader.open('r')
+        self.assertEqual([self.first], [entity for entity in self.reader])
+        self.reader.reset()
+        self.assertEqual({'rows': [self.first]}, self.reader.read())
+
+    def test_round_trip_of_file_with_multiple_records(self):
+        self.writer.open('w')
+        self.writer.write(self.first)
+        self.writer.write(self.second)
+        self.writer.close()
+        self.reader.open('r')
+        self.assertEqual(
+            [self.first, self.second], [entity for entity in self.reader])
+        self.reader.reset()
+        self.assertEqual(
+            {'rows': [self.first, self.second]}, self.reader.read())
+
+
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
     StaticHandlerTest, AdminAspectTest)
