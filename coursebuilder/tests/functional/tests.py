@@ -2822,7 +2822,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
         yaml['course']['title'] = self.new_course_title
         dst_app_context.fs.impl.put(
-            os.path.join(appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH),
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH_SUFFIX),
             etl._ReadWrapper(str(yaml)), is_draft=False)
 
         dst_course = courses.Course(None, app_context=dst_app_context)
@@ -2892,7 +2893,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.create_archive()
         self.create_empty_course(self.raw)
         zip_archive = zipfile.ZipFile(self.archive_path, 'a')
-        zip_archive.writestr(etl._COURSE_JSON_PATH, 'garbage')
+        zip_archive.writestr(
+            etl._Archive.get_internal_path(etl._COURSE_JSON_PATH_SUFFIX),
+            'garbage')
         zip_archive.close()
         self.assertRaises(
             SystemExit, etl.main, self.upload_args,
@@ -2902,7 +2905,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.create_archive()
         self.create_empty_course(self.raw)
         zip_archive = zipfile.ZipFile(self.archive_path, 'a')
-        zip_archive.writestr(etl._COURSE_YAML_PATH, '{')
+        zip_archive.writestr(
+            etl._Archive.get_internal_path(etl._COURSE_YAML_PATH_SUFFIX),
+            '{')
         zip_archive.close()
         self.assertRaises(
             SystemExit, etl.main, self.upload_args,
@@ -2944,7 +2949,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         for unit in units:
             self.assertTrue(unit.title)
         for entity in archive.manifest.entities:
-            full_path = os.path.join(appengine_config.BUNDLE_ROOT, entity.path)
+            full_path = os.path.join(
+                appengine_config.BUNDLE_ROOT,
+                etl._Archive.get_external_path(entity.path))
             stream = context.fs.impl.get(full_path)
             self.assertEqual(entity.is_draft, stream.metadata.is_draft)
 

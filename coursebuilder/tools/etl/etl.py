@@ -74,15 +74,19 @@ sites = None
 transforms = None
 vfs = None
 
-# String. Path to course.json in an archive.
-_COURSE_JSON_PATH = 'data/course.json'
-# String. Path to course.yaml in an archive.
-_COURSE_YAML_PATH = 'course.yaml'
-# Path strings from local disk that will be included in the archive.
-_LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH, 'assets', 'data'])
+# String. Prefix for files stored in an archive.
+_ARCHIVE_PATH_PREFIX = 'files'
+# String. End of the path to course.json in an archive.
+_COURSE_JSON_PATH_SUFFIX = 'data/course.json'
+# String. End of the path to course.yaml in an archive.
+_COURSE_YAML_PATH_SUFFIX = 'course.yaml'
+# Path prefix strings from local disk that will be included in the archive.
+_LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH_SUFFIX, 'assets', 'data'])
 # logging.Logger. Module logger.
 _LOG = logging.getLogger('coursebuilder.tools.etl')
 logging.basicConfig()
+# List of string. Valid values for --log_level.
+_LOG_LEVEL_CHOICES = ['DEBUG', 'ERROR', 'INFO', 'WARNING']
 # String. Name of the manifest file.
 _MANIFEST_FILENAME = 'manifest.json'
 # String. Identifier for download mode.
@@ -97,8 +101,6 @@ _RETRIES = 3
 _TYPE_COURSE = 'course'
 # List of all types.
 _TYPES = [_TYPE_COURSE]
-# List of string. Valid values for --log_level.
-_LOG_LEVEL_CHOICES = ['DEBUG', 'ERROR', 'INFO', 'WARNING']
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
@@ -153,6 +155,34 @@ class _Archive(object):
         self._path = path
         self._zipfile = None
 
+    @classmethod
+    def get_external_path(cls, internal_path):
+        """Gets external path string from results of cls.get_internal_path."""
+        prefix = _ARCHIVE_PATH_PREFIX + os.sep
+        assert internal_path.startswith(prefix)
+        return internal_path.split(prefix)[1]
+
+    @classmethod
+    def get_internal_path(cls, external_path):
+        """Get path string used in the archive from an external path string.
+
+        Generates the path used within an archive for an asset. All assets
+        (meaning all archive contents except the manifest file) must have
+        their paths generated this way, and those paths must be re-translated to
+        external paths via cls.get_external_path before use with systems
+        external to the archive file.
+
+        Args:
+            external_path: string. Path to generate an internal archive path
+                from.
+
+        Returns:
+            String. Internal archive path.
+        """
+        assert not external_path.startswith(_ARCHIVE_PATH_PREFIX)
+        return os.path.join(
+            _ARCHIVE_PATH_PREFIX, _remove_bundle_root(external_path))
+
     def add(self, filename, contents):
         """Adds contents to the archive.
 
@@ -160,7 +190,7 @@ class _Archive(object):
             filename: string. Path of the contents to add.
             contents: bytes. Contents to add.
         """
-        self._zipfile.writestr(_remove_bundle_root(filename), contents)
+        self._zipfile.writestr(filename, contents)
 
     def close(self):
         """Closes archive and test for integrity; must close before read."""
@@ -259,7 +289,7 @@ class _ManifestEntity(object):
 
     def __init__(self, path, is_draft):
         self.is_draft = is_draft
-        self.path = _remove_bundle_root(path)
+        self.path = path
 
 
 class _ReadWrapper(object):
@@ -301,16 +331,18 @@ def _download(archive_path, course_url_prefix):
         context, include_inherited=True)))
     filesystem_files = all_files - datastore_files
     _LOG.info('Adding files from datastore')
-    for path in datastore_files:
-        stream = _get_stream(context, path)
-        entity = _ManifestEntity(path, stream.metadata.is_draft)
-        archive.add(path, stream.read())
+    for external_path in datastore_files:
+        internal_path = _Archive.get_internal_path(external_path)
+        stream = _get_stream(context, external_path)
+        entity = _ManifestEntity(internal_path, stream.metadata.is_draft)
+        archive.add(internal_path, stream.read())
         manifest.add(entity)
     _LOG.info('Adding files from filesystem')
-    for path in filesystem_files:
-        with open(path) as f:
-            archive.add(path, f.read())
-            manifest.add(_ManifestEntity(path, False))
+    for external_path in filesystem_files:
+        with open(external_path) as f:
+            internal_path = _Archive.get_internal_path(external_path)
+            archive.add(internal_path, f.read())
+            manifest.add(_ManifestEntity(internal_path, False))
     _LOG.info('Adding manifest')
     archive.add(_MANIFEST_FILENAME, str(manifest))
     archive.close()
@@ -457,7 +489,8 @@ def _upload(archive_path, course_url_prefix):
         archive.open('r')
     except IOError:
         _die('Cannot open archive_path ' + archive_path)
-    course_json = archive.get(_COURSE_JSON_PATH)
+    course_json = archive.get(
+        _Archive.get_internal_path(_COURSE_JSON_PATH_SUFFIX))
     if course_json:
         try:
             courses.PersistentCourse13().deserialize(course_json)
@@ -465,7 +498,8 @@ def _upload(archive_path, course_url_prefix):
             _die((
                 'Cannot upload archive at %s containing malformed '
                 'course.json') % archive_path)
-    course_yaml = archive.get(_COURSE_YAML_PATH)
+    course_yaml = archive.get(
+        _Archive.get_internal_path(_COURSE_YAML_PATH_SUFFIX))
     if course_yaml:
         try:
             yaml.safe_load(course_yaml)
@@ -476,11 +510,12 @@ def _upload(archive_path, course_url_prefix):
     _LOG.info('Validation passed; beginning upload')
     count = 0
     for entity in archive.manifest.entities:
+        external_path = _Archive.get_external_path(entity.path)
         _put(
-            context, _ReadWrapper(archive.get(entity.path)), entity.path,
+            context, _ReadWrapper(archive.get(entity.path)), external_path,
             entity.is_draft)
         count += 1
-        _LOG.info('Uploaded ' + entity.path)
+        _LOG.info('Uploaded ' + external_path)
     _clear_course_cache(context)
     _LOG.info(
         'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
