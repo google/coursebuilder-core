@@ -753,7 +753,7 @@ class LessonRESTHandler(BaseRESTHandler):
     SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-rte', 'inputex-select', 'inputex-textarea',
+        'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
         'inputex-uneditable']
 
     @classmethod

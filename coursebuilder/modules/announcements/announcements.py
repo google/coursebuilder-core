@@ -229,7 +229,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
 
     REQUIRED_MODULES = [
-        'inputex-date', 'inputex-rte', 'inputex-select', 'inputex-string',
+        'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
         'inputex-uneditable']
 
     def get(self):

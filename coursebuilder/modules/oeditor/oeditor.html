@@ -356,6 +356,171 @@
   // button captions
   cb_global.save_button_caption = '{{ save_button_caption }}'
 
+  /**
+   * Define a rich text editor widget in the module "gcb-rte".
+   */
+  YUI.add("gcb-rte",function(Y){
+
+    var inputEx = Y.inputEx,
+        Dom = Y.DOM;
+
+    /**
+     * Define a YUI class for a Google Course Builder rich text editor.
+     */
+    var GcbRteField = function(options) {
+      GcbRteField.superclass.constructor.call(this, options);
+    };
+
+    /**
+     * Define the methods of the GCB rich text editor here. They are bound
+     * immediately below.
+     */
+    var gcbRteDefs = {
+      setOptions: function(options) {
+        GcbRteField.superclass.setOptions.call(this, options);
+        this.options.opts = options.opts || {};
+        this.options.editorType = options.editorType;
+      },
+      renderComponent: function() {
+        var self = this;
+
+        // Make a unique id for the field
+        if (!GcbRteField.idCounter) {
+          GcbRteField.idCounter = 0;
+        }
+        var id = "gcbRteField-" + GcbRteField.idCounter;
+        GcbRteField.idCounter += 1;
+
+        // Insert the text area for plain text editing
+        var attributes = {id: id};
+        if(this.options.name) {
+          attributes.name = this.options.name;
+        }
+        this.el = inputEx.cn('textarea', attributes);
+        this.fieldContainer.appendChild(this.el);
+
+        // Make a button to toggle between plain text and rich text
+        var showRteText = "Rich Text";
+        var hideRteText = "Plain Text";
+        var showRteFlag = false;
+        var toggle = document.createElement("div");
+        var toggleText = document.createTextNode(showRteText);
+        toggle.appendChild(toggleText);
+        Dom.addClass(toggle, "rte-control");
+        toggle.onclick = function() {
+          showRteFlag = !showRteFlag;
+          if (showRteFlag) {
+            if (self.editor) {
+              showExistingRte(self);
+            } else {
+              showNewRte(self);
+            }
+            toggleText.nodeValue = hideRteText;
+          } else {
+            hideRte(self);
+            toggleText.nodeValue = showRteText;
+          }
+        };
+        this.divEl.appendChild(toggle);
+
+        // The methods for switching between plain text and rich text editing:
+
+        function showNewRte(rteField) {
+          var options = rteField.options;
+          var _def = {
+            height: '300px',
+            width: '500px',
+            dompath: true,
+          };
+          // Merge options.opts into the default options
+          var opts = options.opts;
+          for (var i in opts) {
+            if (Y.Lang.hasOwnProperty(opts, i)) {
+              _def[i] = opts[i];
+            }
+          }
+
+          var editor = new Y.YUI2.widget.SimpleEditor(id, _def);
+
+          // Disable any HTML cleaning done by the editor.
+          editor.cleanHTML = function(html) {
+            if (!html) {
+                html = this.getEditorHTML();
+            }
+            this.fireEvent('cleanHTML',
+                {type: 'cleanHTML', target: this, html: html});
+            return html;
+          };
+          editor._fixNodes = function() {};
+
+          rteField.editor = editor;
+          rteField.editor.render();
+        }
+
+        function showExistingRte(rteField) {
+          var editor = rteField.editor,
+              textArea = rteField.el;
+              rteDiv = textArea.previousSibling;
+
+          if (rteField._cbGetValue) {
+            rteField.getValue = rteField._cbGetValue;
+          }
+
+          Dom.setStyle(rteDiv, 'position', 'static');
+          Dom.setStyle(rteDiv, 'top', '0');
+          Dom.setStyle(rteDiv, 'left', '0');
+          Dom.setStyle(textArea, 'visibility', 'hidden');
+          Dom.setStyle(textArea, 'top', '-9999px');
+          Dom.setStyle(textArea, 'left', '-9999px');
+          Dom.setStyle(textArea, 'position', 'absolute');
+          editor.get('element_cont').addClass('yui-editor-container');
+          editor._setDesignMode('on');
+          editor.setEditorHTML(textArea.value);
+        }
+
+        function hideRte(rteField) {
+          var editor = rteField.editor,
+              textArea = rteField.el;
+              rteDiv = textArea.previousSibling;
+
+          editor.saveHTML();
+
+          rteField._cbGetValue = rteField.getValue;
+          rteField.getValue = function() {
+            return textArea.value;
+          };
+
+          Dom.setStyle(rteDiv, 'position', 'absolute');
+          Dom.setStyle(rteDiv, 'top', '-9999px');
+          Dom.setStyle(rteDiv, 'left', '-9999px');
+          editor.get('element_cont').removeClass('yui-editor-container');
+          Dom.setStyle(textArea, 'visibility', 'visible');
+          Dom.setStyle(textArea, 'top', '');
+          Dom.setStyle(textArea, 'left', '');
+          Dom.setStyle(textArea, 'position', 'static');
+          Dom.addClass(textArea, 'raw-text-editor');
+        }
+      },
+      setValue: function(value, sendUpdatedEvt) {
+        this.el.value = value;
+        if(sendUpdatedEvt !== false) {
+          this.fireUpdatedEvt();
+        }
+      },
+      getValue: function() {
+        if (this.editor) {
+          return this.editor.saveHTML();
+        } else {
+          return this.el.value;
+        }
+      }
+    };
+    Y.extend(GcbRteField, inputEx.Field, gcbRteDefs);
+    inputEx.registerType("html", GcbRteField, []);
+  }, '3.1.0', {
+    requires: ['inputex-field', 'yui2-editor']
+  });
+
   if (cb_global.bundle_lib_files) {
     var yui_config = {
       filter: "raw",
@@ -575,80 +740,6 @@
         Y.inputEx.ListField.prototype.arrowAnimColors = {
           'from': '',
           'to': ''
-        };
-      }
-
-      if (Y.inputEx.RTEField) {
-        // Override the inputEx.RTEField.renderComponent method to insert
-        // a control to toggle between showing the RTE and a raw text editor
-        var superRteFieldRenderer = Y.inputEx.RTEField.prototype.renderComponent;
-        Y.inputEx.RTEField.prototype.renderComponent = function() {
-          superRteFieldRenderer.apply(this);
-          var showRteText = "Rich Text";
-          var hideRteText = "Plain Text";
-          var Dom = Y.DOM;
-          var showRteFlag = true;
-          var toggle = document.createElement("div");
-          var toggleText = document.createTextNode(hideRteText);
-          toggle.appendChild(toggleText);
-          Dom.addClass(toggle, "rte-control");
-          var rteField = this;
-
-          toggle.onclick = function() {
-            showRteFlag = !showRteFlag;
-            if (showRteFlag) {
-              showRte(rteField);
-              toggleText.nodeValue = hideRteText;
-            } else {
-              hideRte(rteField);
-              toggleText.nodeValue = showRteText;
-            }
-          };
-          rteField.divEl.appendChild(toggle);
-
-          function showRte(rteField) {
-            var editor = rteField.editor,
-                rteDiv = editor.get('element').previousSibling,
-                textArea = editor.get('element');
-
-            if (rteField._cbGetValue) {
-              rteField.getValue = rteField._cbGetValue;
-            }
-
-            Dom.setStyle(rteDiv, 'position', 'static');
-            Dom.setStyle(rteDiv, 'top', '0');
-            Dom.setStyle(rteDiv, 'left', '0');
-            Dom.setStyle(textArea, 'visibility', 'hidden');
-            Dom.setStyle(textArea, 'top', '-9999px');
-            Dom.setStyle(textArea, 'left', '-9999px');
-            Dom.setStyle(textArea, 'position', 'absolute');
-            editor.get('element_cont').addClass('yui-editor-container');
-            editor._setDesignMode('on');
-            editor.setEditorHTML(editor.get('textarea').value);
-          }
-
-          function hideRte(rteField) {
-            var editor = rteField.editor,
-                rteDiv = editor.get('element').previousSibling,
-                textArea = editor.get('element');
-
-            editor.saveHTML();
-
-            rteField._cbGetValue = rteField.getValue;
-            rteField.getValue = function() {
-              return editor.get('textarea').value;
-            };
-
-            Dom.setStyle(rteDiv, 'position', 'absolute');
-            Dom.setStyle(rteDiv, 'top', '-9999px');
-            Dom.setStyle(rteDiv, 'left', '-9999px');
-            editor.get('element_cont').removeClass('yui-editor-container');
-            Dom.setStyle(textArea, 'visibility', 'visible');
-            Dom.setStyle(textArea, 'top', '');
-            Dom.setStyle(textArea, 'left', '');
-            Dom.setStyle(textArea, 'position', 'static');
-            Dom.addClass(textArea, 'raw-text-editor');
-          }
         };
       }
 

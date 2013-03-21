@@ -28,7 +28,7 @@ COMMON_REQUIRED_MODULES = [
 ALL_MODULES = [
     'querystring-stringify-simple', 'inputex-select', 'inputex-string',
     'inputex-radio', 'inputex-date', 'inputex-datepicker', 'inputex-checkbox',
-    'inputex-list', 'inputex-color', 'inputex-rte', 'inputex-textarea',
+    'inputex-list', 'inputex-color', 'gcb-rte', 'inputex-textarea',
     'inputex-uneditable', 'inputex-integer', 'inputex-hidden', 'inputex-file',
     'io-upload-iframe']
 
