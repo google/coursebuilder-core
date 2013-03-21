@@ -35,19 +35,28 @@
 
       // inline translations
       var trans = {};
-      trans.CHECK_ANSWER_TEXT = '{% trans %} Check Answer {% endtrans %}';
-      trans.CHECK_ANSWERS_TEXT = '{% trans %} Check Answers {% endtrans %}';
-      trans.SHOW_ANSWER_TEXT = '{% trans %} Skip and Show Answer {% endtrans %}';
-      trans.SAVE_ANSWERS_TEXT = '{% trans %} Save Answers {% endtrans %}';
-      trans.SELECT_ANSWER_PROMPT = '{% trans %} Please click one of the buttons for your answer. {% endtrans %}';
-      trans.ALL_CORRECT_TEXT = '{% trans %} All your answers are correct! {% endtrans %}';
-      trans.NUM_CORRECT_TEXT = '{% trans %} Number of questions you answered correctly {% endtrans %}';
-      trans.YOUR_SCORE_TEXT = '{% trans %} You received a score on this assessment of {% endtrans %}';
-      trans.LESSONS_TO_REVIEW_TEXT = '{% trans %} Here are lessons you could review to improve your score {% endtrans %}';
+      trans.CHECK_ANSWER_TEXT =
+          "{{ gettext(' Check Answer ')|replace('\"', '\\\"') }}";
+      trans.CHECK_ANSWERS_TEXT =
+          "{{ gettext( ' Check Answers ')|replace('\"', '\\\"') }}";
+      trans.SHOW_ANSWER_TEXT =
+          "{{ gettext(' Skip and Show Answer ')|replace('\"', '\\\"') }}";
+      trans.SAVE_ANSWERS_TEXT =
+          "{{ gettext(' Save Answers ')|replace('\"', '\\\"') }}";
+      trans.SELECT_ANSWER_PROMPT =
+          "{{ gettext(' Please click one of the buttons for your answer. ')|replace('\"', '\\\"') }}";
+      trans.ALL_CORRECT_TEXT =
+          "{{ gettext(' All your answers are correct! ')|replace('\"', '\\\"') }}";
+      trans.NUM_CORRECT_TEXT =
+          "{{ gettext(' Number of questions you answered correctly ')|replace('\"', '\\\"') }}";
+      trans.YOUR_SCORE_TEXT =
+          "{{ gettext(' You received a score on this assessment of ')|replace('\"', '\\\"') }}";
+      trans.LESSONS_TO_REVIEW_TEXT =
+          "{{ gettext(' Here are lessons you could review to improve your score ')|replace('\"', '\\\"') }}";
       trans.PERFECT_SCORE_SAVE_TEXT =
-          '{% trans %} Congratulations! Press the \'Save Answers\' button to submit your grade. {% endtrans %}';
+          "{{ gettext(' Congratulations! Press the \\\'Save Answers\\\' button to submit your grade. ')|replace('\"', '\\\"') }}";
       trans.GENERIC_SAVE_TEXT =
-          '{% trans %} Press the \'Save Answers\' button below to save your scores. You can also edit your answers above before clicking \'Save Answers\'. {% endtrans %}';
+          "{{ gettext(' Press the \\\'Save Answers\\\' button below to save your scores. You can also edit your answers above before clicking \\\'Save Answers\\\'. ')|replace('\"', '\\\"') }}";
     </script>
     <script src="assets/lib/activity-generic-1.2.js"></script>
 
