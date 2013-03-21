@@ -21,6 +21,7 @@ import logging
 import os
 import pickle
 import sys
+import appengine_config
 from tools import verify
 import yaml
 from models import MemcacheManager
@@ -873,6 +874,14 @@ class CourseModel13(object):
             return True
         return False
 
+    def delete_all(self):
+        """Deletes all course files."""
+        for entity in self._app_context.fs.impl.list(
+                appengine_config.BUNDLE_ROOT):
+            self._app_context.fs.impl.delete(entity)
+        assert not self._app_context.fs.impl.list(appengine_config.BUNDLE_ROOT)
+        CachedCourse13.delete(self._app_context)
+
     def delete_lesson(self, lesson):
         """Delete a lesson."""
         lesson = self.find_lesson_by_id(None, lesson.lesson_id)
@@ -1254,6 +1263,9 @@ class Course(object):
 
     def move_lesson_to(self, lesson, unit):
         return self._model.move_lesson_to(lesson, unit)
+
+    def delete_all(self):
+        return self._model.delete_all()
 
     def delete_unit(self, unit):
         return self._model.delete_unit(unit)

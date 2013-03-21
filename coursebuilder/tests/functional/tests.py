@@ -2794,10 +2794,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
     def create_empty_course(self, raw):
         sites.setup_courses(raw)
-        context = etl._get_requested_context(
-            sites.get_all_courses(), self.url_prefix)
-        for entity in context.fs.impl.list(appengine_config.BUNDLE_ROOT):
-            context.fs.impl.delete(entity)
+        course = etl._get_course_from(etl._get_requested_context(
+            sites.get_all_courses(), self.url_prefix))
+        course.delete_all()
 
     def import_sample_course(self):
         """Imports a sample course."""
