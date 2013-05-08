@@ -905,6 +905,26 @@ class Manager(object):
         return db.put([step, summary])[0]
 
     @classmethod
+    def get_review_by_key(cls, key):
+        """Gets Review by key (or None); raises KeyError on bad key kind."""
+        model = cls._get_model_by_key(review.Review, key)
+        if not model:
+            return
+
+        return Review(contents=model.contents, key=model.key())
+
+    @classmethod
+    def _get_model_by_key(cls, model_class, key):
+        """Gets an instance of type model_class by key (or None)."""
+        model_kind = model_class.kind()
+        key_kind = key.kind()
+        if model_kind != key_kind:
+            raise KeyError('Cannot get kind %s with key of kind %s' % (
+                model_kind, key_kind))
+
+        return db.get(key)
+
+    @classmethod
     def get_review_keys_by(cls, unit_id, reviewer_key):
         """Gets the keys of all review steps in a unit for a reviewer.
 
@@ -937,6 +957,23 @@ class Manager(object):
         COUNTER_GET_REVIEW_KEYS_BY_SUCCESS.inc()
         COUNTER_GET_REVIEW_KEYS_BY_KEYS_RETURNED.inc(increment=len(keys))
         return keys
+
+    @classmethod
+    def get_review_step_by_key(cls, key):
+        """Gets ReviewStep by key (or None); raises KeyError on bad key kind."""
+        model = cls._get_model_by_key(peer.ReviewStep, key)
+        if not model:
+            return
+
+        return ReviewStep(
+            assigner_kind=model.assigner_kind, change_date=model.change_date,
+            create_date=model.create_date, key=model.key(),
+            removed=model.removed, review_key=model.review_key,
+            review_summary_key=model.review_summary_key,
+            reviewee_key=model.reviewee_key, reviewer_key=model.reviewer_key,
+            state=model.state, submission_key=model.submission_key,
+            unit_id=model.unit_id
+        )
 
     @classmethod
     def get_submission_and_review_keys(cls, unit_id, reviewee_key):
@@ -987,6 +1024,15 @@ class Manager(object):
         COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_RETURNED.inc(
             increment=len(step_keys))
         return results
+
+    @classmethod
+    def get_submission_by_key(cls, key):
+        """Gets Submission by key (or None); raises KeyError on bad key kind."""
+        model = cls._get_model_by_key(review.Submission, key)
+        if not model:
+            return
+
+        return Submission(contents=model.contents, key=model.key())
 
     @classmethod
     def get_submission_key(cls, unit_id, reviewee_key):

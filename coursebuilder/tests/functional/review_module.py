@@ -795,6 +795,21 @@ class ManagerTest(TestBase):
 
         self.assertEqual(lower_priority_summary_key, step.review_summary_key)
 
+    def test_get_review_by_key(self):
+        self.assertRaises(
+            KeyError, review_module.Manager.get_review_by_key,
+            db.Key.from_path('bad_kind', 'name'))
+        self.assertIsNone(
+            review_module.Manager.get_review_by_key(
+                db.Key.from_path(review.Review.kind(), 'name')))
+
+        review_key = review.Review(contents='contents').put()
+        model_review = db.get(review_key)
+        domain_review = review_module.Manager.get_review_by_key(review_key)
+
+        self.assertEqual(model_review.contents, domain_review.contents)
+        self.assertEqual(model_review.key(), domain_review.key)
+
     def test_get_review_keys_by_returns_list_of_keys(self):
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
@@ -849,6 +864,46 @@ class ManagerTest(TestBase):
         self.assertEqual(
             [], review_module.Manager.get_review_keys_by(
                 self.unit_id, self.reviewer_key))
+
+    def test_get_review_step_by_key(self):
+        self.assertRaises(
+            KeyError, review_module.Manager.get_review_step_by_key,
+            db.Key.from_path('bad_kind', 'name'))
+        step_key = db.Key.from_path(
+            peer.ReviewStep.kind(),
+            peer.ReviewStep.key_name(
+                self.unit_id, self.submission_key, self.reviewee_key,
+                self.reviewer_key))
+        self.assertIsNone(
+            review_module.Manager.get_review_step_by_key(step_key))
+
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        model_step = db.get(step_key)
+        domain_step = review_module.Manager.get_review_step_by_key(step_key)
+
+        self.assertEqual(model_step.assigner_kind, domain_step.assigner_kind)
+        self.assertEqual(model_step.change_date, domain_step.change_date)
+        self.assertEqual(model_step.create_date, domain_step.create_date)
+        self.assertEqual(model_step.key(), domain_step.key)
+        self.assertEqual(model_step.removed, domain_step.removed)
+        self.assertEqual(model_step.review_key, domain_step.review_key)
+        self.assertEqual(
+            model_step.review_summary_key, domain_step.review_summary_key)
+        self.assertEqual(model_step.reviewee_key, domain_step.reviewee_key)
+        self.assertEqual(model_step.reviewer_key, domain_step.reviewer_key)
+        self.assertEqual(model_step.state, domain_step.state)
+        self.assertEqual(model_step.submission_key, domain_step.submission_key)
+        self.assertEqual(model_step.unit_id, domain_step.unit_id)
 
     def test_get_submission_and_review_keys_no_steps(self):
         peer.ReviewSummary(
@@ -910,6 +965,22 @@ class ManagerTest(TestBase):
         self.assertIsNone(
             review_module.Manager.get_submission_and_review_keys(
                 self.unit_id, self.reviewee_key))
+
+    def test_get_submission_by_key(self):
+        self.assertRaises(
+            KeyError, review_module.Manager.get_submission_by_key,
+            db.Key.from_path('bad_kind', 'name'))
+        self.assertIsNone(
+            review_module.Manager.get_submission_by_key(
+                db.Key.from_path(review.Submission.kind(), 'name')))
+
+        submission_key = review.Submission(contents='contents').put()
+        model_submission = db.get(submission_key)
+        domain_submission = review_module.Manager.get_submission_by_key(
+            submission_key)
+
+        self.assertEqual(model_submission.contents, domain_submission.contents)
+        self.assertEqual(model_submission.key(), domain_submission.key)
 
     def test_get_submission_key(self):
         peer.ReviewSummary(
