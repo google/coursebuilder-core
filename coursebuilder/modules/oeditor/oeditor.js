@@ -176,11 +176,11 @@ function bindGcbRteField(Y) {
       if (!GcbRteField.idCounter) {
         GcbRteField.idCounter = 0;
       }
-      var id = "gcbRteField-" + GcbRteField.idCounter;
+      this.id = "gcbRteField-" + GcbRteField.idCounter;
       GcbRteField.idCounter += 1;
 
       // Insert the text area for plain text editing
-      var attributes = {id: id};
+      var attributes = {id: this.id};
       if(this.options.name) {
         attributes.name = this.options.name;
       }
@@ -211,6 +211,31 @@ function bindGcbRteField(Y) {
       };
       this.divEl.appendChild(toggle);
 
+      function getEditorDocument(id) {
+        return document.getElementById(id + '_editor').contentWindow.document;
+      }
+
+      function insertMarkerTags(editorDoc) {
+        for (var k = 0; k < cb_global.custom_rte_tag_icons.length; k++) {
+          var tag = cb_global.custom_rte_tag_icons[k];
+          var elts = editorDoc.getElementsByTagName(tag.name);
+          for (var i = 0; i < elts.length; i++) {
+            var img = editorDoc.createElement('img');
+            img.setAttribute('src', tag.iconUrl);
+            img.setAttribute('class', 'gcbMarker');
+            elts[i].appendChild(img);
+          }
+        }
+      }
+
+      function removeGcbMarkerTags(editorDoc) {
+        var elts = editorDoc.getElementsByClassName('gcbMarker');
+        while (elts.length > 0) {
+          var e = elts[0];
+          e.parentNode.removeChild(e);
+        }
+      }
+
       // The methods for switching between plain text and rich text editing:
 
       function showNewRte(rteField) {
@@ -228,7 +253,7 @@ function bindGcbRteField(Y) {
           }
         }
 
-        var editor = new Y.YUI2.widget.SimpleEditor(id, _def);
+        var editor = new Y.YUI2.widget.SimpleEditor(rteField.id, _def);
 
         // Disable any HTML cleaning done by the editor.
         editor.cleanHTML = function(html) {
@@ -246,6 +271,10 @@ function bindGcbRteField(Y) {
 
         rteField.editor = editor;
         rteField.editor.render();
+        // TODO (jorr): Use callbacks to make this deterministic
+        window.setTimeout(function() {
+          insertMarkerTags(getEditorDocument(rteField.id));
+        }, 100);
       }
 
       function showExistingRte(rteField) {
@@ -267,6 +296,7 @@ function bindGcbRteField(Y) {
         editor.get('element_cont').addClass('yui-editor-container');
         editor._setDesignMode('on');
         editor.setEditorHTML(textArea.value);
+        insertMarkerTags(getEditorDocument(textArea.id));
       }
 
       function hideRte(rteField) {
@@ -274,6 +304,7 @@ function bindGcbRteField(Y) {
             textArea = rteField.el;
             rteDiv = textArea.previousSibling;
 
+        removeGcbMarkerTags(getEditorDocument(textArea.id));
         editor.saveHTML();
 
         rteField._cbGetValue = rteField.getValue;

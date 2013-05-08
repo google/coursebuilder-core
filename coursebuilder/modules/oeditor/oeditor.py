@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import os
 import urllib
 import appengine_config
+from common import tags
 import jinja2
 from models import transforms
 
@@ -93,6 +94,12 @@ class ObjectEditor(object):
             post_url = ''
             post_args = ''
 
+        custom_rte_tag_icons = []
+        for tag, tag_class in tags.get_tag_bindings().items():
+            custom_rte_tag_icons.append({
+                'name': tag,
+                'iconUrl': tag_class().get_icon_url()})
+
         template_values = {
             'schema': schema_json,
             'type_label': type_label,
@@ -106,7 +113,8 @@ class ObjectEditor(object):
                 (item[0], transforms.dumps(item[1])) for item in annotations],
             'save_method': save_method,
             'auto_return': auto_return,
-            'save_button_caption': save_button_caption
+            'save_button_caption': save_button_caption,
+            'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons)
             }
 
         if delete_url and not read_only:

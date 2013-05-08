@@ -20,7 +20,9 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import sys
 import unittest
 import appengine_config
+from common import tags
 from controllers import sites
+from lxml import etree
 from models import config
 from models import courses
 from models import transforms
@@ -230,6 +232,96 @@ class InvokeExistingUnitTest(suite.TestBase):
         default_values = {'baz': [4, 5, 6]}
         assert {'foo': [1, 2, 3], 'baz': [4, 5, 6]} == (
             courses.deep_dict_merge(real_values, default_values))
+
+
+class CustomTagTests(unittest.TestCase):
+    """Unit tests for the custom tag functionality."""
+
+    def setUp(self):
+
+        class SimpleTag(tags.BaseTag):
+            def render(self, unused_arg):
+                return etree.Element('SimpleTag')
+
+        class ComplexTag(tags.BaseTag):
+            def render(self, unused_arg):
+                return etree.XML('<Complex><Child>Text</Child></Complex>')
+
+        class ReRootTag(tags.BaseTag):
+            def render(self, node):
+                elt = etree.Element('Re')
+                root = etree.Element('Root')
+                elt.append(root)
+                for child in node:
+                    root.append(child)
+                return elt
+
+        class RequireRootParentTag(tags.BaseTag):
+            def render(self, node):
+                while True:
+                    print node.tag
+                    node = node.getparent()
+                    if node is None:
+                        raise Exception
+                    if node.tag == 'Root':
+                        return etree.Element('OK')
+
+        def new_get_tag_bindings():
+            return {
+                'simple': SimpleTag,
+                'complex': ComplexTag,
+                'reroot': ReRootTag,
+                'requireparent': RequireRootParentTag}
+
+        self.old_get_tag_bindings = tags.get_tag_bindings
+        tags.get_tag_bindings = new_get_tag_bindings
+
+    def tearDown(self):
+        tags.get_tag_bindings = self.old_get_tag_bindings
+
+    def test_simple_tag_is_replaced(self):
+        html = '<div><simple/></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals('<div><SimpleTag></SimpleTag></div>', str(safe_dom))
+
+    def test_replaced_tag_preserves_tail_text(self):
+        html = '<div><simple/>Tail text</div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><SimpleTag></SimpleTag>Tail text</div>', str(safe_dom))
+
+    def test_simple_tag_consumes_children(self):
+        html = '<div><simple><p>child1</p></simple></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><SimpleTag></SimpleTag></div>', str(safe_dom))
+
+    def test_complex_tag_preserves_its_own_children(self):
+        html = '<div><complex/></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><Complex><Child>Text</Child></Complex></div>', str(safe_dom))
+
+    def test_reroot_tag_puts_children_in_new_root(self):
+        html = '<div><reroot><p>one</p><p>two</p></reroot></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><Re><Root><p>one</p><p>two</p></Root></Re></div>',
+            str(safe_dom))
+
+    def test_chains_of_tags(self):
+        html = '<div><reroot><p><simple></p></reroot></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><Re><Root><p><SimpleTag></SimpleTag></p></Root></Re></div>',
+            str(safe_dom))
+
+    def test_child_tags_can_find_their_parents(self):
+        html = '<div><reroot><p><requireparent/></p></reroot></div>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(
+            '<div><Re><Root><p><OK></OK></p></Root></Re></div>',
+            str(safe_dom))
 
 
 if __name__ == '__main__':

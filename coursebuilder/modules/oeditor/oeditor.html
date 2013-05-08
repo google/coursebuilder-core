@@ -225,6 +225,7 @@
 
     // button captions
     cb_global.save_button_caption = '{{ save_button_caption }}'
+    cb_global.custom_rte_tag_icons = JSON.parse("{{ custom_rte_tag_icons|js_string }}");
 
     cb_global.required_modules = [{% for module in required_modules %}
         '{{ module }}'{% if not loop.last %},{% endif %}{% endfor %}];

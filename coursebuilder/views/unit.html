@@ -49,89 +49,89 @@
           {{ gettext('This unit does not contain any lessons.') }}
         </div>
       </div>
-    {% endif %}
+    {% else %}
 
-    {% for lesson in lessons %}
-      {% if lesson.lesson_id == lesson_id %}
-
-        <div style="padding-bottom: 20px;">
-          <div class="gcb-aside gcb-button-box">
-            {% if lesson.now_available or is_course_admin %}
-              <div class="gcb-cols">
-                <div class="gcb-col-7">
-                  <h1 class="lesson_title">
-                    {{ lesson.title }}
-                    {% if not lesson.now_available and is_course_admin %}
-                      <span id="lesson-title-private">
-                        (Private)
-                      </span>
-                    {% endif %}
-                  </h1>
-
-                  {% if lesson.objectives %}
-                    <div class="lesson_objective">
-                      {{ lesson.objectives | safe }}
-                    </div>
+      <div style="padding-bottom: 20px;">
+        <div class="gcb-aside gcb-button-box">
+          {% if lesson.now_available or is_course_admin %}
+            <div class="gcb-cols">
+              <div class="gcb-col-7">
+                <h1 class="lesson_title">
+                  {{ lesson.title }}
+                  {% if not lesson.now_available and is_course_admin %}
+                    <span id="lesson-title-private">
+                      (Private)
+                    </span>
                   {% endif %}
+                </h1>
 
-                </div>
-                <div class="gcb-col-3">
-                  <p style="float:right; margin-top: 0px;">
-                    {% if lesson.notes %}
-                    <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
-                      {# I18N: Link to a text version of a lesson video. #}
-                      {{ gettext('Text Version') }}
-                    </a>
+                {% if objectives %}
+                  <div class="lesson_objective">
+                    {% if gcb_can_use_dynamic_tags %}
+                      {{ objectives }}
+                    {% else %}
+                      {{ objectives|safe }}
                     {% endif %}
-                  </p>
-                </div>
-              </div><!-- /gcb-cols -->
-              {% if lesson.video %}
-                <p class="video-container">
-                  {# I18N: Alt text for an embedded YouTube video player. #}
-                  <iframe class="youtube-player" title="{{ gettext('YouTube Video Player') }}"
-                          type="text/html" width="650" height="400" frameborder="0" allowfullscreen
-                          src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
-                  </iframe>
-                </p>
-              {% endif %}
+                  </div>
+                {% endif %}
 
-            {% else %}
-
-              <h1 class="lesson_title">
-                {{ lesson.title }}
-              </h1>
-
-              <br><br>
-
-              <div>
-                {# I18N: Text shown for a lesson that has not been made public. #}
-                {{ gettext('This lesson is not available.')}}
               </div>
-
+              <div class="gcb-col-3">
+                <p style="float:right; margin-top: 0px;">
+                  {% if lesson.notes %}
+                  <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
+                    {# I18N: Link to a text version of a lesson video. #}
+                    {{ gettext('Text Version') }}
+                  </a>
+                  {% endif %}
+                </p>
+              </div>
+            </div><!-- /gcb-cols -->
+            {% if lesson.video %}
+              <p class="video-container">
+                {# I18N: Alt text for an embedded YouTube video player. #}
+                <iframe class="youtube-player" title="{{ gettext('YouTube Video Player') }}"
+                        type="text/html" width="650" height="400" frameborder="0" allowfullscreen
+                        src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
+                </iframe>
+              </p>
             {% endif %}
-          </div><!-- /gcb-aside -->
 
-          <div class="gcb-button-box">
-            <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
-              {% if back_button_url %}
-                {# I18N: Text on the navigation button at the end of a lesson page. #}
-                <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
-              {% endif %}
+          {% else %}
+
+            <h1 class="lesson_title">
+              {{ lesson.title }}
+            </h1>
+
+            <br><br>
+
+            <div>
+              {# I18N: Text shown for a lesson that has not been made public. #}
+              {{ gettext('This lesson is not available.')}}
             </div>
-            <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
-              {% if next_button_url %}
-                {# I18N: Text on the navigation button at the end of a lesson page. #}
-                <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>
-              {% else %}
-                {# I18N: Text on the navigation button at the end of a lesson. It signals that the student has completed a unit (which is a series of lessons). #}
-                <a href="course"> {{ gettext('End') }} </a>
-              {% endif %}
-            </div>
+
+          {% endif %}
+        </div><!-- /gcb-aside -->
+
+        <div class="gcb-button-box">
+          <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+            {% if back_button_url %}
+              {# I18N: Text on the navigation button at the end of a lesson page. #}
+              <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
+            {% endif %}
+          </div>
+          <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+            {% if next_button_url %}
+              {# I18N: Text on the navigation button at the end of a lesson page. #}
+              <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>
+            {% else %}
+              {# I18N: Text on the navigation button at the end of a lesson. It signals that the student has completed a unit (which is a series of lessons). #}
+              <a href="course"> {{ gettext('End') }} </a>
+            {% endif %}
           </div>
         </div>
-      {% endif %}
-    {% endfor %}
+      </div>
+    {% endif %}
     {{course_info.unit.before_content_ends | safe}}
   </div>
 </div>
