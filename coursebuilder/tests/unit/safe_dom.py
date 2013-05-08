@@ -92,7 +92,8 @@ class ElementTests(unittest.TestCase):
     def test_escape_quotes(self):
         """Element should escape single and double quote characters."""
         element = safe_dom.Element('a', href='a\'b"c`d')
-        self.assertEqual('<a href="a%27b%22c%60d"></a>', element.__str__())
+        self.assertEqual(
+            '<a href="a&#39;b&quot;c&#96;d"></a>', element.__str__())
 
     def test_allow_parens(self):
         """Element should allow parentheses in attributes."""
@@ -101,15 +102,18 @@ class ElementTests(unittest.TestCase):
 
     def test_allow_urls(self):
         """Element should allow urls with a method sepcified in an attribute."""
-        url = 'http://a.b.com/d/e/f?var1=val1&var2=val2#fragment'
-        element = safe_dom.Element('a', action=url)
-        self.assertEqual('<a action="%s"></a>' % url, element.__str__())
+        element = safe_dom.Element(
+            'a', action='http://a.b.com/d/e/f?var1=val1&var2=val2#fra')
+        self.assertEqual(
+            '<a action="http://a.b.com/d/e/f?var1=val1&amp;var2=val2#fra"></a>',
+            element.__str__())
 
-    def test_allow_url_query_chars(self):
-        """Element should pass '?', '=', and '&' characters in an attribute."""
+    def test_url_query_chars(self):
+        """Element should pass '?' and '=' characters in an attribute."""
         element = safe_dom.Element('a', action='target?action=foo&value=bar')
         self.assertEqual(
-            '<a action="target?action=foo&value=bar"></a>', element.__str__())
+            '<a action="target?action=foo&amp;value=bar"></a>',
+            element.__str__())
 
     def test_convert_none_to_empty(self):
         """An attribute with value None should render as empty."""
@@ -141,7 +145,7 @@ class ElementTests(unittest.TestCase):
         element = safe_dom.Element('td').add_child(
             safe_dom.Element('a', href='foo"bar').add_text('1<2'))
         self.assertEqual(
-            '<td><a href="foo%22bar">1&lt;2</a></td>', element.__str__())
+            '<td><a href="foo&quot;bar">1&lt;2</a></td>', element.__str__())
 
     def test_add_text(self):
         """Adding text should add text which will be sanitized."""

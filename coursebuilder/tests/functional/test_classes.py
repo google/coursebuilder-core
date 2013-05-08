@@ -977,15 +977,15 @@ class AdminAspectTest(actions.TestBase):
         assert_contains('gcb_admin_user_emails', response.body)
         assert_contains('[test_admin_list@google.com]', response.body)
         assert_contains(
-            '/admin?action=config_override&name=gcb_admin_user_emails',
+            '/admin?action=config_override&amp;name=gcb_admin_user_emails',
             response.body)
         assert_contains(
-            '/admin?action=config_edit&name=gcb_config_update_interval_sec',
+            '/admin?action=config_edit&amp;name=gcb_config_update_interval_sec',
             response.body)
 
         # Check editor page has proper actions.
         response = self.testapp.get(
-            '/admin?action=config_edit&name=gcb_config_update_interval_sec')
+            '/admin?action=config_edit&amp;name=gcb_config_update_interval_sec')
         assert_equals(response.status_int, 200)
         assert_contains('/admin?action=config_reset', response.body)
         assert_contains('name=gcb_config_update_interval_sec', response.body)

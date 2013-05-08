@@ -4,7 +4,10 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
 import re
-import urllib
+
+
+def escape(strg):
+    return cgi.escape(strg, quote=1).replace("'", '&#39;').replace('`', '&#96;')
 
 
 class Node(object):
@@ -51,7 +54,7 @@ class Text(Node):
 
     @property
     def sanitized(self):
-        return cgi.escape(self._value)
+        return escape(self._value)
 
 
 class Element(Node):
@@ -115,7 +118,7 @@ class Element(Node):
             if value is None:
                 value = ''
             buff += ' %s="%s"' % (
-                attr_name, urllib.quote(value, safe=' /()?&#=:;%'))
+                attr_name, escape(value))
 
         if self._children:
             buff += '>'
