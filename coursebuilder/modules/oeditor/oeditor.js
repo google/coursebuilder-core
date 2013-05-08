@@ -465,6 +465,7 @@ TopLevelEditorControls.prototype = {
           document.getElementById("formContainer").style.display = "block";
           cbShowMsg(json.message);
           setTimeout(function(){ cbHideMsg(); }, 5000);
+          cb_global.onFormLoad();
         },
         failure : function (x,o) {
             cbShowMsg("Server did not respond. Please reload the page to try again.");

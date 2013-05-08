@@ -33,7 +33,8 @@ describe('tests for FramedEditorControls', function() {
       form: {
         getValue: function() {},
         setValue: function() {}
-      }
+      },
+      onFormLoad: function() {}
     };
 
     spyOn(frameProxy, 'getValue').andReturn('parent_form_value');
@@ -43,6 +44,7 @@ describe('tests for FramedEditorControls', function() {
     spyOn(frameProxy, 'onLoad');
     spyOn(env.form, 'getValue').andReturn('form_value');
     spyOn(env.form, 'setValue');
+    spyOn(env, 'onFormLoad');
 
     framedEditorControls = new FramedEditorControls(frameProxy, env);
   });
@@ -98,6 +100,7 @@ describe('tests for FramedEditorControls', function() {
     spyOn(document, 'getElementById').andReturn(formContainer)
     framedEditorControls.populateForm();
     expect(env.form.setValue).toHaveBeenCalledWith('parent_form_value');
+    expect(env.onFormLoad).toHaveBeenCalled();
 
     window.cbHideMsg = _cbHideMsg;
   });

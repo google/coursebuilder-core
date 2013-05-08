@@ -91,5 +91,7 @@ ykXhHPKj8AAAAASUVORK5CYII=
         tag, the display name for the form, and the type (usually string)."""
         reg = schema_fields.FieldRegistry('YouTube Video')
         reg.add_property(
-            schema_fields.SchemaField('videoid', 'VideoId', 'string'))
+            schema_fields.SchemaField('videoid', 'VideoId', 'string',
+            optional=True,
+            description='Provide YouTube video ID (e.g. Kdg2drcUjYI)'))
         return reg

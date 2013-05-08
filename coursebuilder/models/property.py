@@ -16,18 +16,23 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
+import collections
+
 
 class Property(object):
     """Property."""
 
     def __init__(
-        self, name, label, property_type, description=None, optional=False):
+        self, name, label, property_type, select_data=None, description=None,
+        optional=False):
         self._name = name
         self._label = label
         self._property_type = property_type
+        self._select_data = select_data
         self._description = description
         self._optional = optional
 
+    @property
     def name(self):
         return self._name
 
@@ -42,17 +47,23 @@ class Registry(object):
         if description:
             self._registry['description'] = description
         self._properties = []
-        self._sub_registories = {}
+        self._sub_registories = collections.OrderedDict()
+
+    @property
+    def title(self):
+        return self._title
 
     def add_property(self, schema_field):
         """Add a Property to this Registry."""
         self._properties.append(schema_field)
 
-    def add_sub_registry(self, name, title, descirption=None):
+    def add_sub_registry(
+        self, name, title=None, description=None, registry=None):
         """Add a sub registry to for this Registry."""
-        b = Registry(title, descirption)
-        self._sub_registories[name] = b
-        return b
+        if not registry:
+            registry = Registry(title, description)
+        self._sub_registories[name] = registry
+        return registry
 
     def has_subregistries(self):
         return True if self._sub_registories else False

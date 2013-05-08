@@ -20,6 +20,7 @@ import os
 import urllib
 import appengine_config
 from common import jinja_filters
+from common import schema_fields
 from common import tags
 from controllers import utils
 import jinja2
@@ -49,7 +50,9 @@ class ObjectEditor(object):
         save_method='put',
         delete_url=None, delete_method='post',
         auto_return=False, read_only=False,
-        required_modules=None, save_button_caption='Save',
+        required_modules=None,
+        extra_js_files=None,
+        save_button_caption='Save',
         exit_button_caption='Close'):
         """Creates an HTML code needed to embed and operate this form.
 
@@ -70,6 +73,7 @@ class ObjectEditor(object):
             auto_return: whether to return to the exit_url on successful save
             read_only: optional flag; if set, removes Save and Delete operations
             required_modules: list of inputex modules required for this editor
+            extra_js_files: list of extra JS files to be included
             save_button_caption: a caption for the 'Save' button
             exit_button_caption: a caption for the 'Close' button
 
@@ -112,6 +116,7 @@ class ObjectEditor(object):
             'exit_button_caption': exit_button_caption,
             'exit_url': exit_url,
             'required_modules': COMMON_REQUIRED_MODULES + required_modules,
+            'extra_js_files': extra_js_files or [],
             'schema_annotations': [
                 (item[0], transforms.dumps(item[1])) for item in annotations],
             'save_method': save_method,
@@ -136,7 +141,7 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
     """A handler to serve the content of the popup subeditor."""
 
     default_action = 'custom_tag'
-    get_actions = ['custom_tag']
+    get_actions = ['edit_custom_tag', 'add_custom_tag']
     post_actions = []
 
     def get_template(self, template_name, dirs):
@@ -149,7 +154,7 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
 
         return jinja_environment.get_template(template_name)
 
-    def get_custom_tag(self):
+    def get_edit_custom_tag(self):
         """Return the the page used to edit a custom HTML tag in a popup."""
         tag_name = self.request.get('tag_name')
         tag_bindings = tags.get_tag_bindings()
@@ -162,6 +167,37 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         template_values['form_html'] = ObjectEditor.get_html_for(
             self, schema.get_json_schema(), schema.get_schema_dict(), None,
             None, None)
+        self.response.out.write(
+            self.get_template('popup.html', []).render(template_values))
+
+    def get_add_custom_tag(self):
+        """Return the page for the popup used to add a custom HTML tag."""
+        tag_name = self.request.get('tag_name')
+
+        tag_bindings = tags.get_tag_bindings()
+        tag_names = sorted(tag_bindings.keys())
+
+        if tag_name:
+            tag_class = tag_bindings[tag_name]
+        else:
+            tag_class = tag_bindings[tag_names[0]]
+        tag_schema = tag_class().get_schema()
+
+        select_data = []
+        for name in tag_names:
+            clazz = tag_bindings[name]
+            select_data.append((name, clazz().get_schema().title))
+
+        schema = schema_fields.FieldRegistry('Add a content handler')
+        type_select = schema.add_sub_registry('type', 'Content Type')
+        type_select.add_property(schema_fields.SchemaField(
+            'tag', 'Name', 'select', select_data=select_data))
+        schema.add_sub_registry('attributes', registry=tag_schema)
+
+        template_values = {}
+        template_values['form_html'] = ObjectEditor.get_html_for(
+            self, schema.get_json_schema(), schema.get_schema_dict(), None,
+            None, None, extra_js_files=['add_custom_tag.js'])
         self.response.out.write(
             self.get_template('popup.html', []).render(template_values))
 

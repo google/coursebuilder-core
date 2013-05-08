@@ -217,3 +217,32 @@ class AdminTests(BaseIntegrationTest):
         ).click_delete(
         ).confirm_delete(
         ).verify_no_image_file_by_name('assets/img/test.png')
+
+    def test_add_and_edit_custom_tags(self):
+        name = self.create_new_course()[0]
+        self.load_dashboard(
+            name
+        ).click_add_unit(
+        ).set_title(
+            'First Unit'
+        ).click_save(
+        ).click_close(
+        ).click_add_lesson(
+        ).click_rich_text(
+        ).set_rte_text(
+            'Let\'s watch a video:\n'
+        ).click_rte_add_custom_tag(
+        ).set_rte_lightbox_field(
+            'input[name=videoid]', '123'
+        ).click_rte_save(
+        ).doubleclick_rte_element(
+            'gcb-youtube > img'
+        ).ensure_rte_lightbox_field_has_value(
+            'input[name=videoid]', '123'
+        ).set_rte_lightbox_field(
+            'input[name=videoid]', '321'
+        ).click_rte_save(
+        ).click_plain_text(
+        ).ensure_objectives_textarea_contains(
+            '<gcb-youtube videoid="321"></gcb-youtube>')
+

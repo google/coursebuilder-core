@@ -77,7 +77,7 @@ function getGcbRteDefs(env, Dom, Editor) {
               } else { // IE 8 & 9
                 event.cancelBubble = true;
               }
-              that._onCustomTagAction(target);
+              that._editCustomTag(target);
             };
           })(elts[i]);
           img.onmousedown = function(event) {
@@ -105,8 +105,8 @@ function getGcbRteDefs(env, Dom, Editor) {
     /**
      * When a custom tag is double-clicked, open up a sub-editor in a lightbox.
      */
-    _onCustomTagAction: function(node) {
-      var url = '/oeditor/popup?action=custom_tag&tag_name=' +
+    _editCustomTag: function(node) {
+      var url = '/oeditor/popup?action=edit_custom_tag&tag_name=' +
           escape(node.tagName.toLowerCase());
       var value = {};
       for (var i = 0; i < node.attributes.length; i++) {
@@ -131,6 +131,39 @@ function getGcbRteDefs(env, Dom, Editor) {
       window.frameProxy.open();
     },
 
+    _addCustomTag: function() {
+      var that = this;
+      if (window.frameProxy) {
+        window.frameProxy.close();
+      }
+      window.frameProxy = new FrameProxy(
+        'modal-editor',
+        '/oeditor/popup?action=add_custom_tag',
+        null,
+        function(value) {
+          that._insertCustomTag(value);
+        },
+        function () { /* on cancel */ }
+      );
+      window.frameProxy.open();
+    },
+
+    _insertCustomTag: function(value) {
+      var el = document.createElement(value.type.tag);
+      for (var name in value.attributes) {
+        if (value.attributes.hasOwnProperty(name)) {
+          el.setAttribute(name, value.attributes[name]);
+        }
+      }
+      var holder = document.createElement('div');
+      holder.appendChild(el);
+      window.holder = holder;
+      this.editor.execCommand('inserthtml', holder.innerHTML + '&nbsp;');
+      var editorWin = this._getEditorWindow(this.id);
+      this._removeMarkerTags(editorWin);
+      this._insertMarkerTags(editorWin);
+    },
+
     _removeMarkerTags: function(editorWin) {
       var editorDoc = editorWin.document;
       if (editorDoc.getElementsByClassName) {
@@ -149,6 +182,7 @@ function getGcbRteDefs(env, Dom, Editor) {
     },
 
     showNewRte: function() {
+      var that = this;
       var options = this.options;
       var _def = {
         height: '300px',
@@ -178,6 +212,18 @@ function getGcbRteDefs(env, Dom, Editor) {
         return html;
       };
       editor._fixNodes = function() {};
+
+      // Set up a button to add custom tags
+      editor.on('toolbarLoaded', function() {
+        var button = {
+          type: 'push',
+          label: 'Insert Google Course Builder widget',
+          value: 'insertcustomtag',
+          disabled: false
+        };
+        editor.toolbar.addButtonToGroup(button, 'insertitem');
+        editor.toolbar.on('insertcustomtagClick', that._addCustomTag, that, true);
+      });
 
       this.editor = editor;
       this.editor.render();

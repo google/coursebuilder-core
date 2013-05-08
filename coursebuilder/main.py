@@ -38,7 +38,6 @@ urls = [
     ('/course', lessons.CourseHandler),
     ('/forum', utils.ForumHandler),
     ('/dashboard', dashboard.DashboardHandler),
-    ('/oeditor/popup', modules.oeditor.oeditor.PopupHandler),
     ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
     ('/review', lessons.ReviewHandler),
@@ -76,6 +75,8 @@ admin_handlers = [
     ('/rest/config/item', config.ConfigPropertyItemRESTHandler),
     ('/rest/courses/item', config.CoursesItemRESTHandler)]
 
+oeditor_handler = ('/oeditor/popup', modules.oeditor.oeditor.PopupHandler)
+
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 
 cron_handlers = [
@@ -88,6 +89,7 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 debug = not appengine_config.PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
-    admin_handlers + cron_handlers + yui_handlers + [app_handler],
+    admin_handlers + cron_handlers + yui_handlers + [
+        oeditor_handler, app_handler],
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=debug)

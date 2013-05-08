@@ -42,6 +42,7 @@ FramedEditorControls.prototype = {
     cbHideMsg();
     document.getElementById("formContainer").style.display = "block";
     this._frameProxy.onLoad();
+    this._env.onFormLoad();
   }
 };
 
@@ -67,6 +68,7 @@ FrameProxy.prototype = {
     this._root.className = '';
     this._iframe = document.createElement('iframe');
     this._iframe.src = this._url;
+    this._iframe.id = 'modal-editor-iframe';
     this._root.appendChild(this._iframe);
   },
 

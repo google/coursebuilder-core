@@ -16,6 +16,7 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
+import collections
 import json
 from models.property import Property
 from models.property import Registry
@@ -44,29 +45,33 @@ class SchemaField(Property):
             schema['valueFormat'] = 'Y/m/d'
         elif 'text' is self._property_type or 'html' is self._property_type:
             schema['editorType'] = 'simple'
+        elif 'select' is self._property_type:
+            choices = []
+            for value, label in self._select_data:
+                choices.append({'value': value, 'label': label})
+            schema['choices'] = choices
 
         if self._description:
             schema['description'] = self._description
         return schema
 
-    def name(self):
-        return self._name
-
 
 class FieldRegistry(Registry):
     """FieldRegistry is a collection of SchemaField's for an API."""
 
-    def add_sub_registry(self, name, title, descirption=None):
+    def add_sub_registry(
+        self, name, title=None, description=None, registry=None):
         """Add a sub registry to for this Registry."""
-        b = FieldRegistry(title, descirption)
-        self._sub_registories[name] = b
-        return b
+        if not registry:
+            registry = FieldRegistry(title, description)
+        self._sub_registories[name] = registry
+        return registry
 
     def get_json_schema_dict(self):
         schema_dict = dict(self._registry)
-        schema_dict['properties'] = {}
+        schema_dict['properties'] = collections.OrderedDict()
         for schema_field in self._properties:
-            schema_dict['properties'][schema_field.name()] = (
+            schema_dict['properties'][schema_field.name] = (
                 schema_field.get_json_schema())
         for key in self._sub_registories.keys():
             schema_dict['properties'][key] = (
@@ -88,7 +93,7 @@ class FieldRegistry(Registry):
 
         for schema_field in self._properties:
             field_key = list(base_key)
-            field_key.append(schema_field.name())
+            field_key.append(schema_field.name)
             field_key.append('_inputex')
             filed_tuple = field_key, schema_field.get_schema_dict_entry()
             schema_dict.append(filed_tuple)
@@ -140,7 +145,7 @@ class FieldRegistry(Registry):
 
     def convert_entity_to_json_entity(self, entity, json_entry):
         for schema_field in self._properties:
-            field_name = schema_field.name()
+            field_name = schema_field.name
             field_name_parts = field_name.split(':')
             field_name_parts.reverse()
             value = self._get_field_value(field_name_parts, entity)

@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from selenium.webdriver.common import action_chains
 from selenium.webdriver.common import by
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import select
@@ -326,11 +327,79 @@ class AddLink(DashboardEditor):
 
 class AddLesson(DashboardEditor):
     """Page object to model the dashboard's lesson editor."""
+    RTE_EDITOR_ID = 'gcbRteField-0_editor'
+    RTE_TEXTAREA_ID = 'gcbRteField-0'
 
     def __init__(self, tester):
         super(AddLesson, self).__init__(tester)
         self.expect_status_message_to_be(
             'New lesson has been created and saved.')
+
+    def click_rich_text(self):
+        el = self.find_element_by_css_selector('div.rte-control')
+        self._tester.assertEqual('Rich Text', el.text)
+        el.click()
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.element_to_be_clickable((by.By.ID, AddLesson.RTE_EDITOR_ID)))
+        return self
+
+    def click_plain_text(self):
+        el = self.find_element_by_css_selector('div.rte-control')
+        self._tester.assertEqual('Plain Text', el.text)
+        el.click()
+        return self
+
+    def set_rte_text(self, text):
+        self.find_element_by_id('gcbRteField-0_editor').send_keys(text)
+        return self
+
+    def click_rte_add_custom_tag(self):
+        self.find_element_by_link_text(
+            'Insert Google Course Builder widget').click()
+        return self
+
+    def doubleclick_rte_element(self, elt_css_selector):
+        self._tester.driver.switch_to_frame(AddLesson.RTE_EDITOR_ID)
+        target = self.find_element_by_css_selector(elt_css_selector)
+        action_chains.ActionChains(
+            self._tester.driver).double_click(target).perform()
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def _ensure_rte_iframe_ready_and_switch_to_it(self):
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.frame_to_be_available_and_switch_to_it('modal-editor-iframe'))
+        # Ensure inputEx has initialized too
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.element_to_be_clickable(
+                (by.By.PARTIAL_LINK_TEXT, 'Close')))
+
+    def set_rte_lightbox_field(self, field_css_selector, value):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        field = self.find_element_by_css_selector(field_css_selector)
+        field.clear()
+        field.send_keys(value)
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def ensure_rte_lightbox_field_has_value(self, field_css_selector, value):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        self._tester.assertEqual(
+            value,
+            self.find_element_by_css_selector(
+                field_css_selector).get_attribute('value'))
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def click_rte_save(self):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        self.find_element_by_link_text('Save').click()
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def ensure_objectives_textarea_contains(self, text):
+        self._tester.assertTrue(text in self.find_element_by_id(
+            AddLesson.RTE_TEXTAREA_ID).get_attribute('value'))
 
 
 class Organize(DashboardEditor):
