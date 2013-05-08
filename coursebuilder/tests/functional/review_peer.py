@@ -19,6 +19,8 @@ __author__ = [
 ]
 
 from models import entities
+from models import models
+from models import review
 from modules.review import peer
 from tests.functional import actions
 from google.appengine.ext import db
@@ -33,7 +35,7 @@ class UnvalidatedReference(entities.BaseEntity):
 
 
 class ValidatedReference(entities.BaseEntity):
-    referenced_model_key = peer.KeyProperty(kind=ReferencedModel.__name__)
+    referenced_model_key = peer.KeyProperty(kind=ReferencedModel.kind())
 
 
 class KeyPropertyTest(actions.TestBase):
@@ -73,3 +75,36 @@ class KeyPropertyTest(actions.TestBase):
         self.assertRaises(
             db.BadValueError, ValidatedReference,
             referenced_model_key=model_key)
+
+
+class ReviewStepTest(actions.TestBase):
+
+    def test_constructor_sets_key_name(self):
+        """Tests construction of key_name, put of entity with key_name set."""
+        unit_id = 'unit_id'
+        reviewee_key = models.Student(key_name='reviewee@example.com').put()
+        reviewer_key = models.Student(key_name='reviewer@example.com').put()
+        submission_key = review.Submission().put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            reviewee_key=reviewee_key, reviewer_key=reviewer_key,
+            state=peer.REVIEW_STATE_ASSIGNED,
+            submission_key=submission_key, unit_id=unit_id).put()
+        self.assertEqual(
+            peer.ReviewStep.key_name(
+                unit_id, submission_key, reviewee_key, reviewer_key),
+            step_key.name())
+
+
+class ReviewSummaryTest(actions.TestBase):
+
+    def test_constructor_sets_key_name(self):
+        unit_id = 'unit_id'
+        reviewee_key = models.Student(key_name='reviewee@example.com').put()
+        submission_key = review.Submission().put()
+        summary_key = peer.ReviewSummary(
+            reviewee_key=reviewee_key, submission_key=submission_key,
+            unit_id=unit_id).put()
+        self.assertEqual(
+            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key),
+            summary_key.name())

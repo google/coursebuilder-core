@@ -24,6 +24,14 @@ from modules.review import peer
 from google.appengine.ext import db
 
 
+class Error(Exception):
+    """Base error class."""
+
+
+class ReviewProcessAlreadyStartedError(Error):
+    """Raised when someone attempts to start a review process in progress."""
+
+
 class _DomainObject(object):
     """Domain object for review-related classes."""
 
@@ -135,12 +143,14 @@ class ReviewSummary(_DomainObject):
 
     def __init__(
         self, assigned_count=None, completed_count=None, change_date=None,
-        create_date=None, key=None, submission_key=None, unit_id=None):
+        create_date=None, key=None, reviewee_key=None, submission_key=None,
+        unit_id=None):
         self._assigned_count = assigned_count
         self._completed_count = completed_count
         self._change_date = change_date
         self._create_date = create_date
         self._key = key
+        self._reviewee_key = reviewee_key
         self._submission_key = submission_key
         self._unit_id = unit_id
 
@@ -163,6 +173,10 @@ class ReviewSummary(_DomainObject):
     @property
     def key(self):
         return self._key
+
+    @property
+    def reviewee_key(self):
+        return self._reviewee_key
 
     @property
     def submission_key(self):
@@ -189,3 +203,46 @@ class Submission(_DomainObject):
     @property
     def key(self):
         return self._key
+
+
+class Manager(object):
+    """Object that manages the review subsystem."""
+
+    @classmethod
+    def start_review_process_for(cls, unit_id, submission_key, reviewee_key):
+        """Registers a new submission with the review subsystem.
+
+        Once registered, reviews can be assigned against a given submission,
+        either by humans or by machine. No reviews are assigned during
+        registration -- this method merely makes them assignable.
+
+        Args:
+            unit_id: string. Unique identifier for a unit.
+            submission_key: db.Key of models.review.Submission. The submission
+                being registered.
+            reviewee_key: db.Key of models.models.Student. The student who
+                authored the submission.
+
+        Raises:
+            ReviewProcessAlreadyStartedError: if the review process has already
+                been started for this student's submission.
+            db.BadValueError: if passed args are invalid.
+
+        Returns:
+            db.Key of created ReviewSummary.
+        """
+        return cls._create_review_summary(
+            reviewee_key, submission_key, unit_id)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _create_review_summary(cls, reviewee_key, submission_key, unit_id):
+        collision = peer.ReviewSummary.get_by_key_name(
+            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
+        if collision:
+            raise ReviewProcessAlreadyStartedError()
+
+        return peer.ReviewSummary(
+            parent=reviewee_key, reviewee_key=reviewee_key,
+            submission_key=submission_key, unit_id=unit_id
+        ).put()
