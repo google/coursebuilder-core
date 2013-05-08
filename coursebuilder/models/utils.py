@@ -14,10 +14,113 @@
 
 """Helper functions to work with various models."""
 
-__author__ = 'Sean Lip (sll@google.com)'
+__author__ = [
+    'johncox@google.com (John Cox)',
+    'sll@google.com (Sean Lip)',
+]
 
-
+import logging
 import transforms
+
+_LOG = logging.getLogger('models.utils')
+logging.basicConfig()
+
+
+class Error(Exception):
+    """Base error class."""
+
+
+class StopMapping(Error):
+    """Raised by user's map function to stop execution."""
+
+
+class QueryMapper(object):
+    """Mapper that applies a function to each result of a db.query.
+
+    QueryMapper works with result sets larger than 1000.
+
+    Usage:
+
+        def map_fn(model, named_arg, keyword_arg=None):
+            [...]
+
+        query = MyModel.all()
+        # We manipulate query, so it cannot be reused after it's fed to
+        # QueryMapper.
+        mapper = QueryMapper(query)
+        mapper.run(map_fn, 'foo', keyword_arg='bar')
+    """
+
+    def __init__(self, query, batch_size=20, report_every=None):
+        """Constructs a new QueryMapper.
+
+        Args:
+            query: db.Query. The query to run. Cannot be reused after the
+                query mapper's run() method is invoked.
+            batch_size: int. Number of results to fetch per batch.
+            report_every: int or None. If specified, every report_every results
+                we will log the number of results processed at level info. By
+                default we will do this every 10 batches. Set to 0 to disable
+                logging.
+        """
+        if report_every is None:
+            report_every = 10 * batch_size
+
+        self._batch_size = batch_size
+        self._query = query
+        self._report_every = report_every
+
+    def run(self, fn, *fn_args, **fn_kwargs):
+        """Runs the query in batches, applying a function to each result.
+
+        Args:
+            fn: function. Takes a db.Model instance as its first arg, then any
+                number of positional and keyword arguments. Called on each
+                model returned by the query.
+            *fn_args: positional args delegated to fn.
+            **fn_kwargs: keyword args delegated to fn.
+
+        Returns:
+            Integer. Total number of results processed.
+        """
+        total_count = 0
+        cursor = None
+
+        while True:
+            batch_count, cursor = self._handle_batch(
+                cursor, fn, *fn_args, **fn_kwargs)
+
+            total_count += batch_count
+
+            if not (batch_count and cursor):
+                return total_count
+
+            if self._report_every != 0 and not total_count % self._report_every:
+                _LOG.info(
+                    'Models processed by %s.%s so far: %s' % (
+                        fn.__module__, fn.func_name, total_count))
+
+    def _handle_batch(self, cursor, fn, *fn_args, **fn_kwargs):
+        if cursor:
+            self._query.with_cursor(start_cursor=cursor)
+
+        count = 0
+        empty = True
+
+        for model in self._query.fetch(limit=self._batch_size):
+            try:
+                fn(model, *fn_args, **fn_kwargs)
+            except StopMapping:
+                return count, None
+
+            count += 1
+            empty = False
+
+        cursor = None
+        if not empty:
+            cursor = self._query.cursor()
+
+        return count, cursor
 
 
 def set_answer(answers, assessment_name, answer):
