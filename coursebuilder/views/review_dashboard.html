@@ -28,12 +28,7 @@
         {{ gettext('All reviews are due by %(review_due_date)s.',
                    review_due_date=review_due_date) }}
 
-        {# I18N: Instructions for a student being asked to do a review. #}
-        {{ ngettext(
-            'In order to earn credit for this assignment, you must complete at least %(review_min_count)d review by then.',
-            'In order to earn credit for this assignment, you must complete at least %(review_min_count)d reviews by then.',
-            review_min_count) % {'review_min_count': review_min_count}
-        }}
+        In order to earn credit for this assignment, you must complete at least {{review_min_count}} reviews by then.
       </em>
     </p>
 
