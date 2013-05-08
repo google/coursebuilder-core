@@ -1,0 +1,772 @@
+# Telugu translations for PROJECT.
+# Copyright (C) 2013 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2013-04-29 18:58-0700\n"
+"PO-Revision-Date: 2013-04-28 22:13-0700\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: te <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 0.9.6\n"
+
+#. Title of the webpage.
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/activity.html:5
+#: experimental/coursebuilder/views/activity.html:36
+#: experimental/coursebuilder/views/unit.html:5
+#: experimental/coursebuilder/views/unit.html:27
+msgid "Unit"
+msgstr "యూనిట్"
+
+#. Navigation breadcrumb.
+#. Title of the webpage.
+#. Navbar tab.
+#: experimental/coursebuilder/views/activity.html:32
+#: experimental/coursebuilder/views/base.html:16
+#: experimental/coursebuilder/views/base.html:180
+#: experimental/coursebuilder/views/base_registration.html:14
+#: experimental/coursebuilder/views/unit.html:24
+msgid "Course"
+msgstr "కోర్సు"
+
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/activity.html:41
+#: experimental/coursebuilder/views/unit.html:30
+msgid "Lesson"
+msgstr "పాఠం"
+
+#. Navigation breadcrumb.
+#. Menu item.
+#: experimental/coursebuilder/views/activity.html:43
+#: experimental/coursebuilder/views/lesson_navbar.html:58
+#: experimental/coursebuilder/views/lesson_navbar.html:62
+#: experimental/coursebuilder/views/lesson_navbar.html:93
+msgid "Activity"
+msgstr "కార్యాచరణ"
+
+#. Header text for a unit page.
+#. A row in the course schedule.
+#: experimental/coursebuilder/views/activity.html:48
+#: experimental/coursebuilder/views/course.html:119
+#: experimental/coursebuilder/views/course.html:150
+#: experimental/coursebuilder/views/preview.html:42
+#: experimental/coursebuilder/views/unit.html:36
+#, python-format
+msgid "Unit %(id)s - %(title)s"
+msgstr "యూనిట్ %(id)s - %(title)s"
+
+#. Text shown for a unit that has had no lessons added to it yet.
+#: experimental/coursebuilder/views/activity.html:62
+#: experimental/coursebuilder/views/unit.html:51
+msgid "This unit does not contain any lessons."
+msgstr "ఈ యూనిట్‌లో పాఠాలు ఏవీ లేవు."
+
+#. Link to a text version of a lesson video.
+#: experimental/coursebuilder/views/activity.html:91
+#: experimental/coursebuilder/views/unit.html:82
+msgid "Text Version"
+msgstr "వచన సంస్కరణ"
+
+#. Text shown for a lesson that has not been made public.
+#: experimental/coursebuilder/views/activity.html:110
+#: experimental/coursebuilder/views/unit.html:108
+msgid "This lesson is not available."
+msgstr "ఈ పాఠం అందుబాటులో లేదు."
+
+#. Text on the navigation button at the end of a lesson page.
+#: experimental/coursebuilder/views/activity.html:121
+#: experimental/coursebuilder/views/unit.html:118
+msgid "Previous Page"
+msgstr "మునుపటి పేజీ"
+
+#. Text on the navigation button at the end of a lesson page.
+#: experimental/coursebuilder/views/activity.html:127
+#: experimental/coursebuilder/views/unit.html:124
+msgid "Next Page"
+msgstr "తదుపరి పేజీ"
+
+#. Text on the navigation button at the end of a lesson. It signals that the
+#. student has completed a unit (which is a series of lessons).
+#: experimental/coursebuilder/views/activity.html:130
+#: experimental/coursebuilder/views/unit.html:127
+msgid "End"
+msgstr "ముగింపు"
+
+#. Title of the webpage.
+#. Navbar tab.
+#: experimental/coursebuilder/views/announcements.html:5
+#: experimental/coursebuilder/views/base.html:176
+#: experimental/coursebuilder/views/base_registration.html:10
+msgid "Announcements"
+msgstr "ప్రకటనలు"
+
+#. Shown if the list of announcements is empty.
+#: experimental/coursebuilder/views/announcements.html:25
+msgid "No announcements yet."
+msgstr "ఇంకా ప్రకటనలు లేవు."
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/assessment.html:5
+msgid "Assessment"
+msgstr "మూల్య నిర్ధారణ"
+
+#. Text shown to students when they visit an assignment page for which the due
+#. date has passed.
+#: experimental/coursebuilder/views/assessment.html:44
+#, python-format
+msgid ""
+"The due date for submitting this assignment has passed. It was due on "
+"%(submission_due_date)s."
+msgstr ""
+
+#. Shown to the student on the assignment page.
+#: experimental/coursebuilder/views/assessment.html:49
+msgid "Due date for this assignment: "
+msgstr "ఈ అభ్యాసానికి గడువు తేదీ: "
+
+#. Instructions to the student for a peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:59
+msgid ""
+"You may only submit this assignment once. After you submit it, the "
+"assignment will become read-only, and you will not be able to modify your"
+" answers. The answers you submit here will be reviewed by your peers."
+msgstr ""
+"మీరు ఈ అభ్యాసాన్ని ఒక్కసారి మాత్రమే సమర్పించవచ్చు. మీరు దీన్ని సమర్పించిన"
+" తర్వాత, అభ్యాసం చదవడానికి మాత్రమేగా మారుతుంది మరియు మీరు మీ సమాధానాలను "
+"సవరించలేరు. మీరు ఇక్కడ సమర్పించే సమాధానాలను మీ తోటివిద్యార్థులు "
+"సమీక్షిస్తారు."
+
+#. Header text for a previously-submitted assignment.
+#: experimental/coursebuilder/views/assessment.html:71
+msgid "Submitted assignment"
+msgstr "సమర్పించబడిన అభ్యాసం"
+
+#. Header text for the list of reviews received for an assignment.
+#: experimental/coursebuilder/views/assessment.html:79
+msgid "Reviews received"
+msgstr "స్వీకరించిన సమీక్షలు"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:86
+msgid ""
+"After you have completed the required number of peer reviews for this "
+"assignment, the reviews you have received will appear here."
+msgstr ""
+"మీరు ఈ అభ్యాసానికి అవసరమైన సంఖ్యలో తోటివిద్యార్థుల సమీక్షలను పూర్తి చేసిన"
+" తర్వాత, మీరు స్వీకరించిన సమీక్షలు ఇక్కడ కనిపిస్తాయి."
+
+#. Text shown on a button that allows the student to navigate from an
+#. assignment submission page to the peer review dashboard for that assignment.
+#: experimental/coursebuilder/views/assessment.html:93
+msgid "Go to the review dashboard"
+msgstr "సమీక్ష డాష్‌బోర్డ్‌కు వెళ్లు"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:98
+msgid "You have not received any peer reviews yet."
+msgstr "మీరు ఇప్పటికీ తోటివిద్యార్థుల సమీక్షలను స్వీకరించలేదు."
+
+#. Text on the button for checking an answer.
+#: experimental/coursebuilder/views/base.html:42
+msgid " Check Answer "
+msgstr " సమాధానాన్ని తనిఖీ చేయండి "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/views/base.html:46
+msgid " Check Answers "
+msgstr " సమాధానాలను తనిఖీ చేయండి "
+
+#. Text on the button for showing the answer to a question.
+#: experimental/coursebuilder/views/base.html:50
+msgid " Skip and Show Answer "
+msgstr " దాటవేసి, సమాధానాన్ని చూపు "
+
+#. Text on the button for saving answers to a question.
+#: experimental/coursebuilder/views/base.html:54
+msgid " Save Answers "
+msgstr " సమాధానాలను సేవ్ చేయి "
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/views/base.html:58
+msgid " Save Draft "
+msgstr " చిత్తుప్రతిని సేవ్ చేయి "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/views/base.html:62
+msgid " Submit Answers "
+msgstr " సమాధానాలను సమర్పించు "
+
+#. Text on the button for submitting a peer-reviewed assignment.
+#: experimental/coursebuilder/views/base.html:66
+msgid " Submit Assignment "
+msgstr " అభ్యాసాన్ని సమర్పించు "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/views/base.html:70
+msgid " Submit Review "
+msgstr " సమీక్షను సమర్పించు "
+
+#. Text to prompt the student to select a multiple-choice answer.
+#: experimental/coursebuilder/views/base.html:74
+msgid " Please click one of the buttons for your answer. "
+msgstr " దయచేసి మీ సమాధానం కోసం బటన్‌ల్లో ఒకదాన్ని క్లిక్ చేయండి. "
+
+#. Text appearing after the student has answered all questions correctly.
+#: experimental/coursebuilder/views/base.html:78
+msgid " All your answers are correct! "
+msgstr " మీ అన్ని సమాధానాలు సరిగ్గా ఉన్నాయి! "
+
+#. Text appearing after the student has answered all questions correctly.
+#: experimental/coursebuilder/views/base.html:82
+msgid " Number of questions you answered correctly "
+msgstr " మీరు సరిగ్గా సమాధానం ఇచ్చిన ప్రశ్నల సంఖ్య "
+
+#. Text appearing after the student has submitted an assessment.
+#: experimental/coursebuilder/views/base.html:86
+msgid " You received a score on this assessment of "
+msgstr " మీరు దీని యొక్క ఈ మూల్య నిర్ధారణలో ఈ స్కోర్‌ను సాధించారు "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:90
+msgid " Here are lessons you could review to improve your score "
+msgstr " ఇక్కడ మీరు మీ స్కోర్‌ను మెరుగుపరచుకోవడానికి సమీక్షించగల పాఠాలు ఉన్నాయి "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:94
+msgid ""
+" Congratulations! Press the \\'Submit Answers\\' button to submit your "
+"grade. "
+msgstr ""
+" అభినందనలు! మీ గ్రేడ్‌ను సమర్పించడానికి \\'సమాధానాలను సమర్పించు\\' "
+"బటన్‌ను నొక్కండి. "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:98
+msgid ""
+" Press the \\'Submit Answers\\' button below to save your scores. You can"
+" also edit your answers above before clicking \\'Submit Answers\\'. "
+msgstr ""
+" మీ స్కోర్‌లను సేవ్ చేయడానికి దిగువ \\'సమాధానాలను సమర్పించు\\' బటన్‌ను "
+"నొక్కండి. మీరు \\'సమాధానాలను సమర్పించు\\' నొక్కడానికి ముందు ఎగువ మీ "
+"స్కోర్‌లను కూడా సవరించవచ్చు. "
+
+#. Text appearing in a confirmation dialog after the student has tried to
+#. submit an assignment.
+#: experimental/coursebuilder/views/base.html:102
+msgid " Are you sure you want to submit this assignment? "
+msgstr ""
+
+#. Text appearing in a confirmation dialog after the student has tried to
+#. submit a review.
+#: experimental/coursebuilder/views/base.html:106
+msgid " Are you sure you want to submit this review? "
+msgstr ""
+
+#. Text appearing in a confirmation dialog after 'Are you sure you want to
+#. submit this assignment/review?'
+#: experimental/coursebuilder/views/base.html:110
+msgid " You cannot edit or delete it after you have done so. "
+msgstr ""
+
+#. Navbar text.
+#: experimental/coursebuilder/views/base.html:156
+msgid "Logout"
+msgstr "లాగ్ అవుట్ చేయి"
+
+#. Navbar text.
+#: experimental/coursebuilder/views/base.html:162
+msgid "Login"
+msgstr "లాగిన్ చేయి"
+
+#. Navbar tab.
+#. Title of the webpage.
+#: experimental/coursebuilder/views/base.html:185
+#: experimental/coursebuilder/views/forum.html:5
+msgid "Forum"
+msgstr "ఫోరమ్"
+
+#. Navbar tab.
+#. Title of the webpage.
+#: experimental/coursebuilder/views/base.html:190
+#: experimental/coursebuilder/views/student_profile.html:5
+msgid "My Profile"
+msgstr "నా ప్రొఫైల్"
+
+#. Link at the bottom of each page to the privacy and 'Terms and Conditions'
+#. pages.
+#: experimental/coursebuilder/views/base.html:236
+msgid "Privacy & Terms"
+msgstr "గోప్యత & నిబంధనలు"
+
+#. Navbar tab.
+#: experimental/coursebuilder/views/base_registration.html:18
+msgid "Registration"
+msgstr "నమోదు"
+
+#. Message shown to the student immediately after registration.
+#: experimental/coursebuilder/views/confirmation.html:16
+#, python-format
+msgid ""
+"Thank you for registering for %(course_title)s. Unfortunately, the course"
+" is now full, so registration has closed."
+msgstr ""
+"%(course_title)s కోసం నమోదు చేసుకున్నందుకు ధన్యవాదాలు. దురదృష్టవశాత్తూ, "
+"ప్రస్తుతం కోర్సు నిండింది, అందువల్ల నమోదు మూసివేయబడింది."
+
+#. Message shown to the student immediately after registration.
+#: experimental/coursebuilder/views/confirmation.html:22
+#, python-format
+msgid ""
+"Thank you for registering for %(course_title)s. Stay tuned for more "
+"information about the course which will start on %(start_date)s."
+msgstr ""
+"%(course_title)s కోసం నమోదు చేసుకున్నందుకు ధన్యవాదాలు. %(start_date)sన "
+"ప్రారంభమయ్యే కోర్సు గురించి మరింత సమాచారం కోసం వేచి ఉండండి."
+
+#. Welcome text shown to the student after he/she registers for a course. It is
+#. followed immediately by a URL.
+#: experimental/coursebuilder/views/confirmation.html:30
+msgid ""
+"To participate in community discussions about this course, register for "
+"the web forum at "
+msgstr ""
+"ఈ కోర్సు గురించి సంఘం చర్చల్లో పాల్గొనడానికి, దీనిలో వెబ్ ఫోరమ్‌కు నమోదు "
+"చేసుకోండి "
+
+#. Instructions for joining a Google Group.
+#: experimental/coursebuilder/views/confirmation.html:35
+msgid " On that page, click on <b>Join Group</b>. "
+msgstr " ఆ పేజీలో, <b>సమూహంలో చేరండి</b>పై క్లిక్ చేయండి. "
+
+#. Welcome text shown to the student after he/she registers for a course. It is
+#. followed immediately by a URL.
+#: experimental/coursebuilder/views/confirmation.html:42
+msgid ""
+"To receive announcements about this course, register for the "
+"announcements-only email list at "
+msgstr ""
+"ఈ కోర్సు గురించి ప్రకటనలను స్వీకరించడానికి, దీనిలో ప్రకటనలు మాత్రమే "
+"ఇమెయిల్ జాబితాకు నమోదు చేసుకోండి "
+
+#. Instructions for joining a Google Group.
+#: experimental/coursebuilder/views/confirmation.html:47
+msgid ""
+" On that page, click on <b>Join Group</b>. In the dialog box that "
+"appears, under <b>How do you want to read this group?</b>, choose "
+"<b>Email</b>. "
+msgstr ""
+" ఆ పేజీలో, <b>సమూహంలో చేరండి</b> పై క్లిక్ చేయండి. కనిపించే డైలాగ్ "
+"పెట్టెలో, <b>మీరు ఈ సమూహాన్ని ఎలా చదవాలనుకుంటున్నారు?</b> క్రింద "
+"<b>ఇమెయిల్</b>ను ఎంచుకోండి. "
+
+#. This should be interpreted as a noun. It is the title for the course
+#. schedule on the main contents page.
+#: experimental/coursebuilder/views/course.html:19
+#: experimental/coursebuilder/views/preview.html:30
+msgid "Schedule"
+msgstr "షెడ్యూల్"
+
+#. Alt text for image representing student progress.
+#. Text shown after an assignment whose review has been completed.
+#. Shown in the student profile page, next to an assessment title. States
+#. whether the assessment has been completed.
+#: experimental/coursebuilder/views/course.html:30
+#: experimental/coursebuilder/views/course.html:31
+#: experimental/coursebuilder/views/course.html:53
+#: experimental/coursebuilder/views/course.html:54
+#: experimental/coursebuilder/views/course.html:96
+#: experimental/coursebuilder/views/course.html:97
+#: experimental/coursebuilder/views/lesson_navbar.html:35
+#: experimental/coursebuilder/views/lesson_navbar.html:36
+#: experimental/coursebuilder/views/review_dashboard.html:56
+#: experimental/coursebuilder/views/student_data_table.html:46
+msgid "Completed"
+msgstr "పూర్తయింది"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:36
+#: experimental/coursebuilder/views/course.html:37
+#: experimental/coursebuilder/views/course.html:65
+#: experimental/coursebuilder/views/course.html:66
+msgid "Not yet submitted"
+msgstr "ఇంకా సమర్పించలేదు"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:59
+#: experimental/coursebuilder/views/course.html:60
+#: experimental/coursebuilder/views/course.html:102
+#: experimental/coursebuilder/views/course.html:103
+#: experimental/coursebuilder/views/lesson_navbar.html:41
+#: experimental/coursebuilder/views/lesson_navbar.html:42
+msgid "In progress"
+msgstr "ప్రోగ్రెస్‌లో ఉంది"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:108
+#: experimental/coursebuilder/views/course.html:109
+#: experimental/coursebuilder/views/lesson_navbar.html:47
+#: experimental/coursebuilder/views/lesson_navbar.html:48
+msgid "Not yet started"
+msgstr "ఇంకా ప్రారంభించలేదు"
+
+#. Error text for when a student has submitted a review after the deadline.
+#: experimental/coursebuilder/views/error.html:16
+#, python-format
+msgid ""
+"Your review has not been saved, because it was submitted on %(time_now)s."
+" The deadline for submitting reviews was %(review_due_date)s."
+msgstr ""
+
+#. Error text for when a student submits an assignment after the deadline.
+#: experimental/coursebuilder/views/error.html:21
+#, python-format
+msgid ""
+"Your assignment has not been saved, because it was submitted on "
+"%(time_now)s. The deadline for submitting assignments was "
+"%(submission_due_date)s."
+msgstr ""
+
+#. Error text for when a student tries to get a new assignment to review before
+#. submitting his/her own assignment.
+#: experimental/coursebuilder/views/error.html:26
+msgid ""
+"You must submit the assignment for this unit before you can request new "
+"assignments to review."
+msgstr ""
+
+#. Error text for when a student tries to request a new assignment to review
+#. after the review submission deadline.
+#: experimental/coursebuilder/views/error.html:31
+msgid ""
+"The deadline for submitting reviews has already passed, so you cannot "
+"request a new assignment to review."
+msgstr ""
+
+#. Error text for when a student requests a new assignment to review, but needs
+#. to complete more peer reviews first before a new review can be allocated to
+#. him/her.
+#: experimental/coursebuilder/views/error.html:36
+msgid "You must complete all assigned reviews before you can request a new one."
+msgstr ""
+
+#. Error text for when a student has already submitted a review, and tries to
+#. submit it again.
+#: experimental/coursebuilder/views/error.html:41
+msgid "You have already submitted this review. Your latest review was not saved."
+msgstr ""
+
+#. Registration button on the main course page.
+#: experimental/coursebuilder/views/preview.html:13
+msgid "Register"
+msgstr "నమోదు చేయి"
+
+#. Text appearing just before an input field containing a student's answer.
+#: experimental/coursebuilder/views/readonly_assessment.html:31
+#: experimental/coursebuilder/views/readonly_assessment.html:35
+msgid "Answer:"
+msgstr "సమాధానం:"
+
+#. A question in the registration form.
+#: experimental/coursebuilder/views/register.html:23
+msgid "What is your name?"
+msgstr "మీ పేరు ఏమిటి?"
+
+#. Button at the end of the registration form for a course.
+#: experimental/coursebuilder/views/register.html:33
+msgid "Enroll"
+msgstr "నమోదు చేయి"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/review.html:5
+msgid "Review"
+msgstr "సమీక్ష"
+
+#. Link to return to the list of peer reviews.
+#: experimental/coursebuilder/views/review.html:43
+msgid "Back to the review dashboard."
+msgstr "సమీక్ష డాష్‌బోర్డ్‌కు తిరిగి వెళ్లండి."
+
+#. Text shown to students when they visit a review submission page for which
+#. the due date has passed.
+#: experimental/coursebuilder/views/review.html:51
+#, python-format
+msgid ""
+"The due date for submitting this review has passed. It was due on "
+"%(review_due_date)s."
+msgstr ""
+
+#. Shown to a student who is asked to complete a peer review of another
+#. student's assignment.
+#: experimental/coursebuilder/views/review.html:56
+msgid "Due date for this review: "
+msgstr "ఈ సమీక్షకు గడువు తేదీ: "
+
+#. Instructions to a student who is asked to complete a peer review of another
+#. student's assignment.
+#: experimental/coursebuilder/views/review.html:65
+msgid ""
+"The scores and comments you submit here will be viewed by your peers. "
+"Once you submit your review, you may not edit it."
+msgstr ""
+"మీరు ఇక్కడ సమర్పించే స్కోర్‌లు మరియు వ్యాఖ్యలను మీ తోటివిద్యార్థులు "
+"వీక్షిస్తారు. మీరు మీ సమీక్షను సమర్పించిన తర్వాత, దాన్ని మార్చలేకపోవచ్చు."
+
+#. Header text for a reviewed assignment.
+#: experimental/coursebuilder/views/review.html:73
+msgid "Reviewed assignment"
+msgstr "సమీక్షించిన అభ్యాసం"
+
+#. Header text for an assignment that a student still needs to review.
+#: experimental/coursebuilder/views/review.html:76
+msgid "Assignment to review"
+msgstr "సమీక్షించవలసిన అభ్యాసం"
+
+#. Header text for a review the student has previously submitted.
+#: experimental/coursebuilder/views/review.html:87
+msgid "Submitted review"
+msgstr "సమర్పించిన సమీక్ష"
+
+#. Header text for a review form that a student has to complete when reviewing
+#. another student's assignment.
+#: experimental/coursebuilder/views/review.html:93
+msgid "Review form"
+msgstr "సమీక్ష ఫారమ్"
+
+#. Shown as confirmation to a reviewer that his/her review draft has been
+#. saved.
+#: experimental/coursebuilder/views/review_confirmation.html:15
+msgid "Your review has been saved."
+msgstr "మీ సమీక్ష సేవ్ చేయబడింది."
+
+#. Shown as confirmation to a reviewer that his/her review draft has been
+#. submitted.
+#: experimental/coursebuilder/views/review_confirmation.html:18
+msgid "Your review has been submitted successfully."
+msgstr "మీ సమీక్ష విజయవంతంగా సమర్పించబడింది."
+
+#. Text for the button shown on the review submission confirmation page that
+#. allows the student to return to the list of reviews.
+#: experimental/coursebuilder/views/review_confirmation.html:25
+msgid "Back to the review dashboard"
+msgstr "సమీక్ష డాష్‌బోర్డ్‌కు తిరిగి వెళ్లు"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/review_dashboard.html:5
+msgid "Review Dashboard"
+msgstr "సమీక్ష డాష్‌బోర్డ్"
+
+#. Header text for a list of assignments that can be reviewed by the student.
+#: experimental/coursebuilder/views/review_dashboard.html:23
+msgid "Assignments for your review"
+msgstr "మీ సమీక్ష కోసం అభ్యాసాలు"
+
+#. Text shown to students when they visit their list of reviews to be done, but
+#. the due date has passed.
+#: experimental/coursebuilder/views/review_dashboard.html:29
+msgid "The due date for submitting reviews has passed."
+msgstr ""
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:37
+#, python-format
+msgid "All reviews are due by %(review_due_date)s."
+msgstr "అన్ని సమీక్షలకు %(review_due_date)sలోపు గడువు ముగుస్తుంది."
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:41
+msgid ""
+"In order to earn credit for this assignment, you must complete at least 1"
+" review by then."
+msgstr ""
+"ఈ అభ్యాసానికి క్రెడిట్‌ను సంపాదించడానికి, మీరు అప్పటికి కనీసం 1 సమీక్షను "
+"తప్పనిసరిగా పూర్తి చేయాలి."
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:44
+#, python-format
+msgid ""
+"In order to earn credit for this assignment, you must complete at least "
+"%(review_min_count)d reviews by then."
+msgstr ""
+"ఈ అభ్యాసానికి క్రెడిట్‌ను సంపాదించడానికి, మీరు అప్పటికి కనీసం "
+"%(review_min_count)d సమీక్షలను తప్పనిసరిగా పూర్తి చేయాలి."
+
+#. An item in a list of assignments.
+#: experimental/coursebuilder/views/review_dashboard.html:53
+#, python-format
+msgid "Assignment %(index)s"
+msgstr "అభ్యాసం %(index)s"
+
+#. Text shown after an assignment whose review is still in draft state.
+#: experimental/coursebuilder/views/review_dashboard.html:59
+msgid "Draft"
+msgstr "చిత్తుప్రతి"
+
+#. Button that a student can click to request a new assignment to review.
+#: experimental/coursebuilder/views/review_dashboard.html:76
+msgid "Review a new assignment"
+msgstr ""
+
+#. Text shown after a student has asked for a new assignment to review when
+#. there are no assignments left to review.
+#: experimental/coursebuilder/views/review_dashboard.html:83
+msgid ""
+"Sorry, there are no new submissions available for you to review at this "
+"time."
+msgstr ""
+"క్షమించండి, ఈ సమయంలో సమీక్షించడం కోసం మీకు క్రొత్త సమర్పణలు ఏవీ "
+"అందుబాటులో లేవు."
+
+#. Shown on the assignment submission confirmation page when the student has
+#. submitted a duplicate assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:16
+msgid ""
+"You have already submitted this assignment. Your latest attempt has not "
+"been saved."
+msgstr "మీరు ఈ అభ్యాసాన్ని ఇప్పటికే సమర్పించారు. మీ తాజా ప్రయత్నం సేవ్ చేయబడలేదు."
+
+#. Shown on the assignment submission confirmation page when the student has
+#. successfully submitted an assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:19
+msgid ""
+"Thank you for completing this assignment. Your work was successfully "
+"submitted."
+msgstr ""
+"ఈ అభ్యాసాన్ని పూర్తి చేసినందుకు ధన్యవాదాలు. మీ పని విజయవంతంగా "
+"సమర్పించబడింది."
+
+#. Text shown on the assignment submission confirmation page after the student
+#. has submitted a peer-reviewed assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:23
+msgid "Review your peers' assignments by clicking on the button below."
+msgstr ""
+"దిగువ బటన్‌పై క్లిక్ చేయడం ద్వారా మీ తోటివిద్యార్థుల అభ్యాసాలను "
+"సమీక్షించండి."
+
+#. Text for the button on the assignment submission confirmation page.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:30
+msgid "Review peer assignments"
+msgstr "తోటివిద్యార్థుల అభ్యాసాలను సమీక్షించు"
+
+#. Text for the button on the assignment submission confirmation page.
+#. Shown after the student has submitted an assessment. This button allows the
+#. student to navigate back to the main course page.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:35
+#: experimental/coursebuilder/views/test_confirmation.html:31
+msgid "Back to Course page"
+msgstr "కోర్సు పేజీకి తిరిగి వెళ్లు"
+
+#. Table header that states whether a student is currently enrolled in a
+#. course.
+#: experimental/coursebuilder/views/student_data_table.html:9
+msgid "Currently enrolled"
+msgstr "ప్రస్తుతం నమోదు చేయబడ్డారు"
+
+#. Table header that states when a student enrolled in a course.
+#: experimental/coursebuilder/views/student_data_table.html:15
+msgid "Date enrolled"
+msgstr "నమోదు చేసుకున్న తేదీ"
+
+#. Table header for the student's email address. This is a noun.
+#: experimental/coursebuilder/views/student_data_table.html:21
+msgid "Email"
+msgstr "ఇమెయిల్"
+
+#. Table header for the student's name.
+#: experimental/coursebuilder/views/student_data_table.html:27
+msgid "Name"
+msgstr "పేరు"
+
+#. Table header for the student's assessment scores.
+#: experimental/coursebuilder/views/student_data_table.html:34
+msgid "Assessment scores"
+msgstr "మూల్య నిర్ధారణ స్కోర్‌లు"
+
+#. Shown in the student profile page, next to an assignment title, as the link
+#. text for a self- or peer-reviewed assignment.
+#: experimental/coursebuilder/views/student_data_table.html:49
+msgid "View assignment"
+msgstr ""
+
+#. Table header for the student's overall score.
+#: experimental/coursebuilder/views/student_data_table.html:62
+msgid "Overall course score"
+msgstr "మొత్తం కోర్సు స్కోర్"
+
+#. Title of the student profile page. Followed by a student's name.
+#: experimental/coursebuilder/views/student_profile.html:17
+msgid "Student Profile for "
+msgstr "వీరి కోసం విద్యార్థి ప్రొఫైల్ "
+
+#. Label for the input field that allows the student to change the name on
+#. his/her certificate.
+#: experimental/coursebuilder/views/student_profile.html:29
+msgid "New Name"
+msgstr "క్రొత్త పేరు"
+
+#. Text for a button that allows the student to save changes to his/her name
+#. for the certificate.
+#: experimental/coursebuilder/views/student_profile.html:39
+msgid "Change Name"
+msgstr "పేరును మార్చు"
+
+#. Shown on the student profile page.
+#: experimental/coursebuilder/views/student_profile.html:46
+msgid "To leave the course permanently, click on Unenroll"
+msgstr "కోర్సు నుండి శాశ్వతంగా నిష్క్రమించడానికి, నమోదుని తీసివేయిపై క్లిక్ చేయండి"
+
+#. Button that allows the student to unenroll from a course.
+#: experimental/coursebuilder/views/student_profile.html:51
+msgid "Unenroll"
+msgstr "నమోదుని తీసివేయి"
+
+#. Shown when the student profile cannot be found in the database.
+#: experimental/coursebuilder/views/student_profile.html:56
+msgid "Student profile not found ..."
+msgstr "విద్యార్థి ప్రొఫైల్ కనుగొనబడలేదు ..."
+
+#. Alt text for an embedded YouTube video player.
+#: experimental/coursebuilder/views/summary.html:22
+#: experimental/coursebuilder/views/unit.html:91
+msgid "YouTube Video Player"
+msgstr "YouTube వీడియో ప్లేయర్"
+
+#. Text shown after a student has unenrolled from a course. It is followed by a
+#. course name.
+#: experimental/coursebuilder/views/unenroll_confirmation.html:13
+msgid "You have been unenrolled from "
+msgstr "దీని నుండి మీ నమోదు తీసివేయబడింది "
+
+#. Confirmation button, shown when a student has unenrolled from a course.
+#: experimental/coursebuilder/views/unenroll_confirmation.html:19
+msgid "OK"
+msgstr "సరే"
+
+#. Shown when a student has asked to unenroll from a course. Followed by a
+#. course name.
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:13
+msgid "Are you sure you want to unenroll from "
+msgstr "మీరు ఖచ్చితంగా దీని నుండి మీ నమోదుని తీసివేయాలనుకుంటున్నారా "
+
+#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:21
+msgid "Yes"
+msgstr "అవును"
+
+#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:25
+msgid "No"
+msgstr "లేదు"
+

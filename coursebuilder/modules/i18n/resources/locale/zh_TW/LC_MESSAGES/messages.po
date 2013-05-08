@@ -1,0 +1,740 @@
+# Chinese (Taiwan) translations for PROJECT.
+# Copyright (C) 2013 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2013-04-29 18:58-0700\n"
+"PO-Revision-Date: 2013-04-28 22:13-0700\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: zh_TW <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 0.9.6\n"
+
+#. Title of the webpage.
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/activity.html:5
+#: experimental/coursebuilder/views/activity.html:36
+#: experimental/coursebuilder/views/unit.html:5
+#: experimental/coursebuilder/views/unit.html:27
+msgid "Unit"
+msgstr "單元"
+
+#. Navigation breadcrumb.
+#. Title of the webpage.
+#. Navbar tab.
+#: experimental/coursebuilder/views/activity.html:32
+#: experimental/coursebuilder/views/base.html:16
+#: experimental/coursebuilder/views/base.html:180
+#: experimental/coursebuilder/views/base_registration.html:14
+#: experimental/coursebuilder/views/unit.html:24
+msgid "Course"
+msgstr "課程"
+
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/views/activity.html:41
+#: experimental/coursebuilder/views/unit.html:30
+msgid "Lesson"
+msgstr "課堂"
+
+#. Navigation breadcrumb.
+#. Menu item.
+#: experimental/coursebuilder/views/activity.html:43
+#: experimental/coursebuilder/views/lesson_navbar.html:58
+#: experimental/coursebuilder/views/lesson_navbar.html:62
+#: experimental/coursebuilder/views/lesson_navbar.html:93
+msgid "Activity"
+msgstr "活動"
+
+#. Header text for a unit page.
+#. A row in the course schedule.
+#: experimental/coursebuilder/views/activity.html:48
+#: experimental/coursebuilder/views/course.html:119
+#: experimental/coursebuilder/views/course.html:150
+#: experimental/coursebuilder/views/preview.html:42
+#: experimental/coursebuilder/views/unit.html:36
+#, python-format
+msgid "Unit %(id)s - %(title)s"
+msgstr "單位 %(id)s - %(title)s"
+
+#. Text shown for a unit that has had no lessons added to it yet.
+#: experimental/coursebuilder/views/activity.html:62
+#: experimental/coursebuilder/views/unit.html:51
+msgid "This unit does not contain any lessons."
+msgstr "這個單元沒有任何課堂。"
+
+#. Link to a text version of a lesson video.
+#: experimental/coursebuilder/views/activity.html:91
+#: experimental/coursebuilder/views/unit.html:82
+msgid "Text Version"
+msgstr "純文字版"
+
+#. Text shown for a lesson that has not been made public.
+#: experimental/coursebuilder/views/activity.html:110
+#: experimental/coursebuilder/views/unit.html:108
+msgid "This lesson is not available."
+msgstr "這堂課尚未開放報名。"
+
+#. Text on the navigation button at the end of a lesson page.
+#: experimental/coursebuilder/views/activity.html:121
+#: experimental/coursebuilder/views/unit.html:118
+msgid "Previous Page"
+msgstr "上一頁"
+
+#. Text on the navigation button at the end of a lesson page.
+#: experimental/coursebuilder/views/activity.html:127
+#: experimental/coursebuilder/views/unit.html:124
+msgid "Next Page"
+msgstr "下一頁"
+
+#. Text on the navigation button at the end of a lesson. It signals that the
+#. student has completed a unit (which is a series of lessons).
+#: experimental/coursebuilder/views/activity.html:130
+#: experimental/coursebuilder/views/unit.html:127
+msgid "End"
+msgstr "結束"
+
+#. Title of the webpage.
+#. Navbar tab.
+#: experimental/coursebuilder/views/announcements.html:5
+#: experimental/coursebuilder/views/base.html:176
+#: experimental/coursebuilder/views/base_registration.html:10
+msgid "Announcements"
+msgstr "公告"
+
+#. Shown if the list of announcements is empty.
+#: experimental/coursebuilder/views/announcements.html:25
+msgid "No announcements yet."
+msgstr "尚未發佈任何公告。"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/assessment.html:5
+msgid "Assessment"
+msgstr "評估"
+
+#. Text shown to students when they visit an assignment page for which the due
+#. date has passed.
+#: experimental/coursebuilder/views/assessment.html:44
+#, python-format
+msgid ""
+"The due date for submitting this assignment has passed. It was due on "
+"%(submission_due_date)s."
+msgstr ""
+
+#. Shown to the student on the assignment page.
+#: experimental/coursebuilder/views/assessment.html:49
+msgid "Due date for this assignment: "
+msgstr "這項作業的截止日期： "
+
+#. Instructions to the student for a peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:59
+msgid ""
+"You may only submit this assignment once. After you submit it, the "
+"assignment will become read-only, and you will not be able to modify your"
+" answers. The answers you submit here will be reviewed by your peers."
+msgstr "您只有一次提交作業的機會。提交後，這項作業將會設成唯讀，您無法再修改答案。您在這裡提交的答案則會交由其他同學評分。"
+
+#. Header text for a previously-submitted assignment.
+#: experimental/coursebuilder/views/assessment.html:71
+msgid "Submitted assignment"
+msgstr "已提交的作業"
+
+#. Header text for the list of reviews received for an assignment.
+#: experimental/coursebuilder/views/assessment.html:79
+msgid "Reviews received"
+msgstr "收到的評分"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:86
+msgid ""
+"After you have completed the required number of peer reviews for this "
+"assignment, the reviews you have received will appear here."
+msgstr "達到這項作業要求的同學評分次數後，您所獲得的評分將會顯示在這裡。"
+
+#. Text shown on a button that allows the student to navigate from an
+#. assignment submission page to the peer review dashboard for that assignment.
+#: experimental/coursebuilder/views/assessment.html:93
+msgid "Go to the review dashboard"
+msgstr "前往評分資訊主頁"
+
+#. Text shown below a student's peer-reviewed assignment.
+#: experimental/coursebuilder/views/assessment.html:98
+msgid "You have not received any peer reviews yet."
+msgstr "您尚未獲得任何同學評分。"
+
+#. Text on the button for checking an answer.
+#: experimental/coursebuilder/views/base.html:42
+msgid " Check Answer "
+msgstr " 核對答案 "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/views/base.html:46
+msgid " Check Answers "
+msgstr " 核對答案 "
+
+#. Text on the button for showing the answer to a question.
+#: experimental/coursebuilder/views/base.html:50
+msgid " Skip and Show Answer "
+msgstr " 略過並顯示答案 "
+
+#. Text on the button for saving answers to a question.
+#: experimental/coursebuilder/views/base.html:54
+msgid " Save Answers "
+msgstr " 儲存答案 "
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/views/base.html:58
+msgid " Save Draft "
+msgstr " 儲存草稿 "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/views/base.html:62
+msgid " Submit Answers "
+msgstr " 提交答案 "
+
+#. Text on the button for submitting a peer-reviewed assignment.
+#: experimental/coursebuilder/views/base.html:66
+msgid " Submit Assignment "
+msgstr " 提交作業 "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/views/base.html:70
+msgid " Submit Review "
+msgstr " 提交評分 "
+
+#. Text to prompt the student to select a multiple-choice answer.
+#: experimental/coursebuilder/views/base.html:74
+msgid " Please click one of the buttons for your answer. "
+msgstr " 請點選其中的按鈕來回答問題。 "
+
+#. Text appearing after the student has answered all questions correctly.
+#: experimental/coursebuilder/views/base.html:78
+msgid " All your answers are correct! "
+msgstr " 全部答對！ "
+
+#. Text appearing after the student has answered all questions correctly.
+#: experimental/coursebuilder/views/base.html:82
+msgid " Number of questions you answered correctly "
+msgstr " 答對題數 "
+
+#. Text appearing after the student has submitted an assessment.
+#: experimental/coursebuilder/views/base.html:86
+msgid " You received a score on this assessment of "
+msgstr " 您在本次評估的得分為： "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:90
+msgid " Here are lessons you could review to improve your score "
+msgstr " 您可以複習下列課程來提高自己的得分： "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:94
+msgid ""
+" Congratulations! Press the \\'Submit Answers\\' button to submit your "
+"grade. "
+msgstr " 恭喜！請按一下 [提交答案] 按鈕來送出您的成績。 "
+
+#. Text appearing after the student has checked his/her answers to an
+#. assessment.
+#: experimental/coursebuilder/views/base.html:98
+msgid ""
+" Press the \\'Submit Answers\\' button below to save your scores. You can"
+" also edit your answers above before clicking \\'Submit Answers\\'. "
+msgstr " 請按下方的 [提交答案] 按鈕來儲存您的分數。在按下 [提交答案] 按鈕之前，您仍然可以編輯在上方輸入的答案。 "
+
+#. Text appearing in a confirmation dialog after the student has tried to
+#. submit an assignment.
+#: experimental/coursebuilder/views/base.html:102
+msgid " Are you sure you want to submit this assignment? "
+msgstr ""
+
+#. Text appearing in a confirmation dialog after the student has tried to
+#. submit a review.
+#: experimental/coursebuilder/views/base.html:106
+msgid " Are you sure you want to submit this review? "
+msgstr ""
+
+#. Text appearing in a confirmation dialog after 'Are you sure you want to
+#. submit this assignment/review?'
+#: experimental/coursebuilder/views/base.html:110
+msgid " You cannot edit or delete it after you have done so. "
+msgstr ""
+
+#. Navbar text.
+#: experimental/coursebuilder/views/base.html:156
+msgid "Logout"
+msgstr "登出"
+
+#. Navbar text.
+#: experimental/coursebuilder/views/base.html:162
+msgid "Login"
+msgstr "登入"
+
+#. Navbar tab.
+#. Title of the webpage.
+#: experimental/coursebuilder/views/base.html:185
+#: experimental/coursebuilder/views/forum.html:5
+msgid "Forum"
+msgstr "論壇"
+
+#. Navbar tab.
+#. Title of the webpage.
+#: experimental/coursebuilder/views/base.html:190
+#: experimental/coursebuilder/views/student_profile.html:5
+msgid "My Profile"
+msgstr "我的個人資料"
+
+#. Link at the bottom of each page to the privacy and 'Terms and Conditions'
+#. pages.
+#: experimental/coursebuilder/views/base.html:236
+msgid "Privacy & Terms"
+msgstr "隱私權與條款"
+
+#. Navbar tab.
+#: experimental/coursebuilder/views/base_registration.html:18
+msgid "Registration"
+msgstr "報名"
+
+#. Message shown to the student immediately after registration.
+#: experimental/coursebuilder/views/confirmation.html:16
+#, python-format
+msgid ""
+"Thank you for registering for %(course_title)s. Unfortunately, the course"
+" is now full, so registration has closed."
+msgstr "感謝您報名「%(course_title)s」課程。很抱歉，這項課程目前已額滿，暫不接受報名。"
+
+#. Message shown to the student immediately after registration.
+#: experimental/coursebuilder/views/confirmation.html:22
+#, python-format
+msgid ""
+"Thank you for registering for %(course_title)s. Stay tuned for more "
+"information about the course which will start on %(start_date)s."
+msgstr "感謝您報名「%(course_title)s」課程。這項課程的開課日期是 %(start_date)s，敬請期待！"
+
+#. Welcome text shown to the student after he/she registers for a course. It is
+#. followed immediately by a URL.
+#: experimental/coursebuilder/views/confirmation.html:30
+msgid ""
+"To participate in community discussions about this course, register for "
+"the web forum at "
+msgstr "如要加入本課程的討論社群，請前往以下網址申請網路論壇帳戶： "
+
+#. Instructions for joining a Google Group.
+#: experimental/coursebuilder/views/confirmation.html:35
+msgid " On that page, click on <b>Join Group</b>. "
+msgstr " 按一下該網頁中的 [加入群組]<b></b> 按鈕。 "
+
+#. Welcome text shown to the student after he/she registers for a course. It is
+#. followed immediately by a URL.
+#: experimental/coursebuilder/views/confirmation.html:42
+msgid ""
+"To receive announcements about this course, register for the "
+"announcements-only email list at "
+msgstr "如要接收本課程的相關公告，請在公告用電子郵件清單中登記您的電子郵件地址： "
+
+#. Instructions for joining a Google Group.
+#: experimental/coursebuilder/views/confirmation.html:47
+msgid ""
+" On that page, click on <b>Join Group</b>. In the dialog box that "
+"appears, under <b>How do you want to read this group?</b>, choose "
+"<b>Email</b>. "
+msgstr ""
+" 在該網頁中，按一下 [加入群組]<b></b> 按鈕，然後在隨即顯示的對話方塊中，選取 [讀取這個群組內容的方式]<b></b> 底下的 "
+"[電子郵件]<b></b>。 "
+
+#. This should be interpreted as a noun. It is the title for the course
+#. schedule on the main contents page.
+#: experimental/coursebuilder/views/course.html:19
+#: experimental/coursebuilder/views/preview.html:30
+msgid "Schedule"
+msgstr "課程表"
+
+#. Alt text for image representing student progress.
+#. Text shown after an assignment whose review has been completed.
+#. Shown in the student profile page, next to an assessment title. States
+#. whether the assessment has been completed.
+#: experimental/coursebuilder/views/course.html:30
+#: experimental/coursebuilder/views/course.html:31
+#: experimental/coursebuilder/views/course.html:53
+#: experimental/coursebuilder/views/course.html:54
+#: experimental/coursebuilder/views/course.html:96
+#: experimental/coursebuilder/views/course.html:97
+#: experimental/coursebuilder/views/lesson_navbar.html:35
+#: experimental/coursebuilder/views/lesson_navbar.html:36
+#: experimental/coursebuilder/views/review_dashboard.html:56
+#: experimental/coursebuilder/views/student_data_table.html:46
+msgid "Completed"
+msgstr "已完成"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:36
+#: experimental/coursebuilder/views/course.html:37
+#: experimental/coursebuilder/views/course.html:65
+#: experimental/coursebuilder/views/course.html:66
+msgid "Not yet submitted"
+msgstr "尚未提交"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:59
+#: experimental/coursebuilder/views/course.html:60
+#: experimental/coursebuilder/views/course.html:102
+#: experimental/coursebuilder/views/course.html:103
+#: experimental/coursebuilder/views/lesson_navbar.html:41
+#: experimental/coursebuilder/views/lesson_navbar.html:42
+msgid "In progress"
+msgstr "處理中"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/views/course.html:108
+#: experimental/coursebuilder/views/course.html:109
+#: experimental/coursebuilder/views/lesson_navbar.html:47
+#: experimental/coursebuilder/views/lesson_navbar.html:48
+msgid "Not yet started"
+msgstr "尚未開始"
+
+#. Error text for when a student has submitted a review after the deadline.
+#: experimental/coursebuilder/views/error.html:16
+#, python-format
+msgid ""
+"Your review has not been saved, because it was submitted on %(time_now)s."
+" The deadline for submitting reviews was %(review_due_date)s."
+msgstr ""
+
+#. Error text for when a student submits an assignment after the deadline.
+#: experimental/coursebuilder/views/error.html:21
+#, python-format
+msgid ""
+"Your assignment has not been saved, because it was submitted on "
+"%(time_now)s. The deadline for submitting assignments was "
+"%(submission_due_date)s."
+msgstr ""
+
+#. Error text for when a student tries to get a new assignment to review before
+#. submitting his/her own assignment.
+#: experimental/coursebuilder/views/error.html:26
+msgid ""
+"You must submit the assignment for this unit before you can request new "
+"assignments to review."
+msgstr ""
+
+#. Error text for when a student tries to request a new assignment to review
+#. after the review submission deadline.
+#: experimental/coursebuilder/views/error.html:31
+msgid ""
+"The deadline for submitting reviews has already passed, so you cannot "
+"request a new assignment to review."
+msgstr ""
+
+#. Error text for when a student requests a new assignment to review, but needs
+#. to complete more peer reviews first before a new review can be allocated to
+#. him/her.
+#: experimental/coursebuilder/views/error.html:36
+msgid "You must complete all assigned reviews before you can request a new one."
+msgstr ""
+
+#. Error text for when a student has already submitted a review, and tries to
+#. submit it again.
+#: experimental/coursebuilder/views/error.html:41
+msgid "You have already submitted this review. Your latest review was not saved."
+msgstr ""
+
+#. Registration button on the main course page.
+#: experimental/coursebuilder/views/preview.html:13
+msgid "Register"
+msgstr "報名"
+
+#. Text appearing just before an input field containing a student's answer.
+#: experimental/coursebuilder/views/readonly_assessment.html:31
+#: experimental/coursebuilder/views/readonly_assessment.html:35
+msgid "Answer:"
+msgstr "答案："
+
+#. A question in the registration form.
+#: experimental/coursebuilder/views/register.html:23
+msgid "What is your name?"
+msgstr "您的姓名？"
+
+#. Button at the end of the registration form for a course.
+#: experimental/coursebuilder/views/register.html:33
+msgid "Enroll"
+msgstr "註冊"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/review.html:5
+msgid "Review"
+msgstr "評分"
+
+#. Link to return to the list of peer reviews.
+#: experimental/coursebuilder/views/review.html:43
+msgid "Back to the review dashboard."
+msgstr "返回評分資訊主頁。"
+
+#. Text shown to students when they visit a review submission page for which
+#. the due date has passed.
+#: experimental/coursebuilder/views/review.html:51
+#, python-format
+msgid ""
+"The due date for submitting this review has passed. It was due on "
+"%(review_due_date)s."
+msgstr ""
+
+#. Shown to a student who is asked to complete a peer review of another
+#. student's assignment.
+#: experimental/coursebuilder/views/review.html:56
+msgid "Due date for this review: "
+msgstr "這項評分的截止日期： "
+
+#. Instructions to a student who is asked to complete a peer review of another
+#. student's assignment.
+#: experimental/coursebuilder/views/review.html:65
+msgid ""
+"The scores and comments you submit here will be viewed by your peers. "
+"Once you submit your review, you may not edit it."
+msgstr "您在這裡提交的分數和評論將會開放讓其他同學查看。提交評分後，即無法再修改。"
+
+#. Header text for a reviewed assignment.
+#: experimental/coursebuilder/views/review.html:73
+msgid "Reviewed assignment"
+msgstr "已評分的作業"
+
+#. Header text for an assignment that a student still needs to review.
+#: experimental/coursebuilder/views/review.html:76
+msgid "Assignment to review"
+msgstr "待評分的作業"
+
+#. Header text for a review the student has previously submitted.
+#: experimental/coursebuilder/views/review.html:87
+msgid "Submitted review"
+msgstr "已提交的評分"
+
+#. Header text for a review form that a student has to complete when reviewing
+#. another student's assignment.
+#: experimental/coursebuilder/views/review.html:93
+msgid "Review form"
+msgstr "評分表"
+
+#. Shown as confirmation to a reviewer that his/her review draft has been
+#. saved.
+#: experimental/coursebuilder/views/review_confirmation.html:15
+msgid "Your review has been saved."
+msgstr "您的評分已儲存。"
+
+#. Shown as confirmation to a reviewer that his/her review draft has been
+#. submitted.
+#: experimental/coursebuilder/views/review_confirmation.html:18
+msgid "Your review has been submitted successfully."
+msgstr "您的評分已成功提交。"
+
+#. Text for the button shown on the review submission confirmation page that
+#. allows the student to return to the list of reviews.
+#: experimental/coursebuilder/views/review_confirmation.html:25
+msgid "Back to the review dashboard"
+msgstr "返回評分資訊主頁"
+
+#. Title of the webpage.
+#: experimental/coursebuilder/views/review_dashboard.html:5
+msgid "Review Dashboard"
+msgstr "評分資訊主頁"
+
+#. Header text for a list of assignments that can be reviewed by the student.
+#: experimental/coursebuilder/views/review_dashboard.html:23
+msgid "Assignments for your review"
+msgstr "可供您評分的作業"
+
+#. Text shown to students when they visit their list of reviews to be done, but
+#. the due date has passed.
+#: experimental/coursebuilder/views/review_dashboard.html:29
+msgid "The due date for submitting reviews has passed."
+msgstr ""
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:37
+#, python-format
+msgid "All reviews are due by %(review_due_date)s."
+msgstr "請在 %(review_due_date)s前完成所有評分。"
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:41
+msgid ""
+"In order to earn credit for this assignment, you must complete at least 1"
+" review by then."
+msgstr "如要獲得這項作業的學分，您必須完成至少 1 次評分。"
+
+#. Instructions for a student being asked to do a review.
+#: experimental/coursebuilder/views/review_dashboard.html:44
+#, python-format
+msgid ""
+"In order to earn credit for this assignment, you must complete at least "
+"%(review_min_count)d reviews by then."
+msgstr "如要獲得這項作業的學分，您必須完成至少 %(review_min_count)d 次評分。"
+
+#. An item in a list of assignments.
+#: experimental/coursebuilder/views/review_dashboard.html:53
+#, python-format
+msgid "Assignment %(index)s"
+msgstr "第 %(index)s 項作業"
+
+#. Text shown after an assignment whose review is still in draft state.
+#: experimental/coursebuilder/views/review_dashboard.html:59
+msgid "Draft"
+msgstr "草稿"
+
+#. Button that a student can click to request a new assignment to review.
+#: experimental/coursebuilder/views/review_dashboard.html:76
+msgid "Review a new assignment"
+msgstr ""
+
+#. Text shown after a student has asked for a new assignment to review when
+#. there are no assignments left to review.
+#: experimental/coursebuilder/views/review_dashboard.html:83
+msgid ""
+"Sorry, there are no new submissions available for you to review at this "
+"time."
+msgstr "很抱歉，目前沒有最新提交的作業可供您評分。"
+
+#. Shown on the assignment submission confirmation page when the student has
+#. submitted a duplicate assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:16
+msgid ""
+"You have already submitted this assignment. Your latest attempt has not "
+"been saved."
+msgstr "您已提交過這項作業，因此系統並未儲存您最近提交的內容。"
+
+#. Shown on the assignment submission confirmation page when the student has
+#. successfully submitted an assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:19
+msgid ""
+"Thank you for completing this assignment. Your work was successfully "
+"submitted."
+msgstr "感謝您完成這項作業，您已成功提交作業。"
+
+#. Text shown on the assignment submission confirmation page after the student
+#. has submitted a peer-reviewed assignment.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:23
+msgid "Review your peers' assignments by clicking on the button below."
+msgstr "請按下方的按鈕，為同學的作業評分。"
+
+#. Text for the button on the assignment submission confirmation page.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:30
+msgid "Review peer assignments"
+msgstr "為同學的作業評分"
+
+#. Text for the button on the assignment submission confirmation page.
+#. Shown after the student has submitted an assessment. This button allows the
+#. student to navigate back to the main course page.
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:35
+#: experimental/coursebuilder/views/test_confirmation.html:31
+msgid "Back to Course page"
+msgstr "返回課程頁面"
+
+#. Table header that states whether a student is currently enrolled in a
+#. course.
+#: experimental/coursebuilder/views/student_data_table.html:9
+msgid "Currently enrolled"
+msgstr "已註冊"
+
+#. Table header that states when a student enrolled in a course.
+#: experimental/coursebuilder/views/student_data_table.html:15
+msgid "Date enrolled"
+msgstr "註冊日期"
+
+#. Table header for the student's email address. This is a noun.
+#: experimental/coursebuilder/views/student_data_table.html:21
+msgid "Email"
+msgstr "電子郵件"
+
+#. Table header for the student's name.
+#: experimental/coursebuilder/views/student_data_table.html:27
+msgid "Name"
+msgstr "姓名"
+
+#. Table header for the student's assessment scores.
+#: experimental/coursebuilder/views/student_data_table.html:34
+msgid "Assessment scores"
+msgstr "評估分數"
+
+#. Shown in the student profile page, next to an assignment title, as the link
+#. text for a self- or peer-reviewed assignment.
+#: experimental/coursebuilder/views/student_data_table.html:49
+msgid "View assignment"
+msgstr ""
+
+#. Table header for the student's overall score.
+#: experimental/coursebuilder/views/student_data_table.html:62
+msgid "Overall course score"
+msgstr "整體課程分數"
+
+#. Title of the student profile page. Followed by a student's name.
+#: experimental/coursebuilder/views/student_profile.html:17
+msgid "Student Profile for "
+msgstr "以下學生的個人資料： "
+
+#. Label for the input field that allows the student to change the name on
+#. his/her certificate.
+#: experimental/coursebuilder/views/student_profile.html:29
+msgid "New Name"
+msgstr "新的姓名"
+
+#. Text for a button that allows the student to save changes to his/her name
+#. for the certificate.
+#: experimental/coursebuilder/views/student_profile.html:39
+msgid "Change Name"
+msgstr "變更姓名"
+
+#. Shown on the student profile page.
+#: experimental/coursebuilder/views/student_profile.html:46
+msgid "To leave the course permanently, click on Unenroll"
+msgstr "如要永久退出課程，請按一下 [取消註冊]"
+
+#. Button that allows the student to unenroll from a course.
+#: experimental/coursebuilder/views/student_profile.html:51
+msgid "Unenroll"
+msgstr "取消註冊"
+
+#. Shown when the student profile cannot be found in the database.
+#: experimental/coursebuilder/views/student_profile.html:56
+msgid "Student profile not found ..."
+msgstr "找不到學生個人資料..."
+
+#. Alt text for an embedded YouTube video player.
+#: experimental/coursebuilder/views/summary.html:22
+#: experimental/coursebuilder/views/unit.html:91
+msgid "YouTube Video Player"
+msgstr "YouTube 影片播放器"
+
+#. Text shown after a student has unenrolled from a course. It is followed by a
+#. course name.
+#: experimental/coursebuilder/views/unenroll_confirmation.html:13
+msgid "You have been unenrolled from "
+msgstr "您已經取消註冊以下課程： "
+
+#. Confirmation button, shown when a student has unenrolled from a course.
+#: experimental/coursebuilder/views/unenroll_confirmation.html:19
+msgid "OK"
+msgstr "確定"
+
+#. Shown when a student has asked to unenroll from a course. Followed by a
+#. course name.
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:13
+msgid "Are you sure you want to unenroll from "
+msgstr "確定要取消註冊以下課程嗎？ "
+
+#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:21
+msgid "Yes"
+msgstr "是"
+
+#. Response option to 'Are you sure you want to unenroll from COURSE_NAME'?
+#: experimental/coursebuilder/views/unenroll_confirmation_check.html:25
+msgid "No"
+msgstr "否"
+
