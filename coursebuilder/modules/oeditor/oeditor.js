@@ -124,15 +124,26 @@ function keepPopupInView(Y) {
   }
 }
 
-// set initial UI state
-document.getElementById("formContainer").style.display = "none";
-cbShowMsg("Loading...");
+function onPageLoad(env) {
+  YUI.add("gcb-rte", bindGcbRteField, '3.1.0', {
+    requires: ['inputex-field', 'yui2-editor']
+  });
 
+  YUI(getYuiConfig(env.bundle_lib_files)).use(
+    env.required_modules,
+    mainYuiFunction);
+
+  document.getElementById("close-status-popup-button").onclick = cbHideMsg;
+
+  // set initial UI state
+  document.getElementById("formContainer").style.display = "none";
+  cbShowMsg("Loading...");
+}
 
 /**
  * Define a rich text editor widget in the module "gcb-rte".
  */
-YUI.add("gcb-rte",function(Y){
+function bindGcbRteField(Y) {
 
   var inputEx = Y.inputEx,
       Dom = Y.DOM;
@@ -293,59 +304,59 @@ YUI.add("gcb-rte",function(Y){
   };
   Y.extend(GcbRteField, inputEx.Field, gcbRteDefs);
   inputEx.registerType("html", GcbRteField, []);
-}, '3.1.0', {
-  requires: ['inputex-field', 'yui2-editor']
-});
+};
 
-if (cb_global.bundle_lib_files) {
-  var yui_config = {
-    filter: "raw",
-    combine: true,
-    comboBase: '/static/combo/yui?',
-    root: 'yui/build/',
-    groups: {
-      inputex: {
-        combine: 'true',
-        comboBase: '/static/combo/inputex?',
-        root: 'src/'
-      },
-      yui2: {
-        combine: true,
-        comboBase: '/static/combo/2in3?',
-        root: '2in3-master/dist/2.9.0/build/',
-        patterns:  {
-          'yui2-': {
-            configFn: function(me) {
-              if(/-skin|reset|fonts|grids|base/.test(me.name)) {
-                me.type = 'css';
-                me.path = me.path.replace(/\.js/, '.css');
-                me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+function getYuiConfig(bundle_lib_files) {
+  if (bundle_lib_files) {
+    return {
+      filter: "raw",
+      combine: true,
+      comboBase: '/static/combo/yui?',
+      root: 'yui/build/',
+      groups: {
+        inputex: {
+          combine: 'true',
+          comboBase: '/static/combo/inputex?',
+          root: 'src/'
+        },
+        yui2: {
+          combine: true,
+          comboBase: '/static/combo/2in3?',
+          root: '2in3-master/dist/2.9.0/build/',
+          patterns:  {
+            'yui2-': {
+              configFn: function(me) {
+                if(/-skin|reset|fonts|grids|base/.test(me.name)) {
+                  me.type = 'css';
+                  me.path = me.path.replace(/\.js/, '.css');
+                  me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+                }
               }
             }
           }
         }
       }
     }
-  }
-} else {
-  var yui_config = {
-    filter: "raw",
-    combine: false,
-    base: '/static/yui_3.6.0/yui/build/',
-    groups: {
-      inputex: {
-        base: '/static/inputex-3.1.0/src/'
-      },
-      yui2: {
-        base: '/static/2in3/2in3-master/dist/2.9.0/build/',
-        combine: false,
-        patterns:  {
-          'yui2-': {
-            configFn: function(me) {
-              if(/-skin|reset|fonts|grids|base/.test(me.name)) {
-                me.type = 'css';
-                me.path = me.path.replace(/\.js/, '.css');
-                me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+  } else {
+    return {
+      filter: "raw",
+      combine: false,
+      base: '/static/yui_3.6.0/yui/build/',
+      groups: {
+        inputex: {
+          base: '/static/inputex-3.1.0/src/'
+        },
+        yui2: {
+          base: '/static/2in3/2in3-master/dist/2.9.0/build/',
+          combine: false,
+          patterns:  {
+            'yui2-': {
+              configFn: function(me) {
+                if(/-skin|reset|fonts|grids|base/.test(me.name)) {
+                  me.type = 'css';
+                  me.path = me.path.replace(/\.js/, '.css');
+                  me.path = me.path.replace(/\/yui2-skin/, '/assets/skins/sam/yui2-skin');
+                }
               }
             }
           }
@@ -356,224 +367,222 @@ if (cb_global.bundle_lib_files) {
 }
 
 // here is the main method
-YUI(yui_config).use(
-  cb_global.required_modules,
-  function (Y) {
+function mainYuiFunction(Y) {
 
-    // Add a new visu handler to inputEx, to look for a named function. The
-    // must be a member of window and should accept Y and the value of the
-    // target field as its parameters. It should return the correct inputEx
-    // widget initialized to render the given data.
-    if (Y.inputEx.visus) {
-      Y.inputEx.visus.funcName = function(options, value) {
-        return window[options.funcName](Y, value);
-      }
+  // Add a new visu handler to inputEx, to look for a named function. The
+  // must be a member of window and should accept Y and the value of the
+  // target field as its parameters. It should return the correct inputEx
+  // widget initialized to render the given data.
+  if (Y.inputEx.visus) {
+    Y.inputEx.visus.funcName = function(options, value) {
+      return window[options.funcName](Y, value);
     }
+  }
 
-    Y.on('scroll', function(e) {
-      keepPopupInView(Y);
-    });
+  Y.on('scroll', function(e) {
+    keepPopupInView(Y);
+  });
 
-    // here is the object schema
-    var schema = {
-      root : cb_global.schema
-    };
+  // here is the object schema
+  var schema = {
+    root : cb_global.schema
+  };
 
-    // inject inputex annotations
-    cb_global.load_schema_with_annotations(schema);
+  // inject inputex annotations
+  cb_global.load_schema_with_annotations(schema);
 
-    // build form definition from the json schema
-    builder = new Y.inputEx.JsonSchema.Builder({
-      'schemaIdentifierMap': schema
-    });
-    var inputExDefinition = builder.schemaToInputEx(schema.root);
+  // build form definition from the json schema
+  builder = new Y.inputEx.JsonSchema.Builder({
+    'schemaIdentifierMap': schema
+  });
+  var inputExDefinition = builder.schemaToInputEx(schema.root);
 
-    // save button
-    save_button = {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
-          cbShowMsg("Saving...");
+  // save button
+  var saveButton = {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
+        cbShowMsg("Saving...");
 
-        // record current state
-        var lastSavedFormValue = cb_global.form.getValue();
+      // record current state
+      var lastSavedFormValue = cb_global.form.getValue();
 
-        // format request
-        var request_save = cb_global.save_args;
-        request_save.payload = JSON.stringify(lastSavedFormValue);
+      // format request
+      var requestSave = cb_global.save_args;
+      requestSave.payload = JSON.stringify(lastSavedFormValue);
 
-        // append xsrf_token if provided
-        if (cb_global.xsrf_token) {
-            request_save.xsrf_token = cb_global.xsrf_token;
-        }
+      // append xsrf_token if provided
+      if (cb_global.xsrf_token) {
+          requestSave.xsrf_token = cb_global.xsrf_token;
+      }
 
-        // format request
-        request_data = {"request": JSON.stringify(request_save)};
+      // format request
+      var requestData = {"request": JSON.stringify(requestSave)};
 
-        // async post data to the server
-        var url = cb_global.save_url;
+      // async post data to the server
+      var url = cb_global.save_url;
 
-          yioConfig = {
-            method: 'PUT',
-            data: request_data,
-            timeout : ajaxRpcTimeoutMillis,
-            on: {
-                complete: function(transactionId, response, args) {
-                  var json;
-                  if (response && response.responseText) {
-                    json = parseJson(response.responseText);
-                  } else {
-                    cbShowMsg("Server did not respond. Please reload the page to try again.");
-                    return;
-                  }
-
-                if (json.status != 200) {
-                  cbShowMsg(formatServerErrorMessage(json.status, json.message));
+        yioConfig = {
+          method: 'PUT',
+          data: requestData,
+          timeout : ajaxRpcTimeoutMillis,
+          on: {
+              complete: function(transactionId, response, args) {
+                var json;
+                if (response && response.responseText) {
+                  json = parseJson(response.responseText);
+                } else {
+                  cbShowMsg("Server did not respond. Please reload the page to try again.");
                   return;
                 }
 
-                // save lastSavedFormValue
-                cb_global.lastSavedFormValue = lastSavedFormValue;
+              if (json.status != 200) {
+                cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                return;
+              }
 
-                  // update UI
-                  cbShowMsg(json.message);
-                  setTimeout(function(){
-                    cbHideMsg();
-                    if (cb_global.auto_return) {
-                      window.location = cb_global.exit_url;
-                    }
-                  }, 5000);
-                }
-            }
-          };
+              // save lastSavedFormValue
+              cb_global.lastSavedFormValue = lastSavedFormValue;
 
-          if (cb_global.save_method == 'upload') {
-            yioConfig.method = 'POST';
-            yioConfig.form = {
-              id: 'cb-oeditor-form',
-              upload: true
-            };
+                // update UI
+                cbShowMsg(json.message);
+                setTimeout(function(){
+                  cbHideMsg();
+                  if (cb_global.auto_return) {
+                    window.location = cb_global.exit_url;
+                  }
+                }, 5000);
+              }
           }
+        };
 
-          Y.io(url, yioConfig);
-          return false;
-    }};
-
-    // close button
-    close_button = {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
-        if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
-            confirm("Abandon all changes?")) {
-          window.location = cb_global.exit_url;
+        if (cb_global.save_method == 'upload') {
+          yioConfig.method = 'POST';
+          yioConfig.form = {
+            id: 'cb-oeditor-form',
+            upload: true
+          };
         }
-    }};
 
-    // delete button
-    delete_button = {type: 'link', value: 'Delete',
-        className: 'inputEx-Button inputEx-Button-Link pull-right',
-        onClick:function(e) {
-            if (confirm("Are you sure you want to delete this " + 
-                  cb_global.type_label + "?")) {
-                if (cb_global.delete_method == 'delete') {
-                  // async delete
-                  Y.io(cb_global.delete_url, {
-                    method: 'DELETE',
-                    timeout : ajaxRpcTimeoutMillis,
-                    on: {
-                      success: function(id, o, args) {
-                        var json = parseJson(o.responseText);
-                        if (json.status != 200) {
-                          cbShowMsg(formatServerErrorMessage(json.status, json.message));
-                          return;
-                        } else {
-                          window.location = cb_global.exit_url;
-                        }
-                      },
-                      failure : function (x,o) {
-                        cbShowMsg("Server did not respond. Please reload the page to try again.");
+        Y.io(url, yioConfig);
+        return false;
+  }};
+
+  // close button
+  var closeButton = {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
+      if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
+          confirm("Abandon all changes?")) {
+        window.location = cb_global.exit_url;
+      }
+  }};
+
+  // delete button
+  var deleteButton = {type: 'link', value: 'Delete',
+      className: 'inputEx-Button inputEx-Button-Link pull-right',
+      onClick:function(e) {
+          if (confirm("Are you sure you want to delete this " + 
+                cb_global.type_label + "?")) {
+              if (cb_global.delete_method == 'delete') {
+                // async delete
+                Y.io(cb_global.delete_url, {
+                  method: 'DELETE',
+                  timeout : ajaxRpcTimeoutMillis,
+                  on: {
+                    success: function(id, o, args) {
+                      var json = parseJson(o.responseText);
+                      if (json.status != 200) {
+                        cbShowMsg(formatServerErrorMessage(json.status, json.message));
+                        return;
+                      } else {
+                        window.location = cb_global.exit_url;
                       }
+                    },
+                    failure : function (x,o) {
+                      cbShowMsg("Server did not respond. Please reload the page to try again.");
                     }
-                  });
-                } else {
-                  // form delete
-                  var form = document.createElement('form');
-                  form.method = cb_global.delete_method;
-                  form.action = cb_global.delete_url;
-                  document.body.appendChild(form);
-                  form.submit();
-                }
-            }
-        }
-    };
-
-    // choose buttons to show
-    inputExDefinition.buttons = [];
-    if (cb_global.save_url && cb_global.save_method) {
-      inputExDefinition.buttons.push(save_button);
-    }
-    inputExDefinition.buttons.push(close_button);
-    if (cb_global.delete_url != '') {
-      inputExDefinition.buttons.push(delete_button);
-    }
-
-    // Disable the animated highlighting of list fields on reordering
-    if (Y.inputEx.ListField) {
-      Y.inputEx.ListField.prototype.arrowAnimColors = {
-        'from': '',
-        'to': ''
-      };
-    }
-
-    // create form and bind it to DOM
-    inputExDefinition.parentEl = 'formContainer';
-    cb_global.form = new Y.inputEx.Form(inputExDefinition);
-    cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
-
-    moveMarkedFormElementsOutOfFieldset(Y);
-
-    // async request data for the object being edited
-    Y.io(cb_global.get_url, {
-      method: 'GET',
-      timeout : ajaxRpcTimeoutMillis,
-      on: {
-          success: function(id, o, args) {
-            var json = parseJson(o.responseText);
-
-            // check status code
-            if (json.status != 200) {
-              cbShowMsg(formatServerErrorMessage(json.status, json.message));
-              return;
-            }
-
-            // check payload
-            if (!json.payload) {
-              cbShowMsg("Server error; server sent no payload.");
-              return
-            }
-
-            // push payload into form
-            var payload = parseJson(json.payload);
-            cb_global.form.setValue(payload);
-
-            // record xsrf token if provided
-            if (json.xsrf_token) {
-              cb_global.xsrf_token = json.xsrf_token;
-            } else {
-              cb_global.xsrf_token = null;
-            }
-
-            // save lastSavedFormValue
-            cb_global.original = payload;
-            cb_global.lastSavedFormValue = payload;
-
-            // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
-            // but it does not work for rich edit control as it has delayed loading
-            // and may not be ready when this line above is executed
-
-            // update ui state
-            document.getElementById("formContainer").style.display = "block";
-            cbShowMsg(json.message);
-            setTimeout(function(){ cbHideMsg(); }, 5000);
-          },
-          failure : function (x,o) {
-              cbShowMsg("Server did not respond. Please reload the page to try again.");
+                  }
+                });
+              } else {
+                // form delete
+                var form = document.createElement('form');
+                form.method = cb_global.delete_method;
+                form.action = cb_global.delete_url;
+                document.body.appendChild(form);
+                form.submit();
+              }
           }
       }
-    });
-});
+  };
+
+  // choose buttons to show
+  inputExDefinition.buttons = [];
+  if (cb_global.save_url && cb_global.save_method) {
+    inputExDefinition.buttons.push(saveButton);
+  }
+  inputExDefinition.buttons.push(closeButton);
+  if (cb_global.delete_url != '') {
+    inputExDefinition.buttons.push(deleteButton);
+  }
+
+  // Disable the animated highlighting of list fields on reordering
+  if (Y.inputEx.ListField) {
+    Y.inputEx.ListField.prototype.arrowAnimColors = {
+      'from': '',
+      'to': ''
+    };
+  }
+
+  // create form and bind it to DOM
+  inputExDefinition.parentEl = 'formContainer';
+  cb_global.form = new Y.inputEx.Form(inputExDefinition);
+  cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
+
+  moveMarkedFormElementsOutOfFieldset(Y);
+
+  // async request data for the object being edited
+  Y.io(cb_global.get_url, {
+    method: 'GET',
+    timeout : ajaxRpcTimeoutMillis,
+    on: {
+      success: function(id, o, args) {
+        var json = parseJson(o.responseText);
+
+        // check status code
+        if (json.status != 200) {
+          cbShowMsg(formatServerErrorMessage(json.status, json.message));
+          return;
+        }
+
+        // check payload
+        if (!json.payload) {
+          cbShowMsg("Server error; server sent no payload.");
+          return
+        }
+
+        // push payload into form
+        var payload = parseJson(json.payload);
+        cb_global.form.setValue(payload);
+
+        // record xsrf token if provided
+        if (json.xsrf_token) {
+          cb_global.xsrf_token = json.xsrf_token;
+        } else {
+          cb_global.xsrf_token = null;
+        }
+
+        // save lastSavedFormValue
+        cb_global.original = payload;
+        cb_global.lastSavedFormValue = payload;
+
+        // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
+        // but it does not work for rich edit control as it has delayed loading
+        // and may not be ready when this line above is executed
+
+        // update ui state
+        document.getElementById("formContainer").style.display = "block";
+        cbShowMsg(json.message);
+        setTimeout(function(){ cbHideMsg(); }, 5000);
+      },
+      failure : function (x,o) {
+          cbShowMsg("Server did not respond. Please reload the page to try again.");
+      }
+    }
+  });
+}
