@@ -43,8 +43,6 @@ class SchemaField(Property):
         if 'date' is self._property_type:
             schema['dateFormat'] = 'Y/m/d'
             schema['valueFormat'] = 'Y/m/d'
-        elif 'text' is self._property_type or 'html' is self._property_type:
-            schema['editorType'] = 'simple'
         elif 'select' is self._property_type:
             choices = []
             for value, label in self._select_data:

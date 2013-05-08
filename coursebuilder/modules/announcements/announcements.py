@@ -239,7 +239,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 'valueFormat': 'Y/m/d'}),
             (['properties', 'title', '_inputex'], {'label': 'Title'}),
             (['properties', 'html', '_inputex'], {
-                'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
+                'label': 'Body', '_type': 'html'}),
             oeditor.create_bool_select_annotation(
                 ['properties', 'is_draft'], 'Status', 'Draft', 'Published'),
             (['properties', 'send_email', '_inputex'], {

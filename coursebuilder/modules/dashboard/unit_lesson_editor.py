@@ -20,6 +20,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import logging
 import urllib
+from common import tags
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
@@ -816,7 +817,7 @@ class LessonRESTHandler(BaseRESTHandler):
                 'choices': unit_list}),
             (['properties', 'objectives', '_inputex'], {
                 'label': 'Objectives',
-                'editorType': 'simple',
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'description': messages.LESSON_OBJECTIVES_DESCRIPTION}),
             (['properties', 'video', '_inputex'], {
                 'label': 'Video ID',

@@ -6,7 +6,7 @@ function getGcbRteDefs(env, Dom, Editor) {
     setOptions: function(options) {
       GcbRteField.superclass.setOptions.call(this, options);
       this.options.opts = options.opts || {};
-      this.options.editorType = options.editorType;
+      this.options.supportCustomTags = options.supportCustomTags || false;
     },
 
     renderComponent: function() {
@@ -230,16 +230,18 @@ function getGcbRteDefs(env, Dom, Editor) {
       editor._fixNodes = function() {};
 
       // Set up a button to add custom tags
-      editor.on('toolbarLoaded', function() {
-        var button = {
-          type: 'push',
-          label: 'Insert Google Course Builder widget',
-          value: 'insertcustomtag',
-          disabled: false
-        };
-        editor.toolbar.addButtonToGroup(button, 'insertitem');
-        editor.toolbar.on('insertcustomtagClick', that._addCustomTag, that, true);
-      });
+      if (options.supportCustomTags) {
+        editor.on('toolbarLoaded', function() {
+          var button = {
+            type: 'push',
+            label: 'Insert Google Course Builder widget',
+            value: 'insertcustomtag',
+            disabled: false
+          };
+          editor.toolbar.addButtonToGroup(button, 'insertitem');
+          editor.toolbar.on('insertcustomtagClick', that._addCustomTag, that, true);
+        });
+      }
 
       this.editor = editor;
       this.editor.render();
@@ -249,7 +251,9 @@ function getGcbRteDefs(env, Dom, Editor) {
         var ed = document.getElementById(that.id + '_editor');
         if (ed && ed.contentWindow && ed.contentWindow.document &&
             ed.contentWindow.document.readyState == 'complete') {
-          that._insertMarkerTags(that._getEditorWindow());
+          if (options.supportCustomTags) {
+            that._insertMarkerTags(that._getEditorWindow());
+          }
         } else {
           setTimeout(arguments.callee, 100);
         }
@@ -275,7 +279,9 @@ function getGcbRteDefs(env, Dom, Editor) {
       editor.get('element_cont').addClass('yui-editor-container');
       editor._setDesignMode('on');
       editor.setEditorHTML(textArea.value);
-      this._insertMarkerTags(this._getEditorWindow());
+      if (this.options.supportCustomTags) {
+        this._insertMarkerTags(this._getEditorWindow());
+      }
     },
 
     hideRte: function() {
