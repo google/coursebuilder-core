@@ -69,17 +69,17 @@
       <h3>{{ gettext('Assignment to review') }}</h3>
     {% endif %}
 
+    {% import 'readonly_assessment.html' as readonly_assessment %}
+
     <div class="border-box">
-      {% set readonly_assessment = readonly_student_assessment %}
-      {% include 'readonly_assessment.html' %}
+      {{ readonly_assessment.display(readonly_student_assessment) }}
     </div>
 
     {% if readonly_review_form is defined %}
       {# I18N: Header text for a review the student has previously submitted. #}
       <h3>{{ gettext('Submitted review') }}</h3>
       <div class="border-box">
-        {% set readonly_assessment = readonly_review_form %}
-        {% include 'readonly_assessment.html' %}
+        {{ readonly_assessment.display(readonly_review_form) }}
       </div>
     {% else %}
       {# I18N: Header text for a review form that a student has to complete when reviewing another student's assignment. #}

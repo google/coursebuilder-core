@@ -1,41 +1,45 @@
-<div>
-  {{readonly_assessment['preamble'] | safe}}
-</div>
+{% macro display(readonly_assessment) -%}
 
-<ol>
-  {% for q in readonly_assessment['questionsList'] %}
+  <div>
+    {{readonly_assessment['preamble'] | safe}}
+  </div>
 
-    {% set outer_loop = loop %}
-    <li>
-      {{ q['questionHTML'] | safe }}
-      <br>
+  <ol>
+    {% for q in readonly_assessment['questionsList'] %}
 
-      {% if q['choices'] %}
-        {% for choice in q['choices'] %}
-          <input type="radio" disabled="true"
-                 id="readonly-{{outer_loop.index0}}-{{loop.index0}}"
-                 {% if loop.index0 == readonly_assessment['answers'][outer_loop.index0] %}
-                   checked="true"
-                 {% endif %}
-          >
-          &nbsp;
-          <label for="readonly-{{outer_loop.index0}}-{{loop.index0}}">
-            {{ choice }}
-          </label>
-        {% endfor %}
-      {% else %}
-        {% if q['multiLine'] %}
-          {# I18N: Text appearing just before an input field containing a student's answer. #}
-          {{ gettext('Answer:') }}<br>
-          <textarea disabled="true" style="width: 90%" rows="7">{{ readonly_assessment['answers'][outer_loop.index0] }}</textarea>
+      {% set outer_loop = loop %}
+      <li>
+        {{ q['questionHTML'] | safe }}
+        <br>
+
+        {% if q['choices'] %}
+          {% for choice in q['choices'] %}
+            <input type="radio" disabled="true"
+                   id="readonly-{{outer_loop.index0}}-{{loop.index0}}"
+                   {% if loop.index0 == readonly_assessment['answers'][outer_loop.index0] %}
+                     checked="true"
+                   {% endif %}
+            >
+            &nbsp;
+            <label for="readonly-{{outer_loop.index0}}-{{loop.index0}}">
+              {{ choice }}
+            </label>
+          {% endfor %}
         {% else %}
-          {# I18N: Text appearing just before an input field containing a student's answer. #}
-          {{ gettext('Answer:') }}
-          <input type="text" size="50" value="{{ readonly_assessment['answers'][outer_loop.index0] }}" disabled="true">
+          {% if q['multiLine'] %}
+            {# I18N: Text appearing just before an input field containing a student's answer. #}
+            {{ gettext('Answer:') }}<br>
+            <textarea disabled="true" style="width: 90%" rows="7">{{ readonly_assessment['answers'][outer_loop.index0] }}</textarea>
+          {% else %}
+            {# I18N: Text appearing just before an input field containing a student's answer. #}
+            {{ gettext('Answer:') }}
+            <input type="text" size="50" value="{{ readonly_assessment['answers'][outer_loop.index0] }}" disabled="true">
+          {% endif %}
         {% endif %}
-      {% endif %}
-      <br><br>
+        <br><br>
 
-    </li>
-  {% endfor %}
-</ol>
+      </li>
+    {% endfor %}
+  </ol>
+
+{%- endmacro %}

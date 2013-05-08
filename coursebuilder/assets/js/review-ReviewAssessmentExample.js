@@ -22,7 +22,7 @@
 
 var assessment = {
   // HTML to display at the start of the page
-  preamble: 'This is a review form for the above assignment.',
+  preamble: 'When you write your review, please check that the student\'s response is relevant to the question asked. If not, answer \'No\' to the first question below.',
 
   questionsList: [
     {questionHTML: 'Did the student answer all parts of the question?',
