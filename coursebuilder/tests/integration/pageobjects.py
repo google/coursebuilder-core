@@ -58,6 +58,22 @@ class EditorPageObject(PageObject):
             'is_draft')).select_by_visible_text(status)
         return self
 
+    def click_save(self, link_text='Save', status_message='Saved'):
+        self.find_element_by_link_text(link_text).click()
+        self.expect_status_message_to_be(status_message)
+        return self
+
+    def _close_and_return_to(self, continue_page):
+        self.find_element_by_link_text('Close').click()
+        return continue_page(self._tester)
+
+
+class DashboardEditor(EditorPageObject):
+    """A base class for the editors accessed from the Dashboard."""
+
+    def click_close(self):
+        return self._close_and_return_to(DashboardPage)
+
 
 class RootPage(PageObject):
     """Page object to model the interactions with the root page."""
@@ -151,14 +167,8 @@ class AnnouncementsEditorPage(EditorPageObject):
             body_el.send_keys(body)
         return self
 
-    def save(self):
-        self.find_element_by_link_text('Save').click()
-        self.expect_status_message_to_be('Saved.')
-        return self
-
-    def close(self):
-        self.find_element_by_link_text('Close').click()
-        return AnnouncementsPage(self._tester)
+    def click_close(self):
+        return self._close_and_return_to(AnnouncementsPage)
 
 
 class LoginPage(PageObject):
@@ -193,9 +203,29 @@ class DashboardPage(PageObject):
             self.find_element_by_id('gcb-alerts-bar').text)
         return self
 
+    def click_import(self):
+        self.find_element_by_css_selector('#import_course').click()
+        return Import(self._tester)
+
     def click_add_unit(self):
         self.find_element_by_css_selector('#add_unit > button').click()
         return AddUnit(self._tester)
+
+    def click_add_assessment(self):
+        self.find_element_by_css_selector('#add_assessment > button').click()
+        return AddAssessment(self._tester)
+
+    def click_add_link(self):
+        self.find_element_by_css_selector('#add_link > button').click()
+        return AddLink(self._tester)
+
+    def click_add_lesson(self):
+        self.find_element_by_css_selector('#add_lesson > button').click()
+        return AddLesson(self._tester)
+
+    def click_organize(self):
+        self.find_element_by_css_selector('#edit_unit_lesson').click()
+        return Organize(self._tester)
 
     def click_assets(self):
         self.find_element_by_link_text('Assets').click()
@@ -257,7 +287,7 @@ class ImageEditorPage(EditorPageObject):
         return AssetsPage(self._tester)
 
 
-class AddUnit(EditorPageObject):
+class AddUnit(DashboardEditor):
     """Page object to model the dashboard's add unit editor."""
 
     def __init__(self, tester):
@@ -270,14 +300,42 @@ class AddUnit(EditorPageObject):
         title_el.send_keys(title)
         return self
 
-    def click_save_and_expect_unit_added(self):
-        self.find_element_by_link_text('Save').click()
-        self.expect_status_message_to_be('Saved.')
-        return self
 
-    def click_close(self):
-        self.find_element_by_link_text('Close').click()
-        return DashboardPage(self._tester)
+class Import(DashboardEditor):
+    """Page object to model the dashboard's unit/lesson organizer."""
+    pass
+
+
+class AddAssessment(DashboardEditor):
+    """Page object to model the dashboard's assessment editor."""
+
+    def __init__(self, tester):
+        super(AddAssessment, self).__init__(tester)
+        self.expect_status_message_to_be(
+            'New assessment has been created and saved.')
+
+
+class AddLink(DashboardEditor):
+    """Page object to model the dashboard's link editor."""
+
+    def __init__(self, tester):
+        super(AddLink, self).__init__(tester)
+        self.expect_status_message_to_be(
+            'New link has been created and saved.')
+
+
+class AddLesson(DashboardEditor):
+    """Page object to model the dashboard's lesson editor."""
+
+    def __init__(self, tester):
+        super(AddLesson, self).__init__(tester)
+        self.expect_status_message_to_be(
+            'New lesson has been created and saved.')
+
+
+class Organize(DashboardEditor):
+    """Page object to model the dashboard's unit/lesson organizer."""
+    pass
 
 
 class AdminPage(PageObject):
@@ -314,14 +372,8 @@ class ConfigPropertyOverridePage(EditorPageObject):
         self.find_element_by_name('value').send_keys(value)
         return self
 
-    def click_save(self):
-        self.find_element_by_link_text('Save').click()
-        self.expect_status_message_to_be('Saved.')
-        return self
-
     def click_close(self):
-        self.find_element_by_link_text('Close').click()
-        return AdminSettingsPage(self._tester)
+        return self._close_and_return_to(AdminSettingsPage)
 
 
 class AddCourseEditorPage(EditorPageObject):
@@ -346,11 +398,5 @@ class AddCourseEditorPage(EditorPageObject):
 
         return self
 
-    def click_add_new_course_and_expect_course_added(self):
-        self.find_element_by_link_text('Add New Course').click()
-        self.expect_status_message_to_be('Added.')
-        return self
-
     def click_close(self):
-        self.find_element_by_link_text('Close').click()
-        return AdminPage(self)
+        return self._close_and_return_to(AdminPage)

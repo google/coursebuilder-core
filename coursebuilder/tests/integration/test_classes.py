@@ -73,7 +73,8 @@ class BaseIntegrationTest(suite.TestBase):
         ).click_add_course(
         ).set_fields(
             name=name, title=title, email='a@bb.com'
-        ).click_add_new_course_and_expect_course_added(
+        ).click_save(
+            link_text='Add New Course', status_message='Added.'
         ).click_close()
 
         return (name, title)
@@ -102,8 +103,8 @@ class SampleCourseTests(BaseIntegrationTest):
         ).enter_fields(
             title=title, date='2013/03/01',
             body='The new announcement'
-        ).save(
-        ).close(
+        ).click_save(
+        ).click_close(
         ).verify_announcement(
             title=title + ' (Draft)', date='2013-03-01',
             body='The new announcement')
@@ -156,9 +157,44 @@ class AdminTests(BaseIntegrationTest):
             'Test Unit 1'
         ).set_status(
             'Public'
-        ).click_save_and_expect_unit_added(
+        ).click_save(
         ).click_close(
         ).verify_course_outline_contains_unit('Unit 1 - Test Unit 1')
+
+    def test_cancel_add_with_no_changes_should_not_need_confirm(self):
+        """Test entering editors and clicking close without making changes."""
+
+        name = self.create_new_course()[0]
+
+        # Test Import
+        self.load_dashboard(name).click_import(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+
+        # Test Add Assessment
+        self.load_dashboard(name).click_add_assessment(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+
+        # Test Add Link
+        self.load_dashboard(name).click_add_link(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+
+        # Test Add Unit
+        self.load_dashboard(name).click_add_unit(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+
+        # Test Add Lesson
+        self.load_dashboard(name).click_add_lesson(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+
+        # Test Organize Units and Lessons
+        self.load_dashboard(name).click_organize(
+        ).click_close(
+        ).verify_not_publicly_available()  # confirm that we're on the dashboard
 
     def test_upload_and_delete_image(self):
         """Admin should be able to upload an image and then delete it."""

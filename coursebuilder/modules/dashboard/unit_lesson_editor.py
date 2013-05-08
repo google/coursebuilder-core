@@ -153,6 +153,7 @@ class UnitLessonEditor(ApplicationHandler):
         """Adds new link to a course."""
         course = courses.Course(self)
         link = course.add_link()
+        link.href = ''
         course.save()
         self.redirect(self.get_action_url(
             'edit_link', key=link.unit_id, extra_args={'is_newly_created': 1}))
@@ -451,9 +452,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         'inputex-string', 'inputex-select', 'inputex-uneditable']
 
     @classmethod
-    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable-msg=g-bad-name
-        """Schema annotations are dynamic and include a list of courses."""
-
+    def _get_course_list(cls):
         # Make a list of courses user has the rights to.
         course_list = []
         for acourse in sites.get_all_courses():
@@ -464,7 +463,12 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
             course_list.append({
                 'value': acourse.raw,
                 'label': cgi.escape(acourse.get_title())})
+        return course_list
 
+    @classmethod
+    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable-msg=g-bad-name
+        """Schema annotations are dynamic and include a list of courses."""
+        course_list = cls._get_course_list()
         if not course_list:
             return None
 
@@ -484,9 +488,11 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
+        first_course_in_dropdown = self._get_course_list()[0]['value']
+
         transforms.send_json_response(
             self, 200, 'Success.',
-            payload_dict={'course': None},
+            payload_dict={'course': first_course_in_dropdown},
             xsrf_token=XsrfTokenManager.create_xsrf_token(
                 'import-course'))
 
@@ -605,7 +611,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
-            'weight': unit.weight if hasattr(unit, 'weight') else 0,
+            'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
             'content': content,
             'workflow_yaml': unit.workflow_yaml,
             'review_form': review_form,
