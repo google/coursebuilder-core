@@ -1,0 +1,244 @@
+# Copyright 2013 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Performance test for a peer review system.
+
+WARNING! Use this script to test load Course Builder. This is very dangerous
+feature, be careful, because anyone can impersonate super user of your Course
+Builder instance; use only if you have to perform specific load testing
+
+Here is how to run:
+    - update /controllers/sites.py and enable CAN_IMPERSONATE
+    - navigate to the root directory of the app
+    - run a command line by typing:
+        python tests/integration/load_test.py \
+        --thread_count=5 \
+        --start_uid=1 \
+        http://mycourse.appspot.com
+
+"""
+
+__author__ = 'Pavel Simakov (psimakov@google.com)'
+
+import argparse
+import cookielib
+import json
+import logging
+import re
+import threading
+import urllib
+import urllib2
+
+
+# command line arguments parser
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument(
+    'base_url', help=('Base URL of the course you want to test'), type=str)
+PARSER.add_argument(
+    '--start_uid',
+    help='Initial value for unique thread identifier.', default=1, type=int)
+PARSER.add_argument(
+    '--thread_count',
+    help='Count of thread for executing the load test.', default=1, type=int)
+
+
+def assert_contains(needle, haystack):
+    if not needle in haystack:
+        raise Exception('Expected to find term: %s.', needle)
+
+
+def assert_does_not_contain(needle, haystack):
+    if needle in haystack:
+        raise Exception('Did not expect to find term: %s.', needle)
+
+
+def assert_equals(expected, actual):
+    if expected != actual:
+        raise Exception('Expected equality of %s and %s.', expected, actual)
+
+
+class WebSession(object):
+    """A class that allows navigation of web pages keeping cookie session."""
+
+    GET_COUNT = 0
+    POST_COUNT = 0
+    PROGRESS_BATCH = 10
+    PROGRESS_LOCK = threading.Lock()
+
+    def __init__(self, common_headers=None):
+        if common_headers is None:
+            common_headers = {}
+        self.common_headers = common_headers
+        self.cj = cookielib.CookieJar()
+        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
+
+    def log_progress(self):
+        update = ((WebSession.GET_COUNT + WebSession.POST_COUNT) % (
+            self.PROGRESS_BATCH) == 0)
+        if update:
+            logging.info(
+                'Progress GET/POST: %s/%s',
+                WebSession.GET_COUNT, WebSession.POST_COUNT)
+
+    def get_cookie_value(self, name):
+        for cookie in self.cj:
+            if cookie.name == name:
+                return cookie.value
+        return None
+
+    def get(self, url, expected_code=200):
+        """HTTP GET."""
+        with WebSession.PROGRESS_LOCK:
+            WebSession.GET_COUNT += 1
+            self.log_progress()
+
+        request = urllib2.Request(url)
+        for key, value in self.common_headers.items():
+            request.add_header(key, value)
+        response = self.opener.open(request)
+        assert_equals(expected_code, response.code)
+        return response.read()
+
+    def post(self, url, args_dict, expected_code=200):
+        """HTTP POST."""
+        with WebSession.PROGRESS_LOCK:
+            WebSession.POST_COUNT += 1
+            self.log_progress()
+
+        data = None
+        if args_dict:
+            data = urllib.urlencode(args_dict)
+        request = urllib2.Request(url, data)
+        for key, value in self.common_headers.items():
+            request.add_header(key, value)
+        response = self.opener.open(request)
+        assert_equals(expected_code, response.code)
+        return response.read()
+
+
+class TaskThread(threading.Thread):
+    """Runs a task in a separate thread."""
+
+    def __init__(self, func, name=None):
+        super(TaskThread, self).__init__()
+        self.func = func
+        self.exception = None
+        self.name = name
+
+    @classmethod
+    def start_all_tasks(cls, tasks):
+        """Starts all tasks."""
+        for task in tasks:
+            task.start()
+
+    @classmethod
+    def check_all_tasks(cls, tasks):
+        """Checks results of all tasks; fails on the first exception found."""
+        failed_count = 0
+        for task in tasks:
+            while True:
+                # Timeouts should happen after 30 seconds.
+                task.join(30)
+                if task.isAlive():
+                    logging.info('Still waiting for: %s.', task.name)
+                    continue
+                else:
+                    break
+            if task.exception:
+                failed_count += 1
+
+        if failed_count:
+            raise Exception('Tasks failed: %s', failed_count)
+
+    @classmethod
+    def execute_task_list(cls, tasks):
+        """Starts all tasks and checks the results."""
+        cls.start_all_tasks(tasks)
+        cls.check_all_tasks(tasks)
+
+    def run(self):
+        try:
+            self.func()
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error('Error in %s: %s', self.name, e)
+            self.exception = e
+
+
+class PeerReviewLoadTest(object):
+    """A peer review load test."""
+
+    def __init__(self, base_url, uid):
+        self.uid = uid
+        self.host = base_url
+
+        # this is an impersonation identity for the actor thread
+        self.email = 'load_test_bot_%s@example.com' % self.uid
+        self.name = 'Load Test Bot #%s' % self.uid
+
+        # begin web session
+        impersonate_header = {
+            'email': self.email, 'user_id': u'impersonation-%s' % self.uid}
+        self.session = WebSession(
+            common_headers={'Gcb-Impersonate': json.dumps(impersonate_header)})
+
+    def run(self):
+        self.register_if_has_to()
+
+    def get_hidden_field(self, name, body):
+        reg = re.compile(
+            '<input type="hidden" name="%s" value="([^"]*)">' % name)
+        return reg.search(body).group(1)
+
+    def register_if_has_to(self):
+        """Performs student registration action."""
+        body = self.session.get(self.host + '/')
+        assert_contains('Logout', body)
+        if not 'href="register"' in body:
+            body = self.session.get(self.host + '/student/home')
+            assert_contains(self.email, body)
+            assert_contains(self.name, body)
+            return False
+
+        body = self.session.get(self.host + '/register')
+        xsrf_token = self.get_hidden_field('xsrf_token', body)
+
+        data = {'xsrf_token': xsrf_token, 'form01': self.name}
+        body = self.session.post(self.host + '/register', data)
+
+        body = self.session.get(self.host + '/')
+        assert_contains('Logout', body)
+        assert_does_not_contain('href="register"', body)
+
+        return True
+
+
+def run_all(args):
+    """Runs test scenario in multiple threads."""
+    if args.thread_count < 1 or args.thread_count > 100:
+        raise Exception('Please use between 1 and 100 threads.')
+
+    logging.info('Started')
+    tasks = []
+    WebSession.PROGRESS_BATCH = args.thread_count
+    for index in range(0, args.thread_count):
+        test = PeerReviewLoadTest(args.base_url, args.start_uid + index)
+        task = TaskThread(test.run, name='PeerReviewLoadTest-%s' % index)
+        tasks.append(task)
+    TaskThread.execute_task_list(tasks)
+    logging.info('Completed')
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    run_all(PARSER.parse_args())

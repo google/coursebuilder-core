@@ -115,6 +115,7 @@ import zipfile
 
 import appengine_config
 from common import safe_dom
+from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
 from models.config import Registry
@@ -130,6 +131,7 @@ from webapp2_extras import i18n
 import utils
 
 from google.appengine.api import namespace_manager
+from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import zipserve
 
@@ -894,6 +896,48 @@ order they are defined.""")
 
 class ApplicationRequestHandler(webapp2.RequestHandler):
     """Handles dispatching of all URL's to proper handlers."""
+
+    # WARNING! never set this value to True, unless for the production load
+    # tests; setting this value to True will allow any anonymous third party to
+    # act as a Course Builder superuser
+    CAN_IMPERSONATE = False
+
+    # the name of the impersonation header
+    IMPERSONATE_HEADER_NAME = 'Gcb-Impersonate'
+
+    def dispatch(self):
+        if self.CAN_IMPERSONATE:
+            self.impersonate_and_dispatch()
+        else:
+            super(ApplicationRequestHandler, self).dispatch()
+
+    def impersonate_and_dispatch(self):
+        """Dispatches request with user impersonation."""
+        impersonate_info = self.request.headers.get(
+            self.IMPERSONATE_HEADER_NAME)
+        if not impersonate_info:
+            super(ApplicationRequestHandler, self).dispatch()
+            return
+
+        impersonate_info = transforms.loads(impersonate_info)
+        email = impersonate_info.get('email')
+        user_id = impersonate_info.get('user_id')
+
+        def get_impersonated_user():
+            """A method that returns impersonated user."""
+            try:
+                return users.User(email=email, _user_id=user_id)
+            except users.UserNotFoundError:
+                return None
+
+        old_get_current_user = users.get_current_user
+        try:
+            logging.info('Impersonating %s.', email)
+            users.get_current_user = get_impersonated_user
+            super(ApplicationRequestHandler, self).dispatch()
+            return
+        finally:
+            users.get_current_user = old_get_current_user
 
     @classmethod
     def bind_to(cls, urls, urls_map):
