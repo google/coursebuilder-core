@@ -62,22 +62,25 @@ def gcb_init_third_party():
 def gcb_configure_dev_server_if_running():
     """Configure various aspects of development server if not production."""
     if not PRODUCTION_MODE:
-        # pylint: disable-msg=g-import-not-at-top
-        from google.appengine.api import apiproxy_stub_map
-        from google.appengine.datastore import datastore_stub_util
+        try:
+            # pylint: disable-msg=g-import-not-at-top
+            from google.appengine.api import apiproxy_stub_map
+            from google.appengine.datastore import datastore_stub_util
 
-        # Make dev_appserver run with PseudoRandomHRConsistencyPolicy, which we
-        # believe is the best for localhost manual testing; normally
-        # dev_appserver runs either under MasterSlave policy, which does not
-        # allow XG transactions, or under TimeBasedHR policy, which serves
-        # counter-intuitive dirty query results; this also matches policy for
-        # the functional tests
-        stub = apiproxy_stub_map.apiproxy.GetStub(
-            'datastore_v3')
-        if stub:
-            policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
-                probability=1)
-            stub.SetConsistencyPolicy(policy)
+            # Make dev_appserver run with PseudoRandomHRConsistencyPolicy, which
+            # we believe is the best for localhost manual testing; normally
+            # dev_appserver runs either under MasterSlave policy, which does not
+            # allow XG transactions, or under TimeBasedHR policy, which serves
+            # counter-intuitive dirty query results; this also matches policy
+            # for the functional tests
+            stub = apiproxy_stub_map.apiproxy.GetStub(
+                'datastore_v3')
+            if stub:
+                policy = datastore_stub_util.PseudoRandomHRConsistencyPolicy(
+                    probability=1)
+                stub.SetConsistencyPolicy(policy)
+        except Exception as unused_e:  # pylint: disable-msg=broad-except
+            print 'Failed to setup PseudoRandomHRConsistencyPolicy.'
 
 
 gcb_init_third_party()
