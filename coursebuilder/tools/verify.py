@@ -1589,6 +1589,6 @@ def run_all_unit_tests():
     run_example_activity_tests()
 
 
-run_all_unit_tests()
 if __name__ == '__main__':
+    run_all_unit_tests()
     Verifier().load_and_verify_model(echo)
