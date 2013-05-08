@@ -117,7 +117,9 @@ class AssignmentManager(ApplicationHandler):
         request_params['reviewee'] = reviewee
 
         # Check reviewer validity, if applicable.
-        if reviewer_id:
+        if reviewer_id is not None:
+            if not reviewer_id:
+                return request_params, '412: No reviewer email supplied.'
             reviewer = models.Student.get_enrolled_student_by_email(reviewer_id)
             if not reviewer:
                 return (request_params,

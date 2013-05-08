@@ -1,22 +1,6 @@
-<h3>Submission and reviews for {{reviewee_id}}</h3>
+<h3>Assignment (with feedback) for {{reviewee_id}}</h3>
 
 {% import 'readonly_assessment.html' as readonly_assessment %}
-
-<br>
-
-<form id="add-reviewer" action="{{ add_reviewer_action }}" method="POST">
-  <input type="hidden" name="xsrf_token" value="{{ add_reviewer_xsrf_token|escape }}">
-  <input type="hidden" name="unit_id" value="{{ unit_id }}">
-  <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
-
-  Add new reviewer: <input type="text" name="reviewer_id" placeholder="reviewer@example.com">
-
-  <button class="gcb-button gcb-button-action" type="submit">
-    Add Reviewer
-  </button>
-</form>
-
-<br>
 
 <h4>Student's Assignment</h4>
 <div class="border-box">
@@ -24,9 +8,20 @@
 </div>
 
 
-<h4>Reviews received by {{reviewee_id}}</h4>
+<h4>Feedback Received</h4>
 
 <div>
+  <form id="add-reviewer" action="{{ add_reviewer_action }}" method="POST">
+    <input type="hidden" name="xsrf_token" value="{{ add_reviewer_xsrf_token|escape }}">
+    <input type="hidden" name="unit_id" value="{{ unit_id }}">
+    <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
+
+    Add new reviewer: <input type="text" name="reviewer_id" placeholder="reviewer@example.com">
+    <button class="gcb-button gcb-button-action" type="submit">
+      Add New Reviewer
+    </button>
+  </form>
+
   {% if not reviews %}
     (<em>No reviews received yet.</em>)
   {% endif %}
@@ -34,7 +29,7 @@
   <ul>
     {% for review in reviews %}
       <li>
-        Review {{ loop.index }} by {{review['reviewer']}}
+        Review {{ loop.index }} from {{review['reviewer']}}
         {% if review['is_draft'] %}
           (<em>Draft</em>)
         {% else %}
@@ -49,7 +44,7 @@
 
           <button class="gcb-button gcb-button-action right-button" type="submit"
             onclick='return confirm("Remove this reviewer?");'>
-            Remove Reviewer
+            Remove This Review
           </button>
         </form>
 
