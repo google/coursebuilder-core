@@ -19,7 +19,9 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 from controllers import assessments
 from controllers import lessons
 from controllers import utils
+from models import content
 from models import custom_modules
+from tools import verify
 
 
 custom_module = None
@@ -28,6 +30,10 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
+    # provide parser to verify
+    verify.parse_content = content.parse_string_in_scope
+
+    # setup routes
     courses_routes = [
         ('/', lessons.CourseHandler),
         ('/activity', lessons.ActivityHandler),

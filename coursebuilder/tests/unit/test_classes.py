@@ -24,6 +24,7 @@ from common import tags
 from controllers import sites
 from lxml import etree
 from models import config
+from models import content
 from models import courses
 from models import transforms
 from modules.review import domain
@@ -155,6 +156,7 @@ class InvokeExistingUnitTest(suite.TestBase):
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
         transforms.run_all_unit_tests()
+        content.run_all_unit_tests()
 
     def test_string_encoding(self):
         """Test our understanding of Python string encoding aspects.

@@ -37,7 +37,8 @@ BUNDLE_ROOT = BUNDLE_ROOT.replace('\\', '/')
 DEFAULT_NAMESPACE_NAME = ''
 
 # Third-party library zip files.
-THIRD_PARTY_LIBS = ['babel-0.9.6.zip', 'gaepytz-2011h.zip']
+THIRD_PARTY_LIBS = [
+    'babel-0.9.6.zip', 'gaepytz-2011h.zip', 'pyparsing-1.5.7.zip']
 
 
 def gcb_force_default_encoding(encoding):

@@ -45,7 +45,6 @@ from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 import modules.oeditor.oeditor
-from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
@@ -748,15 +747,6 @@ class InfrastructureTest(actions.TestBase):
         self.assert_queriable(models.Student, 'enrolled_on')
         self.assert_queriable(models.StudentAnswersEntity, 'updated_on')
         self.assert_queriable(jobs.DurableJobEntity, 'updated_on')
-
-    def test_assets_and_date(self):
-        """Verify semantics of all asset and data files."""
-
-        def echo(unused_message):
-            pass
-
-        warnings, errors = verify.Verifier().load_and_verify_model(echo)
-        assert not errors and not warnings
 
     def test_config_visible_from_any_namespace(self):
         """Test that ConfigProperty is visible from any namespace."""
