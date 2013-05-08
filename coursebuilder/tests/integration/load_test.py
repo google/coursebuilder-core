@@ -251,8 +251,7 @@ class PeerReviewLoadTest(object):
         self.submit_peer_review_assessment_if_possible()
 
         while self.count_completed_reviews() < 2:
-            if not self.request_and_do_a_review():
-                break
+            self.request_and_do_a_review()
 
     def get_hidden_field(self, name, body):
         # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
@@ -266,6 +265,19 @@ class PeerReviewLoadTest(object):
     def get_js_var(self, name, body):
         reg = re.compile('%s = \'([^\']*)\';\n' % name)
         return reg.search(body).group(1)
+
+    def get_draft_review_url(self, body):
+        """Returns the URL of a draft review on the review dashboard."""
+        # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
+        # across multiple lines in the HTML.
+        # pylint: disable-msg=anomalous-backslash-in-string
+        reg = re.compile(
+            '<a href="([^"]*)">Assignment [0-9]+</a>\s*\(Draft\)')
+        # pylint: enable-msg=anomalous-backslash-in-string
+        result = reg.search(body)
+        if result is None:
+            return None
+        return result.group(1)
 
     def register_if_has_to(self):
         """Performs student registration action."""
@@ -330,30 +342,20 @@ class PeerReviewLoadTest(object):
             assert_contains('Assignments for your review', body)
             assert_contains('Review another assignment', body)
 
-            # TODO(sll): complete pending reviews before asking for a new one
-            # it may happen that the test was stopped and we did not complete
-            # the review last time it run; in second run and may request
-            # another one causing limit for not-yet-reviewed reviews to be to
-            # be exceeded; he we defend against such case
-            if 'disabled="true"' in body:
-                return False
-
-            assert_contains('xsrf_token', body)
-
-            xsrf_token = self.get_hidden_field('xsrf_token', body)
-
-            data = {
-                'unit_id': 'ReviewAssessmentExample',
-                'xsrf_token': xsrf_token,
-            }
-
-            try:
+            draft_review_url = self.get_draft_review_url(body)
+            if draft_review_url:
+                # There is a pending review. Choose it.
+                body = self.session.get(
+                    '%s/%s' % (self.host, draft_review_url))
+            else:
+                # Request a new assignment to review.
+                assert_contains('xsrf_token', body)
+                xsrf_token = self.get_hidden_field('xsrf_token', body)
+                data = {
+                    'unit_id': 'ReviewAssessmentExample',
+                    'xsrf_token': xsrf_token,
+                }
                 body = self.session.post(review_dashboard_url, data)
-            except AssertionError:
-                # The response code is 403. This means that no new reviews can
-                # be requested.
-                raise Exception('Not enough reviews have been completed yet, '
-                                'but this actor is requesting a new one.')
 
             if not 'Back to the review dashboard' in body:
                 # There are no submissions available to review. Wait for a
