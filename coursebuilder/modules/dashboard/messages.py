@@ -34,6 +34,15 @@ ABOUT_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
 This information is configured by an administrator from the Admin pages.
 """, None)
 
+ASSESSMENT_CONTENT_DESCRIPTION = assemble_sanitized_message("""
+Write, in JavaScript format, the text for each of your assessment questions
+and their answer formats.
+""", 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
+
+ASSESSMENT_DETAILS_DESCRIPTION = assemble_sanitized_message("""
+Define, in YAML format, the properties and restrictions of your assessment.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
 ASSESSMENT_EDITOR_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
 
@@ -113,6 +122,11 @@ Links to external sites must start with 'http' or https'.
 
 PAGES_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
+
+REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
+Write, in JavaScript format, the text for each of your review form questions
+and their answer formats.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 SETTINGS_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Settings')

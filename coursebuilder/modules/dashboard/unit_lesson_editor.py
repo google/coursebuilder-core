@@ -574,11 +574,14 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
         (['properties', 'content', '_inputex'], {
-            'label': 'Assessment Content'}),
+            'label': 'Assessment Content',
+            'description': str(messages.ASSESSMENT_CONTENT_DESCRIPTION)}),
         (['properties', 'workflow_yaml', '_inputex'], {
-            'label': 'Assessment Details'}),
+            'label': 'Assessment Details',
+            'description': str(messages.ASSESSMENT_DETAILS_DESCRIPTION)}),
         (['properties', 'review_form', '_inputex'], {
-            'label': 'Reviewer Feedback Form'}),
+            'label': 'Reviewer Feedback Form',
+            'description': str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION)}),
         STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
