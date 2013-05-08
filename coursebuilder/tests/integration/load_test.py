@@ -251,7 +251,8 @@ class PeerReviewLoadTest(object):
         self.submit_peer_review_assessment_if_possible()
 
         while self.count_completed_reviews() < 2:
-            self.request_and_do_a_review()
+            if not self.request_and_do_a_review():
+                break
 
     def get_hidden_field(self, name, body):
         # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
@@ -335,7 +336,7 @@ class PeerReviewLoadTest(object):
             # another one causing limit for not-yet-reviewed reviews to be to
             # be exceeded; he we defend against such case
             if 'disabled="true"' in body:
-                return True
+                return False
 
             assert_contains('xsrf_token', body)
 
