@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import os.path
 import random
 import time
 from selenium import webdriver
@@ -158,3 +159,25 @@ class AdminTests(BaseIntegrationTest):
         ).click_save_and_expect_unit_added(
         ).click_close(
         ).verify_course_outline_contains_unit('Unit 1 - Test Unit 1')
+
+    def test_upload_and_delete_image(self):
+        """Admin should be able to upload an image and then delete it."""
+        image_file = os.path.join(
+            os.path.dirname(__file__), 'assets', 'img', 'test.png')
+
+        name = self.create_new_course()[0]
+
+        self.load_dashboard(
+            name
+        ).click_assets(
+        ).click_upload(
+        ).select_file(
+            image_file
+        ).click_upload_and_expect_saved(
+        ).verify_image_file_by_name(
+            'assets/img/test.png'
+        ).click_edit_image(
+            'assets/img/test.png'
+        ).click_delete(
+        ).confirm_delete(
+        ).verify_no_image_file_by_name('assets/img/test.png')

@@ -134,7 +134,7 @@ function onPageLoad(env) {
     mainYuiFunction);
 
   document.getElementById("close-status-popup-button").onclick = cbHideMsg;
-  
+
   env.inputEx = env.inputEx || {};
   env.inputEx.visus = env.inputEx.visus || {};
   env.inputEx.visus.renderAsset = renderAsset;

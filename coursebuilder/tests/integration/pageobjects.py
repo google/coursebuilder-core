@@ -197,9 +197,64 @@ class DashboardPage(PageObject):
         self.find_element_by_css_selector('#add_unit > button').click()
         return AddUnit(self._tester)
 
+    def click_assets(self):
+        self.find_element_by_link_text('Assets').click()
+        return AssetsPage(self._tester)
+
     def verify_course_outline_contains_unit(self, unit_title):
         self.find_element_by_link_text(unit_title)
         return self
+
+
+class AssetsPage(PageObject):
+    """Page object for the dashboard's assets tab."""
+
+    def click_upload(self):
+        self.find_element_by_link_text('Upload').click()
+        return AssetsEditorPage(self._tester)
+
+    def verify_image_file_by_name(self, name):
+        self.find_element_by_link_text(name)  # throw exception if not found
+        return self
+
+    def verify_no_image_file_by_name(self, name):
+        self.find_element_by_link_text(name)  # throw exception if not found
+        return self
+
+    def click_edit_image(self, name):
+        self.find_element_by_link_text(
+            name).parent.find_element_by_link_text('[Edit]').click()
+        return ImageEditorPage(self._tester)
+
+
+class AssetsEditorPage(EditorPageObject):
+    """Page object for upload image page."""
+
+    def select_file(self, path):
+        self.find_element_by_name('file').send_keys(path)
+        return self
+
+    def click_upload_and_expect_saved(self):
+        self.find_element_by_link_text('Upload').click()
+        self.expect_status_message_to_be('Saved.')
+
+        # Page automatically redirects after successful save.
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.title_contains('Assets'))
+
+        return AssetsPage(self._tester)
+
+
+class ImageEditorPage(EditorPageObject):
+    """Page object for the dashboard's view/delete image page."""
+
+    def click_delete(self):
+        self.find_element_by_link_text('Delete').click()
+        return self
+
+    def confirm_delete(self):
+        self._tester.driver.switch_to_alert().accept()
+        return AssetsPage(self._tester)
 
 
 class AddUnit(EditorPageObject):
