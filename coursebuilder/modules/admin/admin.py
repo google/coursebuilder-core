@@ -24,6 +24,8 @@ import sys
 import time
 import urllib
 from appengine_config import PRODUCTION_MODE
+from common import jinja_filters
+from common import safe_dom
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
@@ -124,8 +126,9 @@ class AdminHandler(
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
         jinja_environment = jinja2.Environment(
-            autoescape=True,
+            autoescape=True, finalize=jinja_filters.finalize,
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
+        jinja_environment.filters['js_string'] = jinja_filters.js_string
         return jinja_environment.get_template(template_name)
 
     def _get_user_nav(self):
@@ -137,39 +140,46 @@ class AdminHandler(
             ('deployment', 'Deployment')]
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             nav_mappings.append(('console', 'Console'))
-        nav = []
+        nav = safe_dom.NodeList()
         for action, title in nav_mappings:
-            class_attr = 'class="selected"' if action == current_action else ''
-            nav.append(
-                '<a href="/admin?action=%s" %s>%s</a>' % (
-                    action, class_attr, escape(title)))
+            if action == current_action:
+                elt = safe_dom.Element(
+                    'a', href='/admin?action=%s' % action,
+                    className='selected')
+            else:
+                elt = safe_dom.Element('a', href='/admin?action=%s' % action)
+            elt.add_text(title)
+            nav.append(elt).append(safe_dom.Text(' '))
 
         if PRODUCTION_MODE:
             app_id = app.get_application_id()
-            nav.append("""
-                <a target="_blank"
-                  href="https://appengine.google.com/dashboard?app_id=s~%s">
-                  Google App Engine
-                </a>
-                """ % escape(app_id))
+            nav.append(safe_dom.Element(
+                'a', target='_blank',
+                href=("""
+https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
+            ).add_text('Google App Engine'))
         else:
-            nav.append(
-                '<a target="_blank" href="/_ah/admin">Google App Engine</a>')
+            nav.append(safe_dom.Element(
+                'a', target='_blank', href='/_ah/admin'
+            ).add_text('Google App Engine')).append(safe_dom.Text(' '))
 
-        nav.append(
-            '<a href="https://code.google.com/p/course-builder/wiki/AdminPage"'
-            ' target="_blank">'
-            'Help</a>')
+        nav.append(safe_dom.Element(
+            'a', target='_blank',
+            href='https://code.google.com/p/course-builder/wiki/AdminPage'
+        ).add_text('Help'))
 
-        return '\n'.join(nav)
+        return nav
 
     def render_page(self, template_values):
         """Renders a page using provided template values."""
 
         template_values['top_nav'] = self._get_user_nav()
-        template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
-            users.get_current_user().email(),
-            users.create_logout_url(self.request.uri)
+        template_values['user_nav'] = safe_dom.NodeList().append(
+            safe_dom.Text('%s | ' % users.get_current_user().email())
+        ).append(
+            safe_dom.Element(
+                'a', href=users.create_logout_url(self.request.uri)
+            ).add_text('Logout')
         )
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
@@ -181,21 +191,30 @@ class AdminHandler(
         """Renders a dictionary ordered by keys."""
         keys = sorted(source_dict.keys())
 
-        content = []
-        content.append('<h3>%s</h3>' % escape(title))
-        content.append('<ol>')
+        content = safe_dom.NodeList()
+        content.append(safe_dom.Element('h3').add_text(title))
+        ol = safe_dom.Element('ol')
+        content.append(ol)
         for key in keys:
             value = source_dict[key]
             if isinstance(value, ConfigProperty):
                 value = value.value
-            content.append(
-                '<li>%s: %s</li>' % (escape(key), escape(str(value))))
-        content.append('</ol>')
-        return '\n'.join(content)
+            ol.add_child(
+                safe_dom.Element('li').add_text('%s: %s' % (key, value)))
+        return content
 
     def format_title(self, text):
         """Formats standard title."""
-        return 'Course Builder &gt; Admin &gt; %s' % escape(text)
+        return safe_dom.NodeList().append(
+            safe_dom.Text('Course Builder ')
+        ).append(
+            safe_dom.Entity('&gt;')
+        ).append(
+            safe_dom.Text(' Admin ')
+        ).append(
+            safe_dom.Entity('&gt;')
+        ).append(
+            safe_dom.Text(' %s' % text))
 
     def get_perf(self):
         """Shows server performance counters page."""
@@ -234,15 +253,16 @@ class AdminHandler(
         template_values['page_description'] = messages.DEPLOYMENT_DESCRIPTION
 
         # Yaml file content.
-        yaml_content = []
-        yaml_content.append('<h3>Contents of <code>app.yaml</code></h3>')
-        yaml_content.append('<ol>')
+        yaml_content = safe_dom.NodeList()
+        yaml_content.append(
+            safe_dom.Element('h3').add_text('Contents of ').add_child(
+                safe_dom.Element('code').add_text('app.yaml')))
+        ol = safe_dom.Element('ol')
+        yaml_content.append(ol)
         yaml_lines = open(os.path.join(os.path.dirname(
             __file__), '../../app.yaml'), 'r').readlines()
         for line in yaml_lines:
-            yaml_content.append('<li>%s</li>' % escape(line))
-        yaml_content.append('</ol>')
-        yaml_content = ''.join(yaml_content)
+            ol.add_child(safe_dom.Element('li').add_text(line))
 
         # Application identity.
         app_id = app.get_application_id()
@@ -251,10 +271,12 @@ class AdminHandler(
         app_dict['default_ver_hostname'] = escape(
             app.get_default_version_hostname())
 
-        template_values['main_content'] = self.render_dict(
-            app_dict,
-            'About the Application') + yaml_content + self.render_dict(
-                os.environ, 'Server Environment Variables')
+        template_values['main_content'] = safe_dom.NodeList().append(
+            self.render_dict(app_dict, 'About the Application')
+        ).append(
+            yaml_content
+        ).append(
+            self.render_dict(os.environ, 'Server Environment Variables'))
 
         self.render_page(template_values)
 
@@ -264,68 +286,85 @@ class AdminHandler(
         template_values['page_title'] = self.format_title('Settings')
         template_values['page_description'] = messages.SETTINGS_DESCRIPTION
 
-        content = []
-        content.append("""
-            <style>
-              span.gcb-db-diff, td.gcb-db-diff {
-                  background-color: #A0FFA0;
-              }
-              span.gcb-env-diff, td.gcb-env-diff {
-                  background-color: #A0A0FF;
-              }
-            </style>
-            <h3>All Settings</h3>
-            <table class="gcb-config">
-            <tr>
-            <th>Name</th>
-            <th>Current Value</th>
-            <th>Actions</th>
-            <th>Description</th>
-            </tr>
+        content = safe_dom.NodeList()
+        table = safe_dom.Element('table', className='gcb-config').add_child(
+            safe_dom.Element('tr').add_child(
+                safe_dom.Element('th').add_text('Name')
+            ).add_child(
+                safe_dom.Element('th').add_text('Current Value')
+            ).add_child(
+                safe_dom.Element('th').add_text('Actions')
+            ).add_child(
+                safe_dom.Element('th').add_text('Description')
+            ))
+        content.append(
+            safe_dom.Element('style').add_text("""
+                span.gcb-db-diff, td.gcb-db-diff {
+                    background-color: #A0FFA0;
+                }
+                span.gcb-env-diff, td.gcb-env-diff {
+                    background-color: #A0A0FF;
+                }
             """)
+            ).append(
+                safe_dom.Element('h3').add_text('All Settings')
+            ).append(table)
 
         def get_style_for(value, value_type):
             """Formats CSS style for given value."""
             style = ''
             if not value or value_type in [int, long, bool]:
-                style = 'style="text-align: center;"'
+                style = 'text-align: center;'
             return style
 
         def get_action_html(caption, args, onclick=None):
             """Formats actions <a> link."""
-            handler = ''
+            a = safe_dom.Element(
+                'a', href='/admin?%s' % urllib.urlencode(args),
+                className='gcb-button'
+            ).add_text(caption)
             if onclick:
-                handler = 'onclick="%s"' % onclick
-            return '<a %s class="gcb-button" href="/admin?%s">%s</a>' % (
-                handler, urllib.urlencode(args), escape(caption))
+                a.add_attribute(onclick=onclick)
+            return a
 
         def get_actions(name, override):
             """Creates actions appropriate to an item."""
-            actions = []
             if override:
-                actions.append(get_action_html('Edit', {
-                    'action': 'config_edit', 'name': name}))
+                return get_action_html('Edit', {
+                    'action': 'config_edit', 'name': name})
             else:
-                actions.append("""
-                    <form action='/admin?%s' method='POST'>
-                    <input type="hidden" name="xsrf_token" value="%s">
-                    <button class="gcb-button" type="submit">
-                      Override
-                    </button></form>""" % (
-                        urllib.urlencode(
-                            {'action': 'config_override', 'name': name}),
-                        escape(self.create_xsrf_token('config_override'))
-                    ))
-            return ''.join(actions)
+                return safe_dom.Element(
+                    'form',
+                    action='/admin?%s' % urllib.urlencode(
+                        {'action': 'config_override', 'name': name}),
+                    method='POST'
+                ).add_child(
+                    safe_dom.Element(
+                        'input', type='hidden', name='xsrf_token',
+                        value=self.create_xsrf_token('config_override'))
+                ).add_child(
+                    safe_dom.Element(
+                        'button', className='gcb-button', type='submit'
+                    ).add_text('Override'))
 
         def get_doc_string(item, default_value):
             """Formats an item documentation string for display."""
             doc_string = item.doc_string
             if not doc_string:
                 doc_string = 'No documentation available.'
-            doc_string = ' %s Default: \'%s\'.' % (
-                doc_string, escape(default_value))
-            return doc_string
+            if isinstance(doc_string, safe_dom.NodeList):
+                return safe_dom.NodeList().append(doc_string).append(
+                    safe_dom.Text(' Default: \'%s\'.' % default_value))
+            doc_string = ' %s Default: \'%s\'.' % (doc_string, default_value)
+            return safe_dom.Text(doc_string)
+
+        def get_lines(value):
+            """Convert \\n line breaks into <br> and escape the lines."""
+            escaped_value = safe_dom.NodeList()
+            for line in str(value).split('\n'):
+                escaped_value.append(
+                    safe_dom.Text(line)).append(safe_dom.Element('br'))
+            return escaped_value
 
         overrides = config.Registry.get_overrides(True)
         registered = config.Registry.registered.copy()
@@ -339,11 +378,11 @@ class AdminHandler(
             has_environ_value, environ_value = item.get_environ_value()
             value = item.value
 
-            class_current = 'class="gcb-db-diff"'
+            class_current = 'gcb-db-diff'
             if value == default_value:
                 class_current = ''
             if has_environ_value and value == environ_value:
-                class_current = 'class="gcb-env-diff"'
+                class_current = 'gcb-env-diff'
 
             if default_value:
                 default_value = str(default_value)
@@ -352,38 +391,58 @@ class AdminHandler(
 
             style_current = get_style_for(value, item.value_type)
 
-            # Enable proper value wrapping.
-            escaped_value = escape(str(value)).replace('\n', '<br/>')
+            tr = safe_dom.Element('tr')
+            table.add_child(tr)
 
-            content.append("""
-                <tr>
-                <td style='white-space: nowrap;'>%s</td>
-                <td %s %s>%s</td>
-                <td style='white-space: nowrap;' align='center'>%s</td>
-                <td>%s</td>
-                </tr>
-                """ % (
-                    escape(item.name), class_current, style_current,
-                    escaped_value, get_actions(name, name in overrides),
-                    get_doc_string(item, default_value)))
+            tr.add_child(
+                safe_dom.Element(
+                    'td', style='white-space: nowrap;').add_text(item.name))
 
-        content.append("""
-            <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
-            """ % count)
+            td_value = safe_dom.Element('td').add_child(get_lines(value))
+            if style_current:
+                td_value.add_attribute(style=style_current)
+            if class_current:
+                td_value.add_attribute(className=class_current)
+            tr.add_child(td_value)
 
-        content.append('</table>')
-        content.append("""
-            <p><strong>Legend</strong>:
-            For each property, the value shown corresponds to, in
-            descending order of priority:
-            <span class='gcb-db-diff'>
-                &nbsp;[ the value set via this page ]&nbsp;</span>,
-            <span class='gcb-env-diff'>
-                &nbsp;[ the environment value in app.yaml ]&nbsp;</span>,
-            and the [ default value ] in the Course Builder codebase.""")
+            tr.add_child(
+                safe_dom.Element(
+                    'td', style='white-space: nowrap;', align='center'
+                ).add_child(get_actions(name, name in overrides)))
 
-        template_values['main_content'] = ''.join(content)
+            tr.add_child(
+                safe_dom.Element(
+                    'td').add_child(get_doc_string(item, default_value)))
 
+        table.add_child(
+            safe_dom.Element('tr').add_child(
+                safe_dom.Element(
+                    'td', colspan='4', align='right'
+                ).add_text('Total: %s item(s)' % count)))
+
+        content.append(
+            safe_dom.Element('p').add_child(
+                safe_dom.Element('strong').add_text('Legend')
+            ).add_text(':').add_text("""
+                For each property, the value shown corresponds to, in
+                descending order of priority:
+            """).add_child(
+                safe_dom.Element('span', className='gcb-db-diff').add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_text(
+                    '[ the value set via this page ]'
+                ).add_child(safe_dom.Entity('&nbsp;'))
+            ).add_text(', ').add_child(
+                safe_dom.Element('span', className='gcb-env-diff').add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_text(
+                    '[ the environment value in app.yaml ]'
+                ).add_child(safe_dom.Entity('&nbsp;'))
+            ).add_text(', ').add_text("""
+                and the [ default value ] in the Course Builder codebase.
+            """))
+
+        template_values['main_content'] = content
         self.render_page(template_values)
 
     def get_courses(self):
@@ -392,35 +451,48 @@ class AdminHandler(
         template_values['page_title'] = self.format_title('Courses')
         template_values['page_description'] = messages.COURSES_DESCRIPTION
 
-        content = []
+        content = safe_dom.NodeList()
         content.append(
-            '<a id="add_course" class="gcb-button pull-right" '
-            'role="button" href="admin?action=add_course">Add Course</a>'
-            '<div style="clear: both; padding-top: 2px;" />')
-        content.append('<h3>All Courses</h3>')
-        content.append('<table>')
-        content.append("""
-            <tr>
-              <th>Course Title</th>
-              <th>Context Path</th>
-              <th>Content Location</th>
-              <th>Student Data Location</th>
-            </tr>
-            """)
+            safe_dom.Element(
+                'a', id='add_course', className='gcb-button pull-right',
+                role='button', href='admin?action=add_course'
+            ).add_text('Add Course')
+        ).append(
+            safe_dom.Element('div', style='clear: both; padding-top: 2px;')
+        ).append(
+            safe_dom.Element('h3').add_text('All Courses')
+        )
+        table = safe_dom.Element('table')
+        content.append(table)
+        table.add_child(
+            safe_dom.Element('tr').add_child(
+                safe_dom.Element('th').add_text('Course Title')
+            ).add_child(
+                safe_dom.Element('th').add_text('Context Path')
+            ).add_child(
+                safe_dom.Element('th').add_text('Content Location')
+            ).add_child(
+                safe_dom.Element('th').add_text('Student Data Location')
+            )
+        )
         courses = sites.get_all_courses()
         count = 0
         for course in courses:
             count += 1
-            error = ''
+            error = safe_dom.Text('')
             slug = course.get_slug()
             try:
-                name = escape(course.get_title())
+                name = course.get_title()
             except Exception as e:  # pylint: disable-msg=broad-except
                 name = 'UNKNOWN COURSE'
-                error = (
-                    '<p>Error in <strong>course.yaml</strong> file:<br/>'
-                    '<pre>\n%s\n%s\n</pre></p>' % (
-                        e.__class__.__name__, escape(str(e))))
+                error = safe_dom.Element('p').add_text('Error in ').add_child(
+                    safe_dom.Element('strong').add_text('course.yaml')
+                ).add_text(' file. ').add_child(
+                    safe_dom.Element('br')
+                ).add_child(
+                    safe_dom.Element('pre').add_text('\n%s\n%s\n' % (
+                        e.__class__.__name__, str(e)))
+                )
 
             if course.fs.is_read_write():
                 location = 'namespace: %s' % course.get_namespace_name()
@@ -432,27 +504,25 @@ class AdminHandler(
                 link = '/dashboard'
             else:
                 link = '%s/dashboard' % slug
-            link = '<a href="%s">%s</a>' % (link, name)
+            link = safe_dom.Element('a', href=link).add_text(name)
 
-            content.append("""
-                <tr>
-                  <td>%s%s</td>
-                  <td>%s</td>
-                  <td>%s</td>
-                  <td>%s</td>
-                </tr>
-                """ % (
-                    link, escape(error), escape(slug),
-                    escape(location),
-                    escape(
-                        'namespace: %s' % course.get_namespace_name())))
+            table.add_child(
+                safe_dom.Element('tr').add_child(
+                    safe_dom.Element('td').add_child(link).add_child(error)
+                ).add_child(
+                    safe_dom.Element('td').add_text(slug)
+                ).add_child(
+                    safe_dom.Element('td').add_text(location)
+                ).add_child(
+                    safe_dom.Element('td').add_text(
+                        'namespace: %s' % course.get_namespace_name())
+                ))
 
-        content.append("""
-            <tr><td colspan="4" align="right">Total: %s item(s)</td></tr>
-            """ % count)
-        content.append('</table>')
-
-        template_values['main_content'] = ''.join(content)
+        table.add_child(
+            safe_dom.Element('tr').add_child(
+                safe_dom.Element('td', colspan='4', align='right').add_text(
+                    'Total: %s item(s)' % count)))
+        template_values['main_content'] = content
 
         self.render_page(template_values)
 
@@ -467,25 +537,43 @@ class AdminHandler(
             self.render_page(template_values)
             return
 
-        content = []
-        content.append("""
-            <p><i><strong>WARNING!</strong> The Interactive Console has the same
-            access to the application's environment and services as a .py file
-            inside the application itself. Be careful, because this means writes
-            to your data store will be executed for real!</i></p>
-            <p><strong>
-              Input your Python code below and press "Run Program" to execute.
-            </strong><p>
-            <form action='/admin?action=console_run' method='POST'>
-            <input type="hidden" name="xsrf_token" value="%s">
-            <textarea
-                style='width: 95%%; height: 200px;' name='code'></textarea>
-            <p align='center'>
-                <button class="gcb-button" type="submit">Run Program</button>
-            </p>
-            </form>""" % escape(self.create_xsrf_token('console_run')))
+        content = safe_dom.NodeList()
+        content.append(
+            safe_dom.Element('p').add_child(
+                safe_dom.Element('i').add_child(
+                    safe_dom.Element('strong').add_text('WARNING!')
+                ).add_text("""
+ The Interactive Console has the same
+access to the application's environment and services as a .py file
+inside the application itself. Be careful, because this means writes
+to your data store will be executed for real!""")
+            )
+        ).append(
+            safe_dom.Element('p').add_child(
+                safe_dom.Element('strong').add_text("""
+Input your Python code below and press "Run Program" to execute.""")
+            )
+        ).append(
+            safe_dom.Element(
+                'form', action='/admin?action=console_run', method='POST'
+            ).add_child(
+                safe_dom.Element(
+                    'input', type='hidden', name='xsrf_token',
+                    value=self.create_xsrf_token('console_run'))
+            ).add_child(
+                safe_dom.Element(
+                    'textarea', style='width: 95%; height: 200px;',
+                    name='code')
+            ).add_child(
+                safe_dom.Element('p', align='center').add_child(
+                    safe_dom.Element(
+                        'button', className='gcb-button', type='submit'
+                    ).add_text('Run Program')
+                )
+            )
+        )
 
-        template_values['main_content'] = ''.join(content)
+        template_values['main_content'] = content
         self.render_page(template_values)
 
     def post_console_run(self):
@@ -509,24 +597,28 @@ class AdminHandler(
             status = 'SUCCESS'
 
         # Render results.
-        content = []
-        content.append('<h3>Submitted Python Code</h3>')
-        content.append('<ol>')
-        for line in code.split('\n'):
-            content.append('<li>%s</li>' % escape(line))
-        content.append('</ol>')
-
-        content.append("""
-            <h3>Execution Results</h3>
-            <ol>
-                <li>Status: %s</li>
-                <li>Duration (sec): %s</li>
-            </ol>
-            """ % (status, duration))
-
-        content.append('<h3>Program Output</h3>')
+        content = safe_dom.NodeList()
         content.append(
-            '<blockquote><pre>%s</pre></blockquote>' % escape(output))
+            safe_dom.Element('h3').add_text('Submitted Python Code'))
+        ol = safe_dom.Element('ol')
+        content.append(ol)
+        for line in code.split('\n'):
+            ol.add_child(safe_dom.Element('li').add_text(line))
 
-        template_values['main_content'] = ''.join(content)
+        content.append(
+            safe_dom.Element('h3').add_text('Execution Results')
+        ).append(
+            safe_dom.Element('ol').add_child(
+                safe_dom.Element('li').add_text('Status: %s' % status)
+            ).add_child(
+                safe_dom.Element('li').add_text('Duration (sec): %s' % duration)
+            )
+        ).append(
+            safe_dom.Element('h3').add_text('Program Output')
+        ).append(
+            safe_dom.Element('blockquote').add_child(
+                safe_dom.Element('pre').add_text(output))
+        )
+
+        template_values['main_content'] = content
         self.render_page(template_values)

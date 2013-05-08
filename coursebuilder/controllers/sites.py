@@ -114,6 +114,7 @@ import urlparse
 import zipfile
 
 import appengine_config
+from common import safe_dom
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
 from models.config import Registry
@@ -845,33 +846,50 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
 
 GCB_COURSES_CONFIG = ConfigProperty(
     'gcb_courses_config', str,
-    ("""<p>A newline separated list of course entries. Each course entry has
-four parts, separated by colons (':'). The four parts are:</p>
-<ol>
-<li>The word 'course', which is a required element.</li>
-<li>A unique course URL prefix. Examples could be '/cs101' or '/art'.
-Default: '/'</li>
-<li>A file system location of course asset files. If location is left empty,
+    safe_dom.NodeList().append(
+        safe_dom.Element('p').add_text("""
+A newline separated list of course entries. Each course entry has
+four parts, separated by colons (':'). The four parts are:""")
+    ).append(
+        safe_dom.Element('ol').add_child(
+            safe_dom.Element('li').add_text(
+                'The word \'course\', which is a required element.')
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A unique course URL prefix. Examples could be '/cs101' or '/art'.
+Default: '/'""")
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A file system location of course asset files. If location is left empty,
 the course assets are stored in a datastore instead of the file system. A course
 with assets in a datastore can be edited online. A course with assets on file
-system must be re-deployed to Google App Engine manually.</li>
-<li>A course datastore namespace where course data is stored in App Engine.
-Note: this value cannot be changed after the course is created.</li>
-</ol>
-For example, consider the following two course entries:<br />
-<blockquote>
-course:/cs101::/ns_cs101<br/>
-course:/:/
-</blockquote>
-<p>Assuming you are hosting Course Builder on http:/www.example.com, the first
+system must be re-deployed to Google App Engine manually.""")
+        ).add_child(
+            safe_dom.Element('li').add_text("""
+A course datastore namespace where course data is stored in App Engine.
+Note: this value cannot be changed after the course is created."""))
+    ).append(
+        safe_dom.Text(
+            'For example, consider the following two course entries:')
+    ).append(safe_dom.Element('br')).append(
+        safe_dom.Element('blockquote').add_text(
+            'course:/cs101::/ns_cs101'
+        ).add_child(
+            safe_dom.Element('br')
+        ).add_text('course:/:/')
+    ).append(
+        safe_dom.Element('p').add_text("""
+Assuming you are hosting Course Builder on http:/www.example.com, the first
 entry defines a course on a http://www.example.com/cs101 and both its assets
 and student data are stored in the datastore namespace 'ns_cs101'. The second
 entry defines a course hosted on http://www.example.com/, with its assets
 stored in the '/' folder of the installation and its data stored in the default
-empty datastore namespace.</p>
-<p>A line that starts with '#' is ignored. Course entries are applied in the
-order they are defined.</p>"""),
-    'course:/:/:', multiline=True, validator=_courses_config_validator)
+empty datastore namespace.""")
+    ).append(
+        safe_dom.Element('p').add_text("""
+A line that starts with '#' is ignored. Course entries are applied in the
+order they are defined.""")
+    ), 'course:/:/:', multiline=True, validator=_courses_config_validator)
 
 
 class ApplicationRequestHandler(webapp2.RequestHandler):

@@ -86,7 +86,7 @@ class ElementTests(unittest.TestCase):
         """Element should include tag attributes."""
         element = safe_dom.Element('button', style='foo', onclick='action')
         self.assertEqual(
-            '<button style="foo" onclick="action"></button>',
+            '<button onclick="action" style="foo"></button>',
             element.__str__())
 
     def test_escape_quotes(self):
@@ -142,6 +142,34 @@ class ElementTests(unittest.TestCase):
             safe_dom.Element('a', href='foo"bar').add_text('1<2'))
         self.assertEqual(
             '<td><a href="foo%22bar">1&lt;2</a></td>', element.__str__())
+
+    def test_add_text(self):
+        """Adding text should add text which will be sanitized."""
+        self.assertEqual(
+            '<a>1&lt;2</a>', safe_dom.Element('a').add_text('1<2').__str__())
+
+    def test_add_attribute(self):
+        """Attributes can be added after initialization."""
+        self.assertEqual(
+            '<a b="c" d="e" f="g" h="i"></a>',
+            safe_dom.Element(
+                'a', b='c', d='e').add_attribute(f='g', h='i').__str__())
+
+    def test_void_elements_have_no_end_tags(self):
+        """Void elements should have no end tag, e.g., <br/>."""
+        void_elements = [
+            'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+            'keygen', 'link', 'menuitem', 'meta', 'param', 'source', 'track',
+            'wbr']
+        for elt in void_elements:
+            self.assertEqual('<%s/>' % elt, safe_dom.Element(elt).__str__())
+
+    def test_empty_non_void_elememnts_should_have_end_tags(self):
+        """Non-void elements should have their end tags, even when empty."""
+        sample_elements = ['p', 'textarea', 'div']
+        for elt in sample_elements:
+            self.assertEqual(
+                '<%s></%s>' % (elt, elt), safe_dom.Element(elt).__str__())
 
 
 class EntityTests(unittest.TestCase):
@@ -199,4 +227,3 @@ class EntityTests(unittest.TestCase):
         except AssertionError:
             return
         self.fail('Expected an assert exception')
-

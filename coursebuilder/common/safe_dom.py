@@ -28,6 +28,7 @@ class NodeList(object):
         return len(self.list)
 
     def append(self, node):
+        assert node is not None, 'Cannot add an empty value to the node list'
         self.list.append(node)
         return self
 
@@ -58,6 +59,10 @@ class Element(Node):
 
     _ALLOWED_NAME_PATTERN = re.compile('^[a-zA-Z][a-zA-Z0-9]*$')
 
+    _VOID_ELEMENTS = frozenset([
+        'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen',
+        'link', 'menuitem', 'meta', 'param', 'source', 'track', 'wbr'])
+
     def __init__(self, tag_name, **attr):
         """Initializes an element with given tag name and attributes.
 
@@ -80,6 +85,13 @@ class Element(Node):
         self._attr = attr
         self._children = []
 
+    def add_attribute(self, **attr):
+        for attr_name, value in attr.items():
+            assert Element._ALLOWED_NAME_PATTERN.match(attr_name), (
+                'attribute name %s is not allowed' % attr_name)
+            self._attr[attr_name] = value
+        return self
+
     def add_child(self, node):
         self._children.append(node)
         return self
@@ -97,17 +109,24 @@ class Element(Node):
         assert Element._ALLOWED_NAME_PATTERN.match(self._tag_name), (
             'tag name %s is not allowed' % self._tag_name)
         buff = '<' + self._tag_name
-        for attr_name, value in self._attr.items():
+        for attr_name, value in sorted(self._attr.items()):
             if attr_name == 'className':
                 attr_name = 'class'
             if value is None:
                 value = ''
             buff += ' %s="%s"' % (
-                attr_name, urllib.quote(value, safe=' /()?&#=:;'))
-        buff += '>'
-        for child in self._children:
-            buff += child.sanitized
-        buff += '</%s>' % self._tag_name
+                attr_name, urllib.quote(value, safe=' /()?&#=:;%'))
+
+        if self._children:
+            buff += '>'
+            for child in self._children:
+                buff += child.sanitized
+            buff += '</%s>' % self._tag_name
+        elif self._tag_name.lower() in Element._VOID_ELEMENTS:
+            buff += '/>'
+        else:
+            buff += '></%s>' % self._tag_name
+
         return buff
 
 

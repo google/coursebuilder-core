@@ -25,7 +25,7 @@ def assemble_sanitized_message(text, link):
         node_list.append(safe_dom.Text(text))
     if link:
         node_list.append(safe_dom.Element(
-            'a', href=link).add_text('Learn more...'))
+            'a', href=link, target='_blank').add_text('Learn more...'))
     return node_list
 
 

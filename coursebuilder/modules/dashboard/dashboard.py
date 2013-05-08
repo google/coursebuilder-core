@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import os
 import urllib
+from common import jinja_filters
 from common import safe_dom
 from controllers import sites
 from controllers.utils import ApplicationHandler
@@ -107,14 +108,12 @@ class DashboardHandler(
 
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
-        def do_finalize(x):
-            if isinstance(x, safe_dom.Node) or isinstance(x, safe_dom.NodeList):
-                return jinja2.utils.Markup(x.sanitized)
-            return x
 
         jinja_environment = jinja2.Environment(
-            autoescape=True, finalize=do_finalize,
+            autoescape=True, finalize=jinja_filters.finalize,
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
+        jinja_environment.filters['js_string'] = jinja_filters.js_string
+
         return jinja_environment.get_template(template_name)
 
     def _get_alerts(self):

@@ -204,37 +204,40 @@
   </div>
 </div>
 
-<!-- TODO(psimakov): take most of JS out into a separate file -->
 <script type='text/javascript'>
   (function() {
     //keep all our global objects here
     var cb_global = {};
 
     // various URL's needed by the form
-    cb_global.get_url = '{{ get_url|safe }}';
-    cb_global.save_url = '{{ save_url|safe }}';
-    cb_global.save_args = {{ save_args|safe }};
-    cb_global.exit_button_caption = '{{ exit_button_caption|safe }}';
-    cb_global.exit_url = '{{ exit_url|safe }}';
+    cb_global.get_url = '{{ get_url }}';
+    cb_global.save_url = '{{ save_url }}';
+    cb_global.save_args = JSON.parse("{{ save_args|js_string }}");
+    cb_global.exit_button_caption = '{{ exit_button_caption }}';
+    cb_global.exit_url = '{{ exit_url }}';
     cb_global.save_method = '{{ save_method }}';
     cb_global.auto_return = {% if auto_return %}true{% else %}false{% endif %};
     cb_global.bundle_lib_files = {% if bundle_lib_files %}true{% else %}false{% endif %};
 
     // If this value is '', deletions are not allowed
-    cb_global.delete_url = '{{ delete_url|safe }}';
+    cb_global.delete_url = '{{ delete_url }}';
     cb_global.delete_method = '{{ delete_method }}';
 
     // button captions
     cb_global.save_button_caption = '{{ save_button_caption }}'
 
-    cb_global.required_modules = [{{ required_modules|safe }}];
-    cb_global.schema = {{ schema|safe }};
-    cb_global.type_label = '{{ type_label|safe }}';
+    cb_global.required_modules = [{% for module in required_modules %}
+        '{{ module }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    cb_global.schema = JSON.parse("{{ schema|js_string }}");
+    cb_global.type_label = '{{ type_label }}';
     cb_global.load_schema_with_annotations = function(schema) {
-      {{ schema_annotations|safe }}
+      {% for annotation in schema_annotations %}
+        schema.root{% for element in annotation[0] %}['{{element}}']{% endfor %}
+          = JSON.parse("{{ annotation[1]|js_string }}")
+      {% endfor %}
     }
 
-    {{ oeditor_js|safe }}
+    {% include 'oeditor.js' %}
 
     onPageLoad(cb_global);
   })();

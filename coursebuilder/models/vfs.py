@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
 import os
+from common import jinja_filters
 import jinja2
 from entities import BaseEntity
 from models import MemcacheManager
@@ -147,14 +148,18 @@ class LocalReadOnlyFileSystem(object):
         return sorted(files)
 
     def get_jinja_environ(self, dir_names):
+        """Configure the environment for Jinja templates."""
         physical_dir_names = []
         for dir_name in dir_names:
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
-        return jinja2.Environment(
-            autoescape=True,
+        jinja_environment = jinja2.Environment(
+            autoescape=True, finalize=jinja_filters.finalize,
             extensions=['jinja2.ext.i18n'],
             loader=jinja2.FileSystemLoader(physical_dir_names))
+        jinja_environment.filters['js_string'] = jinja_filters.js_string
+
+        return jinja_environment
 
     def is_read_write(self):
         return False
@@ -502,11 +507,15 @@ class DatastoreBackedFileSystem(object):
         return sorted(list(result))
 
     def get_jinja_environ(self, dir_names):
-        return jinja2.Environment(
-            autoescape=True,
+
+        jinja_environment = jinja2.Environment(
+            autoescape=True, finalize=jinja_filters.finalize,
             extensions=['jinja2.ext.i18n'],
             loader=VirtualFileSystemTemplateLoader(
                 self, self._logical_home_folder, dir_names))
+        jinja_environment.filters['js_string'] = jinja_filters.js_string
+
+        return jinja_environment
 
     def is_read_write(self):
         return True

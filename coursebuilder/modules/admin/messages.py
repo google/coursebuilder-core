@@ -16,26 +16,29 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from common import safe_dom
 
-def format_msg(text, link):
-    lines = []
+
+def assemble_sanitized_message(text, link):
+    node_list = safe_dom.NodeList()
     if text:
-        lines.append(text)
+        node_list.append(safe_dom.Text(text))
     if link:
-        lines.append('<a target="_blank" href="%s">Learn more...</a>' % link)
-    return '\n'.join(lines)
+        node_list.append(safe_dom.Element(
+            'a', href=link, target='_blank').add_text('Learn more...'))
+    return node_list
 
 
-COURSES_DESCRIPTION = format_msg(
+COURSES_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/CreateNewCourse')
 
-DEPLOYMENT_DESCRIPTION = format_msg("""
+DEPLOYMENT_DESCRIPTION = assemble_sanitized_message("""
 These deployment settings are configurable by editing the Course Builder code
 before uploading it to Google App Engine.
 """, 'https://code.google.com/p/course-builder/wiki/AdminPage')
 
-METRICS_DESCRIPTION = format_msg(
+METRICS_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/AdminPage')
 
-SETTINGS_DESCRIPTION = format_msg(
+SETTINGS_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/AdminPage')

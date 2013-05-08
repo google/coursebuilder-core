@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import os
 import urllib
 import appengine_config
+import jinja2
 from models import transforms
 
 # a set of YUI and inputex modules required by the editor
@@ -35,29 +36,6 @@ ALL_MODULES = [
 
 class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
-
-    @classmethod
-    def format_annotations(cls, annotations):
-        """Formats annotations into JavaScript.
-
-        An annotation is a tuple of two elements. The first element is a
-        list of key names forming xpath of a target schema element. The second
-        is a dictionary, items of which must be attached to the target element.
-
-        Args:
-            annotations: an array of annotations
-
-        Returns:
-            The JavaScript representation of the annotations.
-        """
-        annotations_lines = []
-        for item in annotations:
-            path = []
-            for element in item[0]:
-                path.append('[\'%s\']' % element)
-            annotations_lines.append('schema.root%s = %s;' % (
-                ''.join(path), transforms.dumps(item[1])))
-        return '\n'.join(annotations_lines)
 
     @classmethod
     def get_html_for(
@@ -115,8 +93,6 @@ class ObjectEditor(object):
             post_url = ''
             post_args = ''
 
-        oeditor_js = os.path.join(os.path.dirname(__file__), 'oeditor.js')
-
         template_values = {
             'schema': schema_json,
             'type_label': type_label,
@@ -125,13 +101,12 @@ class ObjectEditor(object):
             'save_args': transforms.dumps(post_args),
             'exit_button_caption': exit_button_caption,
             'exit_url': exit_url,
-            'required_modules': '"%s"' % '","'.join(
-                COMMON_REQUIRED_MODULES + required_modules),
-            'schema_annotations': cls.format_annotations(annotations),
+            'required_modules': COMMON_REQUIRED_MODULES + required_modules,
+            'schema_annotations': [
+                (item[0], transforms.dumps(item[1])) for item in annotations],
             'save_method': save_method,
             'auto_return': auto_return,
-            'save_button_caption': save_button_caption,
-            'oeditor_js': open(oeditor_js).read()
+            'save_button_caption': save_button_caption
             }
 
         if delete_url and not read_only:
@@ -141,8 +116,9 @@ class ObjectEditor(object):
         if appengine_config.BUNDLE_LIB_FILES:
             template_values['bundle_lib_files'] = True
 
-        return handler.get_template(
-            'oeditor.html', [os.path.dirname(__file__)]).render(template_values)
+        return jinja2.utils.Markup(handler.get_template(
+            'oeditor.html', [os.path.dirname(__file__)]
+        ).render(template_values))
 
 
 def create_bool_select_annotation(
