@@ -31,8 +31,10 @@ from controllers.utils import ReflectiveRequestHandler
 import jinja2
 from models import config
 from models import counters
+from models import custom_modules
 from models import roles
 from models.config import ConfigProperty
+import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
 import webapp2
 import messages
@@ -630,3 +632,23 @@ Input your Python code below and press "Run Program" to execute.""")
 
         template_values['main_content'] = content
         self.render_page(template_values)
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    admin_handlers = [
+        ('/admin', AdminHandler),
+        ('/rest/config/item', (
+            modules.admin.config.ConfigPropertyItemRESTHandler)),
+        ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler)]
+
+    global custom_module
+    custom_module = custom_modules.Module(
+        'Site Admin',
+        'A set of pages for Course Builder site administrator.',
+        admin_handlers, [])
+    return custom_module

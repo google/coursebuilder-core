@@ -22,9 +22,11 @@ import datetime
 import random
 
 from models import counters
+from models import custom_modules
 from models import entities
 from models import student_work
 from models import utils
+import models.review
 from modules.review import domain
 from modules.review import peer
 from google.appengine.ext import db
@@ -1046,3 +1048,33 @@ class Manager(object):
             COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP.inc()
 
         return updated_step_key
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    import modules.dashboard  # pylint: disable-msg=g-import-not-at-top
+    from modules.review import stats  # pylint: disable-msg=g-import-not-at-top
+    from modules.review import cron  # pylint: disable-msg=g-import-not-at-top
+
+    # register custom dashboard section
+    modules.dashboard.dashboard.DashboardRegistry.add_custom_analytics_section(
+        stats.PeerReviewStatsHandler)
+
+    # register this peer review implementation
+    models.review.ReviewsProcessor.set_peer_matcher(Manager)
+
+    # register cron handler
+    cron_handlers = [(
+        '/cron/expire_old_assigned_reviews',
+        cron.ExpireOldAssignedReviewsHandler)]
+
+    global custom_module
+    custom_module = custom_modules.Module(
+        'Peer Review Engine',
+        'A set of classes for managing peer review process.',
+        cron_handlers, [])
+    return custom_module

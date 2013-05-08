@@ -64,7 +64,7 @@ class TestBase(suite.AppEngineTestBase):
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
         main.debug = True
-        sites.ApplicationRequestHandler.bind(main.urls)
+        sites.ApplicationRequestHandler.bind(main.namespaced_routes)
         return main.app
 
     def assert_default_namespace(self):

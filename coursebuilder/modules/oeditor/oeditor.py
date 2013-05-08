@@ -24,6 +24,7 @@ from common import schema_fields
 from common import tags
 from controllers import utils
 import jinja2
+from models import custom_modules
 from models import transforms
 import webapp2
 
@@ -108,6 +109,7 @@ class ObjectEditor(object):
                 'iconUrl': tag_class().get_icon_url()})
 
         template_values = {
+            'enabled': custom_module.enabled,
             'schema': schema_json,
             'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
@@ -215,3 +217,46 @@ def create_bool_select_annotation(
     if description:
         properties['description'] = description
     return (keys_list, {'type': 'select', '_inputex': properties})
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    from controllers import sites  # pylint: disable-msg=g-import-not-at-top
+
+    yui_handlers = [
+        ('/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'))),
+        ('/static/yui_3.6.0/(.*)', sites.make_zip_handler(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'))),
+        ('/static/2in3/(.*)', sites.make_zip_handler(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))]
+
+    if appengine_config.BUNDLE_LIB_FILES:
+        yui_handlers += [
+            ('/static/combo/inputex', sites.make_css_combo_zip_handler(
+                os.path.join(
+                    appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'),
+                '/static/inputex-3.1.0/')),
+            ('/static/combo/yui', sites.make_css_combo_zip_handler(
+                os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'),
+                '/yui/')),
+            ('/static/combo/2in3', sites.make_css_combo_zip_handler(
+                os.path.join(
+                    appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip'),
+                '/static/2in3/'))]
+
+    oeditor_handlers = [('/oeditorpopup', PopupHandler)]
+
+    global custom_module
+    custom_module = custom_modules.Module(
+        'Object Editor',
+        'A visual editor for editing various types of objects.',
+        yui_handlers, oeditor_handlers)
+    return custom_module

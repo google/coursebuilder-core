@@ -28,6 +28,7 @@ import jinja2
 import jinja2.exceptions
 from models import config
 from models import courses
+from models import custom_modules
 from models import jobs
 from models import roles
 from models import transforms
@@ -726,3 +727,19 @@ class DashboardRegistry(object):
                                 % handler.name)
 
             cls.analytics_handlers.append(handler)
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    dashboard_handlers = [('/dashboard', DashboardHandler)]
+
+    global custom_module
+    custom_module = custom_modules.Module(
+        'Course Dashboard',
+        'A set of pages for managing Course Builder course.',
+        [], dashboard_handlers)
+    return custom_module

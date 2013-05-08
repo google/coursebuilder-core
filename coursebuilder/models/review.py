@@ -19,7 +19,6 @@ __author__ = [
 ]
 
 from modules.review import domain
-from modules.review import review
 
 import entities
 import student_work
@@ -38,8 +37,12 @@ class ReviewsProcessor(object):
     """A class that processes review arrangements."""
 
     TYPE_IMPL_MAPPING = {
-        PEER_MATCHER: review.Manager,
+        PEER_MATCHER: None,
     }
+
+    @classmethod
+    def set_peer_matcher(cls, matcher):
+        cls.TYPE_IMPL_MAPPING[PEER_MATCHER] = matcher
 
     def __init__(self, course):
         self._course = course

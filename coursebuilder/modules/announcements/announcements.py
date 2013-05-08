@@ -25,6 +25,7 @@ from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
+from models import custom_modules
 from models import entities
 from models import notify
 from models import roles
@@ -354,3 +355,19 @@ class AnnouncementEntity(entities.BaseEntity):
         """Do the normal delete() and invalidate memcache."""
         super(AnnouncementEntity, self).delete()
         MemcacheManager.delete(self.memcache_key)
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    announcement_handlers = [('/announcements', AnnouncementsHandler)]
+
+    global custom_module
+    custom_module = custom_modules.Module(
+        'Course Announcements',
+        'A set of pages for managing course announcements.',
+        [], announcement_handlers)
+    return custom_module

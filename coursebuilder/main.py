@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,92 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Main package for Course Builder, which handles URL routing."""
+"""Course Builder web application entry point."""
+
+__author__ = 'Pavel Simakov (psimakov@google.com)'
+
 import os
 import webapp2
 
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable-msg=unused-import
+
 from common import tags
-from controllers import assessments
-from controllers import lessons
 from controllers import sites
-from controllers import utils
-from modules.admin import admin
-from modules.admin import config
-from modules.announcements import announcements
-from modules.dashboard import dashboard
+from models import custom_modules
+
+import modules.admin.admin
+import modules.announcements.announcements
+import modules.courses.courses
+import modules.dashboard.dashboard
 import modules.oeditor.oeditor
-from modules.review import cron
-from modules.review import stats
+import modules.review.review
 
-urls = [
-    ('/', lessons.CourseHandler),
-    ('/activity', lessons.ActivityHandler),
-    ('/announcements', announcements.AnnouncementsHandler),
-    ('/answer', assessments.AnswerHandler),
-    ('/assessment', lessons.AssessmentHandler),
-    ('/course', lessons.CourseHandler),
-    ('/forum', utils.ForumHandler),
-    ('/dashboard', dashboard.DashboardHandler),
-    ('/oeditorpopup', modules.oeditor.oeditor.PopupHandler),
-    ('/preview', utils.PreviewHandler),
-    ('/register', utils.RegisterHandler),
-    ('/review', lessons.ReviewHandler),
-    ('/reviewdashboard', lessons.ReviewDashboardHandler),
-    ('/student/editstudent', utils.StudentEditStudentHandler),
-    ('/student/home', utils.StudentProfileHandler),
-    ('/student/unenroll', utils.StudentUnenrollHandler),
-    ('/unit', lessons.UnitHandler)]
 
-sites.ApplicationRequestHandler.bind(urls)
+# use this flag to control debug only features
+debug = not appengine_config.PRODUCTION_MODE
 
-yui_handlers = [
-    ('/static/inputex-3.1.0/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'))),
-    ('/static/yui_3.6.0/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'))),
-    ('/static/2in3/(.*)', sites.make_zip_handler(
-        os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))]
+# init and enable all known modules
+modules.oeditor.oeditor.register_module().enable()
+modules.admin.admin.register_module().enable()
+modules.dashboard.dashboard.register_module().enable()
+modules.announcements.announcements.register_module().enable()
+modules.review.review.register_module().enable()
+modules.courses.courses.register_module().enable()
 
-if appengine_config.BUNDLE_LIB_FILES:
-    yui_handlers += [
-        ('/static/combo/inputex', sites.make_css_combo_zip_handler(
-            os.path.join(appengine_config.BUNDLE_ROOT, 'lib/inputex-3.1.0.zip'),
-            '/static/inputex-3.1.0/')),
-        ('/static/combo/yui', sites.make_css_combo_zip_handler(
-            os.path.join(appengine_config.BUNDLE_ROOT, 'lib/yui_3.6.0.zip'),
-            '/yui/')),
-        ('/static/combo/2in3', sites.make_css_combo_zip_handler(
-            os.path.join(
-                appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip'),
-            '/static/2in3/'))]
+# compute all possible routes
+global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
 
-admin_handlers = [
-    ('/admin', admin.AdminHandler),
-    ('/rest/config/item', config.ConfigPropertyItemRESTHandler),
-    ('/rest/courses/item', config.CoursesItemRESTHandler)]
+# routes available at '/%namespace%/' context paths
+sites.ApplicationRequestHandler.bind(namespaced_routes)
+app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 
-extensions_resources_handler = (
-    '/extensions/tags/.*/resources/.*', tags.ResourcesHandler)
+# tag extension resource routes
+extensions_tag_resource_routes = [(
+    '/extensions/tags/.*/resources/.*', tags.ResourcesHandler)]
 
-app_handler = (r'(.*)', sites.ApplicationRequestHandler)
-
-cron_handlers = [
-    ('/cron/expire_old_assigned_reviews', cron.ExpireOldAssignedReviewsHandler),
-]
-
+# i18n configuration for jinja2
 webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
-debug = not appengine_config.PRODUCTION_MODE
-
-# Configure modules.
-dashboard.DashboardRegistry.add_custom_analytics_section(
-    stats.PeerReviewStatsHandler)
-
+# init application
 app = webapp2.WSGIApplication(
-    admin_handlers + cron_handlers + yui_handlers + [
-        extensions_resources_handler, app_handler],
+    global_routes + extensions_tag_resource_routes + app_routes,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=debug)
