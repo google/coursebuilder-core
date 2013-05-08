@@ -124,6 +124,33 @@ function keepPopupInView(Y) {
   }
 }
 
+function getEditCustomTagUrl(env, tagName) {
+  var url = 'oeditorpopup?action=edit_custom_tag';
+  url += '&tag_name=' + escape(tagName);
+  if (env.schema.id == 'Lesson Entity' && env.schema.properties &&
+      env.schema.properties.key) {
+    url += '&lesson_id=' + escape(env.form.getValue().key);
+  }
+  return url;
+}
+
+function getAddCustomTagUrl(env, tagName) {
+  var url = 'oeditorpopup?action=add_custom_tag';
+  if (env.schema.id == 'Lesson Entity' && env.schema.properties &&
+      env.schema.properties.key) {
+    url += '&lesson_id=' + escape(env.form.getValue().key);
+  } else {
+    var lessonId = new RegExp('&lesson_id=\\d+').exec(window.location.search);
+    if (lessonId) {
+      url += lessonId;
+    }
+  }
+  if (tagName) {
+    url += '&tag_name=' + escape(tagName);
+  }
+  return url;
+}
+
 /**
  * Define a YUI class for a Google Course Builder rich text editor.
  */
@@ -460,7 +487,9 @@ TopLevelEditorControls.prototype = {
             cb_global.xsrf_token = null;
           }
 
-          // save lastSavedFormValue
+          // TODO(jorr): Encapsulate cb_global.original and
+          // cb_global.lastSavedFormValue in TopLavelEditorControls rather than
+          // global scope
           cb_global.original = payload;
           cb_global.lastSavedFormValue = payload;
 

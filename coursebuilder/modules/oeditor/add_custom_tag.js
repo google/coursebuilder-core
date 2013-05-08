@@ -5,8 +5,8 @@ if (tag) {
     value.attributes = {};
     window.parent.frameProxy.setValue(value);
 
-    var tag_name = tag.options[tag.selectedIndex].value;
-    window.location.search = '?action=add_custom_tag&tag_name=' + escape(tag_name);
+    var tagName = tag.options[tag.selectedIndex].value;
+    window.location = getAddCustomTagUrl(cb_global, tagName);
   };
 }
 document.getElementById('cb-oeditor-form').action = 'javascript: void(0)';

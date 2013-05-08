@@ -776,6 +776,8 @@ class LessonRESTHandler(BaseRESTHandler):
 
     URI = '/rest/course/lesson'
 
+    # Note GcbRte relies on the structure of this schema. Do not change without
+    # checking the dependency.
     SCHEMA_JSON = """
     {
         "id": "Lesson Entity",
@@ -790,6 +792,7 @@ class LessonRESTHandler(BaseRESTHandler):
                 "type": "string", "format": "html", "optional": true},
             "notes" : {"type": "string", "optional": true},
             "activity_title" : {"type": "string", "optional": true},
+            "activity_listed" : {"type": "boolean", "optional": true},
             "activity": {"type": "string", "format": "text", "optional": true},
             "is_draft": {"type": "boolean"}
             }
@@ -800,7 +803,7 @@ class LessonRESTHandler(BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
-        'inputex-uneditable']
+        'inputex-uneditable', 'inputex-checkbox']
 
     @classmethod
     def get_schema_annotations_dict(cls, units):
@@ -833,6 +836,9 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'activity_title', '_inputex'], {
                 'label': 'Activity Title',
                 'description': messages.LESSON_ACTIVITY_TITLE_DESCRIPTION}),
+            (['properties', 'activity_listed', '_inputex'], {
+                'label': 'Activity Listed',
+                'description': messages.LESSON_ACTIVITY_LISTED_DESCRIPTION}),
             (['properties', 'activity', '_inputex'], {
                 'label': 'Activity',
                 'description': str(messages.LESSON_ACTIVITY_DESCRIPTION)}),
@@ -866,6 +872,7 @@ class LessonRESTHandler(BaseRESTHandler):
             'video': lesson.video,
             'notes': lesson.notes,
             'activity_title': lesson.activity_title,
+            'activity_listed': lesson.activity_listed,
             'activity': activity,
             'is_draft': not lesson.now_available
             }
@@ -910,6 +917,7 @@ class LessonRESTHandler(BaseRESTHandler):
         lesson.video = updates_dict['video']
         lesson.notes = updates_dict['notes']
         lesson.activity_title = updates_dict['activity_title']
+        lesson.activity_listed = updates_dict['activity_listed']
         lesson.now_available = not updates_dict['is_draft']
 
         activity = updates_dict.get('activity', '').strip()

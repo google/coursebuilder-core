@@ -96,6 +96,10 @@ Create an activity by entering the correct syntax above.
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
       '#Writing_activities'))
 
+LESSON_ACTIVITY_LISTED_DESCRIPTION = """
+Whether the activity should be viewable as a stand-alone item in the unit index.
+"""
+
 LESSON_ACTIVITY_TITLE_DESCRIPTION = """
 This appears above your activity.
 """
@@ -109,7 +113,7 @@ Provide a YouTube video ID to embed a video.
 """
 
 LESSON_NOTES_DESCRIPTION = """
-Notes are displayed under the objects in the default template.
+Notes are displayed under the objectives in the default template.
 """
 
 LINK_EDITOR_DESCRIPTION = assemble_sanitized_message("""

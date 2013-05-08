@@ -24,9 +24,9 @@ import pickle
 import sys
 
 import appengine_config
-from common import tags
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
+import common.tags
 from tools import verify
 import yaml
 
@@ -261,7 +261,7 @@ def create_course_registry():
     homepage_opts.add_property(SchemaField(
         'course:blurb', 'Course Preview Content', 'html', optional=True,
         extra_schema_dict_values={
-            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
+            'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value}))
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
         description='Course Intro Video on Course Home Page'))
@@ -399,6 +399,7 @@ class Lesson12(object):
         self.duration = ''
         self.activity = ''
         self.activity_title = ''
+        self.activity_listed = True
 
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
@@ -621,6 +622,7 @@ class Lesson13(object):
         self.now_available = False
         self.has_activity = False
         self.activity_title = ''
+        self.activity_listed = True
 
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
@@ -683,7 +685,9 @@ class PersistentCourse13(object):
         if lesson_dicts:
             for lesson_dict in lesson_dicts:
                 lesson = Lesson13()
-                transforms.dict_to_instance(lesson_dict, lesson)
+                defaults = {'activity_listed': True}
+                transforms.dict_to_instance(
+                    lesson_dict, lesson, defaults=defaults)
                 self.lessons.append(lesson)
 
     @classmethod

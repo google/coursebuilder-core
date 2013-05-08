@@ -22,7 +22,7 @@
           </span>
         {% endif %}
 
-        {% if lesson.activity %}
+        {% if lesson.activity and lesson.activity_listed %}
           <ul>
             {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
               <li class="active">

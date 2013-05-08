@@ -111,8 +111,6 @@ function getGcbRteDefs(env, Dom, Editor) {
      * When a custom tag is double-clicked, open up a sub-editor in a lightbox.
      */
     _editCustomTag: function(node, img) {
-      var url = '/oeditor/popup?action=edit_custom_tag&tag_name=' +
-          escape(node.tagName.toLowerCase());
       var value = {};
       for (var i = 0; i < node.attributes.length; i++) {
         value[node.attributes[i].name] = node.attributes[i].value;
@@ -122,7 +120,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       }
       window.frameProxy = new FrameProxy(
         'modal-editor',
-        url,
+        getEditCustomTagUrl(env, node.tagName.toLowerCase()),
         value,
         function(value) { // on submit
           for (var name in value) {
@@ -145,7 +143,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       }
       window.frameProxy = new FrameProxy(
         'modal-editor',
-        '/oeditor/popup?action=add_custom_tag',
+        getAddCustomTagUrl(env),
         null,
         function(value) { // on submit
           that._insertCustomTag(value);

@@ -17,12 +17,16 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import inspect
+import mimetypes
+import os
 import pkgutil
+import appengine_config
 from common import schema_fields
 from extensions import tags
 from lxml import etree
 from lxml import html
 from models import config
+import webapp2
 import safe_dom
 
 
@@ -62,10 +66,44 @@ Y7nY5q4VYsFs0RRvv9PgmCMI8+VquVWq0WtzBqaC308bMPAGAwGAAiqvZQt8XcthbaELGZ/AbBX0kdVa
 SPB+uxAAAAAElFTkSuQmCC
 """
 
-    def get_schema(self):
+    def get_schema(self, unused_handler):
         """Get the schema for the tag's attributes using schema_fields."""
         reg = schema_fields.FieldRegistry('Unimplemented Custom Tag')
         return reg
+
+
+class ResourcesHandler(webapp2.RequestHandler):
+    """Content handler for resources associated with custom tags."""
+
+    def get(self):
+        """Respond to HTTP GET methods."""
+        path = self.request.path
+        if path.startswith('/'):
+            path = path[1:]
+        path = os.path.normpath(path)
+
+        if not path.startswith(os.path.join('extensions', 'tags')):
+            self.error(404)
+
+        if not os.path.basename(os.path.dirname(path)) == 'resources':
+            self.error(404)
+
+        resource_file = os.path.join(appengine_config.BUNDLE_ROOT, path)
+
+        mimetype = mimetypes.guess_type(resource_file)[0]
+        if mimetype is None:
+            mimetype = 'application/octet-stream'
+
+        try:
+            self.response.status = 200
+            self.response.headers['Content-Type'] = mimetype
+            self.response.cache_control.no_cache = None
+            self.response.cache_control.public = 'public'
+            self.response.cache_control.max_age = 600
+            stream = open(resource_file)
+            self.response.write(stream.read())
+        except IOError:
+            self.error(404)
 
 
 def get_tag_bindings():

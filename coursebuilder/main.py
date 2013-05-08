@@ -18,6 +18,7 @@ import webapp2
 
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable-msg=unused-import
+from common import tags
 from controllers import assessments
 from controllers import lessons
 from controllers import sites
@@ -39,6 +40,7 @@ urls = [
     ('/course', lessons.CourseHandler),
     ('/forum', utils.ForumHandler),
     ('/dashboard', dashboard.DashboardHandler),
+    ('/oeditorpopup', modules.oeditor.oeditor.PopupHandler),
     ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
     ('/review', lessons.ReviewHandler),
@@ -76,7 +78,8 @@ admin_handlers = [
     ('/rest/config/item', config.ConfigPropertyItemRESTHandler),
     ('/rest/courses/item', config.CoursesItemRESTHandler)]
 
-oeditor_handler = ('/oeditor/popup', modules.oeditor.oeditor.PopupHandler)
+extensions_resources_handler = (
+    '/extensions/tags/.*/resources/.*', tags.ResourcesHandler)
 
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 
@@ -95,6 +98,6 @@ dashboard.DashboardRegistry.add_custom_analytics_section(
 
 app = webapp2.WSGIApplication(
     admin_handlers + cron_handlers + yui_handlers + [
-        oeditor_handler, app_handler],
+        extensions_resources_handler, app_handler],
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=debug)
