@@ -43,69 +43,66 @@ class ExpireOldAssignedReviewsHandler(utils.BaseHandler):
 
     def get(self):
         """Runs the expiry operation once for each peer-reviwed unit."""
-        self.response.headers['Content-Type'] = 'text/plain'
+        try:
+            self.response.headers['Content-Type'] = 'text/plain'
 
-        # namespace_string -> [{
-        #       'id': unit_id_string, 'review_window_mins': int}]
-        namespace_to_units = {}  # namespace_string -> [unit_id_strings]
-        for context in sites.get_all_courses():
-            namespace = context.get_namespace_name()
-            namespace_to_units[namespace] = []
-            course = courses.Course(None, context)
+            # namespace_string -> [{
+            #       'id': unit_id_string, 'review_window_mins': int}]
+            namespace_to_units = {}  # namespace_string -> [unit_id_strings]
+            for context in sites.get_all_courses():
+                namespace = context.get_namespace_name()
+                namespace_to_units[namespace] = []
+                course = courses.Course(None, context)
 
-            for unit in course.get_peer_reviewed_units():
-                namespace_to_units[namespace].append({
-                    'review_window_mins': (
-                        unit.workflow.get_review_window_mins()),
-                    'id': str(unit.unit_id),
-                })
+                for unit in course.get_peer_reviewed_units():
+                    namespace_to_units[namespace].append({
+                        'review_window_mins': (
+                            unit.workflow.get_review_window_mins()),
+                        'id': str(unit.unit_id),
+                    })
 
-        total_count = 0
-        total_expired_count = 0
-        total_exception_count = 0
-        start_message = 'Begin expire_old_assigned_reviews cron'
-        _LOG.info(start_message)
-        self.response.write('%s\n' % start_message)
+            total_count = 0
+            total_expired_count = 0
+            total_exception_count = 0
+            _LOG.info('Begin expire_old_assigned_reviews cron')
 
-        for namespace, units in namespace_to_units.iteritems():
-            start_namespace_message = (
-                'Begin processing course in namespace "%s"; %s unit%s found' % (
-                    namespace, len(units), '' if len(units) == 1 else 's'))
-            _LOG.info(start_namespace_message)
-            self.response.write('%s\n' % start_namespace_message)
+            for namespace, units in namespace_to_units.iteritems():
+                start_namespace_message = (
+                    ('Begin processing course in namespace "%s"; %s unit%s '
+                     'found') % (
+                         namespace, len(units), '' if len(units) == 1 else 's'))
+                _LOG.info(start_namespace_message)
 
-            for unit in units:
-                begin_unit_message = 'Begin processing unit %s' % unit['id']
-                _LOG.info(begin_unit_message)
-                self.response.write('\t%s\n' % begin_unit_message)
+                for unit in units:
+                    begin_unit_message = 'Begin processing unit %s' % unit['id']
+                    _LOG.info(begin_unit_message)
 
-                namespace_manager.set_namespace(namespace)
-                expired_keys, exception_keys = (
-                    review.Manager.expire_old_reviews_for_unit(
-                        unit['review_window_mins'], unit['id']))
+                    namespace_manager.set_namespace(namespace)
+                    expired_keys, exception_keys = (
+                        review.Manager.expire_old_reviews_for_unit(
+                            unit['review_window_mins'], unit['id']))
 
-                unit_expired_count = len(expired_keys)
-                unit_exception_count = len(exception_keys)
-                unit_total_count = unit_expired_count + unit_exception_count
-                total_expired_count += unit_expired_count
-                total_exception_count += total_exception_count
-                total_count += unit_total_count
+                    unit_expired_count = len(expired_keys)
+                    unit_exception_count = len(exception_keys)
+                    unit_total_count = unit_expired_count + unit_exception_count
+                    total_expired_count += unit_expired_count
+                    total_exception_count += total_exception_count
+                    total_count += unit_total_count
 
-                end_unit_message = (
-                    'End processing unit %s. Expired: %s, Exceptions: %s, '
-                    'Total: %s' % (
-                        unit['id'], unit_expired_count, unit_exception_count,
-                        unit_total_count))
-                _LOG.info(end_unit_message)
-                self.response.write('\t%s\n' % end_unit_message)
+                    end_unit_message = (
+                        'End processing unit %s. Expired: %s, Exceptions: %s, '
+                        'Total: %s' % (
+                            unit['id'], unit_expired_count,
+                            unit_exception_count, unit_total_count))
+                    _LOG.info(end_unit_message)
 
-            end_namespace_message = 'Done processing namespace "%s"' % namespace
-            _LOG.info(end_namespace_message)
-            self.response.write('%s\n' % end_namespace_message)
+                _LOG.info('Done processing namespace "%s"' % namespace)
 
-        end_message = (
-            'End expire_old_assigned_reviews cron. Expired: %s, Exceptions %s, '
-            'Total: %s' % (
-                total_expired_count, total_exception_count, total_count))
-        _LOG.info(end_message)
-        self.response.write('%s\n' % end_message)
+            end_message = (
+                ('End expire_old_assigned_reviews cron. Expired: %s, '
+                 'Exceptions : %s, Total: %s') % (
+                     total_expired_count, total_exception_count, total_count))
+            _LOG.info(end_message)
+            self.response.write('OK\n')
+        except:  # Hide all errors. pylint: disable-msg=bare-except
+            pass
