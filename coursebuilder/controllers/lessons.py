@@ -16,6 +16,7 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import logging
 import urllib
 import urlparse
 
@@ -575,6 +576,10 @@ class ReviewDashboardHandler(BaseHandler):
         unit, _ = extract_unit_and_lesson(self)
         # Check that the student has submitted the corresponding assignment.
         if not rp.does_submission_exist(unit.unit_id, student.get_key()):
+            logging.error(
+                'Student %s tried to access the review dashboard before '
+                'submitting the assignment for unit %s (%s).',
+                student.user_id, unit.title, unit.unit_id)
             self.error(403)
             return
 
@@ -607,6 +612,31 @@ class ReviewDashboardHandler(BaseHandler):
         unit, unused_lesson = extract_unit_and_lesson(self)
         rp = course.get_reviews_processor()
         review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
+
+        # Check that the student has submitted the corresponding assignment.
+        if not rp.does_submission_exist(unit.unit_id, student.get_key()):
+            logging.error(
+                'Student %s requested an assignment to review before '
+                'submitting the assignment for unit %s (%s).',
+                student.user_id, unit.title, unit.unit_id)
+            self.error(403)
+            return
+
+        # Check that the student can request a new review.
+        required_review_count = unit.workflow.get_review_min_count()
+        can_request_new_review = (
+            len(review_steps) < required_review_count or
+            ReviewUtils.has_completed_all_assigned_reviews(review_steps))
+        if not can_request_new_review:
+            logging.error(
+                'Student %s requested an assignment to review for unit %s (%s),'
+                ' but can_request_new_review is False. Total number of '
+                'review steps is %s. Number of completed reviews is %s.',
+                student.user_id, unit.title, unit.unit_id,
+                len(review_steps),
+                ReviewUtils.count_completed_reviews(review_steps))
+            self.error(403)
+            return
 
         self.template_value['no_submissions_available'] = True
 

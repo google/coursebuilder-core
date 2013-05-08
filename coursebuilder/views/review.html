@@ -31,7 +31,7 @@
       var assessmentGlobals = {};
       assessmentGlobals.isReviewForm = true;
       assessmentGlobals.unitId = '{{ unit_id }}';
-      assessmentGlobals.key = '{{ key }}'
+      assessmentGlobals.key = '{{ key }}';
       {% if saved_answers %}
         assessmentGlobals.savedAnswers = JSON.parse("{{saved_answers | js_string}}");
       {% endif %}

@@ -35,8 +35,10 @@ import argparse
 import cookielib
 import json
 import logging
+import random
 import re
 import threading
+import time
 import urllib
 import urllib2
 
@@ -194,33 +196,139 @@ class PeerReviewLoadTest(object):
 
     def run(self):
         self.register_if_has_to()
+        self.submit_peer_review_assessment_if_possible()
+
+        while self.count_completed_reviews() < 2:
+            self.request_and_do_a_review()
 
     def get_hidden_field(self, name, body):
+        # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
+        # across multiple lines in the HTML.
+        # pylint: disable-msg=anomalous-backslash-in-string
         reg = re.compile(
-            '<input type="hidden" name="%s" value="([^"]*)">' % name)
+            '<input type="hidden" name="%s"\s* value="([^"]*)">' % name)
+        # pylint: enable-msg=anomalous-backslash-in-string
+        return reg.search(body).group(1)
+
+    def get_js_var(self, name, body):
+        reg = re.compile('%s = \'([^\']*)\';\n' % name)
         return reg.search(body).group(1)
 
     def register_if_has_to(self):
         """Performs student registration action."""
-        body = self.session.get(self.host + '/')
+        body = self.session.get('%s/' % self.host)
         assert_contains('Logout', body)
         if not 'href="register"' in body:
-            body = self.session.get(self.host + '/student/home')
+            body = self.session.get('%s/student/home' % self.host)
             assert_contains(self.email, body)
             assert_contains(self.name, body)
             return False
 
-        body = self.session.get(self.host + '/register')
+        body = self.session.get('%s/register' % self.host)
         xsrf_token = self.get_hidden_field('xsrf_token', body)
 
         data = {'xsrf_token': xsrf_token, 'form01': self.name}
-        body = self.session.post(self.host + '/register', data)
+        body = self.session.post('%s/register' % self.host, data)
 
-        body = self.session.get(self.host + '/')
+        body = self.session.get('%s/' % self.host)
         assert_contains('Logout', body)
         assert_does_not_contain('href="register"', body)
 
         return True
+
+    def submit_peer_review_assessment_if_possible(self):
+        """Submits the peer review assessment."""
+        body = self.session.get(
+            '%s/assessment?name=ReviewAssessmentExample' % self.host)
+        assert_contains('You may only submit this assignment once', body)
+
+        if 'Submitted assignment' in body:
+            # The assignment was already submitted.
+            return True
+
+        assessment_xsrf_token = self.get_js_var('assessmentXsrfToken', body)
+
+        answers = [
+            {'index': 0, 'type': 'regex', 'value': 'blah1'},
+            {'index': 1, 'type': 'choices', 'value': None},
+            {'index': 2, 'type': 'regex', 'value': 'blah3'},
+        ]
+
+        data = {
+            'answers': json.dumps(answers),
+            'assessment_type': 'ReviewAssessmentExample',
+            'score': 0,
+            'xsrf_token': assessment_xsrf_token,
+        }
+        body = self.session.post('%s/answer' % self.host, data)
+        assert_contains('Review peer assignments', body)
+        return True
+
+    def request_and_do_a_review(self):
+        """Request a new review, wait for it to be granted, then submit it."""
+        review_dashboard_url = (
+            '%s/reviewdashboard?unit=ReviewAssessmentExample' % self.host)
+
+        completed = False
+        while not completed:
+            body = self.session.get(review_dashboard_url)
+            assert_contains('Assignments for your review', body)
+            assert_contains('Review another assignment', body)
+
+            assert_contains('xsrf_token', body)
+
+            xsrf_token = self.get_hidden_field('xsrf_token', body)
+
+            data = {
+                'unit_id': 'ReviewAssessmentExample',
+                'xsrf_token': xsrf_token,
+            }
+
+            try:
+                body = self.session.post(review_dashboard_url, data)
+            except AssertionError:
+                # The response code is 403. This means that no new reviews can
+                # be requested.
+                raise Exception('Not enough reviews have been completed yet, '
+                                'but this actor is requesting a new one.')
+
+            if not 'Back to the review dashboard' in body:
+                # There are no submissions available to review. Wait for a
+                # while and then try again.
+                assert_contains('Assignments for your review', body)
+                # Sleep for a random number of seconds between 1 and 4.
+                time.sleep(1.0 + random.random() * 3.0)
+                continue
+
+            review_xsrf_token = self.get_js_var('assessmentXsrfToken', body)
+
+            answers = [
+                {'index': 0, 'type': 'choices', 'value': 0},
+                {'index': 1, 'type': 'regex', 'value': 'blah2'},
+            ]
+
+            data = {
+                'answers': json.dumps(answers),
+                'assessment_type': None,
+                'is_draft': 'false',
+                'key': self.get_js_var('assessmentGlobals.key', body),
+                'score': 0,
+                'unit_id': 'ReviewAssessmentExample',
+                'xsrf_token': review_xsrf_token,
+            }
+
+            body = self.session.post('%s/review' % self.host, data)
+            assert_contains('Your review has been submitted', body)
+            return True
+
+    def count_completed_reviews(self):
+        """Counts the number of reviews that the actor has completed."""
+        review_dashboard_url = (
+            '%s/reviewdashboard?unit=ReviewAssessmentExample' % self.host)
+
+        body = self.session.get(review_dashboard_url)
+        num_completed = body.count('(Completed)')
+        return num_completed
 
 
 def run_all(args):
