@@ -517,6 +517,10 @@ class CssComboZipHandler(zipserve.ZipHandler):
     def get(self):
         raise NotImplementedError()
 
+    def SetCachingHeaders(self):  # pylint: disable=C6409
+        """Properly controls caching."""
+        set_static_resource_cache_control(self)
+
     def serve_from_zip_file(self, zipfilename, static_file_handler):
         """Assemble the download by reading file from zip file."""
         zipfile_object = self.zipfile_cache.get(zipfilename)
