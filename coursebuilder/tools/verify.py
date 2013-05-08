@@ -1583,10 +1583,30 @@ def run_example_activity_tests():
     verifier.verify_activity_instance(activity, fname)
 
 
+def test_exec():
+    """This test shows that exec/compile are explitable, thus not safe."""
+    content = """
+foo = [
+    c for c in ().__class__.__base__.__subclasses__()
+    if c.__name__ == 'catch_warnings'
+][0]()._module.__builtins__
+"""
+    restricted_scope = {}
+    restricted_scope.update({'__builtins__': {}})
+    code = compile(content, '<string>', 'exec')
+
+    # pylint: disable-msg=exec-statement
+    exec code in restricted_scope
+    # pylint: enable-msg=exec-statement
+
+    assert 'isinstance' in restricted_scope.get('foo')
+
+
 def run_all_unit_tests():
     run_all_regex_unit_tests()
     run_all_schema_helper_unit_tests()
     run_example_activity_tests()
+    test_exec()
 
 
 if __name__ == '__main__':
