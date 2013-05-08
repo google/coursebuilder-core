@@ -202,6 +202,31 @@ COUNTER_START_REVIEW_PROCESS_FOR_SUCCESS = counters.PerfCounter(
     'gcb-start-review-process-for-success',
     'number of times start_review_process_for() completed successfully')
 
+COUNTER_WRITE_REVIEW_COMPLETED_ASSIGNED_STEP = counters.PerfCounter(
+    'gcb-write-review-completed-assigned-step',
+    'number of times write_review() transitioned an assigned step to completed')
+COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP = counters.PerfCounter(
+    'gcb-write-review-completed-expired-step',
+    'number of times write_review() transitioned an expired step to completed')
+COUNTER_WRITE_REVIEW_FAILED = counters.PerfCounter(
+    'gcb-write-review-failed',
+    'number of times write_review() had a fatal error')
+COUNTER_WRITE_REVIEW_REVIEW_MISS = counters.PerfCounter(
+    'gcb-write-review-review-miss',
+    'number of times write_review() found a missing review')
+COUNTER_WRITE_REVIEW_START = counters.PerfCounter(
+    'gcb-write-review-start',
+    'number of times write_review() started processing')
+COUNTER_WRITE_REVIEW_STEP_MISS = counters.PerfCounter(
+    'gcb-write-review-step-miss',
+    'number of times write_review() found a missing review step')
+COUNTER_WRITE_REVIEW_SUMMARY_MISS = counters.PerfCounter(
+    'gcb-write-review-summary-miss',
+    'number of times write_review() found a missing review summary')
+COUNTER_WRITE_REVIEW_SUCCESS = counters.PerfCounter(
+    'gcb-write-review-success',
+    'number of times write_review() completed successfully')
+
 
 class Error(Exception):
     """Base error class."""
@@ -1121,3 +1146,92 @@ class Manager(object):
             reviewee_key=reviewee_key, submission_key=submission_key,
             unit_id=unit_id,
         ).put()
+
+    @classmethod
+    def write_review(
+        cls, review_step_key, review_payload, mark_completed=True):
+        """Writes a review, updating associated internal state.
+
+        Args:
+            review_step_key: db.Key of peer.ReviewStep. The key of the review
+                step to update.
+            review_payload: string. New contents of the review.
+            mark_completed: boolean. If True, set the state of the review to
+                peer.REVIEW_STATE_COMPLETED. If False, leave the state as it
+                was.
+
+        Raises:
+            ConstraintError: if no review found for the review step.
+            KeyError: if no review step was found with review_step_key.
+            RemovedError: if the step for the review is removed.
+            TransitionError: if mark_completed was True but the step was already
+                in peer.REVIEW_STATE_COMPLETED.
+
+        Returns:
+            db.Key of peer.ReviewStep: key of the written review step.
+        """
+        COUNTER_WRITE_REVIEW_START.inc()
+        try:
+            step_key = cls._update_review_contents_and_change_state(
+                review_step_key, review_payload, mark_completed)
+        except Exception as e:
+            COUNTER_WRITE_REVIEW_FAILED.inc()
+            raise e
+
+        COUNTER_WRITE_REVIEW_SUCCESS.inc()
+        return step_key
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _update_review_contents_and_change_state(
+        cls, review_step_key, review_payload, mark_completed):
+        step = db.get(review_step_key)
+        if not step:
+            COUNTER_WRITE_REVIEW_STEP_MISS.inc()
+            raise KeyError(
+                'No review step found with key %s' % repr(review_step_key))
+        elif step.removed:
+            raise RemovedError(
+                'Unable to process step %s' % repr(step.key()), step.removed)
+        elif mark_completed and step.state == peer.REVIEW_STATE_COMPLETED:
+            raise TransitionError(
+                'Unable to transition step %s' % repr(step.key()),
+                step.state, peer.REVIEW_STATE_COMPLETED)
+
+        fetched_review, summary = db.get(
+            [step.review_key, step.review_summary_key])
+        if not fetched_review:
+            COUNTER_WRITE_REVIEW_REVIEW_MISS.inc()
+            raise ConstraintError(
+                'No review found with key %s' % repr(step.review_key))
+
+        if not summary:
+            COUNTER_WRITE_REVIEW_SUMMARY_MISS.inc()
+            raise ConstraintError(
+                'No review summary found with key %s' % repr(
+                    step.review_summary_key))
+
+        should_increment_assigned_to_completed = False
+        should_increment_expired_to_completed = False
+        fetched_review.contents = review_payload
+        if not mark_completed:
+            fetched_review.put()
+            return step.key()
+
+        else:
+            if step.state == peer.REVIEW_STATE_ASSIGNED:
+                should_increment_assigned_to_completed = True
+            elif step.state == peer.REVIEW_STATE_EXPIRED:
+                should_increment_expired_to_completed = True
+
+            summary.decrement_count(step.state)
+            step.state = peer.REVIEW_STATE_COMPLETED
+            summary.increment_count(step.state)
+
+            _, step_key, _ = db.put([fetched_review, step, summary])
+            if should_increment_assigned_to_completed:
+                COUNTER_WRITE_REVIEW_COMPLETED_ASSIGNED_STEP.inc()
+            elif should_increment_expired_to_completed:
+                COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP.inc()
+
+            return step_key

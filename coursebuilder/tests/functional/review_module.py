@@ -1033,6 +1033,159 @@ class ManagerTest(TestBase):
             review_module.Manager.start_review_process_for,
             self.unit_id, self.submission_key, self.reviewee_key)
 
+    def test_write_review_raises_constraint_error_if_no_review(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.ConstraintError, review_module.Manager.write_review,
+            step_key, 'payload')
+
+    def test_write_review_raises_constraint_error_if_no_summary(self):
+        missing_summary_key = db.Key.from_path(
+            peer.ReviewSummary.kind(), peer.ReviewSummary.key_name(
+                self.unit_id, self.submission_key, self.reviewee_key))
+        review_key = review.Review(contents='contents').put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=review_key, review_summary_key=missing_summary_key,
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.ConstraintError, review_module.Manager.write_review,
+            step_key, 'payload')
+
+    def test_write_review_raises_key_error_if_no_step(self):
+        bad_step_key = db.Key.from_path(peer.ReviewStep.kind(), 'missing')
+
+        self.assertRaises(
+            KeyError, review_module.Manager.write_review, bad_step_key,
+            'payload')
+
+    def test_write_review_raises_removed_error_if_step_removed(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.RemovedError, review_module.Manager.write_review,
+            step_key, 'payload')
+
+    def test_write_review_raises_transition_error_if_step_completed(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.TransitionError, review_module.Manager.write_review,
+            step_key, 'payload')
+
+    def test_write_review_with_mark_completed_false(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        review_key = review.Review(contents='old_contents').put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=review_key, review_summary_key=summary_key,
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        updated_step_key = review_module.Manager.write_review(
+            step_key, 'new_contents', mark_completed=False)
+
+        self.assertEqual(step_key, updated_step_key)
+
+        step, summary = db.get([updated_step_key, summary_key])
+        updated_review = db.get(step.review_key)
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.completed_count)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual('new_contents', updated_review.contents)
+
+    def test_write_review_with_state_assigned_and_mark_completed_true(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        review_key = review.Review(contents='old_contents').put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=review_key, review_summary_key=summary_key,
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        updated_step_key = review_module.Manager.write_review(
+            step_key, 'new_contents')
+
+        self.assertEqual(step_key, updated_step_key)
+
+        step, summary = db.get([updated_step_key, summary_key])
+        updated_review = db.get(step.review_key)
+
+        self.assertEqual(0, summary.assigned_count)
+        self.assertEqual(1, summary.completed_count)
+        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual('new_contents', updated_review.contents)
+
+    def test_write_review_with_state_expired_and_mark_completed_true(self):
+        summary_key = peer.ReviewSummary(
+            expired_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        review_key = review.Review(contents='old_contents').put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_key=review_key, review_summary_key=summary_key,
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        updated_step_key = review_module.Manager.write_review(
+            step_key, 'new_contents')
+
+        self.assertEqual(step_key, updated_step_key)
+
+        step, summary = db.get([updated_step_key, summary_key])
+        updated_review = db.get(step.review_key)
+
+        self.assertEqual(1, summary.completed_count)
+        self.assertEqual(0, summary.expired_count)
+        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual('new_contents', updated_review.contents)
+
 
 class ReviewTest(TestBase):
 
