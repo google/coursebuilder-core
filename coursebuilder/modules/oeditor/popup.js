@@ -13,7 +13,7 @@ FramedEditorControls.prototype = {
   getSaveButton: function() {
     var that = this;
     return {
-      type: 'link',
+      type: 'submit-link',
       value: 'Save',
       onClick: function() {
         that._frameProxy.setValue(that._env.form.getValue());

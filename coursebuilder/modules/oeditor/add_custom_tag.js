@@ -9,3 +9,4 @@ if (tag) {
     window.location.search = '?action=add_custom_tag&tag_name=' + escape(tag_name);
   };
 }
+document.getElementById('cb-oeditor-form').action = 'javascript: void(0)';
