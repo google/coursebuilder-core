@@ -27,7 +27,11 @@
             {{ gettext('Submission %(index)s', index=loop.index) }}
           </a>
           {% if review.review %}
-            ({{ gettext('Completed') }})
+            {% if review.is_draft %}
+              ({{ gettext('Draft') }})
+            {% else %}
+              ({{ gettext('Completed') }})
+            {% endif %}
           {% endif %}
         </li>
       {% endfor %}

@@ -41,7 +41,7 @@
                       {% endif %}
                       <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
 
-                      {% if unit.grader == 'human' %}
+                      {% if unit.needs_human_grader %}
                         {% if not unit.now_available and is_course_admin %}
                           (Private)
                         {% endif %}
@@ -49,24 +49,36 @@
                         <li>
                           <p class="top_content">
                             <span class="progress-empty"></span>
-                          {% if progress[unit.unit_id] > 0 %}
+                          {% if unit.review_progress == 2 %}
                             <img src="assets/lib/completed.png"
                                  alt="{% trans %} Completed {% endtrans %}"
                                  title="{% trans %} Completed {% endtrans %}"
                                  class="progress"
-                                 id="progress-completed-{{unit.unit_id}}">
+                                 id="progress-completed-review-{{unit.unit_id}}">
+                          {% elif unit.review_progress == 1 %}
+                            <img src="assets/lib/in_progress.png"
+                                 alt="{% trans %} In progress {% endtrans %}"
+                                 title="{% trans %} In progress {% endtrans %}"
+                                 class="progress"
+                                 id="progress-inprogress-review-{{unit.unit_id}}">
                           {% else %}
                             <img src="assets/lib/not_started.png"
                                  alt="{% trans %} Not yet submitted {% endtrans %}"
                                  title="{% trans %} Not yet submitted {% endtrans %}"
                                  class="progress"
-                                 id="progress-notstarted-{{unit.unit_id}}">
+                                 id="progress-notstarted-review-{{unit.unit_id}}">
                           {% endif %}
 
-                          <a href="reviewdashboard?unit={{ unit.unit_id }}">
-                            Submit your reviews:
-                            {{ unit.title }}
-                          </a>
+                          {% if unit.is_submitted %}
+                            <a href="reviewdashboard?unit={{ unit.unit_id }}">
+                              Review others' submissions
+                            </a>
+                          {% else %}
+                            <span>
+                              Review others' submissions
+                            </span>
+                          {% endif %}
+
                       {% endif %}
 
                   {% elif unit.type == 'U' %}

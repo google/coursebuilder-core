@@ -83,12 +83,13 @@ class ReviewsProcessor(object):
             'reviewers': {},
         })
 
-    def submit_review(self, student, unit, reviewer, review_data):
+    def submit_review(self, student, unit, reviewer, review_data, is_draft):
         """Handles a review submission."""
         work = self._get_student_work(student, unit)
         # Check if the reviewer has indeed been assigned to this submission.
         if work['reviewers'][reviewer.key().name()]:
             work['reviewers'][reviewer.key().name()]['review'] = review_data
+            work['reviewers'][reviewer.key().name()]['is_draft'] = is_draft
         self._put_student_work(student, unit, work)
 
     def get_reviewer_reviews(self, reviewer, unit):
@@ -110,7 +111,9 @@ class ReviewsProcessor(object):
                     'student': student_key,
                     'submission': work['submission'],
                     'review': work['reviewers'][reviewer.key().name()].get(
-                        'review')
+                        'review'),
+                    'is_draft': work['reviewers'][
+                        reviewer.key().name()].get('is_draft'),
                 })
         return reviews
 

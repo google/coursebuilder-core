@@ -518,18 +518,24 @@ function renderAssessment(assessment, domRoot) {
     curLI.append('<br><br>');
   });
 
-
-  if (assessment.checkAnswers) {
+  if (isReviewAssessment) {
     domRoot.append(
-        '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
-        trans.CHECK_ANSWERS_TEXT + '</button><p/>');
-    domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
-        'readonly="true" id="answerOutput"></textarea>');
+        '<br><button type="button" class="gcb-button gcb-button-primary" id="saveDraftBtn">' +
+        trans.SAVE_DRAFT_TEXT + '</button>&nbsp;&nbsp;' +
+        '<button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
+        trans.SEND_REVIEW_TEXT + '</button>');
+  } else {
+    if (assessment.checkAnswers) {
+      domRoot.append(
+          '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
+          trans.CHECK_ANSWERS_TEXT + '</button><p/>');
+      domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
+          'readonly="true" id="answerOutput"></textarea>');
+    }
+    domRoot.append(
+        '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
+        trans.SUBMIT_ANSWERS_TEXT + '</button>');
   }
-  domRoot.append(
-      '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
-      trans.SAVE_ANSWERS_TEXT + '</button>');
-
 
   function checkOrSubmitAnswers(submitAnswers) {
     $('#answerOutput').html('');
@@ -621,7 +627,10 @@ function renderAssessment(assessment, domRoot) {
     var score = ((numCorrect / numQuestions) * 100).toFixed(2);
 
     var assessmentType = getParamFromUrlByName('name') || 'unnamed assessment';
-    if (submitAnswers) {
+
+    var isSaveDraftReview = (!submitAnswers && isReviewAssessment);
+
+    if (submitAnswers || isSaveDraftReview) {
       // create a new hidden form, submit it via POST, and then delete it
 
       var myForm = document.createElement('form');
@@ -662,6 +671,11 @@ function renderAssessment(assessment, domRoot) {
         myInput.setAttribute('name', 'unit_id');
         myInput.setAttribute('value', unitId);
         myForm.appendChild(myInput);
+
+        myInput = document.createElement('input');
+        myInput.setAttribute('name', 'is_draft');
+        myInput.setAttribute('value', isSaveDraftReview);
+        myForm.appendChild(myInput);
       }
 
       document.body.appendChild(myForm);
@@ -689,6 +703,9 @@ function renderAssessment(assessment, domRoot) {
   }
 
   $('#checkAnswersBtn').click(function() {
+      checkOrSubmitAnswers(false);
+  });
+  $('#saveDraftBtn').click(function() {
       checkOrSubmitAnswers(false);
   });
   $('#submitAnswersBtn').click(function() {

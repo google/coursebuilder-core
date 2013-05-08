@@ -9,9 +9,12 @@
   <div class="gcb-col-1">
   </div>
   <div class="gcb-col-7 gcb-aside gcb-button-box">
-
     <p class="top_content">
-      {{ gettext('Your review has been submitted successfully.') }}
+      {% if is_draft %}
+        {{ gettext('Your review has been saved.') }}
+      {% else %}
+        {{ gettext('Your review has been submitted successfully.') }}
+      {% endif %}
     </p>
 
     <p>

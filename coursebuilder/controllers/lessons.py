@@ -94,6 +94,25 @@ class CourseHandler(BaseHandler):
         """Add child handlers for REST."""
         return [('/rest/events', EventsRESTHandler)]
 
+    def augment_assessment_units(self, student):
+        """Adds additional fields to assessment units."""
+        course = self.get_course()
+        reviews_processor = course.get_reviews_processor()
+
+        for unit in self.template_value['units']:
+            if unit.type == 'A':
+                unit.needs_human_grader = course.needs_human_grader(unit)
+                if unit.needs_human_grader:
+                    reviews = reviews_processor.get_reviewer_reviews(
+                        student, unit)
+                    min_reviews = course.get_assessment_min_reviews(unit)
+
+                    unit.review_progress = ReviewUtils.get_review_progress(
+                        reviews, min_reviews, course.get_progress_tracker())
+
+                    unit.is_submitted = bool(
+                        reviews_processor.get_student_work(student, unit))
+
     def get(self):
         """Handles GET requests."""
         user = self.personalize_page_and_get_user()
@@ -105,12 +124,9 @@ class CourseHandler(BaseHandler):
         if not student:
             return
 
-        course = self.get_course()
-
         self.template_value['units'] = self.get_units()
-        for unit in self.template_value['units']:
-            if unit.type == 'A':
-                unit.grader = course.get_assessment_grader(unit)
+        self.augment_assessment_units(student)
+
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
         self.template_value['is_progress_recorded'] = (
@@ -383,8 +399,11 @@ class ReviewHandler(BaseHandler):
             self.error(404)
             return
 
+        is_draft = (self.request.get('is_draft') == 'true')
+
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit.unit_id
+        self.template_value['is_draft'] = is_draft
 
         reviews_processor = course.get_reviews_processor()
 
@@ -399,7 +418,7 @@ class ReviewHandler(BaseHandler):
 
         reviews_processor.submit_review(
             Student.get_by_email(reviews[review_index]['student']),
-            unit, student, review_data)
+            unit, student, review_data, is_draft)
 
         self.render('review_confirmation.html')
 
@@ -513,6 +532,8 @@ class EventsRESTHandler(BaseRESTHandler):
 
 class ReviewUtils(object):
     """A utility class for processing data relating to assessment reviews."""
+    # TODO(sll): Update all docs and attribute references in this class once
+    # the underlying models in review.py have been properly baked.
 
     @classmethod
     def has_unfinished_reviews(cls, reviews):
@@ -531,3 +552,35 @@ class ReviewUtils(object):
             assert item['index'] == len(answer_list)
             answer_list.append(item['value'])
         return answer_list
+
+    @classmethod
+    def count_completed_reviews(cls, reviews):
+        """Counts the number of completed reviews in the given set."""
+        count = 0
+        for review in reviews:
+            if 'is_draft' in review and not review['is_draft']:
+                count += 1
+        return count
+
+    @classmethod
+    def get_review_progress(cls, reviews, min_reviews, progress_tracker):
+        """Gets the progress value based on the number of reviews done.
+
+        Args:
+          reviews: a list of review objects.
+          min_reviews: the minimum number of reviews that the student is
+              required to complete for this assessment.
+          progress_tracker: the course progress tracker.
+
+        Returns:
+          the corresponding progress value: 0 (not started), 1 (in progress) or
+          2 (completed).
+        """
+        completed_reviews = cls.count_completed_reviews(reviews)
+
+        if completed_reviews == 0:
+            return progress_tracker.NOT_STARTED_STATE
+        elif completed_reviews < min_reviews:
+            return progress_tracker.IN_PROGRESS_STATE
+        else:
+            return progress_tracker.COMPLETED_STATE

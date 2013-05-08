@@ -45,6 +45,7 @@ WORKFLOW_SPEC = 'workflow_spec'
 
 # Keys in the WORKFLOW_SPEC sub-dictionary of the workflow dict.
 GRADER_KEY = 'grader'
+MIN_REVIEWS_KEY = 'min_reviews'
 
 # The name for the peer review assessment used in the sample v1.2 CSV file.
 # This is here so that a peer review assessment example is available when
@@ -53,7 +54,8 @@ GRADER_KEY = 'grader'
 # later (via the web interface).
 LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
 
-DEFAULT_WORKFLOW_SPEC = 'grader: auto'
+DEFAULT_WORKFLOW_SPEC = 'grader: auto\nmin_reviews: 1'
+DEFAULT_MIN_REVIEWS = 1
 
 
 def deep_dict_merge(real_values_dict, default_values_dict):
@@ -425,6 +427,10 @@ class CourseModel12(object):
         if unit.unit_id == LEGACY_REVIEW_ASSESSMENT:
             return HUMAN_GRADER
         return AUTO_GRADER
+
+    def get_assessment_min_reviews(self, unused_unit):
+        """Returns the min number of reviews for an assessment."""
+        return DEFAULT_MIN_REVIEWS
 
     def get_workflow_spec(self, unit):
         """Returns the default assessment workflow spec."""
@@ -1062,6 +1068,14 @@ class CourseModel13(object):
             return AUTO_GRADER
         return yaml.safe_load(workflow_spec).get(GRADER_KEY, AUTO_GRADER)
 
+    def get_assessment_min_reviews(self, unit):
+        """Returns the min number of reviews for an assessment."""
+        workflow_spec = self.get_workflow_spec(unit)
+        if not workflow_spec:
+            return DEFAULT_MIN_REVIEWS
+        return yaml.safe_load(workflow_spec).get(
+            MIN_REVIEWS_KEY, DEFAULT_MIN_REVIEWS)
+
     def get_assessment_as_dict(self, filename):
         """Gets the content of an assessment file as a Python dict."""
         path = self._app_context.fs.impl.physical_to_logical(filename)
@@ -1291,8 +1305,14 @@ class Workflow(object):
             # Validate the workflow specification (in YAML format).
             assert self.workflow_spec
             workflow_dict = yaml.safe_load(self.workflow_spec)
+
             assert GRADER_KEY in workflow_dict
             assert workflow_dict[GRADER_KEY] in [AUTO_GRADER, HUMAN_GRADER]
+
+            assert MIN_REVIEWS_KEY in workflow_dict
+            assert isinstance(workflow_dict[MIN_REVIEWS_KEY], int)
+            assert workflow_dict[MIN_REVIEWS_KEY] >= 0
+
             return True
         except Exception as e:  # pylint: disable-msg=broad-except
             errors.append('Error validating workflow specification: %s' % e)
@@ -1522,6 +1542,10 @@ class Course(object):
     def get_assessment_grader(self, unit):
         """Returns the grader for an assessment."""
         return self._model.get_assessment_grader(unit)
+
+    def get_assessment_min_reviews(self, unit):
+        """Returns the min number of reviews for a peer-reviewed assessment."""
+        return self._model.get_assessment_min_reviews(unit)
 
     def needs_human_grader(self, unit):
         grader = self.get_assessment_grader(unit)
