@@ -175,8 +175,21 @@ class DashboardHandler(
     def format_title(self, text):
         """Formats standard title."""
         title = self.app_context.get_environ()['course']['title']
-        return ('Course Builder &gt; %s &gt; Dashboard &gt; %s' %
-                (cgi.escape(title), text))
+        return safe_dom.NodeList().append(
+            safe_dom.Text('Course Builder ')
+        ).append(
+            safe_dom.Entity('&gt;')
+        ).append(
+            safe_dom.Text(' %s ' % title)
+        ).append(
+            safe_dom.Entity('&gt;')
+        ).append(
+            safe_dom.Text(' Dashboard ')
+        ).append(
+            safe_dom.Entity('&gt;')
+        ).append(
+            safe_dom.Text(' %s' % text)
+        )
 
     def _get_edit_link(self, url):
         return safe_dom.NodeList().append(

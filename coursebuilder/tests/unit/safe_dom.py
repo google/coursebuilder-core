@@ -124,3 +124,60 @@ class ElementTests(unittest.TestCase):
         self.assertEqual(
             '<td><a href="foo%22bar">1&lt;2</a></td>', element.__str__())
 
+
+class EntityTest(unittest.TestCase):
+    """Unit tests for common.safe_dom.Entity."""
+
+    def expect_pass(self, test_text):
+        entity = safe_dom.Entity(test_text)
+        self.assertEqual(test_text, entity.__str__())
+
+    def expect_fail(self, test_text):
+        try:
+            safe_dom.Entity(test_text)
+        except AssertionError:
+            return
+        self.fail('Expected an assert exception')
+
+    def test_should_pass_named_entities(self):
+        self.expect_pass('&nbsp;')
+
+    def test_should_pass_decimal_entities(self):
+        self.expect_pass('&#38;')
+
+    def test_should_pass_hex_entities(self):
+        self.expect_pass('&#x26AB;')
+
+    def test_entities_must_start_with_ampersand(self):
+        self.expect_fail('nbsp;')
+
+    def test_entities_must_end_with_semicolon(self):
+        self.expect_fail('&nbsp')
+
+    def test_named_entities_must_be_all_alpha(self):
+        self.expect_fail('&qu2ot;')
+
+    def test_decimal_entities_must_be_all_decimal_digits(self):
+        self.expect_fail('&#12A6;')
+
+    def test_hex_entities_must_be_all_hex_digits(self):
+        self.expect_fail('&#x26AG')
+
+    def test_entitiesmust_be_non_empty(self):
+        self.expect_fail('&;')
+        self.expect_fail('&#;')
+        self.expect_fail('&#x;')
+
+    def test_should_reject_extraneous_characters(self):
+        self.expect_fail(' &nbsp;')
+        self.expect_fail('&nbsp; ')
+
+    def test_should_reject_tampering(self):
+        entity = safe_dom.Entity('&nbsp;')
+        entity._entity = '<script/>'
+        try:
+            entity.__str__()
+        except AssertionError:
+            return
+        self.fail('Expected an assert exception')
+

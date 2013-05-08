@@ -101,3 +101,18 @@ class Element(Node):
             buff += child.sanitized
         buff += '</%s>' % self._tag_name
         return buff
+
+
+class Entity(Node):
+    """Holds an XML entity."""
+
+    ENTITY_PATTERN = re.compile('^&([a-zA-Z]+|#[0-9]+|#x[0-9a-fA-F]+);$')
+
+    def __init__(self, entity):
+        assert Entity.ENTITY_PATTERN.match(entity)
+        self._entity = entity
+
+    @property
+    def sanitized(self):
+        assert Entity.ENTITY_PATTERN.match(self._entity)
+        return self._entity
