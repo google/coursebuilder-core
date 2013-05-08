@@ -27,13 +27,11 @@ import transforms
 
 from google.appengine.ext import db
 
-# Indicates that a human-graded assessment is self-graded.
-SELF_MATCHER = 'self'
 # Indicates that a human-graded assessment is peer-graded.
 PEER_MATCHER = 'peer'
 
 # Allowed matchers.
-ALLOWED_MATCHERS = [SELF_MATCHER, PEER_MATCHER]
+ALLOWED_MATCHERS = [PEER_MATCHER]
 
 
 class ReviewsProcessor(object):
@@ -41,7 +39,6 @@ class ReviewsProcessor(object):
 
     TYPE_IMPL_MAPPING = {
         PEER_MATCHER: review.Manager,
-        SELF_MATCHER: None,
     }
 
     def __init__(self, course):

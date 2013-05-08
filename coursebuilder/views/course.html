@@ -70,18 +70,16 @@
 
                           {% if unit.is_submitted %}
                             <a href="reviewdashboard?unit={{ unit.unit_id }}">
-                              {% if unit.matcher == 'self' %}
-                                Review your assignment
-                              {% else %}
-                                Review peer assignments
+                              {% if unit.matcher == 'peer' %}
+                                {# I18N: Displayed in the course contents page. Indicates a page to which students can go to review other students' assignments. #}
+                                {{ gettext('Review peer assignments') }}
                               {% endif %}
                             </a>
                           {% else %}
                             <span>
-                              {% if unit.matcher == 'self' %}
-                                Review your assignment
-                              {% else %}
-                                Review peer assignments
+                              {% if unit.matcher == 'peer' %}
+                                {# I18N: Displayed in the course contents page. Indicates a page to which students can go to review other students' assignments. #}
+                                {{ gettext('Review peer assignments') }}
                               {% endif %}
                             </span>
                           {% endif %}

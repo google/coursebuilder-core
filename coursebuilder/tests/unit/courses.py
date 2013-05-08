@@ -130,7 +130,7 @@ class WorkflowValidationTests(unittest.TestCase):
 
         self.errors = []
         workflow = Workflow(self.to_yaml(
-            {'grader': 'human', 'matcher': 'self'}
+            {'grader': 'human', 'matcher': 'peer'}
         ))
         workflow.validate(self.errors)
         self.assert_matching_errors([

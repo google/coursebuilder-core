@@ -464,6 +464,10 @@ class ReviewDashboardHandler(BaseHandler):
 
         self.template_value['navbar'] = {'course': True}
 
+        if not course.needs_human_grader(unit):
+            self.error(404)
+            return
+
         # Check that the student has submitted the corresponding assignment.
         if not rp.does_submission_exist(unit.unit_id, student.get_key()):
             self.template_value['error_code'] = (
@@ -505,6 +509,10 @@ class ReviewDashboardHandler(BaseHandler):
         rp = course.get_reviews_processor()
         review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
         self.template_value['navbar'] = {'course': True}
+
+        if not course.needs_human_grader(unit):
+            self.error(404)
+            return
 
         # Check that the student has submitted the corresponding assignment.
         if not rp.does_submission_exist(unit.unit_id, student.get_key()):
@@ -562,6 +570,10 @@ class ReviewHandler(BaseHandler):
         rp = course.get_reviews_processor()
         unit, unused_lesson = extract_unit_and_lesson(self)
 
+        if not course.needs_human_grader(unit):
+            self.error(404)
+            return
+
         review_step_key = self.request.get('key')
         if not unit or not review_step_key:
             self.error(404)
@@ -584,13 +596,13 @@ class ReviewHandler(BaseHandler):
             self.error(404)
             return
 
-        submission_key = review_step.submission_key
-        submission_contents = rp.get_submission_contents_by_key(
-            unit.unit_id, submission_key)
-
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit.unit_id
         self.template_value['key'] = review_step_key
+
+        submission_key = review_step.submission_key
+        submission_contents = rp.get_submission_contents_by_key(
+            unit.unit_id, submission_key)
 
         readonly_student_assessment = create_readonly_assessment_params(
             course.get_assessment_content(unit),
@@ -647,15 +659,15 @@ class ReviewHandler(BaseHandler):
 
         course = self.get_course()
         rp = course.get_reviews_processor()
-        unit_id = self.request.get('unit_id')
 
-        review_step_key = self.request.get('key')
-        if not review_step_key:
+        unit_id = self.request.get('unit_id')
+        unit = self.find_unit_by_id(unit_id)
+        if not unit or not course.needs_human_grader(unit):
             self.error(404)
             return
 
-        unit = self.find_unit_by_id(unit_id)
-        if not unit:
+        review_step_key = self.request.get('key')
+        if not review_step_key:
             self.error(404)
             return
 
