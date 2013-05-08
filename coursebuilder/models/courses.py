@@ -1476,6 +1476,21 @@ class Course(object):
 
         return None, None
 
+    def get_course_announcement_list_email(self):
+        """Get Announcement email address for the course."""
+        course_env = self.get_environ(self._app_context)
+        if not course_env:
+            return None
+        if 'course' not in course_env:
+            return None
+        course_dict = course_env['course']
+        if 'announcement_list_email' not in course_dict:
+            return None
+        announcement_list_email = course_dict['announcement_list_email']
+        if announcement_list_email:
+            return announcement_list_email
+        return None
+
     def init_new_course_settings(self, title, admin_email):
         """Initializes new course.yaml file if it does not yet exists."""
         fs = self.app_context.fs.impl

@@ -25,6 +25,7 @@ from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
 from models import entities
+from models import notify
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
@@ -154,7 +155,8 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             AnnouncementsItemRESTHandler.SCHEMA_JSON,
-            AnnouncementsItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            AnnouncementsItemRESTHandler.get_schema_annotation_dict(
+                self.get_course().get_course_announcement_list_email()),
             key, rest_url, exit_url,
             required_modules=AnnouncementsItemRESTHandler.REQUIRED_MODULES)
         self.template_value['navbar'] = {'announcements': True}
@@ -207,30 +209,46 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 "title": {"optional": true, "type": "string"},
                 "date": {"optional": true, "type": "date"},
                 "html": {"optional": true, "type": "html"},
-                "is_draft": {"type": "boolean"}
+                "is_draft": {"type": "boolean"},
+                "send_email": {"type": "boolean"}
                 }
         }
         """
 
     SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
 
-    # inputex specific schema annotations to control editor look and feel
-    SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Announcement'),
-        (['properties', 'key', '_inputex'], {
-            'label': 'ID', '_type': 'uneditable'}),
-        (['properties', 'date', '_inputex'], {
-            'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
-            'valueFormat': 'Y/m/d'}),
-        (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        (['properties', 'html', '_inputex'], {
-            'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
-        oeditor.create_bool_select_annotation(
-            ['properties', 'is_draft'], 'Status', 'Draft', 'Published')]
-
     REQUIRED_MODULES = [
         'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
-        'inputex-uneditable']
+        'inputex-uneditable', 'inputex-checkbox']
+
+    @staticmethod
+    def get_send_email_description(announcement_email):
+        """Get the description for Send Email field."""
+        if announcement_email:
+            return 'Email will be sent to : ' + announcement_email
+        return 'Announcement list not configured.'
+
+    @staticmethod
+    def get_schema_annotation_dict(announcement_email):
+        """Utility to get schema annotation dict for this course."""
+        schema_dict = [
+            (['title'], 'Announcement'),
+            (['properties', 'key', '_inputex'], {
+                'label': 'ID', '_type': 'uneditable'}),
+            (['properties', 'date', '_inputex'], {
+                'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
+                'valueFormat': 'Y/m/d'}),
+            (['properties', 'title', '_inputex'], {'label': 'Title'}),
+            (['properties', 'html', '_inputex'], {
+                'label': 'Body', '_type': 'html', 'editorType': 'simple'}),
+            oeditor.create_bool_select_annotation(
+                ['properties', 'is_draft'], 'Status', 'Draft', 'Published'),
+            (['properties', 'send_email', '_inputex'], {
+                'label': 'Send Email', '_type': 'boolean',
+                'description':
+                AnnouncementsItemRESTHandler.get_send_email_description(
+                    announcement_email)})]
+        return schema_dict
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
@@ -287,7 +305,20 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             AnnouncementsItemRESTHandler.SCHEMA_DICT))
         entity.put()
 
-        transforms.send_json_response(self, 200, 'Saved.')
+        email_sent = False
+        if entity.send_email:
+            email_manager = notify.EmailManager(self.get_course())
+            email_sent = email_manager.send_announcement(
+                entity.title, entity.html)
+
+        if entity.send_email and not email_sent:
+            if not self.get_course().get_course_announcement_list_email():
+                message = 'Saved. Announcement list not configured.'
+            else:
+                message = 'Saved, but there was an error sending email.'
+        else:
+            message = 'Saved'
+        transforms.send_json_response(self, 200, message)
 
 
 class AnnouncementEntity(entities.BaseEntity):
@@ -296,6 +327,7 @@ class AnnouncementEntity(entities.BaseEntity):
     date = db.DateProperty()
     html = db.TextProperty(indexed=False)
     is_draft = db.BooleanProperty()
+    send_email = db.BooleanProperty()
 
     memcache_key = 'announcements'
 

@@ -56,6 +56,7 @@ course:
   # Forum URL. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/WebForums.
+  forum_email: My-Course@googlegroups.com
   forum_url: https://groups.google.com/group/My-Course
 
   # Forum embedding URL. This link is used to embed the forum in an iframe on
@@ -67,6 +68,7 @@ course:
   # announcements. For details, see
   #
   #     http://code.google.com/p/course-builder/wiki/CreateEmailList
+  announcement_list_email: My-Course-Announce@googlegroups.com
   announcement_list_url: https://groups.google.com/group/My-Course-Announce
 
   # Locale for internationalization. See modules/i18n/resources/locale for
