@@ -63,12 +63,13 @@ function getGcbRteDefs(env, Dom, Editor) {
       for (var k = 0; k < env.custom_rte_tag_icons.length; k++) {
         var tag = env.custom_rte_tag_icons[k];
         var elts = editorDoc.getElementsByTagName(tag.name);
-        for (var i = 0; i < elts.length; i++) {
+        for (var i = elts.length - 1; i >= 0; i--) {
+          var elt = elts[i];
           var img = editorDoc.createElement('img');
           img.src = tag.iconUrl;
           img.className = 'gcbMarker';
           img.style.cursor = 'pointer';
-          img.ondblclick = (function(target) {
+          img.ondblclick = (function(_elt, _img) {
             // Create a new scope with its own pointer to the current element
             return function(event) {
               var event = event || editorWin.event;
@@ -77,9 +78,9 @@ function getGcbRteDefs(env, Dom, Editor) {
               } else { // IE 8 & 9
                 event.cancelBubble = true;
               }
-              that._editCustomTag(target);
+              that._editCustomTag(_elt, _img);
             };
-          })(elts[i]);
+          })(elt, img);
           img.onmousedown = function(event) {
             var event = event || editorWin.event;
             if (event.preventDefault && event.stopPropagation) {
@@ -90,14 +91,8 @@ function getGcbRteDefs(env, Dom, Editor) {
               event.cancelBubble = false;
             }
           };
-          if (typeof elts[i].canHaveChildren == 'boolean'
-              && !elts[i].canHaveChildren) { // IE 8 & 9
-            elts[i].parentNode.insertBefore(img, elts[i]);
-          } else {
-            // Prefer to append the image as child so it can't be separated from
-            // its tag by the editor.
-            elts[i].appendChild(img);
-          }
+          img.gcbTag = elt;
+          elt.parentNode.replaceChild(img, elt);
         }
       }
     },
@@ -105,7 +100,7 @@ function getGcbRteDefs(env, Dom, Editor) {
     /**
      * When a custom tag is double-clicked, open up a sub-editor in a lightbox.
      */
-    _editCustomTag: function(node) {
+    _editCustomTag: function(node, img) {
       var url = '/oeditor/popup?action=edit_custom_tag&tag_name=' +
           escape(node.tagName.toLowerCase());
       var value = {};
@@ -177,7 +172,11 @@ function getGcbRteDefs(env, Dom, Editor) {
     },
 
     _removeMarkerTags: function(win) {
-      this._removeTagsByClass(win, 'gcbMarker');
+      var elts = win.document.querySelectorAll('.gcbMarker');
+      for (var i = 0; i < elts.length; i++) {
+        var img = elts[i];
+        img.parentNode.replaceChild(img.gcbTag, img);
+      }
     },
 
     _removeTagsByClass: function(win, clazz) {
@@ -236,7 +235,6 @@ function getGcbRteDefs(env, Dom, Editor) {
       this.editor.render();
 
       // Poll until the editor iframe has loaded
-      var that = this;
       (function() {
         var ed = document.getElementById(that.id + '_editor');
         if (ed && ed.contentWindow && ed.contentWindow.document &&
