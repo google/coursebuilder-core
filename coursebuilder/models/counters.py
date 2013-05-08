@@ -17,6 +17,16 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
+def incr_counter_global_value(unused_name, unused_delta):
+    """Hook method for global aggregation."""
+    pass
+
+
+def get_counter_global_value(unused_name):
+    """Hook method for global aggregation."""
+    return None
+
+
 class PerfCounter(object):
     """A generic, in-process integer counter."""
 
@@ -31,6 +41,7 @@ class PerfCounter(object):
         self, increment=1, context=None):  # pylint: disable-msg=unused-argument
         """Increments value by a given increment."""
         self._value += increment
+        incr_counter_global_value(self.name, increment)
 
     @property
     def name(self):
@@ -42,7 +53,13 @@ class PerfCounter(object):
 
     @property
     def value(self):
+        """Value for this process only."""
         return self._value
+
+    @property
+    def global_value(self):
+        """Value aggregated across all processes."""
+        return get_counter_global_value(self.name)
 
 
 class Registry(object):

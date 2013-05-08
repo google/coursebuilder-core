@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import logging
 import appengine_config
 from config import ConfigProperty
+import counters
 from counters import PerfCounter
 from entities import BaseEntity
 from google.appengine.api import memcache
@@ -90,6 +91,14 @@ class MemcacheManager(object):
             memcache.set(key, value, ttl, namespace=namespace)
 
     @classmethod
+    def incr(cls, key, delta, namespace=None):
+        """Incr an item in memcache if memcache is enabled."""
+        if CAN_USE_MEMCACHE.value:
+            if not namespace:
+                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
+            memcache.incr(key, delta, namespace=namespace, initial_value=0)
+
+    @classmethod
     def delete(cls, key, namespace=None):
         """Deletes an item from memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
@@ -97,6 +106,32 @@ class MemcacheManager(object):
             if not namespace:
                 namespace = appengine_config.DEFAULT_NAMESPACE_NAME
             memcache.delete(key, namespace=namespace)
+
+
+CAN_AGGREGATE_COUNTERS = ConfigProperty(
+    'gcb_can_aggregate_counters', bool,
+    'Whether or not to aggregate and record counter values in memcache. '
+    'This allows you to see counter values aggregated across all frontend '
+    'application instances. Without recording, you only see counter values '
+    'for one frontend instance you are connected to right now. Enabling '
+    'aggregation improves quality of performance metrics, but adds a small '
+    'amount of latency to all your requests.',
+    default_value=False)
+
+
+def incr_counter_global_value(name, delta):
+    if CAN_AGGREGATE_COUNTERS.value:
+        MemcacheManager.incr('counter:' + name, delta)
+
+
+def get_counter_global_value(name):
+    if CAN_AGGREGATE_COUNTERS.value:
+        return MemcacheManager.get('counter:' + name)
+    else:
+        return None
+
+counters.get_counter_global_value = get_counter_global_value
+counters.incr_counter_global_value = incr_counter_global_value
 
 
 class Student(BaseEntity):

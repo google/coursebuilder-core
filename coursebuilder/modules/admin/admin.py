@@ -240,10 +240,14 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
         # add all registered counters
         all_counters = counters.Registry.registered.copy()
         for name in all_counters.keys():
-            perf_counters[name] = all_counters[name].value
+            global_value = all_counters[name].global_value
+            if not global_value:
+                global_value = 'NA'
+            perf_counters[name] = '%s / %s' % (
+                all_counters[name].value, global_value)
 
         template_values['main_content'] = self.render_dict(
-            perf_counters, 'In-process Performance Counters')
+            perf_counters, 'In-process Performance Counters (local/global)')
         self.render_page(template_values)
 
     def get_deployment(self):
