@@ -17,6 +17,7 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
+import logging
 import os
 import urllib
 from common import jinja_filters
@@ -545,18 +546,9 @@ class DashboardHandler(
         template_values = {}
         template_values['page_title'] = self.format_title('Analytics')
 
-        details = safe_dom.NodeList().append(
-            safe_dom.Element('h3').add_text('Enrollment Statistics')
-        ).append(
-            safe_dom.Element('ul').add_child(
-                safe_dom.Element('li').add_text('pending'))
-        ).append(
-            safe_dom.Element('h3').add_text('Assessment Statistics')
-        ).append(
-            safe_dom.Element('ul').add_child(
-                safe_dom.Element('li').add_text('pending'))
-        )
-
+        subtemplate_values = {}
+        errors = []
+        stats_calculated = False
         update_message = safe_dom.Text('')
         update_action = safe_dom.Element(
             'form', id='gcb-compute-student-stats',
@@ -579,39 +571,37 @@ class DashboardHandler(
         else:
             if job.status_code == jobs.STATUS_CODE_COMPLETED:
                 stats = transforms.loads(job.output)
-                enrolled = stats['enrollment']['enrolled']
-                unenrolled = stats['enrollment']['unenrolled']
+                stats_calculated = True
 
-                enrollment = safe_dom.NodeList().append(
-                    safe_dom.Element(
-                        'li').add_text('previously enrolled: %s' % unenrolled)
-                ).append(
-                    safe_dom.Element(
-                        'li').add_text('currently enrolled: %s' % enrolled)
-                ).append(
-                    safe_dom.Element(
-                        'li').add_text('total: %s' % (unenrolled + enrolled)))
+                subtemplate_values['enrolled'] = stats['enrollment']['enrolled']
+                subtemplate_values['unenrolled'] = (
+                    stats['enrollment']['unenrolled'])
 
-                assessment = safe_dom.NodeList()
-                total = 0
+                scores = []
+                total_records = 0
                 for key, value in stats['scores'].items():
-                    total += value[0]
-                    avg_score = 0
-                    if value[0]:
-                        avg_score = round(value[1] / value[0], 1)
-                    assessment.append(safe_dom.Element(
-                        'li').add_text('%s: completed %s, average score %s' % (
-                            key, value[0], avg_score)))
-                assessment.append(
-                    safe_dom.Element('li').add_text('total: %s' % total))
+                    total_records += value[0]
+                    avg = round(value[1] / value[0], 1) if value[0] else 0
+                    scores.append({'key': key, 'completed': value[0],
+                                   'avg': avg})
+                subtemplate_values['scores'] = scores
+                subtemplate_values['total_records'] = total_records
 
-                details = safe_dom.NodeList().append(
-                    safe_dom.Element('h3').add_text('Enrollment Statistics')
-                ).append(
-                    safe_dom.Element('ul').add_children(enrollment)
-                ).append(
-                    safe_dom.Element('h3').add_text('Assessment Statistics')
-                ).append(safe_dom.Element('ul').add_children(assessment))
+                additional_stats = ''
+                for callback in DashboardRegistry.analytics_callbacks:
+                    handler = callback()
+                    handler.app_context = self.app_context
+                    handler.request = self.request
+                    handler.response = self.response
+                    try:
+                        additional_stats += handler.get()
+                    except Exception as e:  # pylint: disable-msg=broad-except
+                        error_msg = ('Error retrieving analytics for %s: '
+                                     '%s' % (callback.__name__, e))
+                        logging.error(error_msg)
+                        errors.append(error_msg)
+
+                subtemplate_values['additional_stats'] = additional_stats
 
                 update_message = safe_dom.Text("""
                     Student statistics were last updated on
@@ -633,10 +623,14 @@ class DashboardHandler(
                     Student statistics update started on %s and is running
                     now. Please come back shortly.""" % job.updated_on)
 
-        items = safe_dom.NodeList().append(details).append(
-            update_message).append(update_action)
+        subtemplate_values['stats_calculated'] = stats_calculated
+        subtemplate_values['errors'] = errors
+        subtemplate_values['update_message'] = update_message
+        subtemplate_values['update_action'] = update_action
 
-        template_values['main_content'] = items
+        template_values['main_content'] = jinja2.utils.Markup(self.get_template(
+            'analytics.html', [os.path.dirname(__file__)]
+        ).render(subtemplate_values, autoescape=True))
         self.render_page(template_values)
 
     def post_compute_student_stats(self):
@@ -705,3 +699,14 @@ class ComputeStudentStats(jobs.DurableJob):
             'scores': scores.name_to_tuple}
 
         return data
+
+
+class DashboardRegistry(object):
+    """Holds registered handlers that produce HTML code for the dashboard."""
+    analytics_callbacks = []
+
+    @classmethod
+    def add_custom_analytics_section(cls, handler):
+        """Adds handlers that provide additional data for the Analytics page."""
+        if handler not in cls.analytics_callbacks:
+            cls.analytics_callbacks.append(handler)

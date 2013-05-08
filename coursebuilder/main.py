@@ -28,6 +28,7 @@ from modules.announcements import announcements
 from modules.dashboard import dashboard
 import modules.oeditor.oeditor
 from modules.review import cron
+from modules.review import review_stats
 
 urls = [
     ('/', lessons.CourseHandler),
@@ -87,6 +88,10 @@ webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
 debug = not appengine_config.PRODUCTION_MODE
+
+# Configure modules.
+dashboard.DashboardRegistry.add_custom_analytics_section(
+    review_stats.PeerReviewStats)
 
 app = webapp2.WSGIApplication(
     admin_handlers + cron_handlers + yui_handlers + [

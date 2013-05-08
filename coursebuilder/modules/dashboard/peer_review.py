@@ -76,7 +76,7 @@ class AssignmentManager(ApplicationHandler):
             'readonly_student_assessment': readonly_assessment,
             'reviews': reviews,
             'unit_id': unit_id,
-        }))
+        }, autoescape=True))
 
     def parse_request(self, course, unit_id, reviewee_id, reviewer_id=None):
         """Parses request parameters in a GET or POST request.
