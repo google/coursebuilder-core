@@ -1,0 +1,75 @@
+# Copyright 2013 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Functional tests for modules/review/peer.py."""
+
+__author__ = [
+    'johncox@google.com (John Cox)',
+]
+
+from models import entities
+from modules.review import peer
+from tests.functional import actions
+from google.appengine.ext import db
+
+
+class ReferencedModel(entities.BaseEntity):
+    pass
+
+
+class UnvalidatedReference(entities.BaseEntity):
+    referenced_model_key = peer.KeyProperty()
+
+
+class ValidatedReference(entities.BaseEntity):
+    referenced_model_key = peer.KeyProperty(kind=ReferencedModel.__name__)
+
+
+class KeyPropertyTest(actions.TestBase):
+    """Tests KeyProperty."""
+
+    def setUp(self):  # From superclass. pylint: disable-msg=g-bad-name
+        super(KeyPropertyTest, self).setUp()
+        self.referenced_model_key = ReferencedModel().put()
+
+    def test_validation_and_datastore_round_trip_of_keys_succeeds(self):
+        """Tests happy path for both validation and (de)serialization."""
+        model_with_reference = ValidatedReference(
+            referenced_model_key=self.referenced_model_key)
+        model_with_reference_key = model_with_reference.put()
+        model_with_reference_from_datastore = db.get(model_with_reference_key)
+        self.assertEqual(
+            self.referenced_model_key,
+            model_with_reference_from_datastore.referenced_model_key)
+        custom_model_from_datastore = db.get(
+            model_with_reference_from_datastore.referenced_model_key)
+        self.assertEqual(
+            self.referenced_model_key, custom_model_from_datastore.key())
+        self.assertTrue(isinstance(
+            model_with_reference_from_datastore.referenced_model_key,
+            db.Key))
+
+    def test_type_not_validated_if_kind_not_passed(self):
+        model_key = db.Model().put()
+        unvalidated = UnvalidatedReference(referenced_model_key=model_key)
+        self.assertEqual(model_key, unvalidated.referenced_model_key)
+
+    def test_validation_fails(self):
+        model_key = db.Model().put()
+        self.assertRaises(
+            db.BadValueError, ValidatedReference,
+            referenced_model_key='not_a_key')
+        self.assertRaises(
+            db.BadValueError, ValidatedReference,
+            referenced_model_key=model_key)

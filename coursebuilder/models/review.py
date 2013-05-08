@@ -14,14 +14,95 @@
 
 """Models and helper utilities for the review workflow."""
 
-__author__ = 'Sean Lip (sll@google.com)'
+__author__ = [
+    'johncox@google.com (John Cox)',
+    'sll@google.com (Sean Lip)',
+]
 
 import datetime
 
-from entities import BaseEntity
+import entities
 import transforms
 
 from google.appengine.ext import db
+
+
+# For many classes we define both a _DomainObject subclass and a db.Model.
+# When possible it is best to use the domain object, since db.Model carries with
+# it the datastore API and allows clients to bypass business logic by making
+# direct datastore calls.
+
+
+class _DomainObject(object):
+    """Domain object for review-related classes."""
+
+    # db.Model. The kind associated with this domain object class.
+    _model = None
+
+    @classmethod
+    def make_key(cls, id_or_name, namespace):
+        """Makes a db.Key for a domain object."""
+        assert cls._model is not None
+        return db.Key.from_path(
+            cls._model.kind(), id_or_name, namespace=namespace)
+
+
+class ReviewModel(entities.BaseEntity):
+    """Datastore model for a student review of a Submission.
+
+    This model may be used both by the review subsystem and by Course Builder
+    generally.
+    """
+
+    # Contents of the student's review. Max size is 1MB.
+    contents = db.TextProperty()
+
+
+class Review(_DomainObject):
+    """Domain object for a student work submission."""
+
+    _model = ReviewModel
+
+    def __init__(self, contents=None, key=None):
+        self._contents = contents
+        self._key = key
+
+    @property
+    def contents(self):
+        return self._contents
+
+    @property
+    def key(self):
+        return self._key
+
+
+class SubmissionModel(entities.BaseEntity):
+    """Datastore model for a student work submission.
+
+    This model may be used both by the review subsystem and by Course Builder
+    generally.
+    """
+
+    # Contents of the student submission. Max size is 1MB.
+    contents = db.TextProperty()
+
+
+class Submission(_DomainObject):
+    """Domain object for a student work submission."""
+
+    _model = SubmissionModel
+
+    def __init__(self, contents=None, key=None):
+        self._contents = contents
+        self._key = key
+
+    @property
+    def contents(self):
+        return self._contents
+
+    @property
+    def key(self):
+        return self._key
 
 
 class ReviewUtils(object):
@@ -206,7 +287,7 @@ class ReviewsProcessor(object):
         answers.put()
 
 
-class StudentWorkEntity(BaseEntity):
+class StudentWorkEntity(entities.BaseEntity):
     """Student work for human-reviewed assignments."""
 
     updated_on = db.DateTimeProperty(indexed=True)
