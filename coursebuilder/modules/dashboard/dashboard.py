@@ -20,10 +20,12 @@ import cgi
 import datetime
 import os
 import urllib
+from common import safe_dom
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
+import jinja2.exceptions
 from models import config
 from models import courses
 from models import jobs
@@ -106,8 +108,13 @@ class DashboardHandler(
 
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
+        def do_finalize(x):
+            if isinstance(x, safe_dom.Node) or isinstance(x, safe_dom.NodeList):
+                return jinja2.utils.Markup(x.sanitized)
+            return x
+
         jinja_environment = jinja2.Environment(
-            autoescape=True,
+            autoescape=True, finalize=do_finalize,
             loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
         return jinja_environment.get_template(template_name)
 
@@ -126,32 +133,36 @@ class DashboardHandler(
             ('assets', 'Assets'),
             ('settings', 'Settings'),
             ('students', 'Students')]
-        nav = []
+        nav = safe_dom.NodeList()
         for action, title in nav_mappings:
-            class_attr = 'class="selected"' if action == current_action else ''
-            nav.append(
-                '<a href="dashboard?action=%s" %s>%s</a>' % (
-                    action, class_attr, title))
+
+            class_name = 'selected' if action == current_action else ''
+            action_href = 'dashboard?action=%s' % action
+            nav.append(safe_dom.Element(
+                'a', href=action_href, className=class_name).add_text(
+                    title))
 
         if roles.Roles.is_super_admin():
-            nav.append('<a href="/admin">Admin</a>')
+            nav.append(safe_dom.Element(
+                'a', href='/admin').add_text('Admin'))
 
-        nav.append(
-            '<a href="https://code.google.com/p/course-builder/wiki/Dashboard"'
-            ' target="_blank">'
-            'Help</a>')
+        nav.append(safe_dom.Element(
+            'a', href='https://code.google.com/p/course-builder/wiki/Dashboard',
+            target='_blank').add_text('Help'))
 
-        return '\n'.join(nav)
+        return nav
 
     def render_page(self, template_values):
         """Renders a page using provided template values."""
 
         template_values['top_nav'] = self._get_top_nav()
         template_values['gcb_course_base'] = self.get_base_href(self)
-        template_values['user_nav'] = '%s | <a href="%s">Logout</a>' % (
-            users.get_current_user().email(),
-            users.create_logout_url(self.request.uri)
-        )
+        template_values['user_nav'] = safe_dom.NodeList().append(
+            safe_dom.Text('%s | ' % users.get_current_user().email())
+        ).append(
+            safe_dom.Element(
+                'a', href=users.create_logout_url(self.request.uri)
+            ).add_text('Logout'))
         template_values[
             'page_footer'] = 'Created on: %s' % datetime.datetime.now()
 
@@ -168,16 +179,25 @@ class DashboardHandler(
                 (cgi.escape(title), text))
 
     def _get_edit_link(self, url):
-        return '&nbsp;<a href="%s">Edit</a>' % url
+        return safe_dom.NodeList().append(
+            safe_dom.Text(' ')
+        ).append(
+            safe_dom.Element('a', href=url).add_text('Edit')
+        )
 
     def _get_availability(self, resource):
         if not hasattr(resource, 'now_available'):
-            return ''
+            return safe_dom.Text('')
         if resource.now_available:
-            return ''
+            return safe_dom.Text('')
         else:
-            return ' <span class="draft-label">(%s)</span>' % (
-                unit_lesson_editor.DRAFT_TEXT)
+            return safe_dom.NodeList().append(
+                safe_dom.Text(' ')
+            ).append(
+                safe_dom.Element(
+                    'span', className='draft-label'
+                ).add_text('(%s)' % unit_lesson_editor.DRAFT_TEXT)
+            )
 
     def render_course_outline_to_html(self):
         """Renders course outline to HTML."""
@@ -187,73 +207,74 @@ class DashboardHandler(
 
         is_editable = filer.is_editable_fs(self.app_context)
 
-        lines = []
-        lines.append('<ul style="list-style: none;">')
+        lines = safe_dom.Element('ul', style='list-style: none;')
         for unit in course.get_units():
             if unit.type == 'A':
-                lines.append('<li>')
-                lines.append(
-                    '<strong><a href="assessment?name=%s">%s</a></strong>' % (
-                        unit.unit_id, cgi.escape(unit.title)))
-                lines.append(self._get_availability(unit))
+                li = safe_dom.Element('li').add_child(
+                    safe_dom.Element(
+                        'a', href='assessment?name=%s' % unit.unit_id,
+                        className='strong'
+                    ).add_text(unit.title)
+                ).add_child(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_assessment',
                             'key': unit.unit_id})
-                    lines.append(self._get_edit_link(url))
-                lines.append('</li>\n')
+                    li.add_child(self._get_edit_link(url))
+                lines.add_child(li)
                 continue
 
             if unit.type == 'O':
-                lines.append('<li>')
-                lines.append(
-                    '<strong><a href="%s">%s</a></strong>' % (
-                        unit.href, cgi.escape(unit.title)))
-                lines.append(self._get_availability(unit))
+                li = safe_dom.Element('li').add_child(
+                    safe_dom.Element(
+                        'a', href=unit.href, className='strong'
+                    ).add_text(unit.title)
+                ).add_child(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_link',
                             'key': unit.unit_id})
-                    lines.append(self._get_edit_link(url))
-                lines.append('</li>\n')
+                    li.add_child(self._get_edit_link(url))
+                lines.add_child(li)
                 continue
 
             if unit.type == 'U':
-                lines.append('<li>')
-                lines.append(
-                    ('<strong><a href="unit?unit=%s">Unit %s - %s</a>'
-                     '</strong>') % (
-                         unit.unit_id, unit.index, cgi.escape(unit.title)))
-                lines.append(self._get_availability(unit))
+                li = safe_dom.Element('li').add_child(
+                    safe_dom.Element(
+                        'a', href='unit?unit=%s' % unit.unit_id,
+                        className='strong').add_text(
+                            'Unit %s - %s' % (unit.index, unit.title))
+                ).add_child(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
                         '/dashboard?%s') % urllib.urlencode({
                             'action': 'edit_unit',
                             'key': unit.unit_id})
-                    lines.append(self._get_edit_link(url))
+                    li.add_child(self._get_edit_link(url))
 
-                lines.append('<ol>')
+                ol = safe_dom.Element('ol')
                 for lesson in course.get_lessons(unit.unit_id):
-                    lines.append(
-                        '<li><a href="unit?unit=%s&lesson=%s">%s</a>\n' % (
-                            unit.unit_id, lesson.lesson_id,
-                            cgi.escape(lesson.title)))
-                    lines.append(self._get_availability(lesson))
+                    li2 = safe_dom.Element('li').add_child(
+                        safe_dom.Element(
+                            'a',
+                            href='unit?unit=%s&lesson=%s' % (
+                                unit.unit_id, lesson.lesson_id),
+                        ).add_text(lesson.title)
+                    ).add_child(self._get_availability(lesson))
                     if is_editable:
                         url = self.get_action_url(
                             'edit_lesson', key=lesson.lesson_id)
-                        lines.append(self._get_edit_link(url))
-                    lines.append('</li>')
-                lines.append('</ol>')
-                lines.append('</li>\n')
+                        li2.add_child(self._get_edit_link(url))
+                    ol.add_child(li2)
+                li.add_child(ol)
+                lines.add_child(li)
                 continue
 
             raise Exception('Unknown unit type: %s.' % unit.type)
 
-        lines.append('</ul>')
-        return ''.join(lines)
+        return lines
 
     def get_outline(self):
         """Renders course outline view."""

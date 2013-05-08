@@ -134,25 +134,28 @@
         span.draft-label {
           color: #999;
         }
+        .strong {
+          font-weight: bold;
+        }
     </style>
   </head>
   <body>
   <div id='gcb-user-bar'>
-    {{ user_nav|safe }}
+    {{ user_nav }}
   </div>
   <h2>{{ page_title|safe }}</h2>
   <div id='gcb-nav-bar'>
-    {{ top_nav|safe }}
+    {{ top_nav }}
   </div>
   <div id='gcb-main-area'>
     {% if alerts %}
       <div id="gcb-alerts-bar">
-        {{ alerts|safe }}
+        {{ alerts }}
       </div>
     {% endif %}
     {% if page_description %}
       <p class="page-description">
-        {{ page_description|safe }}
+        {{ page_description }}
       </p>
     {% endif %}
     {% if sections %}
@@ -176,11 +179,11 @@
         <h3>{{ section.title }}</h3>
         {% if section.description %}
           <p class="description">
-            {{ section.description|safe }}
+            {{ section.description }}
           </p>
         {% endif %}
         {% if section.pre %}
-        {{ section.pre|safe }}
+        {{ section.pre }}
         {% else %}
         <ol>
           {% if not section.children %}
