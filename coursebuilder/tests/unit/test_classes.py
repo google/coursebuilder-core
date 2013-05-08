@@ -26,6 +26,7 @@ from lxml import etree
 from models import config
 from models import courses
 from models import transforms
+from modules.review import domain
 from tests import suite
 from tools import verify
 from tools.etl import etl
@@ -76,6 +77,23 @@ class EtlRetryTest(suite.TestBase):
             raise Exception
         self.assertRaises(Exception, fail)
         self.assertEqual(etl._RETRIES, self.retries)
+
+
+class ReviewModuleDomainTests(suite.TestBase):
+    def test_review_step_predicates(self):
+        step = domain.ReviewStep()
+
+        self.assertFalse(step.is_assigned)
+        step._state = domain.REVIEW_STATE_ASSIGNED
+        self.assertTrue(step.is_assigned)
+
+        self.assertFalse(step.is_completed)
+        step._state = domain.REVIEW_STATE_COMPLETED
+        self.assertTrue(step.is_completed)
+
+        self.assertFalse(step.is_expired)
+        step._state = domain.REVIEW_STATE_EXPIRED
+        self.assertTrue(step.is_expired)
 
 
 class SwapTestObject(object):

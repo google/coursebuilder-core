@@ -96,6 +96,21 @@ class ReviewStep(object):
         return self._create_date
 
     @property
+    def is_assigned(self):
+        """Predicate for whether the step is in REVIEW_STATE_ASSIGNED."""
+        return self.state == REVIEW_STATE_ASSIGNED
+
+    @property
+    def is_completed(self):
+        """Predicate for whether the step is in REVIEW_STATE_COMPLETED."""
+        return self.state == REVIEW_STATE_COMPLETED
+
+    @property
+    def is_expired(self):
+        """Predicate for whether the step is in REVIEW_STATE_EXPIRED."""
+        return self.state == REVIEW_STATE_EXPIRED
+
+    @property
     def key(self):
         return self._key
 
