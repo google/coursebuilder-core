@@ -30,189 +30,195 @@ from google.appengine.ext import db
 
 # In-process increment-only performance counters.
 COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY = counters.PerfCounter(
-    'gcb-add-reviewer-bad-summary-key',
+    'gcb-pr-add-reviewer-bad-summary-key',
     'number of times add_reviewer() failed due to a bad review summary key')
 COUNTER_ADD_REVIEWER_SET_ASSIGNER_KIND_HUMAN = counters.PerfCounter(
-    'gcb-add-reviewer-set-assigner-kind-human',
+    'gcb-pr-add-reviewer-set-assigner-kind-human',
     ("number of times add_reviewer() changed an existing step's assigner_kind "
      'to ASSIGNER_KIND_HUMAN'))
 COUNTER_ADD_REVIEWER_CREATE_REVIEW_STEP = counters.PerfCounter(
-    'gcb-add-reviewer-create-review-step',
+    'gcb-pr-add-reviewer-create-review-step',
     'number of times add_reviewer() created a new review step')
 COUNTER_ADD_REVIEWER_EXPIRED_STEP_REASSIGNED = counters.PerfCounter(
-    'gcb-add-reviewer-expired-step-reassigned',
+    'gcb-pr-add-reviewer-expired-step-reassigned',
     'number of times add_reviewer() reassigned an expired step')
 COUNTER_ADD_REVIEWER_FAILED = counters.PerfCounter(
-    'gcb-add-reviewer-failed',
+    'gcb-pr-add-reviewer-failed',
     'number of times add_reviewer() had a fatal error')
 COUNTER_ADD_REVIEWER_REMOVED_STEP_UNREMOVED = counters.PerfCounter(
-    'gcb-add-reviewer-removed-step-unremoved',
+    'gcb-pr-add-reviewer-removed-step-unremoved',
     'number of times add_reviewer() unremoved a removed review step')
 COUNTER_ADD_REVIEWER_START = counters.PerfCounter(
-    'gcb-add-reviewer-start',
+    'gcb-pr-add-reviewer-start',
     'number of times add_reviewer() has started processing')
 COUNTER_ADD_REVIEWER_SUCCESS = counters.PerfCounter(
-    'gcb-add-reviewer-success',
+    'gcb-pr-add-reviewer-success',
     'number of times add_reviewer() completed successfully')
 COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED = counters.PerfCounter(
-    'gcb-add-reviewer-unremoved-step-failed',
+    'gcb-pr-add-reviewer-unremoved-step-failed',
     ('number of times add_reviewer() failed on an unremoved step with a fatal '
      'error'))
 
 COUNTER_DELETE_REVIEWER_ALREADY_REMOVED = counters.PerfCounter(
-    'gcb-review-delete-reviewer-already-removed',
+    'gcb-pr-review-delete-reviewer-already-removed',
     ('number of times delete_reviewer() called on review step with removed '
      'already True'))
 COUNTER_DELETE_REVIEWER_FAILED = counters.PerfCounter(
-    'gcb-review-delete-reviewer-failed',
+    'gcb-pr-review-delete-reviewer-failed',
     'number of times delete_reviewer() had a fatal error')
 COUNTER_DELETE_REVIEWER_START = counters.PerfCounter(
-    'gcb-review-delete-reviewer-start',
+    'gcb-pr-review-delete-reviewer-start',
     'number of times delete_reviewer() has started processing')
 COUNTER_DELETE_REVIEWER_STEP_MISS = counters.PerfCounter(
-    'gcb-review-delete-reviewer-step-miss',
+    'gcb-pr-review-delete-reviewer-step-miss',
     'number of times delete_reviewer() found a missing review step')
 COUNTER_DELETE_REVIEWER_SUCCESS = counters.PerfCounter(
-    'gcb-review-delete-reviewer-success',
+    'gcb-pr-review-delete-reviewer-success',
     'number of times delete_reviewer() completed successfully')
 COUNTER_DELETE_REVIEWER_SUMMARY_MISS = counters.PerfCounter(
-    'gcb-review-delete-reviewer-summary-miss',
+    'gcb-pr-review-delete-reviewer-summary-miss',
     'number of times delete_reviewer() found a missing review summary')
 
 COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION = counters.PerfCounter(
-    'gcb-expire-review-cannot-transition',
+    'gcb-pr-expire-review-cannot-transition',
     ('number of times expire_review() was called on a review step that could '
      'not be transitioned to REVIEW_STATE_EXPIRED'))
 COUNTER_EXPIRE_REVIEW_FAILED = counters.PerfCounter(
-    'gcb-expire-review-failed',
+    'gcb-pr-expire-review-failed',
     'number of times expire_review() had a fatal error')
 COUNTER_EXPIRE_REVIEW_START = counters.PerfCounter(
-    'gcb-expire-review-start',
+    'gcb-pr-expire-review-start',
     'number of times expire_review() has started processing')
 COUNTER_EXPIRE_REVIEW_STEP_MISS = counters.PerfCounter(
-    'gcb-expire-review-step-miss',
+    'gcb-pr-expire-review-step-miss',
     'number of times expire_review() found a missing review step')
 COUNTER_EXPIRE_REVIEW_SUCCESS = counters.PerfCounter(
-    'gcb-expire-review-success',
+    'gcb-pr-expire-review-success',
     'number of times expire_review() completed successfully')
 COUNTER_EXPIRE_REVIEW_SUMMARY_MISS = counters.PerfCounter(
-    'gcb-expire-review-summary-miss',
+    'gcb-pr-expire-review-summary-miss',
     'number of times expire_review() found a missing review summary')
 
 COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_EXPIRE = counters.PerfCounter(
-    'gcb-expire-old-reviews-for-unit-expire',
+    'gcb-pr-expire-old-reviews-for-unit-expire',
     'number of records expire_old_reviews_for_unit() has expired')
 COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SKIP = counters.PerfCounter(
-    'gcb-expire-old-reviews-for-unit-skip',
+    'gcb-pr-expire-old-reviews-for-unit-skip',
     ('number of times expire_old_reviews_for_unit() skipped a record due to an '
      'error'))
 COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_START = counters.PerfCounter(
-    'gcb-expire-old-reviews-for-unit-start',
+    'gcb-pr-expire-old-reviews-for-unit-start',
     'number of times expire_old_reviews_for_unit() has started processing')
 COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS = counters.PerfCounter(
-    'gcb-expire-old-reviews-for-unit-success',
+    'gcb-pr-expire-old-reviews-for-unit-success',
     'number of times expire_old_reviews_for_unit() completed successfully')
 
 COUNTER_GET_NEW_REVIEW_ALREADY_ASSIGNED = counters.PerfCounter(
-    'gcb-get-new-review-already-assigned',
+    'gcb-pr-get-new-review-already-assigned',
     ('number of times get_new_review() rejected a candidate because the '
      'reviewer is already assigned to or has already completed it'))
 COUNTER_GET_NEW_REVIEW_ASSIGNMENT_ATTEMPTED = counters.PerfCounter(
-    'gcb-get-new-review-assignment-attempted',
+    'gcb-pr-get-new-review-assignment-attempted',
     'number of times get_new_review() attempted to assign a candidate')
 COUNTER_GET_NEW_REVIEW_CANNOT_UNREMOVE_COMPLETED = counters.PerfCounter(
-    'gcb-get-new-review-cannot-unremove-completed',
+    'gcb-pr-get-new-review-cannot-unremove-completed',
     ('number of times get_new_review() failed because the reviewer already had '
      'a completed, removed review step'))
 COUNTER_GET_NEW_REVIEW_FAILED = counters.PerfCounter(
-    'gcb-get-new-review-failed',
+    'gcb-pr-get-new-review-failed',
     'number of times get_new_review() had a fatal error')
 COUNTER_GET_NEW_REVIEW_NOT_ASSIGNABLE = counters.PerfCounter(
-    'gcb-get-new-review-none-assignable',
+    'gcb-pr-get-new-review-none-assignable',
     'number of times get_new_review() failed to find an assignable review')
 COUNTER_GET_NEW_REVIEW_REASSIGN_EXISTING = counters.PerfCounter(
-    'gcb-get-new-review-reassign-existing',
+    'gcb-pr-get-new-review-reassign-existing',
     ('number of times get_new_review() unremoved and reassigned an existing '
      'review step'))
 COUNTER_GET_NEW_REVIEW_START = counters.PerfCounter(
-    'gcb-get-new-review-start',
+    'gcb-pr-get-new-review-start',
     'number of times get_new_review() has started processing')
 COUNTER_GET_NEW_REVIEW_SUCCESS = counters.PerfCounter(
-    'gcb-get-new-review-success',
+    'gcb-pr-get-new-review-success',
     'number of times get_new_review() found and assigned a new review')
 COUNTER_GET_NEW_REVIEW_SUMMARY_CHANGED = counters.PerfCounter(
-    'gcb-get-new-review-summary-changed',
+    'gcb-pr-get-new-review-summary-changed',
     ('number of times get_new_review() rejected a candidate because the review '
      'summary changed during processing'))
 
 COUNTER_GET_REVIEW_KEYS_BY_KEYS_RETURNED = counters.PerfCounter(
-    'gcb-get-review-keys-by-keys-returned',
+    'gcb-pr-get-review-keys-by-keys-returned',
     'number of keys get_review_keys_by() returned')
 COUNTER_GET_REVIEW_KEYS_BY_FAILED = counters.PerfCounter(
-    'gcb-get-review-keys-by-failed',
+    'gcb-pr-get-review-keys-by-failed',
     'number of times get_review_keys_by() had a fatal error')
 COUNTER_GET_REVIEW_KEYS_BY_START = counters.PerfCounter(
-    'gcb-get-review-keys-by-start',
+    'gcb-pr-get-review-keys-by-start',
     'number of times get_review_keys_by() started processing')
 COUNTER_GET_REVIEW_KEYS_BY_SUCCESS = counters.PerfCounter(
-    'gcb-get-review-keys-by-success',
+    'gcb-pr-get-review-keys-by-success',
     'number of times get_review_keys_by() completed successfully')
 
 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_FAILED = counters.PerfCounter(
-    'gcb-get-submission-and-review-keys-failed',
+    'gcb-pr-get-submission-and-review-keys-failed',
     'number of times get_submission_and_review_keys() had a fatal error')
 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_RETURNED = counters.PerfCounter(
-    'gcb-get-submission-and-review-keys-keys-returned',
+    'gcb-pr-get-submission-and-review-keys-keys-returned',
     'number of keys get_submission_and_review_keys() returned')
 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_START = counters.PerfCounter(
-    'gcb-get-submission-and-review-keys-start',
+    'gcb-pr-get-submission-and-review-keys-start',
     'number of times get_submission_and_review_keys() has begun processing')
 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS = counters.PerfCounter(
-    'gcb-get-submission-and-review-keys-submission-miss',
+    'gcb-pr-get-submission-and-review-keys-submission-miss',
     ('number of times get_submission_and_review_keys() failed to find a '
      'submission_key'))
 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUCCESS = counters.PerfCounter(
-    'gcb-get-submission-and-review-keys-success',
+    'gcb-pr-get-submission-and-review-keys-success',
     'number of times get_submission-and-review-keys() completed successfully')
 
 COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
-    'gcb-start-review-process-for-already-started',
+    'gcb-pr-start-review-process-for-already-started',
     ('number of times start_review_process_for() called when review already '
      'started'))
 COUNTER_START_REVIEW_PROCESS_FOR_FAILED = counters.PerfCounter(
-    'gcb-start-review-process-for-failed',
+    'gcb-pr-start-review-process-for-failed',
     'number of times start_review_process_for() had a fatal error')
 COUNTER_START_REVIEW_PROCESS_FOR_START = counters.PerfCounter(
-    'gcb-start-review-process-for-start',
+    'gcb-pr-start-review-process-for-start',
     'number of times start_review_process_for() has started processing')
 COUNTER_START_REVIEW_PROCESS_FOR_SUCCESS = counters.PerfCounter(
-    'gcb-start-review-process-for-success',
+    'gcb-pr-start-review-process-for-success',
     'number of times start_review_process_for() completed successfully')
 
 COUNTER_WRITE_REVIEW_COMPLETED_ASSIGNED_STEP = counters.PerfCounter(
-    'gcb-write-review-completed-assigned-step',
+    'gcb-pr-write-review-completed-assigned-step',
     'number of times write_review() transitioned an assigned step to completed')
 COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP = counters.PerfCounter(
-    'gcb-write-review-completed-expired-step',
+    'gcb-pr-write-review-completed-expired-step',
     'number of times write_review() transitioned an expired step to completed')
+COUNTER_WRITE_REVIEW_CREATED_NEW_REVIEW = counters.PerfCounter(
+    'gcb-pr-write-review-created-new-review',
+    'number of times write_review() created a new review')
 COUNTER_WRITE_REVIEW_FAILED = counters.PerfCounter(
-    'gcb-write-review-failed',
+    'gcb-pr-write-review-failed',
     'number of times write_review() had a fatal error')
 COUNTER_WRITE_REVIEW_REVIEW_MISS = counters.PerfCounter(
-    'gcb-write-review-review-miss',
+    'gcb-pr-write-review-review-miss',
     'number of times write_review() found a missing review')
 COUNTER_WRITE_REVIEW_START = counters.PerfCounter(
-    'gcb-write-review-start',
+    'gcb-pr-write-review-start',
     'number of times write_review() started processing')
 COUNTER_WRITE_REVIEW_STEP_MISS = counters.PerfCounter(
-    'gcb-write-review-step-miss',
+    'gcb-pr-write-review-step-miss',
     'number of times write_review() found a missing review step')
 COUNTER_WRITE_REVIEW_SUMMARY_MISS = counters.PerfCounter(
-    'gcb-write-review-summary-miss',
+    'gcb-pr-write-review-summary-miss',
     'number of times write_review() found a missing review summary')
 COUNTER_WRITE_REVIEW_SUCCESS = counters.PerfCounter(
-    'gcb-write-review-success',
+    'gcb-pr-write-review-success',
     'number of times write_review() completed successfully')
+COUNTER_WRITE_REVIEW_UPDATED_EXISTING_REVIEW = counters.PerfCounter(
+    'gcb-pr-write-review-updated-existing-review',
+    'number of times write_review() updated an existing review')
 
 
 class Error(Exception):
@@ -1080,6 +1086,10 @@ class Manager(object):
         cls, review_step_key, review_payload, mark_completed=True):
         """Writes a review, updating associated internal state.
 
+        If the passed step already has a review, that review will be updated. If
+        it does not have a review, a new one will be created with the passed
+        payload.
+
         Args:
             review_step_key: db.Key of peer.ReviewStep. The key of the review
                 step to update.
@@ -1113,6 +1123,11 @@ class Manager(object):
     @db.transactional(xg=True)
     def _update_review_contents_and_change_state(
         cls, review_step_key, review_payload, mark_completed):
+        should_increment_created_new_review = False
+        should_increment_updated_existing_review = False
+        should_increment_assigned_to_completed = False
+        should_increment_expired_to_completed = False
+
         step = db.get(review_step_key)
         if not step:
             COUNTER_WRITE_REVIEW_STEP_MISS.inc()
@@ -1126,26 +1141,35 @@ class Manager(object):
                 'Unable to transition step %s' % repr(step.key()),
                 step.state, peer.REVIEW_STATE_COMPLETED)
 
-        fetched_review, summary = db.get(
-            [step.review_key, step.review_summary_key])
-        if not fetched_review:
+        if step.review_key:
+            review_to_update = db.get(step.review_key)
+            if review_to_update:
+                should_increment_updated_existing_review = True
+        else:
+            review_to_update = review.Review(
+                contents=review_payload, reviewer_key=step.reviewer_key,
+                unit_id=step.unit_id)
+            step.review_key = db.Key.from_path(
+                review.Review.kind(),
+                review.Review.key_name(step.unit_id, step.reviewer_key))
+            should_increment_created_new_review = True
+
+        if not review_to_update:
             COUNTER_WRITE_REVIEW_REVIEW_MISS.inc()
             raise ConstraintError(
                 'No review found with key %s' % repr(step.review_key))
 
+        summary = db.get(step.review_summary_key)
         if not summary:
             COUNTER_WRITE_REVIEW_SUMMARY_MISS.inc()
             raise ConstraintError(
                 'No review summary found with key %s' % repr(
                     step.review_summary_key))
 
-        should_increment_assigned_to_completed = False
-        should_increment_expired_to_completed = False
-        fetched_review.contents = review_payload
+        review_to_update.contents = review_payload
+        updated_step_key = None
         if not mark_completed:
-            fetched_review.put()
-            return step.key()
-
+            _, updated_step_key = db.put([review_to_update, step])
         else:
             if step.state == peer.REVIEW_STATE_ASSIGNED:
                 should_increment_assigned_to_completed = True
@@ -1156,10 +1180,16 @@ class Manager(object):
             step.state = peer.REVIEW_STATE_COMPLETED
             summary.increment_count(step.state)
 
-            _, step_key, _ = db.put([fetched_review, step, summary])
-            if should_increment_assigned_to_completed:
-                COUNTER_WRITE_REVIEW_COMPLETED_ASSIGNED_STEP.inc()
-            elif should_increment_expired_to_completed:
-                COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP.inc()
+            _, updated_step_key, _ = db.put([review_to_update, step, summary])
 
-            return step_key
+        if should_increment_created_new_review:
+            COUNTER_WRITE_REVIEW_CREATED_NEW_REVIEW.inc()
+        elif should_increment_updated_existing_review:
+            COUNTER_WRITE_REVIEW_UPDATED_EXISTING_REVIEW.inc()
+
+        if should_increment_assigned_to_completed:
+            COUNTER_WRITE_REVIEW_COMPLETED_ASSIGNED_STEP.inc()
+        elif should_increment_expired_to_completed:
+            COUNTER_WRITE_REVIEW_COMPLETED_EXPIRED_STEP.inc()
+
+        return updated_step_key
