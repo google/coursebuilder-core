@@ -143,7 +143,7 @@ LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
 # This value is the default workflow for assessment grading,
 DEFAULT_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
     GRADER_KEY: AUTO_GRADER
-})
+}, default_flow_style=False)
 
 # This value is meant to be used only for the human-reviewed assessments in the
 # sample v1.2 Power Searching course.
@@ -154,7 +154,7 @@ LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
     REVIEW_DUE_DATE_KEY: '2013-03-21 12:00',
     REVIEW_MIN_COUNT_KEY: DEFAULT_REVIEW_MIN_COUNT,
     REVIEW_WINDOW_MINS_KEY: DEFAULT_REVIEW_WINDOW_MINS,
-})
+}, default_flow_style=False)
 
 
 def is_editable_fs(app_context):

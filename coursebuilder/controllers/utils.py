@@ -245,6 +245,12 @@ class BaseHandler(ApplicationHandler):
             self.redirect('/preview')
             return None
 
+        # Patch Student models which (for legacy reasons) do not have a user_id
+        # attribute set.
+        if not student.user_id:
+            student.user_id = user.user_id()
+            student.put()
+
         return student
 
     def assert_xsrf_token_or_fail(self, request, action):

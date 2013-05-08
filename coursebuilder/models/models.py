@@ -175,6 +175,8 @@ class Student(BaseEntity):
         student.put()
 
     def get_key(self):
+        if not self.user_id:
+            raise Exception('Student instance has no user_id set.')
         return db.Key.from_path(Student.kind(), self.user_id)
 
     @classmethod
