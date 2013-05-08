@@ -91,8 +91,8 @@ class ElementTests(unittest.TestCase):
 
     def test_escape_quotes(self):
         """Element should escape single and double quote characters."""
-        element = safe_dom.Element('a', href='a\'b"c')
-        self.assertEqual('<a href="a%27b%22c"></a>', element.__str__())
+        element = safe_dom.Element('a', href='a\'b"c`d')
+        self.assertEqual('<a href="a%27b%22c%60d"></a>', element.__str__())
 
     def test_allow_parens(self):
         """Element should allow parentheses in attributes."""
