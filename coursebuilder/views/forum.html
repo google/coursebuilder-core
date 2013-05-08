@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Forum {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Forum') }}
 {% endblock subtitle %}
 
 {% block top_content %}

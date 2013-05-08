@@ -5,27 +5,34 @@
   </colgroup>
 
   <tr>
-    <th align="left">{% trans %} Currently enrolled {% endtrans %}</th>
+    {# I18N: Table header that states whether a student is currently enrolled in a course. #}
+    <th align="left">{{ gettext('Currently enrolled') }}</th>
     <td>{{ student.is_enrolled }}</td>
   </tr>
 
   <tr>
-    <th align="left">{% trans %} Date enrolled {% endtrans %}</th>
+    {# I18N: Table header that states when a student enrolled in a course. #}
+    <th align="left">{{ gettext('Date enrolled') }}</th>
     <td>{{ student.enrolled_on }}</td>
   </tr>
 
   <tr>
-    <th align="left">{% trans %} Email {% endtrans %}</th>
+    {# I18N: Table header for the student's email address. This is a noun. #}
+    <th align="left">{{ gettext('Email') }}</th>
     <td>{{ student.key().name() }}</td>
   </tr>
 
   <tr>
-    <th align="left">{% trans %} Name {% endtrans %}</th>
+    {# I18N: Table header for the student's name. #}
+    <th align="left">{{ gettext('Name') }}</th>
     <td>{{ student.name }}</td>
   </tr>
 
   <tr>
-    <th align="left" colspan=2>{% trans %} Assessment scores {% endtrans %}</th>
+    {# I18N: Table header for the student's assessment scores. #}
+    <th align="left" colspan=2>
+      {{ gettext('Assessment scores') }}
+    </th>
   </tr>
 
   {% for assessment in score_list %}
@@ -34,6 +41,7 @@
       <td>
         {% if not assessment['has_score'] %}
           {% if assessment['completed'] %}
+            {# I18N: Shown in the student profile page, next to an assessment title. States whether the assessment has been completed. #}
             {{ gettext('Completed') }}
           {% endif %}
         {% elif 'score' in assessment and assessment['score'] is defined %}
@@ -45,7 +53,8 @@
 
   {% if overall_score != None %}
     <tr>
-      <th align="left">{% trans %} Overall course score {% endtrans %}</th>
+      {# I18N: Table header for the student's overall score. #}
+      <th align="left">{{ gettext('Overall course score') }}</th>
       <td>
         <span id="assessment-score-overall">{{ overall_score }}</span>
       </td>

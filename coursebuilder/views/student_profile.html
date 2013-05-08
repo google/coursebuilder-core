@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} My Profile {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('My Profile') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -12,39 +13,47 @@
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
       <h2>
-        {% trans %} Student Profile for {% endtrans %}
+        {# I18N: Title of the student profile page. Followed by a student's name. #}
+        {{ gettext('Student Profile for ') }}
         {{ student.key().name() }}
       </h2>
 
       {% if student %}
 
-      {% include 'student_data_table.html' %}
+        {% include 'student_data_table.html' %}
 
-      <form action='student/editstudent' method='post'>
-        <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
-        <h2><label for="name">{% trans %} New Name {% endtrans %}</label></h2>
-        <fieldset style="border: none;">
-          <p><input name="name" id="name" type="text" size="40">
-            <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
-        </fieldset>
+        <form action='student/editstudent' method='post'>
+          <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
+          <h2><label for="name">
+            {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+            {{ gettext('New Name') }}
+          </label></h2>
+          <fieldset style="border: none;">
+            <p><input name="name" id="name" type="text" size="40">
+              <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
+          </fieldset>
 
-        <p><button class="gcb-button" type="submit">
-          {% trans %} Save Changes {% endtrans %}
-        </button> &nbsp;&nbsp;&nbsp;
-          <a href="student/home" class="gcb-button" role="button">
-            {% trans %} Cancel {% endtrans %}
-          </a>
-        </p>
-      </form>
+          <p>
+            <button class="gcb-button" type="submit">
+              {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
+              {{ gettext('Change Name') }}
+            </button>
+          </p>
+        </form>
 
-      <h2>{% trans %} To leave the course permanently, click on Unenroll {% endtrans %}</h2>
+        <h2>
+          {# I18N: Shown on the student profile page. #}
+          {{ gettext('To leave the course permanently, click on Unenroll') }}
+        </h2>
 
-      <p><a role="button" href="student/unenroll" class="gcb-button">
-        {% trans %} Unenroll {% endtrans %}
-      </a></p>
+        <p><a role="button" href="student/unenroll" class="gcb-button">
+          {# I18N: Button that allows the student to unenroll from a course. #}
+          {{ gettext('Unenroll') }}
+        </a></p>
 
       {% else %}
-      <p>Student profile not found ...</p>
+        {# I18N: Shown when the student profile cannot be found in the database. #}
+        <p>{{ gettext('Student profile not found ...')}}</p>
       {% endif %}
     </div>
   </div>

@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Assessment {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Assessment') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -38,6 +39,7 @@
     {% if grader == 'human' %}
       <p>
         <strong>
+          {# I18N: Shown to the student on the assignment page. #}
           {{ gettext('Due date for this assignment: ') }}
         </strong>
         {{ submission_due_date }}.
@@ -46,8 +48,8 @@
       {% if matcher == 'peer' %}
         <p>
           <em>
-            {{ gettext('You may only submit this assignment once. After you submit it, the assignment will become read-only, and you will not be able to modify your
-            answers. The answers you submit here will be reviewed by your peers.')}}
+            {# I18N: Instructions to the student for a peer-reviewed assignment. #}
+            {{ gettext('You may only submit this assignment once. After you submit it, the assignment will become read-only, and you will not be able to modify your answers. The answers you submit here will be reviewed by your peers.')}}
           </em>
         </p>
       {% endif %}
@@ -56,6 +58,7 @@
     {% endif %}
 
     {% if readonly_student_assessment is defined %}
+      {# I18N: Header text for a previously-submitted assignment. #}
       <h3>{{ gettext('Submitted assignment') }}</h3>
 
       <div class="border-box">
@@ -65,6 +68,7 @@
     {% endif %}
 
     {% if reviews_received is defined %}
+      {# I18N: Header text for the list of reviews received for an assignment. #}
       <h3>{{ gettext('Reviews received') }}</h3>
 
       {% for review in reviews_received %}

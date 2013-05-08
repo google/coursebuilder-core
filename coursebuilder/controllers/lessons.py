@@ -55,7 +55,7 @@ ACTIVITY_PAGE_TYPE = 'activity'
 
 # Date format string for displaying the month (in words), day, four-digit year,
 # hour and minute. Example: Mar 21 2013 at 13:00 UTC.
-HUMAN_READABLE_DATE_FORMAT = '%b %d %Y at %H:%M UTC'
+HUMAN_READABLE_DATE_FORMAT = '%b %d %Y, %H:%M UTC'
 
 
 def extract_unit_and_lesson(handler):

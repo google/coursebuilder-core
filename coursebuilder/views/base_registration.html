@@ -6,15 +6,16 @@
   <div class="gcb-aux">
     <ul>
       <li {% if navbar.announcements %}class='active'{% endif %}>
-        <a href="announcements">
-          {% trans %} Announcements {% endtrans %}
-        </a>
+        {# I18N: Navbar tab. #}
+        <a href="announcements">{{ gettext('Announcements') }}</a>
       </li>
       <li {% if navbar.course %}class='active'{% endif %}>
-        <a href="course">{% trans %} Course {% endtrans %}</a>
+        {# I18N: Navbar tab. #}
+        <a href="course">{{ gettext('Course') }}</a>
       </li>
       <li {% if navbar.registration %}class='active'{% endif %}>
-        <a href="register">{% trans %} Registration {% endtrans %}</a>
+        {# I18N: Navbar tab. #}
+        <a href="register">{{ gettext('Registration') }}</a>
       </li>
       {% if is_super_admin %}
       <li class='pull-right'>

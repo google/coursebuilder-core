@@ -9,7 +9,8 @@
         <div class="gcb-col-55">
           <center>
             <a class="gcb-button gcb-button-large" href="register" role="button">
-              {% trans %} Register {% endtrans %}
+              {# I18N: Registration button on the main course page. #}
+              {{ gettext('Register') }}
             </a>
           </center>
         </div>
@@ -25,7 +26,8 @@
       <div class="gcb-col-9">
 
         <h1 class="schedule-headers">
-          {% trans %} Schedule {% endtrans %}
+          {# I18N: This should be interpreted as a noun. It is the title for the course schedule on the main contents page. #}
+          {{ gettext('Schedule') }}
         </h1>
 
         <div class="gcb-main">
@@ -36,6 +38,7 @@
                   <li><p class="top_content">{{ unit.title }}</p></li>
                 {% elif unit.type == 'U' %}
                   <li><p class="top_content">
+                    {# I18N: A row in the course schedule. #}
                     {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
                     <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">{{ unit.release_date }}</span>
                   </p></li>

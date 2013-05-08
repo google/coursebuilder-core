@@ -9,17 +9,20 @@
     <div class="gcb-aside">
 
       <h3>
-        {% trans %} Are you sure you want to unenroll from {% endtrans %}
+        {# I18N: Shown when a student has asked to unenroll from a course. Followed by a course name. #}
+        {{ gettext('Are you sure you want to unenroll from ') }}
         {{course_info.course.title}}?
       </h3>
       <br>
       <form action="student/unenroll" method='post'>
         <input type="hidden" name="xsrf_token" value="{{ student_unenroll_xsrf_token|escape }}">
         <button class="gcb-button" type="submit">
-          {% trans %} Yes {% endtrans %}
+          {# I18N: Response option to 'Are you sure you want to unenroll from COURSE_NAME'? #}
+          {{ gettext('Yes') }}
         </button>
         <a role="button" href="student/home" class="gcb-button" type="submit">
-          {% trans %} No {% endtrans %}
+          {# I18N: Response option to 'Are you sure you want to unenroll from COURSE_NAME'? #}
+          {{ gettext('No') }}
         </a>
       </form>
 

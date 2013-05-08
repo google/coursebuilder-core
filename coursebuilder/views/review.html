@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Assessment {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Review') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -38,12 +39,14 @@
 
     <p>
       <a href="reviewdashboard?unit={{ unit_id }}">
+        {# I18N: Link to return to the list of peer reviews. #}
         {{ gettext('Back to the review dashboard.') }}
       </a>
     </p>
 
     <p>
       <strong>
+        {# I18N: Shown to a student who is asked to complete a peer review of another student's assignment. #}
         {{ gettext('Due date for this review: ') }}
       </strong>
       {{ review_due_date }}.
@@ -51,6 +54,7 @@
 
     <p>
       <em>
+        {# I18N: Instructions to a student who is asked to complete a peer review of another student's assignment. #}
         {{ gettext('The scores and comments you submit here will be viewed by your peers. Once you submit your review, you may not edit it.') }}
       </em>
     </p>
@@ -58,8 +62,10 @@
     <hr>
 
     {% if readonly_review_form is defined %}
+      {# I18N: Header text for a reviewed assignment. #}
       <h3>{{ gettext('Reviewed assignment') }}</h3>
     {% else %}
+      {# I18N: Header text for an assignment that a student still needs to review. #}
       <h3>{{ gettext('Assignment to review') }}</h3>
     {% endif %}
 
@@ -69,12 +75,14 @@
     </div>
 
     {% if readonly_review_form is defined %}
+      {# I18N: Header text for a review the student has previously submitted. #}
       <h3>{{ gettext('Submitted review') }}</h3>
       <div class="border-box">
         {% set readonly_assessment = readonly_review_form %}
         {% include 'readonly_assessment.html' %}
       </div>
     {% else %}
+      {# I18N: Header text for a review form that a student has to complete when reviewing another student's assignment. #}
       <h3>{{ gettext('Review form') }}</h3>
     {% endif %}
 

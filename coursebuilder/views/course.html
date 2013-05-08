@@ -3,9 +3,7 @@
 {% block top_content %}
     <div class="gcb-cols">
       <div class="gcb-col-11 gcb-aside">
-
         {% include 'summary.html' %}
-
       </div>
     </div>
 {% endblock %}
@@ -17,7 +15,8 @@
       <div class="gcb-col-9">
 
         <h1 class="schedule-headers">
-          {% trans %} Schedule {% endtrans %}
+          {# I18N: This should be interpreted as a noun. It is the title for the course schedule on the main contents page. #}
+          {{ gettext('Schedule') }}
         </h1>
         <div class="gcb-main">
           <div style="width: 100%;" class="gcb-nav" id="gcb-nav-y">
@@ -28,14 +27,14 @@
                     <li><p class="top_content">
                       {% if progress[unit.unit_id] > 0 %}
                         <img src="assets/lib/completed.png"
-                             alt="{% trans %} Completed {% endtrans %}"
-                             title="{% trans %} Completed {% endtrans %}"
+                             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                              class="progress"
                              id="progress-completed-{{unit.unit_id}}">
                       {% else %}
                         <img src="assets/lib/not_started.png"
-                             alt="{% trans %} Not yet submitted {% endtrans %}"
-                             title="{% trans %} Not yet submitted {% endtrans %}"
+                             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                              class="progress"
                              id="progress-notstarted-{{unit.unit_id}}">
                       {% endif %}
@@ -51,20 +50,20 @@
                             <span class="progress-empty"></span>
                           {% if unit.review_progress == 2 %}
                             <img src="assets/lib/completed.png"
-                                 alt="{% trans %} Completed {% endtrans %}"
-                                 title="{% trans %} Completed {% endtrans %}"
+                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                  class="progress"
                                  id="progress-completed-review-{{unit.unit_id}}">
                           {% elif unit.review_progress == 1 %}
                             <img src="assets/lib/in_progress.png"
-                                 alt="{% trans %} In progress {% endtrans %}"
-                                 title="{% trans %} In progress {% endtrans %}"
+                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                  class="progress"
                                  id="progress-inprogress-review-{{unit.unit_id}}">
                           {% else %}
                             <img src="assets/lib/not_started.png"
-                                 alt="{% trans %} Not yet submitted {% endtrans %}"
-                                 title="{% trans %} Not yet submitted {% endtrans %}"
+                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                                  class="progress"
                                  id="progress-notstarted-review-{{unit.unit_id}}">
                           {% endif %}
@@ -94,20 +93,20 @@
                       {% if is_progress_recorded %}
                         {% if progress[unit.unit_id] == 2 %}
                           <img src="assets/lib/completed.png"
-                               alt="{% trans %} Completed {% endtrans %}"
-                               title="{% trans %} Completed {% endtrans %}"
+                               alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                               title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                class="progress"
                                id="progress-completed-{{unit.unit_id}}">
                         {% elif progress[unit.unit_id] == 1 %}
                           <img src="assets/lib/in_progress.png"
-                               alt="{% trans %} In progress {% endtrans %}"
-                               title="{% trans %} In progress {% endtrans %}"
+                               alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                               title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                class="progress"
                                id="progress-inprogress-{{unit.unit_id}}">
                         {% else %}
                           <img src="assets/lib/not_started.png"
-                               alt="{% trans %} Not yet started {% endtrans %}"
-                               title="{% trans %} Not yet started {% endtrans %}"
+                               alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+                               title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
                                class="progress"
                                id="progress-notstarted-{{unit.unit_id}}">
                         {% endif %}
@@ -116,6 +115,7 @@
                       {% endif %}
 
                       <a href="unit?unit={{ unit.unit_id }}">
+                        {# I18N: A row in the course schedule. #}
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
                       </a>
                   {% elif unit.type == 'O' %}
@@ -146,6 +146,7 @@
                     <li>
                       <p class="top_content">
                         <span class="progress-empty"></span>
+                        {# I18N: A row in the course schedule. #}
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
                         <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">
                           {{ unit.release_date }}

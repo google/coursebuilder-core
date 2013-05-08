@@ -19,7 +19,8 @@
           <ol>
             <li>
               <label class="form-label" for="form01">
-               {% trans %} What is your name? {% endtrans %}
+                {# I18N: A question in the registration form. #}
+                {{ gettext('What is your name?') }}
               </label>
               <input name="form01" type="text">
             </li>
@@ -28,7 +29,8 @@
         </fieldset>
 
         <button class="gcb-button" type="submit">
-          {% trans %} Enroll {% endtrans %}
+          {# I18N: Button at the end of the registration form for a course. #}
+          {{ gettext('Enroll') }}
         </button>
       </form>
 

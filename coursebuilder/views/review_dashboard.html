@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Assessment {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Review Dashboard') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -18,20 +19,19 @@
       {% endif %}
     </script>
 
-    <h2>
-      {{ gettext('Assignments for your review') }}
-    </h2>
+    {# I18N: Header text for a list of assignments that can be reviewed by the student. #}
+    <h2>{{ gettext('Assignments for your review') }}</h2>
 
     <p>
       <em>
+        {# I18N: Instructions for a student being asked to do a review. #}
         {{ gettext('All reviews are due by %(review_due_date)s.',
                    review_due_date=review_due_date) }}
 
+        {# I18N: Instructions for a student being asked to do a review. #}
         {{ ngettext(
-            'In order to earn credit for this assignment, you must complete at
-             least %(review_min_count)d review by then.',
-            'In order to earn credit for this assignment, you must complete at
-             least %(review_min_count)d reviews by then.',
+            'In order to earn credit for this assignment, you must complete at least %(review_min_count)d review by then.',
+            'In order to earn credit for this assignment, you must complete at least %(review_min_count)d reviews by then.',
             review_min_count) % {'review_min_count': review_min_count}
         }}
       </em>
@@ -40,11 +40,14 @@
     <ol>
       {% for review in reviews %}
         <li>
+          {# I18N: An item in a list of assignments. #}
           <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">{{ gettext('Assignment %(index)s', index=loop.index) }}</a>
           {% if review.review %}
             {% if review.is_draft %}
+              {# I18N: Text shown after an assignment whose review is still in draft state. #}
               ({{ gettext('Draft') }})
             {% else %}
+              {# I18N: Text shown after an assignment whose review has been completed. #}
               ({{ gettext('Completed') }})
             {% endif %}
           {% endif %}
@@ -61,12 +64,14 @@
           disabled="true"
         {% endif %}
       >
+        {# I18N: Button that a student can click to request a new assignment to review. #}
         {{ gettext('Review another assignment') }}
       </button>
     </form>
 
     {% if no_submissions_available is defined and no_submissions_available %}
       <p>
+        {# I18N: Text shown after a student has asked for a new assignment to review when there are no assignments left to review. #}
         {{ gettext('Sorry, there are no new submissions available for you to review at this time.') }}
       </p>
     {% endif %}

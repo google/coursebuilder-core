@@ -9,12 +9,14 @@
     <div class="gcb-aside">
 
       <h3>
-        {% trans %} You have been unenrolled from {% endtrans %}
+        {# I18N: Text shown after a student has unenrolled from a course. It is followed by a course name. #}
+        {{ gettext('You have been unenrolled from ') }}
         {{course_info.course.title}}.
       </h3>
       <form action="preview" method='get'>
         <button class="gcb-button" type="submit">
-          {% trans %} OK {% endtrans %}
+          {# I18N: Confirmation button, shown when a student has unenrolled from a course. #}
+          {{ gettext('OK') }}
         </button>
       </form>
 

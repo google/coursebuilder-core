@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Announcements {% endtrans %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Announcements') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -15,12 +16,13 @@
         {% if announcements.add_action %}
           <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
             <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token|escape }}">
-            <button class="gcb-button gcb-button-action" type="submit">{% trans %} Add New {% endtrans %}</button>
+            <button class="gcb-button gcb-button-action" type="submit">Add New</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
         {% if not announcements.children %}
-          <p>{% trans %} No announcements yet. {% endtrans %}</p>
+          {# I18N: Shown if the list of announcements is empty. #}
+          <p>{{ gettext('No announcements yet.') }}</p>
         {% endif %}
         {% for item in announcements.children %}
           <hr>
@@ -29,18 +31,18 @@
             <input type="hidden" name="xsrf_token" value="{{ item.delete_xsrf_token|escape }}">
             <button class="gcb-button gcb-button-action" type="submit"
               onclick='return confirm("Delete this item?");'>
-              {% trans %} Delete {% endtrans %}
+              Delete
             </button>
           </form>
           {% endif %}
           {% if item.edit_action %}
             <a role="button" href="{{ item.edit_action }}" class="gcb-button gcb-button-action">
-              {% trans %} Edit {% endtrans %}
+              Edit
             </a>
           {% endif %}
           <h2>
             <a name='{{ item.key }}'></a>
-            {{ item.title }}{% if item.is_draft %}{% trans %} (Draft) {% endtrans %}{% endif %}
+            {{ item.title }} {% if item.is_draft %}(Draft){% endif %}
           </h2>
           <p>{{ item.date }}</p>
           <p "margin: 20px 0px;">

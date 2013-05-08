@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block subtitle %}
-  {% trans %} Unit {% endtrans %} {{ unit.index }}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Unit') }} {{ unit.index }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -17,15 +18,19 @@
       class="gcb-button gcb-button-action">Edit lesson</a>
   {% endif %}
   <ul class="gcb-breadcrumb">
-    <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
+    {# I18N: Navigation breadcrumb. #}
+    <li><a href="course">{{ gettext('Course') }}</a></li>
     <li><a href="unit?unit={{ unit.unit_id }}">
-      {% trans %} Unit {% endtrans %}{{ unit.index }}</a></li>
+      {# I18N: Navigation breadcrumb. #}
+      {{ gettext('Unit') }} {{ unit.index }}</a></li>
     {% if lesson %}
-      <li>{% trans %} Lesson {% endtrans %}{{ lesson.index }}</li>
+      {# I18N: Navigation breadcrumb. #}
+      <li>{{ gettext('Lesson') }} {{ lesson.index }}</li>
     {% endif %}
   </ul>
   <div>
     <h1 class="class_header">
+      {# I18N: Header text for a unit page. #}
       {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
     </h1>
   </div>
@@ -40,7 +45,8 @@
     {% if not lesson %}
       <div style="padding-bottom: 20px;">
         <div class="gcb-aside gcb-button-box">
-          {% trans %} This unit does not contain any lessons. {% endtrans %}
+          {# I18N: Text shown for a unit that has had no lessons added to it yet. #}
+          {{ gettext('This unit does not contain any lessons.') }}
         </div>
       </div>
     {% endif %}
@@ -73,7 +79,8 @@
                   <p style="float:right; margin-top: 0px;">
                     {% if lesson.notes %}
                     <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
-                      {% trans %} Text Version {% endtrans %}
+                      {# I18N: Link to a text version of a lesson video. #}
+                      {{ gettext('Text Version') }}
                     </a>
                     {% endif %}
                   </p>
@@ -81,7 +88,8 @@
               </div><!-- /gcb-cols -->
               {% if lesson.video %}
                 <p class="video-container">
-                  <iframe class="youtube-player" title="{% trans %} YouTube Video Player {% endtrans %}"
+                  {# I18N: Alt text for an embedded YouTube video player. #}
+                  <iframe class="youtube-player" title="{{ gettext('YouTube Video Player') }}"
                           type="text/html" width="650" height="400" frameborder="0" allowfullscreen
                           src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
                   </iframe>
@@ -97,7 +105,8 @@
               <br><br>
 
               <div>
-                {% trans %} This lesson is not available. {% endtrans %}
+                {# I18N: Text shown for a lesson that has not been made public. #}
+                {{ gettext('This lesson is not available.')}}
               </div>
 
             {% endif %}
@@ -106,20 +115,17 @@
           <div class="gcb-button-box">
             <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
               {% if back_button_url %}
-                <a href="{{ back_button_url }}">
-                  {% trans %} Previous Page {% endtrans %}
-                </a>
+                {# I18N: Text on the navigation button at the end of a lesson page. #}
+                <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
               {% endif %}
             </div>
             <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
               {% if next_button_url %}
-                <a href="{{ next_button_url }}">
-                  {% trans %} Next Page {% endtrans %}
-                </a>
+                {# I18N: Text on the navigation button at the end of a lesson page. #}
+                <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>
               {% else %}
-                <a href="course">
-                  {% trans %} End {% endtrans %}
-                </a>
+                {# I18N: Text on the navigation button at the end of a lesson. It signals that the student has completed a unit (which is a series of lessons). #}
+                <a href="course"> {{ gettext('End') }} </a>
               {% endif %}
             </div>
           </div>

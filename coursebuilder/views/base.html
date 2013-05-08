@@ -12,7 +12,8 @@
     <title>
       {{course_info.course.title}} -
       {% block subtitle %}
-        {% trans %} Course {% endtrans %}
+        {# I18N: Title of the webpage. #}
+        {{ gettext('Course') }}
       {% endblock subtitle %}
     </title>
 
@@ -35,34 +36,64 @@
 
       // inline translations
       var trans = {};
+
+      {# I18N: Text on the button for checking an answer. #}
       trans.CHECK_ANSWER_TEXT =
           "{{ gettext(' Check Answer ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for checking a set of answers. #}
       trans.CHECK_ANSWERS_TEXT =
           "{{ gettext( ' Check Answers ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for showing the answer to a question. #}
       trans.SHOW_ANSWER_TEXT =
           "{{ gettext(' Skip and Show Answer ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for saving answers to a question. #}
       trans.SAVE_ANSWERS_TEXT =
           "{{ gettext(' Save Answers ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for saving a draft answer. #}
       trans.SAVE_DRAFT_TEXT =
           "{{ gettext(' Save Draft ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for submitting answers. #}
       trans.SUBMIT_ANSWERS_TEXT =
           "{{ gettext(' Submit Answers ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for submitting a peer-reviewed assignment. #}
       trans.SUBMIT_ASSIGNMENT_TEXT =
           "{{ gettext(' Submit Assignment ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text on the button for submitting a peer review. #}
       trans.SUBMIT_REVIEW_TEXT =
           "{{ gettext(' Submit Review ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text to prompt the student to select a multiple-choice answer. #}
       trans.SELECT_ANSWER_PROMPT =
           "{{ gettext(' Please click one of the buttons for your answer. ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has answered all questions correctly. #}
       trans.ALL_CORRECT_TEXT =
           "{{ gettext(' All your answers are correct! ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has answered all questions correctly. #}
       trans.NUM_CORRECT_TEXT =
           "{{ gettext(' Number of questions you answered correctly ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has submitted an assessment. #}
       trans.YOUR_SCORE_TEXT =
           "{{ gettext(' You received a score on this assessment of ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has checked his/her answers to an assessment. #}
       trans.LESSONS_TO_REVIEW_TEXT =
           "{{ gettext(' Here are lessons you could review to improve your score ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has checked his/her answers to an assessment. #}
       trans.PERFECT_SCORE_SAVE_TEXT =
           "{{ gettext(' Congratulations! Press the \\\'Submit Answers\\\' button to submit your grade. ')|replace('\"', '\\\"') }}";
+
+      {# I18N: Text appearing after the student has checked his/her answers to an assessment. #}
       trans.GENERIC_SAVE_TEXT =
           "{{ gettext(' Press the \\\'Submit Answers\\\' button below to save your scores. You can also edit your answers above before clicking \\\'Submit Answers\\\'. ')|replace('\"', '\\\"') }}";
     </script>
@@ -101,12 +132,14 @@
           {{ email }}
           &nbsp;|&nbsp;
           <a href="{{ logoutUrl }}" style="text-decoration: underline;">
-            {% trans %} Logout {% endtrans %}
+            {# I18N: Navbar text. #}
+            {{ gettext('Logout') }}
           </a>
         </div>
         {% elif loginUrl %}
         <div class="pull-right" style="font-size: larger;">
-          <a href="{{ loginUrl }}">{% trans %} Login {% endtrans %}</a>
+          {# I18N: Navbar text. #}
+          <a href="{{ loginUrl }}">{{ gettext('Login') }}</a>
         </div>
         {% endif %}
       </div>
@@ -119,26 +152,22 @@
         <ul>
           {{course_info.base.after_navbar_begins | safe}}
           <li {% if navbar.announcements %}class='active'{% endif %}>
-            <a href="announcements">
-              {% trans %} Announcements {% endtrans %}
-            </a>
+            {# I18N: Navbar tab. #}
+            <a href="announcements">{{ gettext('Announcements') }}</a>
           </li>
           <li {% if navbar.course %}class='active'{% endif %}>
-            <a href="course">
-              {% trans %} Course {% endtrans %}
-            </a>
+            {# I18N: Navbar tab. #}
+            <a href="course">{{ gettext('Course') }}</a>
           </li>
           {% if course_info.course.forum_embed_url %}
           <li {% if navbar.forum %}class='active'{% endif %}>
-            <a href="forum">
-              {% trans %} Forum {% endtrans %}
-            </a>
+            {# I18N: Navbar tab. #}
+            <a href="forum">{{ gettext('Forum') }}</a>
           </li>
           {% endif %}
           <li {% if navbar.myprofile %}class='active'{% endif %}>
-            <a href="student/home">
-              {% trans %} My Profile {% endtrans %}
-            </a>
+            {# I18N: Navbar tab. #}
+            <a href="student/home">{{ gettext('My Profile') }}</a>
           </li>
           {{course_info.base.before_navbar_ends | safe}}
           {% if is_super_admin %}
@@ -183,7 +212,8 @@
             </li>
             <li>
               <a href="{{course_info.base.privacy_terms_url}}">
-                {% trans %} Privacy &amp; Terms {% endtrans %}
+                {# I18N: Link at the bottom of each page to the privacy and 'Terms and Conditions' pages. #}
+                {{ gettext('Privacy & Terms') }}
               </a>
             </li>
           </ul>

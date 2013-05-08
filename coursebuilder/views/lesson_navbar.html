@@ -32,20 +32,20 @@
                 {% if is_progress_recorded %}
                   {% if progress[lesson.lesson_id] == 2 %}
                     <img src="assets/lib/completed.png"
-                         alt="{% trans %} Completed {% endtrans %}"
-                         title="{% trans %} Completed {% endtrans %}"
+                         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                          class="progress"
                          id="progress-completed-{{lesson.lesson_id}}">
                   {% elif progress[lesson.lesson_id] == 1 %}
                     <img src="assets/lib/in_progress.png"
-                         alt="{% trans %} In progress {% endtrans %}"
-                         title="{% trans %} In progress {% endtrans %}"
+                         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                          class="progress"
                          id="progress-inprogress-{{lesson.lesson_id}}">
                   {% else %}
                     <img src="assets/lib/not_started.png"
-                         alt="{% trans %} Not yet started {% endtrans %}"
-                         title="{% trans %} Not yet started {% endtrans %}"
+                         alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+                         title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
                          class="progress"
                          id="progress-notstarted-{{lesson.lesson_id}}">
                   {% endif %}
@@ -54,10 +54,12 @@
                 {% endif %}
 
                 {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-                  {% trans %} Activity {% endtrans %}
+                  {# I18N: Menu item. #}
+                  {{ gettext('Activity') }}
                 {% else %}
                   <a href="activity?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
-                    {% trans %} Activity {% endtrans %}
+                    {# I18N: Menu item. #}
+                    {{ gettext('Activity') }}
                   </a>
                 {% endif %}
               </li>
@@ -87,7 +89,9 @@
                   <span class="grayed">
                 {% endif %}
 
-                  {% trans %} Activity {% endtrans %}
+                  {# I18N: Menu item. #}
+                  {{ gettext('Activity') }}
+
                 </span>
               </li>
             </ul>

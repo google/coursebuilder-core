@@ -11,8 +11,9 @@
   <div class="gcb-col-7 gcb-aside gcb-button-box">
 
     <p class="top_content">
-      Thank you for taking the {{assessment_name | lower}}. Your score for this assessment
-      is {{score}}%. If you wish, you may return to the assessment and take it again.
+      {# I18N: Shown after the student has submitted an assessment. #}
+      {{ gettext('Thank you for taking the %(assessment_name)s. Your score for this assessment
+      is %(score)s%%. If you wish, you may return to the assessment and take it again.' % {'assessment_name': assessment_name|lower, 'score': score}) }}
     </p>
 
     <br>
@@ -26,7 +27,8 @@
 
     <p>
       <a class="gcb-button" href="course">
-        {% trans %} Back to Course page {% endtrans %}
+        {# I18N: Shown after the student has submitted an assessment. This button allows the student to navigate back to the main course page. #}
+        {{ gettext('Back to Course page') }}
       </a>
     </p>
 

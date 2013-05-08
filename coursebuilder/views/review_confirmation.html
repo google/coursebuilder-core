@@ -11,15 +11,18 @@
   <div class="gcb-col-7 gcb-aside gcb-button-box">
     <p class="top_content">
       {% if is_draft %}
+        {# I18N: Shown as confirmation to a reviewer that his/her review draft has been saved. #}
         {{ gettext('Your review has been saved.') }}
       {% else %}
+        {# I18N: Shown as confirmation to a reviewer that his/her review draft has been submitted. #}
         {{ gettext('Your review has been submitted successfully.') }}
       {% endif %}
     </p>
 
     <p>
-      <a class="gcb-button" href="reviewdashboard?unit={{ unit_id }}">
-        {{ gettext('Back to the review dashboard.') }}
+      <a class="gcb-button" role="button" href="reviewdashboard?unit={{ unit_id }}">
+        {# I18N: Text for the button shown on the review submission confirmation page that allows the student to return to the list of reviews. #}
+        {{ gettext('Back to the review dashboard') }}
       </a>
     </p>
 
