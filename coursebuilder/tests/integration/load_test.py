@@ -52,7 +52,14 @@ PARSER.add_argument(
     help='Initial value for unique thread identifier.', default=1, type=int)
 PARSER.add_argument(
     '--thread_count',
-    help='Count of thread for executing the load test.', default=1, type=int)
+    help='Number of concurrent threads for executing the test.',
+    default=1, type=int)
+PARSER.add_argument(
+    '--iteration_count',
+    help='Number of iterations for executing the test. Each thread of each '
+    'iteration acts as a unique user with the uid equal to:'
+    'start_uid + thread_count * iteration_index.',
+    default=1, type=int)
 
 
 def assert_contains(needle, haystack):
@@ -79,9 +86,10 @@ class WebSession(object):
     RESPONSE_TIME_HISTOGRAM = [0, 0, 0, 0, 0, 0]
     PROGRESS_LOCK = threading.Lock()
 
-    def __init__(self, common_headers=None):
+    def __init__(self, uid, common_headers=None):
         if common_headers is None:
             common_headers = {}
+        self.uid = uid
         self.common_headers = common_headers
         self.cj = cookielib.CookieJar()
         self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
@@ -111,7 +119,7 @@ class WebSession(object):
             cls.PROGRESS_BATCH) == 0)
         if update or force:
             logging.info(
-                'GET/POST:[%s/, %s], SLA:%s',
+                'GET/POST:[%s, %s], SLA:%s',
                 cls.GET_COUNT, cls.POST_COUNT, cls.RESPONSE_TIME_HISTOGRAM)
 
     def get_cookie_value(self, name):
@@ -134,7 +142,8 @@ class WebSession(object):
         try:
             response = self.opener.open(request)
         except Exception as e:
-            logging.info('Error executing GET for: %s', (url))
+            logging.info(
+                'Error in session %s executing GET for: %s', self.uid, url)
             raise e
         finally:
             with WebSession.PROGRESS_LOCK:
@@ -160,7 +169,8 @@ class WebSession(object):
         try:
             response = self.opener.open(request)
         except Exception as e:
-            logging.info('Error executing POST for: %s', (url))
+            logging.info(
+                'Error in session %s executing POST for: %s', self.uid, url)
             raise e
         finally:
             with WebSession.PROGRESS_LOCK:
@@ -233,6 +243,7 @@ class PeerReviewLoadTest(object):
         impersonate_header = {
             'email': self.email, 'user_id': u'impersonation-%s' % self.uid}
         self.session = WebSession(
+            uid=uid,
             common_headers={'Gcb-Impersonate': json.dumps(impersonate_header)})
 
     def run(self):
@@ -318,6 +329,14 @@ class PeerReviewLoadTest(object):
             assert_contains('Assignments for your review', body)
             assert_contains('Review another assignment', body)
 
+            # TODO(sll): complete pending reviews before asking for a new one
+            # it may happen that the test was stopped and we did not complete
+            # the review last time it run; in second run and may request
+            # another one causing limit for not-yet-reviewed reviews to be to
+            # be exceeded; he we defend against such case
+            if 'disabled="true"' in body:
+                return True
+
             assert_contains('xsrf_token', body)
 
             xsrf_token = self.get_hidden_field('xsrf_token', body)
@@ -385,23 +404,31 @@ def run_all(args):
     logging.info('base_url: %s', args.base_url)
     logging.info('start_uid: %s', args.start_uid)
     logging.info('thread_count: %s', args.thread_count)
+    logging.info('iteration_count: %s', args.iteration_count)
     logging.info('SLAs are [>30s, >15s, >7s, >3s, >1s, <1s]')
-    tasks = []
-    WebSession.PROGRESS_BATCH = args.thread_count
-    for index in range(0, args.thread_count):
-        test = PeerReviewLoadTest(args.base_url, args.start_uid + index)
-        task = TaskThread(test.run, name='PeerReviewLoadTest-%s' % index)
-        tasks.append(task)
-
     try:
-        TaskThread.execute_task_list(tasks)
-        logging.info('Completed!')
-    except Exception as e:
-        logging.info('Failed!')
-        raise e
+        for iteration_index in range(0, args.iteration_count):
+            logging.info('Started iteration: %s', iteration_index)
+            tasks = []
+            WebSession.PROGRESS_BATCH = args.thread_count
+            for index in range(0, args.thread_count):
+                test = PeerReviewLoadTest(
+                    args.base_url,
+                    (
+                        args.start_uid +
+                        iteration_index * args.thread_count +
+                        index))
+                task = TaskThread(
+                    test.run, name='PeerReviewLoadTest-%s' % index)
+                tasks.append(task)
+            try:
+                TaskThread.execute_task_list(tasks)
+            except Exception as e:
+                logging.info('Failed iteration: %s', iteration_index)
+                raise e
     finally:
         WebSession.log_progress(force=True)
-        logging.info('Duration (s): %s', time.time() - start_time)
+        logging.info('Done! Duration (s): %s', time.time() - start_time)
 
 
 if __name__ == '__main__':
