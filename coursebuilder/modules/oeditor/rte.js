@@ -81,21 +81,26 @@ function getGcbRteDefs(env, Dom, Editor) {
               that._editCustomTag(_elt, _img);
             };
           })(elt, img);
-          img.onmousedown = function(event) {
-            var event = event || editorWin.event;
-            if (event.preventDefault && event.stopPropagation) {
-              event.preventDefault();
-              event.stopPropagation();
-            } else { // IE 8 & 9
-              event.returnValue = false;
-              event.cancelBubble = false;
-            }
+          img.onmousedown = img.onmouseup = img.onclick = function(event) {
+            that._sinkEvent(editorWin, event);
           };
           img.gcbTag = elt;
           that._styleMarkerTag(img);
           elt.parentNode.replaceChild(img, elt);
         }
       }
+    },
+
+    _sinkEvent: function(editorWin, event) {
+      var event = event || editorWin.event;
+      if (event.preventDefault && event.stopPropagation) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else { // IE 8 & 9
+        event.returnValue = false;
+        event.cancelBubble = true;
+      }
+      return false;
     },
 
     _styleMarkerTag: function(img) {
