@@ -207,7 +207,7 @@ class Activity(tags.BaseTag):
 
     def render(self, node):
         activity_id = node.attrib.get('activityid')
-        script = etree.cElementTree.XML("""
+        script = cElementTree.XML("""
 <div>
   <script></script>
   <div style="width: 785px;" id="activityContents"></div>
