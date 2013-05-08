@@ -789,20 +789,26 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(lower_priority_summary_key, step.review_summary_key)
 
-    def test_get_review_by_key(self):
-        self.assertRaises(
-            KeyError, review_module.Manager.get_review_by_key,
-            db.Key.from_path('bad_kind', 'name'))
-        self.assertIsNone(
-            review_module.Manager.get_review_by_key(
-                db.Key.from_path(review.Review.kind(), 'name')))
-
+    def test_get_reviews_by_keys(self):
         review_key = review.Review(
             contents='contents', reviewer_key=self.reviewer_key,
             unit_id=self.unit_id
         ).put()
-        model_review = db.get(review_key)
-        domain_review = review_module.Manager.get_review_by_key(review_key)
+        missing_review_key = db.Key.from_path(
+            review.Review.kind(),
+            review.Review.key_name(
+                str(int(self.unit_id) + 1), self.reviewer_key))
+        model_objects = db.get([review_key, missing_review_key])
+        domain_objects = review_module.Manager.get_reviews_by_keys(
+            [review_key, missing_review_key])
+        model_review, model_miss = model_objects
+        domain_review, domain_miss = domain_objects
+
+        self.assertEqual(2, len(model_objects))
+        self.assertEqual(2, len(domain_objects))
+
+        self.assertIsNone(model_miss)
+        self.assertIsNone(domain_miss)
 
         self.assertEqual(model_review.contents, domain_review.contents)
         self.assertEqual(model_review.key(), domain_review.key)
@@ -865,18 +871,7 @@ class ManagerTest(actions.TestBase):
             [], review_module.Manager.get_review_keys_by(
                 self.unit_id, self.reviewer_key))
 
-    def test_get_review_step_by_key(self):
-        self.assertRaises(
-            KeyError, review_module.Manager.get_review_step_by_key,
-            db.Key.from_path('bad_kind', 'name'))
-        step_key = db.Key.from_path(
-            peer.ReviewStep.kind(),
-            peer.ReviewStep.key_name(
-                self.unit_id, self.submission_key, self.reviewee_key,
-                self.reviewer_key))
-        self.assertIsNone(
-            review_module.Manager.get_review_step_by_key(step_key))
-
+    def test_get_review_steps_by_keys(self):
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -888,8 +883,22 @@ class ManagerTest(actions.TestBase):
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
             state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
-        model_step = db.get(step_key)
-        domain_step = review_module.Manager.get_review_step_by_key(step_key)
+        missing_step_key = db.Key.from_path(
+            peer.ReviewStep.kind(),
+            peer.ReviewStep.key_name(
+                str(int(self.unit_id) + 1), self.submission_key,
+                self.reviewee_key, self.reviewer_key))
+        model_objects = db.get([step_key, missing_step_key])
+        domain_objects = review_module.Manager.get_review_steps_by_keys(
+            [step_key, missing_step_key])
+        model_step, model_miss = model_objects
+        domain_step, domain_miss = domain_objects
+
+        self.assertEqual(2, len(model_objects))
+        self.assertEqual(2, len(domain_objects))
+
+        self.assertIsNone(model_miss)
+        self.assertIsNone(domain_miss)
 
         self.assertEqual(model_step.assigner_kind, domain_step.assigner_kind)
         self.assertEqual(model_step.change_date, domain_step.change_date)
@@ -972,20 +981,25 @@ class ManagerTest(actions.TestBase):
             review_module.Manager.get_submission_and_review_keys(
                 self.unit_id, self.reviewee_key))
 
-    def test_get_submission_by_key(self):
-        self.assertRaises(
-            KeyError, review_module.Manager.get_submission_by_key,
-            db.Key.from_path('bad_kind', 'name'))
-        self.assertIsNone(
-            review_module.Manager.get_submission_by_key(
-                db.Key.from_path(review.Submission.kind(), 'name')))
-
+    def test_get_submissions_by_keys(self):
         submission_key = review.Submission(
             contents='contents', reviewee_key=self.reviewee_key,
             unit_id=self.unit_id).put()
-        model_submission = db.get(submission_key)
-        domain_submission = review_module.Manager.get_submission_by_key(
-            submission_key)
+        missing_submission_key = db.Key.from_path(
+            review.Submission.kind(),
+            review.Submission.key_name(
+                str(int(self.unit_id) + 1), self.reviewee_key))
+        domain_models = db.get([submission_key, missing_submission_key])
+        domain_objects = review_module.Manager.get_submissions_by_keys(
+            [submission_key, missing_submission_key])
+        model_submission, model_miss = domain_models
+        domain_submission, domain_miss = domain_objects
+
+        self.assertEqual(2, len(domain_models))
+        self.assertEqual(2, len(domain_objects))
+
+        self.assertIsNone(model_miss)
+        self.assertIsNone(domain_miss)
 
         self.assertEqual(model_submission.contents, domain_submission.contents)
         self.assertEqual(model_submission.key(), domain_submission.key)
