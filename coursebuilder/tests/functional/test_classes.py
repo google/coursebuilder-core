@@ -1963,7 +1963,7 @@ class AssessmentTest(actions.TestBase):
             # peer reviews have been submitted.
             for assessment in student_scores:
                 if assessment['id'] == 'ReviewAssessmentExample':
-                    assert not assessment['has_score']
+                    assert assessment['human_graded']
                     assert not assessment['completed']
 
             # Navigate to the course overview page.

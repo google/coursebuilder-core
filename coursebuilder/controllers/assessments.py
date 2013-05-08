@@ -134,6 +134,15 @@ class AnswerHandler(BaseHandler):
         grader = unit.workflow.get_grader()
         matcher = unit.workflow.get_matcher()
 
+        # Scores are not recorded for human-reviewed assignments.
+        score = 0
+        if grader == courses.AUTO_GRADER:
+            score = int(round(float(self.request.get('score'))))
+
+        # Record assessment transaction.
+        student = self.update_assessment_transaction(
+            student.key().name(), assessment_type, answers, score)
+
         if grader == courses.HUMAN_GRADER:
             previously_submitted = course.get_reviews_processor(
                 ).does_submission_exist(unit.unit_id, student.get_key())
@@ -158,13 +167,6 @@ class AnswerHandler(BaseHandler):
 
             self.render('reviewed_assessment_confirmation.html')
             return
-
-        # TODO(pgbovine): consider storing as float for better precision
-        score = int(round(float(self.request.get('score'))))
-
-        # Record score.
-        student = self.update_assessment_transaction(
-            student.key().name(), assessment_type, answers, score)
 
         # Record completion event in progress tracker.
         course.get_progress_tracker().put_assessment_completed(

@@ -1644,7 +1644,7 @@ class Course(object):
         overall_score = 0
         total_weight = 0
         for unit in score_list:
-            if unit['has_score']:
+            if not unit['human_graded']:
                 total_weight += unit['weight']
                 overall_score += unit['weight'] * unit['score']
 
@@ -1707,7 +1707,7 @@ class Course(object):
                 'title': unit.title,
                 'weight': weight,
                 'completed': completed,
-                'has_score': not self.needs_human_grader(unit),
+                'human_graded': self.needs_human_grader(unit),
                 'score': (scores[str(unit.unit_id)]
                           if str(unit.unit_id) in scores else 0),
             })

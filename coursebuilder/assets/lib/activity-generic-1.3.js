@@ -677,6 +677,24 @@ function renderAssessment(assessment, domRoot) {
 
     var isSaveDraftReview = (!submitAnswers && assessmentGlobals.isReviewForm);
 
+    // Show a confirmation message when submitting a human-reviewed asseessment,
+    // since this action is non-reversible.
+    if (!assessmentGlobals.isReviewForm && assessmentGlobals.grader == 'human') {
+      if (!window.confirm(
+        trans.SUBMIT_ASSIGNMENT_CONFIRMATION + trans.CONFIRMATION_EXPLANATION)) {
+        return;
+      }
+    }
+
+    // Show a confirmation message when submitting a review for another student's
+    // assessment, since this action is non-reversible.
+    if (assessmentGlobals.isReviewForm && !isSaveDraftReview) {
+      if (!window.confirm(
+        trans.SUBMIT_REVIEW_CONFIRMATION + trans.CONFIRMATION_EXPLANATION)) {
+        return;
+      }
+    }
+
     if (submitAnswers || isSaveDraftReview) {
       // create a new hidden form, submit it via POST, and then delete it
 
