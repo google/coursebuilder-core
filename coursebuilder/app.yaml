@@ -28,6 +28,8 @@ handlers:
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
+- url: /cron/expire_old_assigned_reviews
+  script: main.app
+  login: admin
 - url: /.*
   script: main.app
-
