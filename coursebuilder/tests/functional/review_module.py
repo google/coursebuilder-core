@@ -18,6 +18,8 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import types
+
 from models import models
 from models import review
 from modules.review import peer
@@ -377,6 +379,137 @@ class ManagerTest(TestBase):
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.expired_count)
         self.assertEqual(peer.REVIEW_STATE_EXPIRED, step.state)
+
+    def test_expire_old_reviews_for_unit_expires_found_reviews(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=2, completed_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        first_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        second_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=second_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.expire_old_reviews_for_unit(0, self.unit_id)
+        first_step, second_step, summary = db.get(
+            [first_step_key, second_step_key, summary_key])
+
+        self.assertEqual(
+            [peer.REVIEW_STATE_EXPIRED, peer.REVIEW_STATE_EXPIRED],
+            [step.state for step in [first_step, second_step]])
+        self.assertEqual(0, summary.assigned_count)
+        self.assertEqual(2, summary.expired_count)
+
+    def test_expire_old_reviews_skips_errors_and_continues_processing(self):
+        # Create and bind a function that we can swap in to generate a query
+        # that will pick up bad results so we can tell that we skip them.
+        query_containing_unprocessable_entities = peer.ReviewStep.all(
+            keys_only=True)
+        query_fn = types.MethodType(
+            lambda x, y, z: query_containing_unprocessable_entities,
+            review_module.Manager(), review_module.Manager)
+        self.swap(
+            review_module.Manager, 'get_expiry_query', query_fn)
+
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, completed_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        processable_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        error_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=second_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.expire_old_reviews_for_unit(0, self.unit_id)
+        processed_step, error_step, summary = db.get(
+            [processable_step_key, error_step_key, summary_key])
+
+        self.assertEqual(peer.REVIEW_STATE_COMPLETED, error_step.state)
+        self.assertEqual(peer.REVIEW_STATE_EXPIRED, processed_step.state)
+        self.assertEqual(0, summary.assigned_count)
+        self.assertEqual(1, summary.completed_count)
+        self.assertEqual(1, summary.expired_count)
+
+    def test_get_expiry_query_filters_and_orders_correctly(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=2, completed_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        unused_completed_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        unused_removed_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=second_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        third_reviewee = models.Student(key_name='reviewee3@example.com')
+        third_reviewee_key = third_reviewee.put()
+        unused_other_unit_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=third_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=str(int(self.unit_id) + 1)
+        ).put()
+        fourth_reviewee = models.Student(key_name='reviewee4@example.com')
+        fourth_reviewee_key = fourth_reviewee.put()
+        first_assigned_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=fourth_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        fifth_reviewee = models.Student(key_name='reviewee5@example.com')
+        fifth_reviewee_key = fifth_reviewee.put()
+        second_assigned_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=fifth_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        zero_review_window_query = review_module.Manager.get_expiry_query(
+            0, self.unit_id)
+        future_review_window_query = review_module.Manager.get_expiry_query(
+            1, self.unit_id)
+
+        self.assertEqual(
+            [first_assigned_step_key, second_assigned_step_key],
+            zero_review_window_query.fetch(3))
+        # No items are > 1 minute old, so we expect an empty result set.
+        self.assertEqual(None, future_review_window_query.get())
 
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(

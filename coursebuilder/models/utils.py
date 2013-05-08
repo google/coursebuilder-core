@@ -74,9 +74,10 @@ class QueryMapper(object):
         """Runs the query in batches, applying a function to each result.
 
         Args:
-            fn: function. Takes a db.Model instance as its first arg, then any
-                number of positional and keyword arguments. Called on each
-                model returned by the query.
+            fn: function. Takes a single query result (either a db.Key or
+                db.Model) instance as its first arg, then any number of
+                positional and keyword arguments. Called on each result returned
+                by the query.
             *fn_args: positional args delegated to fn.
             **fn_kwargs: keyword args delegated to fn.
 
@@ -107,9 +108,9 @@ class QueryMapper(object):
         count = 0
         empty = True
 
-        for model in self._query.fetch(limit=self._batch_size):
+        for result in self._query.fetch(limit=self._batch_size):
             try:
-                fn(model, *fn_args, **fn_kwargs)
+                fn(result, *fn_args, **fn_kwargs)
             except StopMapping:
                 return count, None
 

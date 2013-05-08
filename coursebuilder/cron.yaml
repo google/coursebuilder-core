@@ -1,0 +1,4 @@
+cron:
+- description: expires old assigned review steps
+  url: /cron/expire_old_assigned_reviews
+  schedule: every 15 minutes  # Max execution is 10 minutes.

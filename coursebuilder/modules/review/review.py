@@ -18,8 +18,11 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import datetime
+
 from models import counters
 from models import review
+from models import utils
 from modules.review import peer
 from google.appengine.ext import db
 
@@ -94,6 +97,20 @@ COUNTER_EXPIRE_REVIEW_SUCCESS = counters.PerfCounter(
 COUNTER_EXPIRE_REVIEW_SUMMARY_MISS = counters.PerfCounter(
     'gcb-expire-review-summary-miss',
     'number of times expire_review() found a missing review summary')
+
+COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_EXPIRE = counters.PerfCounter(
+    'gcb-expire-old-reviews-for-unit-expire',
+    'number of records expire_old_reviews_for_unit() has expired')
+COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SKIP = counters.PerfCounter(
+    'gcb-expire-old-reviews-for-unit-skip',
+    ('number of times expire_old_reviews_for_unit() skipped a record due to an '
+     'error'))
+COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_START = counters.PerfCounter(
+    'gcb-expire-old-reviews-for-unit-start',
+    'number of times expire_old_reviews_for_unit() has started processing')
+COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS = counters.PerfCounter(
+    'gcb-expire-old-reviews-for-unit-success',
+    'number of times expire_old_reviews_for_unit() completed successfully')
 
 COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
     'gcb-start-review-process-for-already-started',
@@ -579,6 +596,78 @@ class Manager(object):
         step.state = peer.REVIEW_STATE_EXPIRED
         summary.increment_count(step.state)
         return db.put([step, summary])[0]
+
+    @classmethod
+    def expire_old_reviews_for_unit(cls, review_window_mins, unit_id):
+        """Finds and expires all old review steps for a single unit.
+
+        Args:
+            review_window_mins: int. Number of minutes before we expire reviews
+                assigned by peer.ASSIGNER_KIND_AUTO.
+            unit_id: string. Id of the unit to restrict the query to.
+
+        Returns:
+            2-tuple of list of db.Key of peer.ReviewStep. 0th element is keys
+            that were written successfully; 1st element is keys that we failed
+            to update.
+        """
+        query = cls.get_expiry_query(review_window_mins, unit_id)
+        mapper = utils.QueryMapper(query, report_every=100)
+        expired_keys = []
+        exception_keys = []
+
+        def map_fn(review_step_key, expired_keys, exception_keys):
+            try:
+                expired_keys.append(cls.expire_review(review_step_key))
+            except:  # All errors are the same. pylint: disable-msg=bare-except
+                # Skip. Either the entity was updated between the query and
+                # the update, meaning we don't need to expire it; or we ran into
+                # a transient datastore error, meaning we'll expire it next
+                # time.
+                COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SKIP.inc()
+                exception_keys.append(review_step_key)
+
+        COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_START.inc()
+
+        mapper.run(map_fn, expired_keys, exception_keys)
+        COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_EXPIRE.inc(
+            increment=len(expired_keys))
+        COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS.inc()
+        return expired_keys, exception_keys
+
+    @classmethod
+    def get_expiry_query(
+        cls, review_window_mins, unit_id, now_fn=datetime.datetime.now):
+        """Gets a db.Query that returns review steps to mark expired.
+
+        Results are items that were assigned by machine, are currently assigned,
+        are not removed, were last updated more than review_window_mins ago,
+        and are ordered by change date ascending.
+
+        Args:
+            review_window_mins: int. Number of minutes before we expire reviews
+                assigned by peer.ASSIGNER_KIND_AUTO.
+            unit_id: string. Id of the unit to restrict the query to.
+            now_fn: function that returns the current UTC datetime. Injectable
+                for tests only.
+
+        Returns:
+            db.Query.
+        """
+        get_before = now_fn() - datetime.timedelta(
+            minutes=review_window_mins)
+        return peer.ReviewStep.all(keys_only=True).filter(
+            peer.ReviewStep.unit_id.name, unit_id,
+        ).filter(
+            peer.ReviewStep.assigner_kind.name, peer.ASSIGNER_KIND_AUTO
+        ).filter(
+            peer.ReviewStep.state.name, peer.REVIEW_STATE_ASSIGNED
+        ).filter(
+            peer.ReviewStep.removed.name, False
+        ).filter(
+            '%s <=' % peer.ReviewStep.change_date.name, get_before
+        ).order(
+            peer.ReviewStep.change_date.name)
 
     @classmethod
     def start_review_process_for(cls, unit_id, submission_key, reviewee_key):

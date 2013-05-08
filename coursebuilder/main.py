@@ -27,6 +27,7 @@ from modules.admin import config
 from modules.announcements import announcements
 from modules.dashboard import dashboard
 import modules.oeditor.oeditor
+from modules.review import cron
 
 urls = [
     ('/', lessons.CourseHandler),
@@ -77,12 +78,16 @@ admin_handlers = [
 
 app_handler = (r'(.*)', sites.ApplicationRequestHandler)
 
+cron_handlers = [
+    ('/cron/expire_old_assigned_reviews', cron.ExpireOldAssignedReviewsHandler),
+]
+
 webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
 debug = not appengine_config.PRODUCTION_MODE
 
 app = webapp2.WSGIApplication(
-    admin_handlers + yui_handlers + [app_handler],
+    admin_handlers + cron_handlers + yui_handlers + [app_handler],
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=debug)
