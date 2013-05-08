@@ -32,6 +32,7 @@ from models import custom_modules
 from models import jobs
 from models import roles
 from models import transforms
+from models import utils
 from models import vfs
 from models.models import Student
 from course_settings import CourseSettingsHandler
@@ -52,7 +53,6 @@ from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
 from google.appengine.api import users
-from google.appengine.ext import db
 
 
 class DashboardHandler(
@@ -695,12 +695,14 @@ class ComputeStudentStats(jobs.DurableJob):
 
         enrollment = EnrollmentAggregator()
         scores = ScoresAggregator()
-        query = db.GqlQuery(
-            'SELECT * FROM %s' % Student().__class__.__name__,
-            batch_size=10000)
-        for student in query.run():
+        mapper = utils.QueryMapper(
+            Student.all(), batch_size=500, report_every=1000)
+
+        def map_fn(student):
             enrollment.visit(student)
             scores.visit(student)
+
+        mapper.run(map_fn)
 
         data = {
             'enrollment': {

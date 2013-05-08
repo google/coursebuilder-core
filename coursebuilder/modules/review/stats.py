@@ -25,8 +25,8 @@ import jinja2
 from models import courses
 from models import jobs
 from models import transforms
+from models import utils
 from modules.review import peer
-from google.appengine.ext import db
 
 
 class ReviewStatsAggregator(object):
@@ -57,12 +57,10 @@ class ComputeReviewStats(jobs.DurableJob):
         """Computes peer review statistics."""
 
         stats = ReviewStatsAggregator()
+        mapper = utils.QueryMapper(
+            peer.ReviewSummary.all(), batch_size=500, report_every=1000)
 
-        query = db.GqlQuery(
-            'SELECT * FROM %s' % peer.ReviewSummary.__name__,
-            batch_size=10000)
-        for review_summary in query.run():
-            stats.visit(review_summary)
+        mapper.run(stats.visit)
 
         completed_arrays_by_unit = {}
         for unit_id in stats.counts_by_completed_reviews:
