@@ -65,14 +65,14 @@ In order to run this script, you must add the following to the head of sys.path:
    webapp2
    webob
 
-   Their locations in the supported 1.7.0 App Engine SDK are
+   Their locations in the supported 1.7.6 App Engine SDK are
 
    <sdk_path>/lib/fancy_urllib
-   <sdk_path>/lib/jinja2
-   <sdk_path>/lib/webapp2
-   <sdk_path>/lib/webob_1_1_1
+   <sdk_path>/lib/jinja2-2.6
+   <sdk_path>/lib/webapp2-2.5.2
+   <sdk_path>/lib/webob-1.2.3
 
-   where <sdk_path> is the absolute path of the 1.7.0 App Engine SDK.
+   where <sdk_path> is the absolute path of the 1.7.6 App Engine SDK.
 4. If you are running a custom job, the absolute paths of all code required by
    your custom job, unless covered above.
 

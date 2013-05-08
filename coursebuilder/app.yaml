@@ -15,10 +15,12 @@ builtins:
 - deferred: on
 
 libraries:
-- name: webapp2
-  version: latest
 - name: jinja2
-  version: latest
+  version: "2.6"
+- name: webapp2
+  version: "2.5.2"
+- name: webob
+  version: "1.2.3"
 
 handlers:
 - url: /remote_api
