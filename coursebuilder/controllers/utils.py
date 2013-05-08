@@ -161,9 +161,10 @@ class ApplicationHandler(webapp2.RequestHandler):
             location = '%s%s' % (self.app_context.get_slug(), location)
         return location
 
-    def redirect(self, location):
-        super(ApplicationHandler, self).redirect(
-            self.canonicalize_url(location))
+    def redirect(self, location, normalize=True):
+        if normalize:
+            location = self.canonicalize_url(location)
+        super(ApplicationHandler, self).redirect(location)
 
 
 class BaseHandler(ApplicationHandler):
@@ -198,7 +199,8 @@ class BaseHandler(ApplicationHandler):
         """Validate user exists."""
         user = users.get_current_user()
         if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+            self.redirect(
+                users.create_login_url(self.request.uri), normalize=False)
         else:
             return user
 
@@ -215,7 +217,8 @@ class BaseHandler(ApplicationHandler):
         """If the user is enrolled, add personalized fields to the navbar."""
         user = self.personalize_page_and_get_user()
         if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+            self.redirect(
+                users.create_login_url(self.request.uri), normalize=False)
             return None
 
         student = Student.get_enrolled_student_by_email(user.email())
@@ -281,9 +284,11 @@ class RegisterHandler(BaseHandler):
 
     def get(self):
         """Handles GET request."""
+
         user = self.personalize_page_and_get_user()
         if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+            self.redirect(
+                users.create_login_url(self.request.uri), normalize=False)
             return
 
         student = Student.get_enrolled_student_by_email(user.email())
@@ -300,7 +305,8 @@ class RegisterHandler(BaseHandler):
         """Handles POST requests."""
         user = self.personalize_page_and_get_user()
         if not user:
-            self.redirect(users.create_login_url(self.request.uri))
+            self.redirect(
+                users.create_login_url(self.request.uri), normalize=False)
             return
 
         if not self.assert_xsrf_token_or_fail(self.request, 'register-post'):
