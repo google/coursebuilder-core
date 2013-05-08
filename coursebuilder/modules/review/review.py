@@ -25,6 +25,36 @@ from google.appengine.ext import db
 
 
 # In-process increment-only performance counters.
+COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY = counters.PerfCounter(
+    'gcb-add-reviewer-bad-summary-key',
+    'number of times add_reviewer() failed due to a bad review summary key')
+COUNTER_ADD_REVIEWER_SET_ASSIGNER_KIND_HUMAN = counters.PerfCounter(
+    'gcb-add-reviewer-set-assigner-kind-human',
+    ("number of times add_reviewer() changed an existing step's assigner_kind "
+     'to ASSIGNER_KIND_HUMAN'))
+COUNTER_ADD_REVIEWER_CREATE_REVIEW_STEP = counters.PerfCounter(
+    'gcb-add-reviewer-create-review-step',
+    'number of times add_reviewer() created a new review step')
+COUNTER_ADD_REVIEWER_EXPIRED_STEP_REASSIGNED = counters.PerfCounter(
+    'gcb-add-reviewer-expired-step-reassigned',
+    'number of times add_reviewer() reassigned an expired step')
+COUNTER_ADD_REVIEWER_FAILED = counters.PerfCounter(
+    'gcb-add-reviewer-failed',
+    'number of times add_reviewer() had a fatal error')
+COUNTER_ADD_REVIEWER_REMOVED_STEP_UNREMOVED = counters.PerfCounter(
+    'gcb-add-reviewer-removed-step-unremoved',
+    'number of times add_reviewer() unremoved a removed review step')
+COUNTER_ADD_REVIEWER_START = counters.PerfCounter(
+    'gcb-add-reviewer-start',
+    'number of times add_reviewer() has started processing')
+COUNTER_ADD_REVIEWER_SUCCESS = counters.PerfCounter(
+    'gcb-add-reviewer-success',
+    'number of times add_reviewer() completed successfully')
+COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED = counters.PerfCounter(
+    'gcb-add-reviewer-unremoved-step-failed',
+    ('number of times add_reviewer() failed on an unremoved step with a fatal '
+     'error'))
+
 COUNTER_DELETE_REVIEWER_ALREADY_REMOVED = counters.PerfCounter(
     'gcb-review-delete-reviewer-already-removed',
     ('number of times delete_reviewer() called on ReviewStep with removed '
@@ -245,6 +275,128 @@ class Manager(object):
     """Object that manages the review subsystem."""
 
     @classmethod
+    def add_reviewer(cls, unit_id, submission_key, reviewee_key, reviewer_key):
+        """Adds a reviewer for a submission.
+
+        If there is no pre-existing review step, one will be created.
+
+        Attempting to add an existing unremoved step in REVIEW_STATE_ASSIGNED or
+        REVIEW_STATE_COMPLETED is an error.
+
+        If there is an existing unremoved review in REVIEW_STATE_EXPIRED, it
+        will be put in REVIEW_STATE_ASSIGNED. If there is a removed review in
+        REVIEW_STATE_ASSIGNED or REVIEW_STATE_EXPIRED, it will be put in
+        REVIEW_STATE_ASSIGNED and unremoved. If it is in REVIEW_STATE_COMPLETED,
+        it will be unremoved but its state will not change. In all these cases
+        the assigner kind will be set to ASSIGNER_KIND_HUMAN.
+
+        Args:
+            unit_id: string. Unique identifier for a unit.
+            submission_key: db.Key of models.review.Submission. The submission
+                being registered.
+            reviewee_key: db.Key of models.models.Student. The student who
+                authored the submission.
+            reviewer_key: db.Key of models.models.Student. The student to add as
+                a reviewer.
+
+        Raises:
+            ValueError: if there is a pre-existing review step found in
+                REVIEW_STATE_ASSIGNED|COMPLETED.
+
+        Returns:
+            db.Key of written review step.
+        """
+        try:
+            COUNTER_ADD_REVIEWER_START.inc()
+            key = cls._add_reviewer(
+                unit_id, submission_key, reviewee_key, reviewer_key)
+            COUNTER_ADD_REVIEWER_SUCCESS.inc()
+            return key
+        except Exception as e:
+            COUNTER_ADD_REVIEWER_FAILED.inc()
+            raise e
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _add_reviewer(cls, unit_id, submission_key, reviewee_key, reviewer_key):
+        found = peer.ReviewStep.get_by_key_name(
+            peer.ReviewStep.key_name(
+                unit_id, submission_key, reviewee_key, reviewer_key))
+        if not found:
+            return cls._add_new_reviewer(
+                unit_id, submission_key, reviewee_key, reviewer_key)
+        else:
+            return cls._add_reviewer_update_step(found)
+
+    @classmethod
+    def _add_new_reviewer(
+        cls, unit_id, submission_key, reviewee_key, reviewer_key):
+        summary = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=reviewee_key,
+            submission_key=submission_key, unit_id=unit_id)
+        # Synthesize summary key to avoid a second synchronous put op.
+        summary_key = db.Key.from_path(
+            peer.ReviewSummary.kind(),
+            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
+        step = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            review_summary_key=summary_key, reviewee_key=reviewee_key,
+            reviewer_key=reviewer_key, state=peer.REVIEW_STATE_ASSIGNED,
+            submission_key=submission_key, unit_id=unit_id)
+        step_key, written_summary_key = db.put([step, summary])
+        if summary_key != written_summary_key:
+            COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
+            raise AssertionError(
+                'Synthesized invalid review summary key %s' % repr(summary_key))
+        COUNTER_ADD_REVIEWER_CREATE_REVIEW_STEP.inc()
+        return step_key
+
+    @classmethod
+    def _add_reviewer_update_step(cls, step):
+        should_increment_human = False
+        should_increment_reassigned = False
+        should_increment_unremoved = False
+        summary = peer.ReviewSummary.get(step.review_summary_key)
+        if not summary:
+            COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
+            raise AssertionError(
+                'Found invalid review summary key %s' % repr(
+                    step.review_summary_key))
+        if not step.removed:
+            if step.state == peer.REVIEW_STATE_EXPIRED:
+                should_increment_reassigned = True
+                step.state = peer.REVIEW_STATE_ASSIGNED
+                summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
+                summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+            elif (step.state == peer.REVIEW_STATE_ASSIGNED or
+                  step.state == peer.REVIEW_STATE_COMPLETED):
+                COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED.inc()
+                raise ValueError(
+                    ('Unable to add new reviewer to existing step %s in state '
+                     '%s') % (repr(step.key()), step.state))
+        else:
+            should_increment_unremoved = True
+            step.removed = False
+            if step.state != peer.REVIEW_STATE_EXPIRED:
+                summary.increment_count(step.state)
+            else:
+                should_increment_reassigned = True
+                step.state = peer.REVIEW_STATE_ASSIGNED
+                summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
+                summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+        if step.assigner_kind != peer.ASSIGNER_KIND_HUMAN:
+            should_increment_human = True
+            step.assigner_kind = peer.ASSIGNER_KIND_HUMAN
+        step_key = db.put([step, summary])[0]
+        if should_increment_human:
+            COUNTER_ADD_REVIEWER_SET_ASSIGNER_KIND_HUMAN.inc()
+        if should_increment_reassigned:
+            COUNTER_ADD_REVIEWER_EXPIRED_STEP_REASSIGNED.inc()
+        if should_increment_unremoved:
+            COUNTER_ADD_REVIEWER_REMOVED_STEP_UNREMOVED.inc()
+        return step_key
+
+    @classmethod
     def delete_reviewer(cls, review_step_key):
         """Deletes the given review step.
 
@@ -281,15 +433,18 @@ class Manager(object):
         step = db.get(review_step_key)
         if not step:
             COUNTER_DELETE_REVIEWER_STEP_MISS.inc()
-            raise KeyError('No review step found with key %s' % review_step_key)
+            raise KeyError(
+                'No review step found with key %s' % repr(review_step_key))
         if step.removed:
             COUNTER_DELETE_REVIEWER_ALREADY_REMOVED.inc()
-            raise ValueError('Review step %s already removed' % review_step_key)
+            raise ValueError(
+                'Review step %s already removed' % repr(review_step_key))
         summary = db.get(step.review_summary_key)
         if not summary:
             COUNTER_DELETE_REVIEWER_SUMMARY_MISS.inc()
             raise KeyError(
-                'No review summary found with key %s' % step.review_summary_key)
+                'No review summary found with key %s' % repr(
+                    step.review_summary_key))
         step.removed = True
         summary.decrement_count(step.state)
         return db.put([step, summary])[0]
@@ -337,6 +492,6 @@ class Manager(object):
             raise ReviewProcessAlreadyStartedError()
 
         return peer.ReviewSummary(
-            parent=reviewee_key, reviewee_key=reviewee_key,
-            submission_key=submission_key, unit_id=unit_id
+            reviewee_key=reviewee_key, submission_key=submission_key,
+            unit_id=unit_id,
         ).put()

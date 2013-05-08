@@ -40,13 +40,13 @@ ASSIGNER_KINDS = (
 REVIEW_STATE_ASSIGNED = 'ASSIGNED'
 # State of a review that is complete and may be shown to the reviewee, provided
 # the reviewee is themself in a state to see their reviews.
-REVIEW_STATE_COMPLETE = 'COMPLETE'
+REVIEW_STATE_COMPLETED = 'COMPLETED'
 # State of a review that used to be assigned but the assignment has been
 # expired. Only machine-assigned reviews can be expired.
 REVIEW_STATE_EXPIRED = 'EXPIRED'
 REVIEW_STATES = (
     REVIEW_STATE_ASSIGNED,
-    REVIEW_STATE_COMPLETE,
+    REVIEW_STATE_COMPLETED,
     REVIEW_STATE_EXPIRED,
 )
 
@@ -167,10 +167,29 @@ class ReviewSummary(BaseEntity):
         """
         if state == REVIEW_STATE_ASSIGNED:
             self.assigned_count -= 1
-        elif state == REVIEW_STATE_COMPLETE:
+        elif state == REVIEW_STATE_COMPLETED:
             self.completed_count -= 1
         elif state == REVIEW_STATE_EXPIRED:
             self.expired_count -= 1
+        else:
+            raise ValueError('%s not in %s' % (state, REVIEW_STATES))
+
+    def increment_count(self, state):
+        """Increments the count for the given state enum; does not save.
+
+        Args:
+            state: string. State indicating counter to increment; must be one of
+                REVIEW_STATES.
+
+        Raises:
+            ValueError: if state not in REVIEW_STATES
+        """
+        if state == REVIEW_STATE_ASSIGNED:
+            self.assigned_count += 1
+        elif state == REVIEW_STATE_COMPLETED:
+            self.completed_count +=1
+        elif state == REVIEW_STATE_EXPIRED:
+            self.expired_count += 1
         else:
             raise ValueError('%s not in %s' % (state, REVIEW_STATES))
 

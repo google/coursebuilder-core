@@ -118,13 +118,33 @@ class ReviewSummaryTest(actions.TestBase):
                 models.Student.kind(), 'reviewee@example.com'),
             submission_key=db.Key.from_path(
                 review.Submission.kind(), 'submission'), unit_id='1')
+
         self.assertEqual(1, summary.assigned_count)
         summary.decrement_count(peer.REVIEW_STATE_ASSIGNED)
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.completed_count)
-        summary.decrement_count(peer.REVIEW_STATE_COMPLETE)
+        summary.decrement_count(peer.REVIEW_STATE_COMPLETED)
         self.assertEqual(0, summary.completed_count)
         self.assertEqual(1, summary.expired_count)
         summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
         self.assertEqual(0, summary.expired_count)
         self.assertRaises(ValueError, summary.decrement_count, 'bad_state')
+
+    def test_increment_count(self):
+        """Tests increment_count."""
+        summary = peer.ReviewSummary(
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'), unit_id='1')
+
+        self.assertEqual(0, summary.assigned_count)
+        summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.completed_count)
+        summary.increment_count(peer.REVIEW_STATE_COMPLETED)
+        self.assertEqual(1, summary.completed_count)
+        self.assertEqual(0, summary.expired_count)
+        summary.increment_count(peer.REVIEW_STATE_EXPIRED)
+        self.assertEqual(1, summary.expired_count)
+        self.assertRaises(ValueError, summary.increment_count, 'bad_state')

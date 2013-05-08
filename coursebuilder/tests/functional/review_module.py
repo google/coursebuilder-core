@@ -39,41 +39,207 @@ class TestBase(actions.TestBase):
 class ManagerTest(TestBase):
     """Tests for review.Manager."""
 
+    # Don't require documentation for self-describing test methods.
+    # pylint: disable-msg=g-missing-docstring
+
     def setUp(self):  # Name set by parent. pylint: disable-msg=g-bad-name
         super(ManagerTest, self).setUp()
-        self.student = models.Student(key_name='test@example.com')
-        self.student_key = self.student.put()
+        self.reviewee = models.Student(key_name='reviewee@example.com')
+        self.reviewee_key = self.reviewee.put()
+        self.reviewer = models.Student(key_name='reviewer@example.com')
+        self.reviewer_key = self.reviewer.put()
         self.submission = review.Submission(contents='contents')
         self.submission_key = self.submission.put()
         self.unit_id = '1'
 
-    def test_delete_reviewer_marks_step_removed_and_decrements_summary(self):
-        """Ensures delete_reviewer does correct bookkeeping."""
+    def test_add_reviewer_adds_new_step_and_summary(self):
+        step_key = review_module.Manager.add_reviewer(
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
+        step = db.get(step_key)
+        summary = db.get(step.review_summary_key)
+
+        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(self.reviewee_key, step.reviewee_key)
+        self.assertEqual(self.reviewer_key, step.reviewer_key)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(self.submission_key, step.submission_key)
+        self.assertEqual(self.unit_id, step.unit_id)
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.completed_count)
+        self.assertEqual(0, summary.expired_count)
+        self.assertEqual(self.reviewee_key, summary.reviewee_key)
+        self.assertEqual(self.submission_key, summary.submission_key)
+        self.assertEqual(self.unit_id, summary.unit_id)
+
+    def test_add_reviewer_existing_raises_assertion_when_summary_missing(self):
+        missing_key = db.Key.from_path(
+            peer.ReviewSummary.kind(), 'no_summary_found_for_key')
+        peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=missing_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            AssertionError, review_module.Manager.add_reviewer, self.unit_id,
+            self.submission_key, self.reviewee_key, self.reviewer_key)
+
+    def test_add_reviewer_existing_raises_value_error_when_state_assigned(self):
         summary_key = peer.ReviewSummary(
-            assigned_count=1,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'),
-            unit_id='1'
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            ValueError, review_module.Manager.add_reviewer, self.unit_id,
+            self.submission_key, self.reviewee_key, self.reviewer_key)
+
+    def test_add_reviewer_existing_raises_value_error_when_completed(self):
+        summary_key = peer.ReviewSummary(
+            completed_count=1, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            ValueError, review_module.Manager.add_reviewer, self.unit_id,
+            self.submission_key, self.reviewee_key, self.reviewer_key)
+
+    def test_add_reviewer_unremoved_existing_changes_expired_to_assigned(self):
+        summary_key = peer.ReviewSummary(
+            expired_count=1, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
-            review_summary_key=summary_key,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            reviewer_key=db.Key.from_path(
-                models.Student.kind(), 'reviewer@example.com'),
-            submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'),
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.add_reviewer(
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertFalse(step.removed)
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.expired_count)
+
+    def test_add_reviewer_removed_unremoves_assigned_step(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.add_reviewer(
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertFalse(step.removed)
+
+        self.assertEqual(1, summary.assigned_count)
+
+    def test_add_reviewer_removed_unremoves_completed_step(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.add_reviewer(
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertFalse(step.removed)
+
+        self.assertEqual(1, summary.completed_count)
+
+    def test_add_reviewer_removed_unremoves_and_assigns_expired_step(self):
+        summary_key = peer.ReviewSummary(
+            expired_count=1, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        review_module.Manager.add_reviewer(
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertFalse(step.removed)
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.expired_count)
+
+    def test_delete_reviewer_marks_step_removed_and_decrements_summary(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         step, summary = db.get([step_key, summary_key])
+
         self.assertFalse(step.removed)
         self.assertEqual(1, summary.assigned_count)
+
         deleted_key = review_module.Manager.delete_reviewer(step_key)
         step, summary = db.get([step_key, summary_key])
+
         self.assertEqual(step_key, deleted_key)
         self.assertTrue(step.removed)
         self.assertEqual(0, summary.assigned_count)
@@ -84,66 +250,54 @@ class ManagerTest(TestBase):
             db.Key.from_path(peer.ReviewStep.kind(), 'missing_key'))
 
     def test_delete_reviewer_raises_key_error_when_summary_missing(self):
-        """Ensures we raise KeyError if step references a missing summary."""
         missing_key = db.Key.from_path(
             peer.ReviewSummary.kind(), 'missing_review_summary_key')
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
-            review_summary_key=missing_key,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            reviewer_key=db.Key.from_path(
-                models.Student.kind(), 'reviewer@example.com'),
-            submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'),
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+            review_summary_key=missing_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
+
         self.assertRaises(
             KeyError, review_module.Manager.delete_reviewer, step_key)
 
     def test_delete_reviewer_raises_value_error_if_already_removed(self):
-        """Ensures we raise ValueError when deleting removed review step."""
         summary_key = peer.ReviewSummary(
-            assigned_count=1,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'),
-            unit_id='1'
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
-            review_summary_key=summary_key,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            reviewer_key=db.Key.from_path(
-                models.Student.kind(), 'reviewer@example.com'),
-            submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'),
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
+
         self.assertRaises(
             ValueError, review_module.Manager.delete_reviewer, step_key)
 
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
-            self.unit_id, self.submission_key, self.student_key)
+            self.unit_id, self.submission_key, self.reviewee_key)
         summary = db.get(key)
-        self.assertEqual(self.student_key, summary.reviewee_key)
+
+        self.assertEqual(self.reviewee_key, summary.reviewee_key)
         self.assertEqual(self.submission_key, summary.submission_key)
         self.assertEqual(self.unit_id, summary.unit_id)
 
     def test_start_review_process_for_throws_if_already_started(self):
         collision = peer.ReviewSummary(
-            reviewee_key=self.student_key, submission_key=self.submission_key,
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id)
         collision.put()
+
         self.assertRaises(
             review_module.ReviewProcessAlreadyStartedError,
             review_module.Manager.start_review_process_for,
-            self.unit_id, self.submission_key, self.student_key)
+            self.unit_id, self.submission_key, self.reviewee_key)
 
 
 class ReviewTest(TestBase):
