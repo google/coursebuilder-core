@@ -166,8 +166,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       var insertionPoint = editorWin.document.querySelector('.gcbInsertionPoint');
       insertionPoint.parentNode.replaceChild(el, insertionPoint);
 
-      this._removeMarkerTags(editorWin);
-      this._insertMarkerTags(editorWin);
+      this._refreshMarkerTags()
     },
 
     _insertInsertionPointTag: function() {
@@ -183,7 +182,11 @@ function getGcbRteDefs(env, Dom, Editor) {
       var elts = win.document.querySelectorAll('.gcbMarker');
       for (var i = 0; i < elts.length; i++) {
         var img = elts[i];
-        img.parentNode.replaceChild(img.gcbTag, img);
+        if (img.gcbTag) {
+          img.parentNode.replaceChild(img.gcbTag, img);
+        } else {
+          img.parentNode.removeChild(img);
+        }
       }
     },
 
@@ -249,13 +252,31 @@ function getGcbRteDefs(env, Dom, Editor) {
         var ed = document.getElementById(that.id + '_editor');
         if (ed && ed.contentWindow && ed.contentWindow.document &&
             ed.contentWindow.document.readyState == 'complete') {
-          if (options.supportCustomTags) {
-            that._insertMarkerTags(that._getEditorWindow());
-          }
+          that._onEditorIframeLoaded();
         } else {
           setTimeout(arguments.callee, 100);
         }
       })();
+    },
+
+    _onEditorIframeLoaded: function() {
+      var that = this;
+      if (this.options.supportCustomTags) {
+        this._insertMarkerTags(this._getEditorWindow());
+      }
+
+      // Refresh the marker images after a paste
+      this._getEditorWindow().document.body.onpaste = function(e) {
+        setTimeout(function() {
+          that._refreshMarkerTags();
+        }, 10);
+      };
+    },
+
+    _refreshMarkerTags: function() {
+      var editorWin= this._getEditorWindow();
+      this._removeMarkerTags(editorWin);
+      this._insertMarkerTags(editorWin);
     },
 
     showExistingRte: function() {
