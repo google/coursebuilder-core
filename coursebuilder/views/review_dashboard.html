@@ -37,16 +37,18 @@
       {% endfor %}
     </ol>
 
-    {% if can_request_new_review %}
-      <form action="reviewdashboard?unit={{unit_id}}" method="post">
-        <input type="hidden" name="xsrf_token"
-               value="{{ review_dashboard_xsrf_token | escape }}">
-        <input type="hidden" name="unit_id" value="{{ unit_id }}">
-        <button class="gcb-button" type="submit">
-          {{ gettext('Review another submission') }}
-        </button>
-      </form>
-    {% endif %}
+    <form action="reviewdashboard?unit={{unit_id}}" method="post">
+      <input type="hidden" name="xsrf_token"
+             value="{{ review_dashboard_xsrf_token | escape }}">
+      <input type="hidden" name="unit_id" value="{{ unit_id }}">
+      <button class="gcb-button" type="submit"
+        {% if not can_request_new_review %}
+          disabled="true"
+        {% endif %}
+      >
+        {{ gettext('Review another submission') }}
+      </button>
+    </form>
 
     {% if no_submissions_available is defined and no_submissions_available %}
       <p>

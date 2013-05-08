@@ -11,25 +11,23 @@
       <br>
 
       {% if q['choices'] %}
-        <ul>
         {% for choice in q['choices'] %}
-          <li>
-            {% if loop.index0 == readonly_assessment['submission'][outer_loop.index0] %}
-              <strong>
-            {% endif %}
-
+          <input type="radio" disabled="true"
+                 id="readonly-{{outer_loop.index0}}-{{loop.index0}}"
+                 {% if loop.index0 == readonly_assessment['submission'][outer_loop.index0] %}
+                   checked="true"
+                 {% endif %}
+          >
+          &nbsp;
+          <label for="readonly-{{outer_loop.index0}}-{{loop.index0}}">
             {{ choice }}
-
-            {% if loop.index0 == readonly_assessment['submission'][outer_loop.index0] %}
-              </strong>
-            {% endif %}
-          </li>
+          </label>
+          <br>
         {% endfor %}
-        </ul>
       {% else %}
-        <strong>Answer:</strong>
-        {{ readonly_assessment['submission'][outer_loop.index0] }}
+        Answer: <input type="text" value="{{ readonly_assessment['submission'][outer_loop.index0] }}" disabled="true">
       {% endif %}
+      <br>
 
     </li>
   {% endfor %}
