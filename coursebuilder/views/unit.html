@@ -14,8 +14,10 @@
   {% if is_read_write_course and is_course_admin %}
     <a href="dashboard?action=edit_unit&key={{ unit_id }}"
       class="gcb-button gcb-button-action">Edit unit</a>
-    <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
-      class="gcb-button gcb-button-action">Edit lesson</a>
+    {% if lesson %}
+      <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
+        class="gcb-button gcb-button-action">Edit lesson</a>
+    {% endif %}
   {% endif %}
   <ul class="gcb-breadcrumb">
     {# I18N: Navigation breadcrumb. #}
