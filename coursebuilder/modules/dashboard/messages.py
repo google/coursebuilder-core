@@ -23,6 +23,7 @@ def assemble_sanitized_message(text, link):
     node_list = safe_dom.NodeList()
     if text:
         node_list.append(safe_dom.Text(text))
+        node_list.append(safe_dom.Entity('&nbsp;'))
     if link:
         node_list.append(safe_dom.Element(
             'a', href=link, target='_blank').add_text('Learn more...'))
