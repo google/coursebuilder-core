@@ -20,7 +20,6 @@ import logging
 import urllib
 import urlparse
 
-from common import tags
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -193,13 +192,7 @@ class UnitHandler(BaseHandler):
         self.template_value['lesson'] = lesson
 
         if lesson:
-            self.template_value[
-                'gcb_can_use_dynamic_tags'] = tags.CAN_USE_DYNAMIC_TAGS.value
-            if tags.CAN_USE_DYNAMIC_TAGS.value:
-                objectives = tags.html_to_safe_dom(lesson.objectives)
-            else:
-                objectives = lesson.objectives
-            self.template_value['objectives'] = objectives
+            self.template_value['objectives'] = lesson.objectives
 
         self.template_value['lessons'] = lessons
 

@@ -105,7 +105,7 @@ class ForumEmbed(tags.BaseTag):
         embedded_forum_url = (
             'https://groups.google.com/forum/embed/?place=forum/?'
             'fromgroups&hl=en#!categories/%s/%s') \
-            % (urllib.urlencode(forum_name),urllib.urlencode(category_name))
+            % (urllib.quote(forum_name), urllib.quote(category_name))
         iframe = etree.XML("""
 <p>
   <iframe class="forum-embed" title="Forum Embed"

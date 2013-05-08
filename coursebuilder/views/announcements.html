@@ -46,7 +46,7 @@
           </h2>
           <p>{{ item.date }}</p>
           <p "margin: 20px 0px;">
-          {{ item.html | safe }}
+          {{ item.html | gcb_tags }}
         {% endfor %}
       {% endif %}
     </div>

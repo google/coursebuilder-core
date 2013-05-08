@@ -24,6 +24,7 @@ import pickle
 import sys
 
 import appengine_config
+from common import tags
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 from tools import verify
@@ -248,7 +249,7 @@ def create_course_registry():
         'course:now_available', 'Make Course Available', 'boolean'))
 
     # Course registration settings.
-    reg_opts = reg.add_sub_registry('reg_form', 'Student Registraion Options')
+    reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
     reg_opts.add_property(SchemaField(
         'reg_form:can_register', 'Enable Registrations', 'boolean'))
 
@@ -258,7 +259,9 @@ def create_course_registry():
         'course:instructor_details', 'Instructor Details', 'html',
         optional=True))
     homepage_opts.add_property(SchemaField(
-        'course:blurb', 'Course Preview Content', 'text', optional=True))
+        'course:blurb', 'Course Preview Content', 'html', optional=True,
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}))
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
         description='Course Intro Video on Course Home Page'))

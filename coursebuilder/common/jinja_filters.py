@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import jinja2
 import safe_dom
+import tags
 
 
 def finalize(x):
@@ -29,6 +30,8 @@ def finalize(x):
 
 def js_string(data):
     """Escape a string so that it can be put in a JS quote."""
+    if not isinstance(data, basestring):
+        return data
     data = data.replace('\\', '\\\\')
     data = data.replace('\r', '\\r')
     data = data.replace('\n', '\\n')
@@ -39,3 +42,13 @@ def js_string(data):
     data = data.replace('>', '\\u003e')
     data = data.replace('&', '\\u0026')
     return jinja2.utils.Markup(data)
+
+
+def gcb_tags(data):
+    """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
+    if not isinstance(data, basestring):
+        return data
+    if tags.CAN_USE_DYNAMIC_TAGS.value:
+        return jinja2.utils.Markup(tags.html_to_safe_dom(data))
+    else:
+        return jinja2.utils.Markup(data)

@@ -20,6 +20,7 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 import datetime
 import urllib
 
+from common import tags
 from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
@@ -239,7 +240,8 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 'valueFormat': 'Y/m/d'}),
             (['properties', 'title', '_inputex'], {'label': 'Title'}),
             (['properties', 'html', '_inputex'], {
-                'label': 'Body', '_type': 'html'}),
+                'label': 'Body', '_type': 'html',
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}),
             oeditor.create_bool_select_annotation(
                 ['properties', 'is_draft'], 'Status', 'Draft', 'Published'),
             (['properties', 'send_email', '_inputex'], {

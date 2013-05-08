@@ -198,6 +198,10 @@ class DashboardPage(PageObject):
             self.find_element_by_id('gcb-alerts-bar').text)
         return self
 
+    def verify_selected_tab(self, tab_text):
+        tab = self.find_element_by_link_text(tab_text)
+        self._tester.assertEquals('selected', tab.get_attribute('class'))
+
     def verify_not_publicly_available(self):
         self._tester.assertEquals(
             'The course is not publicly available.',

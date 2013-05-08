@@ -118,7 +118,7 @@ def html_to_safe_dom(html_string):
 
     elt_list = html.fragments_fromstring(html_string)
     node_list = safe_dom.NodeList()
-    if elt_list and isinstance(elt_list[0], str):
+    if elt_list and isinstance(elt_list[0], basestring):
         node_list.append(safe_dom.Text(elt_list[0]))
         elt_list = elt_list[1:]
     for elt in elt_list:

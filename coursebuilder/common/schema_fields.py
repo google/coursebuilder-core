@@ -37,7 +37,11 @@ class SchemaField(Property):
 
     def get_schema_dict_entry(self):
         """Get Schema annotation dictionary for this field."""
-        schema = {'label': self._label}
+        if self._extra_schema_dict_values:
+            schema = self._extra_schema_dict_values
+        else:
+            schema = {}
+        schema['label'] = self._label
         schema['_type'] = self._property_type
 
         if 'date' is self._property_type:

@@ -24,13 +24,14 @@ class Property(object):
 
     def __init__(
         self, name, label, property_type, select_data=None, description=None,
-        optional=False):
+        optional=False, extra_schema_dict_values=None):
         self._name = name
         self._label = label
         self._property_type = property_type
         self._select_data = select_data
         self._description = description
         self._optional = optional
+        self._extra_schema_dict_values = extra_schema_dict_values
 
     @property
     def name(self):

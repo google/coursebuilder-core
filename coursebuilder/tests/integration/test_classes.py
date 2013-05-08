@@ -200,7 +200,7 @@ class AdminTests(BaseIntegrationTest):
         self.load_dashboard(name).click_assets(
         ).click_upload(
         ).click_close(
-        ).verify_not_publicly_available()  # confirm that we're on the dashboard
+        ).verify_selected_tab('Assets')
 
     def test_upload_and_delete_image(self):
         """Admin should be able to upload an image and then delete it."""

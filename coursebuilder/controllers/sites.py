@@ -114,6 +114,7 @@ import urlparse
 import zipfile
 
 import appengine_config
+from common import jinja_filters
 from common import safe_dom
 from models import transforms
 from models.config import ConfigProperty
@@ -740,6 +741,7 @@ class ApplicationContext(object):
 
         i18n.get_i18n().set_locale(locale)
         jinja_environment.install_gettext_translations(i18n)
+        jinja_environment.filters['gcb_tags'] = jinja_filters.gcb_tags
 
         return jinja_environment
 

@@ -69,11 +69,7 @@
 
                 {% if objectives %}
                   <div class="lesson_objective">
-                    {% if gcb_can_use_dynamic_tags %}
-                      {{ objectives }}
-                    {% else %}
-                      {{ objectives|safe }}
-                    {% endif %}
+                    {{ objectives | gcb_tags}}
                   </div>
                 {% endif %}
 
