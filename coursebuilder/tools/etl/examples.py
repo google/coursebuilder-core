@@ -29,7 +29,37 @@ import sys
 import appengine_config
 from models import models
 from tools.etl import etl_lib
+from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
+
+
+class PrintMemcacheStats(etl_lib.Job):
+    """Example job that prints remote memcache statistics.
+
+    Usage:
+
+    etl.py run tools.etl.examples.PrintMemcacheStats /course myapp \
+        server.appspot.com
+
+    Arguments to etl.py are documented in tools/etl/etl.py. You must do some
+    environment configuration (setting up imports, mostly) before you can run
+    etl.py; see the tools/etl/etl.py module-level docstring for details.
+    """
+
+    # String. Template to use when printing memcache stats.
+    _STATS_TEMPLATE = """Global memcache stats:
+\tHits: %(hits)s
+\tItems in cache: %(items)s
+\tMisses: %(misses)s
+\tOldest item in seconds: %(oldest_item_age)s
+\tTotal bytes in cache: %(bytes)s
+\tTotal bytes retrieved via get: %(byte_hits)s"""
+
+    def main(self):
+        # Custom jobs execute locally, but can talk to remote services like the
+        # datastore and memcache. Here we get the same memcache stats you can
+        # see in the Memcache Viewer part of App Engine's admin console.
+        print self._STATS_TEMPLATE % memcache.get_stats()
 
 
 class UploadFileToCourse(etl_lib.Job):

@@ -76,6 +76,13 @@ In order to run this script, you must add the following to the head of sys.path:
 4. If you are running a custom job, the absolute paths of all code required by
    your custom job, unless covered above.
 
+When running etl.py against a remote endpoint you will be prompted for a
+username and password. If the remote endpoint is a development server, you may
+enter any username and password. If the remote endpoint is in production, enter
+your username and an application-specific password. See
+http://support.google.com/accounts/bin/answer.py?hl=en&answer=185833 for help on
+application-specific passwords.
+
 Pass --help for additional usage information.
 """
 

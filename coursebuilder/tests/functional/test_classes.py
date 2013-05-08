@@ -19,12 +19,14 @@ __author__ = 'Sean Lip'
 
 import __builtin__
 import copy
+import cStringIO
 import csv
 import datetime
 import logging
 import os
 import re
 import shutil
+import sys
 import time
 import urllib
 import zipfile
@@ -45,6 +47,7 @@ from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
+from tools.etl import examples
 from tools.etl import remote
 import actions
 from actions import assert_contains
@@ -2966,6 +2969,32 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             ['run', 'tools.etl.etl._Archive'] + self.common_args)
         self.assertRaises(
             SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
+
+    def test_run_print_memcache_stats_succeeds(self):
+        """Tests examples.WriteStudentEmailsToFile prints stats to stdout."""
+        args = etl.PARSER.parse_args(
+            ['run', 'tools.etl.examples.PrintMemcacheStats'] + self.common_args)
+        memcache.get('key')
+        memcache.set('key', 1)
+        memcache.get('key')
+
+        old_stdout = sys.stdout
+        stdout = cStringIO.StringIO()
+        try:
+            sys.stdout = stdout
+            etl.main(args, environment_class=FakeEnvironment)
+        finally:
+            sys.stdout = old_stdout
+
+        expected = examples.PrintMemcacheStats._STATS_TEMPLATE % {
+            'byte_hits': 1,
+            'bytes': 1,
+            'hits': 1,
+            'items': 1,
+            'misses': 1,
+            'oldest_item_age': 0,
+        }
+        self.assertTrue(expected in stdout.getvalue())
 
     def test_run_upload_file_to_course_succeeds(self):
         """Tests upload of a single local file to a course."""
