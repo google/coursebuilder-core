@@ -349,8 +349,24 @@ class AddLesson(DashboardEditor):
         el.click()
         return self
 
-    def set_rte_text(self, text):
+    def send_rte_text(self, text):
         self.find_element_by_id('gcbRteField-0_editor').send_keys(text)
+        return self
+
+    def select_rte_custom_tag_type(self, option_text):
+        """Select the given option from the custom content type selector."""
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        select_tag = self.find_element_by_name('tag')
+        for option in select_tag.find_elements_by_tag_name('option'):
+            if option.text == option_text:
+                option.click()
+                break
+        else:
+            self._tester.fail('No option "%s" found' % option_text)
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.element_to_be_clickable(
+                (by.By.PARTIAL_LINK_TEXT, 'Close')))
+        self._tester.driver.switch_to_default_content()
         return self
 
     def click_rte_add_custom_tag(self):
@@ -397,9 +413,10 @@ class AddLesson(DashboardEditor):
         self._tester.driver.switch_to_default_content()
         return self
 
-    def ensure_objectives_textarea_contains(self, text):
-        self._tester.assertTrue(text in self.find_element_by_id(
+    def ensure_objectives_textarea_matches(self, text):
+        self._tester.assertEqual(text, self.find_element_by_id(
             AddLesson.RTE_TEXTAREA_ID).get_attribute('value'))
+        return self
 
 
 class Organize(DashboardEditor):

@@ -92,9 +92,19 @@ function getGcbRteDefs(env, Dom, Editor) {
             }
           };
           img.gcbTag = elt;
+          that._styleMarkerTag(img);
           elt.parentNode.replaceChild(img, elt);
         }
       }
+    },
+
+    _styleMarkerTag: function(img) {
+      img.style.borderRadius = '5px';
+      img.style.borderColor = '#ccc';
+      img.style.borderWidth = '3px';
+      img.style.borderStyle = 'ridge'; 
+      img.style.width = '48px';
+      img.style.height = '48px';
     },
 
     /**

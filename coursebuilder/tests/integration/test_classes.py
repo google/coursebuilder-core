@@ -229,20 +229,38 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).click_add_lesson(
         ).click_rich_text(
-        ).set_rte_text(
-            'Let\'s watch a video:\n'
+        ).send_rte_text(
+            'YouTube:'
         ).click_rte_add_custom_tag(
+        ).select_rte_custom_tag_type(
+            'YouTube Video'
         ).set_rte_lightbox_field(
             'input[name=videoid]', '123'
         ).click_rte_save(
         ).doubleclick_rte_element(
-            'gcb-youtube > img'
+            'img.gcbMarker'
         ).ensure_rte_lightbox_field_has_value(
             'input[name=videoid]', '123'
         ).set_rte_lightbox_field(
             'input[name=videoid]', '321'
         ).click_rte_save(
         ).click_plain_text(
-        ).ensure_objectives_textarea_contains(
-            '<gcb-youtube videoid="321"></gcb-youtube>')
+        ).ensure_objectives_textarea_matches(
+            'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
+        ).click_rich_text(
+        ).send_rte_text(
+            'Forum:'
+        ).click_rte_add_custom_tag(
+        ).select_rte_custom_tag_type(
+            'Forum'
+        ).set_rte_lightbox_field(
+            'input[name=forum]', 'abc'
+        ).set_rte_lightbox_field(
+            'input[name=category]', 'def'
+        ).click_rte_save(
+        ).click_plain_text(
+        ).ensure_objectives_textarea_matches(
+            'Forum:<gcb-forumembed forum="abc" category="def"></gcb-forumembed>'
+            'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
+        )
 
