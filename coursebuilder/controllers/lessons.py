@@ -535,8 +535,17 @@ class ReviewDashboardHandler(BaseHandler):
             return
 
         self.populate_template(unit, reviews)
+        required_review_count = unit.workflow.get_review_min_count()
+
+        # The student can request a new submission if:
+        # - all his/her current reviews are in Draft/Completed state, and
+        # - he/she is not in the state where the required number of reviews
+        #       has already been requested, but not all of these are completed.
         self.template_value['can_request_new_review'] = (
-            not ReviewUtils.has_unfinished_reviews(reviews))
+            not ReviewUtils.has_unstarted_reviews(reviews) and
+            (len(reviews) < required_review_count or
+             ReviewUtils.has_completed_all_assigned_reviews(reviews))
+        )
         self.render('review_dashboard.html')
 
     def post(self):
@@ -558,7 +567,7 @@ class ReviewDashboardHandler(BaseHandler):
 
         self.template_value['no_submissions_available'] = True
 
-        if not ReviewUtils.has_unfinished_reviews(reviews):
+        if not ReviewUtils.has_unstarted_reviews(reviews):
             reviewee_id = reviews_processor.get_new_submission_for_review(
                 student, unit)
             if reviewee_id:

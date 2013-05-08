@@ -19,6 +19,7 @@ __author__ = [
     'sll@google.com (Sean Lip)',
 ]
 
+import calendar
 import datetime
 
 import entities
@@ -52,8 +53,8 @@ class ReviewUtils(object):
     # the underlying models in review.py have been properly baked.
 
     @classmethod
-    def has_unfinished_reviews(cls, reviews):
-        """Returns whether the student has unfinished reviews."""
+    def has_unstarted_reviews(cls, reviews):
+        """Returns whether the student has any unstarted reviews."""
         for review in reviews:
             if 'review' not in review or not review['review']:
                 return True
@@ -77,6 +78,16 @@ class ReviewUtils(object):
             if 'is_draft' in review and not review['is_draft']:
                 count += 1
         return count
+
+    @classmethod
+    def has_completed_all_assigned_reviews(cls, reviews):
+        """Returns whether the student has completed all assigned reviews."""
+        for review in reviews:
+            if 'is_draft' in review and review['is_draft']:
+                return False
+            if 'review' not in review or not review['review']:
+                return False
+        return True
 
     @classmethod
     def has_completed_enough_reviews(cls, reviews, review_min_count):
@@ -145,6 +156,9 @@ class ReviewsProcessor(object):
                 continue
             if reviewer.key().name() in work['reviewers']:
                 continue
+            # Do not allow review of the reviewer's own work.
+            if student_key == reviewer.key().name():
+                continue
 
             # This piece of work is a candidate submission for this reviewer to
             # review.
@@ -177,9 +191,6 @@ class ReviewsProcessor(object):
 
     def get_reviewer_reviews(self, reviewer, unit):
         """Gets the reviews for a given reviewer and unit."""
-        # TODO(sll): This needs to be persistent. We need to get the list of
-        # reviews assigned to a reviewer such that the index of a particular
-        # student submission in this list is always the same.
         reviews = []
         for work_entity in StudentWorkEntity.all():
             key = work_entity.key_string
@@ -197,14 +208,19 @@ class ReviewsProcessor(object):
                         'review'),
                     'is_draft': work['reviewers'][
                         reviewer.key().name()]['is_draft'],
+                    'date_added': work['reviewers'][
+                        reviewer.key().name()]['date_added'],
                 })
-        return reviews
+        # Order the reviews by the time they were assigned.
+        return sorted(reviews, key=lambda r: r['date_added'])
 
     def add_reviewer(self, student, unit, new_reviewer):
         """Adds a reviewer to a student submission."""
         work = self.get_student_work(student, unit)
         work['reviewers'][new_reviewer.key().name()] = {
-            'review': None, 'is_draft': True}
+            'review': None, 'is_draft': True,
+            'date_added': calendar.timegm(
+                datetime.datetime.utcnow().timetuple())}
         self._put_student_work(student, unit, work)
 
     def delete_reviewer(self, student, unit, reviewer_to_delete):
