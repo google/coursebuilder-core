@@ -66,18 +66,34 @@
       <div class="border-box">
         {{ readonly_assessment.display(readonly_student_assessment) }}
       </div>
-    {% endif %}
 
-    {% if reviews_received is defined %}
       {# I18N: Header text for the list of reviews received for an assignment. #}
       <h3>{{ gettext('Reviews received') }}</h3>
 
-      {% for review in reviews_received %}
-        <h4>Review {{ loop.index }}</h4>
-        <div class="border-box">
-          {{ readonly_assessment.display(review) }}
-        </div>
-      {% endfor %}
+      {% if reviews_received is not defined %}
+        <em>
+          {# I18N: Text shown below a student's peer-reviewed assignment. #}
+          {{ gettext('After you have completed the required number of peer reviews for this assignment, the reviews you have received will appear here.') }}
+        </em>
+
+        <br><br>
+
+        <a href="reviewdashboard?unit={{ unit_id }}" class="gcb-button">
+          {# I18N: Text shown on a button that allows the student to navigate from an assignment submission page to the peer review dashboard for that assignment. #}
+          {{ gettext('Go to the review dashboard') }}
+        </a>
+      {% elif not reviews_received %}
+        {# I18N: Text shown below a student's peer-reviewed assignment. #}
+        <em>{{ gettext('You have not received any peer reviews yet.') }}</em>
+      {% else %}
+        {% for review in reviews_received %}
+          <h4>Review {{ loop.index }}</h4>
+          <div class="border-box">
+            {{ readonly_assessment.display(review) }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
     {% endif %}
 
     <div style="width: 970px;" id="assessmentContents"></div>
