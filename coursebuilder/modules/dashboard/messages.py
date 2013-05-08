@@ -103,7 +103,8 @@ This appears above your activity.
 """
 
 LESSON_OBJECTIVES_DESCRIPTION = """
-Objectives are displayed to students under the video in the default template.
+The lesson body is displayed to students above the video in the default
+template.
 """
 
 LESSON_VIDEO_ID_DESCRIPTION = """
