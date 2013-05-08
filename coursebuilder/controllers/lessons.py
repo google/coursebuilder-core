@@ -23,6 +23,7 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from models.models import Student
+from models.review import ReviewUtils
 from models.roles import Roles
 from tools import verify
 
@@ -90,6 +91,15 @@ def get_unit_and_lesson_id_from_url(url):
     query_dict = urlparse.parse_qs(url_components.query)
     unit_id, lesson_id = query_dict['unit'][0], query_dict['lesson'][0]
     return unit_id, lesson_id
+
+
+def create_readonly_assessment_params(content, answers):
+    """Creates parameters for a readonly assessment in the view templates."""
+    return {
+        'preamble': content['assessment']['preamble'],
+        'questionsList': content['assessment']['questionsList'],
+        'answers': answers,
+    }
 
 
 class CourseHandler(BaseHandler):
@@ -329,11 +339,32 @@ class AssessmentHandler(BaseHandler):
                 student, unit)
             if student_work:
                 readonly_view = True
-                self.template_value['readonly_assessment'] = {
-                    'schema': course.get_assessment_content(unit),
-                    'submission': ReviewUtils.get_answer_list(
-                        student_work['submission']),
-                }
+                readonly_student_assessment = create_readonly_assessment_params(
+                    course.get_assessment_content(unit),
+                    ReviewUtils.get_answer_list(student_work['submission'])
+                )
+                self.template_value['readonly_student_assessment'] = (
+                    readonly_student_assessment
+                )
+
+            reviews_processor = course.get_reviews_processor()
+            reviews = reviews_processor.get_reviewer_reviews(student, unit)
+
+            # Determine if the student can see others' reviews of his/her work.
+            if (ReviewUtils.has_completed_enough_reviews(
+                    reviews, unit.workflow.get_review_min_count())):
+                reviewers = reviews_processor.get_student_work(
+                    student, unit).get('reviewers')
+
+                reviews_received = []
+                for (unused_reviewer, review) in reviewers.iteritems():
+                    if not review['is_draft']:
+                        reviews_received.append(review['review'])
+
+                self.template_value['reviews_received'] = [
+                    create_readonly_assessment_params(
+                        course.get_review_form_content(unit), review
+                    ) for review in reviews_received]
 
         if not readonly_view:
             self.template_value['assessment_script_src'] = (
@@ -363,24 +394,32 @@ class ReviewHandler(BaseHandler):
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit.unit_id
 
-        # Populate the review form,
-        self.template_value['assessment_script_src'] = (
-            self.get_course().get_review_form_filename(unit.unit_id))
-
         reviews = course.get_reviews_processor().get_reviewer_reviews(
             student, unit)
 
-        self.template_value['readonly_assessment'] = {
-            'schema': course.get_assessment_content(unit),
-            'submission': ReviewUtils.get_answer_list(
-                reviews[review_index]['submission']),
-        }
+        readonly_student_assessment = create_readonly_assessment_params(
+            course.get_assessment_content(unit),
+            ReviewUtils.get_answer_list(reviews[review_index]['submission'])
+        )
 
-        self.template_value['reviews'] = {
-            'review': reviews[review_index]['review'],
-        }
+        self.template_value['readonly_student_assessment'] = (
+            readonly_student_assessment
+        )
+
+        self.template_value['reviewer_view'] = True
 
         self.template_value['review_index'] = review_index
+
+        if not reviews[review_index]['is_draft']:
+            readonly_review_form = create_readonly_assessment_params(
+                course.get_review_form_content(unit),
+                reviews[review_index]['review'],
+            )
+            self.template_value['readonly_review_form'] = readonly_review_form
+        else:
+            # Populate the review form,
+            self.template_value['assessment_script_src'] = (
+                self.get_course().get_review_form_filename(unit.unit_id))
 
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
@@ -541,59 +580,3 @@ class EventsRESTHandler(BaseRESTHandler):
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
-
-
-class ReviewUtils(object):
-    """A utility class for processing data relating to assessment reviews."""
-    # TODO(sll): Update all docs and attribute references in this class once
-    # the underlying models in review.py have been properly baked.
-
-    @classmethod
-    def has_unfinished_reviews(cls, reviews):
-        """Returns whether the student has unfinished reviews."""
-        for review in reviews:
-            if 'review' not in review or not review['review']:
-                return True
-        return False
-
-    @classmethod
-    def get_answer_list(cls, submission):
-        """Compiles a list of the student's answers from a submission."""
-        answer_list = []
-        for item in submission:
-            # Check that the indices within the submission are valid.
-            assert item['index'] == len(answer_list)
-            answer_list.append(item['value'])
-        return answer_list
-
-    @classmethod
-    def count_completed_reviews(cls, reviews):
-        """Counts the number of completed reviews in the given set."""
-        count = 0
-        for review in reviews:
-            if 'is_draft' in review and not review['is_draft']:
-                count += 1
-        return count
-
-    @classmethod
-    def get_review_progress(cls, reviews, review_min_count, progress_tracker):
-        """Gets the progress value based on the number of reviews done.
-
-        Args:
-          reviews: a list of review objects.
-          review_min_count: the minimum number of reviews that the student is
-              required to complete for this assessment.
-          progress_tracker: the course progress tracker.
-
-        Returns:
-          the corresponding progress value: 0 (not started), 1 (in progress) or
-          2 (completed).
-        """
-        completed_reviews = cls.count_completed_reviews(reviews)
-
-        if completed_reviews == 0:
-            return progress_tracker.NOT_STARTED_STATE
-        elif completed_reviews < review_min_count:
-            return progress_tracker.IN_PROGRESS_STATE
-        else:
-            return progress_tracker.COMPLETED_STATE

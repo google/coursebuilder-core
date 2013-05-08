@@ -484,13 +484,12 @@ class CourseModel12(object):
         assert unit and verify.UNIT_TYPE_ASSESSMENT == unit.type
         return 'assets/js/assessment-%s.js' % unit.unit_id
 
-    def get_assessment_content(self, unit):
-        """Returns the Python dict representation of an assessment."""
+    def _get_assessment_as_dict(self, filename):
+        """Returns the Python dict representation of an assessment file."""
         root_name = 'assessment'
         context = self._app_context
         assessment_content = context.fs.impl.get(os.path.join(
-            context.get_home(),
-            'assets/js/assessment-%s.js' % unit.unit_id)).read()
+            context.get_home(), filename)).read()
 
         content, noverify_text = verify.convert_javascript_to_python(
             assessment_content, root_name)
@@ -498,6 +497,16 @@ class CourseModel12(object):
             content, root_name, verify.Assessment().scope, noverify_text)
 
         return assessment
+
+    def get_assessment_content(self, unit):
+        """Returns the schema for an assessment as a Python dict."""
+        return self._get_assessment_as_dict(
+            self.get_assessment_filename(unit.unit_id))
+
+    def get_review_form_content(self, unit):
+        """Returns the schema for a review form as a Python dict."""
+        return self._get_assessment_as_dict(
+            self.get_review_form_filename(unit.unit_id))
 
     def get_activity_filename(self, unit_id, lesson_id):
         """Returns activity base filename."""
@@ -1112,7 +1121,7 @@ class CourseModel13(object):
 
         self._index()
 
-    def get_assessment_as_dict(self, filename):
+    def _get_assessment_as_dict(self, filename):
         """Gets the content of an assessment file as a Python dict."""
         path = self._app_context.fs.impl.physical_to_logical(filename)
         root_name = 'assessment'
@@ -1125,9 +1134,14 @@ class CourseModel13(object):
         return assessment
 
     def get_assessment_content(self, unit):
-        """Returns the Python dict representation of an assessment."""
-        return self.get_assessment_as_dict(
+        """Returns the schema for an assessment as a Python dict."""
+        return self._get_assessment_as_dict(
             self.get_assessment_filename(unit.unit_id))
+
+    def get_review_form_content(self, unit):
+        """Returns the schema for a review form as a Python dict."""
+        return self._get_assessment_as_dict(
+            self.get_review_form_filename(unit.unit_id))
 
     def set_assessment_file_content(
         self, unit, assessment_content, dest_filename, errors=None):
@@ -1585,8 +1599,9 @@ class Course(object):
         overall_score = 0
         total_weight = 0
         for unit in score_list:
-            total_weight += unit['weight']
-            overall_score += unit['weight'] * unit['score']
+            if unit['has_score']:
+                total_weight += unit['weight']
+                overall_score += unit['weight'] * unit['score']
 
         if total_weight == 0:
             return None
@@ -1619,6 +1634,8 @@ class Course(object):
         assessment_list = self.get_assessment_list()
         scores = transforms.loads(student.scores) if student.scores else {}
 
+        unit_progress = self.get_progress_tracker().get_unit_progress(student)
+
         assessment_score_list = []
         for unit in assessment_list:
             # Compute the weight for this assessment.
@@ -1628,10 +1645,24 @@ class Course(object):
             elif unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
                 weight = DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[unit.unit_id]
 
+            completed = unit_progress[unit.unit_id]
+
+            # If a human-reviewed assessment is completed, ensure that the
+            # required reviews have also been completed.
+            if completed and self.needs_human_grader(unit):
+                reviews = self.get_reviews_processor().get_reviewer_reviews(
+                    student, unit)
+                review_min_count = unit.workflow.get_review_min_count()
+                if not review.ReviewUtils.has_completed_enough_reviews(
+                        reviews, review_min_count):
+                    completed = False
+
             assessment_score_list.append({
                 'id': str(unit.unit_id),
                 'title': unit.title,
                 'weight': weight,
+                'completed': completed,
+                'has_score': not self.needs_human_grader(unit),
                 'score': (scores[str(unit.unit_id)]
                           if str(unit.unit_id) in scores else 0),
             })
@@ -1664,8 +1695,12 @@ class Course(object):
         return self._model.reorder_units(order_data)
 
     def get_assessment_content(self, unit):
-        """Returns the Python dict representation of an assessment."""
+        """Returns the schema for an assessment as a Python dict."""
         return self._model.get_assessment_content(unit)
+
+    def get_review_form_content(self, unit):
+        """Returns the schema for a review form as a Python dict."""
+        return self._model.get_review_form_content(unit)
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(

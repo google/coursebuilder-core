@@ -24,6 +24,67 @@ import transforms
 from google.appengine.ext import db
 
 
+class ReviewUtils(object):
+    """A utility class for processing data relating to assessment reviews."""
+    # TODO(sll): Update all docs and attribute references in this class once
+    # the underlying models in review.py have been properly baked.
+
+    @classmethod
+    def has_unfinished_reviews(cls, reviews):
+        """Returns whether the student has unfinished reviews."""
+        for review in reviews:
+            if 'review' not in review or not review['review']:
+                return True
+        return False
+
+    @classmethod
+    def get_answer_list(cls, submission):
+        """Compiles a list of the student's answers from a submission."""
+        answer_list = []
+        for item in submission:
+            # Check that the indices within the submission are valid.
+            assert item['index'] == len(answer_list)
+            answer_list.append(item['value'])
+        return answer_list
+
+    @classmethod
+    def count_completed_reviews(cls, reviews):
+        """Counts the number of completed reviews in the given set."""
+        count = 0
+        for review in reviews:
+            if 'is_draft' in review and not review['is_draft']:
+                count += 1
+        return count
+
+    @classmethod
+    def has_completed_enough_reviews(cls, reviews, review_min_count):
+        """Checks whether the review count is at least the minimum required."""
+        return cls.count_completed_reviews(reviews) >= review_min_count
+
+    @classmethod
+    def get_review_progress(cls, reviews, review_min_count, progress_tracker):
+        """Gets the progress value based on the number of reviews done.
+
+        Args:
+          reviews: a list of review objects.
+          review_min_count: the minimum number of reviews that the student is
+              required to complete for this assessment.
+          progress_tracker: the course progress tracker.
+
+        Returns:
+          the corresponding progress value: 0 (not started), 1 (in progress) or
+          2 (completed).
+        """
+        completed_reviews = cls.count_completed_reviews(reviews)
+
+        if cls.has_completed_enough_reviews(reviews, review_min_count):
+            return progress_tracker.COMPLETED_STATE
+        elif completed_reviews > 0:
+            return progress_tracker.IN_PROGRESS_STATE
+        else:
+            return progress_tracker.NOT_STARTED_STATE
+
+
 class ReviewsProcessor(object):
     """A class that processes review arrangements."""
 
@@ -113,14 +174,15 @@ class ReviewsProcessor(object):
                     'review': work['reviewers'][reviewer.key().name()].get(
                         'review'),
                     'is_draft': work['reviewers'][
-                        reviewer.key().name()].get('is_draft'),
+                        reviewer.key().name()]['is_draft'],
                 })
         return reviews
 
     def add_reviewer(self, student, unit, new_reviewer):
         """Adds a reviewer to a student submission."""
         work = self.get_student_work(student, unit)
-        work['reviewers'][new_reviewer.key().name()] = {'review': None}
+        work['reviewers'][new_reviewer.key().name()] = {
+            'review': None, 'is_draft': True}
         self._put_student_work(student, unit, work)
 
     def delete_reviewer(self, student, unit, reviewer_to_delete):

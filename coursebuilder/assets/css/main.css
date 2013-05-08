@@ -838,3 +838,9 @@ span.progress-empty {
 .grayed-active {
   font-weight: bold;
 }
+
+.border-box {
+  border: 1px solid black;
+  margin: 20px;
+  padding: 10px;
+}

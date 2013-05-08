@@ -1856,6 +1856,7 @@ class AssessmentTest(actions.TestBase):
             'answers': transforms.dumps(pre_answers)}
         mid = {'assessment_type': 'Mid', 'score': '2.00'}
         fin = {'assessment_type': 'Fin', 'score': '3.00'}
+        peer = {'assessment_type': 'ReviewAssessmentExample'}
         second_mid = {'assessment_type': 'Mid', 'score': '1.00'}
         second_fin = {'assessment_type': 'Fin', 'score': '100000'}
 
@@ -1874,7 +1875,7 @@ class AssessmentTest(actions.TestBase):
         try:
             student = models.Student.get_enrolled_student_by_email(email)
 
-            # Check that three score objects (corresponding to the four sample
+            # Check that four score objects (corresponding to the four sample
             # assessments) exist right now, and that they all have zero
             # score.
             student_scores = course.get_all_scores(student)
@@ -1906,6 +1907,16 @@ class AssessmentTest(actions.TestBase):
             # Submit the final assessment.
             actions.submit_assessment(self, 'Fin', fin)
             student = models.Student.get_enrolled_student_by_email(email)
+
+            # Submit the sample peer review assessment.
+            actions.submit_assessment(self, 'ReviewAssessmentExample', peer)
+            student_scores = course.get_all_scores(student)
+            # This assessment is not considered to be completed until enough
+            # peer reviews have been submitted.
+            for assessment in student_scores:
+                if assessment['id'] == 'ReviewAssessmentExample':
+                    assert not assessment['has_score']
+                    assert not assessment['completed']
 
             # Navigate to the course overview page.
             response = self.get('course')

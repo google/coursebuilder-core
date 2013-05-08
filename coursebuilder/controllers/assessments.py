@@ -51,8 +51,6 @@ def store_score(course, student, assessment_type, score):
     if (existing_score is None) or (score > int(existing_score)):
         utils.set_score(student, assessment_type, score)
 
-    return course.get_overall_result(student)
-
 
 class AnswerHandler(BaseHandler):
     """Handler for saving assessment answers."""
@@ -70,7 +68,7 @@ class AnswerHandler(BaseHandler):
             score: the numerical assessment score.
 
         Returns:
-            the result of the assessment, if appropriate.
+            the student instance.
         """
         student = Student.get_enrolled_student_by_email(email)
         course = self.get_course()
@@ -86,7 +84,7 @@ class AnswerHandler(BaseHandler):
 
         utils.set_answer(answers, assessment_type, new_answers)
 
-        result = store_score(course, student, assessment_type, score)
+        store_score(course, student, assessment_type, score)
 
         student.put()
         answers.put()
@@ -98,7 +96,7 @@ class AnswerHandler(BaseHandler):
                 'type': 'assessment-%s' % assessment_type,
                 'values': new_answers, 'location': 'AnswerHandler'}))
 
-        return student, result
+        return student
 
     def post(self):
         """Handles POST requests."""
@@ -154,14 +152,14 @@ class AnswerHandler(BaseHandler):
         score = int(round(float(self.request.get('score'))))
 
         # Record score.
-        student, result = self.update_assessment_transaction(
+        student = self.update_assessment_transaction(
             student.key().name(), assessment_type, answers, score)
 
         # Record completion event in progress tracker.
         course.get_progress_tracker().put_assessment_completed(
             student, assessment_type)
 
-        self.template_value['result'] = result
+        self.template_value['result'] = course.get_overall_result(student)
         self.template_value['score'] = score
 
         self.template_value['overall_score'] = course.get_overall_score(student)

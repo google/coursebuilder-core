@@ -47,7 +47,11 @@
           <tr>
             <th align="left">&nbsp;&nbsp;&nbsp;{{ assessment['title'] }}</th>
             <td>
-              {% if 'score' in assessment and assessment['score'] is defined %}
+              {% if not assessment['has_score'] %}
+                {% if assessment['completed'] %}
+                  {{ gettext('Completed') }}
+                {% endif %}
+              {% elif 'score' in assessment and assessment['score'] is defined %}
                 <span id="assessment-score-{{assessment['title']}}">{{ assessment['score'] }}</span>
               {% endif %}
             </td>
