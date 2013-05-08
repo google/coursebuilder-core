@@ -357,24 +357,30 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
                     safe_dom.Text(line)).append(safe_dom.Element('br'))
             return escaped_value
 
-        overrides = config.Registry.get_overrides(True)
+        # get fresh properties and their overrides
+        unused_overrides = config.Registry.get_overrides(force_update=True)
         registered = config.Registry.registered.copy()
+        db_overrides = config.Registry.db_overrides.copy()
+        names_with_draft = config.Registry.names_with_draft.copy()
 
         count = 0
         for name in sorted(registered.keys()):
             count += 1
             item = registered[name]
+            has_environ_value, unused_environ_value = item.get_environ_value()
 
-            default_value = item.default_value
-            has_environ_value, environ_value = item.get_environ_value()
-            value = item.value
-
-            class_current = 'gcb-db-diff'
-            if value == default_value:
-                class_current = ''
-            if has_environ_value and value == environ_value:
+            # figure out what kind of override this is
+            class_current = ''
+            if has_environ_value:
                 class_current = 'gcb-env-diff'
+            if item.name in db_overrides:
+                class_current = 'gcb-db-diff'
+            if item.name in names_with_draft:
+                class_current = 'gcb-db-draft'
 
+            # figure out default and current value
+            default_value = item.default_value
+            value = item.value
             if default_value:
                 default_value = str(default_value)
             if value:
@@ -399,7 +405,8 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
             tr.add_child(
                 safe_dom.Element(
                     'td', style='white-space: nowrap;', align='center'
-                ).add_child(get_actions(name, name in overrides)))
+                ).add_child(get_actions(
+                    name, name in db_overrides or name in names_with_draft)))
 
             tr.add_child(
                 safe_dom.Element(
@@ -421,7 +428,13 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
                 safe_dom.Element('span', className='gcb-db-diff').add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_text(
-                    '[ the value set via this page ]'
+                    '[ the value override set via this page ]'
+                ).add_child(safe_dom.Entity('&nbsp;'))
+            ).add_text(', ').add_child(
+                safe_dom.Element('span', className='gcb-db-draft').add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_text(
+                    '[ the default value with pending value override ]'
                 ).add_child(safe_dom.Entity('&nbsp;'))
             ).add_text(', ').add_child(
                 safe_dom.Element('span', className='gcb-env-diff').add_child(

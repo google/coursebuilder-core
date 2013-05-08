@@ -148,6 +148,7 @@ class Registry(object):
     registered = {}
     test_overrides = {}
     db_overrides = {}
+    names_with_draft = {}
     last_update_time = 0
     update_index = 0
 
@@ -170,8 +171,7 @@ class Registry(object):
                 try:
                     namespace_manager.set_namespace(
                         appengine_config.DEFAULT_NAMESPACE_NAME)
-
-                    cls.load_from_db()
+                    cls._load_from_db()
                 finally:
                     namespace_manager.set_namespace(old_namespace)
             except Exception as e:  # pylint: disable-msg=broad-except
@@ -185,10 +185,11 @@ class Registry(object):
         return cls.db_overrides
 
     @classmethod
-    def load_from_db(cls):
+    def _load_from_db(cls):
         """Loads dynamic properties from db."""
         logging.info('Reloading properties.')
         overrides = {}
+        drafts = set()
         for item in ConfigPropertyEntity.all().fetch(1000):
             name = item.key().name()
 
@@ -198,6 +199,8 @@ class Registry(object):
                 continue
 
             target = cls.registered[name]
+            if target and item.is_draft:
+                drafts.add(name)
             if target and not item.is_draft:
                 # Enforce value type.
                 try:
@@ -227,6 +230,7 @@ class Registry(object):
                 overrides[name] = value
 
         cls.db_overrides = overrides
+        cls.names_with_draft = drafts
 
 
 class ConfigPropertyEntity(entities.BaseEntity):
