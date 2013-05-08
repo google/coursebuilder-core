@@ -145,6 +145,36 @@ COUNTER_GET_NEW_REVIEW_SUMMARY_CHANGED = counters.PerfCounter(
     ('number of times get_new_review() rejected a candidate because the review '
      'summary changed during processing'))
 
+COUNTER_GET_REVIEW_KEYS_BY_KEYS_RETURNED = counters.PerfCounter(
+    'gcb-get-review-keys-by-keys-returned',
+    'number of keys get_review_keys_by() returned')
+COUNTER_GET_REVIEW_KEYS_BY_FAILED = counters.PerfCounter(
+    'gcb-get-review-keys-by-failed',
+    'number of times get_review_keys_by() had a fatal error')
+COUNTER_GET_REVIEW_KEYS_BY_START = counters.PerfCounter(
+    'gcb-get-review-keys-by-start',
+    'number of times get_review_keys_by() started processing')
+COUNTER_GET_REVIEW_KEYS_BY_SUCCESS = counters.PerfCounter(
+    'gcb-get-review-keys-by-success',
+    'number of times get_review_keys_by() completed successfully')
+
+COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_FAILED = counters.PerfCounter(
+    'gcb-get-submission-and-review-keys-failed',
+    'number of times get_submission_and_review_keys() had a fatal error')
+COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_RETURNED = counters.PerfCounter(
+    'gcb-get-submission-and-review-keys-keys-returned',
+    'number of keys get_submission_and_review_keys() returned')
+COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_START = counters.PerfCounter(
+    'gcb-get-submission-and-review-keys-start',
+    'number of times get_submission_and_review_keys() has begun processing')
+COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS = counters.PerfCounter(
+    'gcb-get-submission-and-review-keys-submission-miss',
+    ('number of times get_submission_and_review_keys() failed to find a '
+     'submission_key'))
+COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUCCESS = counters.PerfCounter(
+    'gcb-get-submission-and-review-keys-success',
+    'number of times get_submission-and-review-keys() completed successfully')
+
 COUNTER_GET_SUBMISSION_KEY_FAILED = counters.PerfCounter(
     'gcb-get-submission-key-failed',
     'number of times get_submission_key() had a fatal error')
@@ -873,6 +903,90 @@ class Manager(object):
 
         summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
         return db.put([step, summary])[0]
+
+    @classmethod
+    def get_review_keys_by(cls, unit_id, reviewer_key):
+        """Gets the keys of all review steps in a unit for a reviewer.
+
+        Note that keys for review steps marked removed are included in the
+        result set.
+
+        Args:
+            unit_id: string. Id of the unit to restrict the query to.
+            reviewer_key: db.Key of models.models.Student. The author of the
+                requested reviews.
+
+        Returns:
+            [db.Key of peer.ReviewStep].
+        """
+        COUNTER_GET_REVIEW_KEYS_BY_START.inc()
+
+        try:
+            query = peer.ReviewStep.all(keys_only=True).filter(
+                peer.ReviewStep.reviewer_key.name, reviewer_key
+            ).filter(
+                peer.ReviewStep.unit_id.name, unit_id
+            )
+
+            keys = [key for key in query.fetch(1000)]
+
+        except Exception as e:
+            COUNTER_GET_REVIEW_KEYS_BY_FAILED.inc()
+            raise e
+
+        COUNTER_GET_REVIEW_KEYS_BY_SUCCESS.inc()
+        COUNTER_GET_REVIEW_KEYS_BY_KEYS_RETURNED.inc(increment=len(keys))
+        return keys
+
+    @classmethod
+    def get_submission_and_review_keys(cls, unit_id, reviewee_key):
+        """Gets the submission key/review keys for a unit_id, reviewee_key pair.
+
+        Note that keys for review steps marked removed are included in the
+        result set.
+
+        Args:
+            unit_id: string. Id of the unit to restrict the query to.
+            reviewee_key: db.Key of models.models.Student. The student who
+                authored the submission.
+
+        Raises:
+            ConstraintError: if multiple review summary keys were found for the
+                given unit_id, reviewee_key pair.
+            KeyError: if there is no review summary for the given unit_id,
+                reviewee pair.
+
+        Returns:
+            (db.Key of Submission, [db.Key of peer.ReviewStep]) if submission
+            found for given unit_id, reviewee_key pair; None otherwise.
+        """
+        COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_START.inc()
+
+        try:
+            submission_key = cls.get_submission_key(unit_id, reviewee_key)
+            if not submission_key:
+                COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS.inc()
+                return
+
+            step_keys_query = peer.ReviewStep.all(keys_only=True).filter(
+                peer.ReviewStep.reviewee_key.name, reviewee_key
+            ).filter(
+                peer.ReviewStep.submission_key.name, submission_key
+            ).filter(
+                peer.ReviewStep.unit_id.name, unit_id
+            )
+
+            step_keys = step_keys_query.fetch(1000)
+            results = (submission_key, step_keys)
+
+        except Exception as e:
+            COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_FAILED.inc()
+            raise e
+
+        COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUCCESS.inc()
+        COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_RETURNED.inc(
+            increment=len(step_keys))
+        return results
 
     @classmethod
     def get_submission_key(cls, unit_id, reviewee_key):

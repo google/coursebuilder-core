@@ -795,6 +795,153 @@ class ManagerTest(TestBase):
 
         self.assertEqual(lower_priority_summary_key, step.review_summary_key)
 
+    def test_get_review_keys_by_returns_list_of_keys(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        matching_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        non_matching_reviewer = models.Student(key_name='reviewer2@example.com')
+        non_matching_reviewer_key = non_matching_reviewer.put()
+        unused_non_matching_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=non_matching_reviewer_key,
+            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(
+            [matching_step_key],
+            review_module.Manager.get_review_keys_by(
+                self.unit_id, self.reviewer_key))
+
+    def test_get_review_keys_by_returns_empty_list_when_no_matches(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        non_matching_reviewer = models.Student(key_name='reviewer2@example.com')
+        non_matching_reviewer_key = non_matching_reviewer.put()
+        unused_non_matching_step_different_reviewer_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=non_matching_reviewer_key,
+            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            unit_id=self.unit_id,
+        ).put()
+        unused_non_matching_step_different_unit_id_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=str(int(self.unit_id) + 1),
+        ).put()
+
+        self.assertEqual(
+            [], review_module.Manager.get_review_keys_by(
+                self.unit_id, self.reviewer_key))
+
+    def test_get_submission_and_review_keys_no_steps(self):
+        peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(
+            (self.submission_key, []),
+            review_module.Manager.get_submission_and_review_keys(
+                self.unit_id, self.reviewee_key))
+
+    def test_get_submission_and_review_keys_with_steps(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        matching_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        non_matching_reviewee = models.Student(key_name='reviewee2@example.com')
+        non_matching_reviewee_key = non_matching_reviewee.put()
+        unused_non_matching_step_different_reviewee_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key,
+            reviewee_key=non_matching_reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        non_matching_submission_key = review.Submission(
+            contents='contents2').put()
+        unused_non_matching_step_different_submission_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key,
+            submission_key=non_matching_submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+        unused_non_matching_step_different_unit_id_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=str(int(self.unit_id) + 1),
+        ).put
+
+        self.assertEqual(
+            (self.submission_key, [matching_step_key]),
+            review_module.Manager.get_submission_and_review_keys(
+                self.unit_id, self.reviewee_key))
+
+    def test_get_submission_and_review_keys_returns_none_on_miss(self):
+        self.assertIsNone(
+            review_module.Manager.get_submission_and_review_keys(
+                self.unit_id, self.reviewee_key))
+
+    def test_get_submission_key(self):
+        peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(
+            None,
+            review_module.Manager.get_submission_key(
+                str(int(self.unit_id) + 1), self.reviewee_key))
+        self.assertEqual(
+            self.submission_key,
+            review_module.Manager.get_submission_key(
+                self.unit_id, self.reviewee_key))
+
+    def test_get_submission_key_raises_constraint_error(self):
+        unused_first_summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        second_submission_key = review.Submission(contents='contents2').put()
+        unused_second_summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key,
+            submission_key=second_submission_key, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.ConstraintError,
+            review_module.Manager.get_submission_key, self.unit_id,
+            self.reviewee_key)
+
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
             self.unit_id, self.submission_key, self.reviewee_key)
