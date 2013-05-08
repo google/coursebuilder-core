@@ -38,6 +38,7 @@ urls = [
     ('/dashboard', dashboard.DashboardHandler),
     ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
+    ('/reviewdashboard', lessons.ReviewDashboardHandler),
     ('/student/editstudent', utils.StudentEditStudentHandler),
     ('/student/home', utils.StudentProfileHandler),
     ('/student/unenroll', utils.StudentUnenrollHandler),

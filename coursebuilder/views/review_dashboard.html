@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block subtitle %}
+  {% trans %} Assessment {% endtrans %}
+{% endblock subtitle %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-main">
+  <div class="gcb-article">
+    <script>
+      {% if record_events %}
+        gcbCanPostEvents = true;
+        eventXsrfToken = '{{ event_xsrf_token }}';
+      {% endif %}
+    </script>
+
+    <h2>Submissions for you to review</h2>
+
+    <ol>
+      {% for review in reviews %}
+        <li>
+          Submission {{loop.index}}
+          <!-- TODO(sll): These should be links to the relevant review pages. -->
+          {% if review.review %}
+            (Completed)
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+
+    {% if can_request_new_review %}
+      <form action="reviewdashboard?unit={{unit_id}}" method="post">
+        <input type="hidden" name="xsrf_token"
+               value="{{ review_dashboard_xsrf_token | escape }}">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}">
+        <button class="gcb-button" type="submit">
+          {% trans %} Request new review {% endtrans %}
+        </button>
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

@@ -21,6 +21,8 @@ from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
+from models.models import Student
+from models.review import ReviewUtils
 from models.roles import Roles
 from tools import verify
 from utils import BaseHandler
@@ -104,7 +106,12 @@ class CourseHandler(BaseHandler):
         if not student:
             return
 
+        course = self.get_course()
+
         self.template_value['units'] = self.get_units()
+        for unit in self.template_value['units']:
+            if unit.type == 'A':
+                unit.grader = course.get_assessment_grader(unit)
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
         self.template_value['is_progress_recorded'] = (
@@ -278,7 +285,8 @@ class AssessmentHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        if not self.personalize_page_and_get_enrolled():
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
             return
 
         # Extract incoming args
@@ -294,6 +302,67 @@ class AssessmentHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('assessment.html')
+
+
+class ReviewDashboardHandler(BaseHandler):
+    """Handler for generating the index of reviews that a student has to do."""
+
+    def populate_template(self, unit, reviews):
+        """Adds variables to the template."""
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['assessment_name'] = unit.title
+        self.template_value['unit_id'] = unit.unit_id
+        self.template_value['event_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('event-post'))
+        self.template_value['review_dashboard_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
+
+        self.template_value['reviews'] = reviews
+        self.template_value['can_request_new_review'] = (
+            not ReviewUtils.has_unfinished_reviews(reviews))
+
+    def get(self):
+        """Handles GET requests."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        course = self.get_course()
+        unit, unused_lesson = extract_unit_and_lesson(self)
+        reviews = course.get_reviews_processor().get_reviewer_reviews(
+            student, unit)
+
+        self.populate_template(unit, reviews)
+        self.render('review_dashboard.html')
+
+    def post(self):
+        """Allows a reviewer to request a new review."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, 'review-dashboard-post'):
+            return
+
+        course = self.get_course()
+        unit, unused_lesson = extract_unit_and_lesson(self)
+        reviews_processor = course.get_reviews_processor()
+
+        reviews = course.get_reviews_processor().get_reviewer_reviews(
+            student, unit)
+
+        if not ReviewUtils.has_unfinished_reviews(reviews):
+            reviewee_id = reviews_processor.get_new_submission_for_review(
+                student, unit)
+            if reviewee_id:
+                reviewee = Student.get_by_email(reviewee_id)
+                reviews_processor.add_reviewer(reviewee, unit, student)
+
+        reviews = course.get_reviews_processor().get_reviewer_reviews(
+            student, unit)
+        self.populate_template(unit, reviews)
+        self.render('review_dashboard.html')
 
 
 class EventsRESTHandler(BaseRESTHandler):

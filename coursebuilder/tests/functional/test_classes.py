@@ -140,7 +140,7 @@ class InfrastructureTest(actions.TestBase):
 
         assert not dst_course_a.get_units()
         assert not dst_course_b.get_units()
-        assert 11 == len(src_course.get_units())
+        assert 12 == len(src_course.get_units())
 
         # Import 1.2 course into 1.3.
         errors = []
@@ -1375,7 +1375,7 @@ class StudentAspectTest(actions.TestBase):
         # Check preview and static resources are available.
         response = self.get('course')
         assert_equals(response.status_int, 200)
-        response = self.get('assets/js/activity-1.4.js')
+        response = self.get('assets/js/activity-1.3.js')
         assert_equals(response.status_int, 200)
 
         # Override course.yaml settings by patching app_context.
@@ -1391,14 +1391,14 @@ class StudentAspectTest(actions.TestBase):
         # Check preview and static resources are not available to Student.
         response = self.get('course', expect_errors=True)
         assert_equals(response.status_int, 404)
-        response = self.get('assets/js/activity-1.4.js', expect_errors=True)
+        response = self.get('assets/js/activity-1.3.js', expect_errors=True)
         assert_equals(response.status_int, 404)
 
         # Check preview and static resources are still available to author.
         actions.login(email, True)
         response = self.get('course')
         assert_equals(response.status_int, 200)
-        response = self.get('assets/js/activity-1.4.js')
+        response = self.get('assets/js/activity-1.3.js')
         assert_equals(response.status_int, 200)
 
         # Clean up app_context.
@@ -1874,11 +1874,11 @@ class AssessmentTest(actions.TestBase):
         try:
             student = models.Student.get_enrolled_student_by_email(email)
 
-            # Check that three score objects (corresponding to the Pre, Mid and
-            # Fin assessments) exist right now, and that they all have zero
+            # Check that three score objects (corresponding to the four sample
+            # assessments) exist right now, and that they all have zero
             # score.
             student_scores = course.get_all_scores(student)
-            assert len(student_scores) == 3
+            assert len(student_scores) == 4
             for assessment in student_scores:
                 assert assessment['score'] == 0
 
@@ -1886,7 +1886,7 @@ class AssessmentTest(actions.TestBase):
             actions.submit_assessment(self, 'Pre', pre)
             student = models.Student.get_enrolled_student_by_email(email)
             student_scores = course.get_all_scores(student)
-            assert len(student_scores) == 3
+            assert len(student_scores) == 4
             for assessment in student_scores:
                 if assessment['id'] == 'Pre':
                     assert assessment['score'] > 0

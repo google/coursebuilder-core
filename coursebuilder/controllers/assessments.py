@@ -18,6 +18,7 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
 import logging
+from models import courses
 from models import models
 from models import transforms
 from models import utils
@@ -118,12 +119,36 @@ class AnswerHandler(BaseHandler):
             logging.error('No assessment named %s exists.', assessment_type)
             return
 
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['assessment'] = assessment_type
+        self.template_value['assessment_name'] = unit.title
+        self.template_value['is_last_assessment'] = (
+            course.is_last_assessment(unit))
+
         # Convert answers from JSON to dict.
         answers = self.request.get('answers')
         if answers:
             answers = transforms.loads(answers)
         else:
             answers = []
+
+        grader = course.get_assessment_grader(unit)
+        if grader not in [courses.AUTO_GRADER, courses.HUMAN_GRADER]:
+            logging.error('Invalid grader supplied: %s', grader)
+            return
+        if grader == 'human':
+            does_review_exist = True if course.get_reviews_processor(
+                ).get_student_work(student, unit) else False
+
+            if does_review_exist:
+                self.template_value['previously_submitted'] = True
+                self.render('assignment_submission_confirmation.html')
+            else:
+                self.template_value['previously_submitted'] = False
+                course.get_reviews_processor().submit_student_work(
+                    student, unit, answers)
+                self.render('assignment_submission_confirmation.html')
+            return
 
         # TODO(pgbovine): consider storing as float for better precision
         score = int(round(float(self.request.get('score'))))
@@ -136,14 +161,8 @@ class AnswerHandler(BaseHandler):
         course.get_progress_tracker().put_assessment_completed(
             student, assessment_type)
 
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['assessment'] = assessment_type
         self.template_value['result'] = result
         self.template_value['score'] = score
-
-        self.template_value['assessment_name'] = unit.title
-        self.template_value['is_last_assessment'] = (
-            course.is_last_assessment(unit))
 
         self.template_value['overall_score'] = course.get_overall_score(student)
         self.render('test_confirmation.html')

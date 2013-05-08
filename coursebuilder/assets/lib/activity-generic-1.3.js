@@ -330,7 +330,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
       if (numCorrect < questionsList.length) {
         verdict =
             trans.NUM_CORRECT_TEXT + ': ' +
-            numCorrect + '/' + questionsList.length + '. ';      
+            numCorrect + '/' + questionsList.length + '. ';
       }
       $.each(used_tags, function(i, t) {
         $('.correct_' + t).css('background-color', highlightColor);
@@ -632,7 +632,7 @@ function renderAssessment(assessment, domRoot) {
 
       var myInput = null;
 
-      myInput= document.createElement('input');
+      myInput = document.createElement('input');
       myInput.setAttribute('name', 'assessment_type');
       myInput.setAttribute('value', assessmentType);
       myForm.appendChild(myInput);
@@ -658,9 +658,9 @@ function renderAssessment(assessment, domRoot) {
     } else {
       // send event to the server
       gcbAssessmentAudit({
-            'type': 'assessment-' + assessmentType, 'values': userInput,
-            'num_expected': numQuestions, 'num_submitted': userInput.length,
-            'num_correct': numCorrect});
+          'type': 'assessment-' + assessmentType, 'values': userInput,
+          'num_expected': numQuestions, 'num_submitted': userInput.length,
+          'num_correct': numCorrect});
 
       // display feedback to the user
       var outtext = trans.YOUR_SCORE_TEXT + " " + score + '% (' + numCorrect + '/' +

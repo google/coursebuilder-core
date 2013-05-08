@@ -24,14 +24,28 @@ import sys
 import appengine_config
 from tools import verify
 import yaml
+
 from models import MemcacheManager
 import progress
+import review
 import transforms
 import vfs
 
 
 COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
+
+# Indicates that an assessment is graded automatically.
+AUTO_GRADER = 'default'
+# Indicates that an assessment is graded by a human.
+HUMAN_GRADER = 'human'
+
+# The name for the peer review assignment used in the sample v1.2 CSV file.
+# This is here so that a peer review assignment example is available when
+# Course Builder loads with the default course. However, in general, peer
+# review assignments should only be specified in Course Builder v1.4 or
+# later (via the web interface).
+LEGACY_REVIEW_ASSIGNMENT = 'ReviewExample'
 
 
 def deep_dict_merge(real_values_dict, default_values_dict):
@@ -390,6 +404,13 @@ class CourseModel12(object):
             if str(unit.unit_id) == str(unit_id):
                 return unit
         return None
+
+    def get_assessment_grader(self, unit):
+        """Returns the grader for an assessment."""
+        # The only place this is used is in the default course.
+        if unit.unit_id == LEGACY_REVIEW_ASSIGNMENT:
+            return HUMAN_GRADER
+        return AUTO_GRADER
 
     def get_assessment_filename(self, unit_id):
         """Returns assessment base filename."""
@@ -984,6 +1005,11 @@ class CourseModel13(object):
 
         self._index()
 
+    def get_assessment_grader(self, unused_unit):
+        """Returns the grader for an assessment."""
+        # TODO(sll): Generalize this using a setting in the course dashboard UI.
+        return AUTO_GRADER
+
     def set_assessment_content(self, unit, assessment_content, errors=None):
         """Updates the content of an assessment."""
         if errors is None:
@@ -1205,6 +1231,7 @@ class Course(object):
         self._namespace = self._app_context.get_namespace_name()
         self._model = self._load(self._app_context)
         self._tracker = None
+        self._reviews_processor = None
 
     @property
     def app_context(self):
@@ -1217,6 +1244,11 @@ class Course(object):
         if not self._tracker:
             self._tracker = progress.UnitLessonCompletionTracker(self)
         return self._tracker
+
+    def get_reviews_processor(self):
+        if not self._reviews_processor:
+            self._reviews_processor = review.ReviewsProcessor(self)
+        return self._reviews_processor
 
     def get_units(self):
         return self._model.get_units()
@@ -1353,6 +1385,10 @@ class Course(object):
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
+
+    def get_assessment_grader(self, unit):
+        """Returns the grader for an assessment."""
+        return self._model.get_assessment_grader(unit)
 
     def reorder_units(self, order_data):
         return self._model.reorder_units(order_data)

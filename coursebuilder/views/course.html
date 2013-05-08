@@ -40,6 +40,35 @@
                              id="progress-notstarted-{{unit.unit_id}}">
                       {% endif %}
                       <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
+
+                      {% if unit.grader == 'human' %}
+                        {% if not unit.now_available and is_course_admin %}
+                          (Private)
+                        {% endif %}
+                        </p></li>
+                        <li>
+                          <p class="top_content">
+                            <span class="progress-empty"></span>
+                          {% if progress[unit.unit_id] > 0 %}
+                            <img src="assets/lib/completed.png"
+                                 alt="{% trans %} Completed {% endtrans %}"
+                                 title="{% trans %} Completed {% endtrans %}"
+                                 class="progress"
+                                 id="progress-completed-{{unit.unit_id}}">
+                          {% else %}
+                            <img src="assets/lib/not_started.png"
+                                 alt="{% trans %} Not yet submitted {% endtrans %}"
+                                 title="{% trans %} Not yet submitted {% endtrans %}"
+                                 class="progress"
+                                 id="progress-notstarted-{{unit.unit_id}}">
+                          {% endif %}
+
+                          <a href="reviewdashboard?unit={{ unit.unit_id }}">
+                            Submit your reviews:
+                            {{ unit.title }}
+                          </a>
+                      {% endif %}
+
                   {% elif unit.type == 'U' %}
                     <li><p class="top_content">
                       {% if is_progress_recorded %}
@@ -93,7 +122,7 @@
                         {{ unit.title }}
                       </p>
                     </li>
-                {% elif unit.type == 'U' %}
+                  {% elif unit.type == 'U' %}
                     <li>
                       <p class="top_content">
                         <span class="progress-empty"></span>

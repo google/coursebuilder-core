@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-cols">
+  <div class="gcb-col-1">
+  </div>
+  <div class="gcb-col-7 gcb-aside gcb-button-box">
+
+    <p class="top_content">
+      {% if previously_submitted %}
+        You have already submitted this assignment. Your previous submission was
+        not saved.
+      {% else %}
+        Thank you for taking the peer review assignment. Your work was successfully submitted. You can view the status of your submission in the 'My Profile' page.
+      {% endif %}
+    </p>
+
+    <p>
+      <a class="gcb-button" href="course">
+        {% trans %} Back to Course page {% endtrans %}
+      </a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
