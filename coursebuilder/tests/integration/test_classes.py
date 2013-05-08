@@ -255,18 +255,19 @@ class AdminTests(BaseIntegrationTest):
             'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
         ).click_rich_text(
         ).send_rte_text(
-            'Forum:'
+            'Google Group:'
         ).click_rte_add_custom_tag(
         ).select_rte_custom_tag_type(
-            'gcb: Forum'
+            'gcb: Google Group'
         ).set_rte_lightbox_field(
-            'input[name=forum]', 'abc'
+            'input[name=group]', 'abc'
         ).set_rte_lightbox_field(
             'input[name=category]', 'def'
         ).click_rte_save(
         ).click_plain_text(
         ).ensure_objectives_textarea_matches(
-            'Forum:<gcb-forumembed forum="abc" category="def"></gcb-forumembed>'
+            'Google Group:'
+            '<gcb-googlegroup group="abc" category="def"></gcb-googlegroup>'
             'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
         )
 

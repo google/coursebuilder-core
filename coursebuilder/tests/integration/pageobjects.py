@@ -52,7 +52,13 @@ class EditorPageObject(PageObject):
 
     def __init__(self, tester):
         super(EditorPageObject, self).__init__(tester)
-        self.expect_status_message_to_be('Success.')
+
+        def successful_butter_bar(driver):
+            form_status_message = driver.find_element_by_id('formStatusMessage')
+            return 'Success.' in form_status_message.text or (
+                not form_status_message.is_displayed())
+
+        wait.WebDriverWait(self._tester.driver, 15).until(successful_butter_bar)
 
     def set_status(self, status):
         select.Select(self.find_element_by_name(
@@ -349,7 +355,7 @@ class AddLesson(DashboardEditor):
 
     def click_plain_text(self):
         el = self.find_element_by_css_selector('div.rte-control')
-        self._tester.assertEqual('Plain Text', el.text)
+        self._tester.assertEqual('<HTML>', el.text)
         el.click()
         return self
 
