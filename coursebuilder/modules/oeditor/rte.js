@@ -53,8 +53,8 @@ function getGcbRteDefs(env, Dom, Editor) {
       this.divEl.appendChild(toggle);
     },
 
-    _getEditorWindow: function(id) {
-      return document.getElementById(id + '_editor').contentWindow;
+    _getEditorWindow: function() {
+      return document.getElementById(this.id + '_editor').contentWindow;
     },
 
     _insertMarkerTags: function(editorWin) {
@@ -133,6 +133,8 @@ function getGcbRteDefs(env, Dom, Editor) {
 
     _addCustomTag: function() {
       var that = this;
+      this._insertInsertionPointTag();
+
       if (window.frameProxy) {
         window.frameProxy.close();
       }
@@ -140,10 +142,12 @@ function getGcbRteDefs(env, Dom, Editor) {
         'modal-editor',
         '/oeditor/popup?action=add_custom_tag',
         null,
-        function(value) {
+        function(value) { // on submit
           that._insertCustomTag(value);
         },
-        function () { /* on cancel */ }
+        function () { // on cancel
+          that._removeInsertionPointTag(that._getEditorWindow());
+        }
       );
       window.frameProxy.open();
     },
@@ -155,29 +159,32 @@ function getGcbRteDefs(env, Dom, Editor) {
           el.setAttribute(name, value.attributes[name]);
         }
       }
-      var holder = document.createElement('div');
-      holder.appendChild(el);
-      window.holder = holder;
-      this.editor.execCommand('inserthtml', holder.innerHTML + '&nbsp;');
-      var editorWin = this._getEditorWindow(this.id);
+      var editorWin = this._getEditorWindow();
+      var insertionPoint = editorWin.document.querySelector('.gcbInsertionPoint');
+      insertionPoint.parentNode.replaceChild(el, insertionPoint);
+
       this._removeMarkerTags(editorWin);
       this._insertMarkerTags(editorWin);
     },
 
-    _removeMarkerTags: function(editorWin) {
-      var editorDoc = editorWin.document;
-      if (editorDoc.getElementsByClassName) {
-        var elts = editorDoc.getElementsByClassName('gcbMarker');
-        while (elts.length > 0) {
-          var e = elts[0];
-          e.parentNode.removeChild(e);
-        }
-      } else { // IE8
-        var elts = editorDoc.querySelectorAll('.gcbMarker')
-        for (var i = 0; i < elts.length; i++) {
-          var e = elts[i];
-          e.parentNode.removeChild(e);
-        }
+    _insertInsertionPointTag: function() {
+      this.editor.execCommand('inserthtml',
+          '<span class="gcbInsertionPoint"></span>');
+    },
+
+    _removeInsertionPointTag: function(win) {
+      this._removeTagsByClass(win, 'gcbInsertionPoint');
+    },
+
+    _removeMarkerTags: function(win) {
+      this._removeTagsByClass(win, 'gcbMarker');
+    },
+
+    _removeTagsByClass: function(win, clazz) {
+      var elts = win.document.querySelectorAll('.' + clazz);
+      for (var i = 0; i < elts.length; i++) {
+        var e = elts[i];
+        e.parentNode.removeChild(e);
       }
     },
 
@@ -234,7 +241,7 @@ function getGcbRteDefs(env, Dom, Editor) {
         var ed = document.getElementById(that.id + '_editor');
         if (ed && ed.contentWindow && ed.contentWindow.document &&
             ed.contentWindow.document.readyState == 'complete') {
-          that._insertMarkerTags(that._getEditorWindow(that.id));
+          that._insertMarkerTags(that._getEditorWindow());
         } else {
           setTimeout(arguments.callee, 100);
         }
@@ -260,7 +267,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       editor.get('element_cont').addClass('yui-editor-container');
       editor._setDesignMode('on');
       editor.setEditorHTML(textArea.value);
-      this._insertMarkerTags(this._getEditorWindow(this.id));
+      this._insertMarkerTags(this._getEditorWindow());
     },
 
     hideRte: function() {
@@ -268,7 +275,7 @@ function getGcbRteDefs(env, Dom, Editor) {
           textArea = this.el;
           rteDiv = textArea.previousSibling;
 
-      this._removeMarkerTags(this._getEditorWindow(this.id));
+      this._removeMarkerTags(this._getEditorWindow());
       editor.saveHTML();
 
       this._cbGetValue = this.getValue;
@@ -296,7 +303,7 @@ function getGcbRteDefs(env, Dom, Editor) {
 
     getValue: function() {
       if (this.editor) {
-        var editorDoc = this._getEditorWindow(this.id);
+        var editorDoc = this._getEditorWindow();
         // Clean the editor text before saving, and then restore markers
         this._removeMarkerTags(editorDoc);
         var value = this.editor.saveHTML();
