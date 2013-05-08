@@ -420,6 +420,8 @@ class ReviewHandler(BaseHandler):
             # Populate the review form,
             self.template_value['assessment_script_src'] = (
                 self.get_course().get_review_form_filename(unit.unit_id))
+            self.template_value['saved_answers'] = transforms.dumps(
+                reviews[review_index]['review'])
 
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
@@ -427,7 +429,7 @@ class ReviewHandler(BaseHandler):
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
 
-        self.render('assessment.html')
+        self.render('review.html')
 
     def post(self):
         """Handles POST requests, when a reviewer submits a review."""

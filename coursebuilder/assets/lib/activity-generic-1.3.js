@@ -483,6 +483,13 @@ function renderAssessment(assessment, domRoot) {
     curLI.append(q.questionHTML);
     curLI.append('<p/>');
 
+    // The student's saved answer for this question, if it exists.
+    var savedAnswer = null;
+    if (assessmentGlobals.savedAnswers &&
+        questionNum < assessmentGlobals.savedAnswers.length) {
+      savedAnswer = assessmentGlobals.savedAnswers[questionNum];
+    }
+
     // Dispatch to specialized handler depending on the existence of particular fields:
     //   choices              - multiple choice question (with exactly one correct answer)
     //   correctAnswerString  - case-insensitive substring match
@@ -491,26 +498,38 @@ function renderAssessment(assessment, domRoot) {
     if (q.choices) {
       $.each(q.choices, function(i, c) {
         var buttonId = 'q' + questionNum + '-' + i;
+
+        var checkedAttr = '';
+        if (savedAnswer !== null && i == savedAnswer) {
+          checkedAttr = ' checked=true ';
+        }
+
         if (typeof c == 'string') {
           // incorrect choice
           curLI.append('<input type="radio" name="q' + questionNum + '" id="' +
-              buttonId + '">&nbsp;<label for="' + buttonId + '">' + c + '</label><br>');
-        }
-        else {
+              buttonId + '" ' + checkedAttr + ' >&nbsp;<label for="' + buttonId +
+              '">' + c + '</label><br>');
+        } else {
           // wrapped in correct() ...
           if (c[0] != 'correct') {
             alert('Error: Malformed question.');
           }
           // correct choice
           curLI.append('<input type="radio" name="q' + questionNum + '" id="' +
-              buttonId + '" value="correct">&nbsp;<label for="' + buttonId + '">' +
-              c[1] + '</label><br>');
+              buttonId + '" ' + checkedAttr + ' value="correct">&nbsp;<label for="' +
+              buttonId + '">' + c[1] + '</label><br>');
         }
       });
     } else if (q.correctAnswerString || q.correctAnswerRegex || q.correctAnswerNumeric) {
-      curLI.append('Answer:&nbsp;&nbsp;<input type="text" class="alphanumericOnly" ' +
+      curLI.append('Answer:&nbsp;&nbsp;');
+
+      var inputField = $('<input type="text" class="alphanumericOnly" ' +
           'style="border-style: solid; border-color: black; border-width: 1px;" ' +
           'id="q' + questionNum + '">');
+      if (savedAnswer !== null) {
+        inputField.val(savedAnswer);
+      }
+      curLI.append(inputField);
     } else {
       alert('Error: Invalid question type.');
     }
@@ -518,12 +537,12 @@ function renderAssessment(assessment, domRoot) {
     curLI.append('<br><br>');
   });
 
-  if (isReviewAssessment) {
+  if (assessmentGlobals.isReviewAssessment) {
     domRoot.append(
         '<br><button type="button" class="gcb-button gcb-button-primary" id="saveDraftBtn">' +
         trans.SAVE_DRAFT_TEXT + '</button>&nbsp;&nbsp;' +
         '<button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
-        trans.SEND_REVIEW_TEXT + '</button>');
+        trans.SUBMIT_REVIEW_TEXT + '</button>');
   } else {
     if (assessment.checkAnswers) {
       domRoot.append(
@@ -628,7 +647,7 @@ function renderAssessment(assessment, domRoot) {
 
     var assessmentType = getParamFromUrlByName('name') || 'unnamed assessment';
 
-    var isSaveDraftReview = (!submitAnswers && isReviewAssessment);
+    var isSaveDraftReview = (!submitAnswers && assessmentGlobals.isReviewAssessment);
 
     if (submitAnswers || isSaveDraftReview) {
       // create a new hidden form, submit it via POST, and then delete it
@@ -637,7 +656,7 @@ function renderAssessment(assessment, domRoot) {
       myForm.method = 'post';
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/assessments.py
-      myForm.action = isReviewAssessment ? 'review' : 'answer';
+      myForm.action = assessmentGlobals.isReviewAssessment ? 'review' : 'answer';
 
       var myInput = null;
 
@@ -661,15 +680,15 @@ function renderAssessment(assessment, domRoot) {
       myInput.setAttribute('value', assessmentXsrfToken);
       myForm.appendChild(myInput);
 
-      if (isReviewAssessment) {
+      if (assessmentGlobals.isReviewAssessment) {
         myInput = document.createElement('input');
         myInput.setAttribute('name', 'review_index');
-        myInput.setAttribute('value', reviewIndex);
+        myInput.setAttribute('value', assessmentGlobals.reviewIndex);
         myForm.appendChild(myInput);
 
         myInput = document.createElement('input');
         myInput.setAttribute('name', 'unit_id');
-        myInput.setAttribute('value', unitId);
+        myInput.setAttribute('value', assessmentGlobals.unitId);
         myForm.appendChild(myInput);
 
         myInput = document.createElement('input');
