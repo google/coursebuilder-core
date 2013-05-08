@@ -488,15 +488,20 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
             self, 200, 'Success.',
             payload_dict={'course': None},
             xsrf_token=XsrfTokenManager.create_xsrf_token(
-                'unit-lesson-reorder'))
+                'import-course'))
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
+        request = transforms.loads(self.request.get('request'))
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'import-course', {'key': None}):
+            return
+
         if not CourseOutlineRights.can_edit(self):
             transforms.send_json_response(self, 401, 'Access denied.', {})
             return
 
-        request = transforms.loads(self.request.get('request'))
         payload = request.get('payload')
         course_raw = transforms.json_to_dict(
             transforms.loads(payload), self.SCHEMA_DICT)['course']

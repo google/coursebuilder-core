@@ -2475,6 +2475,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_does_not_contain('Filter image results by color', response.body)
 
         # Import sample course.
+        request[
+            'xsrf_token'] = XsrfTokenManager.create_xsrf_token('import-course')
+        import_put_url = (
+            '/test/rest/course/import?%s' % urllib.urlencode(
+                {'request': transforms.dumps(request)}))
         response = self.put(import_put_url, {})
         assert_equals(200, response.status_int)
         assert_contains('Imported.', response.body)
