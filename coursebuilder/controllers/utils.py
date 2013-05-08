@@ -51,6 +51,18 @@ XSRF_SECRET = ConfigProperty(
     'course builder XSRF secret')
 
 
+# Whether to record page load/unload events in a database.
+CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
+    'gcb_can_persist_page_events', bool, (
+        'Whether or not to record student page interactions in a '
+        'datastore. Without event recording, you cannot analyze student '
+        'page interactions. On the other hand, no event recording reduces '
+        'the number of datastore operations and minimizes the use of Google '
+        'App Engine quota. Turn event recording on if you want to analyze '
+        'this data.'),
+    False)
+
+
 class ReflectiveRequestHandler(object):
     """Uses reflection to handle custom get() and post() requests.
 
@@ -211,6 +223,13 @@ class BaseHandler(ApplicationHandler):
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = (
                 users.create_logout_url(self.request.uri))
+
+            # configure page events
+            self.template_value['record_page_events'] = (
+                CAN_PERSIST_PAGE_EVENTS.value)
+            self.template_value['event_xsrf_token'] = (
+                XsrfTokenManager.create_xsrf_token('event-post'))
+
         return user
 
     def personalize_page_and_get_enrolled(self):

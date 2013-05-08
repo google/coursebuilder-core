@@ -18,6 +18,9 @@
 // Original activity and assessment code written by Maggie Johnson
 // Refactored version by Philip Guo
 
+// time on page
+var gcbBeginningOfTime = new Date();
+
 // highlight the correct answer
 var highlightColor = '#3BB9FF';
 
@@ -29,35 +32,47 @@ function getFreshTag() {
 }
 
 // controls sending events to the server; off by default; override to enable
+var gcbCanPostPageEvents = false;
 var gcbCanPostEvents = false;
 
 // various XSRF tokens
 var eventXsrfToken = '';
 var assessmentXsrfToken = '';
 
+function gcbPageEventAudit(name, is_async) {
+  if (gcbCanPostPageEvents) {
+    var timeNow = new Date();
+    gcbAudit({"lapse": timeNow - gcbBeginningOfTime}, 'page-' + name, is_async);
+    gcbBeginningOfTime = timeNow;
+  }
+}
+
 function gcbActivityAudit(dict) {
-  gcbAudit(dict, 'attempt-activity');
+  if (gcbCanPostEvents) {
+    gcbAudit(dict, 'attempt-activity', true);
+  }
 }
 
 function gcbAssessmentAudit(dict) {
-  gcbAudit(dict, 'attempt-assessment');
+  if (gcbCanPostEvents) {
+    gcbAudit(dict, 'attempt-assessment', true);
+  }
 }
 
-function gcbAudit(dict, source) {
-  if (gcbCanPostEvents) {
-    dict['location'] = '' + window.location;
-    var request = {
-        'source': source,
-        'payload': JSON.stringify(dict),
-        'xsrf_token': eventXsrfToken};
-    $.ajax({
-        url: 'rest/events',
-        type: 'POST',
-        data: {'request': JSON.stringify(request)},
-        success: function(){},
-        error:function(){}
-    });
-  }
+function gcbAudit(dict, source, is_async) {
+  dict['location'] = '' + window.location;
+  var request = {
+      'source': source,
+      'payload': JSON.stringify(dict),
+      'xsrf_token': eventXsrfToken};
+  $.ajax({
+      url: 'rest/events',
+      type: 'POST',
+      async: is_async,
+      data: {'request': JSON.stringify(request)},
+      success: function(){},
+      error:function(){}
+  });
 }
 
 // Returns the value of a URL parameter, if it exists.
@@ -761,6 +776,11 @@ function checkText(id, regex) {
 
 // this code runs when the document fully loads:
 $(document).ready(function() {
+  // send an event to the server
+  try {
+    gcbPageEventAudit('enter', true);
+  } catch (e){}
+
   // render the activity specified in the 'var activity' top-level variable
   // (if it exists)
   if (typeof activity != 'undefined') {
@@ -781,4 +801,12 @@ $(document).ready(function() {
     }
   }
   $(document).keypress(stopRKey);
+});
+
+// this code runs when the document unloads:
+$(window).unload(function() {
+  // send an event to the server
+  try {
+    gcbPageEventAudit('leave', false);
+  } catch (e){}
 });
