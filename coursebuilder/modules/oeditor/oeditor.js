@@ -377,12 +377,15 @@ TopLevelEditorControls.prototype = {
 
                   // update UI
                   cbShowMsg(json.message);
-                  setTimeout(function(){
-                    cbHideMsg();
-                    if (cb_global.auto_return) {
+                  if (cb_global.auto_return) {
+                    setTimeout(function() {
                       window.location = cb_global.exit_url;
-                    }
-                  }, 5000);
+                    }, 750);
+                  } else {
+                    setTimeout(function() {
+                      cbHideMsg();
+                    }, 5000);
+                  }
                 }
             }
           };
@@ -499,8 +502,13 @@ TopLevelEditorControls.prototype = {
 
           // update ui state
           document.getElementById("formContainer").style.display = "block";
-          cbShowMsg(json.message);
-          setTimeout(function(){ cbHideMsg(); }, 5000);
+
+          if (json.message) {
+            cbShowMsg(json.message);
+            setTimeout(function(){ cbHideMsg(); }, 5000);
+          } else {
+            cbHideMsg();
+          }
           cb_global.onFormLoad();
         },
         failure : function (x,o) {

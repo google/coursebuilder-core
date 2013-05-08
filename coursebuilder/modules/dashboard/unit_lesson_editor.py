@@ -492,7 +492,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         first_course_in_dropdown = self._get_course_list()[0]['value']
 
         transforms.send_json_response(
-            self, 200, 'Success.',
+            self, 200, None,
             payload_dict={'course': first_course_in_dropdown},
             xsrf_token=XsrfTokenManager.create_xsrf_token(
                 'import-course'))
@@ -744,7 +744,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
                 'lessons': lesson_data})
 
         transforms.send_json_response(
-            self, 200, 'Success.',
+            self, 200, None,
             payload_dict={'outline': outline_data},
             xsrf_token=XsrfTokenManager.create_xsrf_token(
                 'unit-lesson-reorder'))
