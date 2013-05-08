@@ -259,9 +259,10 @@ class AssignmentManager(ApplicationHandler):
         reviewer_key = reviewer.get_key()
         submission_key = rp.get_submission_key(unit.unit_id, reviewee_key)
 
-        new_review_step_key = rp.add_reviewer(
-            unit.unit_id, submission_key, reviewee_key, reviewer_key)
-        if not new_review_step_key:
+        try:
+            rp.add_reviewer(
+                unit.unit_id, submission_key, reviewee_key, reviewer_key)
+        except domain.TransitionError:
             redirect_params['post_error_msg'] = (
                 '412: The reviewer is already assigned to this submission.')
 

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-cols">
+  <div class="gcb-col-1">
+  </div>
+  <div class="gcb-col-7 gcb-aside gcb-button-box">
+    <p class="top_content">
+      {% if error_code == 'review_deadline_exceeded' %}
+
+        {# I18N: Error text for when a student has submitted a review after the deadline. #}
+        {{ gettext('Your review has not been saved, because it was submitted on %(time_now)s. The deadline for submitting reviews was %(review_due_date)s.', time_now=time_now, review_due_date=review_due_date) }}
+
+      {% elif error_code == 'assignment_deadline_exceeded' %}
+
+        {# I18N: Error text for when a student submits an assignment after the deadline. #}
+        {{ gettext('Your assignment has not been saved, because it was submitted on %(time_now)s. The deadline for submitting assignments was %(submission_due_date)s.', time_now=time_now, submission_due_date=submission_due_date) }}
+
+      {% elif error_code == 'cannot_review_before_submitting_assignment' %}
+
+        {# I18N: Error text for when a student tries to get a new assignment to review before submitting his/her own assignment. #}
+        {{ gettext('You must submit the assignment for this unit before you can request new assignments to review.') }}
+
+      {% elif error_code == 'cannot_request_review_after_deadline' %}
+
+        {# I18N: Error text for when a student tries to request a new assignment to review after the review submission deadline. #}
+        {{ gettext('The deadline for submitting reviews has already passed, so you cannot request a new assignment to review.') }}
+
+      {% elif error_code == 'must_complete_more_reviews' %}
+
+        {# I18N: Error text for when a student requests a new assignment to review, but needs to complete more peer reviews first before a new review can be allocated to him/her. #}
+        {{ gettext('You must complete all assigned reviews before you can request a new one.', review_min_count=review_min_count) }}
+
+      {% elif error_code == 'review_already_submitted' %}
+
+        {# I18N: Error text for when a student has already submitted a review, and tries to submit it again. #}
+        {{ gettext('You have already submitted this review. Your latest review was not saved.') }}
+
+      {% endif %}
+
+    </p>
+  </div>
+</div>
+
+{% endblock %}

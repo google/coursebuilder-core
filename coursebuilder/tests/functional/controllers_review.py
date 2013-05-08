@@ -114,7 +114,7 @@ class PeerReviewControllerTest(actions.TestBase):
         response = self.get(
             'reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID,
             expect_errors=True)
-        assert_equals(response.status_int, 403)
+        assert_contains('You must submit the assignment for', response.body)
 
         # The student submits the assignment.
         response = actions.submit_assessment(
@@ -282,7 +282,7 @@ class PeerReviewControllerTest(actions.TestBase):
         # review step key, but is not allowed to.
         response = actions.view_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
-            expected_status_code=403)
+            expected_status_code=404)
 
         # Student 3 logs out.
         actions.logout()
@@ -414,9 +414,6 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains('not-S1', response.body)
 
         review_step_key_1_for_someone_else = get_review_step_key(response)
-
-        response = actions.request_new_review(
-            self, LEGACY_REVIEW_UNIT_ID, expected_status_code=403)
 
         response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
         assert_equals(response.status_int, 200)

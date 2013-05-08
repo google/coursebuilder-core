@@ -47,6 +47,10 @@ import urllib
 import urllib2
 
 
+# The unit id for the peer review assignment in the default course.
+LEGACY_REVIEW_UNIT_ID = 'ReviewAssessmentExample'
+
+
 # command line arguments parser
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
@@ -327,7 +331,7 @@ class PeerReviewLoadTest(object):
     def submit_peer_review_assessment_if_possible(self):
         """Submits the peer review assessment."""
         body = self.session.get(
-            '%s/assessment?name=ReviewAssessmentExample' % self.host)
+            '%s/assessment?name=%s' % (self.host, LEGACY_REVIEW_UNIT_ID))
         assert_contains('You may only submit this assignment once', body)
 
         if 'Submitted assignment' in body:
@@ -346,7 +350,7 @@ class PeerReviewLoadTest(object):
 
         data = {
             'answers': json.dumps(answers),
-            'assessment_type': 'ReviewAssessmentExample',
+            'assessment_type': LEGACY_REVIEW_UNIT_ID,
             'score': 0,
             'xsrf_token': assessment_xsrf_token,
         }
@@ -357,7 +361,7 @@ class PeerReviewLoadTest(object):
     def request_and_do_a_review(self):
         """Request a new review, wait for it to be granted, then submit it."""
         review_dashboard_url = (
-            '%s/reviewdashboard?unit=ReviewAssessmentExample' % self.host)
+            '%s/reviewdashboard?unit=%s' % (self.host, LEGACY_REVIEW_UNIT_ID))
 
         completed = False
         while not completed:
@@ -375,7 +379,7 @@ class PeerReviewLoadTest(object):
                 assert_contains('xsrf_token', body)
                 xsrf_token = self.get_hidden_field('xsrf_token', body)
                 data = {
-                    'unit_id': 'ReviewAssessmentExample',
+                    'unit_id': LEGACY_REVIEW_UNIT_ID,
                     'xsrf_token': xsrf_token,
                 }
                 body = self.session.post(review_dashboard_url, data)
@@ -402,7 +406,7 @@ class PeerReviewLoadTest(object):
                 'is_draft': 'false',
                 'key': self.get_js_var('assessmentGlobals.key', body),
                 'score': 0,
-                'unit_id': 'ReviewAssessmentExample',
+                'unit_id': LEGACY_REVIEW_UNIT_ID,
                 'xsrf_token': review_xsrf_token,
             }
 
@@ -413,7 +417,7 @@ class PeerReviewLoadTest(object):
     def count_completed_reviews(self):
         """Counts the number of reviews that the actor has completed."""
         review_dashboard_url = (
-            '%s/reviewdashboard?unit=ReviewAssessmentExample' % self.host)
+            '%s/reviewdashboard?unit=%s' % (self.host, LEGACY_REVIEW_UNIT_ID))
 
         body = self.session.get(review_dashboard_url)
         num_completed = body.count('(Completed)')

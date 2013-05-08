@@ -17,7 +17,6 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import datetime
-import logging
 import urllib
 import urlparse
 
@@ -351,7 +350,6 @@ class AssessmentHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.template_value['grader'] = unit.workflow.get_grader()
-        self.template_value['matcher'] = unit.workflow.get_matcher()
 
         readonly_view = False
         due_date_exceeded = False
@@ -368,6 +366,8 @@ class AssessmentHandler(BaseHandler):
                 self.template_value['due_date_exceeded'] = True
 
         if course.needs_human_grader(unit):
+            self.template_value['matcher'] = unit.workflow.get_matcher()
+
             rp = course.get_reviews_processor()
             review_steps_by = rp.get_review_steps_by(
                 unit.unit_id, student.get_key())
@@ -422,6 +422,133 @@ class AssessmentHandler(BaseHandler):
         self.render('assessment.html')
 
 
+class ReviewDashboardHandler(BaseHandler):
+    """Handler for generating the index of reviews that a student has to do."""
+
+    def populate_template(self, unit, review_steps):
+        """Adds variables to the template for the review dashboard."""
+        self.template_value['assessment_name'] = unit.title
+        self.template_value['unit_id'] = unit.unit_id
+        self.template_value['event_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('event-post'))
+        self.template_value['review_dashboard_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
+
+        self.template_value['REVIEW_STATE_COMPLETED'] = (
+            domain.REVIEW_STATE_COMPLETED)
+
+        self.template_value['review_steps'] = review_steps
+        self.template_value['review_min_count'] = (
+            unit.workflow.get_review_min_count())
+
+        review_due_date = unit.workflow.get_review_due_date()
+        if review_due_date:
+            self.template_value['review_due_date'] = review_due_date.strftime(
+                HUMAN_READABLE_DATE_FORMAT)
+
+        time_now = datetime.datetime.now()
+        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
+
+    def get(self):
+        """Handles GET requests."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        course = self.get_course()
+        rp = course.get_reviews_processor()
+        unit, _ = extract_unit_and_lesson(self)
+        if not unit:
+            self.error(404)
+            return
+
+        self.template_value['navbar'] = {'course': True}
+
+        # Check that the student has submitted the corresponding assignment.
+        if not rp.does_submission_exist(unit.unit_id, student.get_key()):
+            self.template_value['error_code'] = (
+                'cannot_review_before_submitting_assignment')
+            self.render('error.html')
+            return
+
+        review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
+
+        self.populate_template(unit, review_steps)
+        required_review_count = unit.workflow.get_review_min_count()
+
+        # The student can request a new submission if:
+        # - all his/her current reviews are in Draft/Completed state, and
+        # - he/she is not in the state where the required number of reviews
+        #       has already been requested, but not all of these are completed.
+        self.template_value['can_request_new_review'] = (
+            len(review_steps) < required_review_count or
+            ReviewUtils.has_completed_all_assigned_reviews(review_steps)
+        )
+        self.render('review_dashboard.html')
+
+    def post(self):
+        """Allows a reviewer to request a new review."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, 'review-dashboard-post'):
+            return
+
+        course = self.get_course()
+        unit, unused_lesson = extract_unit_and_lesson(self)
+        if not unit:
+            self.error(404)
+            return
+
+        rp = course.get_reviews_processor()
+        review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
+        self.template_value['navbar'] = {'course': True}
+
+        # Check that the student has submitted the corresponding assignment.
+        if not rp.does_submission_exist(unit.unit_id, student.get_key()):
+            self.template_value['error_code'] = (
+                'cannot_review_before_submitting_assignment')
+            self.render('error.html')
+            return
+
+        # Check that the review due date has not passed.
+        time_now = datetime.datetime.now()
+        review_due_date = unit.workflow.get_review_due_date()
+        if time_now > review_due_date:
+            self.template_value['error_code'] = (
+                'cannot_request_review_after_deadline')
+            self.render('error.html')
+            return
+
+        # Check that the student can request a new review.
+        review_min_count = unit.workflow.get_review_min_count()
+        can_request_new_review = (
+            len(review_steps) < review_min_count or
+            ReviewUtils.has_completed_all_assigned_reviews(review_steps))
+        if not can_request_new_review:
+            self.template_value['review_min_count'] = review_min_count
+            self.template_value['error_code'] = 'must_complete_more_reviews'
+            self.render('error.html')
+            return
+
+        self.template_value['no_submissions_available'] = True
+
+        try:
+            review_step_key = rp.get_new_review(unit.unit_id, student.get_key())
+            redirect_params = {
+                'key': review_step_key,
+                'unit': unit.unit_id,
+            }
+            self.redirect('/review?%s' % urllib.urlencode(redirect_params))
+        except Exception:  # pylint: disable-msg=broad-except
+            review_steps = rp.get_review_steps_by(
+                unit.unit_id, student.get_key())
+            self.populate_template(unit, review_steps)
+            self.render('review_dashboard.html')
+
+
 class ReviewHandler(BaseHandler):
     """Handler for generating the submission page for individual reviews."""
 
@@ -454,7 +581,7 @@ class ReviewHandler(BaseHandler):
 
         # Check that the student is allowed to review this submission.
         if not student.has_same_key_as(review_step.reviewer_key):
-            self.error(403)
+            self.error(404)
             return
 
         submission_key = review_step.submission_key
@@ -545,165 +672,36 @@ class ReviewHandler(BaseHandler):
             self.error(404)
             return
 
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['unit_id'] = unit.unit_id
+
         # Check that the review due date has not passed.
         time_now = datetime.datetime.now()
         review_due_date = unit.workflow.get_review_due_date()
         if time_now > review_due_date:
-            logging.error(
-                'Student %s submitted a review at time %s after the deadline '
-                '%s.', student.user_id, time_now, review_due_date)
-            self.error(403)
+            self.template_value['time_now'] = time_now.strftime(
+                HUMAN_READABLE_DATE_FORMAT)
+            self.template_value['review_due_date'] = (
+                review_due_date.strftime(HUMAN_READABLE_DATE_FORMAT))
+            self.template_value['error_code'] = 'review_deadline_exceeded'
+            self.render('error.html')
             return
 
         mark_completed = (self.request.get('is_draft') == 'false')
-
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['unit_id'] = unit.unit_id
         self.template_value['is_draft'] = (not mark_completed)
 
         review_payload = self.request.get('answers')
         review_payload = transforms.loads(
             review_payload) if review_payload else []
-        rp.write_review(
-            unit.unit_id, review_step_key, review_payload, mark_completed)
+        try:
+            rp.write_review(
+                unit.unit_id, review_step_key, review_payload, mark_completed)
+        except domain.TransitionError:
+            self.template_value['error_code'] = 'review_already_submitted'
+            self.render('error.html')
+            return
 
         self.render('review_confirmation.html')
-
-
-class ReviewDashboardHandler(BaseHandler):
-    """Handler for generating the index of reviews that a student has to do."""
-
-    def populate_template(self, unit, review_steps):
-        """Adds variables to the template for the review dashboard."""
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['assessment_name'] = unit.title
-        self.template_value['unit_id'] = unit.unit_id
-        self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event-post'))
-        self.template_value['review_dashboard_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
-
-        self.template_value['REVIEW_STATE_COMPLETED'] = (
-            domain.REVIEW_STATE_COMPLETED)
-
-        self.template_value['review_steps'] = review_steps
-        self.template_value['review_min_count'] = (
-            unit.workflow.get_review_min_count())
-
-        review_due_date = unit.workflow.get_review_due_date()
-        if review_due_date:
-            self.template_value['review_due_date'] = review_due_date.strftime(
-                HUMAN_READABLE_DATE_FORMAT)
-
-        time_now = datetime.datetime.now()
-        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
-
-    def get(self):
-        """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled()
-        if not student:
-            return
-
-        course = self.get_course()
-        rp = course.get_reviews_processor()
-        unit, _ = extract_unit_and_lesson(self)
-        if not unit:
-            self.error(404)
-            return
-
-        # Check that the student has submitted the corresponding assignment.
-        if not rp.does_submission_exist(unit.unit_id, student.get_key()):
-            logging.error(
-                'Student %s tried to access the review dashboard before '
-                'submitting the assignment for unit %s (%s).',
-                student.user_id, unit.title, unit.unit_id)
-            self.error(403)
-            return
-
-        review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
-
-        self.populate_template(unit, review_steps)
-        required_review_count = unit.workflow.get_review_min_count()
-
-        # The student can request a new submission if:
-        # - all his/her current reviews are in Draft/Completed state, and
-        # - he/she is not in the state where the required number of reviews
-        #       has already been requested, but not all of these are completed.
-        self.template_value['can_request_new_review'] = (
-            len(review_steps) < required_review_count or
-            ReviewUtils.has_completed_all_assigned_reviews(review_steps)
-        )
-        self.render('review_dashboard.html')
-
-    def post(self):
-        """Allows a reviewer to request a new review."""
-        student = self.personalize_page_and_get_enrolled()
-        if not student:
-            return
-
-        if not self.assert_xsrf_token_or_fail(
-                self.request, 'review-dashboard-post'):
-            return
-
-        course = self.get_course()
-        unit, unused_lesson = extract_unit_and_lesson(self)
-        if not unit:
-            self.error(404)
-            return
-
-        rp = course.get_reviews_processor()
-        review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
-
-        # Check that the student has submitted the corresponding assignment.
-        if not rp.does_submission_exist(unit.unit_id, student.get_key()):
-            logging.error(
-                'Student %s requested an assignment to review before '
-                'submitting the assignment for unit %s (%s).',
-                student.user_id, unit.title, unit.unit_id)
-            self.error(403)
-            return
-
-        # Check that the review due date has not passed.
-        time_now = datetime.datetime.now()
-        review_due_date = unit.workflow.get_review_due_date()
-        if time_now > review_due_date:
-            logging.error(
-                'Student %s requested an assignment to review at time %s '
-                'after the deadline %s.', student.user_id, time_now,
-                review_due_date)
-            self.error(403)
-            return
-
-        # Check that the student can request a new review.
-        required_review_count = unit.workflow.get_review_min_count()
-        can_request_new_review = (
-            len(review_steps) < required_review_count or
-            ReviewUtils.has_completed_all_assigned_reviews(review_steps))
-        if not can_request_new_review:
-            logging.error(
-                'Student %s requested an assignment to review for unit %s (%s),'
-                ' but can_request_new_review is False. Total number of '
-                'review steps is %s. Number of completed reviews is %s.',
-                student.user_id, unit.title, unit.unit_id,
-                len(review_steps),
-                ReviewUtils.count_completed_reviews(review_steps))
-            self.error(403)
-            return
-
-        self.template_value['no_submissions_available'] = True
-
-        try:
-            review_step_key = rp.get_new_review(unit.unit_id, student.get_key())
-            redirect_params = {
-                'key': review_step_key,
-                'unit': unit.unit_id,
-            }
-            self.redirect('/review?%s' % urllib.urlencode(redirect_params))
-        except Exception:  # pylint: disable-msg=broad-except
-            review_steps = rp.get_review_steps_by(
-                unit.unit_id, student.get_key())
-            self.populate_template(unit, review_steps)
-            self.render('review_dashboard.html')
 
 
 class EventsRESTHandler(BaseRESTHandler):

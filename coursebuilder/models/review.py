@@ -21,6 +21,7 @@ __author__ = [
 from modules.review import domain
 from modules.review import review
 
+import entities
 import student_work
 import transforms
 
@@ -67,12 +68,9 @@ class ReviewsProcessor(object):
         return impl.get_submissions_by_keys([submission_key])[0]
 
     def add_reviewer(self, unit_id, submission_key, reviewee_key, reviewer_key):
-        try:
-            impl = self._get_impl(unit_id)
-            return impl.add_reviewer(
-                str(unit_id), submission_key, reviewee_key, reviewer_key)
-        except domain.TransitionError:
-            return None
+        impl = self._get_impl(unit_id)
+        return impl.add_reviewer(
+            str(unit_id), submission_key, reviewee_key, reviewer_key)
 
     def delete_reviewer(self, unit_id, review_step_key):
         impl = self._get_impl(unit_id)
@@ -181,14 +179,13 @@ class ReviewsProcessor(object):
             student_work.Submission.key_name(str(unit_id), reviewee_key))
 
     def create_submission(self, unit_id, reviewee_key, submission_payload):
-        # TODO(sll): Add error handling.
         return student_work.Submission(
             unit_id=str(unit_id), reviewee_key=reviewee_key,
             contents=transforms.dumps(submission_payload)).put()
 
     def does_submission_exist(self, unit_id, reviewee_key):
         submission_key = self.get_submission_key(unit_id, reviewee_key)
-        return bool(db.get(submission_key))
+        return bool(entities.get(submission_key))
 
     def start_review_process_for(self, unit_id, submission_key, reviewee_key):
         impl = self._get_impl(unit_id)

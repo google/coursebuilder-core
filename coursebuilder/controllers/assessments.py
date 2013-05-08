@@ -18,6 +18,7 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
 import logging
+from controllers.lessons import HUMAN_READABLE_DATE_FORMAT
 from models import courses
 from models import models
 from models import review
@@ -110,11 +111,12 @@ class AnswerHandler(BaseHandler):
 
         course = self.get_course()
         assessment_type = self.request.get('assessment_type')
-        unit = course.find_unit_by_id(assessment_type)
         if not assessment_type:
-            self.error(412)
+            self.error(404)
             logging.error('No assessment type supplied.')
             return
+
+        unit = course.find_unit_by_id(assessment_type)
         if unit is None or not unit.type == verify.UNIT_TYPE_ASSESSMENT:
             self.error(404)
             logging.error('No assessment named %s exists.', assessment_type)
@@ -128,10 +130,7 @@ class AnswerHandler(BaseHandler):
 
         # Convert answers from JSON to dict.
         answers = self.request.get('answers')
-        if answers:
-            answers = transforms.loads(answers)
-        else:
-            answers = []
+        answers = transforms.loads(answers) if answers else []
 
         grader = unit.workflow.get_grader()
 
@@ -152,6 +151,20 @@ class AnswerHandler(BaseHandler):
                 unit.unit_id, student.get_key())
 
             if not previously_submitted:
+                # Check that the submission due date has not passed.
+                time_now = datetime.datetime.now()
+                submission_due_date = unit.workflow.get_submission_due_date()
+                if time_now > submission_due_date:
+                    self.template_value['time_now'] = time_now.strftime(
+                        HUMAN_READABLE_DATE_FORMAT)
+                    self.template_value['submission_due_date'] = (
+                        submission_due_date.strftime(
+                            HUMAN_READABLE_DATE_FORMAT))
+                    self.template_value['error_code'] = (
+                        'assignment_deadline_exceeded')
+                    self.render('error.html')
+                    return
+
                 submission_key = rp.create_submission(
                     unit.unit_id, student.get_key(), answers)
                 rp.start_review_process_for(
