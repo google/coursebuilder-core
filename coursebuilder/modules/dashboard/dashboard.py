@@ -332,11 +332,12 @@ class DashboardHandler(
                 'caption': 'Add Assessment',
                 'action': self.get_action_url('add_assessment'),
                 'xsrf_token': self.create_xsrf_token('add_assessment')})
-            outline_actions.append({
-                'id': 'import_course',
-                'caption': 'Import',
-                'href': self.get_action_url('import_course')
-                })
+            if not courses.Course(self).get_units():
+                outline_actions.append({
+                    'id': 'import_course',
+                    'caption': 'Import',
+                    'href': self.get_action_url('import_course')
+                    })
 
         data_info = self.list_files('/data/')
 
