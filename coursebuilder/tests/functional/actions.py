@@ -179,9 +179,11 @@ def to_unicode(text):
     return text
 
 
-def assert_contains(needle, haystack):
+def assert_contains(needle, haystack, collapse_whitespace=False):
     needle = to_unicode(needle)
     haystack = to_unicode(haystack)
+    if collapse_whitespace:
+        haystack = ' '.join(haystack.replace('\n', ' ').split())
     if not needle in haystack:
         raise Exception('Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
@@ -195,9 +197,11 @@ def assert_contains_all_of(needles, haystack):
                 'Can\'t find \'%s\' in \'%s\'.' % (needle, haystack))
 
 
-def assert_does_not_contain(needle, haystack):
+def assert_does_not_contain(needle, haystack, collapse_whitespace=False):
     needle = to_unicode(needle)
     haystack = to_unicode(haystack)
+    if collapse_whitespace:
+        haystack = ' '.join(haystack.replace('\n', ' ').split())
     if needle in haystack:
         raise Exception('Found \'%s\' in \'%s\'.' % (needle, haystack))
 
@@ -386,16 +390,17 @@ def view_assessments(browser):
         assert_contains(get_current_user_email(), response.body)
 
 
-def submit_assessment(browser, unit_id, args, base=''):
+def submit_assessment(browser, unit_id, args, base='', presubmit_checks=True):
     """Submits an assessment."""
     response = browser.get('%s/assessment?name=%s' % (base, unit_id))
-    assert_contains(
-        '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
-        response.body)
 
-    js_response = browser.get(
-        '%s/assets/js/assessment-%s.js' % (base, unit_id))
-    assert_equals(js_response.status_int, 200)
+    if presubmit_checks:
+        assert_contains(
+            '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
+            response.body)
+        js_response = browser.get(
+            '%s/assets/js/assessment-%s.js' % (base, unit_id))
+        assert_equals(js_response.status_int, 200)
 
     # Extract XSRF token from the page.
     match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)

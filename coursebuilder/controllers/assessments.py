@@ -112,9 +112,11 @@ class AnswerHandler(BaseHandler):
         assessment_type = self.request.get('assessment_type')
         unit = course.find_unit_by_id(assessment_type)
         if not assessment_type:
+            self.error(412)
             logging.error('No assessment type supplied.')
             return
         if unit is None or not unit.type == verify.UNIT_TYPE_ASSESSMENT:
+            self.error(404)
             logging.error('No assessment named %s exists.', assessment_type)
             return
 
@@ -132,7 +134,6 @@ class AnswerHandler(BaseHandler):
             answers = []
 
         grader = unit.workflow.get_grader()
-        matcher = unit.workflow.get_matcher()
 
         # Scores are not recorded for human-reviewed assignments.
         score = 0
@@ -144,12 +145,13 @@ class AnswerHandler(BaseHandler):
             student.key().name(), assessment_type, answers, score)
 
         if grader == courses.HUMAN_GRADER:
-            previously_submitted = course.get_reviews_processor(
-                ).does_submission_exist(unit.unit_id, student.get_key())
+            rp = course.get_reviews_processor()
 
             # Guard against duplicate submissions of a human-graded assessment.
+            previously_submitted = rp.does_submission_exist(
+                unit.unit_id, student.get_key())
+
             if not previously_submitted:
-                rp = course.get_reviews_processor()
                 submission_key = rp.create_submission(
                     unit.unit_id, student.get_key(), answers)
                 rp.start_review_process_for(
@@ -159,6 +161,8 @@ class AnswerHandler(BaseHandler):
                     student, assessment_type)
 
             self.template_value['previously_submitted'] = previously_submitted
+
+            matcher = unit.workflow.get_matcher()
             self.template_value['matcher'] = matcher
             if matcher == review.PEER_MATCHER:
                 self.template_value['review_dashboard_url'] = (
@@ -167,14 +171,14 @@ class AnswerHandler(BaseHandler):
 
             self.render('reviewed_assessment_confirmation.html')
             return
+        else:
+            # Record completion event in progress tracker.
+            course.get_progress_tracker().put_assessment_completed(
+                student, assessment_type)
 
-        # Record completion event in progress tracker.
-        course.get_progress_tracker().put_assessment_completed(
-            student, assessment_type)
+            self.template_value['result'] = course.get_overall_result(student)
+            self.template_value['score'] = score
+            self.template_value['overall_score'] = course.get_overall_score(
+                student)
 
-        self.template_value['result'] = course.get_overall_result(student)
-        self.template_value['score'] = score
-
-        self.template_value['overall_score'] = course.get_overall_score(student)
-
-        self.render('test_confirmation.html')
+            self.render('test_confirmation.html')

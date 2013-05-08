@@ -341,6 +341,7 @@ class AssessmentHandler(BaseHandler):
         if not unit:
             self.error(404)
             return
+
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit_id
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
