@@ -521,15 +521,26 @@ function renderAssessment(assessment, domRoot) {
         }
       });
     } else if (q.correctAnswerString || q.correctAnswerRegex || q.correctAnswerNumeric) {
-      curLI.append('Answer:&nbsp;&nbsp;');
+      if (('multiLine' in q) && q.multiLine) {
+        curLI.append('Answer:<br>');
 
-      var inputField = $('<input type="text" class="alphanumericOnly" ' +
-          'style="border-style: solid; border-color: black; border-width: 1px;" ' +
-          'id="q' + questionNum + '">');
-      if (savedAnswer !== null) {
-        inputField.val(savedAnswer);
+        var textarea = $('<textarea id="q' + questionNum + '" style="width: 100%" rows="7"></textarea>');
+        if (savedAnswer != null) {
+          textarea.text(savedAnswer);
+        }
+        curLI.append(textarea);
+
+      } else {
+        curLI.append('Answer:&nbsp;&nbsp;');
+
+        var inputField = $('<input type="text" class="alphanumericOnly" ' +
+            'style="border-style: solid; border-color: black; border-width: 1px;" ' +
+            'id="q' + questionNum + '" size="50">');
+        if (savedAnswer !== null) {
+          inputField.val(savedAnswer);
+        }
+        curLI.append(inputField);
       }
-      curLI.append(inputField);
     } else {
       alert('Error: Invalid question type.');
     }

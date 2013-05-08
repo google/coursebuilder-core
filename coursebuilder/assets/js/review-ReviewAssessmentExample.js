@@ -29,6 +29,7 @@ var assessment = {
      choices: ['Yes', 'No']},
 
     {questionHTML: 'Please provide feedback for the assignment author.',
+     multiLine: true,
      correctAnswerRegex: /.*/i
     }
   ],

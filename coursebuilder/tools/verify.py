@@ -57,6 +57,7 @@ SCHEMA = {
             'questionHTML': STRING,
             'lesson': STRING,
             'choices': [STRING, CORRECT],
+            'multiLine': BOOLEAN,
             'correctAnswerNumeric': FLOAT,
             'correctAnswerString': STRING,
             'correctAnswerRegex': REGEX}]

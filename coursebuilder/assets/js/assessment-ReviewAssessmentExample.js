@@ -33,6 +33,7 @@ var assessment = {
      choices: ['0 - 2', '3', '4 -- 5', 'More than 5']},
 
     {questionHTML: 'List the Power Search concepts you used.',
+     multiLine: true,
      correctAnswerRegex: /.*/i
     },
   ],
