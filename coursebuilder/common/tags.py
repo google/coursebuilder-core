@@ -20,11 +20,11 @@ import inspect
 import mimetypes
 import os
 import pkgutil
+from xml.etree import cElementTree
 import appengine_config
 from common import schema_fields
 from extensions import tags
-from lxml import etree
-from lxml import html
+import html5lib
 from models import config
 import webapp2
 import safe_dom
@@ -51,7 +51,7 @@ class BaseTag(object):
 
     def render(self, unused_node):
         """Receive a node and return a node."""
-        return etree.XML('[Unimplemented custom tag]')
+        return cElementTree.XML('[Unimplemented custom tag]')
 
     def get_icon_url(self):
         """Provide an icon for the visual editor."""
@@ -141,7 +141,12 @@ def get_tag_bindings():
 
 def html_to_safe_dom(html_string):
     """Render HTML text as a tree of safe_dom elements."""
+
     tag_bindings = get_tag_bindings()
+
+    node_list = safe_dom.NodeList()
+    if not html_string:
+        return node_list
 
     def _process_html_tree(elt):
         node_list = safe_dom.NodeList()
@@ -162,11 +167,15 @@ def html_to_safe_dom(html_string):
             node_list.append(safe_dom.Text(tail))
         return node_list
 
-    elt_list = html.fragments_fromstring(html_string)
-    node_list = safe_dom.NodeList()
-    if elt_list and isinstance(elt_list[0], basestring):
-        node_list.append(safe_dom.Text(elt_list[0]))
-        elt_list = elt_list[1:]
-    for elt in elt_list:
+    parser = html5lib.HTMLParser(
+        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+        namespaceHTMLElements=False)
+    root = parser.parseFragment('<div>%s</div>' % html_string)[0]
+
+    if root.text:
+        node_list.append(safe_dom.Text(root.text))
+
+    for elt in root:
         node_list.append(_process_html_tree(elt))
+
     return node_list

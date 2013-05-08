@@ -38,7 +38,8 @@ DEFAULT_NAMESPACE_NAME = ''
 
 # Third-party library zip files.
 THIRD_PARTY_LIBS = [
-    'babel-0.9.6.zip', 'gaepytz-2011h.zip', 'pyparsing-1.5.7.zip']
+    'babel-0.9.6.zip', 'gaepytz-2011h.zip', 'pyparsing-1.5.7.zip',
+    'html5lib-0.95.zip']
 
 
 def gcb_force_default_encoding(encoding):

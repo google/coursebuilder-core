@@ -21,7 +21,7 @@ import urlparse
 from common import schema_fields
 from common import tags
 from models import courses
-from lxml import etree
+from xml.etree import cElementTree
 
 
 def _escape_url(url):
@@ -44,7 +44,7 @@ class GoogleDoc(tags.BaseTag):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
         url = _escape_url('%s?embedded=true' % link)
-        iframe = etree.XML("""
+        iframe = cElementTree.XML("""
 <iframe class="google-doc" title="Google Doc" type="text/html" frameborder="0">
 </iframe>""")
         iframe.set('src', url)
@@ -87,7 +87,7 @@ class GoogleSpreadsheet(tags.BaseTag):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
         url = _escape_url('%s&amp;chrome=false' % link.split('&output')[0])
-        iframe = etree.XML("""
+        iframe = cElementTree.XML("""
 <iframe class="google-spreadsheet" title="Google Spreadsheet" type="text/html"
     frameborder="0">
 </iframe>""")
@@ -131,7 +131,7 @@ class YouTube(tags.BaseTag):
         you_tube_url = (
             'https://www.youtube.com/embed/%s'
             '?feature=player_embedded&amp;rel=0') % video_id
-        iframe = etree.XML("""
+        iframe = cElementTree.XML("""
 <p class="video-container">
   <iframe class="youtube-player" title="YouTube Video Player"
     type="text/html" width="650" height="400" frameborder="0"
@@ -178,7 +178,7 @@ class GoogleGroup(tags.BaseTag):
             'https://groups.google.com/forum/embed/?place=forum/?'
             'fromgroups&hl=en#!categories/%s/%s') \
             % (urllib.quote(group_name), urllib.quote(category_name))
-        iframe = etree.XML("""
+        iframe = cElementTree.XML("""
 <p>
   <iframe class="forum-embed" title="Google Group Embed"
     type="text/html" width="700" height="300" frameborder="0">
@@ -207,7 +207,7 @@ class Activity(tags.BaseTag):
 
     def render(self, node):
         activity_id = node.attrib.get('activityid')
-        script = etree.XML("""
+        script = etree.cElementTree.XML("""
 <div>
   <script></script>
   <div style="width: 785px;" id="activityContents"></div>

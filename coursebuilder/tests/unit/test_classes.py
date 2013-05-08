@@ -19,10 +19,10 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import sys
 import unittest
+from xml.etree import cElementTree
 import appengine_config
 from common import tags
 from controllers import sites
-from lxml import etree
 from models import config
 from models import content
 from models import courses
@@ -261,37 +261,27 @@ class CustomTagTests(unittest.TestCase):
 
         class SimpleTag(tags.BaseTag):
             def render(self, unused_arg):
-                return etree.Element('SimpleTag')
+                return cElementTree.Element('SimpleTag')
 
         class ComplexTag(tags.BaseTag):
             def render(self, unused_arg):
-                return etree.XML('<Complex><Child>Text</Child></Complex>')
+                return cElementTree.XML(
+                    '<Complex><Child>Text</Child></Complex>')
 
         class ReRootTag(tags.BaseTag):
             def render(self, node):
-                elt = etree.Element('Re')
-                root = etree.Element('Root')
+                elt = cElementTree.Element('Re')
+                root = cElementTree.Element('Root')
                 elt.append(root)
                 for child in node:
                     root.append(child)
                 return elt
 
-        class RequireRootParentTag(tags.BaseTag):
-            def render(self, node):
-                while True:
-                    print node.tag
-                    node = node.getparent()
-                    if node is None:
-                        raise Exception
-                    if node.tag == 'Root':
-                        return etree.Element('OK')
-
         def new_get_tag_bindings():
             return {
                 'simple': SimpleTag,
                 'complex': ComplexTag,
-                'reroot': ReRootTag,
-                'requireparent': RequireRootParentTag}
+                'reroot': ReRootTag}
 
         self.old_get_tag_bindings = tags.get_tag_bindings
         tags.get_tag_bindings = new_get_tag_bindings
@@ -299,13 +289,30 @@ class CustomTagTests(unittest.TestCase):
     def tearDown(self):
         tags.get_tag_bindings = self.old_get_tag_bindings
 
+    def test_empty_text_is_passed(self):
+        safe_dom = tags.html_to_safe_dom(None)
+        self.assertEquals('', str(safe_dom))
+
+    def test_none_is_treated_as_empty(self):
+        safe_dom = tags.html_to_safe_dom(None)
+        self.assertEquals('', str(safe_dom))
+
+    def test_plain_text_is_passed(self):
+        safe_dom = tags.html_to_safe_dom('This is plain text.')
+        self.assertEquals('This is plain text.', str(safe_dom))
+
+    def test_mix_of_plain_text_and_tags_is_passed(self):
+        html = 'This is plain text<br/>on several<br/>lines'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(html, str(safe_dom))
+
     def test_simple_tag_is_replaced(self):
-        html = '<div><simple/></div>'
+        html = '<div><simple></simple></div>'
         safe_dom = tags.html_to_safe_dom(html)
         self.assertEquals('<div><SimpleTag></SimpleTag></div>', str(safe_dom))
 
     def test_replaced_tag_preserves_tail_text(self):
-        html = '<div><simple/>Tail text</div>'
+        html = '<div><simple></simple>Tail text</div>'
         safe_dom = tags.html_to_safe_dom(html)
         self.assertEquals(
             '<div><SimpleTag></SimpleTag>Tail text</div>', str(safe_dom))
@@ -334,13 +341,6 @@ class CustomTagTests(unittest.TestCase):
         safe_dom = tags.html_to_safe_dom(html)
         self.assertEquals(
             '<div><Re><Root><p><SimpleTag></SimpleTag></p></Root></Re></div>',
-            str(safe_dom))
-
-    def test_child_tags_can_find_their_parents(self):
-        html = '<div><reroot><p><requireparent/></p></reroot></div>'
-        safe_dom = tags.html_to_safe_dom(html)
-        self.assertEquals(
-            '<div><Re><Root><p><OK></OK></p></Root></Re></div>',
             str(safe_dom))
 
 
