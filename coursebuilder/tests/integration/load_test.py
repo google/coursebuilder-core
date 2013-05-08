@@ -18,6 +18,10 @@ WARNING! Use this script to test load Course Builder. This is very dangerous
 feature, be careful, because anyone can impersonate super user of your Course
 Builder instance; use only if you have to perform specific load testing
 
+Keep in mind:
+    - when repeatedly running tests and creating new test namespaces,
+      flush memcache
+
 Here is how to run:
     - update /controllers/sites.py and enable CAN_IMPERSONATE
     - navigate to the root directory of the app
@@ -80,11 +84,15 @@ def assert_equals(expected, actual):
 class WebSession(object):
     """A class that allows navigation of web pages keeping cookie session."""
 
+    PROGRESS_LOCK = threading.Lock()
+    MAX_RETRIES = 3
+    RETRY_SLEEP_SEC = 3
+
     GET_COUNT = 0
     POST_COUNT = 0
+    RETRY_COUNT = 0
     PROGRESS_BATCH = 10
     RESPONSE_TIME_HISTOGRAM = [0, 0, 0, 0, 0, 0]
-    PROGRESS_LOCK = threading.Lock()
 
     def __init__(self, uid, common_headers=None):
         if common_headers is None:
@@ -119,14 +127,51 @@ class WebSession(object):
             cls.PROGRESS_BATCH) == 0)
         if update or force:
             logging.info(
-                'GET/POST:[%s, %s], SLA:%s',
-                cls.GET_COUNT, cls.POST_COUNT, cls.RESPONSE_TIME_HISTOGRAM)
+                'GET/POST:[%s, %s], RETRIES:[%s], SLA:%s',
+                cls.GET_COUNT, cls.POST_COUNT, cls.RETRY_COUNT,
+                cls.RESPONSE_TIME_HISTOGRAM)
 
     def get_cookie_value(self, name):
         for cookie in self.cj:
             if cookie.name == name:
                 return cookie.value
         return None
+
+    def is_soft_error(self, http_error):
+        """Checks if HTTPError is due to starvation of frontend instances."""
+        if http_error.code == 500 and http_error.fp:
+            body = http_error.fp.read()
+            # this is the text specific to the starvation; normal HTTP error
+            # 500 has this specific text '<h1>500 Internal Server Error</h1>'
+            return '<h1>Error: Server Error</h1>' in body
+        return False
+
+    def open(self, request, hint, retriable_request=False):
+        """Executes any HTTP request."""
+        start_time = time.time()
+        try:
+            try_count = 0
+            while True:
+                try:
+                    return self.opener.open(request)
+                except urllib2.HTTPError as he:
+                    if (
+                            try_count < WebSession.MAX_RETRIES and
+                            retriable_request and
+                            self.is_soft_error(he)):
+                        try_count += 1
+                        with WebSession.PROGRESS_LOCK:
+                            WebSession.RETRY_COUNT += 1
+                        time.sleep(WebSession.RETRY_SLEEP_SEC)
+                        continue
+                    raise he
+        except Exception as e:
+            logging.info(
+                'Error in session %s executing: %s', self.uid, hint)
+            raise e
+        finally:
+            with WebSession.PROGRESS_LOCK:
+                self.update_duration(time.time() - start_time)
 
     def get(self, url, expected_code=200):
         """HTTP GET."""
@@ -137,18 +182,7 @@ class WebSession(object):
         request = urllib2.Request(url)
         for key, value in self.common_headers.items():
             request.add_header(key, value)
-
-        start_time = time.time()
-        try:
-            response = self.opener.open(request)
-        except Exception as e:
-            logging.info(
-                'Error in session %s executing GET for: %s', self.uid, url)
-            raise e
-        finally:
-            with WebSession.PROGRESS_LOCK:
-                self.update_duration(time.time() - start_time)
-
+        response = self.open(request, 'GET %s' % url, retriable_request=True)
         assert_equals(expected_code, response.code)
         return response.read()
 
@@ -164,18 +198,7 @@ class WebSession(object):
         request = urllib2.Request(url, data)
         for key, value in self.common_headers.items():
             request.add_header(key, value)
-
-        start_time = time.time()
-        try:
-            response = self.opener.open(request)
-        except Exception as e:
-            logging.info(
-                'Error in session %s executing POST for: %s', self.uid, url)
-            raise e
-        finally:
-            with WebSession.PROGRESS_LOCK:
-                self.update_duration(time.time() - start_time)
-
+        response = self.open(request, 'POST %s' % url)
         assert_equals(expected_code, response.code)
         return response.read()
 

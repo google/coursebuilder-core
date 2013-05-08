@@ -162,7 +162,11 @@ class Registry(object):
         now = long(time.time())
         age = now - cls.last_update_time
         max_age = UPDATE_INTERVAL_SEC.get_value(db_overrides=cls.db_overrides)
-        busy = hasattr(cls.threadlocal, cls.REENTRY_ATTR_NAME)
+
+        # do not update if call is reentrant or outer db transaction exists
+        busy = hasattr(cls.threadlocal, cls.REENTRY_ATTR_NAME) or (
+            db.is_in_transaction())
+
         if (not busy) and (force_update or age < 0 or age >= max_age):
             # Value of '0' disables all datastore overrides.
             if UPDATE_INTERVAL_SEC.get_value() == 0:
