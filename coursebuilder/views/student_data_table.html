@@ -1,0 +1,54 @@
+<table style="border-collapse:collapse;">
+  <colgroup>
+    <col style="width: 10%">
+    <col>
+  </colgroup>
+
+  <tr>
+    <th align="left">{% trans %} Currently enrolled {% endtrans %}</th>
+    <td>{{ student.is_enrolled }}</td>
+  </tr>
+
+  <tr>
+    <th align="left">{% trans %} Date enrolled {% endtrans %}</th>
+    <td>{{ student.enrolled_on }}</td>
+  </tr>
+
+  <tr>
+    <th align="left">{% trans %} Email {% endtrans %}</th>
+    <td>{{ student.key().name() }}</td>
+  </tr>
+
+  <tr>
+    <th align="left">{% trans %} Name {% endtrans %}</th>
+    <td>{{ student.name }}</td>
+  </tr>
+
+  <tr>
+    <th align="left" colspan=2>{% trans %} Assessment scores {% endtrans %}</th>
+  </tr>
+
+  {% for assessment in score_list %}
+    <tr>
+      <th align="left">&nbsp;&nbsp;&nbsp;{{ assessment['title'] }}</th>
+      <td>
+        {% if not assessment['has_score'] %}
+          {% if assessment['completed'] %}
+            {{ gettext('Completed') }}
+          {% endif %}
+        {% elif 'score' in assessment and assessment['score'] is defined %}
+          <span id="assessment-score-{{assessment['title']}}">{{ assessment['score'] }}</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+
+  {% if overall_score != None %}
+    <tr>
+      <th align="left">{% trans %} Overall course score {% endtrans %}</th>
+      <td>
+        <span id="assessment-score-overall">{{ overall_score }}</span>
+      </td>
+    </tr>
+  {% endif %}
+</table>
