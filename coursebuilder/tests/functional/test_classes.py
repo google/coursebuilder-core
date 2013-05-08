@@ -1179,7 +1179,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         self.execute_all_deferred_tasks()
 
         response = self.get('dashboard?action=analytics')
-        assert_contains('were last updated on', response.body)
+        assert_contains('were last updated at', response.body)
         assert_contains('currently enrolled: 1', response.body)
         assert_contains('total: 1', response.body)
 

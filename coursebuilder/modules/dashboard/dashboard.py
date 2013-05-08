@@ -60,6 +60,8 @@ class DashboardHandler(
     AssignmentManager, ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
+    TIME_FMT = '%H:%M'
+
     default_action = 'outline'
     get_actions = [
         default_action, 'assets', 'settings', 'analytics',
@@ -570,10 +572,12 @@ class DashboardHandler(
                                    'avg': avg})
                 subtemplate_values['scores'] = scores
                 subtemplate_values['total_records'] = total_records
+
                 update_message = safe_dom.Text("""
-                    Enrollment and assessment statistics were last updated on
+                    Enrollment and assessment statistics were last updated at
                     %s in about %s second(s).""" % (
-                        job.updated_on, job.execution_time_sec))
+                        job.updated_on.strftime(DashboardHandler.TIME_FMT),
+                        job.execution_time_sec))
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = safe_dom.NodeList().append(
                     safe_dom.Text("""
@@ -586,9 +590,9 @@ class DashboardHandler(
                         safe_dom.Element('pre').add_text('\n%s' % job.output)))
             else:
                 update_message = safe_dom.Text(
-                    'Enrollment and assessment statistics update started on %s'
+                    'Enrollment and assessment statistics update started at %s'
                     ' and is running now. Please come back shortly.' %
-                    job.updated_on)
+                    job.updated_on.strftime(DashboardHandler.TIME_FMT))
 
         subtemplate_values['stats_calculated'] = stats_calculated
         subtemplate_values['errors'] = errors

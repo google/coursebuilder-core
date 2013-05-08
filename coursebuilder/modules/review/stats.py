@@ -82,6 +82,8 @@ class ComputeReviewStats(jobs.DurableJob):
 class PeerReviewStatsHandler(ApplicationHandler):
     """Shows peer review analytics on the dashboard."""
 
+    TIME_FMT = '%H:%M'
+
     # The key used in the statistics dict that generates the dashboard page.
     # Must be unique.
     name = 'peer_review_stats'
@@ -117,9 +119,11 @@ class PeerReviewStatsHandler(ApplicationHandler):
                             'unit_id': unit.unit_id,
                         })
                 update_message = safe_dom.Text("""
-                    Peer review statistics were last updated on
+                    Peer review statistics were last updated at
                     %s in about %s second(s).""" % (
-                        job.updated_on, job.execution_time_sec))
+                        job.updated_on.strftime(
+                            PeerReviewStatsHandler.TIME_FMT),
+                        job.execution_time_sec))
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = safe_dom.NodeList().append(
                     safe_dom.Text("""
@@ -132,8 +136,9 @@ class PeerReviewStatsHandler(ApplicationHandler):
                         safe_dom.Element('pre').add_text('\n%s' % job.output)))
             else:
                 update_message = safe_dom.Text("""
-                    Peer review statistics update started on %s and is running
-                    now. Please come back shortly.""" % job.updated_on)
+                    Peer review statistics update started at %s and is running
+                    now. Please come back shortly.""" % job.updated_on.strftime(
+                        PeerReviewStatsHandler.TIME_FMT))
 
         return jinja2.utils.Markup(self.get_template(
             'stats.html', [os.path.dirname(__file__)]
