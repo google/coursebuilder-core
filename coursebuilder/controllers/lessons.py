@@ -17,6 +17,7 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import urlparse
+
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -24,6 +25,7 @@ from models.counters import PerfCounter
 from models.models import Student
 from models.roles import Roles
 from tools import verify
+
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import XsrfTokenManager
@@ -49,6 +51,10 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 
 UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
+
+# Date format string for displaying the month (in words), day, four-digit year,
+# hour and minute. Example: Mar 21 2013 at 13:00 UTC.
+HUMAN_READABLE_DATE_FORMAT = '%b %d %Y at %H:%M UTC'
 
 
 def extract_unit_and_lesson(handler):
@@ -105,10 +111,11 @@ class CourseHandler(BaseHandler):
                 if unit.needs_human_grader:
                     reviews = reviews_processor.get_reviewer_reviews(
                         student, unit)
-                    min_reviews = course.get_assessment_min_reviews(unit)
+                    review_min_count = unit.workflow.get_review_min_count()
 
                     unit.review_progress = ReviewUtils.get_review_progress(
-                        reviews, min_reviews, course.get_progress_tracker())
+                        reviews, review_min_count, course.get_progress_tracker()
+                    )
 
                     unit.is_submitted = bool(
                         reviews_processor.get_student_work(student, unit))
@@ -427,7 +434,7 @@ class ReviewDashboardHandler(BaseHandler):
     """Handler for generating the index of reviews that a student has to do."""
 
     def populate_template(self, unit, reviews):
-        """Adds variables to the template."""
+        """Adds variables to the template for the review dashboard."""
         self.template_value['navbar'] = {'course': True}
         self.template_value['assessment_name'] = unit.title
         self.template_value['unit_id'] = unit.unit_id
@@ -437,6 +444,12 @@ class ReviewDashboardHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
 
         self.template_value['reviews'] = reviews
+        self.template_value['review_min_count'] = (
+            unit.workflow.get_review_min_count())
+
+        review_due_date = unit.workflow.get_review_due_date()
+        self.template_value['review_due_date'] = review_due_date.strftime(
+            HUMAN_READABLE_DATE_FORMAT)
 
     def get(self):
         """Handles GET requests."""
@@ -563,12 +576,12 @@ class ReviewUtils(object):
         return count
 
     @classmethod
-    def get_review_progress(cls, reviews, min_reviews, progress_tracker):
+    def get_review_progress(cls, reviews, review_min_count, progress_tracker):
         """Gets the progress value based on the number of reviews done.
 
         Args:
           reviews: a list of review objects.
-          min_reviews: the minimum number of reviews that the student is
+          review_min_count: the minimum number of reviews that the student is
               required to complete for this assessment.
           progress_tracker: the course progress tracker.
 
@@ -580,7 +593,7 @@ class ReviewUtils(object):
 
         if completed_reviews == 0:
             return progress_tracker.NOT_STARTED_STATE
-        elif completed_reviews < min_reviews:
+        elif completed_reviews < review_min_count:
             return progress_tracker.IN_PROGRESS_STATE
         else:
             return progress_tracker.COMPLETED_STATE

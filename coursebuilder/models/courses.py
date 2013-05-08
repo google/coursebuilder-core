@@ -17,10 +17,12 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import copy
+from datetime import datetime
 import logging
 import os
 import pickle
 import sys
+
 import appengine_config
 from tools import verify
 import yaml
@@ -35,27 +37,11 @@ import vfs
 COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
 
-# Indicates that an assessment is graded automatically.
-AUTO_GRADER = 'auto'
-# Indicates that an assessment is graded by a human.
-HUMAN_GRADER = 'human'
 
-# Keys in the workflow dict.
-WORKFLOW_SPEC = 'workflow_spec'
-
-# Keys in the WORKFLOW_SPEC sub-dictionary of the workflow dict.
-GRADER_KEY = 'grader'
-MIN_REVIEWS_KEY = 'min_reviews'
-
-# The name for the peer review assessment used in the sample v1.2 CSV file.
-# This is here so that a peer review assessment example is available when
-# Course Builder loads with the default course. However, in general, peer
-# review assessments should only be specified in Course Builder v1.4 or
-# later (via the web interface).
-LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
-
-DEFAULT_WORKFLOW_SPEC = 'grader: auto\nmin_reviews: 1'
-DEFAULT_MIN_REVIEWS = 1
+# Date format string for validating input in ISO 8601 format without a
+# timezone. All such strings are assumed to refer to UTC datetimes.
+# Example: '2013-03-21 13:00'
+ISO_8601_DATE_FORMAT = '%Y-%m-%d %H:%M'
 
 
 def deep_dict_merge(real_values_dict, default_values_dict):
@@ -118,6 +104,64 @@ course:
 
 # Here are the default assessment weights corresponding to the sample course.
 DEFAULT_LEGACY_ASSESSMENT_WEIGHTS = {'Pre': 0, 'Mid': 30, 'Fin': 70}
+
+
+# Indicates that an assessment is graded automatically.
+AUTO_GRADER = 'auto'
+# Indicates that an assessment is graded by a human.
+HUMAN_GRADER = 'human'
+
+# Allowed graders.
+ALLOWED_GRADERS = [AUTO_GRADER, HUMAN_GRADER]
+
+# Indicates that a human-graded assessment is self-graded.
+SELF_MATCHER = 'self'
+# Indicates that a human-graded assessment is peer-graded.
+PEER_MATCHER = 'peer'
+
+# Allowed matchers.
+ALLOWED_MATCHERS = [SELF_MATCHER, PEER_MATCHER]
+
+# Keys in unit.workflow (when it is converted to a dict).
+GRADER_KEY = 'grader'
+MATCHER_KEY = 'matcher'
+SUBMISSION_DUE_DATE_KEY = 'submission_due_date'
+REVIEW_DUE_DATE_KEY = 'review_due_date'
+REVIEW_MIN_COUNT_KEY = 'review_min_count'
+REVIEW_WINDOW_MINS_KEY = 'review_window_mins'
+
+DEFAULT_REVIEW_MIN_COUNT = 2
+DEFAULT_REVIEW_WINDOW_MINS = 60
+
+# Keys specific to human-graded assessments.
+HUMAN_GRADED_ASSESSMENT_KEY_LIST = [
+    MATCHER_KEY, REVIEW_MIN_COUNT_KEY, REVIEW_WINDOW_MINS_KEY,
+    SUBMISSION_DUE_DATE_KEY, REVIEW_DUE_DATE_KEY
+]
+
+# The name for the peer review assessment used in the sample v1.2 CSV file.
+# This is here so that a peer review assessment example is available when
+# Course Builder loads with the sample course. However, in general, peer
+# review assessments should only be specified in Course Builder v1.4 or
+# later (via the web interface).
+LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
+
+# This value is meant to be used for auto-graded assessments in the sample
+# Power Searching course.
+LEGACY_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
+    GRADER_KEY: AUTO_GRADER
+})
+
+# This value is meant to be used only for the human-reviewed assessments in the
+# sample v1.2 Power Searching course.
+LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
+    GRADER_KEY: HUMAN_GRADER,
+    MATCHER_KEY: PEER_MATCHER,
+    SUBMISSION_DUE_DATE_KEY: '2013-03-14 12:00',
+    REVIEW_DUE_DATE_KEY: '2013-03-21 12:00',
+    REVIEW_MIN_COUNT_KEY: DEFAULT_REVIEW_MIN_COUNT,
+    REVIEW_WINDOW_MINS_KEY: DEFAULT_REVIEW_WINDOW_MINS,
+})
 
 
 def is_editable_fs(app_context):
@@ -284,9 +328,18 @@ class Unit12(object):
         return self._index
 
     @property
-    def workflow_spec(self):
-        assert self.unit_id == LEGACY_REVIEW_ASSESSMENT
-        return DEFAULT_WORKFLOW_SPEC
+    def workflow_yaml(self):
+        """Returns the workflow as a YAML text string."""
+        assert verify.UNIT_TYPE_ASSESSMENT == self.type
+        if self.unit_id == LEGACY_REVIEW_ASSESSMENT:
+            return LEGACY_HUMAN_GRADER_WORKFLOW
+        else:
+            return LEGACY_AUTO_GRADER_WORKFLOW
+
+    @property
+    def workflow(self):
+        """Returns the workflow as an object."""
+        return Workflow(self.workflow_yaml)
 
 
 class Lesson12(object):
@@ -421,25 +474,9 @@ class CourseModel12(object):
                 return unit
         return None
 
-    def get_assessment_grader(self, unit):
-        """Returns the grader for an assessment."""
-        # The only place this is used is in the default course.
-        if unit.unit_id == LEGACY_REVIEW_ASSESSMENT:
-            return HUMAN_GRADER
-        return AUTO_GRADER
-
-    def get_assessment_min_reviews(self, unused_unit):
-        """Returns the min number of reviews for an assessment."""
-        return DEFAULT_MIN_REVIEWS
-
-    def get_workflow_spec(self, unit):
-        """Returns the default assessment workflow spec."""
-        return unit.workflow_spec
-
     def get_review_form_filename(self, unit_id):
-        """Returns the default review form filename."""
-        assert unit_id == LEGACY_REVIEW_ASSESSMENT
-        return 'assets/js/review-%s.js' % LEGACY_REVIEW_ASSESSMENT
+        """Returns the corresponding review form filename."""
+        return 'assets/js/review-%s.js' % unit_id
 
     def get_assessment_filename(self, unit_id):
         """Returns assessment base filename."""
@@ -501,14 +538,20 @@ class Unit13(object):
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.weight = 0
 
-        # Only valid for a unit.type == verify.UNIT_TYPE_ASSESSMENT which is
-        # human-reviewed.
-        self.workflow = {}
+        # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
+        self.workflow_yaml = ''
 
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
         return self._index
+
+    @property
+    def workflow(self):
+        """Returns the workflow as an object."""
+        assert verify.UNIT_TYPE_ASSESSMENT == self.type
+        workflow = Workflow(self.workflow_yaml)
+        return workflow
 
 
 class Lesson13(object):
@@ -943,12 +986,20 @@ class CourseModel13(object):
 
     def _delete_assessment(self, unit):
         """Deletes assessment."""
-        filename = self._app_context.fs.impl.physical_to_logical(
-            self.get_assessment_filename(unit.unit_id))
-        if self.app_context.fs.isfile(filename):
-            self.app_context.fs.delete(filename)
-            return True
-        return False
+        files_deleted_count = 0
+
+        filenames = [
+            self._app_context.fs.impl.physical_to_logical(
+                self.get_assessment_filename(unit.unit_id)),
+            self._app_context.fs.impl.physical_to_logical(
+                self.get_review_form_filename(unit.unit_id))]
+
+        for filename in filenames:
+            if self.app_context.fs.isfile(filename):
+                self.app_context.fs.delete(filename)
+                files_deleted_count += 1
+
+        return bool(files_deleted_count)
 
     def delete_all(self):
         """Deletes all course files."""
@@ -996,7 +1047,7 @@ class CourseModel13(object):
 
         if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
             existing_unit.weight = unit.weight
-            existing_unit.workflow = unit.workflow
+            existing_unit.workflow_yaml = unit.workflow_yaml
 
         self._dirty_units.append(existing_unit)
         return existing_unit
@@ -1061,21 +1112,6 @@ class CourseModel13(object):
 
         self._index()
 
-    def get_assessment_grader(self, unit):
-        """Returns the grader for an assessment. Defaults to auto-grading."""
-        workflow_spec = self.get_workflow_spec(unit)
-        if not workflow_spec:
-            return AUTO_GRADER
-        return yaml.safe_load(workflow_spec).get(GRADER_KEY, AUTO_GRADER)
-
-    def get_assessment_min_reviews(self, unit):
-        """Returns the min number of reviews for an assessment."""
-        workflow_spec = self.get_workflow_spec(unit)
-        if not workflow_spec:
-            return DEFAULT_MIN_REVIEWS
-        return yaml.safe_load(workflow_spec).get(
-            MIN_REVIEWS_KEY, DEFAULT_MIN_REVIEWS)
-
     def get_assessment_as_dict(self, filename):
         """Gets the content of an assessment file as a Python dict."""
         path = self._app_context.fs.impl.physical_to_logical(filename)
@@ -1092,11 +1128,6 @@ class CourseModel13(object):
         """Returns the Python dict representation of an assessment."""
         return self.get_assessment_as_dict(
             self.get_assessment_filename(unit.unit_id))
-
-    def get_workflow_spec(self, unit):
-        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
-        workflow_spec = unit.workflow.get(WORKFLOW_SPEC)
-        return workflow_spec
 
     def set_assessment_file_content(
         self, unit, assessment_content, dest_filename, errors=None):
@@ -1202,16 +1233,27 @@ class CourseModel13(object):
                     dst_unit.weight = (
                         DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[dst_unit.unit_id])
 
-                src_filename = os.path.join(
-                    src_course.app_context.get_home(),
-                    src_course.get_assessment_filename(src_unit.unit_id))
-                if src_course.app_context.fs.isfile(src_filename):
-                    astream = src_course.app_context.fs.open(src_filename)
-                    if astream:
-                        dst_filename = os.path.join(
-                            self.app_context.get_home(),
-                            self.get_assessment_filename(dst_unit.unit_id))
-                        self.app_context.fs.put(dst_filename, astream)
+                filepath_mappings = [{
+                    'src': src_course.get_assessment_filename(src_unit.unit_id),
+                    'dst': self.get_assessment_filename(dst_unit.unit_id)
+                }, {
+                    'src': src_course.get_review_form_filename(
+                        src_unit.unit_id),
+                    'dst': self.get_review_form_filename(dst_unit.unit_id)
+                }]
+
+                for mapping in filepath_mappings:
+                    src_filename = os.path.join(
+                        src_course.app_context.get_home(), mapping['src'])
+
+                    if src_course.app_context.fs.isfile(src_filename):
+                        astream = src_course.app_context.fs.open(src_filename)
+                        if astream:
+                            dst_filename = os.path.join(
+                                self.app_context.get_home(), mapping['dst'])
+                            self.app_context.fs.put(dst_filename, astream)
+
+                dst_unit.workflow_yaml = src_unit.workflow_yaml
 
         def copy_lesson12_into_lesson13(
             src_unit, src_lesson, unused_dst_unit, dst_lesson):
@@ -1276,42 +1318,118 @@ class CourseModel13(object):
 
 
 class Workflow(object):
-    """Stores workflow details for assessments."""
+    """Stores workflow specifications for assessments."""
 
-    def __init__(self):
-        # The workflow specification, in YAML format.
-        self.workflow_spec = ''
+    def __init__(self, yaml_str):
+        """Sets yaml_str (the workflow spec), without doing any validation."""
+        self._yaml_str = yaml_str
 
-    def loads(self, workflow):
-        """Loads a workflow."""
-        if workflow is None:
-            self.workflow_spec = DEFAULT_WORKFLOW_SPEC
-        else:
-            self.workflow_spec = workflow.get(WORKFLOW_SPEC)
+    def to_yaml(self):
+        return self._yaml_str
 
-        return self
+    def to_dict(self):
+        if not self._yaml_str:
+            return {}
+        obj = yaml.safe_load(self._yaml_str)
+        assert isinstance(obj, dict)
+        return obj
 
-    def dumps(self):
-        """Dumps this object into a dict."""
-        return {WORKFLOW_SPEC: self.workflow_spec}
+    def _convert_date_string_to_datetime(self, date_str):
+        """Returns a datetime object."""
+        return datetime.strptime(date_str, ISO_8601_DATE_FORMAT)
 
-    def validate_workflow_spec(self, errors=None):
-        """Tests whether this object has a valid workflow specification."""
+    def get_grader(self):
+        """Returns the associated grader; defaults to AUTO_GRADER."""
+        grader = self.to_dict().get(GRADER_KEY)
+        return grader if grader else AUTO_GRADER
+
+    def get_matcher(self):
+        return self.to_dict().get(MATCHER_KEY)
+
+    def get_submission_due_date(self):
+        date_str = self.to_dict().get(SUBMISSION_DUE_DATE_KEY)
+        if date_str is None:
+            return None
+        return self._convert_date_string_to_datetime(date_str)
+
+    def get_review_due_date(self):
+        date_str = self.to_dict().get(REVIEW_DUE_DATE_KEY)
+        if date_str is None:
+            return None
+        return self._convert_date_string_to_datetime(date_str)
+
+    def get_review_min_count(self):
+        return self.to_dict().get(REVIEW_MIN_COUNT_KEY)
+
+    def get_review_window_mins(self):
+        return self.to_dict().get(REVIEW_WINDOW_MINS_KEY)
+
+    def ensure_value_is_nonnegative_int(self, workflow_dict, key, errors):
+        """Checks that workflow_dict[key] is a non-negative integer."""
+        value = workflow_dict[key]
+        if not isinstance(value, int):
+            errors.append('%s should be an integer' % key)
+        elif not value >= 0:
+            errors.append('%s should be a non-negative integer' % key)
+
+    def validate(self, errors=None):
+        """Tests whether the current Workflow object is valid."""
         if errors is None:
             errors = []
 
-        workflow_dict = None
         try:
             # Validate the workflow specification (in YAML format).
-            assert self.workflow_spec
-            workflow_dict = yaml.safe_load(self.workflow_spec)
+            assert self._yaml_str, 'missing key: %s.' % GRADER_KEY
+            workflow_dict = yaml.safe_load(self._yaml_str)
 
-            assert GRADER_KEY in workflow_dict
-            assert workflow_dict[GRADER_KEY] in [AUTO_GRADER, HUMAN_GRADER]
+            assert isinstance(workflow_dict, dict), (
+                'expected the YAML representation of a dict')
 
-            assert MIN_REVIEWS_KEY in workflow_dict
-            assert isinstance(workflow_dict[MIN_REVIEWS_KEY], int)
-            assert workflow_dict[MIN_REVIEWS_KEY] >= 0
+            assert GRADER_KEY in workflow_dict, 'missing key: %s.' % GRADER_KEY
+            assert workflow_dict[GRADER_KEY] in ALLOWED_GRADERS, (
+                'invalid grader, should be one of: %s' %
+                ', '.join(ALLOWED_GRADERS))
+
+            if workflow_dict[GRADER_KEY] == HUMAN_GRADER:
+
+                missing_keys = []
+                for key in HUMAN_GRADED_ASSESSMENT_KEY_LIST:
+                    if key not in workflow_dict:
+                        missing_keys.append(key)
+
+                assert not missing_keys, (
+                    'missing key(s) for a human-reviewed assessment: %s.' %
+                    ', '.join(missing_keys))
+
+                workflow_errors = []
+                if workflow_dict[MATCHER_KEY] not in ALLOWED_MATCHERS:
+                    workflow_errors.append(
+                        'invalid matcher, should be one of: %s' %
+                        ', '.join(ALLOWED_MATCHERS))
+
+                self.ensure_value_is_nonnegative_int(
+                    workflow_dict, REVIEW_MIN_COUNT_KEY, workflow_errors)
+                self.ensure_value_is_nonnegative_int(
+                    workflow_dict, REVIEW_WINDOW_MINS_KEY, workflow_errors)
+
+                try:
+                    submission_due_date = self._convert_date_string_to_datetime(
+                        workflow_dict[SUBMISSION_DUE_DATE_KEY])
+                    review_due_date = self._convert_date_string_to_datetime(
+                        workflow_dict[REVIEW_DUE_DATE_KEY])
+
+                    if not submission_due_date <= review_due_date:
+                        workflow_errors.append(
+                            'submission due date should be earlier than '
+                            'review due date')
+                except Exception as e:  # pylint: disable-msg=broad-except
+                    workflow_errors.append(
+                        'dates should be formatted as YYYY-MM-DD hh:mm '
+                        '(e.g. 1997-07-16 19:20) and be specified in the UTC '
+                        'timezone')
+
+                if workflow_errors:
+                    raise Exception('%s.' % '; '.join(workflow_errors))
 
             return True
         except Exception as e:  # pylint: disable-msg=broad-except
@@ -1539,20 +1657,8 @@ class Course(object):
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
 
-    def get_assessment_grader(self, unit):
-        """Returns the grader for an assessment."""
-        return self._model.get_assessment_grader(unit)
-
-    def get_assessment_min_reviews(self, unit):
-        """Returns the min number of reviews for a peer-reviewed assessment."""
-        return self._model.get_assessment_min_reviews(unit)
-
     def needs_human_grader(self, unit):
-        grader = self.get_assessment_grader(unit)
-        return grader == HUMAN_GRADER
-
-    def _get_workflow_spec(self, unit):
-        return self._model.get_workflow_spec(unit)
+        return unit.workflow.get_grader() == HUMAN_GRADER
 
     def reorder_units(self, order_data):
         return self._model.reorder_units(order_data)

@@ -544,7 +544,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             "title": {"optional": true, "type": "string"},
             "weight": {"optional": true, "type": "string"},
             "content": {"optional": true, "type": "text"},
-            "workflow_spec": {"optional": true, "type": "text"},
+            "workflow_yaml": {"optional": true, "type": "text"},
             "review_form": {"optional": true, "type": "text"},
             "is_draft": {"type": "boolean"}
             }
@@ -562,7 +562,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
         (['properties', 'content', '_inputex'], {'label': 'Content'}),
-        (['properties', 'workflow_spec', '_inputex'], {
+        (['properties', 'workflow_yaml', '_inputex'], {
             'label': 'Workflow Specification'}),
         (['properties', 'review_form', '_inputex'], {'label': 'Reviewer Form'}),
         STATUS_ANNOTATION]
@@ -602,8 +602,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             'title': unit.title,
             'weight': unit.weight if hasattr(unit, 'weight') else 0,
             'content': content,
-            'workflow_spec': courses.Workflow().loads(
-                unit.workflow).workflow_spec,
+            'workflow_yaml': unit.workflow_yaml,
             'review_form': review_form,
             'is_draft': not unit.now_available,
         }
@@ -623,13 +622,18 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         course = courses.Course(self)
         course.set_assessment_content(
             unit, updated_unit_dict.get('content'), errors=errors)
-        course.set_review_form(
-            unit, updated_unit_dict.get('review_form'), errors=errors)
 
-        workflow_object = courses.Workflow()
-        workflow_object.workflow_spec = updated_unit_dict.get('workflow_spec')
-        workflow_object.validate_workflow_spec(errors=errors)
-        unit.workflow = workflow_object.dumps()
+        unit.workflow_yaml = updated_unit_dict.get('workflow_yaml')
+        unit.workflow.validate(errors=errors)
+
+        # Only save the review form if the assessment needs human grading.
+        if not errors:
+            if course.needs_human_grader(unit):
+                course.set_review_form(
+                    unit, updated_unit_dict.get('review_form'), errors=errors)
+            elif updated_unit_dict.get('review_form'):
+                errors.append(
+                    'Review forms for auto-graded assessments should be empty.')
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):

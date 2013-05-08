@@ -132,10 +132,7 @@ class AnswerHandler(BaseHandler):
         else:
             answers = []
 
-        grader = course.get_assessment_grader(unit)
-        if grader not in [courses.AUTO_GRADER, courses.HUMAN_GRADER]:
-            logging.error('Invalid grader supplied: %s', grader)
-            return
+        grader = unit.workflow.get_grader()
 
         if grader == courses.HUMAN_GRADER:
             previously_submitted = bool(course.get_reviews_processor(

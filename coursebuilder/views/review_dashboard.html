@@ -18,14 +18,29 @@
       {% endif %}
     </script>
 
-    <h2>Submissions for you to review</h2>
+    <h2>
+      {{ gettext('Submissions for you to review') }}
+    </h2>
+
+    <p>
+      <em>
+        {{ gettext('All reviews are due by %(review_due_date)s.',
+                   review_due_date=review_due_date) }}
+
+        {{ ngettext(
+            'In order to earn credit for this assessment, you must complete at
+             least %(review_min_count)d review by then.',
+            'In order to earn credit for this assessment, you must complete at
+             least %(review_min_count)d reviews by then.',
+            review_min_count) % {'review_min_count': review_min_count}
+        }}
+      </em>
+    </p>
 
     <ol>
       {% for review in reviews %}
         <li>
-          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">
-            {{ gettext('Submission %(index)s', index=loop.index) }}
-          </a>
+          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">{{ gettext('Submission %(index)s', index=loop.index) }}</a>
           {% if review.review %}
             {% if review.is_draft %}
               ({{ gettext('Draft') }})
