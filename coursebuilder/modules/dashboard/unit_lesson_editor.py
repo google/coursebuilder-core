@@ -830,7 +830,7 @@ class LessonRESTHandler(BaseRESTHandler):
                 'description': messages.LESSON_ACTIVITY_TITLE_DESCRIPTION}),
             (['properties', 'activity', '_inputex'], {
                 'label': 'Activity',
-                'description': messages.LESSON_ACTIVITY_DESCRIPTION}),
+                'description': str(messages.LESSON_ACTIVITY_DESCRIPTION)}),
             STATUS_ANNOTATION]
 
     def get(self):

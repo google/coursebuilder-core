@@ -82,9 +82,10 @@ the same Google App Engine instance.
 <strong>This will only import into an empty course</strong>.
 """, None)
 
-LESSON_ACTIVITY_DESCRIPTION = """
+LESSON_ACTIVITY_DESCRIPTION = assemble_sanitized_message("""
 Create an activity by entering the correct syntax above.
-"""
+""", ('https://code.google.com/p/course-builder/wiki/CreateActivities'
+      '#Writing_activities'))
 
 LESSON_ACTIVITY_TITLE_DESCRIPTION = """
 This appears above your activity.
