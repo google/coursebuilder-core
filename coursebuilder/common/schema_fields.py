@@ -74,7 +74,7 @@ class FieldRegistry(Registry):
         return schema_dict
 
     def get_json_schema(self):
-        """Get the json schmea for this API."""
+        """Get the json schema for this API."""
         return json.dumps(self.get_json_schema_dict())
 
     def _get_schema_dict(self, prefix_key):

@@ -388,18 +388,18 @@ class DashboardHandler(
 
         # Enable editing if supported.
         if filer.is_editable_fs(self.app_context):
-            basic_setting_actions.append({
-                'id': 'edit_basic_course_settings',
-                'caption': 'Edit Basic Settings',
-                'action': self.get_action_url('edit_basic_course_settings'),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
             yaml_actions.append({
                 'id': 'edit_course_yaml',
-                'caption': 'Edit Raw Config',
+                'caption': 'Advanced Edit',
                 'action': self.get_action_url('create_or_edit_settings'),
                 'xsrf_token': self.create_xsrf_token(
                     'create_or_edit_settings')})
+            yaml_actions.append({
+                'id': 'edit_basic_course_settings',
+                'caption': 'Edit',
+                'action': self.get_action_url('edit_basic_course_settings'),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
 
         # Yaml file content.
         yaml_info = []
