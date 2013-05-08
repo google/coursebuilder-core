@@ -18,7 +18,9 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import inspect
 import pkgutil
+from common import schema_fields
 from extensions import tags
+from lxml import etree
 from lxml import html
 from models import config
 import safe_dom
@@ -35,17 +37,35 @@ CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
 class BaseTag(object):
     """Base class for the custom HTML tags."""
 
-    def render(self, node):
+    def render(self, unused_node):
         """Receive a node and return a node."""
-        raise NotImplementedError()
+        return etree.XML('[Unimplemented custom tag]')
 
     def get_icon_url(self):
         """Provide an icon for the visual editor."""
-        raise NotImplementedError()
+        return """
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs
+4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90EGgAIFHpT6h
+8AAAAZdEVYdENvbW1lbnQAQ3JlYXRlZCB3aXRoIEdJTVBXgQ4XAAAC30lEQVRo3u1ZP2sqQRCfVVGUXC
+FqoZAmbSBYxFikMojBD2ErkgdC/AxpAn4A2wRMKptgCrWwSApBEG2DCidcI0gIxogXnXnFI5I87y6Jd6
+seOHDN7LL7+83u/Nk5hoh/wMTCEJHMTMDGGDMzfrCAyWVL4DdCZLy72YwCxhgDIoKXlxcQRREeHx9BFE
+WYTqfg9XohGAxCKBSCnZ0dcDqdhlrFEKlWq8QYIwD49ovFYjQajYiICBF17auLACLSbDaj3d3dObizsz
+Nqt9v09PRE8Xhck0gul9NtONADnojI7XbPAXW73YV55XJZk8TFxcX6TuDk5GQORBAE1StxeXmpSaJery
+99lWBZ69dqtQUgpVJJcW6/39cksL+/v/oTiEajC0DsdjvNZjPF+Q6HQ5PEsrJ0Huj1egs6WZbh+flZcX
+4kEtFcr1KprDaRybKsqL++vlbU+/1+zfVEUVwtAZ/Pp6h/f39X1COi5nqBQGC1iaxUKine5eFwqDg/Fo
+tx8QFdYfTm5uYLiPv7e0JExZD4OV/8/+3t7a0vkcmyTJIk0Xg8Vs0Dr6+vmta/vb1dbR74rTw8PKiCPz
+09XV8m/qmEQiFF8IeHh7oLOq4EEJGazaam5ddajf5ElKJPNps1BDxXAohIjUbjC3CPx0OTycTQfbiewO
+f3QDKZ5LIHVwIf4PP5vGFXZmUErq6uCAAok8lw9TFuBFKp1LxE4GF53eX0d10KSZLg+Pj4X/+SY/ePCw
+HGGIzHYzg6OuLfG+W18MHBAYTDYf7daeLRLtv2RrcE9DdvC4UC5PN5mE6n3DvGhtU+RETn5+cLxVsikT
+BHIru7u1N9uKTTaS4EDItCiAhWq1V13OVywWg02lwfGA6HmuNvb2+b7cQWi8XcUUgQBPB6varjWmMbE0
+Y7nY5q4VYsFs0RRvv9PgmCMI8+VquVWq0WtzBqaC308bMPAGAwGAAiqvZQt8XcthbaELGZ/AbBX0kdVa
+SPB+uxAAAAAElFTkSuQmCC
+"""
 
     def get_schema(self):
         """Get the schema for the tag's attributes using schema_fields."""
-        raise NotImplementedError()
+        reg = schema_fields.FieldRegistry('Unimplemented Custom Tag')
+        return reg
 
 
 def get_tag_bindings():
