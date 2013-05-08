@@ -375,7 +375,7 @@ class AddLesson(DashboardEditor):
 
     def click_rte_add_custom_tag(self):
         self.find_element_by_link_text(
-            'Insert Google Course Builder widget').click()
+            'Insert Google Course Builder component').click()
         return self
 
     def doubleclick_rte_element(self, elt_css_selector):
