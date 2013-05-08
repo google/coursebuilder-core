@@ -115,6 +115,8 @@ class ObjectEditor(object):
             post_url = ''
             post_args = ''
 
+        oeditor_js = os.path.join(os.path.dirname(__file__), 'oeditor.js')
+
         template_values = {
             'schema': schema_json,
             'type_label': type_label,
@@ -128,7 +130,8 @@ class ObjectEditor(object):
             'schema_annotations': cls.format_annotations(annotations),
             'save_method': save_method,
             'auto_return': auto_return,
-            'save_button_caption': save_button_caption
+            'save_button_caption': save_button_caption,
+            'oeditor_js': open(oeditor_js).read()
             }
 
         if delete_url and not read_only:
