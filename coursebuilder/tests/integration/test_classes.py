@@ -239,7 +239,7 @@ class AdminTests(BaseIntegrationTest):
             'YouTube:'
         ).click_rte_add_custom_tag(
         ).select_rte_custom_tag_type(
-            'YouTube Video'
+            'gcb: YouTube Video'
         ).set_rte_lightbox_field(
             'input[name=videoid]', '123'
         ).click_rte_save(
@@ -258,7 +258,7 @@ class AdminTests(BaseIntegrationTest):
             'Forum:'
         ).click_rte_add_custom_tag(
         ).select_rte_custom_tag_type(
-            'Forum'
+            'gcb: Forum'
         ).set_rte_lightbox_field(
             'input[name=forum]', 'abc'
         ).set_rte_lightbox_field(
