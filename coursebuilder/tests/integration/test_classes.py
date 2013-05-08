@@ -29,7 +29,7 @@ class BaseIntegrationTest(suite.TestBase):
 
     TAGS = [suite.TestBase.REQUIRES_INTEGRATION_SERVER]
 
-    LOGIN = 'test'
+    LOGIN = 'test@example.com'
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         self.driver = webdriver.Chrome()
@@ -85,7 +85,7 @@ class SampleCourseTests(BaseIntegrationTest):
 
     def test_admin_can_add_announcement(self):
         uid = self.get_uid()
-        login = 'test-%s' % uid
+        login = 'test-%s@example.com' % uid
         name = 'A Student (%s)' % uid
         title = 'Test announcement (%s)' % uid
 
@@ -111,7 +111,7 @@ class SampleCourseTests(BaseIntegrationTest):
 
     def test_admin_can_change_admin_user_emails(self):
         uid = self.get_uid()
-        login = 'test-%s' % uid
+        login = 'test-%s@example.com' % uid
         email = 'new-admin-%s@foo.com' % uid
 
         self.load_root_page(
@@ -133,7 +133,7 @@ class SampleCourseTests(BaseIntegrationTest):
 class AdminTests(BaseIntegrationTest):
     """Tests for the administrator interface."""
 
-    LOGIN = 'test'
+    LOGIN = 'test@example.com'
 
     def test_default_course_is_read_only(self):
         self.load_root_page(

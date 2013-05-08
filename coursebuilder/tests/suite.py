@@ -40,6 +40,7 @@ import argparse
 import base64
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -95,7 +96,7 @@ class TestBase(unittest.TestCase):
     """Base class for all Course Builder tests."""
 
     REQUIRES_INTEGRATION_SERVER = 1
-    INTEGRATION_SERVER_BASE_URL = 'http://localhost:8000'
+    INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
 
     def setUp(self):
         super(TestBase, self).setUp()
@@ -232,7 +233,15 @@ def start_integration_server(integration_server_start_cmd):
 
 
 def stop_integration_server(server):
-    server.kill()
+    server.kill()  # dev_appserver.py itself.
+
+    # The new dev appserver starts a _python_runtime.py process that isn't
+    # captured by start_integration_server and so doesn't get killed. Until it's
+    # done, our tests will never complete so we kill it manually.
+    pid = int(subprocess.Popen(
+        ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
+    ).communicate()[0][:-1])
+    os.kill(pid, signal.SIGKILL)
 
 
 def fix_sys_path():

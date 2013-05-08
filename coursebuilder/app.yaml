@@ -28,10 +28,6 @@ handlers:
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
-- url: /_ah/dev_admin(/.*)?  # provides interactive console
-  script: $PYTHON_LIB/google/appengine/ext/admin
-  login: admin
-  secure: always
 - url: /.*
   script: main.app
 

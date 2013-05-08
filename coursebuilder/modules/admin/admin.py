@@ -160,7 +160,7 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
             ).add_text('Google App Engine'))
         else:
             nav.append(safe_dom.Element(
-                'a', target='_blank', href='/_ah/admin'
+                'a', target='_blank', href='http://localhost:8000/'
             ).add_text('Google App Engine')).append(safe_dom.Text(' '))
 
         nav.append(safe_dom.Element(
