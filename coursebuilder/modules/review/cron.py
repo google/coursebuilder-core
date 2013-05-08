@@ -70,7 +70,7 @@ class ExpireOldAssignedReviewsHandler(utils.BaseHandler):
         for namespace, units in namespace_to_units.iteritems():
             start_namespace_message = (
                 'Begin processing course in namespace "%s"; %s unit%s found' % (
-                    namespace, len(units), 's' if len(units) > 1 else ''))
+                    namespace, len(units), '' if len(units) == 1 else 's'))
             _LOG.info(start_namespace_message)
             self.response.write('%s\n' % start_namespace_message)
 
