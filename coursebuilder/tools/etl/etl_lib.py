@@ -46,7 +46,7 @@ class Job(object):
     can run arbitrary local computations, but calls to App Engine services
     (db.get() or db.put(), for example) are executed against a remove server.
     This allows you to perform arbitrary computations against your app's data,
-    and to Gconstruct data pipelines that are not possible within the App Engine
+    and to construct data pipelines that are not possible within the App Engine
     execution environment.
 
     When you run your custom job under etl.py in this way, it authenticates

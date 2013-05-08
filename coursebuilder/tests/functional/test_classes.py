@@ -2967,6 +2967,26 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertRaises(
             SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
 
+    def test_run_upload_file_to_course_succeeds(self):
+        """Tests upload of a single local file to a course."""
+        path = os.path.join(self.test_tempdir, 'file')
+        target = 'assets/file'
+        remote_path = os.path.join(appengine_config.BUNDLE_ROOT, target)
+        contents = 'contents'
+
+        with open(path, 'w') as f:
+            f.write(contents)
+
+        args = etl.PARSER.parse_args(
+            ['run', 'tools.etl.examples.UploadFileToCourse'] +
+            self.common_args + ['--job_args=%s %s' % (path, target)])
+        sites.setup_courses(self.raw)
+        context = etl_lib.get_context(args.course_url_prefix)
+
+        self.assertFalse(context.fs.impl.get(remote_path))
+        etl.main(args, environment_class=FakeEnvironment)
+        self.assertEqual(contents, context.fs.impl.get(remote_path).read())
+
     def test_run_write_student_emails_to_file_succeeds(self):
         """Tests args passed to and run of examples.WriteStudentEmailsToFile."""
         email1 = 'email1@example.com'

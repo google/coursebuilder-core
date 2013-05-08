@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Examples of custom extract-transform-load jobs."""
+"""Examples of custom extract-transform-load jobs.
+
+Custom jobs are run via tools/etl/etl.py. You must do environment setup before
+etl.py can be invoked; see its module docstring for details.
+
+See tools/etl/etl_lib.py for documentation on writing Job subclasses.
+"""
 
 __author__ = [
     'johncox@google.com',
@@ -20,18 +26,67 @@ __author__ = [
 
 import os
 import sys
+import appengine_config
 from models import models
 from tools.etl import etl_lib
 from google.appengine.api import namespace_manager
 
 
+class UploadFileToCourse(etl_lib.Job):
+    """Example job that writes a single local file to a remote server.
+
+    Usage:
+
+    etl.py run tools.etl.examples.UploadFileToCourse /course myapp \
+        server.appspot.com --job_args='/path/to/local/file path/to/remote/file'
+
+    Arguments to etl.py are documented in tools/etl/etl.py. You must do some
+    environment configuration (setting up imports, mostly) before you can run
+    etl.py; see the tools/etl/etl.py module-level docstring for details.
+    """
+
+    def _configure_parser(self):
+        # Add custom arguments by manipulating self.parser:
+        self.parser.add_argument(
+            'path', help='Absolute path of the file to upload', type=str)
+        self.parser.add_argument(
+            'target',
+            help=('Internal Course Builder path to upload to (e.g. '
+                  '"assets/img/logo.png")'), type=str)
+
+    def main(self):
+        # By the time main() is invoked, arguments are parsed and available as
+        # self.args. If you need more complicated argument validation than
+        # argparse gives you, do it here:
+        if not os.path.exists(self.args.path):
+            sys.exit('%s does not exist' % self.args.path)
+
+        # Arguments passed to etl.py are also parsed and available as
+        # self.etl_args. Here we use them to figure out the requested course's
+        # context.
+        context = etl_lib.get_context(self.etl_args.course_url_prefix)
+        # Create the absolute path we'll write to.
+        remote_path = os.path.join(
+            appengine_config.BUNDLE_ROOT, self.args.target)
+
+        with open(self.args.path) as f:
+            # Perform the write using the context's filesystem. In a real
+            # program you'd probably want to do additional work (preventing
+            # overwrites of existing files, etc.).
+            context.fs.impl.put(remote_path, f, is_draft=False)
+
+
 class WriteStudentEmailsToFile(etl_lib.Job):
-    """Example job that extracts student emails into a file on disk.
+    """Example job that reads student emails from remote server to local file.
 
     Usage:
 
     etl.py run tools.etl.examples.WriteStudentEmailsToFile /course myapp \
         server.appspot.com --job_args=/path/to/output_file
+
+    Arguments to etl.py are documented in tools/etl/etl.py. You must do some
+    environment configuration (setting up imports, mostly) before you can run
+    etl.py; see the tools/etl/etl.py module-level docstring for details.
     """
 
     def _configure_parser(self):
@@ -57,7 +112,7 @@ class WriteStudentEmailsToFile(etl_lib.Job):
         namespace = etl_lib.get_context(
             self.etl_args.course_url_prefix).get_namespace_name()
 
-        # Because courses are namespaced, we need to change to the requested
+        # Because our models are namespaced, we need to change to the requested
         # course's namespace before doing datastore reads or we won't find its
         # data. Get the current namespace so we can change back when we're done.
         old_namespace = namespace_manager.get_namespace()
