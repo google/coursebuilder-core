@@ -298,17 +298,8 @@ https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
                 safe_dom.Element('th').add_text('Description')
             ))
         content.append(
-            safe_dom.Element('style').add_text("""
-                span.gcb-db-diff, td.gcb-db-diff {
-                    background-color: #A0FFA0;
-                }
-                span.gcb-env-diff, td.gcb-env-diff {
-                    background-color: #A0A0FF;
-                }
-            """)
-            ).append(
-                safe_dom.Element('h3').add_text('All Settings')
-            ).append(table)
+            safe_dom.Element('h3').add_text('All Settings')
+        ).append(table)
 
         def get_style_for(value, value_type):
             """Formats CSS style for given value."""
