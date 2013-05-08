@@ -20,6 +20,9 @@ __author__ = 'Sean Lip'
 import actions
 from actions import assert_contains
 from actions import assert_equals
+from controllers_review import get_review_payload
+from controllers_review import get_review_step_key
+from controllers_review import LEGACY_REVIEW_UNIT_ID
 
 
 class PeerReviewAnalyticsTest(actions.TestBase):
@@ -75,10 +78,33 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         assert_contains('Sample peer review assignment', response.body)
         # JSON code for the completion statistics.
         assert_contains('"[{\\"stats\\": [2]', response.body)
+        actions.logout()
 
-        # TODO(sll): Add the following actions here once we have written the
-        # actions for request_new_review, submit_review::
-        # - Student2 requests a review.
-        # - Student2 submits the review.
-        # The JSON code should then become [1, 1] after the actions above are
-        # completed.
+        # Student2 requests a review.
+        actions.login(student2)
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        review_step_key_2_for_1 = get_review_step_key(response)
+        assert_contains('Assignment to review', response.body)
+
+        # Student2 submits the review.
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
+            get_review_payload('R2for1'))
+        assert_contains(
+            'Your review has been submitted successfully', response.body)
+        actions.logout()
+
+        actions.login(email, is_admin=True)
+        response = self.get('dashboard?action=analytics')
+        assert_contains(
+            'Google &gt; Dashboard &gt; Analytics', response.body)
+
+        compute_form = response.forms['gcb-compute-student-stats']
+        response = self.submit(compute_form)
+        self.execute_all_deferred_tasks()
+
+        response = self.get('dashboard?action=analytics')
+        assert_contains('Peer Review Analytics', response.body)
+        # JSON code for the completion statistics.
+        assert_contains('"[{\\"stats\\": [1, 1]', response.body)
+        actions.logout()

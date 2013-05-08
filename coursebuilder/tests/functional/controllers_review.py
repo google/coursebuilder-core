@@ -28,24 +28,26 @@ from actions import assert_equals
 LEGACY_REVIEW_UNIT_ID = 'ReviewAssessmentExample'
 
 
+def get_review_step_key(response):
+    """Returns the review step key in a request query parameter."""
+    request_query_string = response.request.environ['QUERY_STRING']
+    return request_query_string[request_query_string.find('key=') + 4:]
+
+
+def get_review_payload(identifier, is_draft=False):
+    """Returns a sample review payload."""
+    review = transforms.dumps([
+        {'index': 0, 'type': 'choices', 'value': '0', 'correct': False},
+        {'index': 1, 'type': 'regex', 'value': identifier, 'correct': True}
+    ])
+    return {
+        'answers': review,
+        'is_draft': 'true' if is_draft else 'false',
+    }
+
+
 class PeerReviewControllerTest(actions.TestBase):
     """Test peer review from the Student perspective."""
-
-    def get_review_payload(self, identifier, is_draft=False):
-        """Returns a sample review payload."""
-        review = transforms.dumps([
-            {'index': 0, 'type': 'choices', 'value': '0', 'correct': False},
-            {'index': 1, 'type': 'regex', 'value': identifier, 'correct': True}
-        ])
-        return {
-            'answers': review,
-            'is_draft': 'true' if is_draft else 'false',
-        }
-
-    def get_review_step_key(self, response):
-        """Returns the review step key in a request query parameter."""
-        request_query_string = response.request.environ['QUERY_STRING']
-        return request_query_string[request_query_string.find('key=') + 4:]
 
     def test_submit_assignment(self):
         """Test submission of peer-reviewed assignments."""
@@ -266,7 +268,7 @@ class PeerReviewControllerTest(actions.TestBase):
 
         # Student 2 requests a review, and is given Student 1's assignment.
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        review_step_key_2_for_1 = self.get_review_step_key(response)
+        review_step_key_2_for_1 = get_review_step_key(response)
         assert_contains('S1-1', response.body)
         actions.logout()
 
@@ -362,11 +364,11 @@ class PeerReviewControllerTest(actions.TestBase):
 
         # Student 2 requests a review, and is given Student 1's assignment.
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
-        review_step_key_2_for_1 = self.get_review_step_key(response)
+        review_step_key_2_for_1 = get_review_step_key(response)
         assert_contains('S1-1', response.body)
 
         # Student 2 saves her review as a draft.
-        review_2_for_1_payload = self.get_review_payload(
+        review_2_for_1_payload = get_review_payload(
             'R2for1', is_draft=True)
 
         response = actions.submit_review(
@@ -405,13 +407,13 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains('Assignment to review', response.body)
         assert_contains('not-S1', response.body)
 
-        review_step_key_1_for_someone = self.get_review_step_key(response)
+        review_step_key_1_for_someone = get_review_step_key(response)
 
         response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
         assert_contains('Assignment to review', response.body)
         assert_contains('not-S1', response.body)
 
-        review_step_key_1_for_someone_else = self.get_review_step_key(response)
+        review_step_key_1_for_someone_else = get_review_step_key(response)
 
         response = actions.request_new_review(
             self, LEGACY_REVIEW_UNIT_ID, expected_status_code=403)
@@ -421,7 +423,7 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains('disabled="true"', response.body)
 
         # Student 1 submits both reviews, fulfilling his quota.
-        review_1_for_other_payload = self.get_review_payload('R1for')
+        review_1_for_other_payload = get_review_payload('R1for')
 
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone,
@@ -459,7 +461,7 @@ class PeerReviewControllerTest(actions.TestBase):
 
         response = actions.submit_review(
             self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
-            self.get_review_payload('R2for1'))
+            get_review_payload('R2for1'))
         assert_contains(
             'Your review has been submitted successfully', response.body)
 
@@ -477,3 +479,54 @@ class PeerReviewControllerTest(actions.TestBase):
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
         assert_equals(response.status_int, 200)
         assert_contains('R2for1', response.body)
+
+
+class PeerReviewDashboardTest(actions.TestBase):
+    """Test peer review from the Admin perspective."""
+
+    def test_add_reviewer(self):
+        """Test that admin can add a reviewer, and cannot re-add reviewers."""
+
+        email = 'test_add_reviewer@google.com'
+        name = 'Test Add Reviewer'
+        submission = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'First answer to Q1',
+             'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'First answer to Q3',
+             'correct': True},
+        ])
+        payload = {
+            'answers': submission, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        actions.login(email)
+        actions.register(self, name)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload)
+
+        # There is nothing to review on the review dashboard.
+        response = actions.request_new_review(
+            self, LEGACY_REVIEW_UNIT_ID, expected_status_code=200)
+        assert_does_not_contain('Assignment to review', response.body)
+        assert_contains('Sorry, there are no new submissions ', response.body)
+        actions.logout()
+
+        # The admin assigns the student to review his own work.
+        actions.login(email, is_admin=True)
+        response = actions.add_reviewer(
+            self, LEGACY_REVIEW_UNIT_ID, email, email)
+        assert_equals(response.status_int, 302)
+        response = self.get(response.location)
+        assert_does_not_contain(
+            'Error 412: The reviewer is already assigned', response.body)
+        assert_contains('First answer to Q1', response.body)
+        assert_contains(
+            'Review 1 from test_add_reviewer@google.com', response.body)
+
+        # The admin repeats the 'add reviewer' action. This should fail.
+        response = actions.add_reviewer(
+            self, LEGACY_REVIEW_UNIT_ID, email, email)
+        assert_equals(response.status_int, 302)
+        response = self.get(response.location)
+        assert_contains(
+            'Error 412: The reviewer is already assigned', response.body)

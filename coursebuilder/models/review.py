@@ -71,7 +71,7 @@ class ReviewsProcessor(object):
             impl = self._get_impl(unit_id)
             return impl.add_reviewer(
                 str(unit_id), submission_key, reviewee_key, reviewer_key)
-        except Exception:  # pylint: disable-msg=broad-except
+        except domain.TransitionError:
             return None
 
     def delete_reviewer(self, unit_id, review_step_key):

@@ -55,6 +55,8 @@ from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
 from controllers_review import PeerReviewControllerTest
+from controllers_review import PeerReviewDashboardTest
+from review_stats import PeerReviewAnalyticsTest
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
@@ -3282,7 +3284,8 @@ class TransformsJsonFileTestCase(actions.TestBase):
 
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
-    StaticHandlerTest, AdminAspectTest, PeerReviewControllerTest)
+    StaticHandlerTest, AdminAspectTest, PeerReviewControllerTest,
+    PeerReviewDashboardTest, PeerReviewAnalyticsTest)
 
 MemcacheTest.__bases__ += (InfrastructureTest,) + ALL_COURSE_TESTS
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS

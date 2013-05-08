@@ -20,6 +20,7 @@ import cgi
 import logging
 import os
 import re
+import urllib
 
 import appengine_config
 from controllers import sites
@@ -480,6 +481,32 @@ def submit_review(
 
     response = browser.post('%s/review' % base, args)
     assert_equals(response.status_int, 200)
+    return response
+
+
+def add_reviewer(browser, unit_id, reviewee_email, reviewer_email):
+    """Adds a reviewer to a submission."""
+    url_params = {
+        'action': 'edit_assignment',
+        'reviewee_id': reviewee_email,
+        'unit_id': unit_id,
+    }
+
+    response = browser.get('/dashboard?%s' % urllib.urlencode(url_params))
+
+    # Extract XSRF token from the page.
+    match = re.search(
+        r'<input type="hidden" name="xsrf_token"\s* value="([^"]*)">',
+        response.body)
+    assert match
+    xsrf_token = match.group(1)
+    args = {
+        'xsrf_token': xsrf_token,
+        'reviewer_id': reviewer_email,
+        'reviewee_id': reviewee_email,
+        'unit_id': unit_id,
+    }
+    response = browser.post('/dashboard?action=add_reviewer', args)
     return response
 
 
