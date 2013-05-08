@@ -47,6 +47,86 @@ class ManagerTest(TestBase):
         self.submission_key = self.submission.put()
         self.unit_id = '1'
 
+    def test_delete_reviewer_marks_step_removed_and_decrements_summary(self):
+        """Ensures delete_reviewer does correct bookkeeping."""
+        summary_key = peer.ReviewSummary(
+            assigned_count=1,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'),
+            unit_id='1'
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            reviewer_key=db.Key.from_path(
+                models.Student.kind(), 'reviewer@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'),
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+        ).put()
+        step, summary = db.get([step_key, summary_key])
+        self.assertFalse(step.removed)
+        self.assertEqual(1, summary.assigned_count)
+        deleted_key = review_module.Manager.delete_reviewer(step_key)
+        step, summary = db.get([step_key, summary_key])
+        self.assertEqual(step_key, deleted_key)
+        self.assertTrue(step.removed)
+        self.assertEqual(0, summary.assigned_count)
+
+    def test_delete_reviewer_raises_key_error_when_step_missing(self):
+        self.assertRaises(
+            KeyError, review_module.Manager.delete_reviewer,
+            db.Key.from_path(peer.ReviewStep.kind(), 'missing_key'))
+
+    def test_delete_reviewer_raises_key_error_when_summary_missing(self):
+        """Ensures we raise KeyError if step references a missing summary."""
+        missing_key = db.Key.from_path(
+            peer.ReviewSummary.kind(), 'missing_review_summary_key')
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=missing_key,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            reviewer_key=db.Key.from_path(
+                models.Student.kind(), 'reviewer@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'),
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+        ).put()
+        self.assertRaises(
+            KeyError, review_module.Manager.delete_reviewer, step_key)
+
+    def test_delete_reviewer_raises_value_error_if_already_removed(self):
+        """Ensures we raise ValueError when deleting removed review step."""
+        summary_key = peer.ReviewSummary(
+            assigned_count=1,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'),
+            unit_id='1'
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            reviewer_key=db.Key.from_path(
+                models.Student.kind(), 'reviewer@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'),
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id='1',
+        ).put()
+        self.assertRaises(
+            ValueError, review_module.Manager.delete_reviewer, step_key)
+
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
             self.unit_id, self.submission_key, self.student_key)

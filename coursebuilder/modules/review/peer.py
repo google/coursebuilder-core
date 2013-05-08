@@ -155,6 +155,25 @@ class ReviewSummary(BaseEntity):
         return '%s:%s:%s' % (
             unit_id, submission_key.id_or_name(), reviewee_key.id_or_name())
 
+    def decrement_count(self, state):
+        """Decrements the count for the given state enum; does not save.
+
+        Args:
+            state: string. State indicating counter to decrement; must be one of
+                REVIEW_STATES.
+
+        Raises:
+            ValueError: if state not in REVIEW_STATES.
+        """
+        if state == REVIEW_STATE_ASSIGNED:
+            self.assigned_count -= 1
+        elif state == REVIEW_STATE_COMPLETE:
+            self.completed_count -= 1
+        elif state == REVIEW_STATE_EXPIRED:
+            self.expired_count -= 1
+        else:
+            raise ValueError('%s not in %s' % (state, REVIEW_STATES))
+
 
 class ReviewStep(BaseEntity):
     """Object that represents a single state of a review."""

@@ -18,10 +18,32 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-
+from models import counters
 from models import review
 from modules.review import peer
 from google.appengine.ext import db
+
+
+# In-process increment-only performance counters.
+COUNTER_DELETE_REVIEWER_ALREADY_REMOVED = counters.PerfCounter(
+    'gcb-review-delete-reviewer-already-removed',
+    ('number of times delete_reviewer() called on ReviewStep with removed '
+     'already True'))
+COUNTER_DELETE_REVIEWER_FAILED = counters.PerfCounter(
+    'gcb-review-delete-reviewer-failed',
+    'number of times delete_reviewer() had a fatal error')
+COUNTER_DELETE_REVIEWER_START = counters.PerfCounter(
+    'gcb-review-delete-reviewer-start',
+    'number of times delete_reviewer() has started processing')
+COUNTER_DELETE_REVIEWER_STEP_MISS = counters.PerfCounter(
+    'gcb-review-delete-reviewer-step-miss',
+    'number of times delete_reviewer() found a missing ReviewStep')
+COUNTER_DELETE_REVIEWER_SUCCESS = counters.PerfCounter(
+    'gcb-review-delete-reviewer-success',
+    'number of times delete_reviewer() completed successfully')
+COUNTER_DELETE_REVIEWER_SUMMARY_MISS = counters.PerfCounter(
+    'gcb-review-delete-reviewer-summary-miss',
+    'number of times delete_reviewer() found a missing ReviewSummary')
 
 
 class Error(Exception):
@@ -207,6 +229,56 @@ class Submission(_DomainObject):
 
 class Manager(object):
     """Object that manages the review subsystem."""
+
+    @classmethod
+    def delete_reviewer(cls, review_step_key):
+        """Deletes the given review step.
+
+        We do not physically delete the review step; we mark it as removed,
+        meaning it will be ignored from most queries and the associated review
+        summary will have its corresponding state count decremented. Calling
+        this method on a removed review step is an error.
+
+        Args:
+            review_step_key: db.Key of models.review.ReviewStep. The review step
+                to delete.
+
+        Raises:
+            KeyError: if there is no review step with the given key, or if the
+                step references a review summary that does not exist.
+            ValueError: if called on a review step that has already been marked
+                removed.
+
+        Returns:
+            db.Key of deleted review step.
+        """
+        try:
+            COUNTER_DELETE_REVIEWER_START.inc()
+            key = cls._mark_review_step_removed(review_step_key)
+            COUNTER_DELETE_REVIEWER_SUCCESS.inc()
+            return key
+        except Exception as e:
+            COUNTER_DELETE_REVIEWER_FAILED.inc()
+            raise e
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _mark_review_step_removed(cls, review_step_key):
+        step = db.get(review_step_key)
+        if not step:
+            COUNTER_DELETE_REVIEWER_STEP_MISS.inc()
+            raise KeyError('No review step found with key %s' % review_step_key)
+        if step.removed:
+            COUNTER_DELETE_REVIEWER_ALREADY_REMOVED.inc()
+            raise ValueError('Review step %s already removed' % review_step_key)
+        summary = db.get(step.review_summary_key)
+        if not summary:
+            COUNTER_DELETE_REVIEWER_SUMMARY_MISS.inc()
+            raise KeyError(
+                'No review summary found with key %s' % step.review_summary_key)
+        step.removed = True
+        summary.decrement_count(step.state)
+        return db.put([step, summary])[0]
 
     @classmethod
     def start_review_process_for(cls, unit_id, submission_key, reviewee_key):
