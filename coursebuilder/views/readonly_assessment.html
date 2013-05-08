@@ -1,0 +1,36 @@
+<div>
+  {{review_data['readonly_schema']['assessment']['preamble'] | safe}}
+</div>
+
+<ol>
+  {% for q in review_data['readonly_schema']['assessment']['questionsList'] %}
+
+    {% set outer_loop = loop %}
+    <li>
+      {{ q['questionHTML'] }}
+      <br>
+
+      {% if q['choices'] %}
+        <ul>
+        {% for choice in q['choices'] %}
+          <li>
+            {% if loop.index0 == review_data['submission'][outer_loop.index0] %}
+              <strong>
+            {% endif %}
+
+            {{ choice }}
+
+            {% if loop.index0 == review_data['submission'][outer_loop.index0] %}
+              </strong>
+            {% endif %}
+          </li>
+        {% endfor %}
+        </ul>
+      {% else %}
+        <strong>Answer:</strong>
+        {{ review_data['submission'][outer_loop.index0] }}
+      {% endif %}
+
+    </li>
+  {% endfor %}
+</ol>

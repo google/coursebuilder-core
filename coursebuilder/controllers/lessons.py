@@ -304,6 +304,58 @@ class AssessmentHandler(BaseHandler):
         self.render('assessment.html')
 
 
+class ReviewHandler(BaseHandler):
+    """Handler for generating the submission page for individual reviews."""
+
+    def get(self):
+        """Handles GET requests."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        course = self.get_course()
+        unit, unused_lesson = extract_unit_and_lesson(self)
+
+        try:
+            index = int(self.request.get('index'))
+        except ValueError:
+            self.error(404)
+            return
+
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['unit_id'] = unit.unit_id
+
+        # TODO(sll): Serve the following too once we know where to store the
+        # assessment file generating the review form.
+        # self.template_value['assessment_script_src'] = (
+        #     self.get_course().get_assessment_filename(unit_id))
+
+        reviews = course.get_reviews_processor().get_reviewer_reviews(
+            student, unit)
+
+        submission_list = []
+
+        for item in reviews[index]['submission']:
+            # Check that the indices within the submission are valid.
+            assert item['index'] == len(submission_list)
+            submission_list.append(item['value'])
+
+        self.template_value['review_data'] = {
+            'is_review_assessment': True,
+            'readonly_schema': course.get_assessment_content(unit),
+            'review': reviews[index]['review'],
+            'submission': submission_list,
+        }
+
+        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
+        self.template_value['assessment_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('review-post'))
+        self.template_value['event_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token('event-post'))
+
+        self.render('assessment.html')
+
+
 class ReviewDashboardHandler(BaseHandler):
     """Handler for generating the index of reviews that a student has to do."""
 
@@ -318,8 +370,6 @@ class ReviewDashboardHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('review-dashboard-post'))
 
         self.template_value['reviews'] = reviews
-        self.template_value['can_request_new_review'] = (
-            not ReviewUtils.has_unfinished_reviews(reviews))
 
     def get(self):
         """Handles GET requests."""
@@ -333,6 +383,8 @@ class ReviewDashboardHandler(BaseHandler):
             student, unit)
 
         self.populate_template(unit, reviews)
+        self.template_value['can_request_new_review'] = (
+            not ReviewUtils.has_unfinished_reviews(reviews))
         self.render('review_dashboard.html')
 
     def post(self):
@@ -352,16 +404,21 @@ class ReviewDashboardHandler(BaseHandler):
         reviews = course.get_reviews_processor().get_reviewer_reviews(
             student, unit)
 
+        self.template_value['no_submissions_available'] = True
+
         if not ReviewUtils.has_unfinished_reviews(reviews):
             reviewee_id = reviews_processor.get_new_submission_for_review(
                 student, unit)
             if reviewee_id:
                 reviewee = Student.get_by_email(reviewee_id)
                 reviews_processor.add_reviewer(reviewee, unit, student)
+                self.template_value['no_submissions_available'] = False
+            reviews = course.get_reviews_processor().get_reviewer_reviews(
+                student, unit)
 
-        reviews = course.get_reviews_processor().get_reviewer_reviews(
-            student, unit)
         self.populate_template(unit, reviews)
+        self.template_value['can_request_new_review'] = False
+
         self.render('review_dashboard.html')
 
 

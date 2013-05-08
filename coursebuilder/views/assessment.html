@@ -21,10 +21,21 @@
       assessmentXsrfToken = '{{ assessment_xsrf_token }}';
 
       {% if record_events %}
-      gcbCanPostEvents = true;
-      eventXsrfToken = '{{ event_xsrf_token }}';
+        gcbCanPostEvents = true;
+        eventXsrfToken = '{{ event_xsrf_token }}';
       {% endif %}
     </script>
+
+    {% if review_data is defined %}
+      <p>
+        Click here to return to the <a href="reviewdashboard?unit={{ unit_id }}">review dashboard</a>.
+      </p>
+
+      <div style="border: 1px solid black; margin: 20px; padding: 10px;">
+        {% include 'readonly_assessment.html' %}
+      </div>
+    {% endif %}
+
     <div style="width: 970px;" id="assessmentContents"></div>
   </div>
 </div>

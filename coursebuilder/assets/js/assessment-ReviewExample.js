@@ -22,7 +22,7 @@
 
 var assessment = {
   // HTML to display at the start of the page
-  preamble: '<b>This assessment is a peer review assignment.</b><br><br>From Kee Malesky, of National Public Radio: <br><br>I was asked recently to find reputable sources for the following statement: “During the glory days of radio, it was illegal to mimic the voice of the US president.” Was there actually a law prohibiting that? Or was it just a White House policy, and not a legal issue?',
+  preamble: '<b>This assessment is a peer review assignment.</b><br><br>From Kee Malesky, of National Public Radio: <br><br>I was asked recently to find reputable sources for the following statement: "During the glory days of radio, it was illegal to mimic the voice of the US president." Was there actually a law prohibiting that? Or was it just a White House policy, and not a legal issue?',
 
   // An ordered list of questions, with each question's type implicitly determined by the fields it possesses:
   //   choices              - multiple choice question (with exactly one correct answer)
@@ -31,7 +31,7 @@ var assessment = {
   //   correctAnswerNumeric - freetext numeric match
   questionsList: [
     {questionHTML: 'Was it law or policy?',
-     choices: ['Law', correct('Policy')]},
+     choices: ['Law', 'Policy']},
 
     {questionHTML: 'Explain how you solved the problem. Write your answers in a Google Doc, and include the link to the doc in the space below.',
      correctAnswerRegex: /.*/i

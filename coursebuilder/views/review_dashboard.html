@@ -23,10 +23,11 @@
     <ol>
       {% for review in reviews %}
         <li>
-          Submission {{loop.index}}
-          <!-- TODO(sll): These should be links to the relevant review pages. -->
+          <a href="review?unit={{unit_id}}&amp;index={{loop.index0}}">
+            {{ gettext('Submission %(index)s', index=loop.index) }}
+          </a>
           {% if review.review %}
-            (Completed)
+            {{ gettext('Completed') }}
           {% endif %}
         </li>
       {% endfor %}
@@ -38,9 +39,15 @@
                value="{{ review_dashboard_xsrf_token | escape }}">
         <input type="hidden" name="unit_id" value="{{ unit_id }}">
         <button class="gcb-button" type="submit">
-          {% trans %} Request new review {% endtrans %}
+          {{ gettext('Request new review') }}
         </button>
       </form>
+    {% endif %}
+
+    {% if no_submissions_available is defined and no_submissions_available %}
+      <p>
+        {{ gettext('Sorry, there are no new submissions available to review at this time.') }}
+      </p>
     {% endif %}
 
   </div>

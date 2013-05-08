@@ -418,6 +418,21 @@ class CourseModel12(object):
         assert unit and verify.UNIT_TYPE_ASSESSMENT == unit.type
         return 'assets/js/assessment-%s.js' % unit.unit_id
 
+    def get_assessment_content(self, unit):
+        """Returns the Python dict representation of an assessment."""
+        root_name = 'assessment'
+        context = self._app_context
+        assessment_content = context.fs.impl.get(os.path.join(
+            context.get_home(),
+            'assets/js/assessment-%s.js' % unit.unit_id)).read()
+
+        content, noverify_text = verify.convert_javascript_to_python(
+            assessment_content, root_name)
+        assessment = verify.evaluate_python_expression_from_text(
+            content, root_name, verify.Assessment().scope, noverify_text)
+
+        return assessment
+
     def get_activity_filename(self, unit_id, lesson_id):
         """Returns activity base filename."""
         return 'assets/js/activity-%s.%s.js' % (unit_id, lesson_id)
@@ -1010,6 +1025,19 @@ class CourseModel13(object):
         # TODO(sll): Generalize this using a setting in the course dashboard UI.
         return AUTO_GRADER
 
+    def get_assessment_content(self, unit):
+        """Returns the Python dict representation of an assessment."""
+        path = self._app_context.fs.impl.physical_to_logical(
+            self.get_assessment_filename(unit.unit_id))
+        root_name = 'assessment'
+        assessment_content = self.app_context.fs.get(path)
+
+        content, noverify_text = verify.convert_javascript_to_python(
+            assessment_content, root_name)
+        assessment = verify.evaluate_python_expression_from_text(
+            content, root_name, verify.Assessment().scope, noverify_text)
+        return assessment
+
     def set_assessment_content(self, unit, assessment_content, errors=None):
         """Updates the content of an assessment."""
         if errors is None:
@@ -1392,6 +1420,10 @@ class Course(object):
 
     def reorder_units(self, order_data):
         return self._model.reorder_units(order_data)
+
+    def get_assessment_content(self, unit):
+        """Returns the Python dict representation of an assessment."""
+        return self._model.get_assessment_content(unit)
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(
