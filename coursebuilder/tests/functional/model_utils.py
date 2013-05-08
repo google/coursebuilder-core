@@ -18,6 +18,7 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+from models import counters
 from models import utils
 from tests.functional import actions
 from google.appengine.ext import db
@@ -67,13 +68,17 @@ class QueryMapperTest(actions.TestBase):
 
     def test_run_process_more_than_1000_entities(self):
         """Tests we can process more entities than the old limit of 1k."""
+        counter = counters.PerfCounter(
+            'test-run-process-more-than-1000-entities-counter',
+            'counter for testing increment by QueryMapper')
         db.put([Model() for _ in xrange(1001)])
         # Also pass custom args to QueryMapper ctor.
         num_processed = utils.QueryMapper(
-            Model.all(), batch_size=50, report_every=0
+            Model.all(), batch_size=50, counter=counter, report_every=0
         ).run(process, 1, string='foo')
         last_written = Model.all().order('-create_date').get()
 
+        self.assertEqual(1001, counter.value)
         self.assertEqual(1001, num_processed)
         self.assertEqual(1, last_written.number)
         self.assertEqual('foo', last_written.string)

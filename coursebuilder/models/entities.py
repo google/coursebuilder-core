@@ -36,6 +36,29 @@ DB_DELETE = PerfCounter(
     'A number of times an object was deleted from datastore.')
 
 
+def delete(keys):
+    """Wrapper around db.delete that counts entities we attempted to get."""
+    DB_DELETE.inc(increment=_count(keys))
+    return db.delete(keys)
+
+
+def get(keys):
+    """Wrapper around db.get that counts entities we attempted to get."""
+    DB_GET.inc(increment=_count(keys))
+    return db.get(keys)
+
+
+def put(keys):
+    """Wrapper around db.put that counts entities we attempted to put."""
+    DB_PUT.inc(increment=_count(keys))
+    return db.put(keys)
+
+
+def _count(keys):
+    # App engine accepts key or list of key; count entities found.
+    return len(keys) if isinstance(keys, (list, tuple)) else 1
+
+
 class BaseEntity(db.Model):
     """A common class to all datastore entities."""
 

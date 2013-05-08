@@ -51,13 +51,15 @@ class QueryMapper(object):
         mapper.run(map_fn, 'foo', keyword_arg='bar')
     """
 
-    def __init__(self, query, batch_size=20, report_every=None):
+    def __init__(self, query, batch_size=20, counter=None, report_every=None):
         """Constructs a new QueryMapper.
 
         Args:
             query: db.Query. The query to run. Cannot be reused after the
                 query mapper's run() method is invoked.
             batch_size: int. Number of results to fetch per batch.
+            counter: entities.PerfCounter or None. If given, the counter to
+                increment once for every entity retrieved by query.
             report_every: int or None. If specified, every report_every results
                 we will log the number of results processed at level info. By
                 default we will do this every 10 batches. Set to 0 to disable
@@ -67,6 +69,7 @@ class QueryMapper(object):
             report_every = 10 * batch_size
 
         self._batch_size = batch_size
+        self._counter = counter
         self._query = query
         self._report_every = report_every
 
@@ -108,7 +111,11 @@ class QueryMapper(object):
         count = 0
         empty = True
 
-        for result in self._query.fetch(limit=self._batch_size):
+        batch = self._query.fetch(limit=self._batch_size)
+        if self._counter:
+            self._counter.inc(increment=len(batch))
+
+        for result in batch:
             try:
                 fn(result, *fn_args, **fn_kwargs)
             except StopMapping:

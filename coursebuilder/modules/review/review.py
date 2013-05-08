@@ -22,6 +22,7 @@ import datetime
 import random
 
 from models import counters
+from models import entities
 from models import student_work
 from models import utils
 from modules.review import domain
@@ -59,6 +60,11 @@ COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED = counters.PerfCounter(
     'gcb-pr-add-reviewer-unremoved-step-failed',
     ('number of times add_reviewer() failed on an unremoved step with a fatal '
      'error'))
+
+COUNTER_ASSIGNMENT_CANDIDATES_QUERY_RESULTS_RETURNED = counters.PerfCounter(
+    'gcb-pr-assignment-candidates-query-results-returned',
+    ('number of results returned by the query returned by '
+     'get_assignment_candidates_query()'))
 
 COUNTER_DELETE_REVIEWER_ALREADY_REMOVED = counters.PerfCounter(
     'gcb-pr-review-delete-reviewer-already-removed',
@@ -113,6 +119,10 @@ COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_START = counters.PerfCounter(
 COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS = counters.PerfCounter(
     'gcb-pr-expire-old-reviews-for-unit-success',
     'number of times expire_old_reviews_for_unit() completed successfully')
+
+COUNTER_EXPIRY_QUERY_KEYS_RETURNED = counters.PerfCounter(
+    'gcb-pr-expiry-query-keys-returned',
+    'number of keys returned by the query returned by get_expiry_query()')
 
 COUNTER_GET_NEW_REVIEW_ALREADY_ASSIGNED = counters.PerfCounter(
     'gcb-pr-get-new-review-already-assigned',
@@ -299,7 +309,7 @@ class Manager(object):
             review_summary_key=summary_key, reviewee_key=reviewee_key,
             reviewer_key=reviewer_key, state=domain.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id)
-        step_key, written_summary_key = db.put([step, summary])
+        step_key, written_summary_key = entities.put([step, summary])
 
         if summary_key != written_summary_key:
             COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
@@ -314,7 +324,7 @@ class Manager(object):
         should_increment_human = False
         should_increment_reassigned = False
         should_increment_unremoved = False
-        summary = peer.ReviewSummary.get(step.review_summary_key)
+        summary = entities.get(step.review_summary_key)
 
         if not summary:
             COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
@@ -352,7 +362,7 @@ class Manager(object):
             should_increment_human = True
             step.assigner_kind = domain.ASSIGNER_KIND_HUMAN
 
-        step_key = db.put([step, summary])[0]
+        step_key = entities.put([step, summary])[0]
 
         if should_increment_human:
             COUNTER_ADD_REVIEWER_SET_ASSIGNER_KIND_HUMAN.inc()
@@ -397,7 +407,7 @@ class Manager(object):
     @classmethod
     @db.transactional(xg=True)
     def _mark_review_step_removed(cls, review_step_key):
-        step = db.get(review_step_key)
+        step = entities.get(review_step_key)
         if not step:
             COUNTER_DELETE_REVIEWER_STEP_MISS.inc()
             raise KeyError(
@@ -406,7 +416,7 @@ class Manager(object):
             COUNTER_DELETE_REVIEWER_ALREADY_REMOVED.inc()
             raise domain.RemovedError(
                 'Cannot remove step %s' % repr(review_step_key), step.removed)
-        summary = db.get(step.review_summary_key)
+        summary = entities.get(step.review_summary_key)
 
         if not summary:
             COUNTER_DELETE_REVIEWER_SUMMARY_MISS.inc()
@@ -416,7 +426,7 @@ class Manager(object):
 
         step.removed = True
         summary.decrement_count(step.state)
-        return db.put([step, summary])[0]
+        return entities.put([step, summary])[0]
 
     @classmethod
     def expire_review(cls, review_step_key):
@@ -449,7 +459,7 @@ class Manager(object):
     @classmethod
     @db.transactional(xg=True)
     def _transition_state_to_expired(cls, review_step_key):
-        step = db.get(review_step_key)
+        step = entities.get(review_step_key)
 
         if not step:
             COUNTER_EXPIRE_REVIEW_STEP_MISS.inc()
@@ -469,7 +479,7 @@ class Manager(object):
                 'Cannot transition step %s' % repr(review_step_key),
                 step.state, domain.REVIEW_STATE_EXPIRED)
 
-        summary = db.get(step.review_summary_key)
+        summary = entities.get(step.review_summary_key)
 
         if not summary:
             COUNTER_EXPIRE_REVIEW_SUMMARY_MISS.inc()
@@ -480,7 +490,7 @@ class Manager(object):
         summary.decrement_count(step.state)
         step.state = domain.REVIEW_STATE_EXPIRED
         summary.increment_count(step.state)
-        return db.put([step, summary])[0]
+        return entities.put([step, summary])[0]
 
     @classmethod
     def expire_old_reviews_for_unit(cls, review_window_mins, unit_id):
@@ -497,7 +507,8 @@ class Manager(object):
             to update.
         """
         query = cls.get_expiry_query(review_window_mins, unit_id)
-        mapper = utils.QueryMapper(query, report_every=100)
+        mapper = utils.QueryMapper(
+            query, counter=COUNTER_EXPIRY_QUERY_KEYS_RETURNED, report_every=100)
         expired_keys = []
         exception_keys = []
 
@@ -582,11 +593,6 @@ class Manager(object):
             peer.ReviewStep.change_date.name)
 
     @classmethod
-    def get_review_summaries_query(cls):
-        """Gets a db.Query that returns a list of review summaries."""
-        return peer.ReviewSummary.all()
-
-    @classmethod
     def get_new_review(
         cls, unit_id, reviewer_key, candidate_count=20, max_retries=5):
         """Attempts to assign a review to a reviewer.
@@ -635,10 +641,12 @@ class Manager(object):
         try:
             COUNTER_GET_NEW_REVIEW_START.inc()
             # Filter out candidates that are for submissions by the reviewer.
+            raw_candidates = cls.get_assignment_candidates_query(unit_id).fetch(
+                candidate_count)
+            COUNTER_ASSIGNMENT_CANDIDATES_QUERY_RESULTS_RETURNED.inc(
+                increment=len(raw_candidates))
             candidates = [
-                candidate for candidate in
-                cls.get_assignment_candidates_query(unit_id).fetch(
-                    candidate_count)
+                candidate for candidate in raw_candidates
                 if candidate.reviewee_key != reviewer_key]
 
             retries = 0
@@ -673,7 +681,7 @@ class Manager(object):
     def _attempt_review_assignment(
         cls, review_summary_key, reviewer_key, last_change_date):
         COUNTER_GET_NEW_REVIEW_ASSIGNMENT_ATTEMPTED.inc()
-        summary = db.get(review_summary_key)
+        summary = entities.get(review_summary_key)
         if not summary:
             raise KeyError('No review summary found with key %s' % repr(
                 review_summary_key))
@@ -714,7 +722,7 @@ class Manager(object):
                 return
 
         summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
-        return db.put([step, summary])[0]
+        return entities.put([step, summary])[0]
 
     @classmethod
     def get_reviews_by_keys(cls, keys):
@@ -727,7 +735,7 @@ class Manager(object):
             [domain.Review or None]. Missed keys return None in place in result
             list.
         """
-        return [cls._make_domain_review(model) for model in db.get(keys)]
+        return [cls._make_domain_review(model) for model in entities.get(keys)]
 
     @classmethod
     def _make_domain_review(cls, model):
@@ -783,7 +791,8 @@ class Manager(object):
             [domain.ReviewStep or None]. Missed keys return None in place in
             result list.
         """
-        return [cls._make_domain_review_step(model) for model in db.get(keys)]
+        return [
+            cls._make_domain_review_step(model) for model in entities.get(keys)]
 
     @classmethod
     def _make_domain_review_step(cls, model):
@@ -828,7 +837,7 @@ class Manager(object):
             submission_key = db.Key.from_path(
                 student_work.Submission.kind(),
                 student_work.Submission.key_name(unit_id, reviewee_key))
-            submission = db.get(submission_key)
+            submission = entities.get(submission_key)
             if not submission:
                 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS.inc()
                 return
@@ -862,7 +871,8 @@ class Manager(object):
             [domain.Submission or None]. Missed keys return None in place in
             result list.
         """
-        return [cls._make_domain_submission(model) for model in db.get(keys)]
+        return [
+            cls._make_domain_submission(model) for model in entities.get(keys)]
 
     @classmethod
     def _make_domain_submission(cls, model):
@@ -966,7 +976,7 @@ class Manager(object):
         should_increment_assigned_to_completed = False
         should_increment_expired_to_completed = False
 
-        step = db.get(review_step_key)
+        step = entities.get(review_step_key)
         if not step:
             COUNTER_WRITE_REVIEW_STEP_MISS.inc()
             raise KeyError(
@@ -980,7 +990,7 @@ class Manager(object):
                 step.state, domain.REVIEW_STATE_COMPLETED)
 
         if step.review_key:
-            review_to_update = db.get(step.review_key)
+            review_to_update = entities.get(step.review_key)
             if review_to_update:
                 should_increment_updated_existing_review = True
         else:
@@ -997,7 +1007,7 @@ class Manager(object):
             raise domain.ConstraintError(
                 'No review found with key %s' % repr(step.review_key))
 
-        summary = db.get(step.review_summary_key)
+        summary = entities.get(step.review_summary_key)
         if not summary:
             COUNTER_WRITE_REVIEW_SUMMARY_MISS.inc()
             raise domain.ConstraintError(
@@ -1007,7 +1017,7 @@ class Manager(object):
         review_to_update.contents = review_payload
         updated_step_key = None
         if not mark_completed:
-            _, updated_step_key = db.put([review_to_update, step])
+            _, updated_step_key = entities.put([review_to_update, step])
         else:
             if step.state == domain.REVIEW_STATE_ASSIGNED:
                 should_increment_assigned_to_completed = True
@@ -1018,7 +1028,8 @@ class Manager(object):
             step.state = domain.REVIEW_STATE_COMPLETED
             summary.increment_count(step.state)
 
-            _, updated_step_key, _ = db.put([review_to_update, step, summary])
+            _, updated_step_key, _ = entities.put(
+                [review_to_update, step, summary])
 
         if should_increment_created_new_review:
             COUNTER_WRITE_REVIEW_CREATED_NEW_REVIEW.inc()
