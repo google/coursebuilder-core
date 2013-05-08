@@ -399,7 +399,7 @@ class StudentProfileHandler(BaseHandler):
 
         course = self.get_course()
 
-        self.template_value['navbar'] = {}
+        self.template_value['navbar'] = {'myprofile': True}
         self.template_value['student'] = student
         self.template_value['date_enrolled'] = student.enrolled_on.strftime(
             HUMAN_READABLE_DATE_FORMAT)

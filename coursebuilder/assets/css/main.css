@@ -452,11 +452,11 @@ a.gcb-button-action {
   text-shadow: 0 -1px 1px #555d72;
 }
 
-#gcb-nav-x li, #gcb-nav-x li.active a {
+#gcb-nav-x li.active a {
   font-weight: bold;
 }
-
-#gcb-nav-x li.active {
+#gcb-nav-x li.active a:hover {
+  test-decoration: none !important;
 }
 
 #gcb-nav-x li {
