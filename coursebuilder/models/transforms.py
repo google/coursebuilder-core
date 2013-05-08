@@ -185,11 +185,16 @@ def value_to_string(value, value_type):
         raise ValueError('Unknown type: %s' % value_type)
 
 
-def dict_to_instance(adict, instance):
+def dict_to_instance(adict, instance, defaults=None):
     """Populates instance attributes using data dictionary."""
     for key, unused_value in instance.__dict__.iteritems():
         if not key.startswith('_'):
-            setattr(instance, key, adict[key])
+            if key in adict:
+                setattr(instance, key, adict[key])
+            elif defaults and key in defaults:
+                setattr(instance, key, defaults[key])
+            else:
+                raise KeyError(key)
 
 
 def instance_to_dict(instance):

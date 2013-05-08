@@ -148,9 +148,8 @@ HUMAN_GRADED_ASSESSMENT_KEY_LIST = [
 # later (via the web interface).
 LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
 
-# This value is meant to be used for auto-graded assessments in the sample
-# Power Searching course.
-LEGACY_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
+# This value is the default workflow for assessment grading,
+DEFAULT_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
     GRADER_KEY: AUTO_GRADER
 })
 
@@ -384,7 +383,7 @@ class Unit12(object):
         if self.unit_id == LEGACY_REVIEW_ASSESSMENT:
             return LEGACY_HUMAN_GRADER_WORKFLOW
         else:
-            return LEGACY_AUTO_GRADER_WORKFLOW
+            return DEFAULT_AUTO_GRADER_WORKFLOW
 
     @property
     def workflow(self):
@@ -598,7 +597,7 @@ class Unit13(object):
         self.weight = 0
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
-        self.workflow_yaml = ''
+        self.workflow_yaml = DEFAULT_AUTO_GRADER_WORKFLOW
 
     @property
     def index(self):
@@ -680,7 +679,8 @@ class PersistentCourse13(object):
         if unit_dicts:
             for unit_dict in unit_dicts:
                 unit = Unit13()
-                transforms.dict_to_instance(unit_dict, unit)
+                defaults = {'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW}
+                transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
         self.lessons = []
@@ -733,7 +733,7 @@ class PersistentCourse13(object):
 
 
 class CachedCourse13(AbstractCachedObject):
-    """A representation of a Course12 optimized for storing in memcache."""
+    """A representation of a Course13 optimized for storing in memcache."""
 
     VERSION = COURSE_MODEL_VERSION_1_3
 
@@ -1403,9 +1403,8 @@ class Workflow(object):
         return datetime.strptime(date_str, ISO_8601_DATE_FORMAT)
 
     def get_grader(self):
-        """Returns the associated grader; defaults to AUTO_GRADER."""
-        grader = self.to_dict().get(GRADER_KEY)
-        return grader if grader else AUTO_GRADER
+        """Returns the associated grader."""
+        return self.to_dict().get(GRADER_KEY)
 
     def get_matcher(self):
         return self.to_dict().get(MATCHER_KEY)
@@ -1428,7 +1427,7 @@ class Workflow(object):
     def get_review_window_mins(self):
         return self.to_dict().get(REVIEW_WINDOW_MINS_KEY)
 
-    def ensure_value_is_nonnegative_int(self, workflow_dict, key, errors):
+    def _ensure_value_is_nonnegative_int(self, workflow_dict, key, errors):
         """Checks that workflow_dict[key] is a non-negative integer."""
         value = workflow_dict[key]
         if not isinstance(value, int):
@@ -1471,9 +1470,9 @@ class Workflow(object):
                         'invalid matcher, should be one of: %s' %
                         ', '.join(ALLOWED_MATCHERS))
 
-                self.ensure_value_is_nonnegative_int(
+                self._ensure_value_is_nonnegative_int(
                     workflow_dict, REVIEW_MIN_COUNT_KEY, workflow_errors)
-                self.ensure_value_is_nonnegative_int(
+                self._ensure_value_is_nonnegative_int(
                     workflow_dict, REVIEW_WINDOW_MINS_KEY, workflow_errors)
 
                 try:
