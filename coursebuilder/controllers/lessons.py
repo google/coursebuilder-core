@@ -16,6 +16,7 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import datetime
 import logging
 import urllib
 import urlparse
@@ -337,6 +338,9 @@ class AssessmentHandler(BaseHandler):
         unit_id = self.request.get('name')
         course = self.get_course()
         unit = course.find_unit_by_id(unit_id)
+        if not unit:
+            self.error(404)
+            return
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit_id
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
@@ -348,24 +352,31 @@ class AssessmentHandler(BaseHandler):
         self.template_value['grader'] = unit.workflow.get_grader()
         self.template_value['matcher'] = unit.workflow.get_matcher()
 
+        readonly_view = False
+        due_date_exceeded = False
+
         submission_due_date = unit.workflow.get_submission_due_date()
         if submission_due_date:
             self.template_value['submission_due_date'] = (
                 submission_due_date.strftime(HUMAN_READABLE_DATE_FORMAT))
 
-        readonly_view = False
+            time_now = datetime.datetime.now()
+            if time_now > submission_due_date:
+                readonly_view = True
+                due_date_exceeded = True
+                self.template_value['due_date_exceeded'] = True
+
         if course.needs_human_grader(unit):
             rp = course.get_reviews_processor()
             submission_contents = rp.get_submission_contents(
                 unit.unit_id, student.get_key())
-            if submission_contents:
+            if submission_contents or due_date_exceeded:
                 readonly_view = True
-                readonly_student_assessment = create_readonly_assessment_params(
-                    course.get_assessment_content(unit),
-                    ReviewUtils.get_answer_list(submission_contents)
-                )
                 self.template_value['readonly_student_assessment'] = (
-                    readonly_student_assessment
+                    create_readonly_assessment_params(
+                        course.get_assessment_content(unit),
+                        ReviewUtils.get_answer_list(submission_contents)
+                    )
                 )
 
             review_steps_by = rp.get_review_steps_by(
@@ -423,7 +434,7 @@ class ReviewHandler(BaseHandler):
         unit, unused_lesson = extract_unit_and_lesson(self)
 
         review_step_key = self.request.get('key')
-        if not review_step_key:
+        if not unit or not review_step_key:
             self.error(404)
             return
         review_step_key = db.Key(encoded=review_step_key)
@@ -432,6 +443,10 @@ class ReviewHandler(BaseHandler):
             review_step = rp.get_review_steps_by_keys(
                 unit.unit_id, [review_step_key])[0]
         except KeyError:
+            self.error(404)
+            return
+
+        if not review_step:
             self.error(404)
             return
 
@@ -465,7 +480,14 @@ class ReviewHandler(BaseHandler):
         rev = rp.get_reviews_by_keys(
             unit.unit_id, [review_key])[0] if review_key else None
 
-        if review_step.state == domain.REVIEW_STATE_COMPLETED:
+        time_now = datetime.datetime.now()
+        show_readonly_review = (
+            review_step.state == domain.REVIEW_STATE_COMPLETED or
+            time_now > review_due_date)
+
+        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
+
+        if show_readonly_review:
             readonly_review_form = create_readonly_assessment_params(
                 course.get_review_form_content(unit),
                 ReviewUtils.get_answer_list(rev)
@@ -505,6 +527,9 @@ class ReviewHandler(BaseHandler):
         review_step_key = db.Key(encoded=review_step_key)
 
         unit = self.find_unit_by_id(unit_id)
+        if not unit:
+            self.error(404)
+            return
 
         try:
             review_step = rp.get_review_steps_by_keys(
@@ -516,6 +541,16 @@ class ReviewHandler(BaseHandler):
         # Check that the student is allowed to review this submission.
         if not student.has_same_key_as(review_step.reviewer_key):
             self.error(404)
+            return
+
+        # Check that the review due date has not passed.
+        time_now = datetime.datetime.now()
+        review_due_date = unit.workflow.get_review_due_date()
+        if time_now > review_due_date:
+            logging.error(
+                'Student %s submitted a review at time %s after the deadline '
+                '%s.', student.user_id, time_now, review_due_date)
+            self.error(403)
             return
 
         mark_completed = (self.request.get('is_draft') == 'false')
@@ -558,6 +593,9 @@ class ReviewDashboardHandler(BaseHandler):
             self.template_value['review_due_date'] = review_due_date.strftime(
                 HUMAN_READABLE_DATE_FORMAT)
 
+        time_now = datetime.datetime.now()
+        self.template_value['due_date_exceeded'] = (time_now > review_due_date)
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()
@@ -567,6 +605,9 @@ class ReviewDashboardHandler(BaseHandler):
         course = self.get_course()
         rp = course.get_reviews_processor()
         unit, _ = extract_unit_and_lesson(self)
+        if not unit:
+            self.error(404)
+            return
         # Check that the student has submitted the corresponding assignment.
         if not rp.does_submission_exist(unit.unit_id, student.get_key()):
             logging.error(
@@ -603,6 +644,10 @@ class ReviewDashboardHandler(BaseHandler):
 
         course = self.get_course()
         unit, unused_lesson = extract_unit_and_lesson(self)
+        if not unit:
+            self.error(404)
+            return
+
         rp = course.get_reviews_processor()
         review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
 
@@ -612,6 +657,17 @@ class ReviewDashboardHandler(BaseHandler):
                 'Student %s requested an assignment to review before '
                 'submitting the assignment for unit %s (%s).',
                 student.user_id, unit.title, unit.unit_id)
+            self.error(403)
+            return
+
+        # Check that the review due date has not passed.
+        time_now = datetime.datetime.now()
+        review_due_date = unit.workflow.get_review_due_date()
+        if time_now > review_due_date:
+            logging.error(
+                'Student %s requested an assignment to review at time %s '
+                'after the deadline %s.', student.user_id, time_now,
+                review_due_date)
             self.error(403)
             return
 

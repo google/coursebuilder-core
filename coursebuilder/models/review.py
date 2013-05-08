@@ -136,6 +136,9 @@ class ReviewUtils(object):
     @classmethod
     def get_answer_list(cls, submission):
         """Compiles a list of the student's answers from a submission."""
+        if not submission:
+            return []
+
         answer_list = []
         for item in submission:
             # Check that the indices within the submission are valid.

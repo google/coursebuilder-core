@@ -22,11 +22,19 @@
     {# I18N: Header text for a list of assignments that can be reviewed by the student. #}
     <h2>{{ gettext('Assignments for your review') }}</h2>
 
+    {% if due_date_exceeded %}
+      <p>
+        <strong>
+          {# I18N: Text shown to students when they visit their list of reviews to be done, but the due date has passed. #}
+          {{ gettext('The due date for submitting reviews has passed.') }}
+        </strong>
+      </p>
+    {% endif %}
+
     <p>
       <em>
         {# I18N: Instructions for a student being asked to do a review. #}
-        {{ gettext('All reviews are due by %(review_due_date)s.',
-                   review_due_date=review_due_date) }}
+        {{ gettext('All reviews are due by %(review_due_date)s.', review_due_date=review_due_date) }}
 
         {% if review_min_count == 1 %}
           {# I18N: Instructions for a student being asked to do a review. #}
@@ -54,25 +62,27 @@
       {% endfor %}
     </ol>
 
-    <form action="reviewdashboard?unit={{unit_id}}" method="post">
-      <input type="hidden" name="xsrf_token"
-             value="{{ review_dashboard_xsrf_token | escape }}">
-      <input type="hidden" name="unit_id" value="{{ unit_id }}">
-      <button class="gcb-button" type="submit"
-        {% if not can_request_new_review %}
-          disabled="true"
-        {% endif %}
-      >
-        {# I18N: Button that a student can click to request a new assignment to review. #}
-        {{ gettext('Review another assignment') }}
-      </button>
-    </form>
+    {% if not due_date_exceeded %}
+      <form action="reviewdashboard?unit={{unit_id}}" method="post">
+        <input type="hidden" name="xsrf_token"
+               value="{{ review_dashboard_xsrf_token | escape }}">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}">
+        <button class="gcb-button" type="submit"
+          {% if not can_request_new_review %}
+            disabled="true"
+          {% endif %}
+        >
+          {# I18N: Button that a student can click to request a new assignment to review. #}
+          {{ gettext('Review another assignment') }}
+        </button>
+      </form>
 
-    {% if no_submissions_available is defined and no_submissions_available %}
-      <p>
-        {# I18N: Text shown after a student has asked for a new assignment to review when there are no assignments left to review. #}
-        {{ gettext('Sorry, there are no new submissions available for you to review at this time.') }}
-      </p>
+      {% if no_submissions_available is defined and no_submissions_available %}
+        <p>
+          {# I18N: Text shown after a student has asked for a new assignment to review when there are no assignments left to review. #}
+          {{ gettext('Sorry, there are no new submissions available for you to review at this time.') }}
+        </p>
+      {% endif %}
     {% endif %}
 
   </div>

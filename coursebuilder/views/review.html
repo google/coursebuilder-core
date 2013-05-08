@@ -45,11 +45,18 @@
     </p>
 
     <p>
-      <strong>
-        {# I18N: Shown to a student who is asked to complete a peer review of another student's assignment. #}
-        {{ gettext('Due date for this review: ') }}
-      </strong>
-      {{ review_due_date }}.
+      {% if due_date_exceeded %}
+        <strong>
+          {# I18N: Text shown to students when they visit a review submission page for which the due date has passed. #}
+          {{ gettext('The due date for submitting this review has passed. It was due on %(review_due_date)s.', review_due_date=review_due_date) }}
+        </strong>
+      {% else %}
+        <strong>
+          {# I18N: Shown to a student who is asked to complete a peer review of another student's assignment. #}
+          {{ gettext('Due date for this review: ') }}
+        </strong>
+        {{ review_due_date }}.
+      {% endif %}
     </p>
 
     <p>
