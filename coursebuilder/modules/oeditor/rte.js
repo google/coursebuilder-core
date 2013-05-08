@@ -28,12 +28,12 @@ function getGcbRteDefs(env, Dom, Editor) {
 
       // Make a button to toggle between plain text and rich text
       var showRteText = "Rich Text";
-      var hideRteText = "Plain Text";
+      var hideRteText = "<HTML>";
       var showRteFlag = false;
       var toggle = document.createElement("div");
       var toggleText = document.createTextNode(showRteText);
       toggle.appendChild(toggleText);
-      Dom.addClass(toggle, "rte-control");
+      toggle.className = "rte-control inputEx-Button";
 
       var self = this;
       toggle.onclick = function() {
@@ -199,8 +199,8 @@ function getGcbRteDefs(env, Dom, Editor) {
       var that = this;
       var options = this.options;
       var _def = {
-        height: '300px',
-        width: '500px',
+        height: '350px',
+        width: '510px',
         dompath: true,
       };
       // Merge options.opts into the default options
