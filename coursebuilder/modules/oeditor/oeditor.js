@@ -124,10 +124,26 @@ function keepPopupInView(Y) {
   }
 }
 
+/**
+ * Define a YUI class for a Google Course Builder rich text editor.
+ */
+var GcbRteField = function(options) {
+  GcbRteField.superclass.constructor.call(this, options);
+};
+
 function onPageLoad(env) {
-  YUI.add("gcb-rte", bindGcbRteField, '3.1.0', {
-    requires: ['inputex-field', 'yui2-editor']
-  });
+  /**
+   * Define a rich text editor widget in the module "gcb-rte".
+   */
+  YUI.add("gcb-rte",
+    function(Y) {
+      Y.extend(GcbRteField, Y.inputEx.Field, 
+          getGcbRteDefs(env, Y.DOM, Y.YUI2.widget.SimpleEditor));
+      Y.inputEx.registerType("html", GcbRteField, []);
+    },
+    '3.1.0',
+    {requires: ['inputex-field', 'yui2-editor']}
+  );
 
   YUI(getYuiConfig(env.bundle_lib_files)).use(
     env.required_modules,
@@ -145,33 +161,18 @@ function onPageLoad(env) {
 }
 
 /**
- * Define a rich text editor widget in the module "gcb-rte".
+ * Define the methods of the GCB rich text editor here. They are bound
+ * immediately below.
  */
-function bindGcbRteField(Y) {
-
-  var inputEx = Y.inputEx,
-      Dom = Y.DOM;
-
-  /**
-   * Define a YUI class for a Google Course Builder rich text editor.
-   */
-  var GcbRteField = function(options) {
-    GcbRteField.superclass.constructor.call(this, options);
-  };
-
-  /**
-   * Define the methods of the GCB rich text editor here. They are bound
-   * immediately below.
-   */
-  var gcbRteDefs = {
+var getGcbRteDefs = function(env, Dom, Editor) {
+  return {
     setOptions: function(options) {
       GcbRteField.superclass.setOptions.call(this, options);
       this.options.opts = options.opts || {};
       this.options.editorType = options.editorType;
     },
-    renderComponent: function() {
-      var self = this;
 
+    renderComponent: function() {
       // Make a unique id for the field
       if (!GcbRteField.idCounter) {
         GcbRteField.idCounter = 0;
@@ -180,11 +181,12 @@ function bindGcbRteField(Y) {
       GcbRteField.idCounter += 1;
 
       // Insert the text area for plain text editing
-      var attributes = {id: this.id};
+      this.el = document.createElement('textarea');
+      this.el.setAttribute('id', this.id);
       if(this.options.name) {
-        attributes.name = this.options.name;
+        this.el.setAttribute('name', this.options.name);
       }
-      this.el = inputEx.cn('textarea', attributes);
+
       this.fieldContainer.appendChild(this.el);
 
       // Make a button to toggle between plain text and rich text
@@ -195,150 +197,160 @@ function bindGcbRteField(Y) {
       var toggleText = document.createTextNode(showRteText);
       toggle.appendChild(toggleText);
       Dom.addClass(toggle, "rte-control");
+
+      var self = this;
       toggle.onclick = function() {
         showRteFlag = !showRteFlag;
         if (showRteFlag) {
           if (self.editor) {
-            showExistingRte(self);
+            self.showExistingRte();
           } else {
-            showNewRte(self);
+            self.showNewRte();
           }
           toggleText.nodeValue = hideRteText;
         } else {
-          hideRte(self);
+          self.hideRte();
           toggleText.nodeValue = showRteText;
         }
       };
       this.divEl.appendChild(toggle);
+    },
 
-      function getEditorDocument(id) {
-        return document.getElementById(id + '_editor').contentWindow.document;
-      }
+    getEditorDocument: function(id) {
+      return document.getElementById(id + '_editor').contentWindow.document;
+    },
 
-      function insertMarkerTags(editorDoc) {
-        for (var k = 0; k < cb_global.custom_rte_tag_icons.length; k++) {
-          var tag = cb_global.custom_rte_tag_icons[k];
-          var elts = editorDoc.getElementsByTagName(tag.name);
-          for (var i = 0; i < elts.length; i++) {
-            var img = editorDoc.createElement('img');
-            img.setAttribute('src', tag.iconUrl);
-            img.setAttribute('class', 'gcbMarker');
-            elts[i].appendChild(img);
-          }
+    insertMarkerTags: function(editorDoc) {
+      for (var k = 0; k < env.custom_rte_tag_icons.length; k++) {
+        var tag = env.custom_rte_tag_icons[k];
+        var elts = editorDoc.getElementsByTagName(tag.name);
+        for (var i = 0; i < elts.length; i++) {
+          var img = editorDoc.createElement('img');
+          img.setAttribute('src', tag.iconUrl);
+          img.setAttribute('class', 'gcbMarker');
+          img.ondblclick = function(evt) {
+            // For now, do nothing.
+            evt.stopPropagation();
+          };
+          elts[i].appendChild(img);
         }
-      }
-
-      function removeGcbMarkerTags(editorDoc) {
-        var elts = editorDoc.getElementsByClassName('gcbMarker');
-        while (elts.length > 0) {
-          var e = elts[0];
-          e.parentNode.removeChild(e);
-        }
-      }
-
-      // The methods for switching between plain text and rich text editing:
-
-      function showNewRte(rteField) {
-        var options = rteField.options;
-        var _def = {
-          height: '300px',
-          width: '500px',
-          dompath: true,
-        };
-        // Merge options.opts into the default options
-        var opts = options.opts;
-        for (var i in opts) {
-          if (Y.Lang.hasOwnProperty(opts, i)) {
-            _def[i] = opts[i];
-          }
-        }
-
-        var editor = new Y.YUI2.widget.SimpleEditor(rteField.id, _def);
-
-        // Disable any HTML cleaning done by the editor.
-        editor.cleanHTML = function(html) {
-          if (!html) {
-              html = this.getEditorHTML();
-          }
-          this.fireEvent('cleanHTML',
-              {type: 'cleanHTML', target: this, html: html});
-          return html;
-        };
-        editor._cleanIncomingHTML = function(html) {
-          return html;
-        };
-        editor._fixNodes = function() {};
-
-        rteField.editor = editor;
-        rteField.editor.render();
-        // TODO (jorr): Use callbacks to make this deterministic
-        window.setTimeout(function() {
-          insertMarkerTags(getEditorDocument(rteField.id));
-        }, 100);
-      }
-
-      function showExistingRte(rteField) {
-        var editor = rteField.editor,
-            textArea = rteField.el;
-            rteDiv = textArea.previousSibling;
-
-        if (rteField._cbGetValue) {
-          rteField.getValue = rteField._cbGetValue;
-        }
-
-        Dom.setStyle(rteDiv, 'position', 'static');
-        Dom.setStyle(rteDiv, 'top', '0');
-        Dom.setStyle(rteDiv, 'left', '0');
-        Dom.setStyle(textArea, 'visibility', 'hidden');
-        Dom.setStyle(textArea, 'top', '-9999px');
-        Dom.setStyle(textArea, 'left', '-9999px');
-        Dom.setStyle(textArea, 'position', 'absolute');
-        editor.get('element_cont').addClass('yui-editor-container');
-        editor._setDesignMode('on');
-        editor.setEditorHTML(textArea.value);
-        insertMarkerTags(getEditorDocument(textArea.id));
-      }
-
-      function hideRte(rteField) {
-        var editor = rteField.editor,
-            textArea = rteField.el;
-            rteDiv = textArea.previousSibling;
-
-        removeGcbMarkerTags(getEditorDocument(textArea.id));
-        editor.saveHTML();
-
-        rteField._cbGetValue = rteField.getValue;
-        rteField.getValue = function() {
-          return textArea.value;
-        };
-
-        Dom.setStyle(rteDiv, 'position', 'absolute');
-        Dom.setStyle(rteDiv, 'top', '-9999px');
-        Dom.setStyle(rteDiv, 'left', '-9999px');
-        editor.get('element_cont').removeClass('yui-editor-container');
-        Dom.setStyle(textArea, 'visibility', 'visible');
-        Dom.setStyle(textArea, 'top', '');
-        Dom.setStyle(textArea, 'left', '');
-        Dom.setStyle(textArea, 'position', 'static');
-        Dom.addClass(textArea, 'raw-text-editor');
       }
     },
+
+    removeGcbMarkerTags: function(editorDoc) {
+      var elts = editorDoc.getElementsByClassName('gcbMarker');
+      while (elts.length > 0) {
+        var e = elts[0];
+        e.parentNode.removeChild(e);
+      }
+    },
+
+    showNewRte: function() {
+      var options = this.options;
+      var _def = {
+        height: '300px',
+        width: '500px',
+        dompath: true,
+      };
+      // Merge options.opts into the default options
+      var opts = options.opts;
+      for (var i in opts) {
+        if (opts.hasOwnProperty(i)) {
+          _def[i] = opts[i];
+        }
+      }
+
+      var editor = new Editor(this.id, _def);
+
+      // Disable any HTML cleaning done by the editor.
+      editor.cleanHTML = function(html) {
+        if (!html) {
+            html = this.getEditorHTML();
+        }
+        this.fireEvent('cleanHTML',
+            {type: 'cleanHTML', target: this, html: html});
+        return html;
+      };
+      editor._cleanIncomingHTML = function(html) {
+        return html;
+      };
+      editor._fixNodes = function() {};
+
+      this.editor = editor;
+      this.editor.render();
+      // TODO (jorr): Use callbacks to make this deterministic
+      var that = this;
+      window.setTimeout(function() {
+        that.insertMarkerTags(that.getEditorDocument(that.id));
+      }, 100);
+    },
+
+    showExistingRte: function() {
+      var editor = this.editor,
+          textArea = this.el;
+          rteDiv = textArea.previousSibling;
+
+      if (this._cbGetValue) {
+        this.getValue = this._cbGetValue;
+      }
+
+      Dom.setStyle(rteDiv, 'position', 'static');
+      Dom.setStyle(rteDiv, 'top', '0');
+      Dom.setStyle(rteDiv, 'left', '0');
+      Dom.setStyle(textArea, 'visibility', 'hidden');
+      Dom.setStyle(textArea, 'top', '-9999px');
+      Dom.setStyle(textArea, 'left', '-9999px');
+      Dom.setStyle(textArea, 'position', 'absolute');
+      editor.get('element_cont').addClass('yui-editor-container');
+      editor._setDesignMode('on');
+      editor.setEditorHTML(textArea.value);
+      this.insertMarkerTags(this.getEditorDocument(this.id));
+    },
+
+    hideRte: function() {
+      var editor = this.editor,
+          textArea = this.el;
+          rteDiv = textArea.previousSibling;
+
+      this.removeGcbMarkerTags(this.getEditorDocument(this.id));
+      editor.saveHTML();
+
+      this._cbGetValue = this.getValue;
+      this.getValue = function() {
+        return textArea.value;
+      };
+
+      Dom.setStyle(rteDiv, 'position', 'absolute');
+      Dom.setStyle(rteDiv, 'top', '-9999px');
+      Dom.setStyle(rteDiv, 'left', '-9999px');
+      editor.get('element_cont').removeClass('yui-editor-container');
+      Dom.setStyle(textArea, 'visibility', 'visible');
+      Dom.setStyle(textArea, 'top', '');
+      Dom.setStyle(textArea, 'left', '');
+      Dom.setStyle(textArea, 'position', 'static');
+      Dom.addClass(textArea, 'raw-text-editor');
+    },
+
     setValue: function(value, sendUpdatedEvt) {
       this.el.value = value;
       if(sendUpdatedEvt !== false) {
         this.fireUpdatedEvt();
       }
     },
+
     getValue: function() {
       if (this.editor) {
-        return this.editor.saveHTML();
+        var editorDoc = this.getEditorDocument(this.id);
+        // Clean the editor text before saving, and then restore markers
+        this.removeGcbMarkerTags(editorDoc);
+        var value = this.editor.saveHTML();
+        this.insertMarkerTags(editorDoc);
+        return value;
       } else {
         return this.el.value;
       }
     }
   };
-  Y.extend(GcbRteField, inputEx.Field, gcbRteDefs);
-  inputEx.registerType("html", GcbRteField, []);
 };
 
 function getYuiConfig(bundle_lib_files) {
