@@ -40,7 +40,9 @@ import argparse
 import base64
 import os
 import shutil
+import subprocess
 import sys
+import time
 import unittest
 
 # The following import is needed in order to add third-party libraries.
@@ -59,6 +61,10 @@ _PARSER.add_argument(
 _PARSER.add_argument(
     '--test_class_name',
     help='optional dotted module name of the test(s) to run', type=str)
+_PARSER.add_argument(
+    '--integration_server_start_cmd',
+    help='script to start an external CB server', type=str)
+
 
 # Base filesystem location for test data.
 TEST_DATA_BASE = '/tmp/experimental/coursebuilder/test-data/'
@@ -73,8 +79,23 @@ def empty_environ():
     os.environ['USER_ID'] = ''
 
 
+def iterate_tests(test_suite_or_case):
+    """Iterate through all of the test cases in 'test_suite_or_case'."""
+    try:
+        suite = iter(test_suite_or_case)
+    except TypeError:
+        yield test_suite_or_case
+    else:
+        for test in suite:
+            for subtest in iterate_tests(test):
+                yield subtest
+
+
 class TestBase(unittest.TestCase):
     """Base class for all Course Builder tests."""
+
+    REQUIRES_INTEGRATION_SERVER = 1
+    INTEGRATION_SERVER_BASE_URL = 'http://localhost:8000'
 
     def setUp(self):
         super(TestBase, self).setUp()
@@ -203,6 +224,17 @@ def create_test_suite(parsed_args):
             os.path.dirname(__file__), pattern=parsed_args.pattern)
 
 
+def start_integration_server(integration_server_start_cmd):
+    print 'Starting external server: %s' % integration_server_start_cmd
+    server = subprocess.Popen(integration_server_start_cmd)
+    time.sleep(3)  # Wait for server to start up
+    return server
+
+
+def stop_integration_server(server):
+    server.kill()
+
+
 def fix_sys_path():
     """Fix the sys.path to include GAE extra paths."""
     import dev_appserver  # pylint: disable=C6204
@@ -219,8 +251,22 @@ def main():
     fix_sys_path()
     parsed_args = _PARSER.parse_args()
 
-    result = unittest.TextTestRunner(verbosity=2).run(
-        create_test_suite(parsed_args))
+    test_suite = create_test_suite(parsed_args)
+
+    all_tags = set()
+    for test in iterate_tests(test_suite):
+        if hasattr(test, 'TAGS'):
+            all_tags.update(test.TAGS)
+
+    server = None
+    if TestBase.REQUIRES_INTEGRATION_SERVER in all_tags:
+        server = start_integration_server(
+            parsed_args.integration_server_start_cmd)
+
+    result = unittest.TextTestRunner(verbosity=2).run(test_suite)
+
+    if server:
+        stop_integration_server(server)
 
     if result.errors or result.failures:
         raise Exception(
