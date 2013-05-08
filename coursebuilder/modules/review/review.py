@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import datetime
+import random
 
 from models import counters
 from models import review
@@ -112,6 +113,38 @@ COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS = counters.PerfCounter(
     'gcb-expire-old-reviews-for-unit-success',
     'number of times expire_old_reviews_for_unit() completed successfully')
 
+COUNTER_GET_NEW_REVIEW_ALREADY_ASSIGNED = counters.PerfCounter(
+    'gcb-get-new-review-already-assigned',
+    ('number of times get_new_review() rejected a candidate because the '
+     'reviewer is already assigned to or has already completed it'))
+COUNTER_GET_NEW_REVIEW_ASSIGNMENT_ATTEMPTED = counters.PerfCounter(
+    'gcb-get-new-review-assignment-attempted',
+    'number of times get_new_review() attempted to assign a candidate')
+COUNTER_GET_NEW_REVIEW_CANNOT_UNREMOVE_COMPLETED = counters.PerfCounter(
+    'gcb-get-new-review-cannot-unremove-completed',
+    ('number of times get_new_review() failed because the reviewer already had '
+     'a completed, removed review step'))
+COUNTER_GET_NEW_REVIEW_FAILED = counters.PerfCounter(
+    'gcb-get-new-review-failed',
+    'number of times get_new_review() had a fatal error')
+COUNTER_GET_NEW_REVIEW_NOT_ASSIGNABLE = counters.PerfCounter(
+    'gcb-get-new-review-none-assignable',
+    'number of times get_new_review() failed to find an assignable review')
+COUNTER_GET_NEW_REVIEW_REASSIGN_EXISTING = counters.PerfCounter(
+    'gcb-get-new-review-reassign-existing',
+    ('number of times get_new_review() unremoved and reassigned an existing '
+     'review step'))
+COUNTER_GET_NEW_REVIEW_START = counters.PerfCounter(
+    'gcb-get-new-review-start',
+    'number of times get_new_review() has started processing')
+COUNTER_GET_NEW_REVIEW_SUCCESS = counters.PerfCounter(
+    'gcb-get-new-review-success',
+    'number of times get_new_review() found and assigned a new review')
+COUNTER_GET_NEW_REVIEW_SUMMARY_CHANGED = counters.PerfCounter(
+    'gcb-get-new-review-summary-changed',
+    ('number of times get_new_review() rejected a candidate because the review '
+     'summary changed during processing'))
+
 COUNTER_GET_SUBMISSION_KEY_FAILED = counters.PerfCounter(
     'gcb-get-submission-key-failed',
     'number of times get_submission_key() had a fatal error')
@@ -146,6 +179,10 @@ class Error(Exception):
 
 class ConstraintError(Error):
     """Raised when data is found indicating a constraint is violated."""
+
+
+class NotAssignableError(Error):
+    """Raised when review assignment is requested but cannot be satisfied."""
 
 
 class RemovedError(Error):
@@ -653,6 +690,31 @@ class Manager(object):
         return expired_keys, exception_keys
 
     @classmethod
+    def get_assignment_candidates_query(cls, unit_id):
+        """Gets query that returns candidates for new review assignment.
+
+        New assignment candidates are scoped to a unit. We prefer first items
+        that have the smallest number of completed reviews, then those that have
+        the smallest number of assigned reviews, then those that were created
+        most recently.
+
+        Args:
+            unit_id: string. Id of the unit to restrict the query to.
+
+        Returns:
+            db.Query that will return [peer.ReviewSummary].
+        """
+        return peer.ReviewSummary.all(
+        ).filter(
+            peer.ReviewSummary.unit_id.name, unit_id
+        ).order(
+            peer.ReviewSummary.completed_count.name
+        ).order(
+            peer.ReviewSummary.assigned_count.name
+        ).order(
+            peer.ReviewSummary.create_date.name)
+
+    @classmethod
     def get_expiry_query(
         cls, review_window_mins, unit_id, now_fn=datetime.datetime.now):
         """Gets a db.Query that returns review steps to mark expired.
@@ -685,6 +747,132 @@ class Manager(object):
             '%s <=' % peer.ReviewStep.change_date.name, get_before
         ).order(
             peer.ReviewStep.change_date.name)
+
+    @classmethod
+    def get_new_review(
+        cls, unit_id, reviewer_key, candidate_count=20, max_retries=5):
+        """Attempts to assign a review to a reviewer.
+
+        We prioritize possible reviews by querying review summary objects,
+        finding those that best satisfy cls.get_assignment_candidates_query.
+
+        To minimize write contention, we nontransactionally grab candidate_count
+        candidates from the head of the query, then we randomly select one. We
+        transactionally attempt to assign that review. If assignment fails
+        because the candidate is updated between selection and assignment or the
+        assignment is for a submission the reviewer already has or has already
+        done, we remove the candidate from the list. We then retry assignment
+        up to max_retries times. If we run out of retries or candidates, we
+        raise NotAssignableError.
+
+        This is a naive implementation because it scales only to relatively low
+        new review assignments per second and because it can raise
+        NotAssignableError when there are in fact assignable reviews.
+
+        Args:
+            unit_id: string. The unit to assign work from.
+            reviewer_key: db.Key of models.models.Student. The reviewer to
+                attempt to assign the review to.
+            candidate_count: int. The number of candidate keys to fetch and
+                attempt to assign from. Increasing this decreases the chance
+                that we will have write contention on reviews, but it costs 1 +
+                num_results datastore reads and can get expensive for large
+                courses.
+            max_retries: int. Number of times to retry failed assignment
+                attempts. Careful not to set this too high as a) datastore
+                throughput is slow and latency from this method is user-facing,
+                and b) if you encounter a few failures it is likely that all
+                candidates are now failures, so each retry past the first few is
+                of questionable value.
+
+        Raises:
+            NotAssignableError: if no review can currently be assigned for the
+            given unit_id.
+
+        Returns:
+            db.Key of peer.ReviewStep. The newly created assigned review step.
+        """
+        try:
+            COUNTER_GET_NEW_REVIEW_START.inc()
+            candidates = cls.get_assignment_candidates_query(unit_id).fetch(
+                candidate_count)
+
+            retries = 0
+            while True:
+                if not candidates or retries >= max_retries:
+                    COUNTER_GET_NEW_REVIEW_NOT_ASSIGNABLE.inc()
+                    raise NotAssignableError(
+                        'No reviews assignable for unit %s and reviewer %s' % (
+                            unit_id, repr(reviewer_key)))
+                candidate = cls._choose_assignment_candidate(candidates)
+                candidates.remove(candidate)
+                assigned_key = cls._attempt_review_assignment(
+                    candidate.key(), reviewer_key, candidate.change_date)
+
+                if not assigned_key:
+                    retries += 1
+                else:
+                    COUNTER_GET_NEW_REVIEW_SUCCESS.inc()
+                    return assigned_key
+
+        except Exception, e:
+            COUNTER_GET_NEW_REVIEW_FAILED.inc()
+            raise e
+
+    @classmethod
+    def _choose_assignment_candidate(cls, candidates):
+        """Seam that allows different choice functions in tests."""
+        return random.choice(candidates)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _attempt_review_assignment(
+        cls, review_summary_key, reviewer_key, last_change_date):
+        COUNTER_GET_NEW_REVIEW_ASSIGNMENT_ATTEMPTED.inc()
+        summary = db.get(review_summary_key)
+        if not summary:
+            raise KeyError('No review summary found with key %s' % repr(
+                review_summary_key))
+        if summary.change_date != last_change_date:
+            # The summary has changed since we queried it. We cannot know for
+            # sure what the edit was, but let's skip to the next one because it
+            # was probably a review assignment.
+            COUNTER_GET_NEW_REVIEW_SUMMARY_CHANGED.inc()
+            return
+
+        step = peer.ReviewStep.get_by_key_name(
+            peer.ReviewStep.key_name(
+                summary.unit_id, summary.submission_key, summary.reviewee_key,
+                reviewer_key))
+
+        if not step:
+            step = peer.ReviewStep(
+                assigner_kind=peer.ASSIGNER_KIND_AUTO,
+                review_summary_key=summary.key(),
+                reviewee_key=summary.reviewee_key, reviewer_key=reviewer_key,
+                state=peer.REVIEW_STATE_ASSIGNED,
+                submission_key=summary.submission_key, unit_id=summary.unit_id)
+        else:
+            if step.state == peer.REVIEW_STATE_COMPLETED:
+                # Reviewer has previously done this review and the review
+                # has been deleted. Skip to the next one.
+                COUNTER_GET_NEW_REVIEW_CANNOT_UNREMOVE_COMPLETED.inc()
+                return
+
+            if step.removed:
+                # We can reassign the existing review step.
+                COUNTER_GET_NEW_REVIEW_REASSIGN_EXISTING.inc()
+                step.removed = False
+                step.assigner_kind = peer.ASSIGNER_KIND_AUTO
+                step.state = peer.REVIEW_STATE_ASSIGNED
+            else:
+                # Reviewee has already reviewed or is already assigned to review
+                # this submission, so we cannot reassign the step.
+                COUNTER_GET_NEW_REVIEW_ALREADY_ASSIGNED.inc()
+                return
+
+        summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+        return db.put([step, summary])[0]
 
     @classmethod
     def get_submission_key(cls, unit_id, reviewee_key):

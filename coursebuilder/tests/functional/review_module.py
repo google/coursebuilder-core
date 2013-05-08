@@ -452,6 +452,49 @@ class ManagerTest(TestBase):
         self.assertEqual(1, summary.completed_count)
         self.assertEqual(1, summary.expired_count)
 
+    def test_get_assignment_candidates_query_filters_and_orders_correctly(self):
+        unused_wrong_unit_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=str(int(self.unit_id) + 1)
+        ).put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        older_assigned_and_completed_key = peer.ReviewSummary(
+            assigned_count=1, completed_count=1,
+            reviewee_key=second_reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        third_reviewee = models.Student(key_name='reviewee3@example.com')
+        third_reviewee_key = third_reviewee.put()
+        younger_assigned_and_completed_key = peer.ReviewSummary(
+            assigned_count=1, completed_count=1,
+            reviewee_key=third_reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        fourth_reviewee = models.Student(key_name='reviewee4@example.com')
+        fourth_reviewee_key = fourth_reviewee.put()
+        completed_but_not_assigned_key = peer.ReviewSummary(
+            assigned_count=0, completed_count=1,
+            reviewee_key=fourth_reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        fifth_reviewee = models.Student(key_name='reviewee5@example.com')
+        fifth_reviewee_key = fifth_reviewee.put()
+        assigned_but_not_completed_key = peer.ReviewSummary(
+            assigned_count=1, completed_count=0,
+            reviewee_key=fifth_reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+
+        results = review_module.Manager.get_assignment_candidates_query(
+            self.unit_id).fetch(5)
+        self.assertEqual([
+            assigned_but_not_completed_key,
+            completed_but_not_assigned_key,
+            older_assigned_and_completed_key,
+            younger_assigned_and_completed_key
+        ], [r.key() for r in results])
+
     def test_get_expiry_query_filters_and_orders_correctly(self):
         summary_key = peer.ReviewSummary(
             assigned_count=2, completed_count=1, reviewee_key=self.reviewee_key,
@@ -511,36 +554,246 @@ class ManagerTest(TestBase):
         # No items are > 1 minute old, so we expect an empty result set.
         self.assertEqual(None, future_review_window_query.get())
 
-    def test_get_submission_key(self):
-        peer.ReviewSummary(
+    def test_get_new_review_creates_step_and_updates_summary(self):
+        summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
         ).put()
+        summary = db.get(summary_key)
 
-        self.assertEqual(
-            None,
-            review_module.Manager.get_submission_key(
-                str(int(self.unit_id) + 1), self.reviewee_key))
-        self.assertEqual(
-            self.submission_key,
-            review_module.Manager.get_submission_key(
-                self.unit_id, self.reviewee_key))
+        self.assertEqual(0, summary.assigned_count)
 
-    def test_get_submission_key_raises_constraint_error(self):
-        unused_first_summary_key = peer.ReviewSummary(
+        step_key = review_module.Manager.get_new_review(
+            self.unit_id, self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertEqual(summary.key(), step.review_summary_key)
+        self.assertEqual(self.reviewee_key, step.reviewee_key)
+        self.assertEqual(self.reviewer_key, step.reviewer_key)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(self.submission_key, step.submission_key)
+        self.assertEqual(self.unit_id, step.unit_id)
+
+        self.assertEqual(1, summary.assigned_count)
+
+    def test_get_new_review_raises_key_error_when_summary_missing(self):
+        summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
         ).put()
-        second_submission_key = review.Submission(contents='contents2').put()
-        unused_second_summary_key = peer.ReviewSummary(
-            reviewee_key=self.reviewee_key,
-            submission_key=second_submission_key, unit_id=self.unit_id
+        # Create and bind a function that we can swap in to pick the review
+        # candidate but as a side effect delete the review summary, causing a
+        # the lookup by key to fail.
+        def pick_and_remove(unused_cls, candidates):
+            db.delete(summary_key)
+            return candidates[0]
+
+        fn = types.MethodType(
+            pick_and_remove, review_module.Manager(), review_module.Manager)
+        self.swap(
+            review_module.Manager, '_choose_assignment_candidate', fn)
+
+        self.assertRaises(
+            KeyError, review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+    def test_get_new_review_raises_not_assignable_when_already_assigned(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        unused_already_assigned_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
-            review_module.ConstraintError,
-            review_module.Manager.get_submission_key, self.unit_id,
-            self.reviewee_key)
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+    def test_get_new_review_raises_not_assignable_when_already_completed(self):
+        summary_key = peer.ReviewSummary(
+            completed=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        already_completed_unremoved_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+        db.delete(already_completed_unremoved_step_key)
+        unused_already_completed_removed_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+    def test_get_new_review_raises_not_assignable_when_no_candidates(self):
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+    def test_get_new_review_raises_not_assignable_when_retry_limit_hit(self):
+        higher_priority_summary = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
+        higher_priority_summary_key = higher_priority_summary.put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        lower_priority_summary_key = peer.ReviewSummary(
+            completed_count=1, reviewee_key=second_reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(  # Ensure we'll process higher priority first.
+            [higher_priority_summary_key, lower_priority_summary_key],
+            [c.key() for c in
+             review_module.Manager.get_assignment_candidates_query(
+                 self.unit_id).fetch(2)])
+
+        # Create and bind a function that we can swap in to pick the review
+        # candidate but as a side-effect updates the highest priority candidate
+        # so we'll skip it and retry.
+        def pick_and_update(unused_cls, candidates):
+            db.put(higher_priority_summary)
+            return candidates[0]
+
+        fn = types.MethodType(
+            pick_and_update, review_module.Manager(), review_module.Manager)
+        self.swap(
+            review_module.Manager, '_choose_assignment_candidate', fn)
+
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key, max_retries=0)
+
+    def test_get_new_review_raises_not_assignable_when_summary_updated(self):
+        summary = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
+        summary.put()
+
+        # Create and bind a function that we can swap in to pick the review
+        # candidate but as a side-effect updates the summary so we'll reject it
+        # as a candidate.
+        def pick_and_update(unused_cls, candidates):
+            db.put(summary)
+            return candidates[0]
+
+        fn = types.MethodType(
+            pick_and_update, review_module.Manager(), review_module.Manager)
+        self.swap(
+            review_module.Manager, '_choose_assignment_candidate', fn)
+
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
+    def test_get_new_review_reassigns_removed_assigned_step(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        unused_already_assigned_removed_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        step_key = review_module.Manager.get_new_review(
+            self.unit_id, self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertFalse(step.removed)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+
+        self.assertEqual(1, summary.assigned_count)
+
+    def test_get_new_review_reassigns_removed_expired_step(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        unused_already_expired_removed_step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+
+        step_key = review_module.Manager.get_new_review(
+            self.unit_id, self.reviewer_key)
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertFalse(step.removed)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.expired_count)
+
+    def test_get_new_review_retries_successfully(self):
+        higher_priority_summary = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
+        higher_priority_summary_key = higher_priority_summary.put()
+        second_reviewee = models.Student(key_name='reviewee2@example.com')
+        second_reviewee_key = second_reviewee.put()
+        lower_priority_summary_key = peer.ReviewSummary(
+            completed_count=1, reviewee_key=second_reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(  # Ensure we'll process higher priority first.
+            [higher_priority_summary_key, lower_priority_summary_key],
+            [c.key() for c in
+             review_module.Manager.get_assignment_candidates_query(
+                 self.unit_id).fetch(2)])
+
+        # Create and bind a function that we can swap in to pick the review
+        # candidate but as a side-effect updates the highest priority candidate
+        # so we'll skip it and retry.
+        def pick_and_update(unused_cls, candidates):
+            db.put(higher_priority_summary)
+            return candidates[0]
+
+        fn = types.MethodType(
+            pick_and_update, review_module.Manager(), review_module.Manager)
+        self.swap(
+            review_module.Manager, '_choose_assignment_candidate', fn)
+
+        step_key = review_module.Manager.get_new_review(
+            self.unit_id, self.reviewer_key)
+        step = db.get(step_key)
+
+        self.assertEqual(lower_priority_summary_key, step.review_summary_key)
 
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
