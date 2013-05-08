@@ -21,11 +21,13 @@ import urllib
 import urlparse
 
 from models import models
+from models import student_work
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from models.review import ReviewUtils
 from models.roles import Roles
+from models.student_work import StudentWorkUtils
 from modules.review import domain
 from tools import verify
 
@@ -396,10 +398,10 @@ class AssessmentHandler(BaseHandler):
                 self.template_value['reviews_received'] = [
                     create_readonly_assessment_params(
                         course.get_review_form_content(unit),
-                        ReviewUtils.get_answer_list(review)
+                        StudentWorkUtils.get_answer_list(review)
                     ) for review in reviews_for_student]
             else:
-                submission_contents = rp.get_submission_contents(
+                submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
 
             # Determine whether to show the assessment in readonly mode.
@@ -408,13 +410,22 @@ class AssessmentHandler(BaseHandler):
                 self.template_value['readonly_student_assessment'] = (
                     create_readonly_assessment_params(
                         course.get_assessment_content(unit),
-                        ReviewUtils.get_answer_list(submission_contents)
+                        StudentWorkUtils.get_answer_list(submission_contents)
                     )
                 )
 
         if not readonly_view:
             self.template_value['assessment_script_src'] = (
                 self.get_course().get_assessment_filename(unit_id))
+
+            # If a previous submission exists, reinstate it.
+            submission_contents = student_work.Submission.get_contents(
+                unit.unit_id, student.get_key())
+            saved_answers = (
+                StudentWorkUtils.get_answer_list(submission_contents)
+                if submission_contents else [])
+            self.template_value['saved_answers'] = transforms.dumps(
+                saved_answers)
 
         self.render('assessment.html')
 
@@ -598,12 +609,12 @@ class ReviewHandler(BaseHandler):
         self.template_value['key'] = review_step_key
 
         submission_key = review_step.submission_key
-        submission_contents = rp.get_submission_contents_by_key(
-            unit.unit_id, submission_key)
+        submission_contents = student_work.Submission.get_contents_by_key(
+            submission_key)
 
         readonly_student_assessment = create_readonly_assessment_params(
             course.get_assessment_content(unit),
-            ReviewUtils.get_answer_list(submission_contents)
+            StudentWorkUtils.get_answer_list(submission_contents)
         )
         self.template_value['readonly_student_assessment'] = (
             readonly_student_assessment
@@ -628,14 +639,14 @@ class ReviewHandler(BaseHandler):
         if show_readonly_review:
             readonly_review_form = create_readonly_assessment_params(
                 course.get_review_form_content(unit),
-                ReviewUtils.get_answer_list(rev)
+                StudentWorkUtils.get_answer_list(rev)
             )
             self.template_value['readonly_review_form'] = readonly_review_form
         else:
             # Populate the review form,
             self.template_value['assessment_script_src'] = (
                 self.get_course().get_review_form_filename(unit.unit_id))
-            saved_answers = (ReviewUtils.get_answer_list(rev)
+            saved_answers = (StudentWorkUtils.get_answer_list(rev)
                              if rev else [])
             self.template_value['saved_answers'] = transforms.dumps(
                 saved_answers)

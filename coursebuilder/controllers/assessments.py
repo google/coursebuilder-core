@@ -22,6 +22,7 @@ import logging
 from models import courses
 from models import models
 from models import review
+from models import student_work
 from models import transforms
 from models import utils
 from models.models import Student
@@ -167,7 +168,7 @@ class AnswerHandler(BaseHandler):
                     self.render('error.html')
                     return
 
-                submission_key = rp.create_submission(
+                submission_key = student_work.Submission.write(
                     unit.unit_id, student.get_key(), answers)
                 rp.start_review_process_for(
                     unit.unit_id, submission_key, student.get_key())
@@ -190,6 +191,11 @@ class AnswerHandler(BaseHandler):
             # Record completion event in progress tracker.
             course.get_progress_tracker().put_assessment_completed(
                 student, assessment_type)
+
+            # Save the submission in the datastore, overwriting the earlier
+            # version if it exists.
+            submission_key = student_work.Submission.write(
+                unit.unit_id, student.get_key(), answers)
 
             self.template_value['result'] = course.get_overall_result(student)
             self.template_value['score'] = score

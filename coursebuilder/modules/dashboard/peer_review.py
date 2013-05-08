@@ -27,6 +27,7 @@ from models import courses
 from models import models
 from models import review
 from models import roles
+from models import student_work
 from modules.review import domain
 
 import messages
@@ -186,7 +187,8 @@ class AssignmentManager(ApplicationHandler):
             return
 
         submission_contents = submission_and_review_steps[0]
-        answer_list = review.ReviewUtils.get_answer_list(submission_contents)
+        answer_list = student_work.StudentWorkUtils.get_answer_list(
+            submission_contents)
 
         readonly_assessment = create_readonly_assessment_params(
             assessment_content, answer_list
@@ -205,7 +207,7 @@ class AssignmentManager(ApplicationHandler):
         for idx, review_step in enumerate(review_steps):
             params = create_readonly_assessment_params(
                 review_form,
-                review.ReviewUtils.get_answer_list(reviews[idx])
+                student_work.StudentWorkUtils.get_answer_list(reviews[idx])
             )
             reviews_params.append(params)
 
@@ -257,11 +259,9 @@ class AssignmentManager(ApplicationHandler):
         rp = course.get_reviews_processor()
         reviewee_key = reviewee.get_key()
         reviewer_key = reviewer.get_key()
-        submission_key = rp.get_submission_key(unit.unit_id, reviewee_key)
 
         try:
-            rp.add_reviewer(
-                unit.unit_id, submission_key, reviewee_key, reviewer_key)
+            rp.add_reviewer(unit.unit_id, reviewee_key, reviewer_key)
         except domain.TransitionError:
             redirect_params['post_error_msg'] = (
                 '412: The reviewer is already assigned to this submission.')

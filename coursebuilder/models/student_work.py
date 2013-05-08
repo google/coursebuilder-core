@@ -21,6 +21,7 @@ __author__ = [
 
 import entities
 import models
+import transforms
 
 from google.appengine.ext import db
 
@@ -161,11 +162,65 @@ class Submission(BaseEntity):
         name populated from this method.
 
         Args:
-            unit_id: string. The id of the unit this review belongs to.
-            reviewee_key: db.Key of models.models.Student. The author of this
+            unit_id: string. The id of the unit this submission belongs to.
+            reviewee_key: db.Key of models.models.Student. The author of the
                 the submission.
 
         Returns:
             String.
         """
         return '(submission:%s:%s)' % (unit_id, reviewee_key.id_or_name())
+
+    @classmethod
+    def get_key(cls, unit_id, reviewee_key):
+        """Returns a db,Key for a submission."""
+        return db.Key.from_path(
+            cls.kind(), cls.key_name(unit_id, reviewee_key))
+
+    @classmethod
+    def write(cls, unit_id, reviewee_key, contents):
+        """Updates or creates a student submission, and returns the key.
+
+        Args:
+            unit_id: string. The id of the unit this submission belongs to.
+            reviewee_key: db.Key of models.models.Student. The author of the
+                submission.
+            contents: object. The contents of the submission, as a Python
+                object. This will be JSON-transformed before it is stored.
+
+        Returns:
+            db.Key of Submission.
+        """
+        return cls(
+            unit_id=str(unit_id), reviewee_key=reviewee_key,
+            contents=transforms.dumps(contents)
+        ).put()
+
+    @classmethod
+    def get_contents(cls, unit_id, reviewee_key):
+        """Returns the de-JSONified contents of a submission."""
+        submission_key = cls.get_key(unit_id, reviewee_key)
+        return cls.get_contents_by_key(submission_key)
+
+    @classmethod
+    def get_contents_by_key(cls, submission_key):
+        """Returns the contents of a submission, given a db.Key."""
+        submission = entities.get(submission_key)
+        return transforms.loads(submission.contents) if submission else None
+
+
+class StudentWorkUtils(object):
+    """A utility class for processing student work objects."""
+
+    @classmethod
+    def get_answer_list(cls, submission):
+        """Compiles a list of the student's answers from a submission."""
+        if not submission:
+            return []
+
+        answer_list = []
+        for item in submission:
+            # Check that the indices within the submission are valid.
+            assert item['index'] == len(answer_list)
+            answer_list.append(item['value'])
+        return answer_list

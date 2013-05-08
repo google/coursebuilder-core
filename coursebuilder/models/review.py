@@ -24,8 +24,6 @@ import entities
 import student_work
 import transforms
 
-from google.appengine.ext import db
-
 # Indicates that a human-graded assessment is peer-graded.
 PEER_MATCHER = 'peer'
 
@@ -63,11 +61,8 @@ class ReviewsProcessor(object):
         return impl.get_submission_and_review_step_keys(
             str(unit_id), reviewee_key)
 
-    def _get_submission_by_key(self, unit_id, submission_key):
-        impl = self._get_impl(unit_id)
-        return impl.get_submissions_by_keys([submission_key])[0]
-
-    def add_reviewer(self, unit_id, submission_key, reviewee_key, reviewer_key):
+    def add_reviewer(self, unit_id, reviewee_key, reviewer_key):
+        submission_key = student_work.Submission.get_key(unit_id, reviewee_key)
         impl = self._get_impl(unit_id)
         return impl.add_reviewer(
             str(unit_id), submission_key, reviewee_key, reviewer_key)
@@ -157,34 +152,16 @@ class ReviewsProcessor(object):
         if submission_and_review_step_keys is None:
             return None
 
-        submission_contents = self.get_submission_contents_by_key(
-            unit_id, submission_and_review_step_keys[0])
+        submission_contents = student_work.Submission.get_contents_by_key(
+            submission_and_review_step_keys[0])
         review_step_keys = submission_and_review_step_keys[1]
         sorted_review_steps = sorted(
             self.get_review_steps_by_keys(unit_id, review_step_keys),
             key=lambda r: r.create_date)
         return [submission_contents, sorted_review_steps]
 
-    def get_submission_contents_by_key(self, unit_id, submission_key):
-        submission = self._get_submission_by_key(unit_id, submission_key)
-        return transforms.loads(submission.contents) if submission else None
-
-    def get_submission_contents(self, unit_id, reviewee_key):
-        submission_key = self.get_submission_key(unit_id, reviewee_key)
-        return self.get_submission_contents_by_key(unit_id, submission_key)
-
-    def get_submission_key(self, unit_id, reviewee_key):
-        return db.Key.from_path(
-            student_work.Submission.kind(),
-            student_work.Submission.key_name(str(unit_id), reviewee_key))
-
-    def create_submission(self, unit_id, reviewee_key, submission_payload):
-        return student_work.Submission(
-            unit_id=str(unit_id), reviewee_key=reviewee_key,
-            contents=transforms.dumps(submission_payload)).put()
-
     def does_submission_exist(self, unit_id, reviewee_key):
-        submission_key = self.get_submission_key(unit_id, reviewee_key)
+        submission_key = student_work.Submission.get_key(unit_id, reviewee_key)
         return bool(entities.get(submission_key))
 
     def start_review_process_for(self, unit_id, submission_key, reviewee_key):
@@ -202,21 +179,6 @@ class ReviewsProcessor(object):
 
 class ReviewUtils(object):
     """A utility class for processing data relating to assessment reviews."""
-    # TODO(sll): Update all docs and attribute references in this class once
-    # the underlying models in review.py have been properly baked.
-
-    @classmethod
-    def get_answer_list(cls, submission):
-        """Compiles a list of the student's answers from a submission."""
-        if not submission:
-            return []
-
-        answer_list = []
-        for item in submission:
-            # Check that the indices within the submission are valid.
-            assert item['index'] == len(answer_list)
-            answer_list.append(item['value'])
-        return answer_list
 
     @classmethod
     def count_completed_reviews(cls, review_steps):
