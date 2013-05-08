@@ -17,10 +17,99 @@
 __author__ = 'John Orr (jorr@google.com)', 'Aparna Kadakia (akadakia@google.com)'
 
 import urllib
+import urlparse
 from common import schema_fields
 from common import tags
 from models import courses
 from lxml import etree
+
+
+def _escape_url(url):
+    """Escapes/quotes url parts to sane user input; force https."""
+    scheme, netloc, path, query, unused_fragment = urlparse.urlsplit(url)
+    scheme = 'https'
+    path = urllib.quote(path)
+    query = urllib.quote_plus(query, '=?&;')
+    return urlparse.urlunsplit((scheme, netloc, path, query, unused_fragment))
+
+
+class GoogleDoc(tags.BaseTag):
+    """Custom tag for a Google Doc."""
+
+    def render(self, node):
+        height = node.attrib.get('height') or '300'
+        link = node.attrib.get('link')
+        url = _escape_url('%s?embedded=true' % link)
+        iframe = etree.XML("""
+<iframe class="google-doc" title="Google Doc" type="text/html" frameborder="0">
+</iframe>""")
+        iframe.set('src', url)
+        iframe.set('style', 'width: %spx; height: %spx' % (700, height))
+        return iframe
+
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/docs.png'
+
+    def get_schema(self, unused_handler):
+        reg = schema_fields.FieldRegistry('Google Doc')
+        reg.add_property(
+            # To get this value, users do File > Publish to the web..., click
+            # 'Start publishing', and then copy and paste the Document link.
+            # Changes to the publication status of a document or to its contents
+            # do not appear instantly.
+            schema_fields.SchemaField(
+                'link', 'Document Link', 'string',
+                optional=True,
+                description=('Provide the "Document Link" from the Google Docs '
+                             '"Publish to the web" dialog')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'height', 'Height', 'string',
+                optional=True,
+                extra_schema_dict_values={'value': '300'},
+                description=('Height of the document, in pixels. Width will be '
+                             'set automatically')))
+        return reg
+
+
+class GoogleSpreadsheet(tags.BaseTag):
+    """Custom tag for a Google Spreadsheet."""
+
+    def render(self, node):
+        height = node.attrib.get('height') or '300'
+        link = node.attrib.get('link')
+        url = _escape_url('%s&amp;chrome=false' % link.split('&output')[0])
+        iframe = etree.XML("""
+<iframe class="google-spreadsheet" title="Google Spreadsheet" type="text/html"
+    frameborder="0">
+</iframe>""")
+        iframe.set('src', url)
+        iframe.set('style', 'width: %spx; height: %spx' % (700, height))
+        return iframe
+
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/spreadsheets.png'
+
+    def get_schema(self, unused_handler):
+        reg = schema_fields.FieldRegistry('Google Spreadsheet')
+        reg.add_property(
+            # To get this value, users do File > Publish to the web..., click
+            # 'Start publishing', and then copy and paste the link above 'Copy
+            # and paste the link above'. Changes to the publication status of a
+            # document or to its contents do not appear instantly.
+            schema_fields.SchemaField(
+                'link', 'Link', 'string',
+                optional=True,
+                description=('Provide the link from the Google Spreadsheets '
+                             '"Publish to the web" dialog')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'height', 'Height', 'string',
+                optional=True,
+                extra_schema_dict_values={'value': '300'},
+                description=('Height of the spreadsheet, in pixels. Width will '
+                             'be set automatically')))
+        return reg
 
 
 class YouTube(tags.BaseTag):
@@ -139,3 +228,4 @@ class Activity(tags.BaseTag):
                   'The ID of the activity (e.g. activity-2.4.js). '
                   'Note /assets/js/ is not required')))
         return reg
+
