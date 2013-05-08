@@ -45,6 +45,20 @@ COUNTER_DELETE_REVIEWER_SUMMARY_MISS = counters.PerfCounter(
     'gcb-review-delete-reviewer-summary-miss',
     'number of times delete_reviewer() found a missing ReviewSummary')
 
+COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
+    'gcb-start-review-process-for-already-started',
+    ('number of times start_review_process_for() called when review already '
+     'started'))
+COUNTER_START_REVIEW_PROCESS_FOR_FAILED = counters.PerfCounter(
+    'gcb-start-review-process-for-failed',
+    'number of times start_review_process_for() had a fatal error')
+COUNTER_START_REVIEW_PROCESS_FOR_START = counters.PerfCounter(
+    'gcb-start-review-process-for-start',
+    'number of times start_review_process_for() has started processing')
+COUNTER_START_REVIEW_PROCESS_FOR_SUCCESS = counters.PerfCounter(
+    'gcb-start-review-process-for-success',
+    'number of times start_review_process_for() completed successfully')
+
 
 class Error(Exception):
     """Base error class."""
@@ -303,8 +317,15 @@ class Manager(object):
         Returns:
             db.Key of created ReviewSummary.
         """
-        return cls._create_review_summary(
-            reviewee_key, submission_key, unit_id)
+        try:
+            COUNTER_START_REVIEW_PROCESS_FOR_START.inc()
+            key = cls._create_review_summary(
+                reviewee_key, submission_key, unit_id)
+            COUNTER_START_REVIEW_PROCESS_FOR_SUCCESS.inc()
+            return key
+        except Exception as e:
+            COUNTER_START_REVIEW_PROCESS_FOR_FAILED.inc()
+            raise e
 
     @classmethod
     @db.transactional(xg=True)
@@ -312,6 +333,7 @@ class Manager(object):
         collision = peer.ReviewSummary.get_by_key_name(
             peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
         if collision:
+            COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED.inc()
             raise ReviewProcessAlreadyStartedError()
 
         return peer.ReviewSummary(
