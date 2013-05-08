@@ -340,7 +340,7 @@ class PeerReviewLoadTest(object):
         while not completed:
             body = self.session.get(review_dashboard_url)
             assert_contains('Assignments for your review', body)
-            assert_contains('Review another assignment', body)
+            assert_contains('Review a new assignment', body)
 
             draft_review_url = self.get_draft_review_url(body)
             if draft_review_url:

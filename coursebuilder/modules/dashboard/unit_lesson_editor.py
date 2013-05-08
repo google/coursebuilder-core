@@ -573,10 +573,12 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
-        (['properties', 'content', '_inputex'], {'label': 'Content'}),
+        (['properties', 'content', '_inputex'], {
+            'label': 'Assessment Content'}),
         (['properties', 'workflow_yaml', '_inputex'], {
-            'label': 'Workflow Specification'}),
-        (['properties', 'review_form', '_inputex'], {'label': 'Reviewer Form'}),
+            'label': 'Assessment Details'}),
+        (['properties', 'review_form', '_inputex'], {
+            'label': 'Reviewer Feedback Form'}),
         STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
