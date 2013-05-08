@@ -277,6 +277,13 @@ function mainYuiFunction(Y) {
     };
   }
 
+  // Enable the form to read the value of a file selection field
+  if (Y.inputEx.FileField) {
+    Y.inputEx.FileField.prototype.getValue = function() {
+      return this.el.value;
+    };
+  }
+
   // create form and bind it to DOM
   inputExDefinition.parentEl = 'formContainer';
   cb_global.form = new Y.inputEx.Form(inputExDefinition);

@@ -321,7 +321,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
             "description": "Asset",
             "properties": {
                 "base": {"type": "string"},
-                "file": {"type": "string"}
+                "file": {"type": "string", "optional": true}
                 }
         }
         """

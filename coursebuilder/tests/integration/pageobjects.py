@@ -258,7 +258,7 @@ class AssetsPage(PageObject):
         return ImageEditorPage(self._tester)
 
 
-class AssetsEditorPage(EditorPageObject):
+class AssetsEditorPage(DashboardEditor):
     """Page object for upload image page."""
 
     def select_file(self, path):
