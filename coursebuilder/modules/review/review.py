@@ -580,6 +580,8 @@ class Manager(object):
         the smallest number of assigned reviews, then those that were created
         most recently.
 
+        The results of the query are user-independent.
+
         Args:
             unit_id: string. Id of the unit to restrict the query to.
 
@@ -639,13 +641,15 @@ class Manager(object):
         finding those that best satisfy cls.get_assignment_candidates_query.
 
         To minimize write contention, we nontransactionally grab candidate_count
-        candidates from the head of the query, then we randomly select one. We
-        transactionally attempt to assign that review. If assignment fails
-        because the candidate is updated between selection and assignment or the
-        assignment is for a submission the reviewer already has or has already
-        done, we remove the candidate from the list. We then retry assignment
-        up to max_retries times. If we run out of retries or candidates, we
-        raise NotAssignableError.
+        candidates from the head of the query results. Post-query we filter out
+        any candidates that are for the prospective reviewer's own work.
+
+        Then we randomly select one. We transactionally attempt to assign that
+        review. If assignment fails because the candidate is updated between
+        selection and assignment or the assignment is for a submission the
+        reviewer already has or has already done, we remove the candidate from
+        the list. We then retry assignment up to max_retries times. If we run
+        out of retries or candidates, we raise NotAssignableError.
 
         This is a naive implementation because it scales only to relatively low
         new review assignments per second and because it can raise
@@ -676,8 +680,12 @@ class Manager(object):
         """
         try:
             COUNTER_GET_NEW_REVIEW_START.inc()
-            candidates = cls.get_assignment_candidates_query(unit_id).fetch(
-                candidate_count)
+            # Filter out candidates that are for submissions by the reviewer.
+            candidates = [
+                candidate for candidate in
+                cls.get_assignment_candidates_query(unit_id).fetch(
+                    candidate_count)
+                if candidate.reviewee_key != reviewer_key]
 
             retries = 0
             while True:

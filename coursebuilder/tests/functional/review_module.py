@@ -642,6 +642,17 @@ class ManagerTest(actions.TestBase):
             review_module.Manager.get_new_review, self.unit_id,
             self.reviewer_key)
 
+    def test_get_new_review_raises_not_assignable_when_review_is_for_self(self):
+        peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewer_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.NotAssignableError,
+            review_module.Manager.get_new_review, self.unit_id,
+            self.reviewer_key)
+
     def test_get_new_review_raises_not_assignable_when_no_candidates(self):
         self.assertRaises(
             review_module.NotAssignableError,
