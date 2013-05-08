@@ -25,6 +25,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import logging
 import os
+import threading
 import time
 import appengine_config
 import entities
@@ -151,6 +152,8 @@ class Registry(object):
     names_with_draft = {}
     last_update_time = 0
     update_index = 0
+    threadlocal = threading.local()
+    REENTRY_ATTR_NAME = 'busy'
 
     @classmethod
     def get_overrides(cls, force_update=False):
@@ -159,13 +162,15 @@ class Registry(object):
         now = long(time.time())
         age = now - cls.last_update_time
         max_age = UPDATE_INTERVAL_SEC.get_value(db_overrides=cls.db_overrides)
-        if force_update or age < 0 or age >= max_age:
+        busy = hasattr(cls.threadlocal, cls.REENTRY_ATTR_NAME)
+        if (not busy) and (force_update or age < 0 or age >= max_age):
             # Value of '0' disables all datastore overrides.
             if UPDATE_INTERVAL_SEC.get_value() == 0:
                 cls.db_overrides = {}
                 return cls.db_overrides
 
             # Load overrides from a datastore.
+            setattr(cls.threadlocal, cls.REENTRY_ATTR_NAME, True)
             try:
                 old_namespace = namespace_manager.get_namespace()
                 try:
@@ -178,6 +183,8 @@ class Registry(object):
                 logging.error(
                     'Failed to load properties from a database: %s.', str(e))
             finally:
+                delattr(cls.threadlocal, cls.REENTRY_ATTR_NAME)
+
                 # Avoid overload and update timestamp even if we failed.
                 cls.last_update_time = now
                 cls.update_index += 1
