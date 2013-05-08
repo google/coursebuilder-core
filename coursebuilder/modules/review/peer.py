@@ -68,21 +68,15 @@ class ReviewSummary(student_work.BaseEntity):
         """Constructs a new ReviewSummary."""
         assert not kwargs.get('key_name'), (
             'Setting key_name manually not supported')
-        reviewee_key = kwargs.get('reviewee_key')
         submission_key = kwargs.get('submission_key')
-        unit_id = kwargs.get('unit_id')
-        assert reviewee_key, 'Missing required reviewee_key property'
         assert submission_key, 'Missing required submission_key property'
-        assert unit_id, 'Missing required unit_id property'
-        kwargs['key_name'] = self.key_name(
-            unit_id, submission_key, reviewee_key)
+        kwargs['key_name'] = self.key_name(submission_key)
         super(ReviewSummary, self).__init__(*args, **kwargs)
 
     @classmethod
-    def key_name(cls, unit_id, submission_key, reviewee_key):
+    def key_name(cls, submission_key):
         """Creates a key_name string for datastore operations."""
-        return '(%s:%s:%s)' % (
-            unit_id, submission_key.id_or_name(), reviewee_key.id_or_name())
+        return '(review_summary:%s)' % submission_key.id_or_name()
 
     def _check_count(self):
         count_sum = (
@@ -183,19 +177,15 @@ class ReviewStep(student_work.BaseEntity):
         """Constructs a new ReviewStep."""
         assert not kwargs.get('key_name'), (
             'Setting key_name manually not supported')
-        reviewee_key = kwargs.get('reviewee_key')
         reviewer_key = kwargs.get('reviewer_key')
         submission_key = kwargs.get('submission_key')
-        unit_id = kwargs.get('unit_id')
-        assert reviewee_key and reviewer_key and submission_key and unit_id, (
-            'Missing required property')
-        kwargs['key_name'] = self.key_name(
-            unit_id, submission_key, reviewee_key, reviewer_key)
+        assert reviewer_key, 'Missing required reviewer_key property'
+        assert submission_key, 'Missing required submission_key property'
+        kwargs['key_name'] = self.key_name(submission_key, reviewer_key)
         super(ReviewStep, self).__init__(*args, **kwargs)
 
     @classmethod
-    def key_name(cls, unit_id, submission_key, reviewee_key, reviewer_key):
+    def key_name(cls, submission_key, reviewer_key):
         """Creates a key_name string for datastore operations."""
-        return '(%s:%s:%s:%s)' % (
-            unit_id, submission_key.id_or_name(), reviewee_key.id_or_name(),
-            reviewer_key.id_or_name())
+        return '(review_step:%s:%s)' % (
+            submission_key.id_or_name(), reviewer_key.id_or_name())

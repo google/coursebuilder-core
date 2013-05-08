@@ -327,8 +327,7 @@ class Manager(object):
     @db.transactional(xg=True)
     def _add_reviewer(cls, unit_id, submission_key, reviewee_key, reviewer_key):
         found = peer.ReviewStep.get_by_key_name(
-            peer.ReviewStep.key_name(
-                unit_id, submission_key, reviewee_key, reviewer_key))
+            peer.ReviewStep.key_name(submission_key, reviewer_key))
         if not found:
             return cls._add_new_reviewer(
                 unit_id, submission_key, reviewee_key, reviewer_key)
@@ -344,7 +343,7 @@ class Manager(object):
         # Synthesize summary key to avoid a second synchronous put op.
         summary_key = db.Key.from_path(
             peer.ReviewSummary.kind(),
-            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
+            peer.ReviewSummary.key_name(submission_key))
         step = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_summary_key=summary_key, reviewee_key=reviewee_key,
@@ -736,9 +735,7 @@ class Manager(object):
             return
 
         step = peer.ReviewStep.get_by_key_name(
-            peer.ReviewStep.key_name(
-                summary.unit_id, summary.submission_key, summary.reviewee_key,
-                reviewer_key))
+            peer.ReviewStep.key_name(summary.submission_key, reviewer_key))
 
         if not step:
             step = peer.ReviewStep(
@@ -886,12 +883,10 @@ class Manager(object):
                 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS.inc()
                 return
 
-            step_keys_query = peer.ReviewStep.all(keys_only=True).filter(
-                peer.ReviewStep.reviewee_key.name, reviewee_key
+            step_keys_query = peer.ReviewStep.all(
+                keys_only=True
             ).filter(
                 peer.ReviewStep.submission_key.name, submission_key
-            ).filter(
-                peer.ReviewStep.unit_id.name, unit_id
             )
 
             step_keys = step_keys_query.fetch(_REVIEW_STEP_QUERY_LIMIT)
@@ -963,7 +958,7 @@ class Manager(object):
     @db.transactional(xg=True)
     def _create_review_summary(cls, reviewee_key, submission_key, unit_id):
         collision = peer.ReviewSummary.get_by_key_name(
-            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
+            peer.ReviewSummary.key_name(submission_key))
 
         if collision:
             COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED.inc()

@@ -41,8 +41,7 @@ class ReviewStepTest(actions.TestBase):
             state=domain.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id).put()
         self.assertEqual(
-            peer.ReviewStep.key_name(
-                unit_id, submission_key, reviewee_key, reviewer_key),
+            peer.ReviewStep.key_name(submission_key, reviewer_key),
             step_key.name())
 
 
@@ -58,8 +57,7 @@ class ReviewSummaryTest(actions.TestBase):
             reviewee_key=reviewee_key, submission_key=submission_key,
             unit_id=unit_id).put()
         self.assertEqual(
-            peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key),
-            summary_key.name())
+            peer.ReviewSummary.key_name(submission_key), summary_key.name())
 
     def test_decrement_count(self):
         """Tests decrement_count."""
