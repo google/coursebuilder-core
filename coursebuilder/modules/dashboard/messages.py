@@ -43,6 +43,11 @@ You may create, edit, and delete activities and assessments from the Outline
 page. All other assets must be edited by an administrator.
 """, None)
 
+ASSIGNMENTS_MENU_DESCRIPTION = assemble_sanitized_message("""
+Select a peer-reviewed assignment and enter a student's email address to view
+their assignment submission and any associated reviews.
+""", None)
+
 CONTENTS_OF_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
 The course.yaml file contains many course settings.  Edit it using the button at
 right.

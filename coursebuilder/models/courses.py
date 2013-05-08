@@ -1728,6 +1728,13 @@ class Course(object):
                 assessment_list.append(unit)
         return copy.deepcopy(assessment_list)
 
+    def get_peer_reviewed_units(self):
+        """Returns a list of units that are peer-reviewed assessments."""
+        assessment_list = self.get_assessment_list()
+        return [unit for unit in assessment_list if (
+            unit.workflow.get_grader() == HUMAN_GRADER and
+            unit.workflow.get_matcher() == PEER_MATCHER)]
+
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)
 

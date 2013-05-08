@@ -1,0 +1,35 @@
+<h3>Submission and reviews for {{reviewee_id}}</h3>
+
+{% import 'readonly_assessment.html' as readonly_assessment %}
+
+<h4>Student's Assignment</h4>
+<div class="border-box">
+  {{ readonly_assessment.display(readonly_student_assessment) }}
+</div>
+
+
+<h4>Reviews received by {{reviewee_id}}</h4>
+
+<div>
+  {% if not reviews %}
+    (<em>No reviews received yet.</em>)
+  {% endif %}
+
+  <ul>
+    {% for review in reviews %}
+      <li>
+        <h4>
+          Review {{ loop.index }} by {{review['reviewer']}}
+          {% if review['is_draft'] %}
+            (Draft)
+          {% else %}
+            (Submitted)
+          {% endif %}
+        </h4>
+        <div class="border-box">
+          {{ readonly_assessment.display(review['params']) }}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

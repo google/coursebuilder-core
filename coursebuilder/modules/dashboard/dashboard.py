@@ -33,6 +33,7 @@ from models import roles
 from models import transforms
 from models import vfs
 from models.models import Student
+from assignments import AssignmentManager
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -55,15 +56,15 @@ from google.appengine.ext import db
 
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    ApplicationHandler, ReflectiveRequestHandler):
+    AssignmentManager, ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
     get_actions = [
         default_action, 'assets', 'settings', 'students',
-        'edit_basic_settings', 'edit_settings', 'edit_unit_lesson', 'edit_unit',
-        'edit_link', 'edit_lesson', 'edit_assessment', 'add_asset',
-        'delete_asset', 'import_course']
+        'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
+        'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
+        'add_asset', 'delete_asset', 'import_course', 'edit_assignment']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson',
@@ -83,7 +84,7 @@ class DashboardHandler(
             (LessonRESTHandler.URI, LessonRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
-            (UnitRESTHandler.URI, UnitRESTHandler)
+            (UnitRESTHandler.URI, UnitRESTHandler),
         ]
 
     def can_view(self):
@@ -134,7 +135,8 @@ class DashboardHandler(
             ('', 'Outline'),
             ('assets', 'Assets'),
             ('settings', 'Settings'),
-            ('students', 'Students')]
+            ('students', 'Students'),
+            ('edit_assignment', 'Peer Review')]
         nav = safe_dom.NodeList()
         for action, title in nav_mappings:
 

@@ -1,0 +1,43 @@
+{% macro display(readonly_assessment) -%}
+
+  <div>
+    {{readonly_assessment['preamble'] | safe}}
+  </div>
+
+  <ol>
+    {% for q in readonly_assessment['questionsList'] %}
+
+      {% set outer_loop = loop %}
+      <li>
+        {{ q['questionHTML'] | safe }}
+        <br>
+
+        {% if q['choices'] %}
+          {% for choice in q['choices'] %}
+            <input type="radio" disabled="true"
+                   id="readonly-{{outer_loop.index0}}-{{loop.index0}}"
+                   {% if loop.index0 == readonly_assessment['answers'][outer_loop.index0] %}
+                     checked="true"
+                   {% endif %}
+            >
+            &nbsp;
+            <label for="readonly-{{outer_loop.index0}}-{{loop.index0}}">
+              {{ choice }}
+            </label>
+          {% endfor %}
+        {% else %}
+          {% if q['multiLine'] %}
+            Answer:<br>
+            <textarea disabled="true" style="width: 90%" rows="7">{{ readonly_assessment['answers'][outer_loop.index0] }}</textarea>
+          {% else %}
+            Answer:
+            <input type="text" size="50" value="{{ readonly_assessment['answers'][outer_loop.index0] }}" disabled="true">
+          {% endif %}
+        {% endif %}
+        <br><br>
+
+      </li>
+    {% endfor %}
+  </ol>
+
+{%- endmacro %}
