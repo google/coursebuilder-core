@@ -824,31 +824,7 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(lower_priority_summary_key, step.review_summary_key)
 
-    def test_get_reviews_by_keys(self):
-        review_key = student_work.Review(
-            contents='contents', reviewer_key=self.reviewer_key,
-            unit_id=self.unit_id
-        ).put()
-        missing_review_key = db.Key.from_path(
-            student_work.Review.kind(),
-            student_work.Review.key_name(
-                str(int(self.unit_id) + 1), self.reviewer_key))
-        model_objects = db.get([review_key, missing_review_key])
-        domain_objects = review_module.Manager.get_reviews_by_keys(
-            [review_key, missing_review_key])
-        model_review, model_miss = model_objects
-        domain_review, domain_miss = domain_objects
-
-        self.assertEqual(2, len(model_objects))
-        self.assertEqual(2, len(domain_objects))
-
-        self.assertIsNone(model_miss)
-        self.assertIsNone(domain_miss)
-
-        self.assertEqual(model_review.contents, domain_review.contents)
-        self.assertEqual(model_review.key(), domain_review.key)
-
-    def test_get_review_keys_by_returns_list_of_keys(self):
+    def test_get_review_step_keys_by_returns_list_of_keys(self):
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -874,10 +850,10 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(
             [matching_step_key],
-            review_module.Manager.get_review_keys_by(
+            review_module.Manager.get_review_step_keys_by(
                 self.unit_id, self.reviewer_key))
 
-    def test_get_review_keys_by_returns_keys_in_sorted_order(self):
+    def test_get_review_step_keys_by_returns_keys_in_sorted_order(self):
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -905,10 +881,10 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(
             [first_step_key, second_step_key],
-            review_module.Manager.get_review_keys_by(
+            review_module.Manager.get_review_step_keys_by(
                 self.unit_id, self.reviewer_key))
 
-    def test_get_review_keys_by_returns_empty_list_when_no_matches(self):
+    def test_get_review_step_keys_by_returns_empty_list_when_no_matches(self):
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -934,7 +910,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertEqual(
-            [], review_module.Manager.get_review_keys_by(
+            [], review_module.Manager.get_review_step_keys_by(
                 self.unit_id, self.reviewer_key))
 
     def test_get_review_steps_by_keys(self):
@@ -981,7 +957,31 @@ class ManagerTest(actions.TestBase):
         self.assertEqual(model_step.submission_key, domain_step.submission_key)
         self.assertEqual(model_step.unit_id, domain_step.unit_id)
 
-    def test_get_submission_and_review_keys_no_steps(self):
+    def test_get_reviews_by_keys(self):
+        review_key = student_work.Review(
+            contents='contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id
+        ).put()
+        missing_review_key = db.Key.from_path(
+            student_work.Review.kind(),
+            student_work.Review.key_name(
+                str(int(self.unit_id) + 1), self.reviewer_key))
+        model_objects = db.get([review_key, missing_review_key])
+        domain_objects = review_module.Manager.get_reviews_by_keys(
+            [review_key, missing_review_key])
+        model_review, model_miss = model_objects
+        domain_review, domain_miss = domain_objects
+
+        self.assertEqual(2, len(model_objects))
+        self.assertEqual(2, len(domain_objects))
+
+        self.assertIsNone(model_miss)
+        self.assertIsNone(domain_miss)
+
+        self.assertEqual(model_review.contents, domain_review.contents)
+        self.assertEqual(model_review.key(), domain_review.key)
+
+    def test_get_submission_and_review_step_keys_no_steps(self):
         student_work.Submission(
             reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
         peer.ReviewSummary(
@@ -991,10 +991,10 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(
             (self.submission_key, []),
-            review_module.Manager.get_submission_and_review_keys(
+            review_module.Manager.get_submission_and_review_step_keys(
                 self.unit_id, self.reviewee_key))
 
-    def test_get_submission_and_review_keys_with_steps(self):
+    def test_get_submission_and_review_step_keys_with_steps(self):
         student_work.Submission(
             reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
         summary_key = peer.ReviewSummary(
@@ -1025,12 +1025,12 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(
             (self.submission_key, [matching_step_key]),
-            review_module.Manager.get_submission_and_review_keys(
+            review_module.Manager.get_submission_and_review_step_keys(
                 self.unit_id, self.reviewee_key))
 
-    def test_get_submission_and_review_keys_returns_none_on_miss(self):
+    def test_get_submission_and_review_step_keys_returns_none_on_miss(self):
         self.assertIsNone(
-            review_module.Manager.get_submission_and_review_keys(
+            review_module.Manager.get_submission_and_review_step_keys(
                 self.unit_id, self.reviewee_key))
 
     def test_get_submissions_by_keys(self):

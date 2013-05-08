@@ -53,11 +53,11 @@ class ReviewsProcessor(object):
 
     def _get_review_step_keys_by(self, unit_id, reviewer_key):
         impl = self._get_impl(unit_id)
-        return impl.get_review_keys_by(str(unit_id), reviewer_key)
+        return impl.get_review_step_keys_by(str(unit_id), reviewer_key)
 
     def _get_submission_and_review_step_keys(self, unit_id, reviewee_key):
         impl = self._get_impl(unit_id)
-        return impl.get_submission_and_review_keys(
+        return impl.get_submission_and_review_step_keys(
             str(unit_id), reviewee_key)
 
     def _get_submission_by_key(self, unit_id, submission_key):
