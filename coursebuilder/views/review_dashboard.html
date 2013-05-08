@@ -39,18 +39,16 @@
     </p>
 
     <ol>
-      {% for review in reviews %}
+      {% for review_step in review_steps %}
         <li>
           {# I18N: An item in a list of assignments. #}
-          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">{{ gettext('Assignment %(index)s', index=loop.index) }}</a>
-          {% if review.review %}
-            {% if review.is_draft %}
-              {# I18N: Text shown after an assignment whose review is still in draft state. #}
-              ({{ gettext('Draft') }})
-            {% else %}
-              {# I18N: Text shown after an assignment whose review has been completed. #}
-              ({{ gettext('Completed') }})
-            {% endif %}
+          <a href="review?unit={{unit_id}}&amp;key={{review_step.key}}">{{ gettext('Assignment %(index)s', index=loop.index) }}</a>
+          {% if review_step.state == REVIEW_STATE_COMPLETED %}
+            {# I18N: Text shown after an assignment whose review has been completed. #}
+            ({{ gettext('Completed') }})
+          {% else %}
+            {# I18N: Text shown after an assignment whose review is still in draft state. #}
+            ({{ gettext('Draft') }})
           {% endif %}
         </li>
       {% endfor %}

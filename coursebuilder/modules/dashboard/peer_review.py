@@ -25,8 +25,9 @@ from controllers.utils import ApplicationHandler
 import jinja2
 from models import courses
 from models import models
+from models import review
 from models import roles
-from models.review import ReviewUtils
+from modules.review import domain
 
 import messages
 
@@ -56,13 +57,15 @@ class AssignmentManager(ApplicationHandler):
 
     def get_assignment_html(
         self, peer_reviewed_units, unit_id=None, reviewee_id=None,
-        error_msg=None, readonly_assessment=None, reviews=None):
+        error_msg=None, readonly_assessment=None, review_steps=None,
+        reviewers=None, reviews_params=None):
         """Renders a template allowing an admin to select an assignment."""
         edit_url = self.canonicalize_url('/dashboard')
 
         return jinja2.utils.Markup(self.get_template(
             'assignments_menu.html', [os.path.dirname(__file__)]
         ).render({
+            'REVIEW_STATE_COMPLETED': domain.REVIEW_STATE_COMPLETED,
             'add_reviewer_action': self.get_action_url('add_reviewer'),
             'add_reviewer_xsrf_token': self.create_xsrf_token('add_reviewer'),
             'delete_reviewer_action': self.get_action_url('delete_reviewer'),
@@ -72,9 +75,11 @@ class AssignmentManager(ApplicationHandler):
             'edit_url': edit_url,
             'error_msg': error_msg,
             'peer_reviewed_units': peer_reviewed_units,
-            'reviewee_id': reviewee_id or '',
             'readonly_student_assessment': readonly_assessment,
-            'reviews': reviews,
+            'reviewee_id': reviewee_id or '',
+            'reviewers': reviewers,
+            'reviews_params': reviews_params,
+            'review_steps': review_steps,
             'unit_id': unit_id,
         }, autoescape=True))
 
@@ -102,7 +107,7 @@ class AssignmentManager(ApplicationHandler):
         if not unit:
             return request_params, '404: Unit not found.'
         if (unit.workflow.get_grader() != courses.HUMAN_GRADER or
-            unit.workflow.get_matcher() != courses.PEER_MATCHER):
+            unit.workflow.get_matcher() != review.PEER_MATCHER):
             return request_params, '412: This unit is not peer-graded.'
         request_params['unit'] = unit
 
@@ -168,10 +173,12 @@ class AssignmentManager(ApplicationHandler):
 
         # Render content.
         assessment_content = course.get_assessment_content(unit)
-        student_work = course.get_reviews_processor().get_student_work(
-            reviewee, unit)
+        rp = course.get_reviews_processor()
+        submission_and_review_step_keys = (
+            rp.get_submission_and_review_step_keys(
+                unit.unit_id, reviewee.get_key()))
 
-        if not student_work:
+        if not submission_and_review_step_keys:
             template_values['main_content'] = self.get_assignment_html(
                 peer_reviewed_units, unit_id=unit_id, reviewee_id=reviewee_id,
                 error_msg='412: This student hasn\'t submitted the assignment.'
@@ -179,26 +186,46 @@ class AssignmentManager(ApplicationHandler):
             self.render_page(template_values)
             return
 
-        answer_list = ReviewUtils.get_answer_list(student_work['submission'])
+        submission_key = submission_and_review_step_keys[0]
+        submission_contents = rp.get_submission_contents_by_key(
+            unit.unit_id, submission_key)
+        answer_list = review.ReviewUtils.get_answer_list(submission_contents)
 
         readonly_assessment = create_readonly_assessment_params(
             assessment_content, answer_list
         )
 
-        reviewers = student_work.get('reviewers')
-        review_content = course.get_review_form_content(unit)
-        reviews = []
-        for (reviewer, review) in reviewers.iteritems():
-            review['reviewer'] = reviewer
-            review['params'] = create_readonly_assessment_params(
-                review_content, review['review']
+        review_form = course.get_review_form_content(unit)
+
+        review_step_keys = submission_and_review_step_keys[1]
+        review_steps = rp.get_review_steps_by_keys(
+            unit.unit_id, review_step_keys)
+
+        reviews = rp.get_reviews_by_keys(
+            unit.unit_id,
+            [review_step.review_key for review_step in review_steps])
+
+        reviews_params = []
+        reviewers = []
+        for idx, review_step in enumerate(review_steps):
+            params = create_readonly_assessment_params(
+                review_form,
+                review.ReviewUtils.get_answer_list(reviews[idx])
             )
-            reviews.append(review)
+            reviews_params.append(params)
+
+            reviewer = models.Student.get_student_by_user_id(
+                review_step.reviewer_key.name()).key().name()
+            reviewers.append(reviewer)
+
+        assert len(reviewers) == len(review_steps)
+        assert len(reviews_params) == len(review_steps)
 
         template_values['main_content'] = self.get_assignment_html(
             peer_reviewed_units, unit_id=unit_id, reviewee_id=reviewee_id,
-            readonly_assessment=readonly_assessment, reviews=reviews,
-            error_msg=post_error_msg)
+            readonly_assessment=readonly_assessment, review_steps=review_steps,
+            error_msg=post_error_msg, reviewers=reviewers,
+            reviews_params=reviews_params)
         self.render_page(template_values)
 
     def post_add_reviewer(self):
@@ -234,8 +261,12 @@ class AssignmentManager(ApplicationHandler):
 
         # TODO(sll): Handle any errors here when porting this to the new review
         # module.
-        course.get_reviews_processor().add_reviewer(
-            reviewee, unit, reviewer)
+        rp = course.get_reviews_processor()
+        reviewee_key = reviewee.get_key()
+        reviewer_key = reviewer.get_key()
+        submission_key = rp.get_submission_key(unit.unit_id, reviewee_key)
+        rp.add_reviewer(
+            unit.unit_id, submission_key, reviewee_key, reviewer_key)
 
         self.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))
 
@@ -249,15 +280,14 @@ class AssignmentManager(ApplicationHandler):
 
         unit_id = self.request.get('unit_id')
         reviewee_id = self.request.get('reviewee_id')
-        reviewer_id = self.request.get('reviewer_id')
+        review_step_key = self.request.get('key')
 
         request_params, post_error_msg = self.parse_request(
-            course, unit_id, reviewee_id, reviewer_id=reviewer_id)
+            course, unit_id, reviewee_id)
 
         redirect_params = {
             'action': 'edit_assignment',
             'reviewee_id': reviewee_id,
-            'reviewer_id': reviewer_id,
             'unit_id': unit_id,
         }
 
@@ -266,14 +296,11 @@ class AssignmentManager(ApplicationHandler):
             self.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))
             return
 
+        rp = course.get_reviews_processor()
         unit = request_params.get('unit')
-        reviewee = request_params.get('reviewee')
-        reviewer = request_params.get('reviewer')
 
         # TODO(sll): Handle any errors here when porting this to the new review
         # module.
-
-        course.get_reviews_processor().delete_reviewer(
-            reviewee, unit, reviewer)
+        rp.delete_reviewer(unit.unit_id, review_step_key)
 
         self.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))

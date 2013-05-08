@@ -20,6 +20,7 @@ import datetime
 import logging
 from models import courses
 from models import models
+from models import review
 from models import transforms
 from models import utils
 from models.models import Student
@@ -134,20 +135,23 @@ class AnswerHandler(BaseHandler):
         matcher = unit.workflow.get_matcher()
 
         if grader == courses.HUMAN_GRADER:
-            previously_submitted = bool(course.get_reviews_processor(
-                ).get_student_work(student, unit))
+            previously_submitted = course.get_reviews_processor(
+                ).does_submission_exist(unit.unit_id, student.get_key())
 
             # Guard against duplicate submissions of a human-graded assessment.
             if not previously_submitted:
-                course.get_reviews_processor().submit_student_work(
-                    student, unit, answers)
+                rp = course.get_reviews_processor()
+                submission_key = rp.create_submission(
+                    unit.unit_id, student.get_key(), answers)
+                rp.start_review_process_for(
+                    unit.unit_id, submission_key, student.get_key())
                 # Record completion event in progress tracker.
                 course.get_progress_tracker().put_assessment_completed(
                     student, assessment_type)
 
             self.template_value['previously_submitted'] = previously_submitted
             self.template_value['matcher'] = matcher
-            if matcher == courses.PEER_MATCHER:
+            if matcher == review.PEER_MATCHER:
                 self.template_value['review_dashboard_url'] = (
                     'reviewdashboard?unit=%s' % unit.unit_id
                 )

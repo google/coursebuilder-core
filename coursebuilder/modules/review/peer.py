@@ -15,7 +15,8 @@
 """Internal implementation details of the peer review subsystem.
 
 Public classes, including domain objects, can be found in domain.py and
-models/review.py. Entities declared here should not be used by external clients.
+models/student_work.py. Entities declared here should not be used by external
+clients.
 """
 
 __author__ = [
@@ -24,7 +25,7 @@ __author__ = [
 
 from models import counters
 from models import models
-from models import review
+from models import student_work
 from modules.review import domain
 from google.appengine.ext import db
 
@@ -34,7 +35,7 @@ COUNTER_INCREMENT_COUNT_COUNT_AGGREGATE_EXCEEDED_MAX = counters.PerfCounter(
      'the counts would have exceeded domain.MAX_UNREMOVED_REVIEW_STEPS'))
 
 
-class ReviewSummary(review.BaseEntity):
+class ReviewSummary(student_work.BaseEntity):
     """Object that tracks the aggregate state of reviews for a submission."""
 
     # UTC last modification timestamp.
@@ -55,11 +56,11 @@ class ReviewSummary(review.BaseEntity):
     expired_count = db.IntegerProperty(default=0, required=True)
 
     # Key of the student who wrote the submission being reviewed.
-    reviewee_key = review.KeyProperty(
+    reviewee_key = student_work.KeyProperty(
         kind=models.Student.kind(), required=True)
     # Key of the submission being reviewed.
-    submission_key = review.KeyProperty(
-        kind=review.Submission.kind(), required=True)
+    submission_key = student_work.KeyProperty(
+        kind=student_work.Submission.kind(), required=True)
     # Identifier of the unit this review is a part of.
     unit_id = db.StringProperty(required=True)
 
@@ -130,12 +131,12 @@ class ReviewSummary(review.BaseEntity):
         if state == domain.REVIEW_STATE_ASSIGNED:
             self.assigned_count += 1
         elif state == domain.REVIEW_STATE_COMPLETED:
-            self.completed_count +=1
+            self.completed_count += 1
         elif state == domain.REVIEW_STATE_EXPIRED:
             self.expired_count += 1
 
 
-class ReviewStep(review.BaseEntity):
+class ReviewStep(student_work.BaseEntity):
     """Object that represents a single state of a review."""
 
     # Audit trail information.
@@ -153,8 +154,8 @@ class ReviewStep(review.BaseEntity):
     # Repeated data to allow filtering/ordering in queries.
 
     # Key of the submission being reviewed.
-    submission_key = review.KeyProperty(
-        kind=review.Submission.kind(), required=True)
+    submission_key = student_work.KeyProperty(
+        kind=student_work.Submission.kind(), required=True)
     # Unit this review step is part of.
     unit_id = db.StringProperty(required=True)
 
@@ -169,13 +170,13 @@ class ReviewStep(review.BaseEntity):
     # Pointers that tie the work and people involved together.
 
     # Key of the Review associated with this step.
-    review_key = review.KeyProperty(kind=review.Review.kind())
+    review_key = student_work.KeyProperty(kind=student_work.Review.kind())
     # Key of the associated ReviewSummary.
-    review_summary_key = review.KeyProperty(kind=ReviewSummary.kind())
+    review_summary_key = student_work.KeyProperty(kind=ReviewSummary.kind())
     # Key of the Student being reviewed.
-    reviewee_key = review.KeyProperty(kind=models.Student.kind())
+    reviewee_key = student_work.KeyProperty(kind=models.Student.kind())
     # Key of the Student doing this review.
-    reviewer_key = review.KeyProperty(kind=models.Student.kind())
+    reviewer_key = student_work.KeyProperty(kind=models.Student.kind())
 
     def __init__(self, *args, **kwargs):
         """Constructs a new ReviewStep."""

@@ -22,36 +22,40 @@
     </button>
   </form>
 
-  {% if not reviews %}
+  {% if not review_steps %}
     (<em>No reviews received yet.</em>)
   {% endif %}
 
   <ul>
-    {% for review in reviews %}
+    {% for review_step in review_steps %}
       <li>
-        Review {{ loop.index }} from {{review['reviewer']}}
-        {% if review['is_draft'] %}
-          (<em>Draft</em>)
-        {% else %}
+        Review {{ loop.index }} from {{reviewers[loop.index0]}}
+        {% if review_step.removed %}
+          (<em>Removed</em>)
+        {% elif review_step.state == REVIEW_STATE_COMPLETED %}
           (<em>Submitted</em>)
+        {% else %}
+          (<em>Draft</em>)
         {% endif %}
 
-        <form id='delete-reviewer-{{loop.index0}}' action='{{ delete_reviewer_action }}' method='POST'>
-          <input type="hidden" name="xsrf_token" value="{{ delete_reviewer_xsrf_token|escape }}">
-          <input type="hidden" name="unit_id" value="{{ unit_id }}">
-          <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
-          <input type="hidden" name="reviewer_id" value="{{ review['reviewer'] }}">
+        {% if not review_step.removed %}
+          <form id='delete-reviewer-{{loop.index0}}' action='{{ delete_reviewer_action }}' method='POST'>
+            <input type="hidden" name="xsrf_token" value="{{ delete_reviewer_xsrf_token|escape }}">
+            <input type="hidden" name="unit_id" value="{{ unit_id }}">
+            <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
+            <input type="hidden" name="key" value="{{ review_step.key }}">
 
-          <button class="gcb-button gcb-button-action right-button" type="submit"
-            onclick='return confirm("Remove this reviewer?");'>
-            Remove This Review
-          </button>
-        </form>
+            <button class="gcb-button gcb-button-action right-button" type="submit"
+              onclick='return confirm("Remove this reviewer?");'>
+              Remove This Review
+            </button>
+          </form>
+        {% endif %}
 
-        {% if not review['is_draft'] %}
+        {% if review_step.state == REVIEW_STATE_COMPLETED %}
           <br><br>
-          <div class="border-box">
-            {{ readonly_assessment.display(review['params']) }}
+          <div class="border-box {% if review_step.removed %}translucent{% endif %}">
+            {{ readonly_assessment.display(reviews_params[loop.index0]) }}
           </div>
         {% endif %}
 

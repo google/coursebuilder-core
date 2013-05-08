@@ -710,8 +710,8 @@ function renderAssessment(assessment, domRoot) {
 
       if (assessmentGlobals.isReviewForm) {
         myInput = document.createElement('input');
-        myInput.setAttribute('name', 'review_index');
-        myInput.setAttribute('value', assessmentGlobals.reviewIndex);
+        myInput.setAttribute('name', 'key');
+        myInput.setAttribute('value', assessmentGlobals.key);
         myForm.appendChild(myInput);
 
         myInput = document.createElement('input');

@@ -116,14 +116,6 @@ HUMAN_GRADER = 'human'
 # Allowed graders.
 ALLOWED_GRADERS = [AUTO_GRADER, HUMAN_GRADER]
 
-# Indicates that a human-graded assessment is self-graded.
-SELF_MATCHER = 'self'
-# Indicates that a human-graded assessment is peer-graded.
-PEER_MATCHER = 'peer'
-
-# Allowed matchers.
-ALLOWED_MATCHERS = [SELF_MATCHER, PEER_MATCHER]
-
 # Keys in unit.workflow (when it is converted to a dict).
 GRADER_KEY = 'grader'
 MATCHER_KEY = 'matcher'
@@ -157,7 +149,7 @@ DEFAULT_AUTO_GRADER_WORKFLOW = yaml.safe_dump({
 # sample v1.2 Power Searching course.
 LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
     GRADER_KEY: HUMAN_GRADER,
-    MATCHER_KEY: PEER_MATCHER,
+    MATCHER_KEY: review.PEER_MATCHER,
     SUBMISSION_DUE_DATE_KEY: '2013-03-14 12:00',
     REVIEW_DUE_DATE_KEY: '2013-03-21 12:00',
     REVIEW_MIN_COUNT_KEY: DEFAULT_REVIEW_MIN_COUNT,
@@ -1465,10 +1457,11 @@ class Workflow(object):
                     ', '.join(missing_keys))
 
                 workflow_errors = []
-                if workflow_dict[MATCHER_KEY] not in ALLOWED_MATCHERS:
+                if (workflow_dict[MATCHER_KEY] not in
+                    review.ALLOWED_MATCHERS):
                     workflow_errors.append(
                         'invalid matcher, should be one of: %s' %
-                        ', '.join(ALLOWED_MATCHERS))
+                        ', '.join(review.ALLOWED_MATCHERS))
 
                 self._ensure_value_is_nonnegative_int(
                     workflow_dict, REVIEW_MIN_COUNT_KEY, workflow_errors)
@@ -1699,8 +1692,8 @@ class Course(object):
             # If a human-reviewed assessment is completed, ensure that the
             # required reviews have also been completed.
             if completed and self.needs_human_grader(unit):
-                reviews = self.get_reviews_processor().get_reviewer_reviews(
-                    student, unit)
+                reviews = self.get_reviews_processor().get_review_steps_by(
+                    unit.unit_id, student.get_key())
                 review_min_count = unit.workflow.get_review_min_count()
                 if not review.ReviewUtils.has_completed_enough_reviews(
                         reviews, review_min_count):
@@ -1738,7 +1731,7 @@ class Course(object):
         assessment_list = self.get_assessment_list()
         units = copy.deepcopy([unit for unit in assessment_list if (
             unit.workflow.get_grader() == HUMAN_GRADER and
-            unit.workflow.get_matcher() == PEER_MATCHER)])
+            unit.workflow.get_matcher() == review.PEER_MATCHER)])
         for unit in units:
             unit.unit_id = str(unit.unit_id)
         return units

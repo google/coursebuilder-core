@@ -12,178 +12,126 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Models and helper utilities for the review workflow."""
+"""Review processor that is used for managing human-reviewed assessments."""
 
 __author__ = [
-    'johncox@google.com (John Cox)',
     'sll@google.com (Sean Lip)',
 ]
 
-import calendar
-import datetime
+from modules.review import domain
+from modules.review import review
 
-import entities
-import models
+import student_work
 import transforms
+
 from google.appengine.ext import db
 
+# Indicates that a human-graded assessment is self-graded.
+SELF_MATCHER = 'self'
+# Indicates that a human-graded assessment is peer-graded.
+PEER_MATCHER = 'peer'
 
-class KeyProperty(db.StringProperty):
-    """A property that stores a datastore key.
-
-    App Engine's db.ReferenceProperty is dangerous because accessing a
-    ReferenceProperty on a model instance implicitly causes an RPC. We always
-    want to know about and be in control of our RPCs, so we use this property
-    instead, store a key, and manually make datastore calls when necessary.
-    This is analogous to the approach ndb takes, and it also allows us to do
-    validation against a key's kind (see __init__).
-
-    Keys are stored as indexed strings internally. Usage:
-
-        class Foo(db.Model):
-            pass
-
-        class Bar(db.Model):
-            foo_key = KeyProperty(kind=Foo)  # Validates key is of kind 'Foo'.
-
-        foo_key = Foo().put()
-        bar = Bar(foo_key=foo_key)
-        bar_key = bar.put()
-        foo = db.get(bar.foo_key)
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Constructs a new KeyProperty.
-
-        Args:
-            *args: positional arguments passed to superclass.
-            **kwargs: keyword arguments passed to superclass. Additionally may
-                contain kind, which if passed will be a string used to validate
-                key kind. If omitted, any kind is considered valid.
-        """
-        kind = kwargs.pop('kind', None)
-        super(KeyProperty, self).__init__(*args, **kwargs)
-        self._kind = kind
-
-    def validate(self, value):
-        """Validates passed db.Key value, validating kind passed to ctor."""
-        super(KeyProperty, self).validate(str(value))
-        if value is None:  # Nones are valid iff they pass the parent validator.
-            return value
-        if not isinstance(value, db.Key):
-            raise db.BadValueError(
-                'Value must be of type db.Key; got %s' % type(value))
-        if self._kind and value.kind() != self._kind:
-            raise db.BadValueError(
-                'Key must be of kind %s; was %s' % (self._kind, value.kind()))
-        return value
+# Allowed matchers.
+ALLOWED_MATCHERS = [SELF_MATCHER, PEER_MATCHER]
 
 
-# For many classes we define both a _DomainObject subclass and a db.Model.
-# When possible it is best to use the domain object, since db.Model carries with
-# it the datastore API and allows clients to bypass business logic by making
-# direct datastore calls.
+class ReviewsProcessor(object):
+    """A class that processes review arrangements."""
 
+    TYPE_IMPL_MAPPING = {
+        PEER_MATCHER: review.Manager,
+        SELF_MATCHER: None,
+    }
 
-class BaseEntity(entities.BaseEntity):
-    """Abstract base entity for models related to reviews."""
+    def __init__(self, course):
+        self._course = course
 
-    @classmethod
-    def key_name(cls):
-        """Returns a key_name for use with cls's constructor."""
-        raise NotImplementedError
+    def _get_course(self):
+        return self._course
 
+    def _get_impl(self, unit_id):
+        unit = self._get_course().find_unit_by_id(unit_id)
+        return self.TYPE_IMPL_MAPPING[unit.workflow.get_matcher()]
 
-class Review(BaseEntity):
-    """Datastore model for a student review of a Submission."""
+    def _get_review_step_keys_by(self, unit_id, reviewer_key):
+        impl = self._get_impl(unit_id)
+        return impl.get_review_keys_by(unit_id, reviewer_key)
 
-    # Contents of the student's review. Max size is 1MB.
-    contents = db.TextProperty()
+    def _get_submission_by_key(self, unit_id, submission_key):
+        impl = self._get_impl(unit_id)
+        return impl.get_submissions_by_keys([submission_key])[0]
 
-    # Key of the Student who wrote this review.
-    reviewer_key = KeyProperty(kind=models.Student.kind())
-    # Identifier of the unit this review is a part of.
-    unit_id = db.StringProperty(required=True)
+    def add_reviewer(self, unit_id, submission_key, reviewee_key, reviewer_key):
+        impl = self._get_impl(unit_id)
+        return impl.add_reviewer(
+            unit_id, submission_key, reviewee_key, reviewer_key)
 
-    def __init__(self, *args, **kwargs):
-        """Constructs a new Review."""
-        assert not kwargs.get('key_name'), (
-            'Setting key_name manually is not supported')
-        reviewer_key = kwargs.get('reviewer_key')
-        unit_id = kwargs.get('unit_id')
-        assert reviewer_key and unit_id, 'Missing required property'
-        kwargs['key_name'] = self.key_name(unit_id, reviewer_key)
-        super(Review, self).__init__(*args, **kwargs)
+    def delete_reviewer(self, unit_id, review_step_key):
+        impl = self._get_impl(unit_id)
+        return impl.delete_reviewer(review_step_key)
 
-    @classmethod
-    def key_name(cls, unit_id, reviewer_key):
-        """Creates a key_name string for datastore operations.
+    def get_new_review(self, unit_id, reviewer_key):
+        impl = self._get_impl(unit_id)
+        return impl.get_new_review(unit_id, reviewer_key)
 
-        In order to work with the review subsystem, entities must have a key
-        name populated from this method.
+    def get_review_steps_by(self, unit_id, reviewer_key):
+        review_step_keys = self._get_review_step_keys_by(unit_id, reviewer_key)
+        return self.get_review_steps_by_keys(unit_id, review_step_keys)
 
-        Args:
-            unit_id: string. The id of the unit this review belongs to.
-            reviewer_key: db.Key of models.models.Student. The author of this
-                the review.
+    def get_reviews_by_keys(self, unit_id, review_keys):
+        impl = self._get_impl(unit_id)
+        reviews = impl.get_reviews_by_keys(review_keys)
+        return [(transforms.loads(rev.contents) if rev else None)
+                for rev in reviews]
 
-        Returns:
-            String.
-        """
-        return '(review:%s:%s)' % (unit_id, reviewer_key)
+    def get_review_steps_by_keys(self, unit_id, review_step_keys):
+        impl = self._get_impl(unit_id)
+        return impl.get_review_steps_by_keys(review_step_keys)
 
+    def get_submission_and_review_step_keys(self, unit_id, reviewee_key):
+        impl = self._get_impl(unit_id)
+        return impl.get_submission_and_review_keys(unit_id, reviewee_key)
 
-class Submission(BaseEntity):
-    """Datastore model for a student work submission."""
+    def get_submission_contents_by_key(self, unit_id, submission_key):
+        submission = self._get_submission_by_key(unit_id, submission_key)
+        return transforms.loads(submission.contents) if submission else None
 
-    # Contents of the student submission. Max size is 1MB.
-    contents = db.TextProperty()
+    def get_submission_contents(self, unit_id, reviewee_key):
+        submission_key = self.get_submission_key(unit_id, reviewee_key)
+        return self.get_submission_contents_by_key(unit_id, submission_key)
 
-    # Key of the Student who wrote this submission.
-    reviewee_key = KeyProperty(kind=models.Student.kind())
-    # Identifier of the unit this review is a part of.
-    unit_id = db.StringProperty(required=True)
+    def get_submission_key(self, unit_id, reviewee_key):
+        return db.Key.from_path(
+            student_work.Submission.kind(),
+            student_work.Submission.key_name(unit_id, reviewee_key))
 
-    def __init__(self, *args, **kwargs):
-        """Constructs a new Review."""
-        assert not kwargs.get('key_name'), (
-            'Setting key_name manually is not supported')
-        reviewee_key = kwargs.get('reviewee_key')
-        unit_id = kwargs.get('unit_id')
-        assert reviewee_key and unit_id, 'Missing required property'
-        kwargs['key_name'] = self.key_name(unit_id, reviewee_key)
-        super(Submission, self).__init__(*args, **kwargs)
+    def create_submission(self, unit_id, reviewee_key, submission_payload):
+        # TODO(sll): Add error handling.
+        return student_work.Submission(
+            unit_id=unit_id, reviewee_key=reviewee_key,
+            contents=transforms.dumps(submission_payload)).put()
 
-    @classmethod
-    def key_name(cls, unit_id, reviewee_key):
-        """Creates a key_name string for datastore operations.
+    def does_submission_exist(self, unit_id, reviewee_key):
+        submission_key = self.get_submission_key(unit_id, reviewee_key)
+        return bool(db.get(submission_key))
 
-        In order to work with the review subsystem, entities must have a key
-        name populated from this method.
+    def start_review_process_for(self, unit_id, submission_key, reviewee_key):
+        impl = self._get_impl(unit_id)
+        return impl.start_review_process_for(
+            unit_id, submission_key, reviewee_key)
 
-        Args:
-            unit_id: string. The id of the unit this review belongs to.
-            reviewee_key: db.Key of models.models.Student. The author of this
-                the submission.
-
-        Returns:
-            String.
-        """
-        return '(submission:%s:%s)' % (unit_id, reviewee_key.id_or_name())
+    def write_review(
+        self, unit_id, review_step_key, review_payload, mark_completed):
+        impl = self._get_impl(unit_id)
+        return impl.write_review(
+            review_step_key, transforms.dumps(review_payload),
+            mark_completed=mark_completed)
 
 
 class ReviewUtils(object):
     """A utility class for processing data relating to assessment reviews."""
     # TODO(sll): Update all docs and attribute references in this class once
     # the underlying models in review.py have been properly baked.
-
-    @classmethod
-    def has_unstarted_reviews(cls, reviews):
-        """Returns whether the student has any unstarted reviews."""
-        for review in reviews:
-            if 'review' not in review or not review['review']:
-                return True
-        return False
 
     @classmethod
     def get_answer_list(cls, submission):
@@ -196,21 +144,19 @@ class ReviewUtils(object):
         return answer_list
 
     @classmethod
-    def count_completed_reviews(cls, reviews):
+    def count_completed_reviews(cls, review_steps):
         """Counts the number of completed reviews in the given set."""
         count = 0
-        for review in reviews:
-            if 'is_draft' in review and not review['is_draft']:
+        for review_step in review_steps:
+            if review_step.state == domain.REVIEW_STATE_COMPLETED:
                 count += 1
         return count
 
     @classmethod
-    def has_completed_all_assigned_reviews(cls, reviews):
+    def has_completed_all_assigned_reviews(cls, review_steps):
         """Returns whether the student has completed all assigned reviews."""
-        for review in reviews:
-            if 'is_draft' in review and review['is_draft']:
-                return False
-            if 'review' not in review or not review['review']:
+        for review_step in review_steps:
+            if review_step.state != domain.REVIEW_STATE_COMPLETED:
                 return False
         return True
 
@@ -220,11 +166,12 @@ class ReviewUtils(object):
         return cls.count_completed_reviews(reviews) >= review_min_count
 
     @classmethod
-    def get_review_progress(cls, reviews, review_min_count, progress_tracker):
+    def get_review_progress(
+        cls, review_steps, review_min_count, progress_tracker):
         """Gets the progress value based on the number of reviews done.
 
         Args:
-          reviews: a list of review objects.
+          review_steps: a list of ReviewStep objects.
           review_min_count: the minimum number of reviews that the student is
               required to complete for this assessment.
           progress_tracker: the course progress tracker.
@@ -233,147 +180,11 @@ class ReviewUtils(object):
           the corresponding progress value: 0 (not started), 1 (in progress) or
           2 (completed).
         """
-        completed_reviews = cls.count_completed_reviews(reviews)
+        completed_reviews = cls.count_completed_reviews(review_steps)
 
-        if cls.has_completed_enough_reviews(reviews, review_min_count):
+        if cls.has_completed_enough_reviews(review_steps, review_min_count):
             return progress_tracker.COMPLETED_STATE
         elif completed_reviews > 0:
             return progress_tracker.IN_PROGRESS_STATE
         else:
             return progress_tracker.NOT_STARTED_STATE
-
-
-class ReviewsProcessor(object):
-    """A class that processes review arrangements."""
-
-    def __init__(self, course):
-        self._course = course
-
-    def _get_course(self):
-        return self._course
-
-    def get_new_submission_for_review(self, reviewer, unit):
-        """Returns a new submission that this reviewer can review.
-
-        This can be overwritten by other functions that pair reviewers with
-        submissions.
-
-        Args:
-          reviewer: the reviewer that needs to be assigned a new submission.
-          unit: the corresponding assessment.
-
-        Returns:
-          the student to assign to this reviewer, or None if no valid
-          assignments are possible.
-        """
-        # This implementation returns a submission with the fewest reviewers
-        # assigned so far. It is not optimized.
-        chosen_student_key = None
-        min_reviewers_so_far = 99999
-
-        for work_entity in StudentWorkEntity.all():
-            key = work_entity.key_string
-            work = transforms.loads(work_entity.data)
-
-            student_key = key[:key.find(':')]
-            unit_id = key[key.find(':') + 1:]
-            if unit_id != str(unit.unit_id):
-                continue
-            if reviewer.key().name() in work['reviewers']:
-                continue
-            # Do not allow review of the reviewer's own work.
-            if student_key == reviewer.key().name():
-                continue
-
-            # This piece of work is a candidate submission for this reviewer to
-            # review.
-            if len(work['reviewers']) < min_reviewers_so_far:
-                min_reviewers_so_far = len(work['reviewers'])
-                chosen_student_key = student_key
-
-        return chosen_student_key
-
-    def get_student_work(self, student, unit):
-        """Returns a student's submission and associated reviews, or None."""
-        return self._get_student_work(student, unit)
-
-    def submit_student_work(self, student, unit, answers):
-        """Puts a new student work product into the review pool."""
-        self._put_student_work(student, unit, {
-            'submission': answers,
-            # This dict is keyed by reviewer email, with value {'review': ...}.
-            'reviewers': {},
-        })
-
-    def submit_review(self, student, unit, reviewer, review_data, is_draft):
-        """Handles a review submission."""
-        work = self._get_student_work(student, unit)
-        # Check if the reviewer has indeed been assigned to this submission.
-        if work['reviewers'][reviewer.key().name()]:
-            work['reviewers'][reviewer.key().name()]['review'] = review_data
-            work['reviewers'][reviewer.key().name()]['is_draft'] = is_draft
-        self._put_student_work(student, unit, work)
-
-    def get_reviewer_reviews(self, reviewer, unit):
-        """Gets the reviews for a given reviewer and unit."""
-        reviews = []
-        for work_entity in StudentWorkEntity.all():
-            key = work_entity.key_string
-            work = transforms.loads(work_entity.data)
-
-            student_key = key[:key.find(':')]
-            unit_id = key[key.find(':') + 1:]
-            if unit_id != str(unit.unit_id):
-                continue
-            if reviewer.key().name() in work['reviewers']:
-                reviews.append({
-                    'student': student_key,
-                    'submission': work['submission'],
-                    'review': work['reviewers'][reviewer.key().name()].get(
-                        'review'),
-                    'is_draft': work['reviewers'][
-                        reviewer.key().name()]['is_draft'],
-                    'date_added': work['reviewers'][
-                        reviewer.key().name()]['date_added'],
-                })
-        # Order the reviews by the time they were assigned.
-        return sorted(reviews, key=lambda r: r['date_added'])
-
-    def add_reviewer(self, student, unit, new_reviewer):
-        """Adds a reviewer to a student submission."""
-        work = self.get_student_work(student, unit)
-        work['reviewers'][new_reviewer.key().name()] = {
-            'review': None, 'is_draft': True,
-            'date_added': calendar.timegm(
-                datetime.datetime.utcnow().timetuple())}
-        self._put_student_work(student, unit, work)
-
-    def delete_reviewer(self, student, unit, reviewer_to_delete):
-        """Removes a reviewer from a student submission."""
-        work = self.get_student_work(student, unit)
-        del work['reviewers'][reviewer_to_delete.key().name()]
-        self._put_student_work(student, unit, work)
-
-    def _get_student_work(self, student, unit):
-        key = ':'.join([student.key().name(), str(unit.unit_id)])
-        work_entity = StudentWorkEntity.get_by_key_name(key)
-        return transforms.loads(work_entity.data) if work_entity else None
-
-    def _put_student_work(self, student, unit, work):
-        key = ':'.join([student.key().name(), str(unit.unit_id)])
-        answers = StudentWorkEntity.get_by_key_name(key)
-        if not answers:
-            answers = StudentWorkEntity(key_name=key, key_string=key)
-        answers.updated_on = datetime.datetime.now()
-        answers.data = transforms.dumps(work)
-        answers.put()
-
-
-class StudentWorkEntity(entities.BaseEntity):
-    """Student work for human-reviewed assignments."""
-
-    updated_on = db.DateTimeProperty(indexed=True)
-
-    key_string = db.StringProperty(required=True)
-    # Each of the following is a string representation of a JSON dict.
-    data = db.TextProperty(indexed=False)

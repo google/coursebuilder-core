@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Functional tests for models/student_work.py."""
+"""Functional tests for models/review.py."""
 
 __author__ = [
     'johncox@google.com (John Cox)',

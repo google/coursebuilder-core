@@ -102,7 +102,7 @@ class MemcacheManager(object):
 class Student(BaseEntity):
     """Student profile."""
     enrolled_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
-    user_id = db.StringProperty(indexed=False)
+    user_id = db.StringProperty(indexed=True)
     name = db.StringProperty(indexed=False)
     additional_fields = db.TextProperty(indexed=False)
     is_enrolled = db.BooleanProperty(indexed=False)
@@ -173,6 +173,21 @@ class Student(BaseEntity):
                             'found.' % user.email())
         student.is_enrolled = is_enrolled
         student.put()
+
+    def get_key(self):
+        return db.Key.from_path(Student.kind(), self.user_id)
+
+    @classmethod
+    def get_student_by_user_id(cls, user_id):
+        students = cls.all().filter(cls.user_id.name, user_id).fetch(limit=2)
+        if len(students) == 2:
+            raise Exception(
+                'There is more than one student with user_id %s' % user_id)
+        return students[0] if students else None
+
+    def has_same_key_as(self, key):
+        """Checks if the key of the student and the given key are equal."""
+        return key == self.get_key()
 
 
 class EventEntity(BaseEntity):

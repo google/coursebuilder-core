@@ -22,7 +22,7 @@ import datetime
 import random
 
 from models import counters
-from models import review
+from models import student_work
 from models import utils
 from modules.review import domain
 from modules.review import peer
@@ -299,8 +299,8 @@ class Manager(object):
 
         Args:
             unit_id: string. Unique identifier for a unit.
-            submission_key: db.Key of models.review.Submission. The submission
-                being registered.
+            submission_key: db.Key of models.student_work.Submission. The
+                submission being registered.
             reviewee_key: db.Key of models.models.Student. The student who
                 authored the submission.
             reviewer_key: db.Key of models.models.Student. The student to add as
@@ -424,8 +424,8 @@ class Manager(object):
         this method on a removed review step is an error.
 
         Args:
-            review_step_key: db.Key of models.review.ReviewStep. The review step
-                to delete.
+            review_step_key: db.Key of models.student_work.ReviewStep. The
+                review step to delete.
 
         Raises:
             KeyError: if there is no review step with the given key, or if the
@@ -474,8 +474,8 @@ class Manager(object):
         """Puts a review step in state REVIEW_STATE_EXPIRED.
 
         Args:
-            review_step_key: db.Key of models.review.ReviewStep. The review step
-                to expire.
+            review_step_key: db.Key of models.student_work.ReviewStep. The
+                review step to expire.
 
         Raises:
             KeyError: if there is no review with the given key, or the step
@@ -806,6 +806,8 @@ class Manager(object):
                 peer.ReviewStep.reviewer_key.name, reviewer_key
             ).filter(
                 peer.ReviewStep.unit_id.name, unit_id
+            ).order(
+                peer.ReviewStep.create_date.name,
             )
 
             keys = [key for key in query.fetch(_REVIEW_STEP_QUERY_LIMIT)]
@@ -872,8 +874,8 @@ class Manager(object):
 
         try:
             submission_key = db.Key.from_path(
-                review.Submission.kind(),
-                review.Submission.key_name(unit_id, reviewee_key))
+                student_work.Submission.kind(),
+                student_work.Submission.key_name(unit_id, reviewee_key))
             submission = db.get(submission_key)
             if not submission:
                 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS.inc()
@@ -929,8 +931,8 @@ class Manager(object):
 
         Args:
             unit_id: string. Unique identifier for a unit.
-            submission_key: db.Key of models.review.Submission. The submission
-                being registered.
+            submission_key: db.Key of models.student_work.Submission. The
+                submission being registered.
             reviewee_key: db.Key of models.models.Student. The student who
                 authored the submission.
 
@@ -1032,12 +1034,12 @@ class Manager(object):
             if review_to_update:
                 should_increment_updated_existing_review = True
         else:
-            review_to_update = review.Review(
+            review_to_update = student_work.Review(
                 contents=review_payload, reviewer_key=step.reviewer_key,
                 unit_id=step.unit_id)
             step.review_key = db.Key.from_path(
-                review.Review.kind(),
-                review.Review.key_name(step.unit_id, step.reviewer_key))
+                student_work.Review.kind(),
+                student_work.Review.key_name(step.unit_id, step.reviewer_key))
             should_increment_created_new_review = True
 
         if not review_to_update:

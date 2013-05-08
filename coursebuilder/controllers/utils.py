@@ -345,6 +345,13 @@ class RegisterHandler(BaseHandler):
                 student = Student(key_name=user.email())
                 student.user_id = user.user_id()
 
+            student_by_uid = Student.get_student_by_user_id(user.user_id())
+            is_valid_student = (student_by_uid is None or
+                                student_by_uid.user_id == student.user_id)
+            assert is_valid_student, (
+                'Student\'s email and user id do not match.')
+
+            student.user_id = user.user_id()
             student.is_enrolled = True
             student.name = name
             student.additional_fields = additional_fields

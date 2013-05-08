@@ -19,7 +19,7 @@ __author__ = [
 ]
 
 from models import models
-from models import review
+from models import student_work
 from modules.review import domain
 from modules.review import peer
 from tests.functional import actions
@@ -33,7 +33,7 @@ class ReviewStepTest(actions.TestBase):
         unit_id = 'unit_id'
         reviewee_key = models.Student(key_name='reviewee@example.com').put()
         reviewer_key = models.Student(key_name='reviewer@example.com').put()
-        submission_key = review.Submission(
+        submission_key = student_work.Submission(
             reviewee_key=reviewee_key, unit_id=unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_AUTO,
@@ -52,7 +52,7 @@ class ReviewSummaryTest(actions.TestBase):
     def test_constructor_sets_key_name(self):
         unit_id = 'unit_id'
         reviewee_key = models.Student(key_name='reviewee@example.com').put()
-        submission_key = review.Submission(
+        submission_key = student_work.Submission(
             reviewee_key=reviewee_key, unit_id=unit_id).put()
         summary_key = peer.ReviewSummary(
             reviewee_key=reviewee_key, submission_key=submission_key,
@@ -68,7 +68,7 @@ class ReviewSummaryTest(actions.TestBase):
             reviewee_key=db.Key.from_path(
                 models.Student.kind(), 'reviewee@example.com'),
             submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'), unit_id='1')
+                student_work.Submission.kind(), 'submission'), unit_id='1')
 
         self.assertEqual(1, summary.assigned_count)
         summary.decrement_count(domain.REVIEW_STATE_ASSIGNED)
@@ -87,7 +87,7 @@ class ReviewSummaryTest(actions.TestBase):
             reviewee_key=db.Key.from_path(
                 models.Student.kind(), 'reviewee@example.com'),
             submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'), unit_id='1')
+                student_work.Submission.kind(), 'submission'), unit_id='1')
 
         self.assertRaises(ValueError, summary.increment_count, 'bad_state')
         self.assertEqual(0, summary.assigned_count)
@@ -105,7 +105,7 @@ class ReviewSummaryTest(actions.TestBase):
             reviewee_key=db.Key.from_path(
                 models.Student.kind(), 'reviewee@example.com'),
             submission_key=db.Key.from_path(
-                review.Submission.kind(), 'submission'), unit_id='1')
+                student_work.Submission.kind(), 'submission'), unit_id='1')
         # Increment to the limit succeeds...
         check_overflow.increment_count(domain.REVIEW_STATE_ASSIGNED)
 
