@@ -88,7 +88,7 @@ class ManagerTest(TestBase):
             AssertionError, review_module.Manager.add_reviewer, self.unit_id,
             self.submission_key, self.reviewee_key, self.reviewer_key)
 
-    def test_add_reviewer_existing_raises_value_error_when_state_assigned(self):
+    def test_add_reviewer_existing_raises_transition_error_when_assigned(self):
         summary_key = peer.ReviewSummary(
             assigned_count=1, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
@@ -103,10 +103,11 @@ class ManagerTest(TestBase):
         ).put()
 
         self.assertRaises(
-            ValueError, review_module.Manager.add_reviewer, self.unit_id,
-            self.submission_key, self.reviewee_key, self.reviewer_key)
+            review_module.TransitionError, review_module.Manager.add_reviewer,
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
 
-    def test_add_reviewer_existing_raises_value_error_when_completed(self):
+    def test_add_reviewer_existing_raises_transition_error_when_completed(self):
         summary_key = peer.ReviewSummary(
             completed_count=1, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
@@ -121,8 +122,9 @@ class ManagerTest(TestBase):
         ).put()
 
         self.assertRaises(
-            ValueError, review_module.Manager.add_reviewer, self.unit_id,
-            self.submission_key, self.reviewee_key, self.reviewer_key)
+            review_module.TransitionError, review_module.Manager.add_reviewer,
+            self.unit_id, self.submission_key, self.reviewee_key,
+            self.reviewer_key)
 
     def test_add_reviewer_unremoved_existing_changes_expired_to_assigned(self):
         summary_key = peer.ReviewSummary(
@@ -247,7 +249,7 @@ class ManagerTest(TestBase):
     def test_delete_reviewer_raises_key_error_when_step_missing(self):
         self.assertRaises(
             KeyError, review_module.Manager.delete_reviewer,
-            db.Key.from_path(peer.ReviewStep.kind(), 'missing_key'))
+            db.Key.from_path(peer.ReviewStep.kind(), 'missing_step_key'))
 
     def test_delete_reviewer_raises_key_error_when_summary_missing(self):
         missing_key = db.Key.from_path(
@@ -263,7 +265,7 @@ class ManagerTest(TestBase):
         self.assertRaises(
             KeyError, review_module.Manager.delete_reviewer, step_key)
 
-    def test_delete_reviewer_raises_value_error_if_already_removed(self):
+    def test_delete_reviewer_raises_removed_error_if_already_removed(self):
         summary_key = peer.ReviewSummary(
             assigned_count=1, reviewee_key=self.reviewee_key,
             submission_key=self.submission_key, unit_id=self.unit_id
@@ -277,7 +279,104 @@ class ManagerTest(TestBase):
         ).put()
 
         self.assertRaises(
-            ValueError, review_module.Manager.delete_reviewer, step_key)
+            review_module.RemovedError, review_module.Manager.delete_reviewer,
+            step_key)
+
+    def test_expire_review_raises_key_error_when_step_missing(self):
+        self.assertRaises(
+            KeyError, review_module.Manager.expire_review,
+            db.Key.from_path(peer.ReviewStep.kind(), 'missing_step_key'))
+
+    def test_expire_review_raises_key_error_when_summary_missing(self):
+        missing_key = db.Key.from_path(
+            peer.ReviewSummary.kind(), 'missing_review_summary_key')
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=missing_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            KeyError, review_module.Manager.expire_review, step_key)
+
+    def test_expire_review_raises_transition_error_when_state_completed(self):
+        summary_key = peer.ReviewSummary(
+            completed=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.TransitionError, review_module.Manager.expire_review,
+            step_key)
+
+    def test_expire_review_raises_transition_error_when_state_expired(self):
+        summary_key = peer.ReviewSummary(
+            expired_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.TransitionError, review_module.Manager.expire_review,
+            step_key)
+
+    def test_expire_review_raises_removed_error_when_step_removed(self):
+        summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.RemovedError, review_module.Manager.expire_review,
+            step_key)
+
+    def test_expire_review_transitions_state_and_updates_summary(self):
+        summary_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=self.reviewee_key,
+            submission_key=self.submission_key, unit_id=self.unit_id
+        ).put()
+        step_key = peer.ReviewStep(
+            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            review_key=db.Key.from_path(review.Review.kind(), 'review'),
+            review_summary_key=summary_key, reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, submission_key=self.submission_key,
+            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+
+        step, summary = db.get([step_key, summary_key])
+
+        self.assertEqual(1, summary.assigned_count)
+        self.assertEqual(0, summary.expired_count)
+        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+
+        expired_key = review_module.Manager.expire_review(step_key)
+        step, summary = db.get([expired_key, summary_key])
+
+        self.assertEqual(0, summary.assigned_count)
+        self.assertEqual(1, summary.expired_count)
+        self.assertEqual(peer.REVIEW_STATE_EXPIRED, step.state)
 
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(

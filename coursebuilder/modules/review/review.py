@@ -57,7 +57,7 @@ COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED = counters.PerfCounter(
 
 COUNTER_DELETE_REVIEWER_ALREADY_REMOVED = counters.PerfCounter(
     'gcb-review-delete-reviewer-already-removed',
-    ('number of times delete_reviewer() called on ReviewStep with removed '
+    ('number of times delete_reviewer() called on review step with removed '
      'already True'))
 COUNTER_DELETE_REVIEWER_FAILED = counters.PerfCounter(
     'gcb-review-delete-reviewer-failed',
@@ -67,13 +67,33 @@ COUNTER_DELETE_REVIEWER_START = counters.PerfCounter(
     'number of times delete_reviewer() has started processing')
 COUNTER_DELETE_REVIEWER_STEP_MISS = counters.PerfCounter(
     'gcb-review-delete-reviewer-step-miss',
-    'number of times delete_reviewer() found a missing ReviewStep')
+    'number of times delete_reviewer() found a missing review step')
 COUNTER_DELETE_REVIEWER_SUCCESS = counters.PerfCounter(
     'gcb-review-delete-reviewer-success',
     'number of times delete_reviewer() completed successfully')
 COUNTER_DELETE_REVIEWER_SUMMARY_MISS = counters.PerfCounter(
     'gcb-review-delete-reviewer-summary-miss',
-    'number of times delete_reviewer() found a missing ReviewSummary')
+    'number of times delete_reviewer() found a missing review summary')
+
+COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION = counters.PerfCounter(
+    'gcb-expire-review-cannot-transition',
+    ('number of times expire_review() was called on a review step that could '
+     'not be transitioned to REVIEW_STATE_EXPIRED'))
+COUNTER_EXPIRE_REVIEW_FAILED = counters.PerfCounter(
+    'gcb-expire-review-failed',
+    'number of times expire_review() had a fatal error')
+COUNTER_EXPIRE_REVIEW_START = counters.PerfCounter(
+    'gcb-expire-review-start',
+    'number of times expire_review() has started processing')
+COUNTER_EXPIRE_REVIEW_STEP_MISS = counters.PerfCounter(
+    'gcb-expire-review-step-miss',
+    'number of times expire_review() found a missing review step')
+COUNTER_EXPIRE_REVIEW_SUCCESS = counters.PerfCounter(
+    'gcb-expire-review-success',
+    'number of times expire_review() completed successfully')
+COUNTER_EXPIRE_REVIEW_SUMMARY_MISS = counters.PerfCounter(
+    'gcb-expire-review-summary-miss',
+    'number of times expire_review() found a missing review summary')
 
 COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
     'gcb-start-review-process-for-already-started',
@@ -94,8 +114,42 @@ class Error(Exception):
     """Base error class."""
 
 
+class RemovedError(Error):
+    """Raised when an op cannot be performed on a step because it is removed."""
+
+    def __init__(self, message, value):
+        """Constructs a new RemovedError."""
+        super(RemovedError, self).__init__(message)
+        self.value = value
+
+    def __str__(self):
+        return '%s: removed is %s' % (self.message, self.value)
+
+
 class ReviewProcessAlreadyStartedError(Error):
     """Raised when someone attempts to start a review process in progress."""
+
+
+class TransitionError(Error):
+    """Raised when an invalid state transition is attempted."""
+
+    def __init__(self, message, before, after):
+        """Constructs a new TransitionError.
+
+        Args:
+            message: string. Exception message.
+            before: string in peer.ReviewStates (though this is unenforced).
+                State we attempted to transition from.
+            after: string in peer.ReviewStates (though this is unenforced).
+                State we attempted to transition to.
+        """
+        super(TransitionError, self).__init__(message)
+        self.after = after
+        self.before = before
+
+    def __str__(self):
+        return '%s: attempted to transition from %s to %s' % (
+            self.message, self.before, self.after)
 
 
 class _DomainObject(object):
@@ -300,7 +354,7 @@ class Manager(object):
                 a reviewer.
 
         Raises:
-            ValueError: if there is a pre-existing review step found in
+            TransitionError: if there is a pre-existing review step found in
                 REVIEW_STATE_ASSIGNED|COMPLETED.
 
         Returns:
@@ -344,10 +398,12 @@ class Manager(object):
             reviewer_key=reviewer_key, state=peer.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id)
         step_key, written_summary_key = db.put([step, summary])
+
         if summary_key != written_summary_key:
             COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
             raise AssertionError(
                 'Synthesized invalid review summary key %s' % repr(summary_key))
+
         COUNTER_ADD_REVIEWER_CREATE_REVIEW_STEP.inc()
         return step_key
 
@@ -357,12 +413,15 @@ class Manager(object):
         should_increment_reassigned = False
         should_increment_unremoved = False
         summary = peer.ReviewSummary.get(step.review_summary_key)
+
         if not summary:
             COUNTER_ADD_REVIEWER_BAD_SUMMARY_KEY.inc()
             raise AssertionError(
                 'Found invalid review summary key %s' % repr(
                     step.review_summary_key))
+
         if not step.removed:
+
             if step.state == peer.REVIEW_STATE_EXPIRED:
                 should_increment_reassigned = True
                 step.state = peer.REVIEW_STATE_ASSIGNED
@@ -371,12 +430,14 @@ class Manager(object):
             elif (step.state == peer.REVIEW_STATE_ASSIGNED or
                   step.state == peer.REVIEW_STATE_COMPLETED):
                 COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED.inc()
-                raise ValueError(
-                    ('Unable to add new reviewer to existing step %s in state '
-                     '%s') % (repr(step.key()), step.state))
+                raise TransitionError(
+                    'Unable to add new reviewer to step %s' % (
+                        repr(step.key())),
+                    step.state, peer.REVIEW_STATE_ASSIGNED)
         else:
             should_increment_unremoved = True
             step.removed = False
+
             if step.state != peer.REVIEW_STATE_EXPIRED:
                 summary.increment_count(step.state)
             else:
@@ -384,16 +445,20 @@ class Manager(object):
                 step.state = peer.REVIEW_STATE_ASSIGNED
                 summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
                 summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+
         if step.assigner_kind != peer.ASSIGNER_KIND_HUMAN:
             should_increment_human = True
             step.assigner_kind = peer.ASSIGNER_KIND_HUMAN
+
         step_key = db.put([step, summary])[0]
+
         if should_increment_human:
             COUNTER_ADD_REVIEWER_SET_ASSIGNER_KIND_HUMAN.inc()
         if should_increment_reassigned:
             COUNTER_ADD_REVIEWER_EXPIRED_STEP_REASSIGNED.inc()
         if should_increment_unremoved:
             COUNTER_ADD_REVIEWER_REMOVED_STEP_UNREMOVED.inc()
+
         return step_key
 
     @classmethod
@@ -412,8 +477,8 @@ class Manager(object):
         Raises:
             KeyError: if there is no review step with the given key, or if the
                 step references a review summary that does not exist.
-            ValueError: if called on a review step that has already been marked
-                removed.
+            RemovedError: if called on a review step that has already been
+                marked removed.
 
         Returns:
             db.Key of deleted review step.
@@ -437,16 +502,82 @@ class Manager(object):
                 'No review step found with key %s' % repr(review_step_key))
         if step.removed:
             COUNTER_DELETE_REVIEWER_ALREADY_REMOVED.inc()
-            raise ValueError(
-                'Review step %s already removed' % repr(review_step_key))
+            raise RemovedError(
+                'Cannot remove step %s' % repr(review_step_key), step.removed)
         summary = db.get(step.review_summary_key)
+
         if not summary:
             COUNTER_DELETE_REVIEWER_SUMMARY_MISS.inc()
             raise KeyError(
                 'No review summary found with key %s' % repr(
                     step.review_summary_key))
+
         step.removed = True
         summary.decrement_count(step.state)
+        return db.put([step, summary])[0]
+
+    @classmethod
+    def expire_review(cls, review_step_key):
+        """Puts a review step in state REVIEW_STATE_EXPIRED.
+
+        Args:
+            review_step_key: db.Key of models.review.ReviewStep. The review step
+                to expire.
+
+        Raises:
+            KeyError: if there is no review with the given key, or the step
+                references a review summary that does not exist.
+            RemovedError: if called on a step that is removed.
+            TransitionError: if called on a review step that cannot be
+                transitioned to REVIEW_STATE_EXPIRED (that is, it is already in
+                REVIEW_STATE_COMPLETED or REVIEW_STATE_EXPIRED).
+
+        Returns:
+            db.Key of the expired review step.
+        """
+        try:
+            COUNTER_EXPIRE_REVIEW_START.inc()
+            key = cls._transition_state_to_expired(review_step_key)
+            COUNTER_EXPIRE_REVIEW_SUCCESS.inc()
+            return key
+        except Exception as e:
+            COUNTER_EXPIRE_REVIEW_FAILED.inc()
+            raise e
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _transition_state_to_expired(cls, review_step_key):
+        step = db.get(review_step_key)
+
+        if not step:
+            COUNTER_EXPIRE_REVIEW_STEP_MISS.inc()
+            raise KeyError(
+                'No review step found with key %s' % repr(review_step_key))
+
+        if step.removed:
+            COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION.inc()
+            raise RemovedError(
+                'Cannot transition step %s' % repr(review_step_key),
+                step.removed)
+
+        if step.state in (
+                peer.REVIEW_STATE_COMPLETED, peer.REVIEW_STATE_EXPIRED):
+            COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION.inc()
+            raise TransitionError(
+                'Cannot transition step %s' % repr(review_step_key),
+                step.state, peer.REVIEW_STATE_EXPIRED)
+
+        summary = db.get(step.review_summary_key)
+
+        if not summary:
+            COUNTER_EXPIRE_REVIEW_SUMMARY_MISS.inc()
+            raise KeyError(
+                'No review summary found with key %s' % repr(
+                    step.review_summary_key))
+
+        summary.decrement_count(step.state)
+        step.state = peer.REVIEW_STATE_EXPIRED
+        summary.increment_count(step.state)
         return db.put([step, summary])[0]
 
     @classmethod
@@ -487,6 +618,7 @@ class Manager(object):
     def _create_review_summary(cls, reviewee_key, submission_key, unit_id):
         collision = peer.ReviewSummary.get_by_key_name(
             peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
+
         if collision:
             COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED.inc()
             raise ReviewProcessAlreadyStartedError()
