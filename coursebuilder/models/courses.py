@@ -1729,11 +1729,19 @@ class Course(object):
         return copy.deepcopy(assessment_list)
 
     def get_peer_reviewed_units(self):
-        """Returns a list of units that are peer-reviewed assessments."""
+        """Returns a list of units that are peer-reviewed assessments.
+
+        Returns:
+            A list of units that are peer-reviewed assessments. Each unit
+            in the list has a unit_id of type string.
+        """
         assessment_list = self.get_assessment_list()
-        return [unit for unit in assessment_list if (
+        units = copy.deepcopy([unit for unit in assessment_list if (
             unit.workflow.get_grader() == HUMAN_GRADER and
-            unit.workflow.get_matcher() == PEER_MATCHER)]
+            unit.workflow.get_matcher() == PEER_MATCHER)])
+        for unit in units:
+            unit.unit_id = str(unit.unit_id)
+        return units
 
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)

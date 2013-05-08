@@ -86,8 +86,8 @@
     <select name="unit_id">
       {% for unit in peer_reviewed_units %}
         <option value="{{ unit.unit_id }}"
-         {% if unit_id == unit.unit_id %}selected{% endif %}>
-         {{ unit.title }}
+          {% if unit_id == unit.unit_id %}selected{% endif %}>
+          {{ unit.title }}
         </option>
       {% endfor %}
     </select>
