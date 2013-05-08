@@ -23,6 +23,7 @@ from common import jinja_filters
 from common import safe_dom
 from controllers import sites
 from controllers.utils import ApplicationHandler
+from controllers.utils import HUMAN_READABLE_TIME_FORMAT
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
 import jinja2.exceptions
@@ -59,8 +60,6 @@ class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
     AssignmentManager, ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
-
-    TIME_FMT = '%H:%M'
 
     default_action = 'outline'
     get_actions = [
@@ -576,7 +575,7 @@ class DashboardHandler(
                 update_message = safe_dom.Text("""
                     Enrollment and assessment statistics were last updated at
                     %s in about %s second(s).""" % (
-                        job.updated_on.strftime(DashboardHandler.TIME_FMT),
+                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
                         job.execution_time_sec))
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = safe_dom.NodeList().append(
@@ -592,7 +591,7 @@ class DashboardHandler(
                 update_message = safe_dom.Text(
                     'Enrollment and assessment statistics update started at %s'
                     ' and is running now. Please come back shortly.' %
-                    job.updated_on.strftime(DashboardHandler.TIME_FMT))
+                    job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT))
 
         subtemplate_values['stats_calculated'] = stats_calculated
         subtemplate_values['errors'] = errors

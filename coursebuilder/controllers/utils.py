@@ -70,6 +70,9 @@ HUMAN_READABLE_DATETIME_FORMAT = '%Y-%m-%d, %H:%M UTC'
 # Date format string for displaying dates. Example: 2013-03-21
 HUMAN_READABLE_DATE_FORMAT = '%Y-%m-%d'
 
+# Time format string for displaying times. Example: 01:16:40 UTC.
+HUMAN_READABLE_TIME_FORMAT = '%H:%M:%S UTC'
+
 
 class ReflectiveRequestHandler(object):
     """Uses reflection to handle custom get() and post() requests.
