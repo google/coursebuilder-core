@@ -235,13 +235,20 @@ def create_course_registry():
         SchemaField('course:title', 'Course Name', 'string'))
     course_opts.add_property(
         SchemaField(
-            'course:admin_user_emails', 'Course Admin Emails', 'string'))
+            'course:admin_user_emails', 'Course Admin Emails', 'string',
+            description='A space-separated list of email addresses of course '
+            'administrators. Each email address must be placed between \'[\' '
+            'and \']\'.'))
     course_opts.add_property(
         SchemaField(
-            'course:forum_email', 'Forum Email', 'string', optional=True))
+            'course:forum_email', 'Forum Email', 'string', optional=True,
+            description='Email for the forum, e.g. '
+            '\'My-Course@googlegroups.com\'.'))
     course_opts.add_property(SchemaField(
         'course:announcement_list_email', 'Announcement List Email', 'string',
-        optional=True))
+        optional=True, description='Email for the mailing list where students '
+        'can register to receive course announcements, e.g. '
+        '\'My-Course-Announce@googlegroups.com\''))
     course_opts.add_property(SchemaField('course:locale', 'Locale', 'string'))
     course_opts.add_property(SchemaField(
         'course:start_date', 'Course Start Date', 'string', optional=True))

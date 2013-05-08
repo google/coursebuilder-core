@@ -31,7 +31,7 @@ import safe_dom
 
 
 CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
-    'gcb_can_use_dynamic_tags', bool, (
+    'gcb_can_use_dynamic_tags', bool, safe_dom.Text(
         'Whether lesson content can make use of custom HTML tags such as '
         '<gcb-youtube videoid="...">. If this is enabled some legacy content '
         'may be rendered differently. '),

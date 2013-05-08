@@ -823,8 +823,10 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'unit_id', '_inputex'], {
                 'label': 'Parent Unit', '_type': 'select',
                 'choices': unit_list}),
+            # TODO(sll): The internal 'objectives' property should also be
+            # renamed.
             (['properties', 'objectives', '_inputex'], {
-                'label': 'Objectives',
+                'label': 'Lesson Body',
                 'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
                 'description': messages.LESSON_OBJECTIVES_DESCRIPTION}),
             (['properties', 'video', '_inputex'], {

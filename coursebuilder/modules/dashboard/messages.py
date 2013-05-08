@@ -35,12 +35,11 @@ This information is configured by an administrator from the Admin pages.
 """, None)
 
 ASSESSMENT_CONTENT_DESCRIPTION = assemble_sanitized_message("""
-Write, in JavaScript format, the text for each of your assessment questions
-and their answer formats.
+Assessment questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
 
 ASSESSMENT_DETAILS_DESCRIPTION = assemble_sanitized_message("""
-Define, in YAML format, the properties and restrictions of your assessment.
+Properties and restrictions of your assessment (YAML format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 ASSESSMENT_EDITOR_DESCRIPTION = assemble_sanitized_message(
@@ -88,7 +87,6 @@ The course.yaml file contains many course settings.
 IMPORT_COURSE_DESCRIPTION = assemble_sanitized_message("""
 Import the contents of another course into this course. Both courses must be on
 the same Google App Engine instance.
-<strong>This will only import into an empty course</strong>.
 """, None)
 
 LESSON_ACTIVITY_DESCRIPTION = assemble_sanitized_message("""
@@ -130,8 +128,7 @@ PAGES_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
 REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
-Write, in JavaScript format, the text for each of your review form questions
-and their answer formats.
+Review form questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 SETTINGS_DESCRIPTION = assemble_sanitized_message(
