@@ -232,7 +232,7 @@ function getGcbRteDefs(env, Dom, Editor) {
         editor.on('toolbarLoaded', function() {
           var button = {
             type: 'push',
-            label: 'Insert Google Course Builder widget',
+            label: 'Insert Google Course Builder component',
             value: 'insertcustomtag',
             disabled: false
           };

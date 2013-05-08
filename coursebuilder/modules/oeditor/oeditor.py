@@ -191,8 +191,8 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
             tag_class = tag_bindings[select_data[0][0]]
         tag_schema = tag_class().get_schema(self)
 
-        schema = schema_fields.FieldRegistry('Add a content handler')
-        type_select = schema.add_sub_registry('type', 'Content Type')
+        schema = schema_fields.FieldRegistry('Add a Component')
+        type_select = schema.add_sub_registry('type', 'Component Type')
         type_select.add_property(schema_fields.SchemaField(
             'tag', 'Name', 'select', select_data=select_data))
         schema.add_sub_registry('attributes', registry=tag_schema)
