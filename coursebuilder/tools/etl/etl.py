@@ -422,7 +422,7 @@ def _download(
 def _download_course(context, course, archive_path, course_url_prefix):
     if course.version < courses.COURSE_MODEL_VERSION_1_3:
         _die(
-            'Cannot export course with version < %s' % (
+            'Cannot export course made with Course Builder version < %s' % (
                 courses.COURSE_MODEL_VERSION_1_3))
     archive = _Archive(archive_path)
     archive.open('w')
