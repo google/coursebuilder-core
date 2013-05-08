@@ -17,8 +17,9 @@
 <div class="gcb-col-5">
 
   {% if course_info.course.main_video %}
+    {# I18N: Alt text for an embedded YouTube video player. #}
     <iframe class="youtube-player" type="text/html" width="460"
-     title="{% trans %} YouTube Video Player {% endtrans %}"
+     title="{{ gettext('YouTube Video Player') }}"
      height="300" src="{{course_info.course.main_video.url}}"
      frameborder="0" allowfullscreen></iframe>
   {% else %}
