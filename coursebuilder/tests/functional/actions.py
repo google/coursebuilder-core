@@ -143,10 +143,10 @@ class TestBase(suite.AppEngineTestBase):
         response = self.testapp.get(url, **kwargs)
         return self.hook_response(response)
 
-    def post(self, url, params):
+    def post(self, url, params, expect_errors=False):
         url = self.canonicalize(url)
         logging.info('HTTP Post: %s', url)
-        response = self.testapp.post(url, params)
+        response = self.testapp.post(url, params, expect_errors=expect_errors)
         return self.hook_response(response)
 
     def put(self, url, params):
@@ -409,6 +409,76 @@ def submit_assessment(browser, unit_id, args, base='', presubmit_checks=True):
     args['xsrf_token'] = xsrf_token
 
     response = browser.post('%s/answer' % base, args)
+    assert_equals(response.status_int, 200)
+    return response
+
+
+def request_new_review(browser, unit_id, base='', expected_status_code=302):
+    """Requests a new assignment to review."""
+    response = browser.get('%s/reviewdashboard?unit=%s' % (base, unit_id))
+    assert_contains('Assignments for your review', response.body)
+
+    # Extract XSRF token from the page.
+    match = re.search(
+        r'<input type="hidden" name="xsrf_token"\s* value="([^"]*)">',
+        response.body)
+    assert match
+    xsrf_token = match.group(1)
+    args = {'xsrf_token': xsrf_token}
+
+    expect_errors = (expected_status_code not in [200, 302])
+
+    response = browser.post(
+        '%s/reviewdashboard?unit=%s' % (base, unit_id), args,
+        expect_errors=expect_errors)
+    assert_equals(response.status_int, expected_status_code)
+
+    if expected_status_code == 302:
+        assert_equals(response.status_int, expected_status_code)
+        assert_contains(
+            'review?unit=%s' % unit_id, response.location)
+        response = browser.get(response.location)
+        assert_contains('Assignment to review', response.body)
+
+    return response
+
+
+def view_review(
+    browser, unit_id, review_step_key, base='', expected_status_code=200):
+    """View a review page."""
+    response = browser.get(
+        '%s/review?unit=%s&key=%s' % (base, unit_id, review_step_key),
+        expect_errors=(expected_status_code != 200))
+    assert_equals(response.status_int, expected_status_code)
+    if expected_status_code == 200:
+        assert_contains('Assignment to review', response.body)
+    return response
+
+
+def submit_review(
+    browser, unit_id, review_step_key, args, base='', presubmit_checks=True):
+    """Submits a review."""
+    response = browser.get(
+        '%s/review?unit=%s&key=%s' % (base, unit_id, review_step_key))
+
+    if presubmit_checks:
+        assert_contains(
+            '<script src="assets/js/review-%s.js"></script>' % unit_id,
+            response.body)
+        js_response = browser.get(
+            '%s/assets/js/review-%s.js' % (base, unit_id))
+        assert_equals(js_response.status_int, 200)
+
+    # Extract XSRF token from the page.
+    match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)
+    assert match
+    xsrf_token = match.group(1)
+    args['xsrf_token'] = xsrf_token
+
+    args['key'] = review_step_key
+    args['unit_id'] = unit_id
+
+    response = browser.post('%s/review' % base, args)
     assert_equals(response.status_int, 200)
     return response
 

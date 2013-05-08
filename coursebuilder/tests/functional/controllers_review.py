@@ -31,6 +31,22 @@ LEGACY_REVIEW_UNIT_ID = 'ReviewAssessmentExample'
 class PeerReviewControllerTest(actions.TestBase):
     """Test peer review from the Student perspective."""
 
+    def get_review_payload(self, identifier, is_draft=False):
+        """Returns a sample review payload."""
+        review = transforms.dumps([
+            {'index': 0, 'type': 'choices', 'value': '0', 'correct': False},
+            {'index': 1, 'type': 'regex', 'value': identifier, 'correct': True}
+        ])
+        return {
+            'answers': review,
+            'is_draft': 'true' if is_draft else 'false',
+        }
+
+    def get_review_step_key(self, response):
+        """Returns the review step key in a request query parameter."""
+        request_query_string = response.request.environ['QUERY_STRING']
+        return request_query_string[request_query_string.find('key=') + 4:]
+
     def test_submit_assignment(self):
         """Test submission of peer-reviewed assignments."""
 
@@ -87,8 +103,16 @@ class PeerReviewControllerTest(actions.TestBase):
         # The student should not be able to see others' reviews because he/she
         # has not submitted an assignment yet.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_does_not_contain('Submitted assignment', response.body)
         assert_contains('Due date for this assignment', response.body)
         assert_does_not_contain('Reviews received', response.body)
+
+        # The student should not be able to access the review dashboard because
+        # he/she has not submitted the assignment yet.
+        response = self.get(
+            'reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID,
+            expect_errors=True)
+        assert_equals(response.status_int, 403)
 
         # The student submits the assignment.
         response = actions.submit_assessment(
@@ -100,9 +124,10 @@ class PeerReviewControllerTest(actions.TestBase):
             'Thank you for completing this assignment', response.body)
         assert_contains('Review peer assignments', response.body)
 
-        # The student views the submitted assignment.
+        # The student views the submitted assignment, which has become readonly.
         response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
         assert_contains('First answer to Q1', response.body)
+        assert_contains('Submitted assignment', response.body)
 
         # The student tries to re-submit the same assignment. This should fail.
         response = actions.submit_assessment(
@@ -134,3 +159,321 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains(
             '<a href="reviewdashboard?unit=%s">' % LEGACY_REVIEW_UNIT_ID,
             response.body, collapse_whitespace=True)
+
+        # The student should also be able to now view the review dashboard.
+        response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_contains('Assignments for your review', response.body)
+        assert_contains('Review a new assignment', response.body)
+
+        actions.logout()
+
+    def test_handling_of_fake_review_step_key(self):
+        """Test that bad keys result in the appropriate responses."""
+
+        email = 'student1@google.com'
+        name = 'Student 1'
+        submission = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload = {
+            'answers': submission, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        actions.login(email)
+        actions.register(self, name)
+        actions.submit_assessment(self, LEGACY_REVIEW_UNIT_ID, payload)
+
+        actions.view_review(
+            self, LEGACY_REVIEW_UNIT_ID, 'Fake key',
+            expected_status_code=404)
+
+        actions.logout()
+
+    def test_not_enough_assignments_to_allocate(self):
+        """Test for the case when there are too few assignments in the pool."""
+
+        email = 'student1@google.com'
+        name = 'Student 1'
+        submission = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload = {
+            'answers': submission, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        actions.login(email)
+        actions.register(self, name)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload)
+
+        # The student goes to the review dashboard and requests an assignment
+        # to review -- but there is nothing to review.
+        response = actions.request_new_review(
+            self, LEGACY_REVIEW_UNIT_ID, expected_status_code=200)
+        assert_does_not_contain('Assignment to review', response.body)
+        assert_contains('Sorry, there are no new submissions ', response.body)
+        assert_contains('disabled="true"', response.body)
+
+        actions.logout()
+
+    def test_reviewer_cannot_impersonate_another_reviewer(self):
+        """Test that one reviewer cannot use another's review step key."""
+
+        email1 = 'student1@google.com'
+        name1 = 'Student 1'
+        submission1 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload1 = {
+            'answers': submission1, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email2 = 'student2@google.com'
+        name2 = 'Student 2'
+        submission2 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S2-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload2 = {
+            'answers': submission2, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email3 = 'student3@google.com'
+        name3 = 'Student 3'
+        submission3 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S3-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload3 = {
+            'answers': submission3, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        # Student 1 submits the assignment.
+        actions.login(email1)
+        actions.register(self, name1)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload1)
+        actions.logout()
+
+        # Student 2 logs in and submits the assignment.
+        actions.login(email2)
+        actions.register(self, name2)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload2)
+
+        # Student 2 requests a review, and is given Student 1's assignment.
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        review_step_key_2_for_1 = self.get_review_step_key(response)
+        assert_contains('S1-1', response.body)
+        actions.logout()
+
+        # Student 3 logs in, and submits the assignment.
+        actions.login(email3)
+        actions.register(self, name3)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload3)
+
+        # Student 3 tries to view Student 1's assignment using Student 2's
+        # review step key, but is not allowed to.
+        response = actions.view_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
+            expected_status_code=403)
+
+        # Student 3 logs out.
+        actions.logout()
+
+    def test_student_cannot_see_reviews_prematurely(self):
+        """Test that students cannot see others' reviews prematurely."""
+
+        email = 'student1@google.com'
+        name = 'Student 1'
+        submission = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload = {
+            'answers': submission, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        actions.login(email)
+        actions.register(self, name)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload)
+
+        # Student 1 cannot see the reviews for his assignment yet, because he
+        # has not submitted the two required reviews.
+        response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('Due date for this assignment', response.body)
+        assert_contains(
+            'After you have completed the required number of peer reviews',
+            response.body)
+
+        actions.logout()
+
+    def test_draft_review_behaviour(self):
+        """Test correctness of draft review visibility."""
+
+        email1 = 'student1@google.com'
+        name1 = 'Student 1'
+        submission1 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload1 = {
+            'answers': submission1, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email2 = 'student2@google.com'
+        name2 = 'Student 2'
+        submission2 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S2-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload2 = {
+            'answers': submission2, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email3 = 'student3@google.com'
+        name3 = 'Student 3'
+        submission3 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S3-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload3 = {
+            'answers': submission3, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        # Student 1 submits the assignment.
+        actions.login(email1)
+        actions.register(self, name1)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload1)
+        actions.logout()
+
+        # Student 2 logs in and submits the assignment.
+        actions.login(email2)
+        actions.register(self, name2)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload2)
+
+        # Student 2 requests a review, and is given Student 1's assignment.
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        review_step_key_2_for_1 = self.get_review_step_key(response)
+        assert_contains('S1-1', response.body)
+
+        # Student 2 saves her review as a draft.
+        review_2_for_1_payload = self.get_review_payload(
+            'R2for1', is_draft=True)
+
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
+            review_2_for_1_payload)
+        assert_contains('Your review has been saved.', response.body)
+
+        response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('(Draft)', response.body)
+
+        # Student 2's draft is still changeable.
+        response = actions.view_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1)
+        assert_contains('Submit Review', response.body)
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
+            review_2_for_1_payload)
+        assert_contains('Your review has been saved.', response.body)
+
+        # Student 2 logs out.
+        actions.logout()
+
+        # Student 3 submits the assignment.
+        actions.login(email3)
+        actions.register(self, name3)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload3)
+        actions.logout()
+
+        # Student 1 logs in and requests two assignments to review.
+        actions.login(email1)
+        response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        assert_contains('Assignment to review', response.body)
+        assert_contains('not-S1', response.body)
+
+        review_step_key_1_for_someone = self.get_review_step_key(response)
+
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        assert_contains('Assignment to review', response.body)
+        assert_contains('not-S1', response.body)
+
+        review_step_key_1_for_someone_else = self.get_review_step_key(response)
+
+        response = actions.request_new_review(
+            self, LEGACY_REVIEW_UNIT_ID, expected_status_code=403)
+
+        response = self.get('reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('disabled="true"', response.body)
+
+        # Student 1 submits both reviews, fulfilling his quota.
+        review_1_for_other_payload = self.get_review_payload('R1for')
+
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone,
+            review_1_for_other_payload)
+        assert_contains(
+            'Your review has been submitted successfully', response.body)
+
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else,
+            review_1_for_other_payload)
+        assert_contains(
+            'Your review has been submitted successfully', response.body)
+
+        response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_contains('(Completed)', response.body)
+        assert_does_not_contain('(Draft)', response.body)
+
+        # Although Student 1 has submitted 2 reviews, he cannot view Student
+        # 2's review because it is still in Draft status.
+        response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains(
+            'You have not received any peer reviews yet.', response.body)
+        assert_does_not_contain('R2for1', response.body)
+
+        # Student 1 logs out.
+        actions.logout()
+
+        # Student 2 submits her review for Student 1's assignment.
+        actions.login(email2)
+
+        response = self.get('review?unit=%s&key=%s' % (
+            LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1))
+        assert_does_not_contain('Submitted review', response.body)
+
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1,
+            self.get_review_payload('R2for1'))
+        assert_contains(
+            'Your review has been submitted successfully', response.body)
+
+        # Her review is now read-only.
+        response = self.get('review?unit=%s&key=%s' % (
+            LEGACY_REVIEW_UNIT_ID, review_step_key_2_for_1))
+        assert_contains('Submitted review', response.body)
+        assert_contains('R2for1', response.body)
+
+        # Student 2 logs out.
+        actions.logout()
+
+        # Now Student 1 can see the review he has received from Student 2.
+        actions.login(email1)
+        response = self.get('assessment?name=%s' % LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('R2for1', response.body)

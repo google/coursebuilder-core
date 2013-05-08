@@ -384,11 +384,14 @@ class AssessmentHandler(BaseHandler):
 
                 review_keys_for_student = []
                 for review_step in review_steps_for:
-                    if not review_step.removed:
-                        if review_step.state == domain.REVIEW_STATE_COMPLETED:
-                            review_key = review_step.review_key
-                            if review_key:
-                                review_keys_for_student.append(review_key)
+                    can_show_review = (
+                        review_step.state == domain.REVIEW_STATE_COMPLETED
+                        and not review_step.removed
+                        and review_step.review_key
+                    )
+
+                    if can_show_review:
+                        review_keys_for_student.append(review_step.review_key)
 
                 reviews_for_student = rp.get_reviews_by_keys(
                     unit.unit_id, review_keys_for_student)
@@ -436,12 +439,12 @@ class ReviewHandler(BaseHandler):
         if not unit or not review_step_key:
             self.error(404)
             return
-        review_step_key = db.Key(encoded=review_step_key)
 
         try:
+            review_step_key = db.Key(encoded=review_step_key)
             review_step = rp.get_review_steps_by_keys(
                 unit.unit_id, [review_step_key])[0]
-        except KeyError:
+        except Exception:  # pylint: disable-msg=broad-except
             self.error(404)
             return
 
@@ -451,7 +454,7 @@ class ReviewHandler(BaseHandler):
 
         # Check that the student is allowed to review this submission.
         if not student.has_same_key_as(review_step.reviewer_key):
-            self.error(404)
+            self.error(403)
             return
 
         submission_key = review_step.submission_key
@@ -523,7 +526,6 @@ class ReviewHandler(BaseHandler):
         if not review_step_key:
             self.error(404)
             return
-        review_step_key = db.Key(encoded=review_step_key)
 
         unit = self.find_unit_by_id(unit_id)
         if not unit:
@@ -531,9 +533,10 @@ class ReviewHandler(BaseHandler):
             return
 
         try:
+            review_step_key = db.Key(encoded=review_step_key)
             review_step = rp.get_review_steps_by_keys(
                 unit.unit_id, [review_step_key])[0]
-        except KeyError:
+        except Exception:  # pylint: disable-msg=broad-except
             self.error(404)
             return
 
@@ -607,6 +610,7 @@ class ReviewDashboardHandler(BaseHandler):
         if not unit:
             self.error(404)
             return
+
         # Check that the student has submitted the corresponding assignment.
         if not rp.does_submission_exist(unit.unit_id, student.get_key()):
             logging.error(
