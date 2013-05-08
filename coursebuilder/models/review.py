@@ -57,14 +57,22 @@ class ReviewsProcessor(object):
         impl = self._get_impl(unit_id)
         return impl.get_review_keys_by(str(unit_id), reviewer_key)
 
+    def _get_submission_and_review_step_keys(self, unit_id, reviewee_key):
+        impl = self._get_impl(unit_id)
+        return impl.get_submission_and_review_keys(
+            str(unit_id), reviewee_key)
+
     def _get_submission_by_key(self, unit_id, submission_key):
         impl = self._get_impl(unit_id)
         return impl.get_submissions_by_keys([submission_key])[0]
 
     def add_reviewer(self, unit_id, submission_key, reviewee_key, reviewer_key):
-        impl = self._get_impl(unit_id)
-        return impl.add_reviewer(
-            str(unit_id), submission_key, reviewee_key, reviewer_key)
+        try:
+            impl = self._get_impl(unit_id)
+            return impl.add_reviewer(
+                str(unit_id), submission_key, reviewee_key, reviewer_key)
+        except Exception:  # pylint: disable-msg=broad-except
+            return None
 
     def delete_reviewer(self, unit_id, review_step_key):
         impl = self._get_impl(unit_id)
@@ -78,9 +86,48 @@ class ReviewsProcessor(object):
         review_step_keys = self._get_review_step_keys_by(unit_id, reviewer_key)
         return self.get_review_steps_by_keys(unit_id, review_step_keys)
 
-    def get_reviews_by_keys(self, unit_id, review_keys):
+    def get_reviews_by_keys(
+        self, unit_id, review_keys, handle_empty_keys=False):
+        """Gets a list of reviews, given their review keys.
+
+        If handle_empty_keys is True, then no error is thrown on supplied keys
+        that are None; the elements in the result list corresponding to those
+        keys simply return None. This usually arises when this method is called
+        immediately after get_review_steps_by_keys().
+
+        Args:
+            unit_id: string. Id of the unit to get the reviews for.
+            review_keys: [db.Key of peer.ReviewStep]. May include None, if
+                handle_empty_keys is True.
+            handle_empty_keys: if True, the return value contains None for keys
+                that are None. If False, the method throws if empty keys are
+                supplied.
+
+        Returns:
+            List with the same number of elements as review_keys. It contains:
+            - the JSON-decoded contents of the review corresponding to that
+                review_key, or
+            - None if either:
+              - no review has been submitted for that review key, or
+              - handle_empty_keys == True and the review_key is None.
+        """
         impl = self._get_impl(unit_id)
-        reviews = impl.get_reviews_by_keys(review_keys)
+        reviews = []
+        if not handle_empty_keys:
+            reviews = impl.get_reviews_by_keys(review_keys)
+        else:
+            nonempty_review_indices = []
+            nonempty_review_keys = []
+            for idx, review_key in enumerate(review_keys):
+                if review_key is not None:
+                    nonempty_review_indices.append(idx)
+                    nonempty_review_keys.append(review_key)
+
+            tmp_reviews = impl.get_reviews_by_keys(nonempty_review_keys)
+            reviews = [None] * len(review_keys)
+            for (i, idx) in enumerate(nonempty_review_indices):
+                reviews[idx] = tmp_reviews[i]
+
         return [(transforms.loads(rev.contents) if rev else None)
                 for rev in reviews]
 
@@ -88,9 +135,37 @@ class ReviewsProcessor(object):
         impl = self._get_impl(unit_id)
         return impl.get_review_steps_by_keys(review_step_keys)
 
-    def get_submission_and_review_step_keys(self, unit_id, reviewee_key):
-        impl = self._get_impl(unit_id)
-        return impl.get_submission_and_review_keys(str(unit_id), reviewee_key)
+    def get_submission_and_review_steps(self, unit_id, reviewee_key):
+        """Gets the submission and a list of review steps for a unit/reviewee.
+
+        Note that review steps marked removed are included in the result set.
+
+        Args:
+            unit_id: string. Id of the unit to get the data for.
+            reviewee_key: db.Key of models.models.Student. The student to get
+                the data for.
+
+        Returns:
+            - None if no submission was found for the given unit_id,
+                reviewee_key pair.
+            - (Object, [peer.ReviewStep]) otherwise. The first element is the
+                de-JSONified content of the reviewee's submission. The second
+                element is a list of review steps for this submission, sorted
+                by creation date.
+        """
+
+        submission_and_review_step_keys = (
+            self._get_submission_and_review_step_keys(unit_id, reviewee_key))
+        if submission_and_review_step_keys is None:
+            return None
+
+        submission_contents = self.get_submission_contents_by_key(
+            unit_id, submission_and_review_step_keys[0])
+        review_step_keys = submission_and_review_step_keys[1]
+        sorted_review_steps = sorted(
+            self.get_review_steps_by_keys(unit_id, review_step_keys),
+            key=lambda r: r.create_date)
+        return [submission_contents, sorted_review_steps]
 
     def get_submission_contents_by_key(self, unit_id, submission_key):
         submission = self._get_submission_by_key(unit_id, submission_key)

@@ -174,11 +174,10 @@ class AssignmentManager(ApplicationHandler):
         # Render content.
         assessment_content = course.get_assessment_content(unit)
         rp = course.get_reviews_processor()
-        submission_and_review_step_keys = (
-            rp.get_submission_and_review_step_keys(
-                unit.unit_id, reviewee.get_key()))
 
-        if not submission_and_review_step_keys:
+        submission_and_review_steps = rp.get_submission_and_review_steps(
+            unit.unit_id, reviewee.get_key())
+        if not submission_and_review_steps:
             template_values['main_content'] = self.get_assignment_html(
                 peer_reviewed_units, unit_id=unit_id, reviewee_id=reviewee_id,
                 error_msg='412: This student hasn\'t submitted the assignment.'
@@ -186,9 +185,7 @@ class AssignmentManager(ApplicationHandler):
             self.render_page(template_values)
             return
 
-        submission_key = submission_and_review_step_keys[0]
-        submission_contents = rp.get_submission_contents_by_key(
-            unit.unit_id, submission_key)
+        submission_contents = submission_and_review_steps[0]
         answer_list = review.ReviewUtils.get_answer_list(submission_contents)
 
         readonly_assessment = create_readonly_assessment_params(
@@ -197,13 +194,11 @@ class AssignmentManager(ApplicationHandler):
 
         review_form = course.get_review_form_content(unit)
 
-        review_step_keys = submission_and_review_step_keys[1]
-        review_steps = rp.get_review_steps_by_keys(
-            unit.unit_id, review_step_keys)
-
+        review_steps = submission_and_review_steps[1]
         reviews = rp.get_reviews_by_keys(
             unit.unit_id,
-            [review_step.review_key for review_step in review_steps])
+            [review_step.review_key for review_step in review_steps],
+            handle_empty_keys=True)
 
         reviews_params = []
         reviewers = []
@@ -259,14 +254,16 @@ class AssignmentManager(ApplicationHandler):
         reviewee = request_params.get('reviewee')
         reviewer = request_params.get('reviewer')
 
-        # TODO(sll): Handle any errors here when porting this to the new review
-        # module.
         rp = course.get_reviews_processor()
         reviewee_key = reviewee.get_key()
         reviewer_key = reviewer.get_key()
         submission_key = rp.get_submission_key(unit.unit_id, reviewee_key)
-        rp.add_reviewer(
+
+        new_review_step_key = rp.add_reviewer(
             unit.unit_id, submission_key, reviewee_key, reviewer_key)
+        if not new_review_step_key:
+            redirect_params['post_error_msg'] = (
+                '412: The reviewer is already assigned to this submission.')
 
         self.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))
 
@@ -299,8 +296,6 @@ class AssignmentManager(ApplicationHandler):
         rp = course.get_reviews_processor()
         unit = request_params.get('unit')
 
-        # TODO(sll): Handle any errors here when porting this to the new review
-        # module.
         rp.delete_reviewer(unit.unit_id, review_step_key)
 
         self.redirect('/dashboard?%s' % urllib.urlencode(redirect_params))

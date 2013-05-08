@@ -368,33 +368,18 @@ class AssessmentHandler(BaseHandler):
 
         if course.needs_human_grader(unit):
             rp = course.get_reviews_processor()
-            submission_contents = rp.get_submission_contents(
-                unit.unit_id, student.get_key())
-            if submission_contents or due_date_exceeded:
-                readonly_view = True
-                self.template_value['readonly_student_assessment'] = (
-                    create_readonly_assessment_params(
-                        course.get_assessment_content(unit),
-                        ReviewUtils.get_answer_list(submission_contents)
-                    )
-                )
-
             review_steps_by = rp.get_review_steps_by(
                 unit.unit_id, student.get_key())
 
             # Determine if the student can see others' reviews of his/her work.
             if (ReviewUtils.has_completed_enough_reviews(
                     review_steps_by, unit.workflow.get_review_min_count())):
-                submission_and_review_keys = (
-                    rp.get_submission_and_review_step_keys(
+                submission_and_review_steps = (
+                    rp.get_submission_and_review_steps(
                         unit.unit_id, student.get_key()))
 
-                review_keys_for = []
-                if submission_and_review_keys:
-                    review_keys_for = submission_and_review_keys[1]
-
-                review_steps_for = rp.get_review_steps_by_keys(
-                    unit.unit_id, review_keys_for)
+                submission_contents = submission_and_review_steps[0]
+                review_steps_for = submission_and_review_steps[1]
 
                 review_keys_for_student = []
                 for review_step in review_steps_for:
@@ -412,6 +397,19 @@ class AssessmentHandler(BaseHandler):
                         course.get_review_form_content(unit),
                         ReviewUtils.get_answer_list(review)
                     ) for review in reviews_for_student]
+            else:
+                submission_contents = rp.get_submission_contents(
+                    unit.unit_id, student.get_key())
+
+            # Determine whether to show the assessment in readonly mode.
+            if submission_contents or due_date_exceeded:
+                readonly_view = True
+                self.template_value['readonly_student_assessment'] = (
+                    create_readonly_assessment_params(
+                        course.get_assessment_content(unit),
+                        ReviewUtils.get_answer_list(submission_contents)
+                    )
+                )
 
         if not readonly_view:
             self.template_value['assessment_script_src'] = (
