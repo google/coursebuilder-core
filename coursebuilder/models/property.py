@@ -53,3 +53,6 @@ class Registry(object):
         b = Registry(title, descirption)
         self._sub_registories[name] = b
         return b
+
+    def has_subregistries(self):
+        return True if self._sub_registories else False

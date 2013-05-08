@@ -190,6 +190,35 @@
     padding: 3px;
     max-width: 400px;
   }
+  #modal-editor > .background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    opacity: 0.5;
+    filter: alpha(opacity=50);
+    z-index: 1000;
+  }
+  #modal-editor > iframe {
+    position: absolute;
+    top: 50%;
+    height: 500px;
+    margin-top: -250px;
+    left: 50%;
+    width: 780px;
+    margin-left: -350px;
+    z-index: 1001;
+    background-color: #fff;
+    border-radius: 10px;
+    transition: height 500ms, margin-top 500ms;
+    -webkit-transition: height 500ms, margin-top 500ms;
+    -moz-transition: height 500ms, margin-top 500ms;
+  }
+  .hidden {
+    display: none;
+  }
 </style>
 
 <div id='oeditor-container'>
@@ -202,6 +231,9 @@
   <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
     <div class='form' id='formContainer'></div>
   </div>
+</div>
+<div id='modal-editor' class='hidden'>
+  <div class='background'></div>
 </div>
 
 <script type='text/javascript'>
@@ -239,6 +271,8 @@
     }
 
     {% include 'oeditor.js' %}
+    {% include 'rte.js' %}
+    {% include 'popup.js' %}
 
     onPageLoad(cb_global);
   })();

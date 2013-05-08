@@ -19,9 +19,12 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import os
 import urllib
 import appengine_config
+from common import jinja_filters
 from common import tags
+from controllers import utils
 import jinja2
 from models import transforms
+import webapp2
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -76,7 +79,7 @@ class ObjectEditor(object):
         required_modules = required_modules or ALL_MODULES
 
         # extract label
-        type_label = transforms.loads(schema_json)['description']
+        type_label = transforms.loads(schema_json).get('description')
         if not type_label:
             type_label = 'Generic Object'
 
@@ -127,6 +130,40 @@ class ObjectEditor(object):
         return jinja2.utils.Markup(handler.get_template(
             'oeditor.html', [os.path.dirname(__file__)]
         ).render(template_values))
+
+
+class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
+    """A handler to serve the content of the popup subeditor."""
+
+    default_action = 'custom_tag'
+    get_actions = ['custom_tag']
+    post_actions = []
+
+    def get_template(self, template_name, dirs):
+        """Sets up an environment and Gets jinja template."""
+
+        jinja_environment = jinja2.Environment(
+            autoescape=True, finalize=jinja_filters.finalize,
+            loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
+        jinja_environment.filters['js_string'] = jinja_filters.js_string
+
+        return jinja_environment.get_template(template_name)
+
+    def get_custom_tag(self):
+        """Return the the page used to edit a custom HTML tag in a popup."""
+        tag_name = self.request.get('tag_name')
+        tag_bindings = tags.get_tag_bindings()
+        tag_class = tag_bindings[tag_name]
+        schema = tag_class().get_schema()
+        if schema.has_subregistries():
+            raise NotImplementedError()
+
+        template_values = {}
+        template_values['form_html'] = ObjectEditor.get_html_for(
+            self, schema.get_json_schema(), schema.get_schema_dict(), None,
+            None, None)
+        self.response.out.write(
+            self.get_template('popup.html', []).render(template_values))
 
 
 def create_bool_select_annotation(

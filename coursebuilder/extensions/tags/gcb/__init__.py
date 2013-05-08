@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+from common import schema_fields
 from common import tags
 from lxml import etree
 
@@ -37,6 +38,12 @@ class YouTube(tags.BaseTag):
         return iframe
 
     def get_icon_url(self):
+        """Return the URL for the icon to be displayed in the rich text editor.
+
+        In this example, the icon is encoded into the URL using the 'data'
+        production, but the URL could equally well point to the location of
+        an image file hosted on the server."""
+
         return """
 data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAAA3NCSVQICA
 jb4U/gAAAHdklEQVRYhe2YWWyU1xXH//fbZvOCB0Qc27JR1TpAqcmiEpBKMQVSO6QPNLKNW6hDlqpq1a
@@ -73,3 +80,16 @@ TmwUjuWIUQU8hOf+bZH+7YXjxQ95F/vLjgi1MRgeUwSTAZLIax76a57YwBBA0YYzRE0ARJABEDKfcy5C
 msn3W570shlFKaNG7ezwDGGGOGaZq24zjhcDgWjcZisdKy/Ke9YKD/mdx1/8LeA7qT3AO6k9x1QP8FBJ
 ykXhHPKj8AAAAASUVORK5CYII=
 """
+
+    def get_schema(self):
+        """Return the list of fields which will be displayed in the editor.
+
+        This method assembles the list of fields which will be displayed in
+        the rich text editor when a user double-clicks on the icon for the tag.
+        The fields are a list of SchemaField objects in a FieldRegistry
+        container. Each SchemaField has the actual attribute name as used in the
+        tag, the display name for the form, and the type (usually string)."""
+        reg = schema_fields.FieldRegistry('YouTube Video')
+        reg.add_property(
+            schema_fields.SchemaField('videoid', 'VideoId', 'string'))
+        return reg

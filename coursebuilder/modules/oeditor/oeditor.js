@@ -160,199 +160,6 @@ function onPageLoad(env) {
   cbShowMsg("Loading...");
 }
 
-/**
- * Define the methods of the GCB rich text editor here. They are bound
- * immediately below.
- */
-var getGcbRteDefs = function(env, Dom, Editor) {
-  return {
-    setOptions: function(options) {
-      GcbRteField.superclass.setOptions.call(this, options);
-      this.options.opts = options.opts || {};
-      this.options.editorType = options.editorType;
-    },
-
-    renderComponent: function() {
-      // Make a unique id for the field
-      if (!GcbRteField.idCounter) {
-        GcbRteField.idCounter = 0;
-      }
-      this.id = "gcbRteField-" + GcbRteField.idCounter;
-      GcbRteField.idCounter += 1;
-
-      // Insert the text area for plain text editing
-      this.el = document.createElement('textarea');
-      this.el.setAttribute('id', this.id);
-      if(this.options.name) {
-        this.el.setAttribute('name', this.options.name);
-      }
-
-      this.fieldContainer.appendChild(this.el);
-
-      // Make a button to toggle between plain text and rich text
-      var showRteText = "Rich Text";
-      var hideRteText = "Plain Text";
-      var showRteFlag = false;
-      var toggle = document.createElement("div");
-      var toggleText = document.createTextNode(showRteText);
-      toggle.appendChild(toggleText);
-      Dom.addClass(toggle, "rte-control");
-
-      var self = this;
-      toggle.onclick = function() {
-        showRteFlag = !showRteFlag;
-        if (showRteFlag) {
-          if (self.editor) {
-            self.showExistingRte();
-          } else {
-            self.showNewRte();
-          }
-          toggleText.nodeValue = hideRteText;
-        } else {
-          self.hideRte();
-          toggleText.nodeValue = showRteText;
-        }
-      };
-      this.divEl.appendChild(toggle);
-    },
-
-    getEditorDocument: function(id) {
-      return document.getElementById(id + '_editor').contentWindow.document;
-    },
-
-    insertMarkerTags: function(editorDoc) {
-      for (var k = 0; k < env.custom_rte_tag_icons.length; k++) {
-        var tag = env.custom_rte_tag_icons[k];
-        var elts = editorDoc.getElementsByTagName(tag.name);
-        for (var i = 0; i < elts.length; i++) {
-          var img = editorDoc.createElement('img');
-          img.setAttribute('src', tag.iconUrl);
-          img.setAttribute('class', 'gcbMarker');
-          img.ondblclick = function(evt) {
-            // For now, do nothing.
-            evt.stopPropagation();
-          };
-          elts[i].appendChild(img);
-        }
-      }
-    },
-
-    removeGcbMarkerTags: function(editorDoc) {
-      var elts = editorDoc.getElementsByClassName('gcbMarker');
-      while (elts.length > 0) {
-        var e = elts[0];
-        e.parentNode.removeChild(e);
-      }
-    },
-
-    showNewRte: function() {
-      var options = this.options;
-      var _def = {
-        height: '300px',
-        width: '500px',
-        dompath: true,
-      };
-      // Merge options.opts into the default options
-      var opts = options.opts;
-      for (var i in opts) {
-        if (opts.hasOwnProperty(i)) {
-          _def[i] = opts[i];
-        }
-      }
-
-      var editor = new Editor(this.id, _def);
-
-      // Disable any HTML cleaning done by the editor.
-      editor.cleanHTML = function(html) {
-        if (!html) {
-            html = this.getEditorHTML();
-        }
-        this.fireEvent('cleanHTML',
-            {type: 'cleanHTML', target: this, html: html});
-        return html;
-      };
-      editor._cleanIncomingHTML = function(html) {
-        return html;
-      };
-      editor._fixNodes = function() {};
-
-      this.editor = editor;
-      this.editor.render();
-      // TODO (jorr): Use callbacks to make this deterministic
-      var that = this;
-      window.setTimeout(function() {
-        that.insertMarkerTags(that.getEditorDocument(that.id));
-      }, 100);
-    },
-
-    showExistingRte: function() {
-      var editor = this.editor,
-          textArea = this.el;
-          rteDiv = textArea.previousSibling;
-
-      if (this._cbGetValue) {
-        this.getValue = this._cbGetValue;
-      }
-
-      Dom.setStyle(rteDiv, 'position', 'static');
-      Dom.setStyle(rteDiv, 'top', '0');
-      Dom.setStyle(rteDiv, 'left', '0');
-      Dom.setStyle(textArea, 'visibility', 'hidden');
-      Dom.setStyle(textArea, 'top', '-9999px');
-      Dom.setStyle(textArea, 'left', '-9999px');
-      Dom.setStyle(textArea, 'position', 'absolute');
-      editor.get('element_cont').addClass('yui-editor-container');
-      editor._setDesignMode('on');
-      editor.setEditorHTML(textArea.value);
-      this.insertMarkerTags(this.getEditorDocument(this.id));
-    },
-
-    hideRte: function() {
-      var editor = this.editor,
-          textArea = this.el;
-          rteDiv = textArea.previousSibling;
-
-      this.removeGcbMarkerTags(this.getEditorDocument(this.id));
-      editor.saveHTML();
-
-      this._cbGetValue = this.getValue;
-      this.getValue = function() {
-        return textArea.value;
-      };
-
-      Dom.setStyle(rteDiv, 'position', 'absolute');
-      Dom.setStyle(rteDiv, 'top', '-9999px');
-      Dom.setStyle(rteDiv, 'left', '-9999px');
-      editor.get('element_cont').removeClass('yui-editor-container');
-      Dom.setStyle(textArea, 'visibility', 'visible');
-      Dom.setStyle(textArea, 'top', '');
-      Dom.setStyle(textArea, 'left', '');
-      Dom.setStyle(textArea, 'position', 'static');
-      Dom.addClass(textArea, 'raw-text-editor');
-    },
-
-    setValue: function(value, sendUpdatedEvt) {
-      this.el.value = value;
-      if(sendUpdatedEvt !== false) {
-        this.fireUpdatedEvt();
-      }
-    },
-
-    getValue: function() {
-      if (this.editor) {
-        var editorDoc = this.getEditorDocument(this.id);
-        // Clean the editor text before saving, and then restore markers
-        this.removeGcbMarkerTags(editorDoc);
-        var value = this.editor.saveHTML();
-        this.insertMarkerTags(editorDoc);
-        return value;
-      } else {
-        return this.el.value;
-      }
-    }
-  };
-};
-
 function getYuiConfig(bundle_lib_files) {
   if (bundle_lib_files) {
     return {
@@ -444,91 +251,144 @@ function mainYuiFunction(Y) {
   });
   var inputExDefinition = builder.schemaToInputEx(schema.root);
 
-  // save button
-  var saveButton = {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
+  var editorControls = isFramed() ?
+      new FramedEditorControls(window.parent.frameProxy, cb_global) :
+      new TopLevelEditorControls(Y);
+
+  // choose buttons to show
+  var saveButton = editorControls.getSaveButton(Y);
+  var closeButton = editorControls.getCloseButton(Y);
+  var deleteButton = editorControls.getDeleteButton(Y);
+
+  inputExDefinition.buttons = [];
+  if (saveButton) {
+    inputExDefinition.buttons.push(saveButton);
+  }
+  inputExDefinition.buttons.push(closeButton);
+  if (deleteButton) {
+    inputExDefinition.buttons.push(deleteButton);
+  }
+
+  // Disable the animated highlighting of list fields on reordering
+  if (Y.inputEx.ListField) {
+    Y.inputEx.ListField.prototype.arrowAnimColors = {
+      'from': '',
+      'to': ''
+    };
+  }
+
+  // create form and bind it to DOM
+  inputExDefinition.parentEl = 'formContainer';
+  cb_global.form = new Y.inputEx.Form(inputExDefinition);
+  cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
+
+  editorControls.populateForm(Y);
+
+  moveMarkedFormElementsOutOfFieldset(Y);
+}
+
+function isFramed() {
+  return window.parent != window;
+}
+
+function TopLevelEditorControls(Y) {
+  this._Y = Y;
+}
+TopLevelEditorControls.prototype = {
+  getSaveButton: function() {
+    var that = this;
+    if (cb_global.save_url && cb_global.save_method) {
+      return {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
         cbShowMsg("Saving...");
 
-      // record current state
-      var lastSavedFormValue = cb_global.form.getValue();
+        // record current state
+        var lastSavedFormValue = cb_global.form.getValue();
 
-      // format request
-      var requestSave = cb_global.save_args;
-      requestSave.payload = JSON.stringify(lastSavedFormValue);
+        // format request
+        var requestSave = cb_global.save_args;
+        requestSave.payload = JSON.stringify(lastSavedFormValue);
 
-      // append xsrf_token if provided
-      if (cb_global.xsrf_token) {
-          requestSave.xsrf_token = cb_global.xsrf_token;
-      }
+        // append xsrf_token if provided
+        if (cb_global.xsrf_token) {
+            requestSave.xsrf_token = cb_global.xsrf_token;
+        }
 
-      // format request
-      var requestData = {"request": JSON.stringify(requestSave)};
+        // format request
+        var requestData = {"request": JSON.stringify(requestSave)};
 
-      // async post data to the server
-      var url = cb_global.save_url;
+        // async post data to the server
+        var url = cb_global.save_url;
 
-        yioConfig = {
-          method: 'PUT',
-          data: requestData,
-          timeout : ajaxRpcTimeoutMillis,
-          on: {
-              complete: function(transactionId, response, args) {
-                var json;
-                if (response && response.responseText) {
-                  json = parseJson(response.responseText);
-                } else {
-                  cbShowMsg("Server did not respond. Please reload the page to try again.");
+          yioConfig = {
+            method: 'PUT',
+            data: requestData,
+            timeout : ajaxRpcTimeoutMillis,
+            on: {
+                complete: function(transactionId, response, args) {
+                  var json;
+                  if (response && response.responseText) {
+                    json = parseJson(response.responseText);
+                  } else {
+                    cbShowMsg("Server did not respond. Please reload the page to try again.");
+                    return;
+                  }
+
+                if (json.status != 200) {
+                  cbShowMsg(formatServerErrorMessage(json.status, json.message));
                   return;
                 }
 
-              if (json.status != 200) {
-                cbShowMsg(formatServerErrorMessage(json.status, json.message));
-                return;
-              }
+                // save lastSavedFormValue
+                cb_global.lastSavedFormValue = lastSavedFormValue;
 
-              // save lastSavedFormValue
-              cb_global.lastSavedFormValue = lastSavedFormValue;
-
-                // update UI
-                cbShowMsg(json.message);
-                setTimeout(function(){
-                  cbHideMsg();
-                  if (cb_global.auto_return) {
-                    window.location = cb_global.exit_url;
-                  }
-                }, 5000);
-              }
-          }
-        };
-
-        if (cb_global.save_method == 'upload') {
-          yioConfig.method = 'POST';
-          yioConfig.form = {
-            id: 'cb-oeditor-form',
-            upload: true
+                  // update UI
+                  cbShowMsg(json.message);
+                  setTimeout(function(){
+                    cbHideMsg();
+                    if (cb_global.auto_return) {
+                      window.location = cb_global.exit_url;
+                    }
+                  }, 5000);
+                }
+            }
           };
-        }
 
-        Y.io(url, yioConfig);
-        return false;
-  }};
+          if (cb_global.save_method == 'upload') {
+            yioConfig.method = 'POST';
+            yioConfig.form = {
+              id: 'cb-oeditor-form',
+              upload: true
+            };
+          }
 
-  // close button
-  var closeButton = {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
+          that._Y.io(url, yioConfig);
+          return false;
+        }};
+    } else {
+      return null;
+    }
+  },
+
+  getCloseButton: function() {
+    return {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
       if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
-          confirm("Abandon all changes?")) {
-        window.location = cb_global.exit_url;
-      }
-  }};
+              confirm("Abandon all changes?")) {
+            window.location = cb_global.exit_url;
+          }
+      }};
+  },
 
-  // delete button
-  var deleteButton = {type: 'link', value: 'Delete',
-      className: 'inputEx-Button inputEx-Button-Link pull-right',
-      onClick:function(e) {
-          if (confirm("Are you sure you want to delete this " + 
+  getDeleteButton: function() {
+    var that = this;
+    if (cb_global.delete_url != '') {
+      return {type: 'link', value: 'Delete',
+        className: 'inputEx-Button inputEx-Button-Link pull-right',
+        onClick:function(e) {
+            if (confirm("Are you sure you want to delete this " + 
                 cb_global.type_label + "?")) {
               if (cb_global.delete_method == 'delete') {
                 // async delete
-                Y.io(cb_global.delete_url, {
+                that._Y.io(cb_global.delete_url, {
                   method: 'DELETE',
                   timeout : ajaxRpcTimeoutMillis,
                   on: {
@@ -554,82 +414,62 @@ function mainYuiFunction(Y) {
                 document.body.appendChild(form);
                 form.submit();
               }
-          }
-      }
-  };
-
-  // choose buttons to show
-  inputExDefinition.buttons = [];
-  if (cb_global.save_url && cb_global.save_method) {
-    inputExDefinition.buttons.push(saveButton);
-  }
-  inputExDefinition.buttons.push(closeButton);
-  if (cb_global.delete_url != '') {
-    inputExDefinition.buttons.push(deleteButton);
-  }
-
-  // Disable the animated highlighting of list fields on reordering
-  if (Y.inputEx.ListField) {
-    Y.inputEx.ListField.prototype.arrowAnimColors = {
-      'from': '',
-      'to': ''
-    };
-  }
-
-  // create form and bind it to DOM
-  inputExDefinition.parentEl = 'formContainer';
-  cb_global.form = new Y.inputEx.Form(inputExDefinition);
-  cb_global.form.form.setAttribute('id', 'cb-oeditor-form');
-
-  moveMarkedFormElementsOutOfFieldset(Y);
-
-  // async request data for the object being edited
-  Y.io(cb_global.get_url, {
-    method: 'GET',
-    timeout : ajaxRpcTimeoutMillis,
-    on: {
-      success: function(id, o, args) {
-        var json = parseJson(o.responseText);
-
-        // check status code
-        if (json.status != 200) {
-          cbShowMsg(formatServerErrorMessage(json.status, json.message));
-          return;
-        }
-
-        // check payload
-        if (!json.payload) {
-          cbShowMsg("Server error; server sent no payload.");
-          return
-        }
-
-        // push payload into form
-        var payload = parseJson(json.payload);
-        cb_global.form.setValue(payload);
-
-        // record xsrf token if provided
-        if (json.xsrf_token) {
-          cb_global.xsrf_token = json.xsrf_token;
-        } else {
-          cb_global.xsrf_token = null;
-        }
-
-        // save lastSavedFormValue
-        cb_global.original = payload;
-        cb_global.lastSavedFormValue = payload;
-
-        // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
-        // but it does not work for rich edit control as it has delayed loading
-        // and may not be ready when this line above is executed
-
-        // update ui state
-        document.getElementById("formContainer").style.display = "block";
-        cbShowMsg(json.message);
-        setTimeout(function(){ cbHideMsg(); }, 5000);
-      },
-      failure : function (x,o) {
-          cbShowMsg("Server did not respond. Please reload the page to try again.");
-      }
+            }
+          }};
+    } else {
+      return null;
     }
-  });
-}
+  },
+
+  populateForm: function() {
+    // async request data for the object being edited
+    this._Y.io(cb_global.get_url, {
+      method: 'GET',
+      timeout : ajaxRpcTimeoutMillis,
+      on: {
+        success: function(id, o, args) {
+          var json = parseJson(o.responseText);
+
+          // check status code
+          if (json.status != 200) {
+            cbShowMsg(formatServerErrorMessage(json.status, json.message));
+            return;
+          }
+
+          // check payload
+          if (!json.payload) {
+            cbShowMsg("Server error; server sent no payload.");
+            return
+          }
+
+          // push payload into form
+          var payload = parseJson(json.payload);
+          cb_global.form.setValue(payload);
+
+          // record xsrf token if provided
+          if (json.xsrf_token) {
+            cb_global.xsrf_token = json.xsrf_token;
+          } else {
+            cb_global.xsrf_token = null;
+          }
+
+          // save lastSavedFormValue
+          cb_global.original = payload;
+          cb_global.lastSavedFormValue = payload;
+
+          // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
+          // but it does not work for rich edit control as it has delayed loading
+          // and may not be ready when this line above is executed
+
+          // update ui state
+          document.getElementById("formContainer").style.display = "block";
+          cbShowMsg(json.message);
+          setTimeout(function(){ cbHideMsg(); }, 5000);
+        },
+        failure : function (x,o) {
+            cbShowMsg("Server did not respond. Please reload the page to try again.");
+        }
+      }
+    });
+  }
+};

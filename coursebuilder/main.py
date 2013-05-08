@@ -26,6 +26,7 @@ from modules.admin import admin
 from modules.admin import config
 from modules.announcements import announcements
 from modules.dashboard import dashboard
+import modules.oeditor.oeditor
 
 urls = [
     ('/', lessons.CourseHandler),
@@ -36,6 +37,7 @@ urls = [
     ('/course', lessons.CourseHandler),
     ('/forum', utils.ForumHandler),
     ('/dashboard', dashboard.DashboardHandler),
+    ('/oeditor/popup', modules.oeditor.oeditor.PopupHandler),
     ('/preview', utils.PreviewHandler),
     ('/register', utils.RegisterHandler),
     ('/review', lessons.ReviewHandler),

@@ -43,6 +43,10 @@ class BaseTag(object):
         """Provide an icon for the visual editor."""
         raise NotImplementedError()
 
+    def get_schema(self):
+        """Get the schema for the tag's attributes using schema_fields."""
+        raise NotImplementedError()
+
 
 def get_tag_bindings():
     """Return the bindings of tag names to implementing classes.
