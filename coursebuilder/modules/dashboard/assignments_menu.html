@@ -39,6 +39,11 @@
     padding: 10px 10px 0 10px;
     width: 90%;
   }
+  .right-button {
+    float: right;
+    margin-right: 5%;
+  }
+
 </style>
 
 {% if error_msg %}
@@ -75,7 +80,7 @@
   <br>
 
   <form id="edit_assignment" action="{{ edit_url }}" method="GET">
-    <input type="hidden" name="action" value="{{ action }}">
+    <input type="hidden" name="action" value="{{ edit_assignment_action }}">
 
     Assignment Name:
     <select name="unit_id">
@@ -90,8 +95,6 @@
     <br>
 
     Student email address: <input type="text" name="reviewee_id" value="{{reviewee_id}}">
-
-    <br><br>
 
     <input type="submit" class="gcb-button" value="Display assignment">
   </form>

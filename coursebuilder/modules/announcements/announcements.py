@@ -29,7 +29,6 @@ from models import notify
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
-import models.transforms as transforms
 import modules.announcements.samples as samples
 from modules.oeditor import oeditor
 

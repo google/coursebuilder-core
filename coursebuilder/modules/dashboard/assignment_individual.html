@@ -2,6 +2,22 @@
 
 {% import 'readonly_assessment.html' as readonly_assessment %}
 
+<br>
+
+<form id="add-reviewer" action="{{ add_reviewer_action }}" method="POST">
+  <input type="hidden" name="xsrf_token" value="{{ add_reviewer_xsrf_token|escape }}">
+  <input type="hidden" name="unit_id" value="{{ unit_id }}">
+  <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
+
+  Add new reviewer: <input type="text" name="reviewer_id" placeholder="reviewer@example.com">
+
+  <button class="gcb-button gcb-button-action" type="submit">
+    Add Reviewer
+  </button>
+</form>
+
+<br>
+
 <h4>Student's Assignment</h4>
 <div class="border-box">
   {{ readonly_assessment.display(readonly_student_assessment) }}
@@ -18,17 +34,33 @@
   <ul>
     {% for review in reviews %}
       <li>
-        <h4>
-          Review {{ loop.index }} by {{review['reviewer']}}
-          {% if review['is_draft'] %}
-            (Draft)
-          {% else %}
-            (Submitted)
-          {% endif %}
-        </h4>
-        <div class="border-box">
-          {{ readonly_assessment.display(review['params']) }}
-        </div>
+        Review {{ loop.index }} by {{review['reviewer']}}
+        {% if review['is_draft'] %}
+          (<em>Draft</em>)
+        {% else %}
+          (<em>Submitted</em>)
+        {% endif %}
+
+        <form id='delete-reviewer-{{loop.index0}}' action='{{ delete_reviewer_action }}' method='POST'>
+          <input type="hidden" name="xsrf_token" value="{{ delete_reviewer_xsrf_token|escape }}">
+          <input type="hidden" name="unit_id" value="{{ unit_id }}">
+          <input type="hidden" name="reviewee_id" value="{{ reviewee_id }}">
+          <input type="hidden" name="reviewer_id" value="{{ review['reviewer'] }}">
+
+          <button class="gcb-button gcb-button-action right-button" type="submit"
+            onclick='return confirm("Remove this reviewer?");'>
+            Remove Reviewer
+          </button>
+        </form>
+
+        {% if not review['is_draft'] %}
+          <br><br>
+          <div class="border-box">
+            {{ readonly_assessment.display(review['params']) }}
+          </div>
+        {% endif %}
+
+        <br><br>
       </li>
     {% endfor %}
   </ul>

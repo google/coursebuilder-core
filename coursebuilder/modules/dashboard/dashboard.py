@@ -33,7 +33,6 @@ from models import roles
 from models import transforms
 from models import vfs
 from models.models import Student
-from assignments import AssignmentManager
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -42,6 +41,7 @@ from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 import messages
+from peer_review import AssignmentManager
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
@@ -61,14 +61,16 @@ class DashboardHandler(
 
     default_action = 'outline'
     get_actions = [
-        default_action, 'assets', 'settings', 'students',
+        default_action, 'assets', 'settings', 'analytics',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'import_course', 'edit_assignment']
+    # Requests to these handlers automatically go through an XSRF token check
+    # that is implemented in ReflectiveRequestHandler.
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson',
-        'edit_basic_course_settings']
+        'edit_basic_course_settings', 'add_reviewer', 'delete_reviewer']
 
     @classmethod
     def get_child_routes(cls):
@@ -135,7 +137,7 @@ class DashboardHandler(
             ('', 'Outline'),
             ('assets', 'Assets'),
             ('settings', 'Settings'),
-            ('students', 'Students'),
+            ('analytics', 'Analytics'),
             ('edit_assignment', 'Peer Review')]
         nav = safe_dom.NodeList()
         for action, title in nav_mappings:
@@ -537,11 +539,11 @@ class DashboardHandler(
         template_values['main_content'] = items
         self.render_page(template_values)
 
-    def get_students(self):
-        """Renders course students view."""
+    def get_analytics(self):
+        """Renders course analytics view."""
 
         template_values = {}
-        template_values['page_title'] = self.format_title('Students')
+        template_values['page_title'] = self.format_title('Analytics')
 
         details = safe_dom.NodeList().append(
             safe_dom.Element('h3').add_text('Enrollment Statistics')
@@ -641,7 +643,7 @@ class DashboardHandler(
         """Submits a new student statistics calculation task."""
         job = ComputeStudentStats(self.app_context)
         job.submit()
-        self.redirect('/dashboard?action=students')
+        self.redirect('/dashboard?action=analytics')
 
 
 class ScoresAggregator(object):
