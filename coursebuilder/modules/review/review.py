@@ -222,6 +222,12 @@ COUNTER_WRITE_REVIEW_UPDATED_EXISTING_REVIEW = counters.PerfCounter(
     'number of times write_review() updated an existing review')
 
 
+# Number of entities to fetch when querying for all review steps that meet
+# given criteria. Ideally we'd cursor through results rather than setting a
+# ceiling, but for now let's allow as many removed results as unremoved.
+_REVIEW_STEP_QUERY_LIMIT = 2 * domain.MAX_UNREMOVED_REVIEW_STEPS
+
+
 class Error(Exception):
     """Base error class."""
 
@@ -794,7 +800,7 @@ class Manager(object):
                 peer.ReviewStep.unit_id.name, unit_id
             )
 
-            keys = [key for key in query.fetch(1000)]
+            keys = [key for key in query.fetch(_REVIEW_STEP_QUERY_LIMIT)]
 
         except Exception as e:
             COUNTER_GET_REVIEW_KEYS_BY_FAILED.inc()
@@ -862,7 +868,7 @@ class Manager(object):
                 peer.ReviewStep.unit_id.name, unit_id
             )
 
-            step_keys = step_keys_query.fetch(1000)
+            step_keys = step_keys_query.fetch(_REVIEW_STEP_QUERY_LIMIT)
             results = (submission_key, step_keys)
 
         except Exception as e:

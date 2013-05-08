@@ -27,6 +27,10 @@ ASSIGNER_KINDS = (
     ASSIGNER_KIND_HUMAN,
 )
 
+# Maximum number of ReviewSteps with removed = False, in any REVIEW_STATE, that
+# can exist in the backend at a given time.
+MAX_UNREMOVED_REVIEW_STEPS = 100
+
 # State of a review that is currently assigned, either by a human or by machine.
 REVIEW_STATE_ASSIGNED = 'ASSIGNED'
 # State of a review that is complete and may be shown to the reviewee, provided

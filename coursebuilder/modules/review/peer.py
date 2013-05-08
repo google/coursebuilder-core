@@ -22,10 +22,16 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+from models import counters
 from models import models
 from models import review
 from modules.review import domain
 from google.appengine.ext import db
+
+COUNTER_INCREMENT_COUNT_COUNT_AGGREGATE_EXCEEDED_MAX = counters.PerfCounter(
+    'gcb-pr-increment-count-count-aggregate-exceeded-max',
+    ('number of times increment_count() failed because the new aggregate of '
+     'the counts would have exceeded domain.MAX_UNREMOVED_REVIEW_STEPS'))
 
 
 class ReviewSummary(review.BaseEntity):
@@ -36,6 +42,8 @@ class ReviewSummary(review.BaseEntity):
     # UTC create date.
     create_date = db.DateTimeProperty(auto_now_add=True, required=True)
 
+    # Strong counters. Callers should never manipulate these directly. Instead,
+    # use decrement|increment_count.
     # Count of ReviewStep entities for this submission currently in state
     # STATE_ASSIGNED.
     assigned_count = db.IntegerProperty(default=0, required=True)
@@ -74,6 +82,15 @@ class ReviewSummary(review.BaseEntity):
         return '(%s:%s:%s)' % (
             unit_id, submission_key.id_or_name(), reviewee_key.id_or_name())
 
+    def _check_count(self):
+        count_sum = (
+            self.assigned_count + self.completed_count + self.expired_count)
+        if count_sum >= domain.MAX_UNREMOVED_REVIEW_STEPS:
+            COUNTER_INCREMENT_COUNT_COUNT_AGGREGATE_EXCEEDED_MAX.inc()
+            raise db.BadValueError(
+                'Unable to increment %s to %s; max is %s' % (
+                    self.kind(), count_sum, domain.MAX_UNREMOVED_REVIEW_STEPS))
+
     def decrement_count(self, state):
         """Decrements the count for the given state enum; does not save.
 
@@ -101,16 +118,21 @@ class ReviewSummary(review.BaseEntity):
                 domain.REVIEW_STATES.
 
         Raises:
+            db.BadValueError: if incrementing the counter would cause the sum of
+               all *_counts to exceed domain.MAX_UNREMOVED_REVIEW_STEPS.
             ValueError: if state not in domain.REVIEW_STATES
         """
+        if state not in domain.REVIEW_STATES:
+            raise ValueError('%s not in %s' % (state, domain.REVIEW_STATES))
+
+        self._check_count()
+
         if state == domain.REVIEW_STATE_ASSIGNED:
             self.assigned_count += 1
         elif state == domain.REVIEW_STATE_COMPLETED:
             self.completed_count +=1
         elif state == domain.REVIEW_STATE_EXPIRED:
             self.expired_count += 1
-        else:
-            raise ValueError('%s not in %s' % (state, domain.REVIEW_STATES))
 
 
 class ReviewStep(review.BaseEntity):

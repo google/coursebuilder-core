@@ -89,6 +89,7 @@ class ReviewSummaryTest(actions.TestBase):
             submission_key=db.Key.from_path(
                 review.Submission.kind(), 'submission'), unit_id='1')
 
+        self.assertRaises(ValueError, summary.increment_count, 'bad_state')
         self.assertEqual(0, summary.assigned_count)
         summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
         self.assertEqual(1, summary.assigned_count)
@@ -98,4 +99,17 @@ class ReviewSummaryTest(actions.TestBase):
         self.assertEqual(0, summary.expired_count)
         summary.increment_count(domain.REVIEW_STATE_EXPIRED)
         self.assertEqual(1, summary.expired_count)
-        self.assertRaises(ValueError, summary.increment_count, 'bad_state')
+
+        check_overflow = peer.ReviewSummary(
+            assigned_count=domain.MAX_UNREMOVED_REVIEW_STEPS - 1,
+            reviewee_key=db.Key.from_path(
+                models.Student.kind(), 'reviewee@example.com'),
+            submission_key=db.Key.from_path(
+                review.Submission.kind(), 'submission'), unit_id='1')
+        # Increment to the limit succeeds...
+        check_overflow.increment_count(domain.REVIEW_STATE_ASSIGNED)
+
+        # ...but not beyond.
+        self.assertRaises(
+            db.BadValueError,
+            check_overflow.increment_count, domain.REVIEW_STATE_ASSIGNED)
