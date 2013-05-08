@@ -41,6 +41,7 @@ import json
 import logging
 import random
 import re
+import sys
 import threading
 import time
 import urllib
@@ -72,12 +73,12 @@ PARSER.add_argument(
 
 def assert_contains(needle, haystack):
     if not needle in haystack:
-        raise Exception('Expected to find term: %s.', needle)
+        raise Exception('Expected to find term: %s\n%s', needle, haystack)
 
 
 def assert_does_not_contain(needle, haystack):
     if needle in haystack:
-        raise Exception('Did not expect to find term: %s.', needle)
+        raise Exception('Did not expect to find term: %s\n%s', needle, haystack)
 
 
 def assert_equals(expected, actual):
@@ -143,14 +144,19 @@ class WebSession(object):
 
     def is_soft_error(self, http_error):
         """Checks if HTTPError is due to starvation of frontend instances."""
-        if http_error.code == 500 and http_error.fp:
-            body = http_error.fp.read()
-            # this is the text specific to the starvation; normal HTTP error
-            # 500 has this specific text '<h1>500 Internal Server Error</h1>'
-            return '<h1>Error: Server Error</h1>' in body
+        body = http_error.fp.read()
+
+        # this is the text specific to the front end instance starvation, which
+        # is a retriable error for both GET and POST; normal HTTP error 500 has
+        # this specific text '<h1>500 Internal Server Error</h1>'
+        if http_error.code == 500 and '<h1>Error: Server Error</h1>' in body:
+            return True
+
+        logging.error(
+            'Non-retriable HTTP %s error:\n%s', http_error.code, body)
         return False
 
-    def open(self, request, hint, retriable_request=False):
+    def open(self, request, hint):
         """Executes any HTTP request."""
         start_time = time.time()
         try:
@@ -161,7 +167,6 @@ class WebSession(object):
                 except urllib2.HTTPError as he:
                     if (
                             try_count < WebSession.MAX_RETRIES and
-                            retriable_request and
                             self.is_soft_error(he)):
                         try_count += 1
                         with WebSession.PROGRESS_LOCK:
@@ -186,7 +191,7 @@ class WebSession(object):
         request = urllib2.Request(url)
         for key, value in self.common_headers.items():
             request.add_header(key, value)
-        response = self.open(request, 'GET %s' % url, retriable_request=True)
+        response = self.open(request, 'GET %s' % url)
         assert_equals(expected_code, response.code)
         return response.read()
 
@@ -252,7 +257,8 @@ class TaskThread(threading.Thread):
             self.func()
         except Exception as e:  # pylint: disable-msg=broad-except
             logging.error('Error in %s: %s', self.name, e)
-            self.exception = e
+            self.exc_info = sys.exc_info()
+            raise self.exc_info[1], None, self.exc_info[2]
 
 
 class PeerReviewLoadTest(object):
@@ -365,17 +371,17 @@ class PeerReviewLoadTest(object):
 
         completed = False
         while not completed:
+            # Get peer review dashboard and inspect it.
             body = self.session.get(review_dashboard_url)
             assert_contains('Assignments for your review', body)
             assert_contains('Review a new assignment', body)
 
+            # Pick first pending review if any or ask for a new review.
             draft_review_url = self.get_draft_review_url(body)
-            if draft_review_url:
-                # There is a pending review. Choose it.
+            if draft_review_url:  # There is a pending review. Choose it.
                 body = self.session.get(
                     '%s/%s' % (self.host, draft_review_url))
-            else:
-                # Request a new assignment to review.
+            else:  # Request a new assignment to review.
                 assert_contains('xsrf_token', body)
                 xsrf_token = self.get_hidden_field('xsrf_token', body)
                 data = {
@@ -384,22 +390,30 @@ class PeerReviewLoadTest(object):
                 }
                 body = self.session.post(review_dashboard_url, data)
 
-            if not 'Back to the review dashboard' in body:
-                # There are no submissions available to review. Wait for a
-                # while and then try again.
-                assert_contains('Assignments for your review', body)
-                # Sleep for a random number of seconds between 1 and 4.
-                time.sleep(1.0 + random.random() * 3.0)
-                continue
+                # It is possible that we fail to get a new review because the
+                # old one is now visible, but was not yet visible when we asked
+                # for the dashboard page.
+                if (
+                        'You must complete all assigned reviews before you '
+                        'can request a new one.' in body):
+                    continue
 
+                # It is possible that no submissions available for review yet.
+                # Wait for a while until they become available on the dashboard
+                # page.
+                if not 'Back to the review dashboard' in body:
+                    assert_contains('Assignments for your review', body)
+                    # Sleep for a random number of seconds between 1 and 4.
+                    time.sleep(1.0 + random.random() * 3.0)
+                    continue
+
+            # Submit the review.
             review_xsrf_token = self.get_js_var('assessmentXsrfToken', body)
-
             answers = [
                 {'index': 0, 'type': 'choices', 'value': 0},
                 {'index': 1, 'type': 'regex',
                  'value': 'Review 0 by %s' % self.email},
             ]
-
             data = {
                 'answers': json.dumps(answers),
                 'assessment_type': None,
@@ -409,7 +423,6 @@ class PeerReviewLoadTest(object):
                 'unit_id': LEGACY_REVIEW_UNIT_ID,
                 'xsrf_token': review_xsrf_token,
             }
-
             body = self.session.post('%s/review' % self.host, data)
             assert_contains('Your review has been submitted', body)
             return True
