@@ -317,7 +317,7 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             else:
                 message = 'Saved, but there was an error sending email.'
         else:
-            message = 'Saved'
+            message = 'Saved.'
         transforms.send_json_response(self, 200, message)
 
 
