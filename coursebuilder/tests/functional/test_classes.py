@@ -823,7 +823,7 @@ class AdminAspectTest(actions.TestBase):
 
         # Login.
         email = 'test_courses_page_for_multiple_courses@google.com'
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
 
         # Check the course listing page.
         response = self.testapp.get('/admin')
@@ -871,7 +871,7 @@ class AdminAspectTest(actions.TestBase):
         del os.environ['gcb_admin_user_emails']
 
         # Check actual admin has access.
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.testapp.get('/admin?action=console')
         assert_equals(response.status_int, 200)
 
@@ -882,7 +882,7 @@ class AdminAspectTest(actions.TestBase):
         # Finally, test that the console is not found when it is disabled
         modules.admin.admin.DIRECT_CODE_EXECUTION_UI_ENABLED = False
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         self.testapp.get('/admin?action=console', status=404)
         self.testapp.post('/admin?action=console_run', status=404)
 
@@ -1004,7 +1004,7 @@ class AdminAspectTest(actions.TestBase):
         email = 'test_access_to_admin_pages@google.com'
         name = 'Test Access to Admin Pages'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         actions.register(self, name)
 
         response = self.testapp.get('/admin')
@@ -1041,7 +1041,7 @@ class AdminAspectTest(actions.TestBase):
 
         email = 'test_multiple_courses@google.com'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.testapp.get('/admin')
         assert_contains('Course Builder &gt; Admin &gt; Courses', response.body)
         assert_contains('Total: 2 item(s)', response.body)
@@ -1068,7 +1068,7 @@ class AdminAspectTest(actions.TestBase):
             return
 
         email = 'test_add_course@google.com'
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
 
         # Prepare request data.
         payload_dict = {
@@ -1121,7 +1121,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         actions.logout()
 
         # Admin has access.
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.get('dashboard')
         assert_contains('Google &gt; Dashboard &gt; Outline', response.body)
 
@@ -1207,7 +1207,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         actions.register(self, name)
 
         response = actions.view_announcements(self)
@@ -1220,7 +1220,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         email = 'test_announcements@google.com'
         name = 'Test Announcements'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         actions.register(self, name)
 
         # add new
@@ -1252,7 +1252,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         email = 'test_announcements_rest@google.com'
         name = 'Test Announcements Rest'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         actions.register(self, name)
 
         response = actions.view_announcements(self)
@@ -1323,7 +1323,7 @@ class StudentAspectTest(actions.TestBase):
         actions.logout()
 
         # Login as admin and add announcements.
-        actions.login('admin@sample.com', True)
+        actions.login('admin@sample.com', is_admin=True)
         actions.register(self, 'admin')
         response = actions.view_announcements(self)
         actions.logout()
@@ -1395,7 +1395,7 @@ class StudentAspectTest(actions.TestBase):
         assert_equals(response.status_int, 404)
 
         # Check preview and static resources are still available to author.
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.get('course')
         assert_equals(response.status_int, 200)
         response = self.get('assets/js/activity-1.3.js')
@@ -2207,7 +2207,7 @@ class MultipleCoursesTestBase(actions.TestBase):
         """Visit a course as a Student would."""
 
         # Check normal user has no access.
-        actions.login(course.email, is_admin)
+        actions.login(course.email, is_admin=is_admin)
 
         # Test schedule.
         if first_time:
@@ -2591,7 +2591,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         email = 'test_get_put_file@google.com'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.get('dashboard?action=settings')
 
         # Check course.yaml edit form.
@@ -2619,7 +2619,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         """Test course with no assets and the simlest possible course.yaml."""
 
         email = 'test_empty_course@google.com'
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
 
         # Check minimal preview page comes up.
         response = self.get('preview')
@@ -2639,7 +2639,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Login as admin.
         email = 'test_empty_course@google.com'
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         response = self.get('dashboard')
 
         # Add unit.
@@ -2752,7 +2752,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         name = 'Test Units Lessons'
 
         assert_cached('preview', 'Putting it all together')
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
         assert_cached('preview', 'Putting it all together')
         actions.register(self, name)
         assert_cached(
@@ -2784,7 +2784,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         email = 'test_units_lessons@google.com'
         name = 'Test Units Lessons'
 
-        actions.login(email, True)
+        actions.login(email, is_admin=True)
 
         response = self.get('preview')
         assert_contains('Putting it all together', response.body)

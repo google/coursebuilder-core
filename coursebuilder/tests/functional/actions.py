@@ -232,7 +232,7 @@ def assert_all_fail(browser, callbacks):
 
 def login(email, is_admin=False):
     os.environ['USER_EMAIL'] = email
-    os.environ['USER_ID'] = 'user1'
+    os.environ['USER_ID'] = email
 
     is_admin_value = '0'
     if is_admin:

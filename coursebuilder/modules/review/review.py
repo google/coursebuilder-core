@@ -633,6 +633,11 @@ class Manager(object):
             peer.ReviewStep.change_date.name)
 
     @classmethod
+    def get_review_summaries_query(cls):
+        """Gets a db.Query that returns a list of review summaries."""
+        return peer.ReviewSummary.all()
+
+    @classmethod
     def get_new_review(
         cls, unit_id, reviewer_key, candidate_count=20, max_retries=5):
         """Attempts to assign a review to a reviewer.

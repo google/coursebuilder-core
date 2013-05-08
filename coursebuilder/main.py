@@ -28,7 +28,7 @@ from modules.announcements import announcements
 from modules.dashboard import dashboard
 import modules.oeditor.oeditor
 from modules.review import cron
-from modules.review import review_stats
+from modules.review import stats
 
 urls = [
     ('/', lessons.CourseHandler),
@@ -91,7 +91,7 @@ debug = not appengine_config.PRODUCTION_MODE
 
 # Configure modules.
 dashboard.DashboardRegistry.add_custom_analytics_section(
-    review_stats.PeerReviewStats)
+    stats.PeerReviewStatsHandler)
 
 app = webapp2.WSGIApplication(
     admin_handlers + cron_handlers + yui_handlers + [

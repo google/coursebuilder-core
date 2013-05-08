@@ -71,8 +71,9 @@ class ReviewSummary(student_work.BaseEntity):
         reviewee_key = kwargs.get('reviewee_key')
         submission_key = kwargs.get('submission_key')
         unit_id = kwargs.get('unit_id')
-        assert (reviewee_key and submission_key and unit_id), (
-            'Missing required property')
+        assert reviewee_key, 'Missing required reviewee_key property'
+        assert submission_key, 'Missing required submission_key property'
+        assert unit_id, 'Missing required unit_id property'
         kwargs['key_name'] = self.key_name(
             unit_id, submission_key, reviewee_key)
         super(ReviewSummary, self).__init__(*args, **kwargs)

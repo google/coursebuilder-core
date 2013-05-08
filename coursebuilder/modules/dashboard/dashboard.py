@@ -588,13 +588,13 @@ class DashboardHandler(
                 subtemplate_values['total_records'] = total_records
 
                 additional_stats = ''
-                for callback in DashboardRegistry.analytics_callbacks:
+                for callback in DashboardRegistry.analytics_handlers:
                     handler = callback()
                     handler.app_context = self.app_context
                     handler.request = self.request
                     handler.response = self.response
                     try:
-                        additional_stats += handler.get()
+                        additional_stats += handler.get(stats[handler.name])
                     except Exception as e:  # pylint: disable-msg=broad-except
                         error_msg = ('Error retrieving analytics for %s: '
                                      '%s' % (callback.__name__, e))
@@ -698,15 +698,26 @@ class ComputeStudentStats(jobs.DurableJob):
                 'unenrolled': enrollment.unenrolled},
             'scores': scores.name_to_tuple}
 
+        for callback in DashboardRegistry.analytics_handlers:
+            handler = callback()
+            data[handler.name] = handler.stats_computer().get_stats()
+
         return data
 
 
 class DashboardRegistry(object):
     """Holds registered handlers that produce HTML code for the dashboard."""
-    analytics_callbacks = []
+    analytics_handlers = []
 
     @classmethod
     def add_custom_analytics_section(cls, handler):
         """Adds handlers that provide additional data for the Analytics page."""
-        if handler not in cls.analytics_callbacks:
-            cls.analytics_callbacks.append(handler)
+        if handler not in cls.analytics_handlers:
+            existing_names = [h.name for h in cls.analytics_handlers]
+            existing_names.append('enrollment')
+            existing_names.append('scores')
+            if handler.name in existing_names:
+                raise Exception('Stats handler name %s is being duplicated.'
+                                % handler.name)
+
+            cls.analytics_handlers.append(handler)
