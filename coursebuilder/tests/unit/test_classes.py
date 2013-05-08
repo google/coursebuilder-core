@@ -24,7 +24,7 @@ from controllers import sites
 from models import config
 from models import courses
 from models import transforms
-import suite
+from tests import suite
 from tools import verify
 from tools.etl import etl
 

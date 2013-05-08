@@ -19,7 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import random
 import time
 from selenium import webdriver
-import suite
+from tests import suite
 import pageobjects
 
 
