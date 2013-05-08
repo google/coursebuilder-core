@@ -318,6 +318,7 @@ class RegisterHandler(BaseHandler):
             self.template_value['course_status'] = 'full'
         else:
             name = self.request.get('form01')
+            additional_fields = transforms.dumps(self.request.POST.items())
 
             # create new or re-enroll old student
             student = Student.get_by_email(user.email())
@@ -327,6 +328,7 @@ class RegisterHandler(BaseHandler):
 
             student.is_enrolled = True
             student.name = name
+            student.additional_fields = additional_fields
             student.put()
 
         # Render registration confirmation page

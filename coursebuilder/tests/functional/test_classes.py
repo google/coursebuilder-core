@@ -1435,6 +1435,54 @@ class StudentAspectTest(actions.TestBase):
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old
 
+    def test_registration_with_additional_fields(self):
+        """Registers a new student with customized registration form."""
+
+        email = 'test_registration_with_additional_fields@example.com'
+        name = 'Test Registration with Additional Fields'
+        zipcode = '94043'
+        score = '99'
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            """Insert additional fields into course.yaml."""
+            environ = get_environ_old(self)
+            environ['reg_form']['additional_registration_fields'] = (
+                '\'<!-- reg_form.additional_registration_fields -->'
+                '<li>'
+                '<label class="form-label" for="form02"> What is your zipcode?'
+                '</label><input name="form02" type="text"></li>'
+                '<li>'
+                '<label class="form-label" for="form03"> What is your score?'
+                '</label> <input name="form03" type="text"></li>\''
+                )
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        # Login and register.
+        actions.login(email)
+        actions.register_with_additional_fields(self, name, zipcode, score)
+
+        # Verify that registration results in capturing additional registration
+        # questions.
+        old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.namespace)
+        student = models.Student.get_enrolled_student_by_email(email)
+
+        # Check that two registration additional fields are populated
+        # with correct values.
+        if student.additional_fields:
+            json_dict = transforms.loads(student.additional_fields)
+            assert zipcode == json_dict[2][1]
+            assert score == json_dict[3][1]
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+        namespace_manager.set_namespace(old_namespace)
+
     def test_permissions(self):
         """Test student permissions, and which pages they can view."""
         email = 'test_permissions@example.com'

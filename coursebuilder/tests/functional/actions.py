@@ -284,6 +284,23 @@ def view_registration(browser):
     return response
 
 
+def register_with_additional_fields(browser, name, data2, data3):
+    """Registers a new student with customized registration form."""
+
+    response = browser.get('/')
+    assert_equals(response.status_int, 302)
+
+    response = view_registration(browser)
+
+    response.form.set('form01', name)
+    response.form.set('form02', data2)
+    response.form.set('form03', data3)
+    response = browser.submit(response.form)
+
+    assert_contains('Thank you for registering for', response.body)
+    check_profile(browser, name)
+
+
 def view_preview(browser):
     """Views /preview page."""
     response = browser.get('preview')
