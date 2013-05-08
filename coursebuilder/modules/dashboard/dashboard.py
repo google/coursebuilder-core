@@ -293,9 +293,12 @@ class DashboardHandler(
         """Renders course outline view."""
 
         pages_info = [
-            '<a href="%s">Announcements</a>' % self.canonicalize_url(
-                '/announcements'),
-            '<a href="%s">Course</a>' % self.canonicalize_url('/course')]
+            safe_dom.Element(
+                'a', href=self.canonicalize_url('/announcements')
+            ).add_text('Announcements'),
+            safe_dom.Element(
+                'a', href=self.canonicalize_url('/course')
+            ).add_text('Course')]
 
         outline_actions = []
         if filer.is_editable_fs(self.app_context):
@@ -368,15 +371,16 @@ class DashboardHandler(
 
         # Basic course info.
         course_info = [
-            ('Course Title', self.app_context.get_environ()['course']['title']),
-            ('Context Path', self.app_context.get_slug()),
-            ('Datastore Namespace', self.app_context.get_namespace_name())]
+            'Course Title: %s' % self.app_context.get_environ()['course'][
+                'title'],
+            'Context Path: %s' % self.app_context.get_slug(),
+            'Datastore Namespace: %s' % self.app_context.get_namespace_name()]
 
         # Course file system.
         fs = self.app_context.fs.impl
-        course_info.append(('File system', fs.__class__.__name__))
+        course_info.append(('File System: %s' % fs.__class__.__name__))
         if fs.__class__ == vfs.LocalReadOnlyFileSystem:
-            course_info.append(('Home folder', sites.abspath(
+            course_info.append(('Home Folder: %s' % sites.abspath(
                 self.app_context.get_home_folder(), '/')))
 
         # Enable editing if supported.

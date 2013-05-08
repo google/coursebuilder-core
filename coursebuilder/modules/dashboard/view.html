@@ -190,11 +190,7 @@
           &lt; none &gt;
           {% endif %}
           {% for item in section.children %}
-          {% if 2 == (item|count) %}
-          <li>{{ item[0] }}: {{ item[1] }}</li>
-          {% else %}
-          <li>{{ item|safe }}</li>
-          {% endif %}
+          <li>{{ item }}</li>
           {% endfor %}
         </ol>
         {% endif %}
