@@ -5,15 +5,9 @@
   </colgroup>
 
   <tr>
-    {# I18N: Table header that states whether a student is currently enrolled in a course. #}
-    <th align="left">{{ gettext('Currently enrolled') }}</th>
-    <td>{{ student.is_enrolled }}</td>
-  </tr>
-
-  <tr>
     {# I18N: Table header that states when a student enrolled in a course. #}
     <th align="left">{{ gettext('Date enrolled') }}</th>
-    <td>{{ student.enrolled_on }}</td>
+    <td>{{ date_enrolled }}</td>
   </tr>
 
   <tr>

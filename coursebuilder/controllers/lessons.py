@@ -32,6 +32,7 @@ from tools import verify
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import CAN_PERSIST_PAGE_EVENTS
+from utils import HUMAN_READABLE_DATETIME_FORMAT
 from utils import XsrfTokenManager
 
 from google.appengine.ext import db
@@ -57,10 +58,6 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 
 UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
-
-# Date format string for displaying the month (in words), day, four-digit year,
-# hour and minute. Example: Mar 21 2013 at 13:00 UTC.
-HUMAN_READABLE_DATE_FORMAT = '%b %d %Y, %H:%M UTC'
 
 
 def extract_unit_and_lesson(handler):
@@ -357,7 +354,7 @@ class AssessmentHandler(BaseHandler):
         submission_due_date = unit.workflow.get_submission_due_date()
         if submission_due_date:
             self.template_value['submission_due_date'] = (
-                submission_due_date.strftime(HUMAN_READABLE_DATE_FORMAT))
+                submission_due_date.strftime(HUMAN_READABLE_DATETIME_FORMAT))
 
             time_now = datetime.datetime.now()
             if time_now > submission_due_date:
@@ -444,7 +441,7 @@ class ReviewDashboardHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if review_due_date:
             self.template_value['review_due_date'] = review_due_date.strftime(
-                HUMAN_READABLE_DATE_FORMAT)
+                HUMAN_READABLE_DATETIME_FORMAT)
 
         time_now = datetime.datetime.now()
         self.template_value['due_date_exceeded'] = (time_now > review_due_date)
@@ -615,7 +612,7 @@ class ReviewHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if review_due_date:
             self.template_value['review_due_date'] = review_due_date.strftime(
-                HUMAN_READABLE_DATE_FORMAT)
+                HUMAN_READABLE_DATETIME_FORMAT)
 
         review_key = review_step.review_key
         rev = rp.get_reviews_by_keys(
@@ -692,9 +689,9 @@ class ReviewHandler(BaseHandler):
         review_due_date = unit.workflow.get_review_due_date()
         if time_now > review_due_date:
             self.template_value['time_now'] = time_now.strftime(
-                HUMAN_READABLE_DATE_FORMAT)
+                HUMAN_READABLE_DATETIME_FORMAT)
             self.template_value['review_due_date'] = (
-                review_due_date.strftime(HUMAN_READABLE_DATE_FORMAT))
+                review_due_date.strftime(HUMAN_READABLE_DATETIME_FORMAT))
             self.template_value['error_code'] = 'review_deadline_exceeded'
             self.render('error.html')
             return

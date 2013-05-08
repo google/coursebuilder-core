@@ -18,7 +18,7 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 
 import datetime
 import logging
-from controllers.lessons import HUMAN_READABLE_DATE_FORMAT
+
 from models import courses
 from models import models
 from models import review
@@ -28,6 +28,8 @@ from models.models import Student
 from models.models import StudentAnswersEntity
 from tools import verify
 from utils import BaseHandler
+from utils import HUMAN_READABLE_DATETIME_FORMAT
+
 from google.appengine.ext import db
 
 
@@ -156,10 +158,10 @@ class AnswerHandler(BaseHandler):
                 submission_due_date = unit.workflow.get_submission_due_date()
                 if time_now > submission_due_date:
                     self.template_value['time_now'] = time_now.strftime(
-                        HUMAN_READABLE_DATE_FORMAT)
+                        HUMAN_READABLE_DATETIME_FORMAT)
                     self.template_value['submission_due_date'] = (
                         submission_due_date.strftime(
-                            HUMAN_READABLE_DATE_FORMAT))
+                            HUMAN_READABLE_DATETIME_FORMAT))
                     self.template_value['error_code'] = (
                         'assignment_deadline_exceeded')
                     self.render('error.html')

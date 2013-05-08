@@ -63,6 +63,14 @@ CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
     False)
 
 
+# Date format string for displaying datetimes in UTC.
+# Example: 2013-03-21 13:00 UTC
+HUMAN_READABLE_DATETIME_FORMAT = '%Y-%m-%d, %H:%M UTC'
+
+# Date format string for displaying dates. Example: 2013-03-21
+HUMAN_READABLE_DATE_FORMAT = '%Y-%m-%d'
+
+
 class ReflectiveRequestHandler(object):
     """Uses reflection to handle custom get() and post() requests.
 
@@ -393,6 +401,8 @@ class StudentProfileHandler(BaseHandler):
 
         self.template_value['navbar'] = {}
         self.template_value['student'] = student
+        self.template_value['date_enrolled'] = student.enrolled_on.strftime(
+            HUMAN_READABLE_DATE_FORMAT)
         self.template_value['score_list'] = course.get_all_scores(student)
         self.template_value['overall_score'] = course.get_overall_score(student)
         self.template_value['student_edit_xsrf_token'] = (
