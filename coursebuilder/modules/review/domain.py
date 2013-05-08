@@ -46,6 +46,56 @@ REVIEW_STATES = (
 )
 
 
+class Error(Exception):
+    """Base error class."""
+
+
+class ConstraintError(Error):
+    """Raised when data is found indicating a constraint is violated."""
+
+
+class NotAssignableError(Error):
+    """Raised when review assignment is requested but cannot be satisfied."""
+
+
+class RemovedError(Error):
+    """Raised when an op cannot be performed on a step because it is removed."""
+
+    def __init__(self, message, value):
+        """Constructs a new RemovedError."""
+        super(RemovedError, self).__init__(message)
+        self.value = value
+
+    def __str__(self):
+        return '%s: removed is %s' % (self.message, self.value)
+
+
+class ReviewProcessAlreadyStartedError(Error):
+    """Raised when someone attempts to start a review process in progress."""
+
+
+class TransitionError(Error):
+    """Raised when an invalid state transition is attempted."""
+
+    def __init__(self, message, before, after):
+        """Constructs a new TransitionError.
+
+        Args:
+            message: string. Exception message.
+            before: string in peer.ReviewStates (though this is unenforced).
+                State we attempted to transition from.
+            after: string in peer.ReviewStates (though this is unenforced).
+                State we attempted to transition to.
+        """
+        super(TransitionError, self).__init__(message)
+        self.after = after
+        self.before = before
+
+    def __str__(self):
+        return '%s: attempted to transition from %s to %s' % (
+            self.message, self.before, self.after)
+
+
 class Review(object):
     """Domain object for a student work submission."""
 

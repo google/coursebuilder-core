@@ -98,7 +98,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.TransitionError, review_module.Manager.add_reviewer,
+            domain.TransitionError, review_module.Manager.add_reviewer,
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
 
@@ -117,7 +117,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.TransitionError, review_module.Manager.add_reviewer,
+            domain.TransitionError, review_module.Manager.add_reviewer,
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
 
@@ -274,7 +274,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.RemovedError, review_module.Manager.delete_reviewer,
+            domain.RemovedError, review_module.Manager.delete_reviewer,
             step_key)
 
     def test_expire_review_raises_key_error_when_step_missing(self):
@@ -310,7 +310,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.TransitionError, review_module.Manager.expire_review,
+            domain.TransitionError, review_module.Manager.expire_review,
             step_key)
 
     def test_expire_review_raises_transition_error_when_state_expired(self):
@@ -327,7 +327,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.TransitionError, review_module.Manager.expire_review,
+            domain.TransitionError, review_module.Manager.expire_review,
             step_key)
 
     def test_expire_review_raises_removed_error_when_step_removed(self):
@@ -344,8 +344,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.RemovedError, review_module.Manager.expire_review,
-            step_key)
+            domain.RemovedError, review_module.Manager.expire_review, step_key)
 
     def test_expire_review_transitions_state_and_updates_summary(self):
         summary_key = peer.ReviewSummary(
@@ -633,9 +632,8 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key)
 
     def test_get_new_review_raises_not_assignable_when_already_completed(self):
         summary_key = peer.ReviewSummary(
@@ -651,9 +649,8 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key)
 
         db.delete(already_completed_unremoved_step_key)
         unused_already_completed_removed_step_key = peer.ReviewStep(
@@ -665,9 +662,8 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key)
 
     def test_get_new_review_raises_not_assignable_when_review_is_for_self(self):
         peer.ReviewSummary(
@@ -676,15 +672,14 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id,
             self.reviewer_key)
 
     def test_get_new_review_raises_not_assignable_when_no_candidates(self):
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key)
 
     def test_get_new_review_raises_not_assignable_when_retry_limit_hit(self):
         higher_priority_summary = peer.ReviewSummary(
@@ -719,9 +714,8 @@ class ManagerTest(actions.TestBase):
             review_module.Manager, '_choose_assignment_candidate', fn)
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key, max_retries=0)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key, max_retries=0)
 
     def test_get_new_review_raises_not_assignable_when_summary_updated(self):
         summary = peer.ReviewSummary(
@@ -742,9 +736,8 @@ class ManagerTest(actions.TestBase):
             review_module.Manager, '_choose_assignment_candidate', fn)
 
         self.assertRaises(
-            review_module.NotAssignableError,
-            review_module.Manager.get_new_review, self.unit_id,
-            self.reviewer_key)
+            domain.NotAssignableError, review_module.Manager.get_new_review,
+            self.unit_id, self.reviewer_key)
 
     def test_get_new_review_reassigns_removed_assigned_step(self):
         summary_key = peer.ReviewSummary(
@@ -1079,7 +1072,7 @@ class ManagerTest(actions.TestBase):
         collision.put()
 
         self.assertRaises(
-            review_module.ReviewProcessAlreadyStartedError,
+            domain.ReviewProcessAlreadyStartedError,
             review_module.Manager.start_review_process_for,
             self.unit_id, self.submission_key, self.reviewee_key)
 
@@ -1097,7 +1090,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.ConstraintError, review_module.Manager.write_review,
+            domain.ConstraintError, review_module.Manager.write_review,
             step_key, 'payload')
 
     def test_write_review_raises_constraint_error_if_no_summary(self):
@@ -1117,7 +1110,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.ConstraintError, review_module.Manager.write_review,
+            domain.ConstraintError, review_module.Manager.write_review,
             step_key, 'payload')
 
     def test_write_review_raises_key_error_if_no_step(self):
@@ -1141,8 +1134,8 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.RemovedError, review_module.Manager.write_review,
-            step_key, 'payload')
+            domain.RemovedError, review_module.Manager.write_review, step_key,
+            'payload')
 
     def test_write_review_raises_transition_error_if_step_completed(self):
         summary_key = peer.ReviewSummary(
@@ -1158,7 +1151,7 @@ class ManagerTest(actions.TestBase):
         ).put()
 
         self.assertRaises(
-            review_module.TransitionError, review_module.Manager.write_review,
+            domain.TransitionError, review_module.Manager.write_review,
             step_key, 'payload')
 
     def test_write_review_with_mark_completed_false(self):

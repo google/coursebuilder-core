@@ -228,56 +228,6 @@ COUNTER_WRITE_REVIEW_UPDATED_EXISTING_REVIEW = counters.PerfCounter(
 _REVIEW_STEP_QUERY_LIMIT = 2 * domain.MAX_UNREMOVED_REVIEW_STEPS
 
 
-class Error(Exception):
-    """Base error class."""
-
-
-class ConstraintError(Error):
-    """Raised when data is found indicating a constraint is violated."""
-
-
-class NotAssignableError(Error):
-    """Raised when review assignment is requested but cannot be satisfied."""
-
-
-class RemovedError(Error):
-    """Raised when an op cannot be performed on a step because it is removed."""
-
-    def __init__(self, message, value):
-        """Constructs a new RemovedError."""
-        super(RemovedError, self).__init__(message)
-        self.value = value
-
-    def __str__(self):
-        return '%s: removed is %s' % (self.message, self.value)
-
-
-class ReviewProcessAlreadyStartedError(Error):
-    """Raised when someone attempts to start a review process in progress."""
-
-
-class TransitionError(Error):
-    """Raised when an invalid state transition is attempted."""
-
-    def __init__(self, message, before, after):
-        """Constructs a new TransitionError.
-
-        Args:
-            message: string. Exception message.
-            before: string in peer.ReviewStates (though this is unenforced).
-                State we attempted to transition from.
-            after: string in peer.ReviewStates (though this is unenforced).
-                State we attempted to transition to.
-        """
-        super(TransitionError, self).__init__(message)
-        self.after = after
-        self.before = before
-
-    def __str__(self):
-        return '%s: attempted to transition from %s to %s' % (
-            self.message, self.before, self.after)
-
-
 class Manager(object):
     """Object that manages the review subsystem."""
 
@@ -307,8 +257,8 @@ class Manager(object):
                 a reviewer.
 
         Raises:
-            TransitionError: if there is a pre-existing review step found in
-                REVIEW_STATE_ASSIGNED|COMPLETED.
+            domain.TransitionError: if there is a pre-existing review step found
+                in domain.REVIEW_STATE_ASSIGNED|COMPLETED.
 
         Returns:
             db.Key of written review step.
@@ -382,7 +332,7 @@ class Manager(object):
             elif (step.state == domain.REVIEW_STATE_ASSIGNED or
                   step.state == domain.REVIEW_STATE_COMPLETED):
                 COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED.inc()
-                raise TransitionError(
+                raise domain.TransitionError(
                     'Unable to add new reviewer to step %s' % (
                         repr(step.key())),
                     step.state, domain.REVIEW_STATE_ASSIGNED)
@@ -427,10 +377,10 @@ class Manager(object):
                 review step to delete.
 
         Raises:
+            domain.RemovedError: if called on a review step that has already
+                been marked removed.
             KeyError: if there is no review step with the given key, or if the
                 step references a review summary that does not exist.
-            RemovedError: if called on a review step that has already been
-                marked removed.
 
         Returns:
             db.Key of deleted review step.
@@ -454,7 +404,7 @@ class Manager(object):
                 'No review step found with key %s' % repr(review_step_key))
         if step.removed:
             COUNTER_DELETE_REVIEWER_ALREADY_REMOVED.inc()
-            raise RemovedError(
+            raise domain.RemovedError(
                 'Cannot remove step %s' % repr(review_step_key), step.removed)
         summary = db.get(step.review_summary_key)
 
@@ -477,12 +427,12 @@ class Manager(object):
                 review step to expire.
 
         Raises:
-            KeyError: if there is no review with the given key, or the step
-                references a review summary that does not exist.
-            RemovedError: if called on a step that is removed.
-            TransitionError: if called on a review step that cannot be
+            domain.RemovedError: if called on a step that is removed.
+            domain.TransitionError: if called on a review step that cannot be
                 transitioned to REVIEW_STATE_EXPIRED (that is, it is already in
                 REVIEW_STATE_COMPLETED or REVIEW_STATE_EXPIRED).
+            KeyError: if there is no review with the given key, or the step
+                references a review summary that does not exist.
 
         Returns:
             db.Key of the expired review step.
@@ -508,14 +458,14 @@ class Manager(object):
 
         if step.removed:
             COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION.inc()
-            raise RemovedError(
+            raise domain.RemovedError(
                 'Cannot transition step %s' % repr(review_step_key),
                 step.removed)
 
         if step.state in (
                 domain.REVIEW_STATE_COMPLETED, domain.REVIEW_STATE_EXPIRED):
             COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION.inc()
-            raise TransitionError(
+            raise domain.TransitionError(
                 'Cannot transition step %s' % repr(review_step_key),
                 step.state, domain.REVIEW_STATE_EXPIRED)
 
@@ -653,11 +603,11 @@ class Manager(object):
         selection and assignment or the assignment is for a submission the
         reviewer already has or has already done, we remove the candidate from
         the list. We then retry assignment up to max_retries times. If we run
-        out of retries or candidates, we raise NotAssignableError.
+        out of retries or candidates, we raise domain.NotAssignableError.
 
         This is a naive implementation because it scales only to relatively low
         new review assignments per second and because it can raise
-        NotAssignableError when there are in fact assignable reviews.
+        domain.NotAssignableError when there are in fact assignable reviews.
 
         Args:
             unit_id: string. The unit to assign work from.
@@ -676,8 +626,8 @@ class Manager(object):
                 of questionable value.
 
         Raises:
-            NotAssignableError: if no review can currently be assigned for the
-            given unit_id.
+            domain.NotAssignableError: if no review can currently be assigned
+                for the given unit_id.
 
         Returns:
             db.Key of peer.ReviewStep. The newly created assigned review step.
@@ -695,7 +645,7 @@ class Manager(object):
             while True:
                 if not candidates or retries >= max_retries:
                     COUNTER_GET_NEW_REVIEW_NOT_ASSIGNABLE.inc()
-                    raise NotAssignableError(
+                    raise domain.NotAssignableError(
                         'No reviews assignable for unit %s and reviewer %s' % (
                             unit_id, repr(reviewer_key)))
                 candidate = cls._choose_assignment_candidate(candidates)
@@ -863,8 +813,8 @@ class Manager(object):
                 authored the submission.
 
         Raises:
-            ConstraintError: if multiple review summary keys were found for the
-                given unit_id, reviewee_key pair.
+            domain.ConstraintError: if multiple review summary keys were found
+                for the given unit_id, reviewee_key pair.
             KeyError: if there is no review summary for the given unit_id,
                 reviewee pair.
 
@@ -937,9 +887,9 @@ class Manager(object):
                 authored the submission.
 
         Raises:
-            ReviewProcessAlreadyStartedError: if the review process has already
-                been started for this student's submission.
             db.BadValueError: if passed args are invalid.
+            domain.ReviewProcessAlreadyStartedError: if the review process has
+                already been started for this student's submission.
 
         Returns:
             db.Key of created ReviewSummary.
@@ -962,7 +912,7 @@ class Manager(object):
 
         if collision:
             COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED.inc()
-            raise ReviewProcessAlreadyStartedError()
+            raise domain.ReviewProcessAlreadyStartedError()
 
         return peer.ReviewSummary(
             reviewee_key=reviewee_key, submission_key=submission_key,
@@ -987,11 +937,11 @@ class Manager(object):
                 was.
 
         Raises:
-            ConstraintError: if no review found for the review step.
+            domain.ConstraintError: if no review found for the review step.
+            domain.RemovedError: if the step for the review is removed.
+            domain.TransitionError: if mark_completed was True but the step was
+                already in domain.REVIEW_STATE_COMPLETED.
             KeyError: if no review step was found with review_step_key.
-            RemovedError: if the step for the review is removed.
-            TransitionError: if mark_completed was True but the step was already
-                in domain.REVIEW_STATE_COMPLETED.
 
         Returns:
             db.Key of peer.ReviewStep: key of the written review step.
@@ -1022,10 +972,10 @@ class Manager(object):
             raise KeyError(
                 'No review step found with key %s' % repr(review_step_key))
         elif step.removed:
-            raise RemovedError(
+            raise domain.RemovedError(
                 'Unable to process step %s' % repr(step.key()), step.removed)
         elif mark_completed and step.state == domain.REVIEW_STATE_COMPLETED:
-            raise TransitionError(
+            raise domain.TransitionError(
                 'Unable to transition step %s' % repr(step.key()),
                 step.state, domain.REVIEW_STATE_COMPLETED)
 
@@ -1044,13 +994,13 @@ class Manager(object):
 
         if not review_to_update:
             COUNTER_WRITE_REVIEW_REVIEW_MISS.inc()
-            raise ConstraintError(
+            raise domain.ConstraintError(
                 'No review found with key %s' % repr(step.review_key))
 
         summary = db.get(step.review_summary_key)
         if not summary:
             COUNTER_WRITE_REVIEW_SUMMARY_MISS.inc()
-            raise ConstraintError(
+            raise domain.ConstraintError(
                 'No review summary found with key %s' % repr(
                     step.review_summary_key))
 
