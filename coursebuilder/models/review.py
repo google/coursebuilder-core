@@ -55,7 +55,7 @@ class ReviewsProcessor(object):
 
     def _get_review_step_keys_by(self, unit_id, reviewer_key):
         impl = self._get_impl(unit_id)
-        return impl.get_review_keys_by(unit_id, reviewer_key)
+        return impl.get_review_keys_by(str(unit_id), reviewer_key)
 
     def _get_submission_by_key(self, unit_id, submission_key):
         impl = self._get_impl(unit_id)
@@ -64,7 +64,7 @@ class ReviewsProcessor(object):
     def add_reviewer(self, unit_id, submission_key, reviewee_key, reviewer_key):
         impl = self._get_impl(unit_id)
         return impl.add_reviewer(
-            unit_id, submission_key, reviewee_key, reviewer_key)
+            str(unit_id), submission_key, reviewee_key, reviewer_key)
 
     def delete_reviewer(self, unit_id, review_step_key):
         impl = self._get_impl(unit_id)
@@ -72,7 +72,7 @@ class ReviewsProcessor(object):
 
     def get_new_review(self, unit_id, reviewer_key):
         impl = self._get_impl(unit_id)
-        return impl.get_new_review(unit_id, reviewer_key)
+        return impl.get_new_review(str(unit_id), reviewer_key)
 
     def get_review_steps_by(self, unit_id, reviewer_key):
         review_step_keys = self._get_review_step_keys_by(unit_id, reviewer_key)
@@ -90,7 +90,7 @@ class ReviewsProcessor(object):
 
     def get_submission_and_review_step_keys(self, unit_id, reviewee_key):
         impl = self._get_impl(unit_id)
-        return impl.get_submission_and_review_keys(unit_id, reviewee_key)
+        return impl.get_submission_and_review_keys(str(unit_id), reviewee_key)
 
     def get_submission_contents_by_key(self, unit_id, submission_key):
         submission = self._get_submission_by_key(unit_id, submission_key)
@@ -103,12 +103,12 @@ class ReviewsProcessor(object):
     def get_submission_key(self, unit_id, reviewee_key):
         return db.Key.from_path(
             student_work.Submission.kind(),
-            student_work.Submission.key_name(unit_id, reviewee_key))
+            student_work.Submission.key_name(str(unit_id), reviewee_key))
 
     def create_submission(self, unit_id, reviewee_key, submission_payload):
         # TODO(sll): Add error handling.
         return student_work.Submission(
-            unit_id=unit_id, reviewee_key=reviewee_key,
+            unit_id=str(unit_id), reviewee_key=reviewee_key,
             contents=transforms.dumps(submission_payload)).put()
 
     def does_submission_exist(self, unit_id, reviewee_key):
@@ -118,7 +118,7 @@ class ReviewsProcessor(object):
     def start_review_process_for(self, unit_id, submission_key, reviewee_key):
         impl = self._get_impl(unit_id)
         return impl.start_review_process_for(
-            unit_id, submission_key, reviewee_key)
+            str(unit_id), submission_key, reviewee_key)
 
     def write_review(
         self, unit_id, review_step_key, review_payload, mark_completed):

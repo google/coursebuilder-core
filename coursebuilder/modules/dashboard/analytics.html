@@ -1,35 +1,10 @@
-{% if stats_calculated %}
-  <h3>Enrollment Statistics</h3>
-  <ul>
-    <li>previously enrolled: {{ unenrolled }}</li>
-    <li>currently enrolled: {{ enrolled }}</li>
-    <li>total: {{ unenrolled + enrolled }}</li>
-  </ul>
+{{stats_html}}
 
-  <h3>Assessment Statistics</h3>
-  <ul>
-    {% for unit in scores %}
-      <li>
-        {{ unit['key'] }}: completed {{ unit['completed'] }}, average score {{ unit['avg'] }}
-      </li>
-    {% endfor %}
-    <li>
-      total: {{ total_records }}
-    </li>
-  </ul>
-
-  {{ additional_stats }}
+{% if show_recalculate_button %}
+  <form id="gcb-compute-student-stats" action="dashboard?action=compute_student_stats" method="POST">
+      <input type="hidden" name="xsrf_token" value="{{xsrf_token}}">
+      <p>
+          <button class="gcb-button" type="submit">Re-Calculate Now</button>
+      </p>
+  </form>
 {% endif %}
-
-{% if errors %}
-  <h3>Errors</h3>
-  <ul>
-    {% for error in errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{{ update_message }}
-
-{{ update_action }}

@@ -1,49 +1,63 @@
-{% if peer_reviewed_units %}
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+{% if stats_calculated %}
+  {% if serialized_units %}
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
-  <script type="text/javascript">
-    // Global object repository.
-    var dashboard_analytics = {}
-    dashboard_analytics.units = JSON.parse("{{serialized_units | js_string}}");
+    <script type="text/javascript">
+      // Global object repository.
+      var dashboard_analytics = {}
+      dashboard_analytics.units = JSON.parse("{{serialized_units_json | js_string}}");
 
-    google.load('visualization', '1.0', {'packages':['corechart']});
-    google.setOnLoadCallback(drawChart);
+      google.load('visualization', '1.0', {'packages':['corechart']});
+      google.setOnLoadCallback(drawChart);
 
-    function drawChart() {
-      var datatables = [];
-      for (i = 0; i < dashboard_analytics.units.length; i++) {
-        var table = new google.visualization.DataTable();
-        table.addColumn('string', 'Reviews');
-        table.addColumn('number', 'Students');
+      function drawChart() {
+        var datatables = [];
+        for (i = 0; i < dashboard_analytics.units.length; i++) {
+          var table = new google.visualization.DataTable();
+          table.addColumn('string', 'Reviews');
+          table.addColumn('number', 'Students');
 
-        var rows = [];
-        for (j = 0; j < dashboard_analytics.units[i].stats.length; j++) {
-          var label = '' + j + ' review' + (j != 1 ? 's' : '');
-          rows.push([label, dashboard_analytics.units[i].stats[j]]);
+          var rows = [];
+          for (j = 0; j < dashboard_analytics.units[i].stats.length; j++) {
+            var label = '' + j + ' review' + (j != 1 ? 's' : '');
+            rows.push([label, dashboard_analytics.units[i].stats[j]]);
+          }
+          table.addRows(rows);
+          datatables.push(table);
         }
-        table.addRows(rows);
-        datatables.push(table);
+
+        var options = {
+          'title': 'Number of assignments with the given number of peer reviews',
+          'width': 600,
+          'height': 300,
+          'legend': {position: 'none'}
+        };
+
+        for (i = 0; i < dashboard_analytics.units.length; i++) {
+          var chart = new google.visualization.BarChart(
+            document.getElementById('chart_' + i));
+          chart.draw(datatables[i], options);
+        }
       }
+    </script>
 
-      var options = {
-        'title': 'Number of assignments with the given number of peer reviews',
-        'width': 600,
-        'height': 300,
-        'legend': {position: 'none'}
-      };
+    <h3>Peer Review Analytics</h3>
+    {% for unit in serialized_units %}
+      <h4>{{ unit['title'] }}</h4>
+      <div id="chart_{{loop.index0}}"></div>
+    {% endfor %}
 
-      for (i = 0; i < dashboard_analytics.units.length; i++) {
-        var chart = new google.visualization.BarChart(
-          document.getElementById('chart_' + i));
-        chart.draw(datatables[i], options);
-      }
-    }
-  </script>
-
-  <h3>Peer Review Analytics</h3>
-  {% for unit in peer_reviewed_units %}
-    <h4>{{ unit['title'] }}</h4>
-    <div id="chart_{{loop.index0}}"></div>
-  {% endfor %}
-
+  {% endif %}
 {% endif %}
+
+{% if errors %}
+  <h3>Peer Review Statistics -- Errors</h3>
+  <ul>
+    {% for error in errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{{ update_message }}
+

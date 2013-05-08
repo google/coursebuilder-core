@@ -19,9 +19,11 @@ __author__ = 'Sean Lip (sll@google.com)'
 
 import os
 
+from common import safe_dom
 from controllers.utils import ApplicationHandler
 import jinja2
 from models import courses
+from models import jobs
 from models import transforms
 from modules.review import peer
 from google.appengine.ext import db
@@ -31,24 +33,29 @@ class ReviewStatsAggregator(object):
     """Aggregates peer review statistics."""
 
     def __init__(self):
-        # This dict records how many submissions have a given number of
-        # completed reviews.
+        # This dict records, for each unit, how many submissions have a given
+        # number of completed reviews. The format of each key-value pair is
+        #     unit_id: {num_reviews: count_of_submissions}
         self.counts_by_completed_reviews = {}
 
     def visit(self, review_summary):
-        datum = review_summary.completed_count
-        if datum not in self.counts_by_completed_reviews:
-            self.counts_by_completed_reviews[datum] = 1
+        unit_id = review_summary.unit_id
+        if unit_id not in self.counts_by_completed_reviews:
+            self.counts_by_completed_reviews[unit_id] = {}
+
+        count = review_summary.completed_count
+        if count not in self.counts_by_completed_reviews[unit_id]:
+            self.counts_by_completed_reviews[unit_id][count] = 1
         else:
-            self.counts_by_completed_reviews[datum] += 1
+            self.counts_by_completed_reviews[unit_id][count] += 1
 
 
-class ComputeReviewStats(object):
-    """Methods for computing peer review statistics."""
+class ComputeReviewStats(jobs.DurableJob):
+    """A job for computing peer review statistics."""
 
-    @classmethod
-    def get_stats(cls):
-        """Return the data needed to populate the dashboard analytics view."""
+    def run(self):
+        """Computes peer review statistics."""
+
         stats = ReviewStatsAggregator()
 
         query = db.GqlQuery(
@@ -57,20 +64,21 @@ class ComputeReviewStats(object):
         for review_summary in query.run():
             stats.visit(review_summary)
 
-        max_completed_reviews = 0
-        if stats.counts_by_completed_reviews:
+        completed_arrays_by_unit = {}
+        for unit_id in stats.counts_by_completed_reviews:
             max_completed_reviews = max(
-                stats.counts_by_completed_reviews.keys())
+                stats.counts_by_completed_reviews[unit_id].keys())
 
-        completed_reviews_array = []
-        for i in range(max_completed_reviews + 1):
-            if i in stats.counts_by_completed_reviews:
-                completed_reviews_array.append(
-                    stats.counts_by_completed_reviews[i])
-            else:
-                completed_reviews_array.append(0)
+            completed_reviews_array = []
+            for i in range(max_completed_reviews + 1):
+                if i in stats.counts_by_completed_reviews[unit_id]:
+                    completed_reviews_array.append(
+                        stats.counts_by_completed_reviews[unit_id][i])
+                else:
+                    completed_reviews_array.append(0)
+            completed_arrays_by_unit[unit_id] = completed_reviews_array
 
-        return {'submissions_given_completed_reviews': completed_reviews_array}
+        return {'counts_by_completed_reviews': completed_arrays_by_unit}
 
 
 class PeerReviewStatsHandler(ApplicationHandler):
@@ -83,23 +91,58 @@ class PeerReviewStatsHandler(ApplicationHandler):
     # get_stats() method.
     stats_computer = ComputeReviewStats
 
-    def get(self, stats):
-        """Returns HTML code for peer review analytics."""
+    def get_markup(self, job):
+        """Returns Jinja markup for peer review analytics."""
+
+        errors = []
+        stats_calculated = False
+        update_message = safe_dom.Text('')
 
         course = courses.Course(self)
-        peer_reviewed_units = course.get_peer_reviewed_units()
+        serialized_units = []
 
-        serializable_units = []
-        for unit in peer_reviewed_units:
-            serializable_units.append({
-                'stats': stats['submissions_given_completed_reviews'],
-                'title': unit.title,
-                'unit_id': unit.unit_id,
-            })
+        if not job:
+            update_message = safe_dom.Text(
+                'Peer review statistics have not been calculated yet.')
+        else:
+            if job.status_code == jobs.STATUS_CODE_COMPLETED:
+                stats = transforms.loads(job.output)
+                stats_calculated = True
+
+                for unit in course.get_peer_reviewed_units():
+                    if unit.unit_id in stats['counts_by_completed_reviews']:
+                        unit_stats = (
+                            stats['counts_by_completed_reviews'][unit.unit_id])
+                        serialized_units.append({
+                            'stats': unit_stats,
+                            'title': unit.title,
+                            'unit_id': unit.unit_id,
+                        })
+                update_message = safe_dom.Text("""
+                    Peer review statistics were last updated on
+                    %s in about %s second(s).""" % (
+                        job.updated_on, job.execution_time_sec))
+            elif job.status_code == jobs.STATUS_CODE_FAILED:
+                update_message = safe_dom.NodeList().append(
+                    safe_dom.Text("""
+                        There was an error updating peer review statistics.
+                        Here is the message:""")
+                ).append(
+                    safe_dom.Element('br')
+                ).append(
+                    safe_dom.Element('blockquote').add_child(
+                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
+            else:
+                update_message = safe_dom.Text("""
+                    Peer review statistics update started on %s and is running
+                    now. Please come back shortly.""" % job.updated_on)
 
         return jinja2.utils.Markup(self.get_template(
             'stats.html', [os.path.dirname(__file__)]
         ).render({
-            'peer_reviewed_units': peer_reviewed_units,
-            'serialized_units': transforms.dumps(serializable_units),
+            'errors': errors,
+            'serialized_units': serialized_units,
+            'serialized_units_json': transforms.dumps(serialized_units),
+            'stats_calculated': stats_calculated,
+            'update_message': update_message,
         }, autoescape=True))

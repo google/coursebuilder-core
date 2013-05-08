@@ -17,7 +17,6 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
-import logging
 import os
 import urllib
 from common import jinja_filters
@@ -540,34 +539,17 @@ class DashboardHandler(
         template_values['main_content'] = items
         self.render_page(template_values)
 
-    def get_analytics(self):
-        """Renders course analytics view."""
-
-        template_values = {}
-        template_values['page_title'] = self.format_title('Analytics')
-
+    def get_markup_for_basic_analytics(self, job):
+        """Renders markup for basic enrollment and assessment analytics."""
         subtemplate_values = {}
         errors = []
         stats_calculated = False
         update_message = safe_dom.Text('')
-        update_action = safe_dom.Element(
-            'form', id='gcb-compute-student-stats',
-            action='dashboard?action=compute_student_stats',
-            method='POST'
-        ).add_child(
-            safe_dom.Element(
-                'input', type='hidden', name='xsrf_token',
-                value=self.create_xsrf_token('compute_student_stats'))
-        ).add_child(
-            safe_dom.Element('p').add_child(
-                safe_dom.Element(
-                    'button', className='gcb-button', type='submit'
-                ).add_text('Re-Calculate Now')))
 
-        job = ComputeStudentStats(self.app_context).load()
         if not job:
             update_message = safe_dom.Text(
-                'Student statistics have not been calculated yet.')
+                'Enrollment/assessment statistics have not been calculated '
+                'yet.')
         else:
             if job.status_code == jobs.STATUS_CODE_COMPLETED:
                 stats = transforms.loads(job.output)
@@ -586,57 +568,83 @@ class DashboardHandler(
                                    'avg': avg})
                 subtemplate_values['scores'] = scores
                 subtemplate_values['total_records'] = total_records
-
-                additional_stats = ''
-                for callback in DashboardRegistry.analytics_handlers:
-                    handler = callback()
-                    handler.app_context = self.app_context
-                    handler.request = self.request
-                    handler.response = self.response
-                    try:
-                        additional_stats += handler.get(stats[handler.name])
-                    except Exception as e:  # pylint: disable-msg=broad-except
-                        error_msg = ('Error retrieving analytics for %s: '
-                                     '%s' % (callback.__name__, e))
-                        logging.error(error_msg)
-                        errors.append(error_msg)
-
-                subtemplate_values['additional_stats'] = additional_stats
-
                 update_message = safe_dom.Text("""
-                    Student statistics were last updated on
+                    Enrollment and assessment statistics were last updated on
                     %s in about %s second(s).""" % (
                         job.updated_on, job.execution_time_sec))
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = safe_dom.NodeList().append(
                     safe_dom.Text("""
-                        There was an error updating student statistics.
-                        Here is the message:""")
+                        There was an error updating enrollment/assessment
+                        statistics. Here is the message:""")
                 ).append(
                     safe_dom.Element('br')
                 ).append(
                     safe_dom.Element('blockquote').add_child(
                         safe_dom.Element('pre').add_text('\n%s' % job.output)))
             else:
-                update_action = safe_dom.Text('')
-                update_message = safe_dom.Text("""
-                    Student statistics update started on %s and is running
-                    now. Please come back shortly.""" % job.updated_on)
+                update_message = safe_dom.Text(
+                    'Enrollment and assessment statistics update started on %s'
+                    ' and is running now. Please come back shortly.' %
+                    job.updated_on)
 
         subtemplate_values['stats_calculated'] = stats_calculated
         subtemplate_values['errors'] = errors
         subtemplate_values['update_message'] = update_message
-        subtemplate_values['update_action'] = update_action
+
+        return jinja2.utils.Markup(self.get_template(
+            'basic_analytics.html', [os.path.dirname(__file__)]
+        ).render(subtemplate_values, autoescape=True))
+
+    def get_analytics(self):
+        """Renders course analytics view."""
+        template_values = {}
+        template_values['page_title'] = self.format_title('Analytics')
+
+        at_least_one_job_exists = False
+        at_least_one_job_finished = False
+
+        basic_analytics_job = ComputeStudentStats(self.app_context).load()
+        stats_html = self.get_markup_for_basic_analytics(basic_analytics_job)
+        if basic_analytics_job:
+            at_least_one_job_exists = True
+            if basic_analytics_job.status_code == jobs.STATUS_CODE_COMPLETED:
+                at_least_one_job_finished = True
+
+        for callback in DashboardRegistry.analytics_handlers:
+            handler = callback()
+            handler.app_context = self.app_context
+            handler.request = self.request
+            handler.response = self.response
+
+            job = handler.stats_computer(self.app_context).load()
+            stats_html += handler.get_markup(job)
+
+            if job:
+                at_least_one_job_exists = True
+                if job.status_code == jobs.STATUS_CODE_COMPLETED:
+                    at_least_one_job_finished = True
 
         template_values['main_content'] = jinja2.utils.Markup(self.get_template(
             'analytics.html', [os.path.dirname(__file__)]
-        ).render(subtemplate_values, autoescape=True))
+        ).render({
+            'show_recalculate_button': (
+                at_least_one_job_finished or not at_least_one_job_exists),
+            'stats_html': stats_html,
+            'xsrf_token': self.create_xsrf_token('compute_student_stats'),
+        }, autoescape=True))
+
         self.render_page(template_values)
 
     def post_compute_student_stats(self):
         """Submits a new student statistics calculation task."""
         job = ComputeStudentStats(self.app_context)
         job.submit()
+
+        for callback in DashboardRegistry.analytics_handlers:
+            job = callback().stats_computer(self.app_context)
+            job.submit()
+
         self.redirect('/dashboard?action=analytics')
 
 
@@ -697,10 +705,6 @@ class ComputeStudentStats(jobs.DurableJob):
                 'enrolled': enrollment.enrolled,
                 'unenrolled': enrollment.unenrolled},
             'scores': scores.name_to_tuple}
-
-        for callback in DashboardRegistry.analytics_handlers:
-            handler = callback()
-            data[handler.name] = handler.stats_computer().get_stats()
 
         return data
 
