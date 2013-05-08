@@ -39,31 +39,29 @@ var gcbCanPostEvents = false;
 var eventXsrfToken = '';
 var assessmentXsrfToken = '';
 
-function gcbPageEventAudit(name, is_async) {
+function gcbPageEventAudit(data_dict, name) {
   if (gcbCanPostPageEvents) {
-    var timeNow = new Date();
-    gcbAudit({"lapse": timeNow - gcbBeginningOfTime}, 'page-' + name, is_async);
-    gcbBeginningOfTime = timeNow;
+    gcbAudit(data_dict, name, false);
   }
 }
 
-function gcbActivityAudit(dict) {
+function gcbActivityAudit(data_dict) {
   if (gcbCanPostEvents) {
-    gcbAudit(dict, 'attempt-activity', true);
+    gcbAudit(data_dict, 'attempt-activity', true);
   }
 }
 
-function gcbAssessmentAudit(dict) {
+function gcbAssessmentAudit(data_dict) {
   if (gcbCanPostEvents) {
-    gcbAudit(dict, 'attempt-assessment', true);
+    gcbAudit(data_dict, 'attempt-assessment', true);
   }
 }
 
-function gcbAudit(dict, source, is_async) {
-  dict['location'] = '' + window.location;
+function gcbAudit(data_dict, source, is_async) {
+  data_dict['location'] = '' + window.location;
   var request = {
       'source': source,
-      'payload': JSON.stringify(dict),
+      'payload': JSON.stringify(data_dict),
       'xsrf_token': eventXsrfToken};
   $.ajax({
       url: 'rest/events',
@@ -776,10 +774,11 @@ function checkText(id, regex) {
 
 // this code runs when the document fully loads:
 $(document).ready(function() {
-  // send an event to the server
-  try {
-    gcbPageEventAudit('enter', true);
-  } catch (e){}
+  // hook click events of specific links
+  $('#lessonNotesLink').click(function(evt) {
+      gcbPageEventAudit({'href': evt.target.href}, 'click-link');
+      return true;
+  });
 
   // render the activity specified in the 'var activity' top-level variable
   // (if it exists)
@@ -807,6 +806,6 @@ $(document).ready(function() {
 $(window).unload(function() {
   // send an event to the server
   try {
-    gcbPageEventAudit('leave', false);
+    gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'visit-page');
   } catch (e){}
 });
