@@ -157,8 +157,9 @@ class AdminHandler(
             app_id = app.get_application_id()
             nav.append(safe_dom.Element(
                 'a', target='_blank',
-                href=("""
-https://appengine.google.com/dashboard?app_id=s~%s""" % app_id)
+                href=(
+                    'https://appengine.google.com/'
+                    'dashboard?app_id=s~%s' % app_id)
             ).add_text('Google App Engine'))
         else:
             nav.append(safe_dom.Element(

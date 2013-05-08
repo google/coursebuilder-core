@@ -44,6 +44,7 @@ from models import vfs
 from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
+import modules.oeditor.oeditor
 from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
@@ -1657,6 +1658,20 @@ class StudentAspectTest(actions.TestBase):
 
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""
+
+    def test_disabled_modules_has_no_roites(self):
+        """Test that disabled modules has no routes."""
+        assert modules.oeditor.oeditor.custom_module.enabled
+        assert modules.oeditor.oeditor.custom_module.global_routes
+        assert modules.oeditor.oeditor.custom_module.namespaced_routes
+
+        modules.oeditor.oeditor.custom_module.disable()
+        try:
+            assert not modules.oeditor.oeditor.custom_module.enabled
+            assert not modules.oeditor.oeditor.custom_module.global_routes
+            assert not modules.oeditor.oeditor.custom_module.namespaced_routes
+        finally:
+            modules.oeditor.oeditor.custom_module.enable()
 
     def test_static_files_cache_control(self):
         """Test static/zip handlers use proper Cache-Control headers."""
