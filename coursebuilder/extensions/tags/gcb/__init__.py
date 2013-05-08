@@ -165,22 +165,22 @@ class YouTube(tags.BaseTag):
         return reg
 
 
-class ForumEmbed(tags.BaseTag):
+class GoogleGroup(tags.BaseTag):
 
     @classmethod
     def name(cls):
-        return'Forum'
+        return 'Google Group'
 
     def render(self, node):
-        forum_name = node.attrib.get('forum')
+        group_name = node.attrib.get('group')
         category_name = node.attrib.get('category')
         embedded_forum_url = (
             'https://groups.google.com/forum/embed/?place=forum/?'
             'fromgroups&hl=en#!categories/%s/%s') \
-            % (urllib.quote(forum_name), urllib.quote(category_name))
+            % (urllib.quote(group_name), urllib.quote(category_name))
         iframe = etree.XML("""
 <p>
-  <iframe class="forum-embed" title="Forum Embed"
+  <iframe class="forum-embed" title="Google Group Embed"
     type="text/html" width="700" height="300" frameborder="0">
   </iframe>
 </p>""")
@@ -191,11 +191,11 @@ class ForumEmbed(tags.BaseTag):
         return '/extensions/tags/gcb/resources/forumembed.png'
 
     def get_schema(self, unused_handler):
-        reg = schema_fields.FieldRegistry(ForumEmbed.name())
+        reg = schema_fields.FieldRegistry(GoogleGroup.name())
         reg.add_property(
             schema_fields.SchemaField(
-              'forum', 'Forum Name', 'string', optional=True,
-              description='Name of the Forum (e.g. mapping-with-google)'))
+              'group', 'Group Name', 'string', optional=True,
+              description='Name of the Google Group (e.g. mapping-with-google)'))
         reg.add_property(
             schema_fields.SchemaField(
               'category', 'Category Name', 'string', optional=True,
