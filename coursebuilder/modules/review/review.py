@@ -24,6 +24,7 @@ import random
 from models import counters
 from models import review
 from models import utils
+from modules.review import domain
 from modules.review import peer
 from google.appengine.ext import db
 
@@ -271,157 +272,6 @@ class TransitionError(Error):
             self.message, self.before, self.after)
 
 
-class Review(object):
-    """Domain object for a student work submission."""
-
-    def __init__(self, contents=None, key=None):
-        self._contents = contents
-        self._key = key
-
-    @property
-    def contents(self):
-        return self._contents
-
-    @property
-    def key(self):
-        return self._key
-
-
-class ReviewStep(object):
-    """Domain object for the status of a single review at a point in time."""
-
-    def __init__(
-        self, assigner_kind=None, change_date=None, create_date=None, key=None,
-        removed=None, review_key=None, review_summary_key=None,
-        reviewee_key=None, reviewer_key=None, state=None, submission_key=None,
-        unit_id=None):
-        self._assigner_kind = assigner_kind
-        self._change_date = change_date
-        self._create_date = create_date
-        self._key = key
-        self._removed = removed
-        self._review_key = review_key
-        self._review_summary_key = review_summary_key
-        self._reviewee_key = reviewee_key
-        self._reviewer_key = reviewer_key
-        self._state = state
-        self._submission_key = submission_key
-        self._unit_id = unit_id
-
-    @property
-    def assigner_kind(self):
-        return self._assigner_kind
-
-    @property
-    def change_date(self):
-        return self._change_date
-
-    @property
-    def create_date(self):
-        return self._create_date
-
-    @property
-    def key(self):
-        return self._key
-
-    @property
-    def removed(self):
-        return self._removed
-
-    @property
-    def review_key(self):
-        return self._review_key
-
-    @property
-    def review_summary_key(self):
-        return self._review_summary_key
-
-    @property
-    def reviewee_key(self):
-        return self._reviewee_key
-
-    @property
-    def reviewer_key(self):
-        return self._reviewer_key
-
-    @property
-    def state(self):
-        return self._state
-
-    @property
-    def submission_key(self):
-        return self._submission_key
-
-    @property
-    def unit_id(self):
-        return self._unit_id
-
-
-class ReviewSummary(object):
-    """Domain object for review state aggregate entities."""
-
-    def __init__(
-        self, assigned_count=None, completed_count=None, change_date=None,
-        create_date=None, key=None, reviewee_key=None, submission_key=None,
-        unit_id=None):
-        self._assigned_count = assigned_count
-        self._completed_count = completed_count
-        self._change_date = change_date
-        self._create_date = create_date
-        self._key = key
-        self._reviewee_key = reviewee_key
-        self._submission_key = submission_key
-        self._unit_id = unit_id
-
-    @property
-    def assigned_count(self):
-        return self._assigned_count
-
-    @property
-    def completed_count(self):
-        return self._completed_count
-
-    @property
-    def change_date(self):
-        return self._change_date
-
-    @property
-    def create_date(self):
-        return self._create_date
-
-    @property
-    def key(self):
-        return self._key
-
-    @property
-    def reviewee_key(self):
-        return self._reviewee_key
-
-    @property
-    def submission_key(self):
-        return self._submission_key
-
-    @property
-    def unit_id(self):
-        return self._unit_id
-
-
-class Submission(object):
-    """Domain object for a student work submission."""
-
-    def __init__(self, contents=None, key=None):
-        self._contents = contents
-        self._key = key
-
-    @property
-    def contents(self):
-        return self._contents
-
-    @property
-    def key(self):
-        return self._key
-
-
 class Manager(object):
     """Object that manages the review subsystem."""
 
@@ -490,9 +340,9 @@ class Manager(object):
             peer.ReviewSummary.kind(),
             peer.ReviewSummary.key_name(unit_id, submission_key, reviewee_key))
         step = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_summary_key=summary_key, reviewee_key=reviewee_key,
-            reviewer_key=reviewer_key, state=peer.REVIEW_STATE_ASSIGNED,
+            reviewer_key=reviewer_key, state=domain.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id)
         step_key, written_summary_key = db.put([step, summary])
 
@@ -519,33 +369,33 @@ class Manager(object):
 
         if not step.removed:
 
-            if step.state == peer.REVIEW_STATE_EXPIRED:
+            if step.state == domain.REVIEW_STATE_EXPIRED:
                 should_increment_reassigned = True
-                step.state = peer.REVIEW_STATE_ASSIGNED
-                summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
-                summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
-            elif (step.state == peer.REVIEW_STATE_ASSIGNED or
-                  step.state == peer.REVIEW_STATE_COMPLETED):
+                step.state = domain.REVIEW_STATE_ASSIGNED
+                summary.decrement_count(domain.REVIEW_STATE_EXPIRED)
+                summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
+            elif (step.state == domain.REVIEW_STATE_ASSIGNED or
+                  step.state == domain.REVIEW_STATE_COMPLETED):
                 COUNTER_ADD_REVIEWER_UNREMOVED_STEP_FAILED.inc()
                 raise TransitionError(
                     'Unable to add new reviewer to step %s' % (
                         repr(step.key())),
-                    step.state, peer.REVIEW_STATE_ASSIGNED)
+                    step.state, domain.REVIEW_STATE_ASSIGNED)
         else:
             should_increment_unremoved = True
             step.removed = False
 
-            if step.state != peer.REVIEW_STATE_EXPIRED:
+            if step.state != domain.REVIEW_STATE_EXPIRED:
                 summary.increment_count(step.state)
             else:
                 should_increment_reassigned = True
-                step.state = peer.REVIEW_STATE_ASSIGNED
-                summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
-                summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+                step.state = domain.REVIEW_STATE_ASSIGNED
+                summary.decrement_count(domain.REVIEW_STATE_EXPIRED)
+                summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
 
-        if step.assigner_kind != peer.ASSIGNER_KIND_HUMAN:
+        if step.assigner_kind != domain.ASSIGNER_KIND_HUMAN:
             should_increment_human = True
-            step.assigner_kind = peer.ASSIGNER_KIND_HUMAN
+            step.assigner_kind = domain.ASSIGNER_KIND_HUMAN
 
         step_key = db.put([step, summary])[0]
 
@@ -658,11 +508,11 @@ class Manager(object):
                 step.removed)
 
         if step.state in (
-                peer.REVIEW_STATE_COMPLETED, peer.REVIEW_STATE_EXPIRED):
+                domain.REVIEW_STATE_COMPLETED, domain.REVIEW_STATE_EXPIRED):
             COUNTER_EXPIRE_REVIEW_CANNOT_TRANSITION.inc()
             raise TransitionError(
                 'Cannot transition step %s' % repr(review_step_key),
-                step.state, peer.REVIEW_STATE_EXPIRED)
+                step.state, domain.REVIEW_STATE_EXPIRED)
 
         summary = db.get(step.review_summary_key)
 
@@ -673,7 +523,7 @@ class Manager(object):
                     step.review_summary_key))
 
         summary.decrement_count(step.state)
-        step.state = peer.REVIEW_STATE_EXPIRED
+        step.state = domain.REVIEW_STATE_EXPIRED
         summary.increment_count(step.state)
         return db.put([step, summary])[0]
 
@@ -683,7 +533,7 @@ class Manager(object):
 
         Args:
             review_window_mins: int. Number of minutes before we expire reviews
-                assigned by peer.ASSIGNER_KIND_AUTO.
+                assigned by domain.ASSIGNER_KIND_AUTO.
             unit_id: string. Id of the unit to restrict the query to.
 
         Returns:
@@ -751,7 +601,7 @@ class Manager(object):
 
         Args:
             review_window_mins: int. Number of minutes before we expire reviews
-                assigned by peer.ASSIGNER_KIND_AUTO.
+                assigned by domain.ASSIGNER_KIND_AUTO.
             unit_id: string. Id of the unit to restrict the query to.
             now_fn: function that returns the current UTC datetime. Injectable
                 for tests only.
@@ -764,9 +614,9 @@ class Manager(object):
         return peer.ReviewStep.all(keys_only=True).filter(
             peer.ReviewStep.unit_id.name, unit_id,
         ).filter(
-            peer.ReviewStep.assigner_kind.name, peer.ASSIGNER_KIND_AUTO
+            peer.ReviewStep.assigner_kind.name, domain.ASSIGNER_KIND_AUTO
         ).filter(
-            peer.ReviewStep.state.name, peer.REVIEW_STATE_ASSIGNED
+            peer.ReviewStep.state.name, domain.REVIEW_STATE_ASSIGNED
         ).filter(
             peer.ReviewStep.removed.name, False
         ).filter(
@@ -873,13 +723,13 @@ class Manager(object):
 
         if not step:
             step = peer.ReviewStep(
-                assigner_kind=peer.ASSIGNER_KIND_AUTO,
+                assigner_kind=domain.ASSIGNER_KIND_AUTO,
                 review_summary_key=summary.key(),
                 reviewee_key=summary.reviewee_key, reviewer_key=reviewer_key,
-                state=peer.REVIEW_STATE_ASSIGNED,
+                state=domain.REVIEW_STATE_ASSIGNED,
                 submission_key=summary.submission_key, unit_id=summary.unit_id)
         else:
-            if step.state == peer.REVIEW_STATE_COMPLETED:
+            if step.state == domain.REVIEW_STATE_COMPLETED:
                 # Reviewer has previously done this review and the review
                 # has been deleted. Skip to the next one.
                 COUNTER_GET_NEW_REVIEW_CANNOT_UNREMOVE_COMPLETED.inc()
@@ -889,15 +739,15 @@ class Manager(object):
                 # We can reassign the existing review step.
                 COUNTER_GET_NEW_REVIEW_REASSIGN_EXISTING.inc()
                 step.removed = False
-                step.assigner_kind = peer.ASSIGNER_KIND_AUTO
-                step.state = peer.REVIEW_STATE_ASSIGNED
+                step.assigner_kind = domain.ASSIGNER_KIND_AUTO
+                step.state = domain.REVIEW_STATE_ASSIGNED
             else:
                 # Reviewee has already reviewed or is already assigned to review
                 # this submission, so we cannot reassign the step.
                 COUNTER_GET_NEW_REVIEW_ALREADY_ASSIGNED.inc()
                 return
 
-        summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+        summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
         return db.put([step, summary])[0]
 
     @classmethod
@@ -907,7 +757,7 @@ class Manager(object):
         if not model:
             return
 
-        return Review(contents=model.contents, key=model.key())
+        return domain.Review(contents=model.contents, key=model.key())
 
     @classmethod
     def _get_model_by_key(cls, model_class, key):
@@ -961,7 +811,7 @@ class Manager(object):
         if not model:
             return
 
-        return ReviewStep(
+        return domain.ReviewStep(
             assigner_kind=model.assigner_kind, change_date=model.change_date,
             create_date=model.create_date, key=model.key(),
             removed=model.removed, review_key=model.review_key,
@@ -1031,7 +881,7 @@ class Manager(object):
         if not model:
             return
 
-        return Submission(contents=model.contents, key=model.key())
+        return domain.Submission(contents=model.contents, key=model.key())
 
     @classmethod
     def start_review_process_for(cls, unit_id, submission_key, reviewee_key):
@@ -1095,7 +945,7 @@ class Manager(object):
                 step to update.
             review_payload: string. New contents of the review.
             mark_completed: boolean. If True, set the state of the review to
-                peer.REVIEW_STATE_COMPLETED. If False, leave the state as it
+                domain.REVIEW_STATE_COMPLETED. If False, leave the state as it
                 was.
 
         Raises:
@@ -1103,7 +953,7 @@ class Manager(object):
             KeyError: if no review step was found with review_step_key.
             RemovedError: if the step for the review is removed.
             TransitionError: if mark_completed was True but the step was already
-                in peer.REVIEW_STATE_COMPLETED.
+                in domain.REVIEW_STATE_COMPLETED.
 
         Returns:
             db.Key of peer.ReviewStep: key of the written review step.
@@ -1136,10 +986,10 @@ class Manager(object):
         elif step.removed:
             raise RemovedError(
                 'Unable to process step %s' % repr(step.key()), step.removed)
-        elif mark_completed and step.state == peer.REVIEW_STATE_COMPLETED:
+        elif mark_completed and step.state == domain.REVIEW_STATE_COMPLETED:
             raise TransitionError(
                 'Unable to transition step %s' % repr(step.key()),
-                step.state, peer.REVIEW_STATE_COMPLETED)
+                step.state, domain.REVIEW_STATE_COMPLETED)
 
         if step.review_key:
             review_to_update = db.get(step.review_key)
@@ -1171,13 +1021,13 @@ class Manager(object):
         if not mark_completed:
             _, updated_step_key = db.put([review_to_update, step])
         else:
-            if step.state == peer.REVIEW_STATE_ASSIGNED:
+            if step.state == domain.REVIEW_STATE_ASSIGNED:
                 should_increment_assigned_to_completed = True
-            elif step.state == peer.REVIEW_STATE_EXPIRED:
+            elif step.state == domain.REVIEW_STATE_EXPIRED:
                 should_increment_expired_to_completed = True
 
             summary.decrement_count(step.state)
-            step.state = peer.REVIEW_STATE_COMPLETED
+            step.state = domain.REVIEW_STATE_COMPLETED
             summary.increment_count(step.state)
 
             _, updated_step_key, _ = db.put([review_to_update, step, summary])

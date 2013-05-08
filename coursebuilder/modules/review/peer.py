@@ -14,8 +14,8 @@
 
 """Internal implementation details of the peer review subsystem.
 
-Public classes, including domain objects, can be found in models/review.py.
-Entities declared here should not be used by external clients.
+Public classes, including domain objects, can be found in domain.py and
+models/review.py. Entities declared here should not be used by external clients.
 """
 
 __author__ = [
@@ -24,30 +24,8 @@ __author__ = [
 
 from models import models
 from models import review
+from modules.review import domain
 from google.appengine.ext import db
-
-# Identifier for reviews that have been computer-assigned.
-ASSIGNER_KIND_AUTO = 'AUTO'
-# Identifier for reviews that have been assigned by a human.
-ASSIGNER_KIND_HUMAN = 'HUMAN'
-ASSIGNER_KINDS = (
-    ASSIGNER_KIND_AUTO,
-    ASSIGNER_KIND_HUMAN,
-)
-
-# State of a review that is currently assigned, either by a human or by machine.
-REVIEW_STATE_ASSIGNED = 'ASSIGNED'
-# State of a review that is complete and may be shown to the reviewee, provided
-# the reviewee is themself in a state to see their reviews.
-REVIEW_STATE_COMPLETED = 'COMPLETED'
-# State of a review that used to be assigned but the assignment has been
-# expired. Only machine-assigned reviews can be expired.
-REVIEW_STATE_EXPIRED = 'EXPIRED'
-REVIEW_STATES = (
-    REVIEW_STATE_ASSIGNED,
-    REVIEW_STATE_COMPLETED,
-    REVIEW_STATE_EXPIRED,
-)
 
 
 class ReviewSummary(review.BaseEntity):
@@ -101,38 +79,38 @@ class ReviewSummary(review.BaseEntity):
 
         Args:
             state: string. State indicating counter to decrement; must be one of
-                REVIEW_STATES.
+                domain.REVIEW_STATES.
 
         Raises:
-            ValueError: if state not in REVIEW_STATES.
+            ValueError: if state not in domain.REVIEW_STATES.
         """
-        if state == REVIEW_STATE_ASSIGNED:
+        if state == domain.REVIEW_STATE_ASSIGNED:
             self.assigned_count -= 1
-        elif state == REVIEW_STATE_COMPLETED:
+        elif state == domain.REVIEW_STATE_COMPLETED:
             self.completed_count -= 1
-        elif state == REVIEW_STATE_EXPIRED:
+        elif state == domain.REVIEW_STATE_EXPIRED:
             self.expired_count -= 1
         else:
-            raise ValueError('%s not in %s' % (state, REVIEW_STATES))
+            raise ValueError('%s not in %s' % (state, domain.REVIEW_STATES))
 
     def increment_count(self, state):
         """Increments the count for the given state enum; does not save.
 
         Args:
             state: string. State indicating counter to increment; must be one of
-                REVIEW_STATES.
+                domain.REVIEW_STATES.
 
         Raises:
-            ValueError: if state not in REVIEW_STATES
+            ValueError: if state not in domain.REVIEW_STATES
         """
-        if state == REVIEW_STATE_ASSIGNED:
+        if state == domain.REVIEW_STATE_ASSIGNED:
             self.assigned_count += 1
-        elif state == REVIEW_STATE_COMPLETED:
+        elif state == domain.REVIEW_STATE_COMPLETED:
             self.completed_count +=1
-        elif state == REVIEW_STATE_EXPIRED:
+        elif state == domain.REVIEW_STATE_EXPIRED:
             self.expired_count += 1
         else:
-            raise ValueError('%s not in %s' % (state, REVIEW_STATES))
+            raise ValueError('%s not in %s' % (state, domain.REVIEW_STATES))
 
 
 class ReviewStep(review.BaseEntity):
@@ -143,7 +121,8 @@ class ReviewStep(review.BaseEntity):
     # Identifier for the kind of thing that did the assignment. Used to
     # distinguish between assignments done by humans and those done by the
     # review subsystem.
-    assigner_kind = db.StringProperty(choices=ASSIGNER_KINDS, required=True)
+    assigner_kind = db.StringProperty(
+        choices=domain.ASSIGNER_KINDS, required=True)
     # UTC last modification timestamp.
     change_date = db.DateTimeProperty(auto_now=True, required=True)
     # UTC create date.
@@ -160,7 +139,7 @@ class ReviewStep(review.BaseEntity):
     # State information.
 
     # State of this review step.
-    state = db.StringProperty(choices=REVIEW_STATES, required=True)
+    state = db.StringProperty(choices=domain.REVIEW_STATES, required=True)
     # Whether or not the review has been removed. By default removed entities
     # are ignored for most queries.
     removed = db.BooleanProperty(default=False)

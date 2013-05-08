@@ -22,6 +22,7 @@ import types
 
 from models import models
 from models import review
+from modules.review import domain
 from modules.review import peer
 from modules.review import review as review_module
 from tests.functional import actions
@@ -53,10 +54,10 @@ class ManagerTest(actions.TestBase):
         step = db.get(step_key)
         summary = db.get(step.review_summary_key)
 
-        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(domain.ASSIGNER_KIND_HUMAN, step.assigner_kind)
         self.assertEqual(self.reviewee_key, step.reviewee_key)
         self.assertEqual(self.reviewer_key, step.reviewer_key)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertEqual(self.submission_key, step.submission_key)
         self.assertEqual(self.unit_id, step.unit_id)
 
@@ -71,11 +72,11 @@ class ManagerTest(actions.TestBase):
         missing_key = db.Key.from_path(
             peer.ReviewSummary.kind(), 'no_summary_found_for_key')
         peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=missing_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -89,11 +90,11 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -108,11 +109,11 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -127,19 +128,19 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         review_module.Manager.add_reviewer(
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertFalse(step.removed)
 
         self.assertEqual(1, summary.assigned_count)
@@ -151,19 +152,19 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         review_module.Manager.add_reviewer(
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertFalse(step.removed)
 
         self.assertEqual(1, summary.assigned_count)
@@ -174,19 +175,19 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
         review_module.Manager.add_reviewer(
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
-        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual(domain.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(domain.REVIEW_STATE_COMPLETED, step.state)
         self.assertFalse(step.removed)
 
         self.assertEqual(1, summary.completed_count)
@@ -198,19 +199,19 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         review_module.Manager.add_reviewer(
             self.unit_id, self.submission_key, self.reviewee_key,
             self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_HUMAN, step.assigner_kind)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.ASSIGNER_KIND_HUMAN, step.assigner_kind)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertFalse(step.removed)
 
         self.assertEqual(1, summary.assigned_count)
@@ -222,11 +223,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         step, summary = db.get([step_key, summary_key])
 
@@ -249,11 +250,11 @@ class ManagerTest(actions.TestBase):
         missing_key = db.Key.from_path(
             peer.ReviewSummary.kind(), 'missing_review_summary_key')
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=missing_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -265,11 +266,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -285,11 +286,11 @@ class ManagerTest(actions.TestBase):
         missing_key = db.Key.from_path(
             peer.ReviewSummary.kind(), 'missing_review_summary_key')
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=missing_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -301,11 +302,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -318,11 +319,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -335,11 +336,11 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -352,25 +353,25 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         step, summary = db.get([step_key, summary_key])
 
         self.assertEqual(1, summary.assigned_count)
         self.assertEqual(0, summary.expired_count)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
 
         expired_key = review_module.Manager.expire_review(step_key)
         step, summary = db.get([expired_key, summary_key])
 
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.expired_count)
-        self.assertEqual(peer.REVIEW_STATE_EXPIRED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_EXPIRED, step.state)
 
     def test_expire_old_reviews_for_unit_expires_found_reviews(self):
         summary_key = peer.ReviewSummary(
@@ -378,27 +379,27 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         first_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         second_reviewee = models.Student(key_name='reviewee2@example.com')
         second_reviewee_key = second_reviewee.put()
         second_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=second_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         review_module.Manager.expire_old_reviews_for_unit(0, self.unit_id)
         first_step, second_step, summary = db.get(
             [first_step_key, second_step_key, summary_key])
 
         self.assertEqual(
-            [peer.REVIEW_STATE_EXPIRED, peer.REVIEW_STATE_EXPIRED],
+            [domain.REVIEW_STATE_EXPIRED, domain.REVIEW_STATE_EXPIRED],
             [step.state for step in [first_step, second_step]])
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(2, summary.expired_count)
@@ -419,27 +420,27 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         processable_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         second_reviewee = models.Student(key_name='reviewee2@example.com')
         second_reviewee_key = second_reviewee.put()
         error_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=second_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
         review_module.Manager.expire_old_reviews_for_unit(0, self.unit_id)
         processed_step, error_step, summary = db.get(
             [processable_step_key, error_step_key, summary_key])
 
-        self.assertEqual(peer.REVIEW_STATE_COMPLETED, error_step.state)
-        self.assertEqual(peer.REVIEW_STATE_EXPIRED, processed_step.state)
+        self.assertEqual(domain.REVIEW_STATE_COMPLETED, error_step.state)
+        self.assertEqual(domain.REVIEW_STATE_EXPIRED, processed_step.state)
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.completed_count)
         self.assertEqual(1, summary.expired_count)
@@ -493,47 +494,48 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         unused_completed_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
         second_reviewee = models.Student(key_name='reviewee2@example.com')
         second_reviewee_key = second_reviewee.put()
         unused_removed_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=second_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         third_reviewee = models.Student(key_name='reviewee3@example.com')
         third_reviewee_key = third_reviewee.put()
         unused_other_unit_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=third_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=str(int(self.unit_id) + 1)
+            state=domain.REVIEW_STATE_ASSIGNED,
+            unit_id=str(int(self.unit_id) + 1)
         ).put()
         fourth_reviewee = models.Student(key_name='reviewee4@example.com')
         fourth_reviewee_key = fourth_reviewee.put()
         first_assigned_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=fourth_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         fifth_reviewee = models.Student(key_name='reviewee5@example.com')
         fifth_reviewee_key = fifth_reviewee.put()
         second_assigned_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=fifth_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         zero_review_window_query = review_module.Manager.get_expiry_query(
             0, self.unit_id)
@@ -559,11 +561,11 @@ class ManagerTest(actions.TestBase):
             self.unit_id, self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertEqual(domain.ASSIGNER_KIND_AUTO, step.assigner_kind)
         self.assertEqual(summary.key(), step.review_summary_key)
         self.assertEqual(self.reviewee_key, step.reviewee_key)
         self.assertEqual(self.reviewer_key, step.reviewer_key)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertEqual(self.submission_key, step.submission_key)
         self.assertEqual(self.unit_id, step.unit_id)
 
@@ -596,11 +598,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         unused_already_assigned_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -614,11 +616,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         already_completed_unremoved_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -628,11 +630,11 @@ class ManagerTest(actions.TestBase):
 
         db.delete(already_completed_unremoved_step_key)
         unused_already_completed_removed_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -710,20 +712,20 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         unused_already_assigned_removed_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
 
         step_key = review_module.Manager.get_new_review(
             self.unit_id, self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertEqual(domain.ASSIGNER_KIND_AUTO, step.assigner_kind)
         self.assertFalse(step.removed)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
 
         self.assertEqual(1, summary.assigned_count)
 
@@ -733,20 +735,20 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         unused_already_expired_removed_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
 
         step_key = review_module.Manager.get_new_review(
             self.unit_id, self.reviewer_key)
         step, summary = db.get([step_key, summary_key])
 
-        self.assertEqual(peer.ASSIGNER_KIND_AUTO, step.assigner_kind)
+        self.assertEqual(domain.ASSIGNER_KIND_AUTO, step.assigner_kind)
         self.assertFalse(step.removed)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
 
         self.assertEqual(1, summary.assigned_count)
         self.assertEqual(0, summary.expired_count)
@@ -811,20 +813,21 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         matching_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         non_matching_reviewer = models.Student(key_name='reviewer2@example.com')
         non_matching_reviewer_key = non_matching_reviewer.put()
         unused_non_matching_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=non_matching_reviewer_key,
-            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            submission_key=self.submission_key,
+            state=domain.REVIEW_STATE_EXPIRED,
             unit_id=self.unit_id
         ).put()
 
@@ -841,19 +844,21 @@ class ManagerTest(actions.TestBase):
         non_matching_reviewer = models.Student(key_name='reviewer2@example.com')
         non_matching_reviewer_key = non_matching_reviewer.put()
         unused_non_matching_step_different_reviewer_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=non_matching_reviewer_key,
-            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            submission_key=self.submission_key,
+            state=domain.REVIEW_STATE_EXPIRED,
             unit_id=self.unit_id,
         ).put()
         unused_non_matching_step_different_unit_id_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=str(int(self.unit_id) + 1),
+            state=domain.REVIEW_STATE_EXPIRED,
+            unit_id=str(int(self.unit_id) + 1),
         ).put()
 
         self.assertEqual(
@@ -877,11 +882,11 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         model_step = db.get(step_key)
         domain_step = review_module.Manager.get_review_step_by_key(step_key)
@@ -921,39 +926,40 @@ class ManagerTest(actions.TestBase):
             unit_id=self.unit_id
         ).put()
         matching_step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         non_matching_reviewee = models.Student(key_name='reviewee2@example.com')
         non_matching_reviewee_key = non_matching_reviewee.put()
         unused_non_matching_step_different_reviewee_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key,
             reviewee_key=non_matching_reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         non_matching_submission_key = review.Submission(
             contents='contents2', reviewee_key=non_matching_reviewee_key,
             unit_id=self.unit_id).put()
         unused_non_matching_step_different_submission_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key,
             submission_key=non_matching_submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         unused_non_matching_step_different_unit_id_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=str(int(self.unit_id) + 1),
+            state=domain.REVIEW_STATE_EXPIRED,
+            unit_id=str(int(self.unit_id) + 1),
         ).put
 
         self.assertEqual(
@@ -1010,11 +1016,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -1029,10 +1035,11 @@ class ManagerTest(actions.TestBase):
             contents='contents', reviewer_key=self.reviewer_key,
             unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=missing_summary_key,
             reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
-            submission_key=self.submission_key, state=peer.REVIEW_STATE_EXPIRED,
+            submission_key=self.submission_key,
+            state=domain.REVIEW_STATE_EXPIRED,
             unit_id=self.unit_id
         ).put()
 
@@ -1053,11 +1060,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN, removed=True,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -1070,11 +1077,11 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_COMPLETED, unit_id=self.unit_id
         ).put()
 
         self.assertRaises(
@@ -1090,11 +1097,11 @@ class ManagerTest(actions.TestBase):
             contents='old_contents', reviewer_key=self.reviewer_key,
             unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
             reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
             submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         updated_step_key = review_module.Manager.write_review(
             step_key, 'new_contents', mark_completed=False)
@@ -1106,7 +1113,7 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(1, summary.assigned_count)
         self.assertEqual(0, summary.completed_count)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertEqual('new_contents', updated_review.contents)
 
     def test_write_review_with_no_review_mark_completed_false(self):
@@ -1115,10 +1122,10 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         self.assertIsNone(db.get(step_key).review_key)
         updated_step_key = review_module.Manager.write_review(
@@ -1131,7 +1138,7 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(1, summary.assigned_count)
         self.assertEqual(0, summary.completed_count)
-        self.assertEqual(peer.REVIEW_STATE_ASSIGNED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step.state)
         self.assertEqual(step.review_key, updated_review.key())
         self.assertEqual('contents', updated_review.contents)
 
@@ -1141,10 +1148,10 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_summary_key=summary_key, reviewee_key=self.reviewee_key,
             reviewer_key=self.reviewer_key, submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         self.assertIsNone(db.get(step_key).review_key)
         updated_step_key = review_module.Manager.write_review(
@@ -1157,7 +1164,7 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.completed_count)
-        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_COMPLETED, step.state)
         self.assertEqual(step.review_key, updated_review.key())
         self.assertEqual('contents', updated_review.contents)
 
@@ -1170,11 +1177,11 @@ class ManagerTest(actions.TestBase):
             contents='old_contents', reviewer_key=self.reviewer_key,
             unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
             reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
             submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
         ).put()
         updated_step_key = review_module.Manager.write_review(
             step_key, 'new_contents')
@@ -1186,7 +1193,7 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.completed_count)
-        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_COMPLETED, step.state)
         self.assertEqual('new_contents', updated_review.contents)
 
     def test_write_review_with_state_expired_and_mark_completed_true(self):
@@ -1198,11 +1205,11 @@ class ManagerTest(actions.TestBase):
             contents='old_contents', reviewer_key=self.reviewer_key,
             unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_HUMAN,
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
             reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
             submission_key=self.submission_key,
-            state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
+            state=domain.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         updated_step_key = review_module.Manager.write_review(
             step_key, 'new_contents')
@@ -1214,5 +1221,5 @@ class ManagerTest(actions.TestBase):
 
         self.assertEqual(1, summary.completed_count)
         self.assertEqual(0, summary.expired_count)
-        self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
+        self.assertEqual(domain.REVIEW_STATE_COMPLETED, step.state)
         self.assertEqual('new_contents', updated_review.contents)

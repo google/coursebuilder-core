@@ -20,6 +20,7 @@ __author__ = [
 
 from models import models
 from models import review
+from modules.review import domain
 from modules.review import peer
 from tests.functional import actions
 from google.appengine.ext import db
@@ -35,9 +36,9 @@ class ReviewStepTest(actions.TestBase):
         submission_key = review.Submission(
             reviewee_key=reviewee_key, unit_id=unit_id).put()
         step_key = peer.ReviewStep(
-            assigner_kind=peer.ASSIGNER_KIND_AUTO,
+            assigner_kind=domain.ASSIGNER_KIND_AUTO,
             reviewee_key=reviewee_key, reviewer_key=reviewer_key,
-            state=peer.REVIEW_STATE_ASSIGNED,
+            state=domain.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id).put()
         self.assertEqual(
             peer.ReviewStep.key_name(
@@ -70,13 +71,13 @@ class ReviewSummaryTest(actions.TestBase):
                 review.Submission.kind(), 'submission'), unit_id='1')
 
         self.assertEqual(1, summary.assigned_count)
-        summary.decrement_count(peer.REVIEW_STATE_ASSIGNED)
+        summary.decrement_count(domain.REVIEW_STATE_ASSIGNED)
         self.assertEqual(0, summary.assigned_count)
         self.assertEqual(1, summary.completed_count)
-        summary.decrement_count(peer.REVIEW_STATE_COMPLETED)
+        summary.decrement_count(domain.REVIEW_STATE_COMPLETED)
         self.assertEqual(0, summary.completed_count)
         self.assertEqual(1, summary.expired_count)
-        summary.decrement_count(peer.REVIEW_STATE_EXPIRED)
+        summary.decrement_count(domain.REVIEW_STATE_EXPIRED)
         self.assertEqual(0, summary.expired_count)
         self.assertRaises(ValueError, summary.decrement_count, 'bad_state')
 
@@ -89,12 +90,12 @@ class ReviewSummaryTest(actions.TestBase):
                 review.Submission.kind(), 'submission'), unit_id='1')
 
         self.assertEqual(0, summary.assigned_count)
-        summary.increment_count(peer.REVIEW_STATE_ASSIGNED)
+        summary.increment_count(domain.REVIEW_STATE_ASSIGNED)
         self.assertEqual(1, summary.assigned_count)
         self.assertEqual(0, summary.completed_count)
-        summary.increment_count(peer.REVIEW_STATE_COMPLETED)
+        summary.increment_count(domain.REVIEW_STATE_COMPLETED)
         self.assertEqual(1, summary.completed_count)
         self.assertEqual(0, summary.expired_count)
-        summary.increment_count(peer.REVIEW_STATE_EXPIRED)
+        summary.increment_count(domain.REVIEW_STATE_EXPIRED)
         self.assertEqual(1, summary.expired_count)
         self.assertRaises(ValueError, summary.increment_count, 'bad_state')
