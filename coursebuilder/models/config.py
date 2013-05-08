@@ -294,10 +294,10 @@ UPDATE_INTERVAL_SEC = ConfigProperty(
     'gcb_config_update_interval_sec', int, (
         'An update interval (in seconds) for reloading runtime properties '
         'from a datastore. Using this editor, you can set this value to an '
-        'integer between 1 and 300. To completely disable  reloading '
+        'integer between 1 and %s, inclusive. To completely disable reloading '
         'properties from a datastore, you must set the value to 0. However, '
         'you can only set the value to 0 by directly modifying the app.yaml '
-        'file. Maximum value is "%s".' % MAX_UPDATE_INTERVAL_SEC),
+        'file.' % MAX_UPDATE_INTERVAL_SEC),
     default_value=DEFAULT_UPDATE_INTERVAL_SEC,
     validator=validate_update_interval)
 

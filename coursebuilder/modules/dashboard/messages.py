@@ -113,7 +113,9 @@ Provide a YouTube video ID to embed a video.
 """
 
 LESSON_NOTES_DESCRIPTION = """
-Notes are displayed under the objectives in the default template.
+Provide a URL that points to the notes for this lesson (if applicable). These
+notes can be accessed by clicking on the 'Text Version' button on the lesson
+page.
 """
 
 LINK_EDITOR_DESCRIPTION = assemble_sanitized_message("""

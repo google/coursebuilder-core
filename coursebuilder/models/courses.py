@@ -251,7 +251,9 @@ def create_course_registry():
     # Course registration settings.
     reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
     reg_opts.add_property(SchemaField(
-        'reg_form:can_register', 'Enable Registrations', 'boolean'))
+        'reg_form:can_register', 'Enable Registrations', 'boolean',
+        description='Checking this box allows new students to register for '
+        'the course.'))
 
     # Course homepage settings.
     homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
@@ -259,18 +261,22 @@ def create_course_registry():
         'course:instructor_details', 'Instructor Details', 'html',
         optional=True))
     homepage_opts.add_property(SchemaField(
-        'course:blurb', 'Course Preview Content', 'html', optional=True,
+        'course:blurb', 'Course Abstract', 'html', optional=True,
+        description='Text, shown on the course homepage, that explains what '
+        'the course is about.',
         extra_schema_dict_values={
             'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value}))
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
-        description='Course Intro Video on Course Home Page'))
+        description='URL for the preview video shown on the course homepage.'))
     homepage_opts.add_property(SchemaField(
         'course:main_image:url', 'Course Image', 'string', optional=True,
-        description='Course image if course video is not specified'))
+        description='URL for the preview image shown on the course homepage. '
+        'This will only be shown if no course video is specified.'))
     homepage_opts.add_property(SchemaField(
         'course:main_image:alt_text', 'Alternate Text', 'string',
-        optional=True, description='Alternate Text for Course Image'))
+        optional=True,
+        description='Alt text for the preview image on the course homepage.'))
     return reg
 
 
