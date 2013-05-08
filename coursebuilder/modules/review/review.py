@@ -112,6 +112,19 @@ COUNTER_EXPIRE_OLD_REVIEWS_FOR_UNIT_SUCCESS = counters.PerfCounter(
     'gcb-expire-old-reviews-for-unit-success',
     'number of times expire_old_reviews_for_unit() completed successfully')
 
+COUNTER_GET_SUBMISSION_KEY_FAILED = counters.PerfCounter(
+    'gcb-get-submission-key-failed',
+    'number of times get_submission_key() had a fatal error')
+COUNTER_GET_SUBMISSION_KEY_MISS = counters.PerfCounter(
+    'gcb-get-submission-key-miss',
+    'number of times get_submission_key() found a missing review summary')
+COUNTER_GET_SUBMISSION_KEY_START = counters.PerfCounter(
+    'gcb-get-submission-key-start',
+    'number of times get_submission_key() has started processing')
+COUNTER_GET_SUBMISSION_KEY_SUCCESS = counters.PerfCounter(
+    'gcb-get-submission-key-success',
+    'number of times get_submission_key() completed successfully')
+
 COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
     'gcb-start-review-process-for-already-started',
     ('number of times start_review_process_for() called when review already '
@@ -129,6 +142,10 @@ COUNTER_START_REVIEW_PROCESS_FOR_SUCCESS = counters.PerfCounter(
 
 class Error(Exception):
     """Base error class."""
+
+
+class ConstraintError(Error):
+    """Raised when data is found indicating a constraint is violated."""
 
 
 class RemovedError(Error):
@@ -668,6 +685,46 @@ class Manager(object):
             '%s <=' % peer.ReviewStep.change_date.name, get_before
         ).order(
             peer.ReviewStep.change_date.name)
+
+    @classmethod
+    def get_submission_key(cls, unit_id, reviewee_key):
+        """Gets the submission key for a unit_id, reviewee_key pair.
+
+        Args:
+            unit_id: string. Id of the unit to restrict the query to.
+            reviewee_key: db.Key of models.models.Student. The reviewee to
+                restrict the query to.
+
+        Raises:
+            ConstraintError: if mutiple review summary keys were found for the
+                given unit_id, reviewee_key pair.
+
+        Returns:
+            db.Key of review.Submission if found; None otherwise.
+        """
+        COUNTER_GET_SUBMISSION_KEY_START.inc()
+
+        try:
+            summaries = peer.ReviewSummary.all().filter(
+                peer.ReviewSummary.reviewee_key.name, reviewee_key
+            ).filter(
+                peer.ReviewSummary.unit_id.name, unit_id
+            ).fetch(2)
+
+            if len(summaries) > 1:
+                raise ConstraintError(
+                    ('Found multiple summary keys for unit %s, reviewee_key '
+                     '%s') % (unit_id, repr(reviewee_key)))
+
+        except Exception as e:
+            COUNTER_GET_SUBMISSION_KEY_FAILED.inc()
+            raise e
+
+        if not summaries:
+            COUNTER_GET_SUBMISSION_KEY_MISS.inc()
+        else:
+            COUNTER_GET_SUBMISSION_KEY_SUCCESS.inc()
+            return summaries[0].submission_key
 
     @classmethod
     def start_review_process_for(cls, unit_id, submission_key, reviewee_key):

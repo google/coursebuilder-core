@@ -511,6 +511,37 @@ class ManagerTest(TestBase):
         # No items are > 1 minute old, so we expect an empty result set.
         self.assertEqual(None, future_review_window_query.get())
 
+    def test_get_submission_key(self):
+        peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+
+        self.assertEqual(
+            None,
+            review_module.Manager.get_submission_key(
+                str(int(self.unit_id) + 1), self.reviewee_key))
+        self.assertEqual(
+            self.submission_key,
+            review_module.Manager.get_submission_key(
+                self.unit_id, self.reviewee_key))
+
+    def test_get_submission_key_raises_constraint_error(self):
+        unused_first_summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id
+        ).put()
+        second_submission_key = review.Submission(contents='contents2').put()
+        unused_second_summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key,
+            submission_key=second_submission_key, unit_id=self.unit_id
+        ).put()
+
+        self.assertRaises(
+            review_module.ConstraintError,
+            review_module.Manager.get_submission_key, self.unit_id,
+            self.reviewee_key)
+
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
             self.unit_id, self.submission_key, self.reviewee_key)
