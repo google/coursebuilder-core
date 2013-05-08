@@ -24,6 +24,9 @@ class NodeList(object):
     def __init__(self):
         self.list = []
 
+    def __len__(self):
+        return len(self.list)
+
     def append(self, node):
         self.list.append(node)
         return self
@@ -53,7 +56,7 @@ class Text(Node):
 class Element(Node):
     """Embodies an HTML element which will be sanitized when accessed."""
 
-    _ALLOWED_NAME_PATTERN = re.compile('^[a-zA-Z]+$')
+    _ALLOWED_NAME_PATTERN = re.compile('^[a-zA-Z][a-zA-Z0-9]*$')
 
     def __init__(self, tag_name, **attr):
         """Initializes an element with given tag name and attributes.
@@ -62,9 +65,10 @@ class Element(Node):
         will be quote-escaped.
 
         Args:
-            tag_name: the name of the element, which must match [a-zA-Z]+
+            tag_name: the name of the element, which must match
+                _ALLOWED_NAME_PATTERN.
             **attr: the names and value of the attributes. Names must match
-                [a-zA-Z]+ and values will be quote-escaped.
+                _ALLOWED_NAME_PATTERN and values will be quote-escaped.
         """
         assert Element._ALLOWED_NAME_PATTERN.match(tag_name), (
             'tag name %s is not allowed' % tag_name)
@@ -78,6 +82,10 @@ class Element(Node):
 
     def add_child(self, node):
         self._children.append(node)
+        return self
+
+    def add_children(self, node_list):
+        self._children += node_list.list
         return self
 
     def add_text(self, text):
@@ -95,7 +103,7 @@ class Element(Node):
             if value is None:
                 value = ''
             buff += ' %s="%s"' % (
-                attr_name, urllib.quote(value, safe='/()?&#=:'))
+                attr_name, urllib.quote(value, safe=' /()?&#=:;'))
         buff += '>'
         for child in self._children:
             buff += child.sanitized

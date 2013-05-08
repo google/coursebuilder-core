@@ -24,6 +24,19 @@ class NodeListTests(unittest.TestCase):
         node_list.append(MockNode('a')).append(MockNode('b'))
         self.assertEqual('ab', node_list.sanitized)
 
+    def test_len(self):
+        """NodeList should support len."""
+        node_list = safe_dom.NodeList().append(
+            MockNode('a')).append(MockNode('b'))
+        self.assertEqual(2, len(node_list))
+
+    def test_append_node_list(self):
+        """NodeList should support appending both Nodes and NodeLists."""
+        node_list = safe_dom.NodeList().append(
+            safe_dom.NodeList().append(MockNode('a')).append(MockNode('b'))
+        ).append(MockNode('c'))
+        self.assertEqual('abc', node_list.__str__())
+
 
 class TextTests(unittest.TestCase):
     """Unit tests for common.safe_dom.Text."""
@@ -50,8 +63,8 @@ class ElementTests(unittest.TestCase):
         self.assertEqual('<p></p>', element.__str__())
 
     def test_reject_bad_tag_names(self):
-        """Element should reject non-alphabetical tag names."""
-        bad_names = ['a2', 'a b', '@', 'a-b']
+        """Element should reject bad tag names."""
+        bad_names = ['2a', 'a b', '@', 'a-b']
         for name in bad_names:
             try:
                 safe_dom.Element(name)
@@ -60,8 +73,8 @@ class ElementTests(unittest.TestCase):
             self.fail('Expected an exception: "%s"' % name)
 
     def test_reject_bad_attribute_names(self):
-        """Element should reject non-alphabetical attribute names."""
-        bad_names = ['a2', 'a b', '@', 'a-b']
+        """Element should reject bad attribute names."""
+        bad_names = ['2a', 'a b', '@', 'a-b']
         for name in bad_names:
             try:
                 safe_dom.Element('p', **{name: 'good value'})
@@ -117,6 +130,12 @@ class ElementTests(unittest.TestCase):
             safe_dom.Element('d'))
         self.assertEqual('<a><b><c></c></b><d></d></a>', element.__str__())
 
+    def test_include_node_list(self):
+        """Element should include a list of children."""
+        element = safe_dom.Element('a').add_children(
+            safe_dom.NodeList().append(MockNode('b')).append(MockNode('c')))
+        self.assertEqual('<a>bc</a>', element.__str__())
+
     def test_sanitize_children(self):
         """Element should sanitize child elements as they are included."""
         element = safe_dom.Element('td').add_child(
@@ -125,7 +144,7 @@ class ElementTests(unittest.TestCase):
             '<td><a href="foo%22bar">1&lt;2</a></td>', element.__str__())
 
 
-class EntityTest(unittest.TestCase):
+class EntityTests(unittest.TestCase):
     """Unit tests for common.safe_dom.Entity."""
 
     def expect_pass(self, test_text):

@@ -16,7 +16,6 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-import cgi
 import datetime
 import os
 import urllib
@@ -437,47 +436,52 @@ class DashboardHandler(
         edit_url_template=None, sub_title=None):
         """Walks files in folders and renders their names in a section."""
 
-        lines = []
+        items = safe_dom.NodeList()
         count = 0
         for filename in self.list_files(subfolder):
             if prefix and not filename.startswith(prefix):
                 continue
+            li = safe_dom.Element('li')
             if links:
-                lines.append(
-                    '<li><a href="%s">%s</a>' % (
-                        urllib.quote(filename), cgi.escape(filename)))
+                li.add_child(safe_dom.Element(
+                    'a', href=urllib.quote(filename)).add_text(filename))
                 if edit_url_template:
                     edit_url = edit_url_template % urllib.quote(filename)
-                    lines.append('&nbsp;<a href="%s">[Edit]</a>' % edit_url)
-                lines.append('</li>\n')
+                    li.add_child(
+                        safe_dom.Entity('&nbsp;')
+                    ).add_child(
+                        safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
             else:
-                lines.append('<li>%s</li>\n' % cgi.escape(filename))
+                li.add_text(filename)
             count += 1
+            items.append(li)
 
-        output = []
+        output = safe_dom.NodeList()
 
         if filer.is_editable_fs(self.app_context) and upload:
             output.append(
-                '<a class="gcb-button pull-right" href="dashboard?%s">'
-                'Upload</a>' % urllib.urlencode(
-                    {'action': 'add_asset', 'base': subfolder}))
-            output.append('<div style=\"clear: both; padding-top: 2px;\" />')
+                safe_dom.Element(
+                    'a', className='gcb-button pull-right',
+                    href='dashboard?%s' % urllib.urlencode(
+                        {'action': 'add_asset', 'base': subfolder})
+                ).add_text('Upload')
+            ).append(
+                safe_dom.Element('div', style='clear: both; padding-top: 2px;'))
         if title:
-            output.append('<h3>%s' % cgi.escape(title))
+            h3 = safe_dom.Element('h3')
             if count:
-                output.append(' (%s)' % count)
-            output.append('</h3>')
+                h3.add_text('%s (%s)' % (title, count))
+            else:
+                h3.add_text(title)
+            output.append(h3)
         if sub_title:
-            output.append('<blockquote>%s</blockquote>' % cgi.escape(sub_title))
-        if lines:
-            output.append('<ol>')
-            output += lines
-            output.append('</ol>')
+            output.append(safe_dom.Element('blockquote').add_text(sub_title))
+        if items:
+            output.append(safe_dom.Element('ol').add_children(items))
         else:
             if caption_if_empty:
                 output.append(
-                    '<blockquote>%s</blockquote>' % cgi.escape(
-                        caption_if_empty))
+                    safe_dom.Element('blockquote').add_text(caption_if_empty))
         return output
 
     def get_assets(self):
@@ -486,32 +490,38 @@ class DashboardHandler(
         def inherits_from(folder):
             return '< inherited from %s >' % folder
 
-        lines = []
-        lines += self.list_and_format_file_list(
-            'Assessments', '/assets/js/', links=True,
-            prefix='assets/js/assessment-')
-        lines += self.list_and_format_file_list(
-            'Activities', '/assets/js/', links=True,
-            prefix='assets/js/activity-')
-        lines += self.list_and_format_file_list(
-            'Images & Documents', '/assets/img/', links=True, upload=True,
-            edit_url_template='dashboard?action=delete_asset&uri=%s',
-            sub_title='< inherited from /assets/img/ >', caption_if_empty=None)
-        lines += self.list_and_format_file_list(
-            'Cascading Style Sheets', '/assets/css/', links=True,
-            caption_if_empty=inherits_from('/assets/css/'))
-        lines += self.list_and_format_file_list(
-            'JavaScript Libraries', '/assets/lib/', links=True,
-            caption_if_empty=inherits_from('/assets/lib/'))
-        lines += self.list_and_format_file_list(
-            'View Templates', '/views/',
-            caption_if_empty=inherits_from('/views/'))
-        lines = ''.join(lines)
+        items = safe_dom.NodeList().append(
+            self.list_and_format_file_list(
+                'Assessments', '/assets/js/', links=True,
+                prefix='assets/js/assessment-')
+        ).append(
+            self.list_and_format_file_list(
+                'Activities', '/assets/js/', links=True,
+                prefix='assets/js/activity-')
+        ).append(
+            self.list_and_format_file_list(
+                'Images & Documents', '/assets/img/', links=True, upload=True,
+                edit_url_template='dashboard?action=delete_asset&uri=%s',
+                sub_title='< inherited from /assets/img/ >',
+                caption_if_empty=None)
+        ).append(
+            self.list_and_format_file_list(
+                'Cascading Style Sheets', '/assets/css/', links=True,
+                caption_if_empty=inherits_from('/assets/css/'))
+        ).append(
+            self.list_and_format_file_list(
+                'JavaScript Libraries', '/assets/lib/', links=True,
+                caption_if_empty=inherits_from('/assets/lib/'))
+        ).append(
+            self.list_and_format_file_list(
+                'View Templates', '/views/',
+                caption_if_empty=inherits_from('/views/'))
+        )
 
         template_values = {}
         template_values['page_title'] = self.format_title('Assets')
         template_values['page_description'] = messages.ASSETS_DESCRIPTION
-        template_values['main_content'] = lines
+        template_values['main_content'] = items
         self.render_page(template_values)
 
     def get_students(self):
@@ -520,92 +530,98 @@ class DashboardHandler(
         template_values = {}
         template_values['page_title'] = self.format_title('Students')
 
-        details = """
-            <h3>Enrollment Statistics</h3>
-            <ul><li>pending</li></ul>
-            <h3>Assessment Statistics</h3>
-            <ul><li>pending</li></ul>
-            """
+        details = safe_dom.NodeList().append(
+            safe_dom.Element('h3').add_text('Enrollment Statistics')
+        ).append(
+            safe_dom.Element('ul').add_child(
+                safe_dom.Element('li').add_text('pending'))
+        ).append(
+            safe_dom.Element('h3').add_text('Assessment Statistics')
+        ).append(
+            safe_dom.Element('ul').add_child(
+                safe_dom.Element('li').add_text('pending'))
+        )
 
-        update_message = ''
-        update_action = """
-            <form
-                id='gcb-compute-student-stats'
-                action='dashboard?action=compute_student_stats'
-                method='POST'>
-                <input type="hidden" name="xsrf_token" value="%s">
-                <p>
-                    <button class="gcb-button" type="submit">
-                        Re-Calculate Now
-                    </button>
-                </p>
-            </form>
-        """ % self.create_xsrf_token('compute_student_stats')
+        update_message = safe_dom.Text('')
+        update_action = safe_dom.Element(
+            'form', id='gcb-compute-student-stats',
+            action='dashboard?action=compute_student_stats',
+            method='POST'
+        ).add_child(
+            safe_dom.Element(
+                'input', type='hidden', name='xsrf_token',
+                value=self.create_xsrf_token('compute_student_stats'))
+        ).add_child(
+            safe_dom.Element('p').add_child(
+                safe_dom.Element(
+                    'button', className='gcb-button', type='submit'
+                ).add_text('Re-Calculate Now')))
 
         job = ComputeStudentStats(self.app_context).load()
         if not job:
-            update_message = """
-                Student statistics have not been calculated yet."""
+            update_message = safe_dom.Text(
+                'Student statistics have not been calculated yet.')
         else:
             if job.status_code == jobs.STATUS_CODE_COMPLETED:
                 stats = transforms.loads(job.output)
                 enrolled = stats['enrollment']['enrolled']
                 unenrolled = stats['enrollment']['unenrolled']
 
-                enrollment = []
-                enrollment.append(
-                    '<li>previously enrolled: %s</li>' % unenrolled)
-                enrollment.append(
-                    '<li>currently enrolled: %s</li>' % enrolled)
-                enrollment.append(
-                    '<li>total: %s</li>' % (unenrolled + enrolled))
-                enrollment = ''.join(enrollment)
+                enrollment = safe_dom.NodeList().append(
+                    safe_dom.Element(
+                        'li').add_text('previously enrolled: %s' % unenrolled)
+                ).append(
+                    safe_dom.Element(
+                        'li').add_text('currently enrolled: %s' % enrolled)
+                ).append(
+                    safe_dom.Element(
+                        'li').add_text('total: %s' % (unenrolled + enrolled)))
 
-                assessment = []
+                assessment = safe_dom.NodeList()
                 total = 0
                 for key, value in stats['scores'].items():
                     total += value[0]
                     avg_score = 0
                     if value[0]:
                         avg_score = round(value[1] / value[0], 1)
-                    assessment.append("""
-                        <li>%s: completed %s, average score %s
-                        """ % (key, value[0], avg_score))
-                assessment.append('<li>total: %s</li>' % total)
-                assessment = ''.join(assessment)
+                    assessment.append(safe_dom.Element(
+                        'li').add_text('%s: completed %s, average score %s' % (
+                            key, value[0], avg_score)))
+                assessment.append(
+                    safe_dom.Element('li').add_text('total: %s' % total))
 
-                details = """
-                    <h3>Enrollment Statistics</h3>
-                    <ul>%s</ul>
-                    <h3>Assessment Statistics</h3>
-                    <ul>%s</ul>
-                    """ % (enrollment, assessment)
+                details = safe_dom.NodeList().append(
+                    safe_dom.Element('h3').add_text('Enrollment Statistics')
+                ).append(
+                    safe_dom.Element('ul').add_children(enrollment)
+                ).append(
+                    safe_dom.Element('h3').add_text('Assessment Statistics')
+                ).append(safe_dom.Element('ul').add_children(assessment))
 
-                update_message = """
+                update_message = safe_dom.Text("""
                     Student statistics were last updated on
                     %s in about %s second(s).""" % (
-                        job.updated_on, job.execution_time_sec)
+                        job.updated_on, job.execution_time_sec))
             elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = """
-                    There was an error updating student statistics.
-                    Here is the message:<br>
-                    <blockquote>
-                      <pre>\n%s</pre>
-                    </blockquote>
-                    """ % cgi.escape(job.output)
+                update_message = safe_dom.NodeList().append(
+                    safe_dom.Text("""
+                        There was an error updating student statistics.
+                        Here is the message:""")
+                ).append(
+                    safe_dom.Element('br')
+                ).append(
+                    safe_dom.Element('blockquote').add_child(
+                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
             else:
-                update_action = ''
-                update_message = """
+                update_action = safe_dom.Text('')
+                update_message = safe_dom.Text("""
                     Student statistics update started on %s and is running
-                    now. Please come back shortly.""" % job.updated_on
+                    now. Please come back shortly.""" % job.updated_on)
 
-        lines = []
-        lines.append(details)
-        lines.append(update_message)
-        lines.append(update_action)
-        lines = ''.join(lines)
+        items = safe_dom.NodeList().append(details).append(
+            update_message).append(update_action)
 
-        template_values['main_content'] = lines
+        template_values['main_content'] = items
         self.render_page(template_values)
 
     def post_compute_student_stats(self):
