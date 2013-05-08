@@ -177,18 +177,19 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         tag_name = self.request.get('tag_name')
 
         tag_bindings = tags.get_tag_bindings()
-        tag_names = sorted(tag_bindings.keys())
+
+        select_data = []
+        for name in tag_bindings.keys():
+            clazz = tag_bindings[name]
+            select_data.append((name, '%s: %s' % (
+                clazz.vendor(), clazz.name())))
+        select_data = sorted(select_data, key=lambda pair: pair[1])
 
         if tag_name:
             tag_class = tag_bindings[tag_name]
         else:
-            tag_class = tag_bindings[tag_names[0]]
+            tag_class = tag_bindings[select_data[0][0]]
         tag_schema = tag_class().get_schema(self)
-
-        select_data = []
-        for name in tag_names:
-            clazz = tag_bindings[name]
-            select_data.append((name, clazz().get_schema(self).title))
 
         schema = schema_fields.FieldRegistry('Add a content handler')
         type_select = schema.add_sub_registry('type', 'Content Type')

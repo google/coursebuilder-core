@@ -36,6 +36,10 @@ def _escape_url(url):
 class GoogleDoc(tags.BaseTag):
     """Custom tag for a Google Doc."""
 
+    @classmethod
+    def name(cls):
+        return'Google Doc'
+
     def render(self, node):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
@@ -51,7 +55,7 @@ class GoogleDoc(tags.BaseTag):
         return '/extensions/tags/gcb/resources/docs.png'
 
     def get_schema(self, unused_handler):
-        reg = schema_fields.FieldRegistry('Google Doc')
+        reg = schema_fields.FieldRegistry(GoogleDoc.name())
         reg.add_property(
             # To get this value, users do File > Publish to the web..., click
             # 'Start publishing', and then copy and paste the Document link.
@@ -75,6 +79,10 @@ class GoogleDoc(tags.BaseTag):
 class GoogleSpreadsheet(tags.BaseTag):
     """Custom tag for a Google Spreadsheet."""
 
+    @classmethod
+    def name(cls):
+        return'Google Spreadsheet'
+
     def render(self, node):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
@@ -91,7 +99,7 @@ class GoogleSpreadsheet(tags.BaseTag):
         return '/extensions/tags/gcb/resources/spreadsheets.png'
 
     def get_schema(self, unused_handler):
-        reg = schema_fields.FieldRegistry('Google Spreadsheet')
+        reg = schema_fields.FieldRegistry(GoogleSpreadsheet.name())
         reg.add_property(
             # To get this value, users do File > Publish to the web..., click
             # 'Start publishing', and then copy and paste the link above 'Copy
@@ -113,6 +121,11 @@ class GoogleSpreadsheet(tags.BaseTag):
 
 
 class YouTube(tags.BaseTag):
+
+    @classmethod
+    def name(cls):
+        return'YouTube Video'
+
     def render(self, node):
         video_id = node.attrib.get('videoid')
         you_tube_url = (
@@ -144,7 +157,7 @@ class YouTube(tags.BaseTag):
         The fields are a list of SchemaField objects in a FieldRegistry
         container. Each SchemaField has the actual attribute name as used in the
         tag, the display name for the form, and the type (usually string)."""
-        reg = schema_fields.FieldRegistry('YouTube Video')
+        reg = schema_fields.FieldRegistry(YouTube.name())
         reg.add_property(
             schema_fields.SchemaField('videoid', 'Video Id', 'string',
             optional=True,
@@ -153,6 +166,11 @@ class YouTube(tags.BaseTag):
 
 
 class ForumEmbed(tags.BaseTag):
+
+    @classmethod
+    def name(cls):
+        return'Forum'
+
     def render(self, node):
         forum_name = node.attrib.get('forum')
         category_name = node.attrib.get('category')
@@ -173,7 +191,7 @@ class ForumEmbed(tags.BaseTag):
         return '/extensions/tags/gcb/resources/forumembed.png'
 
     def get_schema(self, unused_handler):
-        reg = schema_fields.FieldRegistry('Forum')
+        reg = schema_fields.FieldRegistry(ForumEmbed.name())
         reg.add_property(
             schema_fields.SchemaField(
               'forum', 'Forum Name', 'string', optional=True,
@@ -186,6 +204,7 @@ class ForumEmbed(tags.BaseTag):
 
 
 class Activity(tags.BaseTag):
+
     def render(self, node):
         activity_id = node.attrib.get('activityid')
         script = etree.XML("""

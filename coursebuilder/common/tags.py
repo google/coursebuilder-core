@@ -41,6 +41,14 @@ CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
 class BaseTag(object):
     """Base class for the custom HTML tags."""
 
+    @classmethod
+    def name(cls):
+        return cls.__name__
+
+    @classmethod
+    def vendor(cls):
+        return cls.__module__
+
     def render(self, unused_node):
         """Receive a node and return a node."""
         return etree.XML('[Unimplemented custom tag]')
