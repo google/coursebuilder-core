@@ -131,6 +131,7 @@ class AnswerHandler(BaseHandler):
             answers = []
 
         grader = unit.workflow.get_grader()
+        matcher = unit.workflow.get_matcher()
 
         if grader == courses.HUMAN_GRADER:
             previously_submitted = bool(course.get_reviews_processor(
@@ -145,6 +146,12 @@ class AnswerHandler(BaseHandler):
                     student, assessment_type)
 
             self.template_value['previously_submitted'] = previously_submitted
+            self.template_value['matcher'] = matcher
+            if matcher == courses.PEER_MATCHER:
+                self.template_value['review_dashboard_url'] = (
+                    'reviewdashboard?unit=%s' % unit.unit_id
+                )
+
             self.render('reviewed_assessment_confirmation.html')
             return
 
@@ -163,4 +170,5 @@ class AnswerHandler(BaseHandler):
         self.template_value['score'] = score
 
         self.template_value['overall_score'] = course.get_overall_score(student)
+
         self.render('test_confirmation.html')

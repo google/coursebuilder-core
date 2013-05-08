@@ -95,11 +95,12 @@ def get_unit_and_lesson_id_from_url(url):
 
 def create_readonly_assessment_params(content, answers):
     """Creates parameters for a readonly assessment in the view templates."""
-    return {
+    assessment_params = {
         'preamble': content['assessment']['preamble'],
         'questionsList': content['assessment']['questionsList'],
         'answers': answers,
     }
+    return assessment_params
 
 
 class CourseHandler(BaseHandler):
@@ -123,6 +124,7 @@ class CourseHandler(BaseHandler):
                         student, unit)
                     review_min_count = unit.workflow.get_review_min_count()
 
+                    unit.matcher = unit.workflow.get_matcher()
                     unit.review_progress = ReviewUtils.get_review_progress(
                         reviews, review_min_count, course.get_progress_tracker()
                     )
@@ -333,6 +335,14 @@ class AssessmentHandler(BaseHandler):
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
 
+        self.template_value['grader'] = unit.workflow.get_grader()
+        self.template_value['matcher'] = unit.workflow.get_matcher()
+
+        submission_due_date = unit.workflow.get_submission_due_date()
+        if submission_due_date:
+            self.template_value['submission_due_date'] = (
+                submission_due_date.strftime(HUMAN_READABLE_DATE_FORMAT))
+
         readonly_view = False
         if course.needs_human_grader(unit):
             student_work = course.get_reviews_processor().get_student_work(
@@ -391,11 +401,14 @@ class ReviewHandler(BaseHandler):
             self.error(404)
             return
 
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['unit_id'] = unit.unit_id
-
         reviews = course.get_reviews_processor().get_reviewer_reviews(
             student, unit)
+        if review_index >= len(reviews):
+            self.error(404)
+            return
+
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['unit_id'] = unit.unit_id
 
         readonly_student_assessment = create_readonly_assessment_params(
             course.get_assessment_content(unit),
@@ -406,9 +419,12 @@ class ReviewHandler(BaseHandler):
             readonly_student_assessment
         )
 
-        self.template_value['reviewer_view'] = True
-
         self.template_value['review_index'] = review_index
+
+        review_due_date = unit.workflow.get_review_due_date()
+        if review_due_date:
+            self.template_value['review_due_date'] = review_due_date.strftime(
+                HUMAN_READABLE_DATE_FORMAT)
 
         if not reviews[review_index]['is_draft']:
             readonly_review_form = create_readonly_assessment_params(
@@ -444,7 +460,6 @@ class ReviewHandler(BaseHandler):
         try:
             review_index = int(self.request.get('review_index'))
         except ValueError:
-            self.error(404)
             return
 
         is_draft = (self.request.get('is_draft') == 'true')
@@ -489,8 +504,9 @@ class ReviewDashboardHandler(BaseHandler):
             unit.workflow.get_review_min_count())
 
         review_due_date = unit.workflow.get_review_due_date()
-        self.template_value['review_due_date'] = review_due_date.strftime(
-            HUMAN_READABLE_DATE_FORMAT)
+        if review_due_date:
+            self.template_value['review_due_date'] = review_due_date.strftime(
+                HUMAN_READABLE_DATE_FORMAT)
 
     def get(self):
         """Handles GET requests."""
@@ -502,6 +518,11 @@ class ReviewDashboardHandler(BaseHandler):
         unit, unused_lesson = extract_unit_and_lesson(self)
         reviews = course.get_reviews_processor().get_reviewer_reviews(
             student, unit)
+
+        # Check that the student has submitted the corresponding assignment.
+        if not course.get_reviews_processor().get_student_work(student, unit):
+            self.error(403)
+            return
 
         self.populate_template(unit, reviews)
         self.template_value['can_request_new_review'] = (

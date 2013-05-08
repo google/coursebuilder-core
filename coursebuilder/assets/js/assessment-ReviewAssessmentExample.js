@@ -22,15 +22,19 @@
 
 var assessment = {
   // HTML to display at the start of the page
-  preamble: '<b>This assessment is peer-reviewed.</b><br><br>From Kee Malesky, of National Public Radio: <br><br>I was asked recently to find reputable sources for the following statement: "During the glory days of radio, it was illegal to mimic the voice of the US president." Was there actually a law prohibiting that? Or was it just a White House policy, and not a legal issue?',
+  preamble: 'Solve the problem below by using concepts from at least three Power Search lessons. Record your experience in a Google doc.<br><br><strong>Problem</strong>: Plan a 3-day trip to a destination you have never visited. Where will you go? Why?',
 
   questionsList: [
-    {questionHTML: 'Was it law or policy?',
-     choices: ['Law', 'Policy']},
-
-    {questionHTML: 'Explain how you solved the problem. Write your answers in a Google Doc, and include the link to the doc in the space below.',
+    {questionHTML: 'Please write your response in a Google doc, and paste the link to the doc in the answer box below. You will need to ensure that your doc can be viewed by reviewers; please see this <a href="https://support.google.com/drive/bin/answer.py?hl=en&answer=2494822&topic=2816927&rd=1">help page</a> for instructions on how to do this.',
      correctAnswerRegex: /.*/i
-    }
+    },
+
+    {questionHTML: 'How many Power Search concepts did you use in your writeup?',
+     choices: ['0 - 2', '3', '4 -- 5', 'More than 5']},
+
+    {questionHTML: 'List the Power Search concepts you used.',
+     correctAnswerRegex: /.*/i
+    },
   ],
 
   // The assessmentName key is deprecated in v1.3 of Course Builder, and no

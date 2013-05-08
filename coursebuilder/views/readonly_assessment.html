@@ -7,7 +7,7 @@
 
     {% set outer_loop = loop %}
     <li>
-      {{ q['questionHTML'] }}
+      {{ q['questionHTML'] | safe }}
       <br>
 
       {% if q['choices'] %}
@@ -22,12 +22,11 @@
           <label for="readonly-{{outer_loop.index0}}-{{loop.index0}}">
             {{ choice }}
           </label>
-          <br>
         {% endfor %}
       {% else %}
         Answer: <input type="text" value="{{ readonly_assessment['answers'][outer_loop.index0] }}" disabled="true">
       {% endif %}
-      <br>
+      <br><br>
 
     </li>
   {% endfor %}

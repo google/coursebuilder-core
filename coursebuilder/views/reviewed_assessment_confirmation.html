@@ -12,17 +12,25 @@
 
     <p class="top_content">
       {% if previously_submitted %}
-        You have already submitted this assignment. Your previous submission was
-        not saved.
+        {{ gettext('You have already submitted this assignment. Your latest attempt has not
+        been saved.') }}
       {% else %}
-        Thank you for taking the peer review assignment. Your work was successfully submitted. You can view the status of your submission in the 'My Profile' page.
+        {{ gettext('Thank you for completing this assignment. Your work was successfully submitted.') }}
       {% endif %}
+
+      {{ gettext('Review your peers\' assignments by clicking on the button below.') }}
     </p>
 
     <p>
-      <a class="gcb-button" href="course">
-        {% trans %} Back to Course page {% endtrans %}
-      </a>
+      {% if matcher == 'peer' %}
+        <a class="gcb-button" href="{{review_dashboard_url}}">
+          {{ gettext('Review peer assignments') }}
+        </a>
+      {% else %}
+        <a class="gcb-button" href="course">
+          {{ gettext('Back to Course page') }}
+        </a>
+      {% endif %}
     </p>
 
   </div>

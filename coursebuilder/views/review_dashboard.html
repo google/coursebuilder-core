@@ -19,7 +19,7 @@
     </script>
 
     <h2>
-      {{ gettext('Submissions for you to review') }}
+      {{ gettext('Assignments for your review') }}
     </h2>
 
     <p>
@@ -28,9 +28,9 @@
                    review_due_date=review_due_date) }}
 
         {{ ngettext(
-            'In order to earn credit for this assessment, you must complete at
+            'In order to earn credit for this assignment, you must complete at
              least %(review_min_count)d review by then.',
-            'In order to earn credit for this assessment, you must complete at
+            'In order to earn credit for this assignment, you must complete at
              least %(review_min_count)d reviews by then.',
             review_min_count) % {'review_min_count': review_min_count}
         }}
@@ -40,7 +40,7 @@
     <ol>
       {% for review in reviews %}
         <li>
-          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">{{ gettext('Submission %(index)s', index=loop.index) }}</a>
+          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">{{ gettext('Assignment %(index)s', index=loop.index) }}</a>
           {% if review.review %}
             {% if review.is_draft %}
               ({{ gettext('Draft') }})
@@ -61,7 +61,7 @@
           disabled="true"
         {% endif %}
       >
-        {{ gettext('Review another submission') }}
+        {{ gettext('Review another assignment') }}
       </button>
     </form>
 

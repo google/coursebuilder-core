@@ -537,7 +537,7 @@ function renderAssessment(assessment, domRoot) {
     curLI.append('<br><br>');
   });
 
-  if (assessmentGlobals.isReviewAssessment) {
+  if (assessmentGlobals.isReviewForm) {
     domRoot.append(
         '<br><button type="button" class="gcb-button gcb-button-primary" id="saveDraftBtn">' +
         trans.SAVE_DRAFT_TEXT + '</button>&nbsp;&nbsp;' +
@@ -551,9 +551,13 @@ function renderAssessment(assessment, domRoot) {
       domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
           'readonly="true" id="answerOutput"></textarea>');
     }
+    var buttonText = trans.SUBMIT_ANSWERS_TEXT;
+    if (assessmentGlobals.grader == 'human') {
+      buttonText = trans.SUBMIT_ASSIGNMENT_TEXT;
+    }
     domRoot.append(
         '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
-        trans.SUBMIT_ANSWERS_TEXT + '</button>');
+        buttonText + '</button>');
   }
 
   function checkOrSubmitAnswers(submitAnswers) {
@@ -647,7 +651,7 @@ function renderAssessment(assessment, domRoot) {
 
     var assessmentType = getParamFromUrlByName('name') || 'unnamed assessment';
 
-    var isSaveDraftReview = (!submitAnswers && assessmentGlobals.isReviewAssessment);
+    var isSaveDraftReview = (!submitAnswers && assessmentGlobals.isReviewForm);
 
     if (submitAnswers || isSaveDraftReview) {
       // create a new hidden form, submit it via POST, and then delete it
@@ -656,7 +660,7 @@ function renderAssessment(assessment, domRoot) {
       myForm.method = 'post';
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/assessments.py
-      myForm.action = assessmentGlobals.isReviewAssessment ? 'review' : 'answer';
+      myForm.action = assessmentGlobals.isReviewForm ? 'review' : 'answer';
 
       var myInput = null;
 
@@ -680,7 +684,7 @@ function renderAssessment(assessment, domRoot) {
       myInput.setAttribute('value', assessmentXsrfToken);
       myForm.appendChild(myInput);
 
-      if (assessmentGlobals.isReviewAssessment) {
+      if (assessmentGlobals.isReviewForm) {
         myInput = document.createElement('input');
         myInput.setAttribute('name', 'review_index');
         myInput.setAttribute('value', assessmentGlobals.reviewIndex);

@@ -871,7 +871,8 @@ def read_objects_from_csv(value_rows, header, new_object, converter=None):
 
 def escape_javascript_regex(text):
     return re.sub(
-        r'([:][ ]*)([/])(.*)([/][ismx]*)', r': regex("\2\3\4")', text)
+        r'correctAnswerRegex([:][ ]*)([/])(.*)([/][ismx]*)',
+        r'correctAnswerRegex: regex("\2\3\4")', text)
 
 
 def remove_javascript_single_line_comment(text):
@@ -1335,12 +1336,12 @@ def run_all_regex_unit_tests():
 
     # pylint: disable-msg=anomalous-backslash-in-string
     assert escape_javascript_regex(
-        'blah regex: /site:bls.gov?/i, blah') == (
-            'blah regex: regex(\"/site:bls.gov?/i\"), blah')
+        'correctAnswerRegex: /site:bls.gov?/i, blah') == (
+            'correctAnswerRegex: regex(\"/site:bls.gov?/i\"), blah')
     assert escape_javascript_regex(
-        'blah regex: /site:http:\/\/www.google.com?q=abc/i, blah') == (
-            'blah regex: regex(\"/site:http:\/\/www.google.com?q=abc/i\"), '
-            'blah')
+        'correctAnswerRegex: /site:http:\/\/www.google.com?q=abc/i, blah') == (
+            'correctAnswerRegex: '
+            'regex(\"/site:http:\/\/www.google.com?q=abc/i\"), blah')
     assert remove_javascript_multi_line_comment(
         'blah\n/*\ncomment\n*/\nblah') == 'blah\n\nblah'
     assert remove_javascript_multi_line_comment(
@@ -1562,8 +1563,9 @@ def run_all_schema_helper_unit_tests():
     assert_same(create_python_dict_from_js_object(
         '{"a": correct("hello world")}'),
                 {'a': Term(CORRECT, 'hello world')})
-    assert_same(create_python_dict_from_js_object('{"a": /hello/i}'),
-                {'a': Term(REGEX, '/hello/i')})
+    assert_same(create_python_dict_from_js_object(
+        '{correctAnswerRegex: /hello/i}'),
+                {'correctAnswerRegex': Term(REGEX, '/hello/i')})
 
 
 def run_example_activity_tests():

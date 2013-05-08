@@ -22,13 +22,13 @@
 
 var assessment = {
   // HTML to display at the start of the page
-  preamble: 'This is a review form for the above assessment.',
+  preamble: 'This is a review form for the above assignment.',
 
   questionsList: [
     {questionHTML: 'Did the student answer all parts of the question?',
      choices: ['Yes', 'No']},
 
-    {questionHTML: 'Please provide feedback for the author of the submission.',
+    {questionHTML: 'Please provide feedback for the assignment author.',
      correctAnswerRegex: /.*/i
     }
   ],
