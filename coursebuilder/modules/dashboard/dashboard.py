@@ -33,6 +33,8 @@ from models import roles
 from models import transforms
 from models import vfs
 from models.models import Student
+from course_settings import CourseSettingsHandler
+from course_settings import CourseSettingsRESTHandler
 import filer
 from filer import AssetItemRESTHandler
 from filer import AssetUriRESTHandler
@@ -52,19 +54,20 @@ from google.appengine.ext import db
 
 
 class DashboardHandler(
-    FileManagerAndEditor, UnitLessonEditor, ApplicationHandler,
-    ReflectiveRequestHandler):
+    CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
+    ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
     get_actions = [
         default_action, 'assets', 'settings', 'students',
-        'edit_settings', 'edit_unit_lesson', 'edit_unit', 'edit_link',
-        'edit_lesson', 'edit_assessment', 'add_asset', 'delete_asset',
-        'import_course']
+        'edit_basic_settings', 'edit_settings', 'edit_unit_lesson', 'edit_unit',
+        'edit_link', 'edit_lesson', 'edit_assessment', 'add_asset',
+        'delete_asset', 'import_course']
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
-        'add_link', 'add_assessment', 'add_lesson']
+        'add_link', 'add_assessment', 'add_lesson',
+        'edit_basic_course_settings']
 
     @classmethod
     def get_child_routes(cls):
@@ -72,6 +75,7 @@ class DashboardHandler(
         return [
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
+            (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
@@ -366,6 +370,7 @@ class DashboardHandler(
         """Renders course settings view."""
 
         yaml_actions = []
+        basic_setting_actions = []
 
         # Basic course info.
         course_info = [
@@ -383,9 +388,15 @@ class DashboardHandler(
 
         # Enable editing if supported.
         if filer.is_editable_fs(self.app_context):
+            basic_setting_actions.append({
+                'id': 'edit_basic_course_settings',
+                'caption': 'Edit Basic Settings',
+                'action': self.get_action_url('edit_basic_course_settings'),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
             yaml_actions.append({
                 'id': 'edit_course_yaml',
-                'caption': 'Edit',
+                'caption': 'Edit Raw Config',
                 'action': self.get_action_url('create_or_edit_settings'),
                 'xsrf_token': self.create_xsrf_token(
                     'create_or_edit_settings')})
@@ -409,6 +420,7 @@ class DashboardHandler(
             {
                 'title': 'About the Course',
                 'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
+                'actions': basic_setting_actions,
                 'children': course_info},
             {
                 'title': 'Contents of course.yaml file',

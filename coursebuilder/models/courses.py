@@ -24,6 +24,8 @@ import pickle
 import sys
 
 import appengine_config
+from common.schema_fields import FieldRegistry
+from common.schema_fields import SchemaField
 from tools import verify
 import yaml
 
@@ -228,6 +230,54 @@ def index_units_and_lessons(course):
                 lesson._index = (  # pylint: disable-msg=protected-access
                     lesson_index)
                 lesson_index += 1
+
+
+def create_course_registry():
+    """Create the registry for course properties."""
+
+    reg = FieldRegistry('Basic Course Settings', description='Course Settings')
+
+    # Course level settings.
+    course_opts = reg.add_sub_registry('course', 'Course Config')
+    course_opts.add_property(
+        SchemaField('course:title', 'Course Name', 'string'))
+    course_opts.add_property(
+        SchemaField(
+            'course:admin_user_emails', 'Course Admin Emails', 'string'))
+    course_opts.add_property(
+        SchemaField(
+            'course:forum_email', 'Forum Email', 'string', optional=True))
+    course_opts.add_property(SchemaField(
+        'course:announcement_list_email', 'Announcement List Email', 'string',
+        optional=True))
+    course_opts.add_property(SchemaField('course:locale', 'Locale', 'string'))
+    course_opts.add_property(SchemaField(
+        'course:start_date', 'Course Start Date', 'string', optional=True))
+    course_opts.add_property(SchemaField(
+        'course:now_available', 'Make Course Available', 'boolean'))
+
+    # Course registration settings.
+    reg_opts = reg.add_sub_registry('reg_form', 'Student Registraion Options')
+    reg_opts.add_property(SchemaField(
+        'reg_form:can_register', 'Enable Registrations', 'boolean'))
+
+    # Course homepage settings.
+    homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
+    homepage_opts.add_property(SchemaField(
+        'course:instructor_details', 'Instructor Details', 'html',
+        optional=True))
+    homepage_opts.add_property(SchemaField(
+        'course:blurb', 'Course Preview Content', 'text', optional=True))
+    homepage_opts.add_property(SchemaField(
+        'course:main_video:url', 'Course Video', 'url', optional=True,
+        description='Course Intro Video on Course Home Page'))
+    homepage_opts.add_property(SchemaField(
+        'course:main_image:url', 'Course Image', 'string', optional=True,
+        description='Course image if course video is not specified'))
+    homepage_opts.add_property(SchemaField(
+        'course:main_image:alt_text', 'Alternate Text', 'string',
+        optional=True, description='Alternate Text for Course Image'))
+    return reg
 
 
 class AbstractCachedObject(object):
