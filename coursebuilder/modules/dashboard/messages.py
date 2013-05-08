@@ -50,8 +50,8 @@ their assignment submission and any associated reviews.
 """, None)
 
 CONTENTS_OF_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
-The course.yaml file contains many course settings.  Edit it using the button at
-right.
+The course.yaml file contains many course settings.  Edit it using the buttons
+at the right.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
 
 COURSE_OUTLINE_DESCRIPTION = assemble_sanitized_message(
