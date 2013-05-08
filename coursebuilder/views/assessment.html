@@ -16,9 +16,21 @@
 
 <div class="gcb-main">
   <div class="gcb-article">
-    <script src="{{ assessment_script_src }}"></script>
+    {% if assessment_script_src %}
+      <script src="{{ assessment_script_src }}"></script>
+    {% elif assessment_script %}
+      <script>{{ assessment_script | safe }}</script>
+    {% endif %}
     <script>
       assessmentXsrfToken = '{{ assessment_xsrf_token }}';
+
+      {% if reviews is defined %}
+        var isReviewAssessment = true;
+        var reviewIndex = {{ review_index }};
+        var unitId = '{{ unit_id }}';
+      {% else %}
+        var isReviewAssessment = false;
+      {% endif %}
 
       {% if record_events %}
         gcbCanPostEvents = true;
@@ -26,11 +38,22 @@
       {% endif %}
     </script>
 
-    {% if review_data is defined %}
+    {% if reviews is defined %}
       <p>
-        Click here to return to the <a href="reviewdashboard?unit={{ unit_id }}">review dashboard</a>.
+        <a href="reviewdashboard?unit={{ unit_id }}">
+          {{ gettext('Back to the review dashboard.') }}
+        </a>
       </p>
+    {% endif %}
 
+    {% if readonly_assessment is defined %}
+      {% if reviews is not defined %}
+        <p>
+          <strong>
+            {{ gettext('You have already submitted this assessment.') }}
+          </strong>
+        </p>
+      {% endif %}
       <div style="border: 1px solid black; margin: 20px; padding: 10px;">
         {% include 'readonly_assessment.html' %}
       </div>

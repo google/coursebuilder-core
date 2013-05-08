@@ -23,11 +23,11 @@
     <ol>
       {% for review in reviews %}
         <li>
-          <a href="review?unit={{unit_id}}&amp;index={{loop.index0}}">
+          <a href="review?unit={{unit_id}}&amp;review_index={{loop.index0}}">
             {{ gettext('Submission %(index)s', index=loop.index) }}
           </a>
           {% if review.review %}
-            {{ gettext('Completed') }}
+            ({{ gettext('Completed') }})
           {% endif %}
         </li>
       {% endfor %}
@@ -39,7 +39,7 @@
                value="{{ review_dashboard_xsrf_token | escape }}">
         <input type="hidden" name="unit_id" value="{{ unit_id }}">
         <button class="gcb-button" type="submit">
-          {{ gettext('Request new review') }}
+          {{ gettext('Review another submission') }}
         </button>
       </form>
     {% endif %}

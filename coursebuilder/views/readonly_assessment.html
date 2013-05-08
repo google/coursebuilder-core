@@ -1,9 +1,9 @@
 <div>
-  {{review_data['readonly_schema']['assessment']['preamble'] | safe}}
+  {{readonly_assessment['schema']['assessment']['preamble'] | safe}}
 </div>
 
 <ol>
-  {% for q in review_data['readonly_schema']['assessment']['questionsList'] %}
+  {% for q in readonly_assessment['schema']['assessment']['questionsList'] %}
 
     {% set outer_loop = loop %}
     <li>
@@ -14,13 +14,13 @@
         <ul>
         {% for choice in q['choices'] %}
           <li>
-            {% if loop.index0 == review_data['submission'][outer_loop.index0] %}
+            {% if loop.index0 == readonly_assessment['submission'][outer_loop.index0] %}
               <strong>
             {% endif %}
 
             {{ choice }}
 
-            {% if loop.index0 == review_data['submission'][outer_loop.index0] %}
+            {% if loop.index0 == readonly_assessment['submission'][outer_loop.index0] %}
               </strong>
             {% endif %}
           </li>
@@ -28,7 +28,7 @@
         </ul>
       {% else %}
         <strong>Answer:</strong>
-        {{ review_data['submission'][outer_loop.index0] }}
+        {{ readonly_assessment['submission'][outer_loop.index0] }}
       {% endif %}
 
     </li>

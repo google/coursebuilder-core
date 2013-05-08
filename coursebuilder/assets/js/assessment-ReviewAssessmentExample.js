@@ -22,13 +22,8 @@
 
 var assessment = {
   // HTML to display at the start of the page
-  preamble: '<b>This assessment is a peer review assignment.</b><br><br>From Kee Malesky, of National Public Radio: <br><br>I was asked recently to find reputable sources for the following statement: "During the glory days of radio, it was illegal to mimic the voice of the US president." Was there actually a law prohibiting that? Or was it just a White House policy, and not a legal issue?',
+  preamble: '<b>This assessment is peer-reviewed.</b><br><br>From Kee Malesky, of National Public Radio: <br><br>I was asked recently to find reputable sources for the following statement: "During the glory days of radio, it was illegal to mimic the voice of the US president." Was there actually a law prohibiting that? Or was it just a White House policy, and not a legal issue?',
 
-  // An ordered list of questions, with each question's type implicitly determined by the fields it possesses:
-  //   choices              - multiple choice question (with exactly one correct answer)
-  //   correctAnswerString  - case-insensitive string match
-  //   correctAnswerRegex   - freetext regular expression match
-  //   correctAnswerNumeric - freetext numeric match
   questionsList: [
     {questionHTML: 'Was it law or policy?',
      choices: ['Law', 'Policy']},
@@ -41,6 +36,6 @@ var assessment = {
   // The assessmentName key is deprecated in v1.3 of Course Builder, and no
   // longer used. The assessment name should be set in the unit.csv file or via
   // the course editor interface.
-  assessmentName: 'ReviewExample', // unique name submitted along with all of the answers
-  checkAnswers: false  // render a "Check your Answers" button to allow students to check answers prior to submitting?
+  assessmentName: 'ReviewAssessmentExample',
+  checkAnswers: false
 }

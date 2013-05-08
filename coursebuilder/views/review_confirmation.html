@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-cols">
+  <div class="gcb-col-1">
+  </div>
+  <div class="gcb-col-7 gcb-aside gcb-button-box">
+
+    <p class="top_content">
+      {{ gettext('Your review has been submitted successfully.') }}
+    </p>
+
+    <p>
+      <a class="gcb-button" href="reviewdashboard?unit={{ unit_id }}">
+        {{ gettext('Back to the review dashboard.') }}
+      </a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

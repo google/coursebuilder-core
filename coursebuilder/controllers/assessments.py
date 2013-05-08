@@ -136,18 +136,18 @@ class AnswerHandler(BaseHandler):
         if grader not in [courses.AUTO_GRADER, courses.HUMAN_GRADER]:
             logging.error('Invalid grader supplied: %s', grader)
             return
-        if grader == 'human':
+        if grader == courses.HUMAN_GRADER:
             does_review_exist = True if course.get_reviews_processor(
                 ).get_student_work(student, unit) else False
 
             if does_review_exist:
                 self.template_value['previously_submitted'] = True
-                self.render('assignment_submission_confirmation.html')
+                self.render('reviewed_assessment_confirmation.html')
             else:
                 self.template_value['previously_submitted'] = False
                 course.get_reviews_processor().submit_student_work(
                     student, unit, answers)
-                self.render('assignment_submission_confirmation.html')
+                self.render('reviewed_assessment_confirmation.html')
             return
 
         # TODO(pgbovine): consider storing as float for better precision

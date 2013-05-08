@@ -36,16 +36,24 @@ COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
 
 # Indicates that an assessment is graded automatically.
-AUTO_GRADER = 'default'
+AUTO_GRADER = 'auto'
 # Indicates that an assessment is graded by a human.
 HUMAN_GRADER = 'human'
 
-# The name for the peer review assignment used in the sample v1.2 CSV file.
-# This is here so that a peer review assignment example is available when
+# Keys in the workflow dict.
+WORKFLOW_SPEC = 'workflow_spec'
+
+# Keys in the WORKFLOW_SPEC sub-dictionary of the workflow dict.
+GRADER_KEY = 'grader'
+
+# The name for the peer review assessment used in the sample v1.2 CSV file.
+# This is here so that a peer review assessment example is available when
 # Course Builder loads with the default course. However, in general, peer
-# review assignments should only be specified in Course Builder v1.4 or
+# review assessments should only be specified in Course Builder v1.4 or
 # later (via the web interface).
-LEGACY_REVIEW_ASSIGNMENT = 'ReviewExample'
+LEGACY_REVIEW_ASSESSMENT = 'ReviewAssessmentExample'
+
+DEFAULT_WORKFLOW_SPEC = 'grader: auto'
 
 
 def deep_dict_merge(real_values_dict, default_values_dict):
@@ -183,8 +191,9 @@ class AbstractCachedObject(object):
     def _make_key(cls):
         # The course content files may change between deployment. To avoid
         # reading old cached values by the new version of the application we
-        # add deployment version to the key. Now each version of the application
-        # can put/get its own version of the course and the deployment.
+        # add deployment version to the key. Now each version of the
+        # application can put/get its own version of the course and the
+        # deployment.
         return 'course:model:pickle:%s:%s' % (
             cls.VERSION, os.environ.get('CURRENT_VERSION_ID'))
 
@@ -271,6 +280,11 @@ class Unit12(object):
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
         return self._index
+
+    @property
+    def workflow_spec(self):
+        assert self.unit_id == LEGACY_REVIEW_ASSESSMENT
+        return DEFAULT_WORKFLOW_SPEC
 
 
 class Lesson12(object):
@@ -408,9 +422,18 @@ class CourseModel12(object):
     def get_assessment_grader(self, unit):
         """Returns the grader for an assessment."""
         # The only place this is used is in the default course.
-        if unit.unit_id == LEGACY_REVIEW_ASSIGNMENT:
+        if unit.unit_id == LEGACY_REVIEW_ASSESSMENT:
             return HUMAN_GRADER
         return AUTO_GRADER
+
+    def get_workflow_spec(self, unit):
+        """Returns the default assessment workflow spec."""
+        return unit.workflow_spec
+
+    def get_review_form_filename(self, unit_id):
+        """Returns the default review form filename."""
+        assert unit_id == LEGACY_REVIEW_ASSESSMENT
+        return 'assets/js/review-%s.js' % LEGACY_REVIEW_ASSESSMENT
 
     def get_assessment_filename(self, unit_id):
         """Returns assessment base filename."""
@@ -471,6 +494,10 @@ class Unit13(object):
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.weight = 0
+
+        # Only valid for a unit.type == verify.UNIT_TYPE_ASSESSMENT which is
+        # human-reviewed.
+        self.workflow = {}
 
     @property
     def index(self):
@@ -823,6 +850,13 @@ class CourseModel13(object):
         assert verify.UNIT_TYPE_ASSESSMENT == unit.type
         return 'assets/js/assessment-%s.js' % unit.unit_id
 
+    def get_review_form_filename(self, unit_id):
+        """Returns review form filename."""
+        unit = self.find_unit_by_id(unit_id)
+        assert unit
+        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        return 'assets/js/review-%s.js' % unit.unit_id
+
     def get_activity_filename(self, unused_unit_id, lesson_id):
         """Returns activity base filename."""
         lesson = self.find_lesson_by_id(None, lesson_id)
@@ -956,6 +990,7 @@ class CourseModel13(object):
 
         if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
             existing_unit.weight = unit.weight
+            existing_unit.workflow = unit.workflow
 
         self._dirty_units.append(existing_unit)
         return existing_unit
@@ -1020,15 +1055,16 @@ class CourseModel13(object):
 
         self._index()
 
-    def get_assessment_grader(self, unused_unit):
-        """Returns the grader for an assessment."""
-        # TODO(sll): Generalize this using a setting in the course dashboard UI.
-        return AUTO_GRADER
+    def get_assessment_grader(self, unit):
+        """Returns the grader for an assessment. Defaults to auto-grading."""
+        workflow_spec = self.get_workflow_spec(unit)
+        if not workflow_spec:
+            return AUTO_GRADER
+        return yaml.safe_load(workflow_spec).get(GRADER_KEY, AUTO_GRADER)
 
-    def get_assessment_content(self, unit):
-        """Returns the Python dict representation of an assessment."""
-        path = self._app_context.fs.impl.physical_to_logical(
-            self.get_assessment_filename(unit.unit_id))
+    def get_assessment_as_dict(self, filename):
+        """Gets the content of an assessment file as a Python dict."""
+        path = self._app_context.fs.impl.physical_to_logical(filename)
         root_name = 'assessment'
         assessment_content = self.app_context.fs.get(path)
 
@@ -1038,13 +1074,23 @@ class CourseModel13(object):
             content, root_name, verify.Assessment().scope, noverify_text)
         return assessment
 
-    def set_assessment_content(self, unit, assessment_content, errors=None):
-        """Updates the content of an assessment."""
+    def get_assessment_content(self, unit):
+        """Returns the Python dict representation of an assessment."""
+        return self.get_assessment_as_dict(
+            self.get_assessment_filename(unit.unit_id))
+
+    def get_workflow_spec(self, unit):
+        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        workflow_spec = unit.workflow.get(WORKFLOW_SPEC)
+        return workflow_spec
+
+    def set_assessment_file_content(
+        self, unit, assessment_content, dest_filename, errors=None):
+        """Updates the content of an assessment file on the file system."""
         if errors is None:
             errors = []
 
-        path = self._app_context.fs.impl.physical_to_logical(
-            self.get_assessment_filename(unit.unit_id))
+        path = self._app_context.fs.impl.physical_to_logical(dest_filename)
         root_name = 'assessment'
 
         try:
@@ -1069,6 +1115,24 @@ class CourseModel13(object):
         fs.put(
             path, vfs.string_to_stream(assessment_content),
             is_draft=not unit.now_available)
+
+    def set_assessment_content(self, unit, assessment_content, errors=None):
+        """Updates the content of an assessment."""
+        self.set_assessment_file_content(
+            unit,
+            assessment_content,
+            self.get_assessment_filename(unit.unit_id),
+            errors=errors
+        )
+
+    def set_review_form(self, unit, review_form, errors=None):
+        """Sets the content of a review form."""
+        self.set_assessment_file_content(
+            unit,
+            review_form,
+            self.get_review_form_filename(unit.unit_id),
+            errors=errors
+        )
 
     def set_activity_content(self, lesson, activity_content, errors=None):
         """Updates the content of an activity."""
@@ -1195,6 +1259,44 @@ class CourseModel13(object):
             persistent.to_dict(),
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
+
+
+class Workflow(object):
+    """Stores workflow details for assessments."""
+
+    def __init__(self):
+        # The workflow specification, in YAML format.
+        self.workflow_spec = ''
+
+    def loads(self, workflow):
+        """Loads a workflow."""
+        if workflow is None:
+            self.workflow_spec = DEFAULT_WORKFLOW_SPEC
+        else:
+            self.workflow_spec = workflow.get(WORKFLOW_SPEC)
+
+        return self
+
+    def dumps(self):
+        """Dumps this object into a dict."""
+        return {WORKFLOW_SPEC: self.workflow_spec}
+
+    def validate_workflow_spec(self, errors=None):
+        """Tests whether this object has a valid workflow specification."""
+        if errors is None:
+            errors = []
+
+        workflow_dict = None
+        try:
+            # Validate the workflow specification (in YAML format).
+            assert self.workflow_spec
+            workflow_dict = yaml.safe_load(self.workflow_spec)
+            assert GRADER_KEY in workflow_dict
+            assert workflow_dict[GRADER_KEY] in [AUTO_GRADER, HUMAN_GRADER]
+            return True
+        except Exception as e:  # pylint: disable-msg=broad-except
+            errors.append('Error validating workflow specification: %s' % e)
+            return False
 
 
 class Course(object):
@@ -1411,12 +1513,22 @@ class Course(object):
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)
 
+    def get_review_form_filename(self, unit_id):
+        return self._model.get_review_form_filename(unit_id)
+
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
 
     def get_assessment_grader(self, unit):
         """Returns the grader for an assessment."""
         return self._model.get_assessment_grader(unit)
+
+    def needs_human_grader(self, unit):
+        grader = self.get_assessment_grader(unit)
+        return grader == HUMAN_GRADER
+
+    def _get_workflow_spec(self, unit):
+        return self._model.get_workflow_spec(unit)
 
     def reorder_units(self, order_data):
         return self._model.reorder_units(order_data)
@@ -1428,6 +1540,9 @@ class Course(object):
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(
             unit, assessment_content, errors=errors)
+
+    def set_review_form(self, unit, review_form, errors=None):
+        return self._model.set_review_form(unit, review_form, errors=errors)
 
     def set_activity_content(self, lesson, activity_content, errors=None):
         return self._model.set_activity_content(

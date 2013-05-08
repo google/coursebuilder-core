@@ -24,18 +24,6 @@ import transforms
 from google.appengine.ext import db
 
 
-class ReviewUtils(object):
-    """A utility class for processing data relating to assessment reviews."""
-
-    @classmethod
-    def has_unfinished_reviews(cls, reviews):
-        """Returns whether the student has unfinished reviews."""
-        for review in reviews:
-            if 'review' not in review or not review['review']:
-                return True
-        return False
-
-
 class ReviewsProcessor(object):
     """A class that processes review arrangements."""
 
@@ -59,18 +47,29 @@ class ReviewsProcessor(object):
           the student to assign to this reviewer, or None if no valid
           assignments are possible.
         """
+        # This implementation returns a submission with the fewest reviewers
+        # assigned so far. It is not optimized.
+        chosen_student_key = None
+        min_reviewers_so_far = 99999
+
         for work_entity in StudentWorkEntity.all():
             key = work_entity.key_string
             work = transforms.loads(work_entity.data)
 
             student_key = key[:key.find(':')]
             unit_id = key[key.find(':') + 1:]
-            if unit_id != unit.unit_id:
+            if unit_id != str(unit.unit_id):
                 continue
             if reviewer.key().name() in work['reviewers']:
                 continue
-            return student_key
-        return None
+
+            # This piece of work is a candidate submission for this reviewer to
+            # review.
+            if len(work['reviewers']) < min_reviewers_so_far:
+                min_reviewers_so_far = len(work['reviewers'])
+                chosen_student_key = student_key
+
+        return chosen_student_key
 
     def get_student_work(self, student, unit):
         """Returns a student's submission and associated reviews, or None."""
@@ -89,10 +88,14 @@ class ReviewsProcessor(object):
         work = self._get_student_work(student, unit)
         # Check if the reviewer has indeed been assigned to this submission.
         if work['reviewers'][reviewer.key().name()]:
-            work['reviewers'][reviewer.key().name()] = review_data
+            work['reviewers'][reviewer.key().name()]['review'] = review_data
+        self._put_student_work(student, unit, work)
 
     def get_reviewer_reviews(self, reviewer, unit):
         """Gets the reviews for a given reviewer and unit."""
+        # TODO(sll): This needs to be persistent. We need to get the list of
+        # reviews assigned to a reviewer such that the index of a particular
+        # student submission in this list is always the same.
         reviews = []
         for work_entity in StudentWorkEntity.all():
             key = work_entity.key_string
@@ -100,7 +103,7 @@ class ReviewsProcessor(object):
 
             student_key = key[:key.find(':')]
             unit_id = key[key.find(':') + 1:]
-            if unit_id != unit.unit_id:
+            if unit_id != str(unit.unit_id):
                 continue
             if reviewer.key().name() in work['reviewers']:
                 reviews.append({
@@ -124,13 +127,12 @@ class ReviewsProcessor(object):
         self._put_student_work(student, unit, work)
 
     def _get_student_work(self, student, unit):
-        key = ':'.join([student.key().name(), unit.unit_id])
+        key = ':'.join([student.key().name(), str(unit.unit_id)])
         work_entity = StudentWorkEntity.get_by_key_name(key)
         return transforms.loads(work_entity.data) if work_entity else None
 
     def _put_student_work(self, student, unit, work):
-        key = ':'.join([student.key().name(), unit.unit_id])
-
+        key = ':'.join([student.key().name(), str(unit.unit_id)])
         answers = StudentWorkEntity.get_by_key_name(key)
         if not answers:
             answers = StudentWorkEntity(key_name=key, key_string=key)

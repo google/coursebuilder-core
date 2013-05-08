@@ -628,7 +628,7 @@ function renderAssessment(assessment, domRoot) {
       myForm.method = 'post';
 
       // defaults to 'answer', which invokes AnswerHandler in ../../controllers/assessments.py
-      myForm.action = assessment.formScript || 'answer';
+      myForm.action = isReviewAssessment ? 'review' : 'answer';
 
       var myInput = null;
 
@@ -651,6 +651,18 @@ function renderAssessment(assessment, domRoot) {
       myInput.setAttribute('name', 'xsrf_token');
       myInput.setAttribute('value', assessmentXsrfToken);
       myForm.appendChild(myInput);
+
+      if (isReviewAssessment) {
+        myInput = document.createElement('input');
+        myInput.setAttribute('name', 'review_index');
+        myInput.setAttribute('value', reviewIndex);
+        myForm.appendChild(myInput);
+
+        myInput = document.createElement('input');
+        myInput.setAttribute('name', 'unit_id');
+        myInput.setAttribute('value', unitId);
+        myForm.appendChild(myInput);
+      }
 
       document.body.appendChild(myForm);
       myForm.submit();

@@ -22,7 +22,6 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from models.models import Student
-from models.review import ReviewUtils
 from models.roles import Roles
 from tools import verify
 from utils import BaseHandler
@@ -291,15 +290,31 @@ class AssessmentHandler(BaseHandler):
 
         # Extract incoming args
         unit_id = self.request.get('name')
+        course = self.get_course()
+        unit = course.find_unit_by_id(unit_id)
         self.template_value['navbar'] = {'course': True}
-        self.template_value['assessment_script_src'] = (
-            self.get_course().get_assessment_filename(unit_id))
         self.template_value['unit_id'] = unit_id
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
+
+        readonly_view = False
+        if course.needs_human_grader(unit):
+            student_work = course.get_reviews_processor().get_student_work(
+                student, unit)
+            if student_work:
+                readonly_view = True
+                self.template_value['readonly_assessment'] = {
+                    'schema': course.get_assessment_content(unit),
+                    'submission': ReviewUtils.get_answer_list(
+                        student_work['submission']),
+                }
+
+        if not readonly_view:
+            self.template_value['assessment_script_src'] = (
+                self.get_course().get_assessment_filename(unit_id))
 
         self.render('assessment.html')
 
@@ -317,7 +332,7 @@ class ReviewHandler(BaseHandler):
         unit, unused_lesson = extract_unit_and_lesson(self)
 
         try:
-            index = int(self.request.get('index'))
+            review_index = int(self.request.get('review_index'))
         except ValueError:
             self.error(404)
             return
@@ -325,27 +340,24 @@ class ReviewHandler(BaseHandler):
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit.unit_id
 
-        # TODO(sll): Serve the following too once we know where to store the
-        # assessment file generating the review form.
-        # self.template_value['assessment_script_src'] = (
-        #     self.get_course().get_assessment_filename(unit_id))
+        # Populate the review form,
+        self.template_value['assessment_script_src'] = (
+            self.get_course().get_review_form_filename(unit.unit_id))
 
         reviews = course.get_reviews_processor().get_reviewer_reviews(
             student, unit)
 
-        submission_list = []
-
-        for item in reviews[index]['submission']:
-            # Check that the indices within the submission are valid.
-            assert item['index'] == len(submission_list)
-            submission_list.append(item['value'])
-
-        self.template_value['review_data'] = {
-            'is_review_assessment': True,
-            'readonly_schema': course.get_assessment_content(unit),
-            'review': reviews[index]['review'],
-            'submission': submission_list,
+        self.template_value['readonly_assessment'] = {
+            'schema': course.get_assessment_content(unit),
+            'submission': ReviewUtils.get_answer_list(
+                reviews[review_index]['submission']),
         }
+
+        self.template_value['reviews'] = {
+            'review': reviews[review_index]['review'],
+        }
+
+        self.template_value['review_index'] = review_index
 
         self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
@@ -354,6 +366,42 @@ class ReviewHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('assessment.html')
+
+    def post(self):
+        """Handles POST requests, when a reviewer submits a review."""
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+
+        course = self.get_course()
+        unit_id = self.request.get('unit_id')
+        unit = self.find_unit_by_id(unit_id)
+
+        try:
+            review_index = int(self.request.get('review_index'))
+        except ValueError:
+            self.error(404)
+            return
+
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['unit_id'] = unit.unit_id
+
+        reviews_processor = course.get_reviews_processor()
+
+        reviews = reviews_processor.get_reviewer_reviews(student, unit)
+
+        review_data = self.request.get('answers')
+        review_data = transforms.loads(review_data) if review_data else []
+
+        # Currently we only keep track of the answers to the review form, and
+        # do not apply a scoring mechanism.
+        review_data = ReviewUtils.get_answer_list(review_data)
+
+        reviews_processor.submit_review(
+            Student.get_by_email(reviews[review_index]['student']),
+            unit, student, review_data)
+
+        self.render('review_confirmation.html')
 
 
 class ReviewDashboardHandler(BaseHandler):
@@ -461,3 +509,25 @@ class EventsRESTHandler(BaseRESTHandler):
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
+
+
+class ReviewUtils(object):
+    """A utility class for processing data relating to assessment reviews."""
+
+    @classmethod
+    def has_unfinished_reviews(cls, reviews):
+        """Returns whether the student has unfinished reviews."""
+        for review in reviews:
+            if 'review' not in review or not review['review']:
+                return True
+        return False
+
+    @classmethod
+    def get_answer_list(cls, submission):
+        """Compiles a list of the student's answers from a submission."""
+        answer_list = []
+        for item in submission:
+            # Check that the indices within the submission are valid.
+            assert item['index'] == len(answer_list)
+            answer_list.append(item['value'])
+        return answer_list

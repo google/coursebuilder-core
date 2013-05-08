@@ -45,10 +45,9 @@ PUBLISHED_TEXT = 'Public'
 # nested arrayable polymorphic attributes is a pain...
 
 
-def create_status_annotation():
-    return oeditor.create_bool_select_annotation(
-        ['properties', 'is_draft'], 'Status', DRAFT_TEXT,
-        PUBLISHED_TEXT, class_name='split-from-main-group')
+STATUS_ANNOTATION = oeditor.create_bool_select_annotation(
+    ['properties', 'is_draft'], 'Status', DRAFT_TEXT,
+    PUBLISHED_TEXT, class_name='split-from-main-group')
 
 
 class CourseOutlineRights(object):
@@ -360,7 +359,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        create_status_annotation()]
+        STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable']
@@ -410,7 +409,7 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         (['properties', 'url', '_inputex'], {
             'label': 'URL',
             'description': messages.LINK_EDITOR_URL_DESCRIPTION}),
-        create_status_annotation()]
+        STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable']
@@ -545,6 +544,8 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             "title": {"optional": true, "type": "string"},
             "weight": {"optional": true, "type": "string"},
             "content": {"optional": true, "type": "text"},
+            "workflow_spec": {"optional": true, "type": "text"},
+            "review_form": {"optional": true, "type": "text"},
             "is_draft": {"type": "boolean"}
             }
     }
@@ -561,7 +562,10 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
         (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
         (['properties', 'content', '_inputex'], {'label': 'Content'}),
-        create_status_annotation()]
+        (['properties', 'workflow_spec', '_inputex'], {
+            'label': 'Workflow Specification'}),
+        (['properties', 'review_form', '_inputex'], {'label': 'Reviewer Form'}),
+        STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
         'inputex-select', 'inputex-string', 'inputex-textarea',
@@ -570,6 +574,10 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
             courses.Course(self).get_assessment_filename(unit.unit_id))
+
+    def _get_review_form_path(self, unit):
+        return self.app_context.fs.impl.physical_to_logical(
+            courses.Course(self).get_review_form_filename(unit.unit_id))
 
     def unit_to_dict(self, unit):
         """Assemble a dict with the unit data fields."""
@@ -582,16 +590,26 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         else:
             content = ''
 
+        review_form_path = self._get_review_form_path(unit)
+        if review_form_path and fs.isfile(review_form_path):
+            review_form = fs.get(review_form_path)
+        else:
+            review_form = ''
+
         return {
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'weight': unit.weight if hasattr(unit, 'weight') else 0,
             'content': content,
-            'is_draft': not unit.now_available}
+            'workflow_spec': courses.Workflow().loads(
+                unit.workflow).workflow_spec,
+            'review_form': review_form,
+            'is_draft': not unit.now_available,
+        }
 
     def apply_updates(self, unit, updated_unit_dict, errors):
-        """Store the updated assignment."""
+        """Store the updated assessment."""
         unit.title = updated_unit_dict.get('title')
 
         try:
@@ -602,9 +620,16 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
             errors.append('The weight must be an integer.')
 
         unit.now_available = not updated_unit_dict.get('is_draft')
-        courses.Course(
-            None, app_context=self.app_context).set_assessment_content(
-                unit, updated_unit_dict.get('content'), errors=errors)
+        course = courses.Course(self)
+        course.set_assessment_content(
+            unit, updated_unit_dict.get('content'), errors=errors)
+        course.set_review_form(
+            unit, updated_unit_dict.get('review_form'), errors=errors)
+
+        workflow_object = courses.Workflow()
+        workflow_object.workflow_spec = updated_unit_dict.get('workflow_spec')
+        workflow_object.validate_workflow_spec(errors=errors)
+        unit.workflow = workflow_object.dumps()
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):
@@ -790,7 +815,7 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'activity', '_inputex'], {
                 'label': 'Activity',
                 'description': messages.LESSON_ACTIVITY_DESCRIPTION}),
-            create_status_annotation()]
+            STATUS_ANNOTATION]
 
     def get(self):
         """Handles GET REST verb and returns lesson object as JSON payload."""
