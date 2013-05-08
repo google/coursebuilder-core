@@ -155,13 +155,13 @@ PARSER.add_argument(
           'process; all models are processed by '
           'default' % _TYPE_DATASTORE), type=lambda s: s.split(','))
 PARSER.add_argument(
-    '--log_level', choices=_LOG_LEVEL_CHOICES,
-    help='Level of logging messages to emit', default='INFO',
-    type=lambda s: s.upper())
-PARSER.add_argument(
     '--batch_size',
     help='number of results to attempt to retrieve per batch',
     default=20, type=int)
+PARSER.add_argument(
+    '--log_level', choices=_LOG_LEVEL_CHOICES,
+    help='Level of logging messages to emit', default='INFO',
+    type=lambda s: s.upper())
 
 
 class _Archive(object):
@@ -717,10 +717,12 @@ def _upload_datastore():
 
 def _validate_arguments(parsed_args):
     """Validate parsed args for additional constraints."""
+    if parsed_args.batch_size < 1:
+        _die('--batch_size must be a positive value')
     if (parsed_args.mode == _MODE_DOWNLOAD and
         os.path.exists(parsed_args.archive_path)):
         _die(
-            'Cannot download to archive path %s; file already exists.' % (
+            'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
 
 
