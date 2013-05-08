@@ -134,6 +134,10 @@ function onPageLoad(env) {
     mainYuiFunction);
 
   document.getElementById("close-status-popup-button").onclick = cbHideMsg;
+  
+  env.inputEx = env.inputEx || {};
+  env.inputEx.visus = env.inputEx.visus || {};
+  env.inputEx.visus.renderAsset = renderAsset;
 
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
@@ -369,13 +373,13 @@ function getYuiConfig(bundle_lib_files) {
 // here is the main method
 function mainYuiFunction(Y) {
 
-  // Add a new visu handler to inputEx, to look for a named function. The
-  // must be a member of window and should accept Y and the value of the
-  // target field as its parameters. It should return the correct inputEx
+  // Add a new visu handler to inputEx, to look for a named function. It must
+  // be a member of cb_global.inputEx.visus and should accept Y and the value of
+  // the target field as its parameters. It should return the correct inputEx
   // widget initialized to render the given data.
   if (Y.inputEx.visus) {
     Y.inputEx.visus.funcName = function(options, value) {
-      return window[options.funcName](Y, value);
+      return cb_global.inputEx.visus[options.funcName](Y, value);
     }
   }
 
