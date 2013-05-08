@@ -14,7 +14,7 @@
 
 """Extract-transform-load utility.
 
-There are two features:
+There are three features:
 
 1. Download and upload of Course Builder 1.3 data:
 
@@ -29,18 +29,29 @@ upon.
 
 For upload,
 
-$ python etl.py upload course /cs101 myapp server.appspot.com archive.zip
+$ python etl.py upload course /cs101 myapp server.appspot.com \
+    --archive_path archive.zip
 
 2. Download of datastore entities. This feature is experimental and upload is
    not supported:
 
-$ python etl.py download datastore /cs101 myapp server.appspot.com archive.zip \
-    --datastore_types model1,model2
+$ python etl.py download datastore /cs101 myapp server.appspot.com \
+    --archive_path archive.zip --datastore_types model1,model2
 
 This will result in a file called archive.zip that contains a dump of all model1
 and model2 instances found in the specified course, identified as above. The
 archive will contain serialized data along with a manifest. The format of
 archive.zip will change and should not be relied upon.
+
+3. Execution of custom jobs.
+
+$ python etl.py run path.to.my.Job /cs101 myapp server.appspot.com \
+    --job_args='more_args --delegated_to my.Job'
+
+This requires that you have written a custom class named Job found in the
+directory path/to/my, relative to the Course Builder root. Job's main method
+will be executed against the specified course, identified as above. See
+etl_lib.Job for more information.
 
 In order to run this script, you must add the following to the head of sys.path:
 
@@ -61,7 +72,9 @@ In order to run this script, you must add the following to the head of sys.path:
    <sdk_path>/lib/webapp2
    <sdk_path>/lib/webob_1_1_1
 
-where <sdk_path> is the absolute path of the 1.7.0 App Engine SDK.
+   where <sdk_path> is the absolute path of the 1.7.0 App Engine SDK.
+4. If you are running a custom job, the absolute paths of all code required by
+   your custom job, unless covered above.
 
 Pass --help for additional usage information.
 """
@@ -86,11 +99,11 @@ announcements = None
 appengine_config = None
 courses = None
 db = None
+etl_lib = None
 jobs = None
 metadata = None
 namespace_manager = None
 remote = None
-sites = None
 transforms = None
 vfs = None
 
@@ -114,26 +127,33 @@ _LOG_LEVEL_CHOICES = ['DEBUG', 'ERROR', 'INFO', 'WARNING']
 _MANIFEST_FILENAME = 'manifest.json'
 # String. Identifier for download mode.
 _MODE_DOWNLOAD = 'download'
-# String. Identifer for upload mode.
+# String. Identifier for custom run mode.
+_MODE_RUN = 'run'
+# String. Identifier for upload mode.
 _MODE_UPLOAD = 'upload'
 # List of all modes.
-_MODES = [_MODE_DOWNLOAD, _MODE_UPLOAD]
+_MODES = [_MODE_DOWNLOAD, _MODE_RUN, _MODE_UPLOAD]
 # Int. The number of times to retry remote_api calls.
 _RETRIES = 3
 # String. Identifier for type corresponding to course definition data.
 _TYPE_COURSE = 'course'
 # String. Identifier for type corresponding to datastore entities.
 _TYPE_DATASTORE = 'datastore'
-# List of all types.
-_TYPES = [_TYPE_COURSE, _TYPE_DATASTORE]
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
     'mode', choices=_MODES,
-    help='indicates whether we are downloading or uploading data', type=str)
+    help='Indicates whether we are downloading or uploading data', type=str)
 PARSER.add_argument(
-    'type', choices=_TYPES, help='type of entity to download', type=str)
+    'type',
+    help=(
+        'Type of entity to process. If mode is %s or %s, should be one of '
+        '%s or %s. If mode is %s, should be an importable dotted path to your '
+        'etl_lib.Job subclass') % (
+            _MODE_DOWNLOAD, _MODE_UPLOAD, _TYPE_COURSE, _TYPE_DATASTORE,
+            _MODE_RUN),
+    type=str)
 PARSER.add_argument(
     'course_url_prefix',
     help=(
@@ -141,23 +161,32 @@ PARSER.add_argument(
         "'course:/foo:/directory:namespace'"), type=str)
 PARSER.add_argument(
     'application_id',
-    help="the id of the application to read from (e.g. 'myapp')", type=str)
+    help="The id of the application to read from (e.g. 'myapp')", type=str)
 PARSER.add_argument(
     'server',
-    help=('the full name of the source application to read from (e.g. '
-          'myapp.appspot.com)'), type=str)
+    help=(
+        'The full name of the source application to read from (e.g. '
+        'myapp.appspot.com)'), type=str)
 PARSER.add_argument(
-    'archive_path',
-    help='absolute path of the archive file to read or write', type=str)
-PARSER.add_argument(
-    '--datastore_types',
-    help=("When type is '%s', comma-separated list of datastore model types to "
-          'process; all models are processed by '
-          'default' % _TYPE_DATASTORE), type=lambda s: s.split(','))
+    '--archive_path',
+    help=(
+        'Absolute path of the archive file to read or write; required if mode '
+        'is %s or %s' % (_MODE_DOWNLOAD, _MODE_UPLOAD)), type=str)
 PARSER.add_argument(
     '--batch_size',
-    help='number of results to attempt to retrieve per batch',
+    help='Number of results to attempt to retrieve per batch',
     default=20, type=int)
+PARSER.add_argument(
+    '--datastore_types',
+    help=(
+        "When type is '%s', comma-separated list of datastore model types to "
+        'process; all models are processed by default' % _TYPE_DATASTORE),
+    type=lambda s: s.split(','))
+PARSER.add_argument(
+    '--job_args', default=[],
+    help=(
+        'If mode is %s, string containing args delegated to etl_lib.Job '
+        'subclass') % _MODE_RUN, type=lambda s: s.split())
 PARSER.add_argument(
     '--log_level', choices=_LOG_LEVEL_CHOICES,
     help='Level of logging messages to emit', default='INFO',
@@ -367,7 +396,7 @@ def _download(
     batch_size):
     """Validates and dispatches to a specific download method."""
     archive_path = os.path.abspath(archive_path)
-    context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
+    context = etl_lib.get_context(course_url_prefix)
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
     course = _get_course_from(context)
@@ -414,7 +443,6 @@ def _download_course(context, course, archive_path, course_url_prefix):
 
 def _download_datastore(
     context, course, archive_path, datastore_types, batch_size):
-    _import_entity_modules()
     available_types = set(_get_datastore_kinds())
     if not datastore_types:
         datastore_types = available_types
@@ -508,38 +536,28 @@ def _import_modules_into_global_scope():
     # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
     # pylint: disable-msg=redefined-outer-name,unused-variable
     global appengine_config
-    global sites
     global namespace_manager
     global db
     global metadata
     global courses
     global transforms
     global vfs
+    global etl_lib
     global remote
     try:
         import appengine_config
-        from controllers import sites
         from google.appengine.api import namespace_manager
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
         from models import courses
         from models import transforms
         from models import vfs
+        from tools.etl import etl_lib
         from tools.etl import remote
     except ImportError, e:
         _die((
             'Unable to import required modules; see tools/etl/etl.py for '
             'docs.'), with_trace=True)
-
-
-def _get_requested_context(app_contexts, course_url_prefix):
-    """Gets requested app_context from list based on course_url_prefix str."""
-    found = None
-    for context in app_contexts:
-        if context.raw.startswith('course:%s:' % course_url_prefix):
-            found = context
-            break
-    return found
 
 
 def _remove_bundle_root(path):
@@ -654,11 +672,26 @@ def _put(context, content, path, is_draft):
         is_draft=is_draft)
 
 
+def _run_custom(parsed_args):
+    try:
+        module_name, job_class_name = parsed_args.type.rsplit('.', 1)
+        module = __import__(module_name, globals(), locals(), [job_class_name])
+        job_class = getattr(module, job_class_name)
+        assert issubclass(job_class, etl_lib.Job)
+        job = job_class(parsed_args)
+    except:  # Any error means death. pylint: disable-msg=bare-except
+        _die(
+            'Unable to import and instantiate %s, or not of type %s' % (
+                parsed_args.type, etl_lib.Job.__name__),
+            with_trace=True)
+    job.run()
+
+
 def _upload(upload_type, archive_path, course_url_prefix):
     _LOG.info((
         'Processing course with URL prefix %s from archive path %s' % (
             course_url_prefix, archive_path)))
-    context = _get_requested_context(sites.get_all_courses(), course_url_prefix)
+    context = etl_lib.get_context(course_url_prefix)
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
     if upload_type == _TYPE_COURSE:
@@ -717,6 +750,9 @@ def _upload_datastore():
 
 def _validate_arguments(parsed_args):
     """Validate parsed args for additional constraints."""
+    if (parsed_args.mode in {_MODE_DOWNLOAD, _MODE_UPLOAD}
+        and not parsed_args.archive_path):
+        _die('--archive_path missing')
     if parsed_args.batch_size < 1:
         _die('--batch_size must be a positive value')
     if (parsed_args.mode == _MODE_DOWNLOAD and
@@ -738,6 +774,7 @@ def main(parsed_args, environment_class=None):
     _validate_arguments(parsed_args)
     _LOG.setLevel(parsed_args.log_level.upper())
     _import_modules_into_global_scope()
+    _import_entity_modules()
     if not environment_class:
         environment_class = remote.Environment
     _LOG.info('Mode is %s' % parsed_args.mode)
@@ -752,6 +789,8 @@ def main(parsed_args, environment_class=None):
             parsed_args.type, parsed_args.archive_path,
             parsed_args.course_url_prefix, parsed_args.datastore_types,
             parsed_args.batch_size)
+    if parsed_args.mode == _MODE_RUN:
+        _run_custom(parsed_args)
     elif parsed_args.mode == _MODE_UPLOAD:
         _upload(
             parsed_args.type, parsed_args.archive_path,

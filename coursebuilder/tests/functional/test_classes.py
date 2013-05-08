@@ -44,6 +44,7 @@ import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 from tools import verify
 from tools.etl import etl
+from tools.etl import etl_lib
 from tools.etl import remote
 import actions
 from actions import assert_contains
@@ -2797,10 +2798,12 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.raw = 'course:%s::ns_test' % self.url_prefix
         self.swap(os, 'environ', self.test_environ)
         self.common_args = [
-            self.url_prefix, 'myapp', 'localhost:8080', self.archive_path]
-        self.common_course_args = [etl._TYPE_COURSE] + self.common_args
+            self.url_prefix, 'myapp', 'localhost:8080']
+        self.common_command_args = self.common_args + [
+            '--archive_path', self.archive_path]
+        self.common_course_args = [etl._TYPE_COURSE] + self.common_command_args
         self.common_datastore_args = [
-            etl._TYPE_DATASTORE] + self.common_args
+            etl._TYPE_DATASTORE] + self.common_command_args
         self.download_course_args = etl.PARSER.parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args)
         self.upload_course_args = etl.PARSER.parse_args(
@@ -2821,8 +2824,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
     def create_empty_course(self, raw):
         sites.setup_courses(raw)
-        course = etl._get_course_from(etl._get_requested_context(
-            sites.get_all_courses(), self.url_prefix))
+        course = etl._get_course_from(etl_lib.get_context(self.url_prefix))
         course.delete_all()
 
     def import_sample_course(self):
@@ -2904,8 +2906,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         download_datastore_args = etl.PARSER.parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'Student,StudentPropertyEntity'])
-        context = etl._get_requested_context(
-            sites.get_all_courses(), download_datastore_args.course_url_prefix)
+        context = etl_lib.get_context(download_datastore_args.course_url_prefix)
+
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(context.get_namespace_name())
@@ -2918,6 +2920,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             db.put([first_student, second_student, first_entity, second_entity])
         finally:
             namespace_manager.set_namespace(old_namespace)
+
         etl.main(
             download_datastore_args, environment_class=FakeEnvironment)
         archive = etl._Archive(self.archive_path)
@@ -2946,6 +2949,45 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertEqual(
             [model.name for model in [first_entity, second_entity]],
             [entity['name'] for entity in entities])
+
+    def test_run_fails_when_delegated_argument_parsing_fails(self):
+        bad_args = etl.PARSER.parse_args(
+            ['run', 'tools.etl_lib.Job'] + self.common_args +
+            ['--job_args', "'unexpected_argument'"])
+        self.assertRaises(
+            SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
+
+    def test_run_fails_when_if_requested_class_missing_or_invalid(self):
+        bad_args = etl.PARSER.parse_args(
+            ['run', 'a.missing.class.or.Module'] + self.common_args)
+        self.assertRaises(
+            SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
+        bad_args = etl.PARSER.parse_args(
+            ['run', 'tools.etl.etl._Archive'] + self.common_args)
+        self.assertRaises(
+            SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
+
+    def test_run_write_student_emails_to_file_succeeds(self):
+        """Tests args passed to and run of examples.WriteStudentEmailsToFile."""
+        email1 = 'email1@example.com'
+        email2 = 'email2@example.com'
+        path = os.path.join(self.test_tempdir, 'emails')
+        args = etl.PARSER.parse_args(
+            ['run', 'tools.etl.examples.WriteStudentEmailsToFile'] +
+            self.common_args + ['--job_args=%s --batch_size 1' % path])
+        context = etl_lib.get_context(args.course_url_prefix)
+
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            first_student = models.Student(key_name=email1)
+            second_student = models.Student(key_name=email2)
+            db.put([first_student, second_student])
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        etl.main(args, environment_class=FakeEnvironment)
+        self.assertEqual('%s\n%s\n' % (email1, email2), open(path).read())
 
     def test_upload_course_fails_if_archive_cannot_be_opened(self):
         sites.setup_courses(self.raw)
@@ -2995,14 +3037,12 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
         self.create_archive()
         self.create_empty_course(self.raw)
-        context = etl._get_requested_context(
-            sites.get_all_courses(), self.upload_course_args.course_url_prefix)
+        context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         self.assertNotEqual(self.new_course_title, context.get_title())
         etl.main(self.upload_course_args, environment_class=FakeEnvironment)
         archive = etl._Archive(self.archive_path)
         archive.open('r')
-        context = etl._get_requested_context(
-            sites.get_all_courses(), self.upload_course_args.course_url_prefix)
+        context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
         self.assertEqual(
             len(archive.manifest.entities), len(filesystem_contents))
