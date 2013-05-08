@@ -1335,6 +1335,8 @@ def test_path_construction():
 
 
 def run_all_unit_tests():
+    assert not ApplicationRequestHandler.CAN_IMPERSONATE
+
     test_namespace_collisions_are_detected()
     test_unprefix()
     test_rule_definitions()
