@@ -28,17 +28,7 @@ from tests.functional import actions
 from google.appengine.ext import db
 
 
-class TestBase(actions.TestBase):
-
-    def assert_make_key_successful(
-        self, domain_object_class, db_model_class, id_or_name, namespace):
-        key = domain_object_class.make_key(id_or_name, namespace)
-        self.assertEqual(db_model_class.__name__, key.kind())
-        self.assertEqual(id_or_name, key.id_or_name())
-        self.assertEqual(namespace, key.namespace())
-
-
-class ManagerTest(TestBase):
+class ManagerTest(actions.TestBase):
     """Tests for review.Manager."""
 
     # Don't require documentation for self-describing test methods.
@@ -50,9 +40,11 @@ class ManagerTest(TestBase):
         self.reviewee_key = self.reviewee.put()
         self.reviewer = models.Student(key_name='reviewer@example.com')
         self.reviewer_key = self.reviewer.put()
-        self.submission = review.Submission(contents='contents')
-        self.submission_key = self.submission.put()
         self.unit_id = '1'
+        self.submission_key = db.Key.from_path(
+            review.Submission.kind(),
+            review.Submission.key_name(
+                reviewee_key=self.reviewee_key, unit_id=self.unit_id))
 
     def test_add_reviewer_adds_new_step_and_summary(self):
         step_key = review_module.Manager.add_reviewer(
@@ -803,7 +795,10 @@ class ManagerTest(TestBase):
             review_module.Manager.get_review_by_key(
                 db.Key.from_path(review.Review.kind(), 'name')))
 
-        review_key = review.Review(contents='contents').put()
+        review_key = review.Review(
+            contents='contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id
+        ).put()
         model_review = db.get(review_key)
         domain_review = review_module.Manager.get_review_by_key(review_key)
 
@@ -906,6 +901,8 @@ class ManagerTest(TestBase):
         self.assertEqual(model_step.unit_id, domain_step.unit_id)
 
     def test_get_submission_and_review_keys_no_steps(self):
+        review.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
         peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -917,6 +914,8 @@ class ManagerTest(TestBase):
                 self.unit_id, self.reviewee_key))
 
     def test_get_submission_and_review_keys_with_steps(self):
+        review.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
         summary_key = peer.ReviewSummary(
             reviewee_key=self.reviewee_key, submission_key=self.submission_key,
             unit_id=self.unit_id
@@ -939,7 +938,8 @@ class ManagerTest(TestBase):
             state=peer.REVIEW_STATE_EXPIRED, unit_id=self.unit_id
         ).put()
         non_matching_submission_key = review.Submission(
-            contents='contents2').put()
+            contents='contents2', reviewee_key=non_matching_reviewee_key,
+            unit_id=self.unit_id).put()
         unused_non_matching_step_different_submission_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_AUTO, removed=True,
             review_key=db.Key.from_path(review.Review.kind(), 'review'),
@@ -974,44 +974,15 @@ class ManagerTest(TestBase):
             review_module.Manager.get_submission_by_key(
                 db.Key.from_path(review.Submission.kind(), 'name')))
 
-        submission_key = review.Submission(contents='contents').put()
+        submission_key = review.Submission(
+            contents='contents', reviewee_key=self.reviewee_key,
+            unit_id=self.unit_id).put()
         model_submission = db.get(submission_key)
         domain_submission = review_module.Manager.get_submission_by_key(
             submission_key)
 
         self.assertEqual(model_submission.contents, domain_submission.contents)
         self.assertEqual(model_submission.key(), domain_submission.key)
-
-    def test_get_submission_key(self):
-        peer.ReviewSummary(
-            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
-            unit_id=self.unit_id
-        ).put()
-
-        self.assertEqual(
-            None,
-            review_module.Manager.get_submission_key(
-                str(int(self.unit_id) + 1), self.reviewee_key))
-        self.assertEqual(
-            self.submission_key,
-            review_module.Manager.get_submission_key(
-                self.unit_id, self.reviewee_key))
-
-    def test_get_submission_key_raises_constraint_error(self):
-        unused_first_summary_key = peer.ReviewSummary(
-            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
-            unit_id=self.unit_id
-        ).put()
-        second_submission_key = review.Submission(contents='contents2').put()
-        unused_second_summary_key = peer.ReviewSummary(
-            reviewee_key=self.reviewee_key,
-            submission_key=second_submission_key, unit_id=self.unit_id
-        ).put()
-
-        self.assertRaises(
-            review_module.ConstraintError,
-            review_module.Manager.get_submission_key, self.unit_id,
-            self.reviewee_key)
 
     def test_start_review_process_for_succeeds(self):
         key = review_module.Manager.start_review_process_for(
@@ -1054,7 +1025,9 @@ class ManagerTest(TestBase):
         missing_summary_key = db.Key.from_path(
             peer.ReviewSummary.kind(), peer.ReviewSummary.key_name(
                 self.unit_id, self.submission_key, self.reviewee_key))
-        review_key = review.Review(contents='contents').put()
+        review_key = review.Review(
+            contents='contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=missing_summary_key,
@@ -1113,7 +1086,9 @@ class ManagerTest(TestBase):
             assigned_count=1, reviewee_key=self.reviewee_key,
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
-        review_key = review.Review(contents='old_contents').put()
+        review_key = review.Review(
+            contents='old_contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1139,7 +1114,9 @@ class ManagerTest(TestBase):
             assigned_count=1, reviewee_key=self.reviewee_key,
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
-        review_key = review.Review(contents='old_contents').put()
+        review_key = review.Review(
+            contents='old_contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1165,7 +1142,9 @@ class ManagerTest(TestBase):
             expired_count=1, reviewee_key=self.reviewee_key,
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
-        review_key = review.Review(contents='old_contents').put()
+        review_key = review.Review(
+            contents='old_contents', reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=peer.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1185,35 +1164,3 @@ class ManagerTest(TestBase):
         self.assertEqual(0, summary.expired_count)
         self.assertEqual(peer.REVIEW_STATE_COMPLETED, step.state)
         self.assertEqual('new_contents', updated_review.contents)
-
-
-class ReviewTest(TestBase):
-
-    def test_make_key(self):
-        self.assert_make_key_successful(
-            review_module.Review, review.Review, 'id_or_name',
-            'namespace')
-
-
-class ReviewStepTest(TestBase):
-
-    def test_make_key(self):
-        self.assert_make_key_successful(
-            review_module.ReviewStep, peer.ReviewStep, 'id_or_name',
-            'namespace')
-
-
-class ReviewSummaryTest(TestBase):
-
-    def test_make_key(self):
-        self.assert_make_key_successful(
-            review_module.ReviewSummary, peer.ReviewSummary, 'id_or_name',
-            'namespace')
-
-
-class SubmissionTest(TestBase):
-
-    def test_make_key(self):
-        self.assert_make_key_successful(
-            review_module.Submission, review.Submission, 'id_or_name',
-            'namespace')

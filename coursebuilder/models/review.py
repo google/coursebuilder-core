@@ -23,8 +23,60 @@ import calendar
 import datetime
 
 import entities
+import models
 import transforms
 from google.appengine.ext import db
+
+
+class KeyProperty(db.StringProperty):
+    """A property that stores a datastore key.
+
+    App Engine's db.ReferenceProperty is dangerous because accessing a
+    ReferenceProperty on a model instance implicitly causes an RPC. We always
+    want to know about and be in control of our RPCs, so we use this property
+    instead, store a key, and manually make datastore calls when necessary.
+    This is analogous to the approach ndb takes, and it also allows us to do
+    validation against a key's kind (see __init__).
+
+    Keys are stored as indexed strings internally. Usage:
+
+        class Foo(db.Model):
+            pass
+
+        class Bar(db.Model):
+            foo_key = KeyProperty(kind=Foo)  # Validates key is of kind 'Foo'.
+
+        foo_key = Foo().put()
+        bar = Bar(foo_key=foo_key)
+        bar_key = bar.put()
+        foo = db.get(bar.foo_key)
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Constructs a new KeyProperty.
+
+        Args:
+            *args: positional arguments passed to superclass.
+            **kwargs: keyword arguments passed to superclass. Additionally may
+                contain kind, which if passed will be a string used to validate
+                key kind. If omitted, any kind is considered valid.
+        """
+        kind = kwargs.pop('kind', None)
+        super(KeyProperty, self).__init__(*args, **kwargs)
+        self._kind = kind
+
+    def validate(self, value):
+        """Validates passed db.Key value, validating kind passed to ctor."""
+        super(KeyProperty, self).validate(str(value))
+        if value is None:  # Nones are valid iff they pass the parent validator.
+            return value
+        if not isinstance(value, db.Key):
+            raise db.BadValueError(
+                'Value must be of type db.Key; got %s' % type(value))
+        if self._kind and value.kind() != self._kind:
+            raise db.BadValueError(
+                'Key must be of kind %s; was %s' % (self._kind, value.kind()))
+        return value
 
 
 # For many classes we define both a _DomainObject subclass and a db.Model.
@@ -33,18 +85,91 @@ from google.appengine.ext import db
 # direct datastore calls.
 
 
-class Review(entities.BaseEntity):
+class BaseEntity(entities.BaseEntity):
+    """Abstract base entity for models related to reviews."""
+
+    @classmethod
+    def key_name(cls):
+        """Returns a key_name for use with cls's constructor."""
+        raise NotImplementedError
+
+
+class Review(BaseEntity):
     """Datastore model for a student review of a Submission."""
 
     # Contents of the student's review. Max size is 1MB.
     contents = db.TextProperty()
 
+    # Key of the Student who wrote this review.
+    reviewer_key = KeyProperty(kind=models.Student.kind())
+    # Identifier of the unit this review is a part of.
+    unit_id = db.StringProperty(required=True)
 
-class Submission(entities.BaseEntity):
+    def __init__(self, *args, **kwargs):
+        """Constructs a new Review."""
+        assert not kwargs.get('key_name'), (
+            'Setting key_name manually is not supported')
+        reviewer_key = kwargs.get('reviewer_key')
+        unit_id = kwargs.get('unit_id')
+        assert reviewer_key and unit_id, 'Missing required property'
+        kwargs['key_name'] = self.key_name(unit_id, reviewer_key)
+        super(Review, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def key_name(cls, unit_id, reviewer_key):
+        """Creates a key_name string for datastore operations.
+
+        In order to work with the review subsystem, entities must have a key
+        name populated from this method.
+
+        Args:
+            unit_id: string. The id of the unit this review belongs to.
+            reviewer_key: db.Key of models.models.Student. The author of this
+                the review.
+
+        Returns:
+            String.
+        """
+        return '(review:%s:%s)' % (unit_id, reviewer_key)
+
+
+class Submission(BaseEntity):
     """Datastore model for a student work submission."""
 
     # Contents of the student submission. Max size is 1MB.
     contents = db.TextProperty()
+
+    # Key of the Student who wrote this submission.
+    reviewee_key = KeyProperty(kind=models.Student.kind())
+    # Identifier of the unit this review is a part of.
+    unit_id = db.StringProperty(required=True)
+
+    def __init__(self, *args, **kwargs):
+        """Constructs a new Review."""
+        assert not kwargs.get('key_name'), (
+            'Setting key_name manually is not supported')
+        reviewee_key = kwargs.get('reviewee_key')
+        unit_id = kwargs.get('unit_id')
+        assert reviewee_key and unit_id, 'Missing required property'
+        kwargs['key_name'] = self.key_name(unit_id, reviewee_key)
+        super(Submission, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def key_name(cls, unit_id, reviewee_key):
+        """Creates a key_name string for datastore operations.
+
+        In order to work with the review subsystem, entities must have a key
+        name populated from this method.
+
+        Args:
+            unit_id: string. The id of the unit this review belongs to.
+            reviewee_key: db.Key of models.models.Student. The author of this
+                the submission.
+
+        Returns:
+            String.
+        """
+        return '(submission:%s:%s)' % (unit_id, reviewee_key.id_or_name())
 
 
 class ReviewUtils(object):

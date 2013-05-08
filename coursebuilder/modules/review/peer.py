@@ -22,7 +22,6 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
-from models import entities
 from models import models
 from models import review
 from google.appengine.ext import db
@@ -51,67 +50,7 @@ REVIEW_STATES = (
 )
 
 
-class KeyProperty(db.StringProperty):
-    """A property that stores a datastore key.
-
-    App Engine's db.ReferenceProperty is dangerous because accessing a
-    ReferenceProperty on a model instance implicitly causes an RPC. We always
-    want to know about and be in control of our RPCs, so we use this property
-    instead, store a key, and manually make datastore calls when necessary.
-    This is analogous to the approach ndb takes, and it also allows us to do
-    validation against a key's kind (see __init__).
-
-    Keys are stored as indexed strings internally. Usage:
-
-        class Foo(db.Model):
-            pass
-
-        class Bar(db.Model):
-            foo_key = KeyProperty(kind=Foo)  # Validates key is of kind 'Foo'.
-
-        foo_key = Foo().put()
-        bar = Bar(foo_key=foo_key)
-        bar_key = bar.put()
-        foo = db.get(bar.foo_key)
-    """
-
-    def __init__(self, *args, **kwargs):
-        """Constructs a new KeyProperty.
-
-        Args:
-            *args: positional arguments passed to superclass.
-            **kwargs: keyword arguments passed to superclass. Additionally may
-                contain kind, which if passed will be a string used to validate
-                key kind. If omitted, any kind is considered valid.
-        """
-        kind = kwargs.pop('kind', None)
-        super(KeyProperty, self).__init__(*args, **kwargs)
-        self._kind = kind
-
-    def validate(self, value):
-        """Validates passed db.Key value, validating kind passed to ctor."""
-        super(KeyProperty, self).validate(str(value))
-        if value is None:  # Nones are valid iff they pass the parent validator.
-            return value
-        if not isinstance(value, db.Key):
-            raise db.BadValueError(
-                'Value must be of type db.Key; got %s' % type(value))
-        if self._kind and value.kind() != self._kind:
-            raise db.BadValueError(
-                'Key must be of kind %s; was %s' % (self._kind, value.kind()))
-        return value
-
-
-class BaseEntity(entities.BaseEntity):
-    """Abstract base entity for all review subsystem entities."""
-
-    @classmethod
-    def key_name(cls):
-        """Returns a key_name for use with cls's constructor."""
-        raise NotImplementedError
-
-
-class ReviewSummary(BaseEntity):
+class ReviewSummary(review.BaseEntity):
     """Object that tracks the aggregate state of reviews for a submission."""
 
     # UTC last modification timestamp.
@@ -130,21 +69,23 @@ class ReviewSummary(BaseEntity):
     expired_count = db.IntegerProperty(default=0, required=True)
 
     # Key of the student who wrote the submission being reviewed.
-    reviewee_key = KeyProperty(kind=models.Student.kind(), required=True)
+    reviewee_key = review.KeyProperty(
+        kind=models.Student.kind(), required=True)
     # Key of the submission being reviewed.
-    submission_key = KeyProperty(kind=review.Submission.kind(), required=True)
+    submission_key = review.KeyProperty(
+        kind=review.Submission.kind(), required=True)
     # Identifier of the unit this review is a part of.
     unit_id = db.StringProperty(required=True)
 
     def __init__(self, *args, **kwargs):
         """Constructs a new ReviewSummary."""
         assert not kwargs.get('key_name'), (
-            'setting key_name manually not supported')
+            'Setting key_name manually not supported')
         reviewee_key = kwargs.get('reviewee_key')
         submission_key = kwargs.get('submission_key')
         unit_id = kwargs.get('unit_id')
         assert (reviewee_key and submission_key and unit_id), (
-            'missing required property')
+            'Missing required property')
         kwargs['key_name'] = self.key_name(
             unit_id, submission_key, reviewee_key)
         super(ReviewSummary, self).__init__(*args, **kwargs)
@@ -152,7 +93,7 @@ class ReviewSummary(BaseEntity):
     @classmethod
     def key_name(cls, unit_id, submission_key, reviewee_key):
         """Creates a key_name string for datastore operations."""
-        return '%s:%s:%s' % (
+        return '(%s:%s:%s)' % (
             unit_id, submission_key.id_or_name(), reviewee_key.id_or_name())
 
     def decrement_count(self, state):
@@ -194,7 +135,7 @@ class ReviewSummary(BaseEntity):
             raise ValueError('%s not in %s' % (state, REVIEW_STATES))
 
 
-class ReviewStep(BaseEntity):
+class ReviewStep(review.BaseEntity):
     """Object that represents a single state of a review."""
 
     # Audit trail information.
@@ -211,7 +152,8 @@ class ReviewStep(BaseEntity):
     # Repeated data to allow filtering/ordering in queries.
 
     # Key of the submission being reviewed.
-    submission_key = KeyProperty(kind=review.Submission.kind(), required=True)
+    submission_key = review.KeyProperty(
+        kind=review.Submission.kind(), required=True)
     # Unit this review step is part of.
     unit_id = db.StringProperty(required=True)
 
@@ -226,24 +168,24 @@ class ReviewStep(BaseEntity):
     # Pointers that tie the work and people involved together.
 
     # Key of the Review associated with this step.
-    review_key = KeyProperty(kind=review.Review.kind())
+    review_key = review.KeyProperty(kind=review.Review.kind())
     # Key of the associated ReviewSummary.
-    review_summary_key = KeyProperty(kind=ReviewSummary.kind())
+    review_summary_key = review.KeyProperty(kind=ReviewSummary.kind())
     # Key of the Student being reviewed.
-    reviewee_key = KeyProperty(kind=models.Student.kind())
+    reviewee_key = review.KeyProperty(kind=models.Student.kind())
     # Key of the Student doing this review.
-    reviewer_key = KeyProperty(kind=models.Student.kind())
+    reviewer_key = review.KeyProperty(kind=models.Student.kind())
 
     def __init__(self, *args, **kwargs):
         """Constructs a new ReviewStep."""
         assert not kwargs.get('key_name'), (
-            'setting key_name manually not supported')
+            'Setting key_name manually not supported')
         reviewee_key = kwargs.get('reviewee_key')
         reviewer_key = kwargs.get('reviewer_key')
         submission_key = kwargs.get('submission_key')
         unit_id = kwargs.get('unit_id')
         assert reviewee_key and reviewer_key and submission_key and unit_id, (
-            'missing required property')
+            'Missing required property')
         kwargs['key_name'] = self.key_name(
             unit_id, submission_key, reviewee_key, reviewer_key)
         super(ReviewStep, self).__init__(*args, **kwargs)
@@ -251,6 +193,6 @@ class ReviewStep(BaseEntity):
     @classmethod
     def key_name(cls, unit_id, submission_key, reviewee_key, reviewer_key):
         """Creates a key_name string for datastore operations."""
-        return '%s:%s:%s:%s' % (
+        return '(%s:%s:%s:%s)' % (
             unit_id, submission_key.id_or_name(), reviewee_key.id_or_name(),
             reviewer_key.id_or_name())

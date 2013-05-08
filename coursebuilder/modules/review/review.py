@@ -175,19 +175,6 @@ COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUCCESS = counters.PerfCounter(
     'gcb-get-submission-and-review-keys-success',
     'number of times get_submission-and-review-keys() completed successfully')
 
-COUNTER_GET_SUBMISSION_KEY_FAILED = counters.PerfCounter(
-    'gcb-get-submission-key-failed',
-    'number of times get_submission_key() had a fatal error')
-COUNTER_GET_SUBMISSION_KEY_MISS = counters.PerfCounter(
-    'gcb-get-submission-key-miss',
-    'number of times get_submission_key() found a missing review summary')
-COUNTER_GET_SUBMISSION_KEY_START = counters.PerfCounter(
-    'gcb-get-submission-key-start',
-    'number of times get_submission_key() has started processing')
-COUNTER_GET_SUBMISSION_KEY_SUCCESS = counters.PerfCounter(
-    'gcb-get-submission-key-success',
-    'number of times get_submission_key() completed successfully')
-
 COUNTER_START_REVIEW_PROCESS_FOR_ALREADY_STARTED = counters.PerfCounter(
     'gcb-start-review-process-for-already-started',
     ('number of times start_review_process_for() called when review already '
@@ -278,24 +265,8 @@ class TransitionError(Error):
             self.message, self.before, self.after)
 
 
-class _DomainObject(object):
-    """Domain object for review-related classes."""
-
-    # db.Model. The model definition associated with this domain object class.
-    _model = None
-
-    @classmethod
-    def make_key(cls, id_or_name, namespace):
-        """Makes a db.Key for a domain object."""
-        assert cls._model is not None
-        return db.Key.from_path(
-            cls._model.kind(), id_or_name, namespace=namespace)
-
-
-class Review(_DomainObject):
+class Review(object):
     """Domain object for a student work submission."""
-
-    _model = review.Review
 
     def __init__(self, contents=None, key=None):
         self._contents = contents
@@ -310,10 +281,8 @@ class Review(_DomainObject):
         return self._key
 
 
-class ReviewStep(_DomainObject):
+class ReviewStep(object):
     """Domain object for the status of a single review at a point in time."""
-
-    _model = peer.ReviewStep
 
     def __init__(
         self, assigner_kind=None, change_date=None, create_date=None, key=None,
@@ -382,10 +351,8 @@ class ReviewStep(_DomainObject):
         return self._unit_id
 
 
-class ReviewSummary(_DomainObject):
+class ReviewSummary(object):
     """Domain object for review state aggregate entities."""
-
-    _model = peer.ReviewSummary
 
     def __init__(
         self, assigned_count=None, completed_count=None, change_date=None,
@@ -433,10 +400,8 @@ class ReviewSummary(_DomainObject):
         return self._unit_id
 
 
-class Submission(_DomainObject):
+class Submission(object):
     """Domain object for a student work submission."""
-
-    _model = review.Submission
 
     def __init__(self, contents=None, key=None):
         self._contents = contents
@@ -1025,8 +990,11 @@ class Manager(object):
         COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_START.inc()
 
         try:
-            submission_key = cls.get_submission_key(unit_id, reviewee_key)
-            if not submission_key:
+            submission_key = db.Key.from_path(
+                review.Submission.kind(),
+                review.Submission.key_name(unit_id, reviewee_key))
+            submission = db.get(submission_key)
+            if not submission:
                 COUNTER_GET_SUBMISSION_AND_REVIEW_KEYS_SUBMISSION_MISS.inc()
                 return
 
@@ -1058,46 +1026,6 @@ class Manager(object):
             return
 
         return Submission(contents=model.contents, key=model.key())
-
-    @classmethod
-    def get_submission_key(cls, unit_id, reviewee_key):
-        """Gets the submission key for a unit_id, reviewee_key pair.
-
-        Args:
-            unit_id: string. Id of the unit to restrict the query to.
-            reviewee_key: db.Key of models.models.Student. The reviewee to
-                restrict the query to.
-
-        Raises:
-            ConstraintError: if mutiple review summary keys were found for the
-                given unit_id, reviewee_key pair.
-
-        Returns:
-            db.Key of review.Submission if found; None otherwise.
-        """
-        COUNTER_GET_SUBMISSION_KEY_START.inc()
-
-        try:
-            summaries = peer.ReviewSummary.all().filter(
-                peer.ReviewSummary.reviewee_key.name, reviewee_key
-            ).filter(
-                peer.ReviewSummary.unit_id.name, unit_id
-            ).fetch(2)
-
-            if len(summaries) > 1:
-                raise ConstraintError(
-                    ('Found multiple summary keys for unit %s, reviewee_key '
-                     '%s') % (unit_id, repr(reviewee_key)))
-
-        except Exception as e:
-            COUNTER_GET_SUBMISSION_KEY_FAILED.inc()
-            raise e
-
-        if not summaries:
-            COUNTER_GET_SUBMISSION_KEY_MISS.inc()
-        else:
-            COUNTER_GET_SUBMISSION_KEY_SUCCESS.inc()
-            return summaries[0].submission_key
 
     @classmethod
     def start_review_process_for(cls, unit_id, submission_key, reviewee_key):
