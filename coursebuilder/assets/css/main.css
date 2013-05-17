@@ -154,26 +154,6 @@ th, td {
   padding: 17px 15px 5px;
 }
 
-#gcb-header h1, #gcb-header h2 {
-  float: left;
-  font-size: 27px;
-  font-weight: 300;
-  line-height: 1.52;
-  margin: 0;
-  text-shadow: 0 1px 1px #fff;
-  white-space: nowrap;
-}
-
-#gcb-header h1 {
-  padding: 0 12px 0 0;
-}
-
-#gcb-header h2 {
-  border: solid #babcc0;
-  border-width: 0 0 0 1px;
-  padding: 0 12px;
-}
-
 #gcb-header img {
   padding: 0 3px 0 0;
   position: relative;
@@ -588,25 +568,23 @@ a.gcb-button-action {
   margin: 0 1.4880952381% 20px;
 }
 
-h1.product-headers {
+.product-headers-large {
   font-size: 25px;
   color: #dd4b39;
   font-weight: normal;
   margin: 10px 7px;
+  font-family: "open sans",arial,sans-serif;
 }
 
-h2.product-headers {
+.product-headers, .bio-headers {
   font-size: 16px;
   margin: .4em 0 0;
   font-weight: normal;
   margin: 10px 7px;
+  font-family: "open sans",arial,sans-serif;
 }
 
 .bio-headers {
-  font-size: 16px;
-  margin: .4em 0 0;
-  font-weight: normal;
-  margin: 10px 7px;
   float: right;
 }
 
@@ -723,4 +701,31 @@ span.progress-empty {
   border: 1px solid black;
   margin: 20px;
   padding: 10px;
+}
+
+/* Styling for the course title shown at the top of all student-facing pages. */
+.title-header {
+  border: solid #babcc0;
+  border-width: 0 0 0 1px;
+  float: left;
+  font-family: "open sans", arial, sans-serif;
+  font-size: 27px;
+  font-weight: 300;
+  line-height: 1.52;
+  margin: 0;
+  padding: 0 12px;
+  text-shadow: 0 1px 1px #fff;
+  white-space: nowrap;
+}
+
+/* Styling for the course logo at the top-left of all student-facing pages. */
+.course-image {
+  float: left;
+  font-size: 27px;
+  font-weight: 300;
+  line-height: 1.52;
+  margin: 0;
+  padding: 0 12px 0 0;
+  text-shadow: 0 1px 1px #fff;
+  white-space: nowrap;
 }
