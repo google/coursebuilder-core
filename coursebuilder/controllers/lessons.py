@@ -665,6 +665,9 @@ class ReviewHandler(BaseHandler):
         if not student:
             return
 
+        if not self.assert_xsrf_token_or_fail(self.request, 'review-post'):
+            return
+
         course = self.get_course()
         rp = course.get_reviews_processor()
 
