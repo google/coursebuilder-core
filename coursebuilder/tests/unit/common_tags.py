@@ -109,3 +109,9 @@ class CustomTagTests(unittest.TestCase):
         self.assertEquals(
             '<div><Re><Root><p><SimpleTag></SimpleTag></p></Root></Re></div>',
             str(safe_dom))
+
+    def test_scripts_are_not_escaped(self):
+        html = '<script>alert("2"); var a = (1 < 2 && 2 > 1);</script>'
+        safe_dom = tags.html_to_safe_dom(html)
+        self.assertEquals(html, str(safe_dom))
+

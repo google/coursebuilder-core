@@ -133,6 +133,34 @@ class Element(Node):
         return buff
 
 
+class ScriptElement(Element):
+    """Represents an HTML <script> element."""
+
+    def __init__(self, **attr):
+        super(ScriptElement, self).__init__('script', **attr)
+
+    def add_child(self, unused_node):
+        raise ValueError()
+
+    def add_children(self, unused_nodes):
+        raise ValueError()
+
+    def add_text(self, text):
+        """Add the script body."""
+
+        class Script(Node):
+            def __init__(self, script):
+                self._script = script
+
+            @property
+            def sanitized(self):
+                if '</script>' in self._script:
+                    raise ValueError('End script tag forbidden')
+                return self._script
+
+        self._children.append(Script(text))
+
+
 class Entity(Node):
     """Holds an XML entity."""
 

@@ -176,6 +176,45 @@ class ElementTests(unittest.TestCase):
                 '<%s></%s>' % (elt, elt), safe_dom.Element(elt).__str__())
 
 
+class ScriptElementTests(unittest.TestCase):
+    """Unit tests for common.safe_dom.ScriptElement."""
+
+    def test_script_should_not_escape_body(self):
+        """"The body of the script tag should not be escaped."""
+        script = safe_dom.ScriptElement()
+        script.add_text('alert("foo");')
+        script.add_text('1 < 2 && 2 > 1;')
+        self.assertEqual(
+            '<script>alert("foo");1 < 2 && 2 > 1;</script>', script.__str__())
+
+    def test_script_should_reject_close_script_tag_in_body(self):
+        """Expect an error if the body of the script tag contains </script>."""
+        script = safe_dom.ScriptElement()
+        script.add_text('</script>')
+        try:
+            script.__str__()
+            self.fail('Expected an exception')
+        except ValueError:
+            pass
+
+    def test_script_should_not_allow_child_nodes_to_be_added(self):
+        """Script should not allow child nodes to be added."""
+        script = safe_dom.ScriptElement()
+        try:
+            child = safe_dom.Element('br')
+            script.add_child(child)
+            self.fail('Expected an exception')
+        except ValueError:
+            pass
+
+        try:
+            children = safe_dom.NodeList().append(safe_dom.Element('br'))
+            script.add_children(children)
+            self.fail('Expected an exception')
+        except ValueError:
+            pass
+
+
 class EntityTests(unittest.TestCase):
     """Unit tests for common.safe_dom.Entity."""
 

@@ -156,7 +156,10 @@ def html_to_safe_dom(html_string):
         if elt.tag in tag_bindings:
             elt = tag_bindings[elt.tag]().render(elt)
 
-        out_elt = safe_dom.Element(elt.tag)
+        if elt.tag.lower() == 'script':
+            out_elt = safe_dom.ScriptElement()
+        else:
+            out_elt = safe_dom.Element(elt.tag)
         out_elt.add_attribute(**elt.attrib)
         if elt.text:
             out_elt.add_text(elt.text)
