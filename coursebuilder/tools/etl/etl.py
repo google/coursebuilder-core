@@ -505,7 +505,7 @@ def _filter_filesystem_files(files):
         relative_name = _remove_bundle_root(path)
         not_in_excludes = not any(
             [relative_name.startswith(e) for e in _LOCAL_WHITELIST_EXCLUDES])
-        head_directory = relative_name.split('/')[0]
+        head_directory = relative_name.split(os.path.sep)[0]
         if not_in_excludes and head_directory in _LOCAL_WHITELIST:
             filtered_files.append(path)
     return filtered_files
@@ -581,8 +581,8 @@ def _remove_bundle_root(path):
     """Removes BUNDLE_ROOT prefix from a path."""
     if path.startswith(appengine_config.BUNDLE_ROOT):
         path = path.split(appengine_config.BUNDLE_ROOT)[1]
-    # Path must not start with / so it is os.path.join()able.
-    if path.startswith('/'):
+    # Path must not start with path separator so it is os.path.join()able.
+    if path.startswith(os.path.sep):
         path = path[1:]
     return path
 
