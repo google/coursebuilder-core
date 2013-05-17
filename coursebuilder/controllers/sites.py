@@ -492,10 +492,37 @@ def make_zip_handler(zipfilename):
     class CustomZipHandler(zipserve.ZipHandler):
         """Custom ZipHandler that properly controls caching."""
 
-        def get(self, name):
+        def __init__(self):
+            # This variable represents the path after the namespace prefix is
+            # removed. The full path is still stored in self.request.path. For
+            # example, if self.request.path is '/new_course/foo/bar/baz/...',
+            # the path_translated would be '/foo/bar/baz/...'.
+            self.path_translated = None
+
+        def get(self, *args):
             """Handles GET request."""
+
+            path = None
+
+            # try to use path passed explicitly
+            if args and len(args) >= 1:
+                path = args[0]
+
+            # use path_translated if no name was passed explicitly
+            if not path:
+                path = self.path_translated
+
+                # we need to remove leading slash and all filenames inside zip
+                # file must be relative
+                if path and path.startswith('/') and len(path) > 1:
+                    path = path[1:]
+
+            if not path:
+                self.error(404)
+                return
+
             ZIP_HANDLER_COUNT.inc()
-            self.ServeFromZipFile(zipfilename, name)
+            self.ServeFromZipFile(zipfilename, path)
             count_stats(self)
 
         def SetCachingHeaders(self):  # pylint: disable=C6409
@@ -535,7 +562,6 @@ class CssComboZipHandler(zipserve.ZipHandler):
             self.zipfile_cache[zipfilename] = zipfile_object
         if not zipfile_object:
             self.error(404)
-            self.response.out.write('Not found')
             return
 
         all_content_types = set()
@@ -980,6 +1006,29 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         """Reject all, but authors requests, to an unpublished course."""
         return context.now_available or Roles.is_course_admin(context)
 
+    def _get_handler_factory_for_path(self, path):
+        """Picks a handler to handle the path."""
+        # Checks if path maps in its entirety.
+        if path in ApplicationRequestHandler.urls_map:
+            return ApplicationRequestHandler.urls_map[path]
+
+        # Check if partial path maps. For now, let only zipserve.ZipHandler
+        # handle partial matches.
+        parts = path.split('/')
+        candidate = None
+        partial_path = ''
+        for part in parts:
+            if part:
+                partial_path += '/' + part
+                if partial_path in ApplicationRequestHandler.urls_map:
+                    handler = ApplicationRequestHandler.urls_map[partial_path]
+                    if (
+                            isinstance(handler, zipserve.ZipHandler) or
+                            issubclass(handler, zipserve.ZipHandler)):
+                        candidate = handler
+
+        return candidate
+
     def get_handler_for_course_type(self, context, path):
         """Gets the right handler for the given context and path."""
 
@@ -1002,10 +1051,11 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             return handler
 
         # Handle all dynamic handlers here.
-        if path in ApplicationRequestHandler.urls_map:
-            factory = ApplicationRequestHandler.urls_map[path]
-            handler = factory()
+        handler_factory = self._get_handler_factory_for_path(path)
+        if handler_factory:
+            handler = handler_factory()
             handler.app_context = context
+            handler.path_translated = path
             handler.request = self.request
             handler.response = self.response
 
@@ -1249,7 +1299,7 @@ def test_url_to_handler_mapping_for_course_type():
         def __init__(self):
             self.app_context = None
 
-    class FakeHandler2(object):
+    class FakeHandler2(zipserve.ZipHandler):
         def __init__(self):
             self.app_context = None
 
@@ -1265,6 +1315,10 @@ def test_url_to_handler_mapping_for_course_type():
     assert_handled('/a/b/', FakeHandler0)
     assert_handled('/a/b/foo', FakeHandler1)
     assert_handled('/a/b/bar', FakeHandler2)
+
+    # Test partial path match.
+    assert_handled('/a/b/foo/bee', None)
+    assert_handled('/a/b/bar/bee', FakeHandler2)
 
     # Test assets mapping.
     handler = assert_handled('/a/b/assets/img/foo.png', AssetHandler)
@@ -1303,6 +1357,7 @@ def test_url_to_handler_mapping_for_course_type():
             AbstractFileSystem.normpath('/views'))
 
     # Negative cases
+    assert_handled('/baz', None)
     assert_handled('/favicon.ico', None)
     assert_handled('/e/f/index.html', None)
     assert_handled('/foo/foo.css', None)
