@@ -62,7 +62,7 @@ def deep_dict_merge(real_values_dict, default_values_dict):
 
         # Copy over other values.
         for key, value in default_values.items():
-            if not key in real_values:
+            if key not in real_values:
                 real_values[key] = value
 
     result = {}
@@ -354,7 +354,7 @@ class AbstractCachedObject(object):
     def deserialize(self, binary_data):
         """Loads instance from a pickle representation."""
         adict = pickle.loads(binary_data)
-        if not self.version == adict.get('version'):
+        if self.version != adict.get('version'):
             raise Exception('Expected version %s, found %s.' % (
                 self.version, adict.get('version')))
         self.__dict__.update(adict)
@@ -478,7 +478,7 @@ class CourseModel12(object):
         unit_id_to_lessons = {}
         for lesson in lessons:
             key = str(lesson.unit_id)
-            if not key in unit_id_to_lessons:
+            if key not in unit_id_to_lessons:
                 unit_id_to_lessons[key] = []
             unit_id_to_lessons[key].append(lesson)
         return unit_id_to_lessons
@@ -738,7 +738,7 @@ class PersistentCourse13(object):
         """Loads instance from a JSON representation."""
         json_text = binary_data.decode('utf-8')
         adict = transforms.loads(json_text)
-        if not self.version == adict.get('version'):
+        if self.version != adict.get('version'):
             raise Exception('Expected version %s, found %s.' % (
                 self.version, adict.get('version')))
         self._from_dict(adict)
@@ -804,7 +804,7 @@ class CourseModel13(object):
         unit_id_to_lesson_ids = {}
         for lesson in lessons:
             key = str(lesson.unit_id)
-            if not key in unit_id_to_lesson_ids:
+            if key not in unit_id_to_lesson_ids:
                 unit_id_to_lesson_ids[key] = []
             unit_id_to_lesson_ids[key].append(str(lesson.lesson_id))
         return unit_id_to_lesson_ids
@@ -1444,7 +1444,7 @@ class Workflow(object):
         value = workflow_dict[key]
         if not isinstance(value, int):
             errors.append('%s should be an integer' % key)
-        elif not value >= 0:
+        elif value < 0:
             errors.append('%s should be a non-negative integer' % key)
 
     def validate(self, errors=None):
@@ -1494,7 +1494,7 @@ class Workflow(object):
                     review_due_date = self._convert_date_string_to_datetime(
                         workflow_dict[REVIEW_DUE_DATE_KEY])
 
-                    if not submission_due_date <= review_due_date:
+                    if submission_due_date > review_due_date:
                         workflow_errors.append(
                             'submission due date should be earlier than '
                             'review due date')

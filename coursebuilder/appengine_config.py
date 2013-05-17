@@ -47,7 +47,7 @@ def gcb_force_default_encoding(encoding):
 
     # Eclipse silently sets default encoding to 'utf-8', while GAE forces
     # 'ascii'. We need to control this directly for consistency.
-    if not sys.getdefaultencoding() == encoding:
+    if sys.getdefaultencoding() != encoding:
         reload(sys)
         sys.setdefaultencoding(encoding)
 

@@ -102,7 +102,7 @@ class ReflectiveRequestHandler(object):
         if not action:
             action = self.default_action
 
-        if not action in self.get_actions:
+        if action not in self.get_actions:
             self.error(404)
             return
 
@@ -116,7 +116,7 @@ class ReflectiveRequestHandler(object):
     def post(self):
         """Handles POST."""
         action = self.request.get('action')
-        if not action or not action in self.post_actions:
+        if not action or action not in self.post_actions:
             self.error(404)
             return
 
@@ -547,7 +547,7 @@ class XsrfTokenManager(object):
         """Validate a given XSRF token by retrieving it from memcache."""
         try:
             parts = token.split(cls.DELIMITER_PUBLIC)
-            if not len(parts) == 2:
+            if len(parts) != 2:
                 return False
 
             issued_on = long(parts[0])

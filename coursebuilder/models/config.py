@@ -55,7 +55,7 @@ class ConfigProperty(object):
         self, name, value_type, doc_string,
         default_value=None, multiline=False, validator=None):
 
-        if not value_type in ALLOWED_TYPES:
+        if value_type not in ALLOWED_TYPES:
             raise Exception('Bad value type: %s' % value_type)
 
         self._validator = validator
@@ -204,7 +204,7 @@ class Registry(object):
         for item in ConfigPropertyEntity.all().fetch(1000):
             name = item.key().name()
 
-            if not name in cls.registered:
+            if name not in cls.registered:
                 logging.error(
                     'Property is not registered (skipped): %s', name)
                 continue

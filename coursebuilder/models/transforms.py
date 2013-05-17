@@ -90,11 +90,11 @@ def json_to_dict(source_dict, schema):
     output = {}
     for key, attr in schema['properties'].items():
         # Skip schema elements that don't exist in source.
-        if not key in source_dict:
+        if key not in source_dict:
             continue
 
         attr_type = attr['type']
-        if not attr_type in JSON_TYPES:
+        if attr_type not in JSON_TYPES:
             raise ValueError('Unsupported JSON type: %s' % attr_type)
         if attr_type == 'date':
             output[key] = datetime.datetime.strptime(

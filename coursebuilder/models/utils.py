@@ -101,8 +101,8 @@ class QueryMapper(object):
 
             if self._report_every != 0 and not total_count % self._report_every:
                 _LOG.info(
-                    'Models processed by %s.%s so far: %s' % (
-                        fn.__module__, fn.func_name, total_count))
+                    'Models processed by %s.%s so far: %s',
+                    fn.__module__, fn.func_name, total_count)
 
     def _handle_batch(self, cursor, fn, *fn_args, **fn_kwargs):
         if cursor:

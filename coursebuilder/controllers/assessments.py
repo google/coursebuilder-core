@@ -120,7 +120,7 @@ class AnswerHandler(BaseHandler):
             return
 
         unit = course.find_unit_by_id(assessment_type)
-        if unit is None or not unit.type == verify.UNIT_TYPE_ASSESSMENT:
+        if unit is None or unit.type != verify.UNIT_TYPE_ASSESSMENT:
             self.error(404)
             logging.error('No assessment named %s exists.', assessment_type)
             return

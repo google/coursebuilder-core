@@ -96,7 +96,7 @@ class ExpireOldAssignedReviewsHandler(utils.BaseHandler):
                             unit_exception_count, unit_total_count))
                     _LOG.info(end_unit_message)
 
-                _LOG.info('Done processing namespace "%s"' % namespace)
+                _LOG.info('Done processing namespace "%s"', namespace)
 
             end_message = (
                 ('End expire_old_assigned_reviews cron. Expired: %s, '

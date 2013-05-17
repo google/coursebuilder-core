@@ -110,7 +110,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
         return self.get_course().get_environ(self.app_context)
 
     def get_group_id(self, email):
-        if not email or not '@googlegroups.com' in email:
+        if not email or '@googlegroups.com' not in email:
             return None
         return email.split('@')[0]
 

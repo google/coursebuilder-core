@@ -72,7 +72,7 @@ PARSER.add_argument(
 
 
 def assert_contains(needle, haystack):
-    if not needle in haystack:
+    if needle not in haystack:
         raise Exception('Expected to find term: %s\n%s', needle, haystack)
 
 
@@ -316,7 +316,7 @@ class PeerReviewLoadTest(object):
         """Performs student registration action."""
         body = self.session.get('%s/' % self.host)
         assert_contains('Logout', body)
-        if not 'href="register"' in body:
+        if 'href="register"' not in body:
             body = self.session.get('%s/student/home' % self.host)
             assert_contains(self.email, body)
             assert_contains(self.name, body)
@@ -401,7 +401,7 @@ class PeerReviewLoadTest(object):
                 # It is possible that no submissions available for review yet.
                 # Wait for a while until they become available on the dashboard
                 # page.
-                if not 'Back to the review dashboard' in body:
+                if 'Back to the review dashboard' not in body:
                     assert_contains('Assignments for your review', body)
                     # Sleep for a random number of seconds between 1 and 4.
                     time.sleep(1.0 + random.random() * 3.0)

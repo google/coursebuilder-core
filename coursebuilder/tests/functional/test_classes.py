@@ -107,7 +107,7 @@ class InfrastructureTest(actions.TestBase):
         parts = token.split('/')
         assert len(parts) == 2
         forgery = '%s/%s' % (long(parts[0]) + 1000, parts[1])
-        assert not forgery == token
+        assert forgery != token
         assert not utils.XsrfTokenManager.is_xsrf_token_valid(forgery, action)
 
         # Check token properly expires.
@@ -2126,7 +2126,7 @@ class MultipleCoursesTestBase(actions.TestBase):
         text = open(filename, 'r').read().decode('utf-8')
 
         # Make sure target text is not in the file.
-        assert not replace in text
+        assert replace not in text
         text = text.replace(find, replace)
         assert replace in text
 

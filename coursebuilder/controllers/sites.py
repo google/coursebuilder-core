@@ -773,7 +773,7 @@ def validate_new_course_entry_attributes(name, title, admin_email, errors):
     if not title or len(title) < 3:
         errors.append('The course title is too short.')
 
-    if not admin_email or not '@' in admin_email:
+    if not admin_email or '@' not in admin_email:
         errors.append('Please enter a valid email address.')
 
 

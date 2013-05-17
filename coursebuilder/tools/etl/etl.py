@@ -468,15 +468,15 @@ def _download_datastore(
         json_path = os.path.join(
             os.path.dirname(archive_path), '%s.json' % found_type)
         _LOG.info(
-            'Adding entities of type %s to temporary file %s' % (
-                found_type, json_path))
+            'Adding entities of type %s to temporary file %s',
+            found_type, json_path)
         json_file = transforms.JsonFile(json_path)
         json_file.open('w')
         _process_models(db.class_for_kind(found_type), json_file, batch_size)
         json_file.close()
         internal_path = _Archive.get_internal_path(
             os.path.basename(json_file.name))
-        _LOG.info('Adding %s to archive' % internal_path)
+        _LOG.info('Adding %s to archive', internal_path)
         archive.add_local_file(json_file.name, internal_path)
         manifest.add(_ManifestEntity(internal_path, False))
         _LOG.info('Removing temporary file ' + json_file.name)
@@ -646,7 +646,7 @@ def _process_models(kind, json_file, batch_size):
             break
         total_count += batch_count
         if not total_count % reportable_chunk:
-            _LOG.info('Loaded records: %s' % total_count)
+            _LOG.info('Loaded records: %s', total_count)
 
 
 @_retry(message='Fetching datastore entity batch failed; retrying')
@@ -695,9 +695,9 @@ def _run_custom(parsed_args):
 
 
 def _upload(upload_type, archive_path, course_url_prefix):
-    _LOG.info((
-        'Processing course with URL prefix %s from archive path %s' % (
-            course_url_prefix, archive_path)))
+    _LOG.info(
+        'Processing course with URL prefix %s from archive path %s',
+        course_url_prefix, archive_path)
     context = etl_lib.get_context(course_url_prefix)
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
@@ -747,7 +747,7 @@ def _upload_course(context, archive_path, course_url_prefix):
         _LOG.info('Uploaded ' + external_path)
     _clear_course_cache(context)
     _LOG.info(
-        'Done; %s entit%s uploaded' % (count, 'y' if count == 1 else 'ies'))
+        'Done; %s entit%s uploaded', count, 'y' if count == 1 else 'ies')
 
 
 def _upload_datastore():
@@ -784,11 +784,11 @@ def main(parsed_args, environment_class=None):
     _import_entity_modules()
     if not environment_class:
         environment_class = remote.Environment
-    _LOG.info('Mode is %s' % parsed_args.mode)
+    _LOG.info('Mode is %s', parsed_args.mode)
     _LOG.info(
-        'Target is url %s from application_id %s on server %s' % (
-            parsed_args.course_url_prefix, parsed_args.application_id,
-            parsed_args.server))
+        'Target is url %s from application_id %s on server %s',
+        parsed_args.course_url_prefix, parsed_args.application_id,
+        parsed_args.server)
     environment_class(
         parsed_args.application_id, parsed_args.server).establish()
     if parsed_args.mode == _MODE_DOWNLOAD:

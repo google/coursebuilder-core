@@ -93,7 +93,7 @@ class ResourcesHandler(webapp2.RequestHandler):
         if not path.startswith(os.path.join('extensions', 'tags')):
             self.error(404)
 
-        if not os.path.basename(os.path.dirname(path)) == 'resources':
+        if os.path.basename(os.path.dirname(path)) != 'resources':
             self.error(404)
 
         resource_file = os.path.join(appengine_config.BUNDLE_ROOT, path)

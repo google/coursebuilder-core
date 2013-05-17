@@ -149,9 +149,9 @@ class UnitLessonCompletionTracker(object):
             # Skip lessons that do not have activities associated with them.
             if not lesson.activity:
                 continue
-            if not (self.get_lesson_status(
+            if (self.get_lesson_status(
                     progress,
-                    unit_id, lesson.lesson_id) == self.COMPLETED_STATE):
+                    unit_id, lesson.lesson_id) != self.COMPLETED_STATE):
                 return
 
         # Record that all lessons in this unit have been completed.
@@ -173,8 +173,8 @@ class UnitLessonCompletionTracker(object):
         lessons = self._get_course().get_lessons(unit_id)
         for lesson in lessons:
             if str(lesson.lesson_id) == lesson_id and lesson:
-                if not (self.get_activity_status(
-                        progress, unit_id, lesson_id) == self.COMPLETED_STATE):
+                if (self.get_activity_status(
+                        progress, unit_id, lesson_id) != self.COMPLETED_STATE):
                     return
 
         # Record that all activities in this lesson have been completed.
@@ -252,7 +252,7 @@ class UnitLessonCompletionTracker(object):
         """Records that the given student has completed an activity block."""
         if not self._get_course().is_valid_unit_lesson_id(unit_id, lesson_id):
             return
-        if not block_id in self.get_valid_block_ids(unit_id, lesson_id):
+        if block_id not in self.get_valid_block_ids(unit_id, lesson_id):
             return
         self._put_event(
             student,

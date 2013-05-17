@@ -224,7 +224,7 @@ class UnitHandler(BaseHandler):
                 'activity?unit=%s&lesson=%s' % (
                     unit_id, lesson_id))
         else:
-            if not index < len(lessons) - 1:
+            if index >= len(lessons) - 1:
                 self.template_value['next_button_url'] = ''
             else:
                 next_lesson = lessons[index + 1]
@@ -292,7 +292,7 @@ class ActivityHandler(BaseHandler):
             'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
 
         # Format next button.
-        if not index < len(lessons) - 1:
+        if index >= len(lessons) - 1:
             self.template_value['next_button_url'] = ''
         else:
             next_lesson = lessons[index + 1]
