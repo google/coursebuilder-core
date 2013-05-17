@@ -1006,7 +1006,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             return ApplicationRequestHandler.urls_map[path]
 
         # Check if partial path maps. For now, let only zipserve.ZipHandler
-        # handle partial matches.
+        # handle partial matches. We want to find the longest possible match.
         parts = path.split('/')
         candidate = None
         partial_path = ''
@@ -1301,6 +1301,14 @@ def test_url_to_handler_mapping_for_course_type():
         def __init__(self):
             self.app_context = None
 
+    class FakeHandler3(zipserve.ZipHandler):
+        def __init__(self):
+            self.app_context = None
+
+    class FakeHandler4(zipserve.ZipHandler):
+        def __init__(self):
+            self.app_context = None
+
     # Setup handler.
     handler0 = FakeHandler0
     handler1 = FakeHandler1
@@ -1343,7 +1351,15 @@ def test_url_to_handler_mapping_for_course_type():
 
     # Default mapping
     reset_courses()
-    urls = [('/', handler0), ('/foo', handler1), ('/bar', handler2)]
+    handler3 = FakeHandler3
+    handler4 = FakeHandler4
+    urls = [
+        ('/', handler0),
+        ('/foo', handler1),
+        ('/bar', handler2),
+        ('/zip', handler3),
+        ('/zip/a/b', handler4)]
+    ApplicationRequestHandler.bind(urls)
 
     # Positive cases
     assert_handled('/', FakeHandler0)
@@ -1353,6 +1369,12 @@ def test_url_to_handler_mapping_for_course_type():
     assert AbstractFileSystem.normpath(
         handler.app_context.get_template_home()).endswith(
             AbstractFileSystem.normpath('/views'))
+
+    # Partial URL matching cases test that the most specific match is found.
+    assert_handled('/zip', FakeHandler3)
+    assert_handled('/zip/a', FakeHandler3)
+    assert_handled('/zip/a/b', FakeHandler4)
+    assert_handled('/zip/a/b/c', FakeHandler4)
 
     # Negative cases
     assert_handled('/baz', None)
