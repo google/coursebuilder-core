@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-04-29 18:58-0700\n"
-"PO-Revision-Date: 2013-04-28 22:13-0700\n"
+"POT-Creation-Date: 2013-05-16 18:20-0700\n"
+"PO-Revision-Date: 2013-05-16 18:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fa <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -31,8 +31,8 @@ msgstr "واحد"
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/activity.html:32
-#: experimental/coursebuilder/views/base.html:16
-#: experimental/coursebuilder/views/base.html:180
+#: experimental/coursebuilder/views/base.html:11
+#: experimental/coursebuilder/views/base.html:175
 #: experimental/coursebuilder/views/base_registration.html:14
 #: experimental/coursebuilder/views/unit.html:24
 msgid "Course"
@@ -56,8 +56,8 @@ msgstr "فعالیت"
 #. Header text for a unit page.
 #. A row in the course schedule.
 #: experimental/coursebuilder/views/activity.html:48
-#: experimental/coursebuilder/views/course.html:119
-#: experimental/coursebuilder/views/course.html:150
+#: experimental/coursebuilder/views/course.html:117
+#: experimental/coursebuilder/views/course.html:148
 #: experimental/coursebuilder/views/preview.html:42
 #: experimental/coursebuilder/views/unit.html:36
 #, python-format
@@ -104,7 +104,7 @@ msgstr "پایان"
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/announcements.html:5
-#: experimental/coursebuilder/views/base.html:176
+#: experimental/coursebuilder/views/base.html:171
 #: experimental/coursebuilder/views/base_registration.html:10
 msgid "Announcements"
 msgstr "اعلامیه‌ها"
@@ -127,6 +127,8 @@ msgid ""
 "The due date for submitting this assignment has passed. It was due on "
 "%(submission_due_date)s."
 msgstr ""
+"زمان تحویل این تکلیف گذشته است. زمان تحویل در تاریخ "
+"%(submission_due_date)s بود."
 
 #. Shown to the student on the assignment page.
 #: experimental/coursebuilder/views/assessment.html:49
@@ -160,89 +162,89 @@ msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
 msgstr ""
-"پس از اینکه تعداد مورد نیاز بررسی همکاران را برای این تکلیف تکمیل کردید، "
-"بررسی‌های دریافت شده توسط شما در اینجا نمایش داده می‌شوند."
+"پس از اینکه به تعداد مورد نیاز تکالیف هم‌دوره‌ای‌های خود را صحیح کردید، "
+"نتیجه صحیح کردن دیگران از تکلیف شما در اینجا نمایش داده می‌شود."
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
 #: experimental/coursebuilder/views/assessment.html:93
 msgid "Go to the review dashboard"
-msgstr "رفتن به به صفحه کنترل بررسی"
+msgstr "رفتن به به صفحه کنترل صحیح کردن تکالیف"
 
 #. Text shown below a student's peer-reviewed assignment.
 #: experimental/coursebuilder/views/assessment.html:98
 msgid "You have not received any peer reviews yet."
-msgstr "هنوز هیچ بررسی همکاری دریافت نکرده‌اید."
+msgstr "هنوز هیچ کس تکلیف شما را صحیح نکرده است."
 
 #. Text on the button for checking an answer.
-#: experimental/coursebuilder/views/base.html:42
+#: experimental/coursebuilder/views/base.html:37
 msgid " Check Answer "
 msgstr " بررسی پاسخ "
 
 #. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/base.html:46
+#: experimental/coursebuilder/views/base.html:41
 msgid " Check Answers "
 msgstr " بررسی پاسخ‌ها "
 
 #. Text on the button for showing the answer to a question.
-#: experimental/coursebuilder/views/base.html:50
+#: experimental/coursebuilder/views/base.html:45
 msgid " Skip and Show Answer "
 msgstr " رد شدن و نمایش پاسخ "
 
 #. Text on the button for saving answers to a question.
-#: experimental/coursebuilder/views/base.html:54
+#: experimental/coursebuilder/views/base.html:49
 msgid " Save Answers "
 msgstr " ذخیره پاسخ‌ها "
 
 #. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/base.html:58
+#: experimental/coursebuilder/views/base.html:53
 msgid " Save Draft "
 msgstr " ذخیره پیش‌نویس "
 
 #. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/base.html:62
+#: experimental/coursebuilder/views/base.html:57
 msgid " Submit Answers "
 msgstr " ارسال پاسخ‌ها "
 
 #. Text on the button for submitting a peer-reviewed assignment.
-#: experimental/coursebuilder/views/base.html:66
+#: experimental/coursebuilder/views/base.html:61
 msgid " Submit Assignment "
 msgstr " ارسال تکلیف "
 
 #. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/base.html:70
+#: experimental/coursebuilder/views/base.html:65
 msgid " Submit Review "
 msgstr " ارسال بازبینی "
 
 #. Text to prompt the student to select a multiple-choice answer.
-#: experimental/coursebuilder/views/base.html:74
+#: experimental/coursebuilder/views/base.html:69
 msgid " Please click one of the buttons for your answer. "
 msgstr " لطفاً برای پاسخ خود روی یکی از دکمه‌ها کلیک کنید. "
 
 #. Text appearing after the student has answered all questions correctly.
-#: experimental/coursebuilder/views/base.html:78
+#: experimental/coursebuilder/views/base.html:73
 msgid " All your answers are correct! "
 msgstr " همه پاسخ‌های شما درست هستند! "
 
 #. Text appearing after the student has answered all questions correctly.
-#: experimental/coursebuilder/views/base.html:82
+#: experimental/coursebuilder/views/base.html:77
 msgid " Number of questions you answered correctly "
 msgstr " تعداد سؤالاتی که به درستی پاسخ داده‌اید "
 
 #. Text appearing after the student has submitted an assessment.
-#: experimental/coursebuilder/views/base.html:86
+#: experimental/coursebuilder/views/base.html:81
 msgid " You received a score on this assessment of "
 msgstr " نمره‌ای که در این ارزیابی کسب کردید "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:90
+#: experimental/coursebuilder/views/base.html:85
 msgid " Here are lessons you could review to improve your score "
 msgstr " این هم درس‌هایی که می‌توانید برای بهبود نمره خود مطالعه کنید "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:94
+#: experimental/coursebuilder/views/base.html:89
 msgid ""
 " Congratulations! Press the \\'Submit Answers\\' button to submit your "
 "grade. "
@@ -250,7 +252,7 @@ msgstr " تبریک می‌گوییم! برای ارسال نمره خود دک�
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:98
+#: experimental/coursebuilder/views/base.html:93
 msgid ""
 " Press the \\'Submit Answers\\' button below to save your scores. You can"
 " also edit your answers above before clicking \\'Submit Answers\\'. "
@@ -260,49 +262,49 @@ msgstr ""
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit an assignment.
-#: experimental/coursebuilder/views/base.html:102
+#: experimental/coursebuilder/views/base.html:97
 msgid " Are you sure you want to submit this assignment? "
-msgstr ""
+msgstr " مطمئنید می‌خواهید این تکلیف را ارسال کنید؟ "
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit a review.
-#: experimental/coursebuilder/views/base.html:106
+#: experimental/coursebuilder/views/base.html:101
 msgid " Are you sure you want to submit this review? "
-msgstr ""
+msgstr " مطمئنید می‌خواهید تکلیفی را که صحیح کرده‌اید ارسال کنید؟ "
 
 #. Text appearing in a confirmation dialog after 'Are you sure you want to
 #. submit this assignment/review?'
-#: experimental/coursebuilder/views/base.html:110
+#: experimental/coursebuilder/views/base.html:105
 msgid " You cannot edit or delete it after you have done so. "
-msgstr ""
+msgstr " پس از ارسال نمی‌توانید آن را ویرایش یا حذف کنید. "
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:156
+#: experimental/coursebuilder/views/base.html:151
 msgid "Logout"
 msgstr "خروج از سیستم"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:162
+#: experimental/coursebuilder/views/base.html:157
 msgid "Login"
 msgstr "ورود به سیستم"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base.html:185
+#: experimental/coursebuilder/views/base.html:180
 #: experimental/coursebuilder/views/forum.html:5
 msgid "Forum"
 msgstr "تالار گفتمان"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base.html:190
+#: experimental/coursebuilder/views/base.html:185
 #: experimental/coursebuilder/views/student_profile.html:5
 msgid "My Profile"
 msgstr "نمایه من"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:236
+#: experimental/coursebuilder/views/base.html:231
 msgid "Privacy & Terms"
 msgstr "حریم خصوصی و شرایط"
 
@@ -382,12 +384,12 @@ msgstr "برنامه زمانی"
 #: experimental/coursebuilder/views/course.html:31
 #: experimental/coursebuilder/views/course.html:53
 #: experimental/coursebuilder/views/course.html:54
-#: experimental/coursebuilder/views/course.html:96
-#: experimental/coursebuilder/views/course.html:97
+#: experimental/coursebuilder/views/course.html:94
+#: experimental/coursebuilder/views/course.html:95
 #: experimental/coursebuilder/views/lesson_navbar.html:35
 #: experimental/coursebuilder/views/lesson_navbar.html:36
 #: experimental/coursebuilder/views/review_dashboard.html:56
-#: experimental/coursebuilder/views/student_data_table.html:46
+#: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
 msgstr "کامل"
 
@@ -402,16 +404,25 @@ msgstr "هنوز ارسال نشده"
 #. Alt text for image representing student progress.
 #: experimental/coursebuilder/views/course.html:59
 #: experimental/coursebuilder/views/course.html:60
-#: experimental/coursebuilder/views/course.html:102
-#: experimental/coursebuilder/views/course.html:103
+#: experimental/coursebuilder/views/course.html:100
+#: experimental/coursebuilder/views/course.html:101
 #: experimental/coursebuilder/views/lesson_navbar.html:41
 #: experimental/coursebuilder/views/lesson_navbar.html:42
 msgid "In progress"
 msgstr "در حال انجام"
 
+#. Displayed in the course contents page. Indicates a page to which students
+#. can go to review other students' assignments.
+#. Text for the button on the assignment submission confirmation page.
+#: experimental/coursebuilder/views/course.html:75
+#: experimental/coursebuilder/views/course.html:82
+#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:30
+msgid "Review peer assignments"
+msgstr "بازبینی تکالیف همکلاسی‌ها"
+
 #. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/course.html:108
-#: experimental/coursebuilder/views/course.html:109
+#: experimental/coursebuilder/views/course.html:106
+#: experimental/coursebuilder/views/course.html:107
 #: experimental/coursebuilder/views/lesson_navbar.html:47
 #: experimental/coursebuilder/views/lesson_navbar.html:48
 msgid "Not yet started"
@@ -424,6 +435,8 @@ msgid ""
 "Your review has not been saved, because it was submitted on %(time_now)s."
 " The deadline for submitting reviews was %(review_due_date)s."
 msgstr ""
+"تکلیفی را که صحیح کردید ذخیره نشد زیرا در تاریخ %(time_now)s ارسال شده "
+"بود. زمان تحویل تکلیف صحیح شده %(review_due_date)s بود."
 
 #. Error text for when a student submits an assignment after the deadline.
 #: experimental/coursebuilder/views/error.html:21
@@ -433,6 +446,8 @@ msgid ""
 "%(time_now)s. The deadline for submitting assignments was "
 "%(submission_due_date)s."
 msgstr ""
+"تکلیف شما ذخیره نشد زیرا در تاریخ %(time_now)s ارسال شده بود. زمان تحویل "
+"تکلیف %(submission_due_date)s بود."
 
 #. Error text for when a student tries to get a new assignment to review before
 #. submitting his/her own assignment.
@@ -441,6 +456,8 @@ msgid ""
 "You must submit the assignment for this unit before you can request new "
 "assignments to review."
 msgstr ""
+"قبل از درخواست تکالیف جدید برای صحیح کردن، باید تکلیف این واحد را ارسال "
+"کنید."
 
 #. Error text for when a student tries to request a new assignment to review
 #. after the review submission deadline.
@@ -449,19 +466,23 @@ msgid ""
 "The deadline for submitting reviews has already passed, so you cannot "
 "request a new assignment to review."
 msgstr ""
+"آخرین فرصت ارسال این تکالیف صحیح شده گذشته است بنابراین نمی‌توانید تکلیف "
+"جدیدی را برای صحیح کردن درخواست کنید."
 
 #. Error text for when a student requests a new assignment to review, but needs
 #. to complete more peer reviews first before a new review can be allocated to
 #. him/her.
 #: experimental/coursebuilder/views/error.html:36
 msgid "You must complete all assigned reviews before you can request a new one."
-msgstr ""
+msgstr "قبل از درخواست یک تکلیف جدید، باید همه تکالیف محول شده را صحیح کنید."
 
 #. Error text for when a student has already submitted a review, and tries to
 #. submit it again.
 #: experimental/coursebuilder/views/error.html:41
 msgid "You have already submitted this review. Your latest review was not saved."
 msgstr ""
+"قبلاً این تکلیف صحیح شده را ارسال کرده‌اید. آخرین تکلیف صحیح شده شما "
+"ذخیره نشد."
 
 #. Registration button on the main course page.
 #: experimental/coursebuilder/views/preview.html:13
@@ -502,6 +523,8 @@ msgid ""
 "The due date for submitting this review has passed. It was due on "
 "%(review_due_date)s."
 msgstr ""
+"فرصت صحیح کردن این تکلیف تمام شده است. زمان تحویل آن در تاریخ "
+"%(review_due_date)s بود."
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
@@ -573,7 +596,7 @@ msgstr "تکالیف برای بازبینی شما"
 #. the due date has passed.
 #: experimental/coursebuilder/views/review_dashboard.html:29
 msgid "The due date for submitting reviews has passed."
-msgstr ""
+msgstr "فرصت صحیح کردن تکالیف تمام شده است."
 
 #. Instructions for a student being asked to do a review.
 #: experimental/coursebuilder/views/review_dashboard.html:37
@@ -587,7 +610,7 @@ msgid ""
 "In order to earn credit for this assignment, you must complete at least 1"
 " review by then."
 msgstr ""
-"برای کسب امتیاز این تکلیف، باید حداقل یک بررسی را تا آن زمان تکمیل کرده "
+"برای کسب نمره این تکلیف، باید حداقل یک تکلیف را تا آن زمان صحیح کرده "
 "باشید."
 
 #. Instructions for a student being asked to do a review.
@@ -597,8 +620,8 @@ msgid ""
 "In order to earn credit for this assignment, you must complete at least "
 "%(review_min_count)d reviews by then."
 msgstr ""
-"برای کسب امتیاز این تکلیف، باید حداقل %(review_min_count)d بررسی را تا آن"
-" زمان تکمیل کرده باشید."
+"برای کسب نمره این تکلیف، باید حداقل %(review_min_count)d تکلیف را تا آن "
+"زمان صحیح کرده باشید."
 
 #. An item in a list of assignments.
 #: experimental/coursebuilder/views/review_dashboard.html:53
@@ -614,7 +637,7 @@ msgstr "پیش‌نویس‌"
 #. Button that a student can click to request a new assignment to review.
 #: experimental/coursebuilder/views/review_dashboard.html:76
 msgid "Review a new assignment"
-msgstr ""
+msgstr "صحیح کردن یک تکلیف جدید"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
@@ -647,11 +670,6 @@ msgid "Review your peers' assignments by clicking on the button below."
 msgstr "با کلیک کردن روی دکمه زیر، تکالیف همکلاسی‌های خود را بازبینی کنید."
 
 #. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:30
-msgid "Review peer assignments"
-msgstr "بازبینی تکالیف همکلاسی‌ها"
-
-#. Text for the button on the assignment submission confirmation page.
 #. Shown after the student has submitted an assessment. This button allows the
 #. student to navigate back to the main course page.
 #: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:35
@@ -659,40 +677,34 @@ msgstr "بازبینی تکالیف همکلاسی‌ها"
 msgid "Back to Course page"
 msgstr "بازگشت به صفحه دوره"
 
-#. Table header that states whether a student is currently enrolled in a
-#. course.
-#: experimental/coursebuilder/views/student_data_table.html:9
-msgid "Currently enrolled"
-msgstr "درحال‌حاضر نا‌م‌نویسی شده است"
-
 #. Table header that states when a student enrolled in a course.
-#: experimental/coursebuilder/views/student_data_table.html:15
+#: experimental/coursebuilder/views/student_data_table.html:9
 msgid "Date enrolled"
 msgstr "تاریخ نام‌نویسی"
 
 #. Table header for the student's email address. This is a noun.
-#: experimental/coursebuilder/views/student_data_table.html:21
+#: experimental/coursebuilder/views/student_data_table.html:15
 msgid "Email"
 msgstr "ایمیل"
 
 #. Table header for the student's name.
-#: experimental/coursebuilder/views/student_data_table.html:27
+#: experimental/coursebuilder/views/student_data_table.html:21
 msgid "Name"
 msgstr "نام"
 
 #. Table header for the student's assessment scores.
-#: experimental/coursebuilder/views/student_data_table.html:34
+#: experimental/coursebuilder/views/student_data_table.html:28
 msgid "Assessment scores"
 msgstr "نمرات ارزیابی"
 
 #. Shown in the student profile page, next to an assignment title, as the link
 #. text for a self- or peer-reviewed assignment.
-#: experimental/coursebuilder/views/student_data_table.html:49
+#: experimental/coursebuilder/views/student_data_table.html:43
 msgid "View assignment"
-msgstr ""
+msgstr "مشاهده تکلیف"
 
 #. Table header for the student's overall score.
-#: experimental/coursebuilder/views/student_data_table.html:62
+#: experimental/coursebuilder/views/student_data_table.html:56
 msgid "Overall course score"
 msgstr "نمره کلی دوره"
 
@@ -760,4 +772,7 @@ msgstr "بله"
 #: experimental/coursebuilder/views/unenroll_confirmation_check.html:25
 msgid "No"
 msgstr "خیر"
+
+#~ msgid "Currently enrolled"
+#~ msgstr "درحال‌حاضر نا‌م‌نویسی شده است"
 
