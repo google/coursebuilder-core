@@ -492,13 +492,6 @@ def make_zip_handler(zipfilename):
     class CustomZipHandler(zipserve.ZipHandler):
         """Custom ZipHandler that properly controls caching."""
 
-        def __init__(self):
-            # This variable represents the path after the namespace prefix is
-            # removed. The full path is still stored in self.request.path. For
-            # example, if self.request.path is '/new_course/foo/bar/baz/...',
-            # the path_translated would be '/foo/bar/baz/...'.
-            self.path_translated = None
-
         def get(self, *args):
             """Handles GET request."""
 
@@ -1055,9 +1048,14 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if handler_factory:
             handler = handler_factory()
             handler.app_context = context
-            handler.path_translated = path
             handler.request = self.request
             handler.response = self.response
+
+            # This variable represents the path after the namespace prefix is
+            # removed. The full path is still stored in self.request.path. For
+            # example, if self.request.path is '/new_course/foo/bar/baz/...',
+            # the path_translated would be '/foo/bar/baz/...'.
+            handler.path_translated = path
 
             debug('Handler: %s > %s' % (path, handler.__class__.__name__))
             DYNAMIC_HANDLER_COUNT.inc()
