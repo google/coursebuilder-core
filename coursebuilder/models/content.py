@@ -113,6 +113,8 @@ class AssessmentParser13(object):
         Word(nums) + Optional(Literal('.') + Word(nums))
     ).setParseAction(make_float)
 
+    integer = Word(nums).setParseAction(make_int)
+
     choice_decl = (
         string ^
         Combine(
@@ -147,6 +149,14 @@ class AssessmentParser13(object):
             Optional(
                 key('correctAnswerNumeric') + sep(':') +
                 float + Optional(sep(','))) +
+            Optional(
+                key('choiceScores') + sep(':') +
+                sep('[') +
+                Group(list_of(float)).setParseAction(make_list) +
+                sep(']') +
+                Optional(sep(','))) +
+            Optional(
+                key('weight') + sep(':') + integer + Optional(sep(','))) +
             Optional(
                 key('multiLine') + sep(':') +
                 boolean + Optional(sep(','))) +
@@ -508,6 +518,8 @@ def test_assessment():
     },
 
    {questionHTML: '<p>This is text.</p>',
+     choiceScores: [0, 0.5, 1.0],
+     weight: 3,
      choices: [correct("True"), "False", "I don't know"]
     },
 
@@ -603,7 +615,9 @@ def test_assessment_ast():
          ["A and B", "D and B", correct("A and C"), "C and D", "I don't know"]
     },
     {"questionHTML": '<p>This is text.</p>',
-     choices: [correct("True"), "False", "I don't know"]
+     choices: [correct("True"), "False", "I don't know"],
+     choiceScores: [0, 0.5, 1.0],
+     weight: 3
     },
     {questionHTML: '<p>This is text.</p>',
      correctAnswerString: 'sunrise'
