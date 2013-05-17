@@ -10,7 +10,7 @@
   </div>
   <div class="gcb-col-7 gcb-aside gcb-button-box">
 
-    <p class="top_content">
+    <p class="gcb-top-content">
       {# I18N: Shown after the student has submitted an assessment. #}
       {{ gettext('Thank you for taking the %(assessment_name)s. Your score for this assessment
       is %(score)s%%. If you wish, you may return to the assessment and take it again.' % {'assessment_name': assessment_name|lower, 'score': score}) }}
@@ -20,7 +20,7 @@
 
     {% if 'assessment_confirmations' in course_info and is_last_assessment and overall_score != None and result %}
       <!-- Displays result-specific text for the final assessment. -->
-      <p class="top_content">
+      <p class="gcb-top-content">
         {{course_info.assessment_confirmations['result_text'][result] % overall_score}}
       </p>
     {% endif %}

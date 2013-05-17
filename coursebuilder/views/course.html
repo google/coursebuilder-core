@@ -14,7 +14,7 @@
       </div>
       <div class="gcb-col-9">
 
-        <h1 class="schedule-headers">
+        <h1 class="gcb-schedule-headers">
           {# I18N: This should be interpreted as a noun. It is the title for the course schedule on the main contents page. #}
           {{ gettext('Schedule') }}
         </h1>
@@ -24,18 +24,18 @@
               {% for unit in units %}
                 {% if unit.now_available or is_course_admin %}
                   {% if unit.type == 'A' %}
-                    <li><p class="top_content">
+                    <li><p class="gcb-top-content">
                       {% if progress[unit.unit_id] > 0 %}
                         <img src="assets/lib/completed.png"
                              alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                              title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                             class="progress"
+                             class="gcb-progress-circle"
                              id="progress-completed-{{unit.unit_id}}">
                       {% else %}
                         <img src="assets/lib/not_started.png"
                              alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                              title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                             class="progress"
+                             class="gcb-progress-circle"
                              id="progress-notstarted-{{unit.unit_id}}">
                       {% endif %}
                       <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
@@ -46,25 +46,25 @@
                         {% endif %}
                         </p></li>
                         <li>
-                          <p class="top_content">
-                            <span class="progress-empty"></span>
+                          <p class="gcb-top-content">
+                            <span class="gcb-progress-empty"></span>
                           {% if unit.review_progress == 2 %}
                             <img src="assets/lib/completed.png"
                                  alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                  title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                                 class="progress"
+                                 class="gcb-progress-circle"
                                  id="progress-completed-review-{{unit.unit_id}}">
                           {% elif unit.review_progress == 1 %}
                             <img src="assets/lib/in_progress.png"
                                  alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                  title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                                 class="progress"
+                                 class="gcb-progress-circle"
                                  id="progress-inprogress-review-{{unit.unit_id}}">
                           {% else %}
                             <img src="assets/lib/not_started.png"
                                  alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                                  title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                                 class="progress"
+                                 class="gcb-progress-circle"
                                  id="progress-notstarted-review-{{unit.unit_id}}">
                           {% endif %}
 
@@ -87,29 +87,29 @@
                       {% endif %}
 
                   {% elif unit.type == 'U' %}
-                    <li><p class="top_content">
+                    <li><p class="gcb-top-content">
                       {% if is_progress_recorded %}
                         {% if progress[unit.unit_id] == 2 %}
                           <img src="assets/lib/completed.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                               class="progress"
+                               class="gcb-progress-circle"
                                id="progress-completed-{{unit.unit_id}}">
                         {% elif progress[unit.unit_id] == 1 %}
                           <img src="assets/lib/in_progress.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                               class="progress"
+                               class="gcb-progress-circle"
                                id="progress-inprogress-{{unit.unit_id}}">
                         {% else %}
                           <img src="assets/lib/not_started.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                               class="progress"
+                               class="gcb-progress-circle"
                                id="progress-notstarted-{{unit.unit_id}}">
                         {% endif %}
                       {% else %}
-                        <span class="progress-empty"></span>
+                        <span class="gcb-progress-empty"></span>
                       {% endif %}
 
                       <a href="unit?unit={{ unit.unit_id }}">
@@ -118,13 +118,13 @@
                       </a>
                   {% elif unit.type == 'O' %}
                     <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
+                      <p class="gcb-top-content">
+                        <span class="gcb-progress-empty"></span>
                         <a href="{{ unit.href }}"> {{ unit.title }} </a>
                   {% else %}
                     <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
+                      <p class="gcb-top-content">
+                        <span class="gcb-progress-empty"></span>
                         Error: unit type not recognized.
                   {% endif %}
                       {% if not unit.now_available and is_course_admin %}
@@ -135,23 +135,23 @@
                 {% else %}
                   {% if unit.type == 'A' or unit.type == 'O' %}
                     <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
+                      <p class="gcb-top-content">
+                        <span class="gcb-progress-empty"></span>
                         {{ unit.title }}
                       </p>
                     </li>
                   {% elif unit.type == 'U' %}
                     <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
+                      <p class="gcb-top-content">
+                        <span class="gcb-progress-empty"></span>
                         {# I18N: A row in the course schedule. #}
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
                       </p>
                     </li>
                   {% else %}
                     <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
+                      <p class="gcb-top-content">
+                        <span class="gcb-progress-empty"></span>
                         Error: unit type not recognized.
                       </p>
                     </li>

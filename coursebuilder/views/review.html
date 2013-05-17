@@ -78,14 +78,14 @@
 
     {% import 'readonly_assessment.html' as readonly_assessment %}
 
-    <div class="border-box">
+    <div class="gcb-border-box">
       {{ readonly_assessment.display(readonly_student_assessment) }}
     </div>
 
     {% if readonly_review_form is defined %}
       {# I18N: Header text for a review the student has previously submitted. #}
       <h3>{{ gettext('Submitted review') }}</h3>
-      <div class="border-box">
+      <div class="gcb-border-box">
         {{ readonly_assessment.display(readonly_review_form) }}
       </div>
     {% else %}

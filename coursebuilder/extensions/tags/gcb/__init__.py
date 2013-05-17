@@ -132,7 +132,7 @@ class YouTube(tags.BaseTag):
             'https://www.youtube.com/embed/%s'
             '?feature=player_embedded&amp;rel=0') % video_id
         iframe = cElementTree.XML("""
-<p class="video-container">
+<p class="gcb-video-container">
   <iframe class="youtube-player" title="YouTube Video Player"
     type="text/html" width="650" height="400" frameborder="0"
     allowfullscreen="allowfullscreen">

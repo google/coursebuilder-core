@@ -466,7 +466,7 @@ class AdminHandler(
         content = safe_dom.NodeList()
         content.append(
             safe_dom.Element(
-                'a', id='add_course', className='gcb-button pull-right',
+                'a', id='add_course', className='gcb-button gcb-pull-right',
                 role='button', href='admin?action=add_course'
             ).add_text('Add Course')
         ).append(

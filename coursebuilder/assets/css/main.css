@@ -25,18 +25,15 @@
 /* Wide-ranging styles. */
 
 html {
-  line-height: 1.54;
   background: #fff;
   color: #444;
+  font-size: 13px;
+  line-height: 1.54;
   padding: 0 15px;
 }
 
 html, input, textarea {
   font-family: arial,sans-serif;
-}
-
-html, h4, h5, h6 {
-  font-size: 13px;
 }
 
 body, table, fieldset {
@@ -67,12 +64,6 @@ a:focus, a:hover, a:active {
 
 form label, form p, form input, form textarea, form select {
   margin: 0 0 5px;
-}
-
-form label.form-label {
-  display: block;
-  font-weight: bold;
-  padding: 0;
 }
 
 th, td {
@@ -288,7 +279,7 @@ th, td {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.54;
-  padding: 8px 12px;
+  padding: 4px 7px;
   text-align: center;
   text-shadow: 0 1px rgba(0,0,0,.1);
   -moz-transition: all .218s ease-in;
@@ -337,12 +328,7 @@ button.gcb-button::-moz-focus-inner {
   box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
 }
 
-button.gcb-button-action {
-  float: right;
-  margin-left: 8px;
-}
-
-a.gcb-button-action {
+a.gcb-button-action, button.gcb-button-action {
   float: right;
   margin-left: 8px;
 }
@@ -353,6 +339,7 @@ a.gcb-button-action {
   background-image: -moz-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
   background-image: -ms-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
   background-image: -webkit-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
+  margin: 0 -15px;
   padding: 0 15px;
 }
 
@@ -364,7 +351,7 @@ a.gcb-button-action {
 }
 
 #gcb-nav-x.gcb-complex ul {
-  height: 82px;
+  height: 50px;
 }
 
 #gcb-nav-x li, #gcb-nav-x li a {
@@ -462,249 +449,76 @@ a.gcb-button-action {
   margin: 0 1.4880952381% 20px;
 }
 
-#gcb-header, #gcb-nav-x, #gcb-footer {
-  margin: 0 -15px;
-}
-
 /*
   Core style modifications.
 */
 
-.gcb-button {
-  padding: 4px 7px;
-}
-
-.next-button a {
+/* Styles for next and previous navigation buttons at the bottom of lesson pages. */
+.gcb-next-button a, .gcb-prev-button a {
   float: left;
   height: 24px;
   line-height: 24px;
   position: relative;
   color: #444;
-  margin: 0px;
-  padding: 10px 10px 10px 20px;
   text-decoration: none;
 }
+.gcb-next-button a {
+  padding: 10px 10px 10px 20px;
+}
+.gcb-prev-button a {
+  padding: 10px 20px 10px 10px;
+}
 
-.next-button a:after {
+.gcb-next-button a:after, .gcb-prev-button a:after {
   content: "";
   top: 0;
-  right: -44px;
   border-width: 22px 22px 22px 22px;
-  border-color: transparent transparent transparent #f0f0f0;
   border-style: solid;
   position: absolute;
   width: 0px;
   height: 0px;
 }
+.gcb-next-button a:after {
+  border-color: transparent transparent transparent #f0f0f0;
+  right: -44px;
+}
+.gcb-prev-button a:after {
+  border-color: transparent #f0f0f0 transparent transparent;
+  left: -44px;
+}
 
-.next-button {
-  padding: 8px 12px;
-  font-size: 20px;
-  margin: 5px 0px;
-  padding: 0;
-  position: relative;
+.gcb-next-button, .gcb-prev-button {
   background-color: #f0f0f0;
-  font-family: "open sans", arial, sans-serif;
   background-position: left bottom;
   background-repeat: repeat-x;
+  -moz-box-shadow: 0 1px 1px rgba(0,0,0,.2);
+  -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.2);
+  box-shadow: 0 1px 1px rgba(0,0,0,.2);
+  display: inline-block;
+  font-family: "open sans", arial, sans-serif;
+  font-size: 20px;
+  position: relative;
+  -moz-transition: all .218s ease-in;
+  -webkit-transition: all .218s ease-in;
+  transition: all .218s ease-in;
+}
+.gcb-next-button {
   -moz-border-radius: 10px 0px 0px 10px;
   -webkit-border-radius: 10px 0px 0px 10px;
   border-radius: 10px 0px 0px 10px;
-  -moz-box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  display: inline-block;
-  -moz-transition: all .218s ease-in;
-  -webkit-transition: all .218s ease-in;
-  transition: all .218s ease-in;
+  float: right;
+  margin: 5px 40px 5px 0;
 }
-
-.prev-button a {
-  float: left;
-  height: 24px;
-  line-height: 24px;
-  position: relative;
-  color: #444;
-  margin: 0px;
-  padding: 10px 20px 10px 10px;
-  text-decoration: none;
-}
-
-.prev-button a:after {
-  content: "";
-  top: 0;
-  left: -44px;
-  border-width: 22px 22px 22px 22px;
-  border-color: transparent #f0f0f0 transparent transparent;
-  border-style: solid;
-  position: absolute;
-  width: 0px;
-  height: 0px;
-}
-
-.prev-button {
-  font-size: 20px;
-  padding: 0;
-  position: relative;
-  background-color: #f0f0f0;
-  font-family: "open sans", arial, sans-serif;
-  background-position: left bottom;
-  background-repeat: repeat-x;
+.gcb-prev-button {
   -moz-border-radius: 0px 10px 10px 0px;
   -webkit-border-radius: 0px 10px 10px 0px;
   border-radius: 0px 10px 10px 0px;
-  -moz-box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  display:inline-block;
-  -moz-transition: all .218s ease-in;
-  -webkit-transition: all .218s ease-in;
-  transition: all .218s ease-in;
-}
-
-.gcb-col-55 {
-  width: 40%;
   float: left;
-  margin: 0 1.4880952381% 20px;
+  margin: 5px 0 5px 40px;
 }
 
-.product-headers-large {
-  font-size: 25px;
-  color: #dd4b39;
-  font-weight: normal;
-  margin: 10px 7px;
-  font-family: "open sans",arial,sans-serif;
-}
-
-.product-headers, .bio-headers {
-  font-size: 16px;
-  margin: .4em 0 0;
-  font-weight: normal;
-  margin: 10px 7px;
-  font-family: "open sans",arial,sans-serif;
-}
-
-.bio-headers {
-  float: right;
-}
-
-.schedule-headers {
-  font-size: 20px;
-  font-weight: normal;
-  margin: 10px 7px;
-}
-
-p.top_content {
-  margin: 0px 20px;
-  font-size: 16px;
-  font-weight: 200;
-  line-height: 20px;
-}
-
-.pull-right {
-  float: right;
-}
-
-#gcb-nav-x .pull-right {
-  float: right;
-}
-
-#gcb-nav-x.gcb-complex ul {
-  height: 50px;
-}
-
-h1.class_header {
-  margin: 0;
-  padding-bottom: 10px;
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: -1px;
-  border-bottom:2px dotted #e0e0e0;
-}
-
-h1.lesson_title {
-  font-size: 23px;
-  text-align: left;
-  margin: 0px;
-}
-
-div.lesson_objective {
-  margin-left: 10px;
-  text-align: left;
-}
-
-.video-container {
-  position: relative;
-  padding-bottom: 56.25%;
-  padding-top: 30px;
-  height: 0;
-  overflow: hidden;
-}
-
-.video-container iframe,
-.video-container object,
-.video-container embed {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-table {
-  margin-bottom: 20px;
-}
-
-tbody tr td {
-  vertical-align: middle;
-  width: 18%;
-}
-
-tbody tr td:first-child {
-  width: 10%;
-}
-
-tbody ul {
-  margin: 0;
-}
-
-tbody li {
-  margin: 0 0 10px 10px;
-}
-
-.gcb-cols h2:first-of-type,.gcb-cols h3:first-of-type {
-  margin-top: 0;
-}
-
-img.progress {
-  margin: 2px 7px 0 0;
-  opacity: 0.7;
-}
-
-span.progress-empty {
-  display: inline-block;
-  height: 14px;
-  margin: 2px 7px 0 0;
-  width: 15px;
-}
-
-.grayed {
-  color: gray;
-  font-weight: normal;
-}
-
-.grayed-active {
-  font-weight: bold;
-}
-
-.border-box {
-  border: 1px solid black;
-  margin: 20px;
-  padding: 10px;
-}
-
-/* Styling for the course title shown at the top of all student-facing pages. */
-.title-header {
+/* Styles for the course title shown at the top of all student-facing pages. */
+.gcb-title-header {
   border: solid #babcc0;
   border-width: 0 0 0 1px;
   float: left;
@@ -718,8 +532,8 @@ span.progress-empty {
   white-space: nowrap;
 }
 
-/* Styling for the course logo at the top-left of all student-facing pages. */
-.course-image {
+/* Styles for the course logo at the top-left of all student-facing pages. */
+.gcb-course-image {
   float: left;
   font-size: 27px;
   font-weight: 300;
@@ -728,4 +542,127 @@ span.progress-empty {
   padding: 0 12px 0 0;
   text-shadow: 0 1px 1px #fff;
   white-space: nowrap;
+}
+
+/* Styles for course summary headers. */
+.gcb-product-headers-large {
+  color: #dd4b39;
+  font-family: "open sans",arial,sans-serif;
+  font-size: 25px;
+  font-weight: normal;
+  margin: 10px 7px;
+}
+.gcb-product-headers, .gcb-bio-headers {
+  font-family: "open sans",arial,sans-serif;
+  font-size: 16px;
+  font-weight: normal;
+  margin: .4em 0 0;
+  margin: 10px 7px;
+}
+.gcb-bio-headers {
+  float: right;
+}
+
+/* Style for the course schedule header. */
+.gcb-schedule-headers {
+  font-size: 20px;
+  font-weight: normal;
+  margin: 10px 7px;
+}
+
+/*
+  Styles for textual content (mostly in the course schedule and various
+  confirmation pages).
+*/
+.gcb-top-content {
+  margin: 0px 20px;
+  font-size: 16px;
+  font-weight: 200;
+  line-height: 20px;
+}
+
+/* Styles for elements on a unit/lesson page. */
+.gcb-unit-header {
+  border-bottom:2px dotted #e0e0e0;
+  font-size: 30px;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin: 0;
+  padding-bottom: 10px;
+}
+
+.gcb-lesson-title {
+  font-size: 23px;
+  margin: 0px;
+  text-align: left;
+}
+
+.gcb-lesson-content {
+  margin-left: 10px;
+  text-align: left;
+}
+
+.gcb-video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  padding-top: 30px;
+  height: 0;
+  overflow: hidden;
+}
+.gcb-video-container iframe, .gcb-video-container object, .gcb-video-container embed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Styles for the student data table on the student profile page. */
+.gcb-student-data-table tbody tr td {
+  border-collapse: collapse;
+  vertical-align: middle;
+  width: 18%;
+}
+
+/* Styles for the circular progress indicators. */
+.gcb-progress-circle {
+  margin: 2px 7px 0 0;
+  opacity: 0.7;
+}
+.gcb-progress-empty {
+  display: inline-block;
+  height: 14px;
+  margin: 2px 7px 0 0;
+  width: 15px;
+}
+
+/* Styles for grayed-out text (e.g. to indicate private lessons/units). */
+.gcb-grayed {
+  color: gray;
+  font-weight: normal;
+}
+.gcb-grayed-active {
+  font-weight: bold;
+}
+
+/* A box that surrounds read-only assessments. */
+.gcb-border-box {
+  border: 1px solid black;
+  margin: 20px;
+  padding: 10px;
+}
+
+/* Styles for floating elements to the right. */
+.gcb-pull-right {
+  float: right;
+}
+#gcb-nav-x .gcb-pull-right {
+  float: right;
+}
+
+/* Registration page form. */
+.gcb-reg-form-label {
+  display: block;
+  font-weight: bold;
+  padding: 0;
 }

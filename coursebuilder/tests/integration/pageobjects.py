@@ -122,7 +122,7 @@ class RegisterPage(PageObject):
     def verify_enrollment(self):
         self._tester.assertTrue(
             'Thank you for registering' in self.find_element_by_css_selector(
-                'p.top_content').text)
+                '.gcb-top-content').text)
         return self
 
     def click_course(self):

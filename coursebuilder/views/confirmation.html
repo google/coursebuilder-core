@@ -11,13 +11,13 @@
 
     <div class="gcb-col-7 gcb-aside gcb-button-box">
       {% if course_status == "full" %}
-        <p class="top_content">
+        <p class="gcb-top-content">
           {# I18N: Message shown to the student immediately after registration. #}
           {{ gettext('Thank you for registering for %(course_title)s. Unfortunately, the course is now full, so registration has closed.', course_title=course_info.course.title) }}
         </p>
 
       {% else %}
-        <p class="top_content">
+        <p class="gcb-top-content">
           {# I18N: Message shown to the student immediately after registration. #}
           {{ gettext('Thank you for registering for %(course_title)s. Stay tuned for more information about the course which will start on %(start_date)s.', course_title=course_info.course.title, start_date=course_info.course.start_date) }}
         </p>

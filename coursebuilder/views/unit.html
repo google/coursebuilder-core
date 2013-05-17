@@ -31,7 +31,7 @@
     {% endif %}
   </ul>
   <div>
-    <h1 class="class_header">
+    <h1 class="gcb-unit-header">
       {# I18N: Header text for a unit page. #}
       {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
     </h1>
@@ -58,7 +58,7 @@
           {% if lesson.now_available or is_course_admin %}
             <div class="gcb-cols">
               <div class="gcb-col-7">
-                <h1 class="lesson_title">
+                <h1 class="gcb-lesson-title">
                   {{ lesson.title }}
                   {% if not lesson.now_available and is_course_admin %}
                     <span id="lesson-title-private">
@@ -68,7 +68,7 @@
                 </h1>
 
                 {% if objectives %}
-                  <div class="lesson_objective">
+                  <div class="gcb-lesson-content">
                     {{ objectives | gcb_tags}}
                   </div>
                 {% endif %}
@@ -86,7 +86,7 @@
               </div>
             </div><!-- /gcb-cols -->
             {% if lesson.video %}
-              <p class="video-container">
+              <p class="gcb-video-container">
                 {# I18N: Alt text for an embedded YouTube video player. #}
                 <iframe class="youtube-player" title="{{ gettext('YouTube Video Player') }}"
                         type="text/html" width="650" height="400" frameborder="0" allowfullscreen
@@ -97,7 +97,7 @@
 
           {% else %}
 
-            <h1 class="lesson_title">
+            <h1 class="gcb-lesson-title">
               {{ lesson.title }}
             </h1>
 
@@ -112,13 +112,13 @@
         </div><!-- /gcb-aside -->
 
         <div class="gcb-button-box">
-          <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+          <div class="gcb-prev-button">
             {% if back_button_url %}
               {# I18N: Text on the navigation button at the end of a lesson page. #}
               <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
             {% endif %}
           </div>
-          <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+          <div class="gcb-next-button">
             {% if next_button_url %}
               {# I18N: Text on the navigation button at the end of a lesson page. #}
               <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>

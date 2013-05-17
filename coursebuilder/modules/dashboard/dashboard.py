@@ -479,7 +479,7 @@ class DashboardHandler(
         if filer.is_editable_fs(self.app_context) and upload:
             output.append(
                 safe_dom.Element(
-                    'a', className='gcb-button pull-right',
+                    'a', className='gcb-button gcb-pull-right',
                     href='dashboard?%s' % urllib.urlencode(
                         {'action': 'add_asset', 'base': subfolder})
                 ).add_text('Upload')

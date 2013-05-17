@@ -43,7 +43,7 @@
     <li>{# I18N: Navigation breadcrumb. #} {{ gettext('Activity') }}</li>
   </ul>
   <div>
-    <h1 class="class_header">
+    <h1 class="gcb-unit-header">
       {# I18N: Header text for a unit page. #}
       {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
     </h1>
@@ -75,7 +75,7 @@
 
               <div class="gcb-cols">
                 <div class="gcb-col-7">
-                  <h1 class="lesson_title">
+                  <h1 class="gcb-lesson-title">
                     {{ lesson.activity_title }}
                     {% if not lesson.now_available and is_course_admin %}
                       <span id="lesson-title-private">
@@ -99,7 +99,7 @@
 
             {% else %}
 
-              <h1 class="lesson_title">
+              <h1 class="gcb-lesson-title">
                 {{ lesson.title }}
               </h1>
 
@@ -115,13 +115,13 @@
           </div><!-- /gcb-aside -->
 
           <div class="gcb-button-box">
-            <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+            <div class="gcb-prev-button">
               {% if back_button_url %}
                 {# I18N: Text on the navigation button at the end of a lesson page. #}
                 <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
               {% endif %}
             </div>
-            <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+            <div class="gcb-next-button">
               {% if next_button_url %}
                 {# I18N: Text on the navigation button at the end of a lesson page. #}
                 <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>

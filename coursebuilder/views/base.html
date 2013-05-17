@@ -127,13 +127,13 @@
     <!-- logo bar -->
     <div id="gcb-header" role="banner">
       <div class="gcb-aux">
-        <p class="course-image">
+        <p class="gcb-course-image">
           <a href="{{course_info.institution.url}}">
             <img src="{{course_info.institution.logo.url}}"
                  alt="{{course_info.institution.logo.alt_text}}">
           </a>
         </p>
-        <p class="title-header">
+        <p class="gcb-title-header">
           <a href="/">{{course_info.base.nav_header}}</a>
         </p>
         {% if course_info.base.show_gplus_button %}
@@ -143,7 +143,7 @@
         {% endif %}
 
         {% if logoutUrl %}
-        <div class="pull-right" style="font-size: larger;">
+        <div class="gcb-pull-right" style="font-size: larger;">
           {{ email }}
           &nbsp;|&nbsp;
           <a href="{{ logoutUrl }}" style="text-decoration: underline;">
@@ -152,7 +152,7 @@
           </a>
         </div>
         {% elif loginUrl %}
-        <div class="pull-right" style="font-size: larger;">
+        <div class="gcb-pull-right" style="font-size: larger;">
           {# I18N: Navbar text. #}
           <a href="{{ loginUrl }}">{{ gettext('Login') }}</a>
         </div>
@@ -186,12 +186,12 @@
           </li>
           {{course_info.base.before_navbar_ends | safe}}
           {% if is_super_admin %}
-          <li class="pull-right">
+          <li class="gcb-pull-right">
             <a href="/admin">Admin</a>
           </li>
           {% endif %}
           {% if is_course_admin %}
-          <li class="pull-right">
+          <li class="gcb-pull-right">
             <a href="dashboard">Dashboard</a>
           </li>
           {% endif %}

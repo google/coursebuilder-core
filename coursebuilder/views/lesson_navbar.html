@@ -17,7 +17,7 @@
         {% endif %}
 
         {% if not lesson.now_available and is_course_admin %}
-          <span class="grayed">
+          <span class="gcb-grayed">
             (Private)
           </span>
         {% endif %}
@@ -34,23 +34,23 @@
                     <img src="assets/lib/completed.png"
                          alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                          title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                         class="progress"
+                         class="gcb-progress-circle"
                          id="progress-completed-{{lesson.lesson_id}}">
                   {% elif progress[lesson.lesson_id] == 1 %}
                     <img src="assets/lib/in_progress.png"
                          alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                          title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                         class="progress"
+                         class="gcb-progress-circle"
                          id="progress-inprogress-{{lesson.lesson_id}}">
                   {% else %}
                     <img src="assets/lib/not_started.png"
                          alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
                          title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                         class="progress"
+                         class="gcb-progress-circle"
                          id="progress-notstarted-{{lesson.lesson_id}}">
                   {% endif %}
                 {% else %}
-                  <span class="progress-empty"></span>
+                  <span class="gcb-progress-empty"></span>
                 {% endif %}
 
                 {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
@@ -71,9 +71,9 @@
       {% else %}
         <li>
           {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
-            <span class="grayed-active">
+            <span class="gcb-grayed-active">
           {% else %}
-            <span class="grayed">
+            <span class="gcb-grayed">
           {% endif %}
 
             {{ unit.index}}.{{ lesson.index }} {{ lesson.title }}
@@ -82,11 +82,11 @@
           {% if lesson.activity %}
             <ul>
               <li>
-                <span class="progress-empty"></span>
+                <span class="gcb-progress-empty"></span>
                 {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-                  <span class="grayed-active">
+                  <span class="gcb-grayed-active">
                 {% else %}
-                  <span class="grayed">
+                  <span class="gcb-grayed">
                 {% endif %}
 
                   {# I18N: Menu item. #}

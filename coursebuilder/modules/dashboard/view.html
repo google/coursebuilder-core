@@ -124,7 +124,7 @@
           text-decoration: none;
           border: none;
         }
-        .pull-right {
+        .gcb-pull-right {
           float: right;
         }
         #gcb-section pre {
@@ -164,12 +164,12 @@
       <div id='gcb-section'>
         {% for action in section.actions %}
           {% if action.href %}
-          <a id='{{ action.id }}' class="gcb-button pull-right" role="button"
+          <a id='{{ action.id }}' class="gcb-button gcb-pull-right" role="button"
               href="{{ action.href }}" >{{ action.caption }}</a>
           {% else %}
           <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
             <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
-            <button class="gcb-button pull-right" type="submit">{{ action.caption }}</button>
+            <button class="gcb-button gcb-pull-right" type="submit">{{ action.caption }}</button>
           </form>
           {% endif %}
         {% endfor %}

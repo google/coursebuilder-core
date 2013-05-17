@@ -70,7 +70,7 @@
       {# I18N: Header text for a previously-submitted assignment. #}
       <h3>{{ gettext('Submitted assignment') }}</h3>
 
-      <div class="border-box">
+      <div class="gcb-border-box">
         {{ readonly_assessment.display(readonly_student_assessment) }}
       </div>
 
@@ -99,7 +99,7 @@
       {% else %}
         {% for review in reviews_received %}
           <h4>Review {{ loop.index }}</h4>
-          <div class="border-box">
+          <div class="gcb-border-box">
             {{ readonly_assessment.display(review) }}
           </div>
         {% endfor %}

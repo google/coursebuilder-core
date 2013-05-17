@@ -173,7 +173,7 @@ function onPageLoad(env) {
    */
   YUI.add("gcb-rte",
     function(Y) {
-      Y.extend(GcbRteField, Y.inputEx.Field, 
+      Y.extend(GcbRteField, Y.inputEx.Field,
           getGcbRteDefs(env, Y.DOM, Y.YUI2.widget.SimpleEditor));
       Y.inputEx.registerType("html", GcbRteField, []);
     },
@@ -428,9 +428,9 @@ TopLevelEditorControls.prototype = {
     var that = this;
     if (cb_global.delete_url != '') {
       return {type: 'link', value: 'Delete',
-        className: 'inputEx-Button inputEx-Button-Link pull-right',
+        className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
         onClick:function(e) {
-            if (confirm("Are you sure you want to delete this " + 
+            if (confirm("Are you sure you want to delete this " +
                 cb_global.type_label + "?")) {
               if (cb_global.delete_method == 'delete') {
                 // async delete
