@@ -439,7 +439,10 @@ def _download_course(context, course, archive_path, course_url_prefix):
     for external_path in datastore_files:
         internal_path = _Archive.get_internal_path(external_path)
         stream = _get_stream(context, external_path)
-        entity = _ManifestEntity(internal_path, stream.metadata.is_draft)
+        is_draft = False
+        if stream.metadata and hasattr(stream.metadata, 'is_draft'):
+            is_draft = stream.metadata.is_draft
+        entity = _ManifestEntity(internal_path, is_draft)
         archive.add(internal_path, stream.read())
         manifest.add(entity)
     _LOG.info('Adding files from filesystem')
