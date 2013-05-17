@@ -133,7 +133,7 @@
                       </p>
                     </li>
                 {% else %}
-                  {% if unit.type == 'A' %}
+                  {% if unit.type == 'A' or unit.type == 'O' %}
                     <li>
                       <p class="top_content">
                         <span class="progress-empty"></span>
@@ -146,16 +146,6 @@
                         <span class="progress-empty"></span>
                         {# I18N: A row in the course schedule. #}
                         {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
-                        <span style="padding-left: 20px; font-size: 12px; color: #5e94ff;">
-                          {{ unit.release_date }}
-                        </span>
-                      </p>
-                    </li>
-                  {% elif unit.type == 'O' %}
-                    <li>
-                      <p class="top_content">
-                        <span class="progress-empty"></span>
-                        {{ unit.title }}
                       </p>
                     </li>
                   {% else %}
