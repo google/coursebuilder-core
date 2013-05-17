@@ -25,7 +25,7 @@ from models.property import Registry
 class SchemaField(Property):
     """SchemaField defines a simple field in REST API."""
 
-    def get_json_schema(self):
+    def get_json_schema_dict(self):
         """Get the JSCON schema for this field."""
         prop = {}
         prop['type'] = self._property_type
@@ -35,7 +35,7 @@ class SchemaField(Property):
             prop['description'] = self._description
         return prop
 
-    def get_schema_dict_entry(self):
+    def _get_schema_dict(self, prefix_key):
         """Get Schema annotation dictionary for this field."""
         if self._extra_schema_dict_values:
             schema = self._extra_schema_dict_values
@@ -54,7 +54,8 @@ class SchemaField(Property):
 
         if self._description:
             schema['description'] = self._description
-        return schema
+
+        return [(prefix_key + ['_inputex'], schema)]
 
 
 class FieldArray(SchemaField):
@@ -69,13 +70,17 @@ class FieldArray(SchemaField):
             extra_schema_dict_values=extra_schema_dict_values)
         self._item_type = item_type
 
-    def get_json_schema(self):
-        json_schema = super(FieldArray, self).get_json_schema()
-        if isinstance(self._item_type, SchemaField):
-            json_schema['items'] = self._item_type.get_json_schema()
-        elif isinstance(self._item_type, FieldRegistry):
-            json_schema['items'] = self._item_type.get_json_schema_dict()
+    def get_json_schema_dict(self):
+        json_schema = super(FieldArray, self).get_json_schema_dict()
+        json_schema['items'] = self._item_type.get_json_schema_dict()
         return json_schema
+
+    def _get_schema_dict(self, prefix_key):
+        dict_list = super(FieldArray, self)._get_schema_dict(prefix_key)
+        # pylint: disable-msg=protected-access
+        dict_list += self._item_type._get_schema_dict(prefix_key + ['items'])
+        # pylint: enable-msg=protected-access
+        return dict_list
 
 
 class FieldRegistry(Registry):
@@ -94,7 +99,7 @@ class FieldRegistry(Registry):
         schema_dict['properties'] = collections.OrderedDict()
         for schema_field in self._properties:
             schema_dict['properties'][schema_field.name] = (
-                schema_field.get_json_schema())
+                schema_field.get_json_schema_dict())
         for key in self._sub_registories.keys():
             schema_dict['properties'][key] = (
                 self._sub_registories[key].get_json_schema_dict())
@@ -118,12 +123,11 @@ class FieldRegistry(Registry):
         base_key = list(prefix_key)
         base_key.append('properties')
 
+        # pylint: disable-msg=protected-access
         for schema_field in self._properties:
-            field_key = list(base_key)
-            field_key.append(schema_field.name)
-            field_key.append('_inputex')
-            filed_tuple = field_key, schema_field.get_schema_dict_entry()
-            schema_dict.append(filed_tuple)
+            key = base_key + [schema_field.name]
+            schema_dict += schema_field._get_schema_dict(key)
+        # pylint: enable-msg=protected-access
 
         for key in self._sub_registories.keys():
             sub_registry_key_prefix = list(base_key)

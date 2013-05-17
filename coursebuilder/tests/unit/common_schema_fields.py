@@ -28,15 +28,15 @@ def remove_whitespace(s):
 class BaseFieldTests(unittest.TestCase):
     """Base class for the tests on a schema field."""
 
-    def assert_json_schema_value(self, expected, registry):
+    def assert_json_schema_value(self, expected, field):
         self.assertEquals(
             remove_whitespace(expected),
-            remove_whitespace(json.dumps(registry.get_json_schema())))
+            remove_whitespace(json.dumps(field.get_json_schema_dict())))
 
-    def assert_schema_dict_value(self, expected, registry):
+    def assert_schema_dict_value(self, expected, field):
         self.assertEquals(
             remove_whitespace(expected),
-            remove_whitespace(json.dumps(registry.get_schema_dict_entry())))
+            remove_whitespace(json.dumps(field._get_schema_dict([]))))
 
 
 class SchemaFieldTests(BaseFieldTests):
@@ -46,7 +46,7 @@ class SchemaFieldTests(BaseFieldTests):
         field = schema_fields.SchemaField('aName', 'aLabel', 'aType')
         expected = '{"type":"aType"}'
         self.assert_json_schema_value(expected, field)
-        expected = '{"label":"aLabel"}'
+        expected = '[[["_inputex"], {"label": "aLabel"}]]'
         self.assert_schema_dict_value(expected, field)
         self.assertEquals('aName', field.name)
 
@@ -54,7 +54,7 @@ class SchemaFieldTests(BaseFieldTests):
         field = schema_fields.SchemaField(
             'aName', 'aLabel', 'aType',
             extra_schema_dict_values={'a': 'A', 'b': 'B'})
-        expected = '{"a": "A", "b": "B", "label": "aLabel"}'
+        expected = '[[["_inputex"], {"a": "A", "b": "B", "label": "aLabel"}]]'
         self.assert_schema_dict_value(expected, field)
 
 
@@ -65,10 +65,19 @@ class FieldArrayTests(BaseFieldTests):
         array = schema_fields.FieldArray(
             'aName', 'aLabel',
             item_type=schema_fields.SchemaField(
-                'unusedName', 'unusedLabel', 'aType'))
-        expected = '{"items": {"type": "aType"}, "type": "array"}'
+                'unusedName', 'field_label', 'aType'))
+        expected = """
+{
+  "items": {"type": "aType"},
+  "type": "array"
+}"""
         self.assert_json_schema_value(expected, array)
-        expected = '{"label": "aLabel"}'
+        expected = """
+[
+  [["_inputex"],{"label":"aLabel"}],
+  [["items","_inputex"],{"label":"field_label"}]
+]
+"""
         self.assert_schema_dict_value(expected, array)
 
     def test_field_array_with_object_members(self):
@@ -90,31 +99,31 @@ class FieldArrayTests(BaseFieldTests):
   "type":"array"}
 """
         self.assert_json_schema_value(expected, field)
-        expected = '{"label": "aLabel"}'
+        expected = """
+[
+  [["_inputex"],{"label":"aLabel"}],
+  [["items","title"],"object_title"],
+  [["items","properties","prop_name","_inputex"],{"label":"prop_label"}]
+]
+"""
         self.assert_schema_dict_value(expected, field)
 
     def test_extra_schema_dict(self):
         array = schema_fields.FieldArray(
             'aName', 'aLabel',
             item_type=schema_fields.SchemaField(
-                'unusedName', 'unusedLabel', 'aType'),
+                'unusedName', 'field_label', 'aType'),
             extra_schema_dict_values={'a': 'A', 'b': 'B'})
-        expected = '{"a": "A", "b": "B", "label": "aLabel"}'
+        expected = """
+[
+  [["_inputex"],{"a":"A","b":"B","label":"aLabel"}],
+  [["items","_inputex"],{"label":"field_label"}]]
+"""
         self.assert_schema_dict_value(expected, array)
 
 
-class FieldRegistryTests(unittest.TestCase):
+class FieldRegistryTests(BaseFieldTests):
     """Unit tests for common.schema_fields.FieldRegistry."""
-
-    def assert_json_schema_value(self, expected, registry):
-        self.assertEquals(
-            remove_whitespace(expected),
-            remove_whitespace(registry.get_json_schema()))
-
-    def assert_schema_dict_value(self, expected, registry):
-        self.assertEquals(
-            remove_whitespace(expected),
-            remove_whitespace(json.dumps(registry.get_schema_dict())))
 
     def test_single_property(self):
         reg = schema_fields.FieldRegistry(
@@ -217,3 +226,70 @@ class FieldRegistryTests(unittest.TestCase):
   [["_inputex"], {"a": "A", "b": "B"}]]
 """
         self.assert_schema_dict_value(expected, reg)
+
+    def test_mc_question_schema(self):
+        """The multiple choice question schema is a good end-to-end example."""
+        mc_question = schema_fields.FieldRegistry(
+            'MC Question',
+            extra_schema_dict_values={'className': 'mc-question'})
+
+        mc_question.add_property(
+            schema_fields.SchemaField('question', 'Question', 'string'))
+
+        choice_type = schema_fields.FieldRegistry(
+            'choice', extra_schema_dict_values={'className': 'mc-choice'})
+        choice_type.add_property(
+            schema_fields.SchemaField('text', 'Text', 'string'))
+        choice_type.add_property(
+            schema_fields.SchemaField('score', 'Score', 'string'))
+        choice_type.add_property(
+            schema_fields.SchemaField('feedback', 'Feedback', 'string'))
+
+        choices_array = schema_fields.FieldArray(
+            'choices', 'Choices', item_type=choice_type)
+
+        mc_question.add_property(choices_array)
+
+        expected = """
+{
+  "type":"object",
+  "id":"MCQuestion",
+  "properties":{
+    "question":{"type":"string"},
+    "choices":{
+      "items":{
+        "type":"object",
+        "id":"choice",
+        "properties":{
+          "text":{"type":"string"},
+          "score":{"type":"string"},
+          "feedback":{"type":"string"}
+        }
+      },
+      "type":"array"
+    }
+  }
+}
+"""
+        self.assert_json_schema_value(expected, mc_question)
+
+        expected = """
+[
+  [["title"],"MCQuestion"],
+  [["_inputex"],{"className":"mc-question"}],
+  [["properties","question","_inputex"],{"label":"Question"}],
+  [["properties","choices","_inputex"],{"label":"Choices"}],
+  [["properties","choices","items","title"],"choice"],
+  [["properties","choices","items","_inputex"],{"className":"mc-choice"}],
+  [["properties","choices","items","properties","text","_inputex"],{
+    "label":"Text"
+  }],
+  [["properties","choices","items","properties","score","_inputex"],{
+    "label":"Score"
+  }],
+  [["properties","choices","items","properties","feedback","_inputex"],{
+    "label":"Feedback"
+  }]
+ ]
+"""
+        self.assert_schema_dict_value(expected, mc_question)
