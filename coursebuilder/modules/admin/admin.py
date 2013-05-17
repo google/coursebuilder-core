@@ -254,6 +254,26 @@ class AdminHandler(
             perf_counters, 'In-process Performance Counters (local/global)')
         self.render_page(template_values)
 
+    def _make_routes_dom(self, parent_element, routes, caption):
+        """Renders routes as DOM."""
+        if routes:
+            # sort routes
+            all_routes = []
+            for route in routes:
+                if route:
+                    all_routes.append(str(route))
+
+            # render as DOM
+            ul = safe_dom.Element('ul')
+            parent_element.add_child(ul)
+
+            ul.add_child(safe_dom.Element('li').add_text(caption))
+            ul2 = safe_dom.Element('ul')
+            ul.add_child(ul2)
+            for route in sorted(all_routes):
+                if route:
+                    ul2.add_child(safe_dom.Element('li').add_text(route))
+
     def get_deployment(self):
         """Shows server environment and deployment information page."""
         template_values = {}
@@ -270,8 +290,15 @@ class AdminHandler(
             enabled_text = ''
             if name not in custom_modules.Registry.enabled_module_names:
                 enabled_text = ' (disabled)'
-            ol.add_child(safe_dom.Element('li').add_text(
-                '%s%s' % (name, enabled_text)))
+
+            li = safe_dom.Element('li').add_text('%s%s' % (name, enabled_text))
+            ol.add_child(li)
+
+            amodule = custom_modules.Registry.registered_modules.get(name)
+            self._make_routes_dom(
+                li, amodule.global_routes, 'Global Routes')
+            self._make_routes_dom(
+                li, amodule.namespaced_routes, 'Namespaced Routes')
 
         # Custom tags.
         tag_content = safe_dom.NodeList()
