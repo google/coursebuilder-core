@@ -35,9 +35,12 @@ from google.appengine.ext.remote_api import remote_api_stub
 from google.appengine.tools import appengine_rpc
 from google.appengine.tools import remote_api_shell
 
-
+# String. Used to detect appspot.com servers.
+_APPSPOT_SERVER_SUFFIX = 'appspot.com'
 # String. Password used when a password is not necessary.
 _BOGUS_PASSWORD = 'bogus_password'
+# String. Infix for google.com application ids.
+_GOOGLE_APPLICATION_INFIX = 'google.com'
 # String. Prefix App Engine uses application ids in the dev appserver.
 _LOCAL_APPLICATION_ID_PREFIX = 'dev~'
 # String. Prefix used to detect if a server is running locally.
@@ -113,11 +116,17 @@ class Environment(object):
         prefix = _REMOTE_APPLICATION_ID_PREFIX
         if self._is_localhost():
             prefix = _LOCAL_APPLICATION_ID_PREFIX
+        elif not self._is_appspot():
+            prefix = '%s%s:' % (prefix, _GOOGLE_APPLICATION_INFIX)
         return prefix + self._application_id
 
     def _get_secure(self):
         """Returns boolean indicating whether or not to use https."""
         return not self._is_localhost()
+
+    def _is_appspot(self):
+        """Returns True iff server is appspot.com."""
+        return self._server.endswith(_APPSPOT_SERVER_SUFFIX)
 
     def _is_localhost(self):
         """Returns True if environment is dev_appserver and False otherwise."""
