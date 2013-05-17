@@ -23,7 +23,7 @@ from models.property import Registry
 
 
 class SchemaField(Property):
-    """SchemaField defines a solo field in REST API."""
+    """SchemaField defines a simple field in REST API."""
 
     def get_json_schema(self):
         """Get the JSCON schema for this field."""
@@ -58,8 +58,25 @@ class SchemaField(Property):
         return schema
 
 
+class FieldArray(SchemaField):
+    """FieldArray is an array with object or simple items in the REST API."""
+
+    def __init__(self, name, label, description=None, item_type=None):
+        super(FieldArray, self).__init__(
+            name, label, 'array', description=description)
+        self._item_type = item_type
+
+    def get_json_schema(self):
+        json_schema = super(FieldArray, self).get_json_schema()
+        if isinstance(self._item_type, SchemaField):
+            json_schema['items'] = self._item_type.get_json_schema()
+        elif isinstance(self._item_type, FieldRegistry):
+            json_schema['items'] = self._item_type.get_json_schema_dict()
+        return json_schema
+
+
 class FieldRegistry(Registry):
-    """FieldRegistry is a collection of SchemaField's for an API."""
+    """FieldRegistry is an object with SchemaField properties in REST API."""
 
     def add_sub_registry(
         self, name, title=None, description=None, registry=None):
