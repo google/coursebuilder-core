@@ -41,12 +41,13 @@ class Property(object):
 class Registry(object):
     """Registry is a collection of Property's."""
 
-    def __init__(self, title, description=None):
+    def __init__(self, title, description=None, extra_schema_dict_values=None):
         self._title = title
         self._registry = {'id': title, 'type': 'object'}
         self._description = description
         if description:
             self._registry['description'] = description
+        self._extra_schema_dict_values = extra_schema_dict_values
         self._properties = []
         self._sub_registories = collections.OrderedDict()
 

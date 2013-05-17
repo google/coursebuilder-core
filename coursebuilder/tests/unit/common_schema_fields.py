@@ -25,8 +25,8 @@ def remove_whitespace(s):
     return ''.join(s.split())
 
 
-class SchemaFieldTests(unittest.TestCase):
-    """Unit tests for common.schema_fields.SchemaField."""
+class BaseFieldTests(unittest.TestCase):
+    """Base class for the tests on a schema field."""
 
     def assert_json_schema_value(self, expected, registry):
         self.assertEquals(
@@ -38,13 +38,28 @@ class SchemaFieldTests(unittest.TestCase):
             remove_whitespace(expected),
             remove_whitespace(json.dumps(registry.get_schema_dict_entry())))
 
+
+class SchemaFieldTests(BaseFieldTests):
+    """Unit tests for common.schema_fields.SchemaField."""
+
     def test_simple_field(self):
         field = schema_fields.SchemaField('aName', 'aLabel', 'aType')
         expected = '{"type":"aType"}'
         self.assert_json_schema_value(expected, field)
-        expected = '{"_type":"aType","label":"aLabel"}'
+        expected = '{"label":"aLabel"}'
         self.assert_schema_dict_value(expected, field)
         self.assertEquals('aName', field.name)
+
+    def test_extra_schema_dict(self):
+        field = schema_fields.SchemaField(
+            'aName', 'aLabel', 'aType',
+            extra_schema_dict_values={'a': 'A', 'b': 'B'})
+        expected = '{"a": "A", "b": "B", "label": "aLabel"}'
+        self.assert_schema_dict_value(expected, field)
+
+
+class FieldArrayTests(BaseFieldTests):
+    """Unit tests for common.schema_fields.FieldArray."""
 
     def test_field_array_with_simple_members(self):
         array = schema_fields.FieldArray(
@@ -53,7 +68,7 @@ class SchemaFieldTests(unittest.TestCase):
                 'unusedName', 'unusedLabel', 'aType'))
         expected = '{"items": {"type": "aType"}, "type": "array"}'
         self.assert_json_schema_value(expected, array)
-        expected = '{"_type": "array", "label": "aLabel"}'
+        expected = '{"label": "aLabel"}'
         self.assert_schema_dict_value(expected, array)
 
     def test_field_array_with_object_members(self):
@@ -75,8 +90,17 @@ class SchemaFieldTests(unittest.TestCase):
   "type":"array"}
 """
         self.assert_json_schema_value(expected, field)
-        expected = '{"_type": "array", "label": "aLabel"}'
+        expected = '{"label": "aLabel"}'
         self.assert_schema_dict_value(expected, field)
+
+    def test_extra_schema_dict(self):
+        array = schema_fields.FieldArray(
+            'aName', 'aLabel',
+            item_type=schema_fields.SchemaField(
+                'unusedName', 'unusedLabel', 'aType'),
+            extra_schema_dict_values={'a': 'A', 'b': 'B'})
+        expected = '{"a": "A", "b": "B", "label": "aLabel"}'
+        self.assert_schema_dict_value(expected, array)
 
 
 class FieldRegistryTests(unittest.TestCase):
@@ -115,7 +139,6 @@ class FieldRegistryTests(unittest.TestCase):
 [
   [["title"], "registry_name"],
   [["properties","field_name","_inputex"], {
-    "_type": "property_type",
     "description": "property_description",
     "label":"field_label"
   }]
@@ -145,7 +168,6 @@ class FieldRegistryTests(unittest.TestCase):
 [
   [["title"],"registry_name"],
   [["properties","field_name","_inputex"],{
-    "_type":"select",
     "choices":[
       {"value": "a", "label": "A"},
       {"value": "b","label": "B"}],
@@ -184,3 +206,14 @@ class FieldRegistryTests(unittest.TestCase):
 }
 """
         self.assert_json_schema_value(expected, reg)
+
+    def test_extra_schema_dict(self):
+        reg = schema_fields.FieldRegistry(
+            'aName', 'aLabel',
+            extra_schema_dict_values={'a': 'A', 'b': 'B'})
+        expected = """
+[
+  [["title"], "aName"],
+  [["_inputex"], {"a": "A", "b": "B"}]]
+"""
+        self.assert_schema_dict_value(expected, reg)

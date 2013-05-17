@@ -42,7 +42,6 @@ class SchemaField(Property):
         else:
             schema = {}
         schema['label'] = self._label
-        schema['_type'] = self._property_type
 
         if 'date' is self._property_type:
             schema['dateFormat'] = 'Y/m/d'
@@ -61,9 +60,13 @@ class SchemaField(Property):
 class FieldArray(SchemaField):
     """FieldArray is an array with object or simple items in the REST API."""
 
-    def __init__(self, name, label, description=None, item_type=None):
+    def __init__(
+        self, name, label, description=None, item_type=None,
+        extra_schema_dict_values=None):
+
         super(FieldArray, self).__init__(
-            name, label, 'array', description=description)
+            name, label, 'array', description=description,
+            extra_schema_dict_values=extra_schema_dict_values)
         self._item_type = item_type
 
     def get_json_schema(self):
@@ -106,6 +109,11 @@ class FieldRegistry(Registry):
         title_key = list(prefix_key)
         title_key.append('title')
         schema_dict = [(title_key, self._title)]
+
+        if self._extra_schema_dict_values:
+            key = list(prefix_key)
+            key.append('_inputex')
+            schema_dict.append([key, self._extra_schema_dict_values])
 
         base_key = list(prefix_key)
         base_key.append('properties')
