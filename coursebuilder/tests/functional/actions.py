@@ -27,7 +27,7 @@ from controllers import sites
 from controllers import utils
 import main
 from models import config
-import suite
+from tests import suite
 from google.appengine.api import namespace_manager
 
 
