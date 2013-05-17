@@ -125,6 +125,9 @@ _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
 _INTERNAL_DATASTORE_KIND_REGEX = re.compile(r'^__.*__$')
 # Path prefix strings from local disk that will be included in the archive.
 _LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH_SUFFIX, 'assets', 'data'])
+# Path prefix strings that are subdirectories of the whitelist that we actually
+# want to exclude because they aren't userland code and will cause conflicts.
+_LOCAL_WHITELIST_EXCLUDES = frozenset(['assets/lib'])
 # logging.Logger. Module logger.
 _LOG = logging.getLogger('coursebuilder.tools.etl')
 logging.basicConfig()
@@ -488,7 +491,8 @@ def _filter_filesystem_files(files):
     """Filters out unnecessary files from a local filesystem.
 
     If we just read from disk, we'll pick up and archive lots of files that we
-    don't need to upload later.
+    don't need to upload later, plus non-userland code that on reupload will
+    shadow the system versions (views, assets/lib, etc.).
 
     Args:
         files: list of string. Absolute file paths.
@@ -496,9 +500,15 @@ def _filter_filesystem_files(files):
     Returns:
         List of string. Absolute filepaths we want to archive.
     """
-    return [
-        f for f in files if _remove_bundle_root(f).split('/')[0]
-        in _LOCAL_WHITELIST]
+    filtered_files = []
+    for path in files:
+        relative_name = _remove_bundle_root(path)
+        not_in_excludes = not any(
+            [relative_name.startswith(e) for e in _LOCAL_WHITELIST_EXCLUDES])
+        head_directory = relative_name.split('/')[0]
+        if not_in_excludes and head_directory in _LOCAL_WHITELIST:
+            filtered_files.append(path)
+    return filtered_files
 
 
 def _finalize_download(archive, manifest):
