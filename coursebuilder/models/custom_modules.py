@@ -72,6 +72,8 @@ class Registry(object):
         global_routes = []
         namespaced_routes = []
         for registered_module in cls.registered_modules.values():
-            global_routes += registered_module.global_routes
-            namespaced_routes += registered_module.namespaced_routes
+            if registered_module.enabled:
+                # Only populate the routing table with enabled modules.
+                global_routes += registered_module.global_routes
+                namespaced_routes += registered_module.namespaced_routes
         return global_routes, namespaced_routes
