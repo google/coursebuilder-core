@@ -114,7 +114,7 @@ function generateMultipleChoiceQuestion(params, domRoot, index) {
   });
 
   domRoot.append('<br>');
-  domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
+  domRoot.append('<p/><button class="gcb-button" ' +
       'id="submit_' + tag + '">' + trans.CHECK_ANSWER_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 50px;" readonly="true" ' +
@@ -262,7 +262,7 @@ function generateMultipleChoiceGroupQuestion(params, domRoot, index) {
   var toplevel_tag = getFreshTag();
 
   domRoot.append(
-      '<p/><button class="gcb-button gcb-button-primary" id="submit_' +
+      '<p/><button class="gcb-button" id="submit_' +
       toplevel_tag + '">' + trans.CHECK_ANSWERS_TEXT + '</button>');
   domRoot.append(
       '<p/><textarea style="width: 600px; height: 100px;" readonly="true" ' +
@@ -386,12 +386,12 @@ function generateFreetextQuestion(params, domRoot, index) {
       '&nbsp;&nbsp;<input type="text" style="width: 400px; ' +
       'class="alphanumericOnly" id="input_' + tag + '">');
   if (correctAnswerOutput && incorrectAnswerOutput) {
-    domRoot.append('<p/><button class="gcb-button gcb-button-primary" ' +
+    domRoot.append('<p/><button class="gcb-button" ' +
         'id="submit_' + tag + '">' + trans.CHECK_ANSWER_TEXT + '</button>');
   }
   if (showAnswerOutput) {
     domRoot.append(
-        '<p/><button class="gcb-button gcb-button-primary" ' +
+        '<p/><button class="gcb-button" ' +
         'id="skip_and_show_' + tag + '">' +
         showAnswerPrompt + '</button>');
   }
@@ -563,14 +563,14 @@ function renderAssessment(assessment, domRoot) {
 
   if (assessmentGlobals.isReviewForm) {
     domRoot.append(
-        '<br><button type="button" class="gcb-button gcb-button-primary" id="saveDraftBtn">' +
+        '<br><button type="button" class="gcb-button" id="saveDraftBtn">' +
         trans.SAVE_DRAFT_TEXT + '</button>&nbsp;&nbsp;' +
-        '<button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
+        '<button type="button" class="gcb-button" id="submitAnswersBtn">' +
         trans.SUBMIT_REVIEW_TEXT + '</button>');
   } else {
     if (assessment.checkAnswers) {
       domRoot.append(
-          '<button type="button" class="gcb-button gcb-button-primary" id="checkAnswersBtn">' +
+          '<button type="button" class="gcb-button" id="checkAnswersBtn">' +
           trans.CHECK_ANSWERS_TEXT + '</button><p/>');
       domRoot.append('<p/><textarea style="width: 600px; height: 120px;" ' +
           'readonly="true" id="answerOutput"></textarea>');
@@ -580,7 +580,7 @@ function renderAssessment(assessment, domRoot) {
       buttonText = trans.SUBMIT_ASSIGNMENT_TEXT;
     }
     domRoot.append(
-        '<br><button type="button" class="gcb-button gcb-button-primary" id="submitAnswersBtn">' +
+        '<br><button type="button" class="gcb-button" id="submitAnswersBtn">' +
         buttonText + '</button>');
   }
 

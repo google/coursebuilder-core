@@ -17,12 +17,12 @@
 */
 
 /*
-
   Core CSS stylesheet. This file is self-contained and has no external dependencies.
 
   @author: psimakov@google.com (Pavel Simakov)
-
 */
+
+/* Wide-ranging styles. */
 
 html {
   line-height: 1.54;
@@ -65,12 +65,6 @@ a:focus, a:hover, a:active {
   text-decoration: underline;
 }
 
-form ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 form label, form p, form input, form textarea, form select {
   margin: 0 0 5px;
 }
@@ -81,15 +75,13 @@ form label.form-label {
   padding: 0;
 }
 
-form li li label {
-  font-weight: normal;
-}
-
 th, td {
   border: 1px solid #ebebeb;
   padding: 4px 12px;
   vertical-align: top;
 }
+
+/* GCB-specific styles. */
 
 #gcb-nav-y {
   float: left;
@@ -136,31 +128,13 @@ th, td {
   margin-top: 0;
 }
 
-#gcb-main, .gcb-aux {
+#gcb-main {
+  /* This rule intentionally left blank. */
+}
+
+.gcb-aux {
   margin: auto;
   max-width: 978px;
-}
-
-#gcb-main {
-  clear: both;
-  margin-top: 30px;
-}
-
-#gcb-main:after {
-  clear: both;
-  content: " ";
-  display: block;
-  height: 0;
-  visibility: hidden;
-}
-
-#gcb-nav-x.gcb-aux {
-  position: relative;
-}
-
-#gcb-nav-root.gcb-aux {
-  height: 25px;
-  position: relative;
 }
 
 #gcb-header, #gcb-footer {
@@ -289,12 +263,6 @@ th, td {
   overflow: hidden;
 }
 
-.gcb-breadcrumb ol {
-  margin: 0 auto;
-  max-width: 978px;
-  padding: 0;
-}
-
 .gcb-breadcrumb li {
   float: left;
   height: 28px;
@@ -348,10 +316,6 @@ th, td {
   transition: all .218s ease-in;
 }
 
-.gcb-button-primary {
-
-}
-
 .gcb-button-large {
   width: 200px;
   height: 48px;
@@ -393,19 +357,6 @@ button.gcb-button::-moz-focus-inner {
   box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
 }
 
-.gcb-button[disabled] {
-  background: none;
-  background-image: -moz-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
-  background-image: -webkit-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
-  background-image: linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
-  border-color: #f3f3f3;
-  color: #b8b8b8;
-}
-
-form.gcb-button {
-  padding: 4px 12px;
-}
-
 button.gcb-button-action {
   float: right;
   margin-left: 8px;
@@ -425,14 +376,11 @@ a.gcb-button-action {
   padding: 0 15px;
 }
 
-#gcb-nav-x ul, #gcb-nav-x.gcb-aux {
-  position: relative;
-}
-
 #gcb-nav-x ul {
   height: 50px;
   list-style: none;
   margin: 0;
+  position: relative;
 }
 
 #gcb-nav-x.gcb-complex ul {
@@ -455,23 +403,10 @@ a.gcb-button-action {
 #gcb-nav-x li.active a {
   font-weight: bold;
 }
-#gcb-nav-x li.active a:hover {
-  test-decoration: none !important;
-}
 
 #gcb-nav-x li {
   margin: 0 15px 0 0;
   text-shadow: none;
-}
-
-#gcb-nav-x.gcb-button {
-  float: right;
-  margin: 8px 0 0;
-  padding: 4px 12px;
-  position: absolute;
-  right: 0;
-  top: 0;
-  z-index: 1;
 }
 
 .gcb-cols {
@@ -552,9 +487,7 @@ a.gcb-button-action {
 }
 
 /*
-
   Core style modifications.
-
 */
 
 .gcb-button {
@@ -669,7 +602,7 @@ h2.product-headers {
   margin: 10px 7px;
 }
 
-h2.bio-headers {
+.bio-headers {
   font-size: 16px;
   margin: .4em 0 0;
   font-weight: normal;
@@ -677,17 +610,10 @@ h2.bio-headers {
   float: right;
 }
 
-h1.schedule-headers {
+.schedule-headers {
   font-size: 20px;
   font-weight: normal;
   margin: 10px 7px;
-}
-
-h1.top_content {
-  margin: 20px 20px;
-  font-size: 40px;
-  line-height: 1;
-  letter-spacing: -1px;
 }
 
 p.top_content {
@@ -695,14 +621,6 @@ p.top_content {
   font-size: 16px;
   font-weight: 200;
   line-height: 20px;
-}
-
-.tab-content > .tab-pane {
-  display: none;
-}
-
-.tab-content > .active {
-  display: block;
 }
 
 .pull-right {
@@ -755,12 +673,6 @@ div.lesson_objective {
   height: 100%;
 }
 
-script+img,script+iframe,noscript img {
-  display: block;
-  height: 1px;
-  width: 1px;
-}
-
 table {
   margin-bottom: 20px;
 }
@@ -782,40 +694,8 @@ tbody li {
   margin: 0 0 10px 10px;
 }
 
-.new {
-  color: #c00;
-}
-
-.date {
-  font: 300 14px "Open Sans";
-  margin-top: 0;
-}
-
 .gcb-cols h2:first-of-type,.gcb-cols h3:first-of-type {
   margin-top: 0;
-}
-
-.hide {
-  display: none;
-}
-
-#carousel p {
-  padding: 120px 20px 25px 535px;
-}
-
-#carousel iframe {
-  display: block;
-  height: 360px;
-  float: left;
-  margin: 30px 0 0 0;
-  width: 480px;
-}
-
-h1.product-headers {
-  font-size: 25px;
-  color: #dd4b39;
-  font-weight: normal;
-  margin: 10px 7px;
 }
 
 img.progress {

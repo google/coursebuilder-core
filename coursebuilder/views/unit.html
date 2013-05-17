@@ -10,7 +10,7 @@
 
 {% block main_content %}
 
-<div class="gcb-main">
+<div id="gcb-main">
   {% if is_read_write_course and is_course_admin %}
     <a href="dashboard?action=edit_unit&key={{ unit_id }}"
       class="gcb-button gcb-button-action">Edit unit</a>
@@ -77,7 +77,7 @@
               <div class="gcb-col-3">
                 <p style="float:right; margin-top: 0px;">
                   {% if lesson.notes %}
-                  <a role="button" class="gcb-button gcb-button-primary" id="lessonNotesLink" href="{{ lesson.notes }}" target="_blank">
+                  <a role="button" class="gcb-button" id="lessonNotesLink" href="{{ lesson.notes }}" target="_blank">
                     {# I18N: Link to a text version of a lesson video. #}
                     {{ gettext('Text Version') }}
                   </a>
