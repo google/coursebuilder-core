@@ -1,24 +1,82 @@
-describe("the tests for propertyCount", function () {
+describe('ButterBar', function() {
+  var popup, message, butterBar;
 
-  it("counts the object's own members", function () {
-    var ob = {
-      a: 0,
-      b: "two",
-      c: [1, 2, 3]
-    };
-    expect(propertyCount(ob)).toBe(3);
+  beforeEach(function() {
+    popup = {style: {}}; // mock
+    message = {style: {}}; // mock
+    butterBar = new ButterBar(popup, message);
   });
 
-  it("doesn't count the superclass's members", function () {
-    function f () {};
-    f.prototype.a = "super property";
-    var ob = new f();
-    expect(ob.a).toBe("super property");
-    expect(propertyCount(ob)).toBe(0);
+  it('can display text', function() {
+    butterBar.showMessage('Hello, World');
+    expect(message.textContent).toBe('Hello, World');
+    expect(message.innerText).toBe('Hello, World');
+    expect(popup.style.display).toBe('block');
+  });
+  it('can be hidden', function() {
+    butterBar.hide();
+    expect(popup.style.display).toBe('none');
   });
 });
 
-describe('tests for FramedEditorControls', function() {
+describe('deepEquals', function() {
+  it('matches objects which are equal', function() {
+    var a = {
+      'a': [1, 2, 3],
+      'b': {'c': 'C', 'd': null}
+    };
+    var b = {
+      'b': {'d': null, 'c': 'C'},
+      'a': [1, 2, 3]
+    };
+    expect(deepEquals(a, b)).toBe(true);
+  });
+  it('distinguishes objects are which are different deep down', function() {
+    var a = {
+      'a': [1, 2, 3],
+      'b': {'c': 'C', 'd': {'e': 5}} // the difference is in 'e'
+    };
+    var b = {
+      'b': {'d': {'e': 4}, 'c': 'C'}, // the difference is in 'e'
+      'a': [1, 2, 3]
+    };
+    expect(deepEquals(a, b)).toBe(false);
+  });
+
+  describe("propertyCount", function () {
+    it("counts the object's own members", function () {
+      var ob = {
+        a: 0,
+        b: "two",
+        c: [1, 2, 3]
+      };
+      expect(propertyCount(ob)).toBe(3);
+    });
+
+    it("doesn't count the superclass's members", function () {
+      function f () {};
+      f.prototype.a = "super property";
+      var ob = new f();
+      expect(ob.a).toBe("super property");
+      expect(propertyCount(ob)).toBe(0);
+    });
+  });
+});
+
+describe('parseJson', function() {
+  it('strips off XSSI prefix if it\'s present', function() {
+    var json = ')]}\'{"a": 2}';
+    var parsed = parseJson(json);
+    expect(parsed.a).toBe(2);
+  });
+  it('parses JSON correctly even without the XSSI prefix', function() {
+    var json = '{"a": 2}';
+    var parsed = parseJson(json);
+    expect(parsed.a).toBe(2);
+  });
+});
+
+describe('FramedEditorControls', function() {
   var framedEditorControls, frameProxy, env;
 
   beforeEach(function() {
@@ -49,7 +107,7 @@ describe('tests for FramedEditorControls', function() {
     framedEditorControls = new FramedEditorControls(frameProxy, env);
   });
 
-  describe('tests for the save button', function() {
+  describe('the save button', function() {
     var saveButton;
 
     beforeEach(function() {
@@ -57,7 +115,7 @@ describe('tests for FramedEditorControls', function() {
     });
 
     it('is a link with value "Save"', function() {
-      expect(saveButton.type).toEqual('link');
+      expect(saveButton.type).toEqual('submit-link');
       expect(saveButton.value).toEqual('Save');
     });
 
@@ -68,7 +126,7 @@ describe('tests for FramedEditorControls', function() {
     });
   });
 
-  describe('tests for the close button', function() {
+  describe('the close button', function() {
     var closeButton;
 
     beforeEach(function() {
@@ -106,7 +164,7 @@ describe('tests for FramedEditorControls', function() {
   });
 });
 
-describe('the tests for FrameProxy', function() {
+describe('FrameProxy', function() {
   var DEFAULT_VALUE = {value: 'one'};
   var proxy, root, iframe, callbacks;
 

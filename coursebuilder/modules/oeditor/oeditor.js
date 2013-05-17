@@ -3,17 +3,42 @@ var ajaxRpcTimeoutMillis = 15 * 1000;
 // XSSI prefix. Must be kept in sync with models/transforms.py.
 var xssiPrefix = ")]}'";
 
-function cbShowMsg(text){
-  var popup = document.getElementById("formStatusPopup");
-  var message = document.getElementById("formStatusMessage");
-  message.textContent = text;  // FF, Chrome
-  message.innerText = text;    // IE
-  popup.style.display = "block";
+function ButterBar(popup, message) {
+  this.popup = popup;
+  this.message = message;
 }
-
+ButterBar.prototype.showMessage = function(text) {
+  this.message.textContent = text;  // FF, Chrome
+  this.message.innerText = text;    // IE
+  this.popup.style.display = "block";
+};
+ButterBar.prototype.hide = function() {
+  this.popup.style.display = "none";
+};
+ButterBar.getButterBar = function() {
+  return new ButterBar(document.getElementById("formStatusPopup"),
+    document.getElementById("formStatusMessage"));
+};
+ButterBar.keepInView = function(Y) {
+  var container = Y.one('#oeditor-container');
+  var popup = Y.one('#formStatusPopup');
+  // The 'absolute' style positions the popup 45px above the top of the
+  // container and we want 'fixed' to pin it at 10px below the top of the
+  // window, so check that the container isn't less than 55px from the top of
+  // the window.
+  if (container.getY() - container.get('docScrollY') <= 55) {
+    popup.addClass('fixed');
+    popup.removeClass('absolute');
+  } else {
+    popup.removeClass('fixed');
+    popup.addClass('absolute');
+  }
+};
+function cbShowMsg(text){
+  ButterBar.getButterBar().showMessage(text);
+}
 function cbHideMsg(){
-  elem = document.getElementById("formStatusPopup");
-  elem.style.display = "none";
+  ButterBar.getButterBar().hide();
 }
 
 /**
@@ -33,14 +58,6 @@ function deepEquals(x, y) {
   }
   return true;
 }
-
-/**
- * Parses JSON string that starts with an XSSI prefix.
- */
-function parseJson(s) {
-  return JSON.parse(s.replace(xssiPrefix, ''));
-}
-
 function propertyCount(x) {
   var count = 0;
   for (e in x) {
@@ -50,6 +67,14 @@ function propertyCount(x) {
   }
   return count;
 }
+
+/**
+ * Parses JSON string that starts with an XSSI prefix.
+ */
+function parseJson(s) {
+  return JSON.parse(s.replace(xssiPrefix, ''));
+}
+
 
 function formatServerErrorMessage(status, message) {
   var msg = "Unknown error (" + status + ").";
@@ -105,22 +130,6 @@ function moveMarkedFormElementsOutOfFieldset(Y) {
     splitFromMainGroupParent.addClass('split-from-main-group-parent');
     Y.one('#cb-oeditor-form').insertBefore(splitFromMainGroupParent,
       Y.one('#cb-oeditor-form > div.inputEx-Form-buttonBar'));
-  }
-}
-
-function keepPopupInView(Y) {
-  var container = Y.one('#oeditor-container');
-  var popup = Y.one('#formStatusPopup');
-  // The 'absolute' style positions the popup 45px above the top of the
-  // container and we want 'fixed' to pin it at 10px below the top of the
-  // window, so check that the container isn't less than 55px from the top of
-  // the window.
-  if (container.getY() - container.get('docScrollY') <= 55) {
-    popup.addClass('fixed');
-    popup.removeClass('absolute');
-  } else {
-    popup.removeClass('fixed');
-    popup.addClass('absolute');
   }
 }
 
@@ -261,7 +270,7 @@ function mainYuiFunction(Y) {
   }
 
   Y.on('scroll', function(e) {
-    keepPopupInView(Y);
+    ButterBar.keepInView(Y);
   });
 
   // here is the object schema
