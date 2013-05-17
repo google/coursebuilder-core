@@ -114,6 +114,21 @@ class ResourcesHandler(webapp2.RequestHandler):
             self.error(404)
 
 
+class Registry(object):
+    """A class that holds all dynamically registered tags."""
+
+    _bindings = {}
+
+    @classmethod
+    def add_tag_binding(cls, tag_name, clazz):
+        """Registeres a tag name to class binding."""
+        cls._bindings[tag_name] = clazz
+
+    @classmethod
+    def get_all_tags(cls):
+        return dict(cls._bindings.items())
+
+
 def get_tag_bindings():
     """Return the bindings of tag names to implementing classes.
 
@@ -136,7 +151,7 @@ def get_tag_bindings():
                 if issubclass(clazz, BaseTag):
                     tag_name = ('%s-%s' % (mod.__name__, name)).lower()
                     bindings[tag_name] = clazz
-    return bindings
+    return dict(bindings.items() + Registry.get_all_tags().items())
 
 
 def html_to_safe_dom(html_string):
