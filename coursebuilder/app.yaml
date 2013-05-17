@@ -5,7 +5,7 @@ api_version: 1
 threadsafe: false
 
 env_variables:
-  GCB_PRODUCT_VERSION: '1.4.0'
+  GCB_PRODUCT_VERSION: '1.4.1'
 
 inbound_services:
 - warmup
@@ -26,8 +26,11 @@ handlers:
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
+  secure: always
 - url: /cron/expire_old_assigned_reviews
   script: main.app
   login: admin
+  secure: always
 - url: /.*
   script: main.app
+  secure: always
