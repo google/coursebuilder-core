@@ -331,11 +331,12 @@ class DashboardHandler(
                 'id': 'edit_unit_lesson',
                 'caption': 'Organize',
                 'href': self.get_action_url('edit_unit_lesson')})
-            outline_actions.append({
-                'id': 'add_lesson',
-                'caption': 'Add Lesson',
-                'action': self.get_action_url('add_lesson'),
-                'xsrf_token': self.create_xsrf_token('add_lesson')})
+            if courses.Course(self).get_units():
+                outline_actions.append({
+                    'id': 'add_lesson',
+                    'caption': 'Add Lesson',
+                    'action': self.get_action_url('add_lesson'),
+                    'xsrf_token': self.create_xsrf_token('add_lesson')})
             outline_actions.append({
                 'id': 'add_unit',
                 'caption': 'Add Unit',
@@ -602,14 +603,17 @@ class DashboardHandler(
         if not filer.is_editable_fs(self.app_context):
             return safe_dom.NodeList()
 
-        output = safe_dom.NodeList().append(
-            safe_dom.Element(
-                'a', className='gcb-button gcb-pull-right',
-                href='dashboard?action=add_question_group'
-            ).add_text('Add Question Group')
-        ).append(
-            safe_dom.Element('div', style='clear: both; padding-top: 2px;')
-        ).append(
+        all_questions = QuestionDAO.get_all()
+        output = safe_dom.NodeList()
+        if all_questions:
+            output.append(
+                safe_dom.Element(
+                    'a', className='gcb-button gcb-pull-right',
+                    href='dashboard?action=add_question_group'
+                ).add_text('Add Question Group')
+            ).append(
+                safe_dom.Element('div', style='clear: both; padding-top: 2px;'))
+        output.append(
             safe_dom.Element('h3').add_text('Question Groups')
         )
 
