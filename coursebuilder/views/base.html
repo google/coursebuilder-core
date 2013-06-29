@@ -165,6 +165,10 @@
         {% if logoutUrl %}
         <div class="gcb-pull-right" style="font-size: larger;">
           {{ email }}
+          {% if transient_student and can_register %}
+            {# I18N: Text shown in parentheses next to the student's email address at the top-right of all course pages, if the student is logged in but not registered for the course he/she is currently browsing. #}
+            ({{ gettext('Not registered') }})
+          {% endif %}
           &nbsp;|&nbsp;
           <a href="{{ logoutUrl }}" style="text-decoration: underline;">
             {# I18N: Navbar text. #}

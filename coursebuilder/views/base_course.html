@@ -55,10 +55,10 @@
           {% endif %}
         {% endif %}
         {% if not transient_student %}
-            <li {% if navbar.progress %}class='active'{% endif %}>
-              {# I18N: Navbar tab. #}
-              <a href="student/home">{{ gettext('Progress') }}</a>
-            </li>
+          <li {% if navbar.progress %}class='active'{% endif %}>
+            {# I18N: Navbar tab. #}
+            <a href="student/home">{{ gettext('Progress') }}</a>
+          </li>
         {% else %}
           <li {% if navbar.registration %}class='active'{% endif %}>
             {# I18N: Navbar tab. #}

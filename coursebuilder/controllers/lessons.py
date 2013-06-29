@@ -163,8 +163,6 @@ class CourseHandler(BaseHandler):
                     XsrfTokenManager.create_xsrf_token('register-post'))
 
         self.template_value['transient_student'] = student.is_transient
-        self.template_value['can_register'] = self.app_context.get_environ(
-            )['reg_form']['can_register']
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
 

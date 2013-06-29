@@ -289,6 +289,11 @@ class BaseHandler(ApplicationHandler):
         """If the user exists, add personalized fields to the navbar."""
         user = self.get_user()
         PageInitializerService.get().initialize(self.template_value)
+
+        if hasattr(self, 'app_context'):
+            self.template_value['can_register'] = self.app_context.get_environ(
+                )['reg_form']['can_register']
+
         if user:
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = (
