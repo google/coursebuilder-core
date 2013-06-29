@@ -35,4 +35,7 @@ div.qt-warning {
   background-color: #ffffb7;
   color: #f00;
 }
-.
+.qt-hint, .qt-check-answer {
+  display: inline-block;
+  margin: 10px 0;
+}

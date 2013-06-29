@@ -488,6 +488,15 @@ class UnitLessonCompletionTracker(object):
             }
         return result
 
+    def get_component_progress(self, student, unit_id, lesson_id, cpt_id):
+        """Returns the progress status of the given component."""
+        if student.is_transient:
+            return 0
+
+        progress = self.get_or_create_progress(student)
+        return self.is_component_completed(
+            progress, unit_id, lesson_id, cpt_id) or 0
+
     def _get_entity_value(self, progress, event_key):
         if not progress.value:
             return None

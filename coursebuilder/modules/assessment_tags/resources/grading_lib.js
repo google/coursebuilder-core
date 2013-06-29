@@ -47,7 +47,7 @@ BaseQuestion.prototype.onCheckAnswer = function() {
           .append($("<p/>").text(this.getMessageAboutScore(grade.score)))
           .append(grade.feedback));
 
-  if (grade.answer) {
+  if (this.componentAudit) {
     this.componentAudit({
       'instanceid': this.id,
       'answer': grade.answer,
@@ -130,6 +130,14 @@ SaQuestion.prototype.MATCHERS = {
     }
   }
 };
+SaQuestion.prototype.bindHintButton = function() {
+  var that = this;
+  this.el.find('div.qt-hint > button.qt-hint-button')
+      .click(function () {
+        that.onShowHint();
+      });
+  return this;
+};
 SaQuestion.prototype.bind = function() {
   var that = this;
   if (this.scored) {
@@ -140,10 +148,7 @@ SaQuestion.prototype.bind = function() {
       .click(function () {
         that.onCheckAnswer();
       });
-  this.el.find('div.qt-hint > button.qt-hint-button')
-      .click(function () {
-        that.onShowHint();
-      });
+  this.bindHintButton();
   return this;
 };
 SaQuestion.prototype.onShowHint = function() {
@@ -183,11 +188,13 @@ QuestionGroup.prototype.init = function() {
   var that = this;
   this.el.find('div.qt-mc-question.qt-embedded')
       .each(function(index, element) {
-        that.questions.push(new McQuestion($(element), that.questionData));
+        that.questions.push(new McQuestion(
+          $(element), that.questionData, [], null));
       });
   this.el.find('div.qt-sa-question.qt-embedded')
       .each(function(index, element) {
-        that.questions.push(new SaQuestion($(element), that.questionData));
+        that.questions.push(new SaQuestion(
+          $(element), that.questionData, [], null).bindHintButton());
       });
 };
 QuestionGroup.prototype.getWeight = function() {
@@ -227,6 +234,12 @@ QuestionGroup.prototype.onCheckAnswer = function() {
           grade.score / this.getTotalPoints())))
       .removeClass('qt-hidden');
   this.displayFeedback(grade.feedback);
+
+  this.componentAudit({
+    'instanceid': this.id,
+    'answer': grade.answer,
+    'score': grade.score
+  });
 };
 QuestionGroup.prototype.grade = function() {
   var that = this;
@@ -254,11 +267,11 @@ function gradeScoredLesson(questions) {
       .removeClass('qt-hidden');
 }
 
-function gcbAssessmentTagAudit(data_dict) {
-  gcbTagEventAudit(data_dict, 'assessment');
-}
-
 function findGcbQuestions() {
+  function gcbAssessmentTagAudit(data_dict) {
+    gcbTagEventAudit(data_dict, 'assessment');
+  }
+
   var gcbQuestions = [];
   $('div.qt-mc-question.qt-standalone').each(function(index, element) {
     gcbQuestions.push(new McQuestion(

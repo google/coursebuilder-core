@@ -33,7 +33,8 @@ from models import transforms
 RESOURCES_PATH = '/modules/assessment_tags/resources'
 
 
-def render_question(quid, instanceid, locale, embedded=False, weight=None):
+def render_question(
+    quid, instanceid, locale, embedded=False, weight=None, progress=None):
     """Generates the HTML for a question.
 
     Args:
@@ -47,6 +48,9 @@ def render_question(quid, instanceid, locale, embedded=False, weight=None):
           object.
       weight: float. The weight to be used when grading the question in a
           scored lesson.
+      progress: None, 0 or 1. If None, no progress marker should be shown. If
+          0, a 'not-started' progress marker should be shown. If 1, a
+          'complete' progress marker should be shown.
 
     Returns:
       a Jinja markup string that represents the HTML for the question.
@@ -57,6 +61,8 @@ def render_question(quid, instanceid, locale, embedded=False, weight=None):
     template_values['embedded'] = embedded
     template_values['instanceid'] = instanceid
     template_values['resources_path'] = RESOURCES_PATH
+    if progress is not None:
+        template_values['progress'] = progress
 
     template_file = None
     js_data = {}
@@ -112,8 +118,16 @@ class QuestionTag(tags.BaseTag):
 
         instanceid = node.attrib.get('instanceid')
 
+        progress = None
+        if not handler.student.is_transient:
+            progress = handler.get_course().get_progress_tracker(
+                ).get_component_progress(
+                    handler.student, handler.unit_id, handler.lesson_id,
+                    instanceid)
+
         div = cElementTree.XML(render_question(
-            quid, instanceid, locale, embedded=False, weight=weight))
+            quid, instanceid, locale, embedded=False, weight=weight,
+            progress=progress))
         return div
 
     def get_schema(self, unused_handler):
@@ -172,6 +186,13 @@ class QuestionGroupTag(tags.BaseTag):
         template_values['embedded'] = False
         template_values['instanceid'] = group_instanceid
         template_values['resources_path'] = RESOURCES_PATH
+
+        if not handler.student.is_transient:
+            progress = handler.get_course().get_progress_tracker(
+                ).get_component_progress(
+                    handler.student, handler.unit_id, handler.lesson_id,
+                    group_instanceid)
+            template_values['progress'] = progress
 
         template_values['question_html_array'] = []
         js_data = {}
