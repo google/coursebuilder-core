@@ -24,7 +24,6 @@ from controllers import sites
 from models import config
 from models import content
 from models import courses
-from models import transforms
 from modules.review import domain
 from tests import suite
 from tools import verify
@@ -153,7 +152,6 @@ class InvokeExistingUnitTest(suite.TestBase):
         sites.run_all_unit_tests()
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
-        transforms.run_all_unit_tests()
         content.run_all_unit_tests()
 
     def test_string_encoding(self):

@@ -115,6 +115,11 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
         payload = request.get('payload')
         question_dict = transforms.loads(payload)
 
+        question_dict, errors = self.import_and_validate(question_dict)
+        if errors:
+            self.validation_error('\n'.join(errors), key=key)
+            return
+
         if key:
             question = QuestionDTO(key, question_dict)
         else:
@@ -154,10 +159,12 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     REQUIRED_MODULES = [
         'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
-        'inputex-string', 'inputex-list']
+        'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden']
 
     TYPE = QuestionDTO.MULTIPLE_CHOICE
     XSRF_TOKEN = 'mc-question-edit'
+
+    SCHEMA_VERSION = '1.5'
 
     @classmethod
     def get_schema(cls):
@@ -167,6 +174,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             description='multiple choice question',
             extra_schema_dict_values={'className': 'mc-container'})
 
+        mc_question.add_property(schema_fields.SchemaField(
+            'version', '', 'string', optional=True, hidden=True))
         mc_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
             extra_schema_dict_values={'className': 'mc-question'}))
@@ -178,8 +187,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'multiple_selections', 'Selection', 'boolean',
             optional=True,
             select_data=[
-                ('single', 'Allow only one selection'),
-                ('multiple', 'Allow multiple selections')],
+                ('false', 'Allow only one selection'),
+                ('true', 'Allow multiple selections')],
             extra_schema_dict_values={
                 '_type': 'radio',
                 'className': 'mc-selection'}))
@@ -188,7 +197,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'Choice',
             extra_schema_dict_values={'className': 'mc-choice'})
         choice_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True,
+            'score', 'Score', 'number', optional=True,
             extra_schema_dict_values={'className': 'mc-choice-score'}))
         choice_type.add_property(schema_fields.SchemaField(
             'text', 'Text', 'html', optional=True,
@@ -222,9 +231,10 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict = question.dict
         else:
             payload_dict = {
+                'version': self.SCHEMA_VERSION,
                 'question': '',
                 'description': '',
-                'multiple_selections': 'single',
+                'multiple_selections': 'false',
                 'choices': [
                     {'score': '1', 'text': '', 'feedback': ''},
                     {'score': '0', 'text': '', 'feedback': ''},
@@ -237,6 +247,43 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
+    def import_and_validate(self, unvalidated_dict):
+        version = unvalidated_dict.get('version')
+        if self.SCHEMA_VERSION != version:
+            return (None, ['Version %s question not supported.' % version])
+        return self._import_and_validate15(unvalidated_dict)
+
+    def _import_and_validate15(self, unvalidated_dict):
+        errors = []
+        try:
+            question_dict = transforms.json_to_dict(
+                unvalidated_dict, self.get_schema().get_json_schema_dict())
+        except ValueError as err:
+            errors.append(str(err))
+            return (None, errors)
+
+        if not question_dict['question'].strip():
+            errors.append('The question must have a non-empty body.')
+
+        if not question_dict['description'].strip():
+            errors.append('The description must be non-empty.')
+
+        if not question_dict['choices']:
+            errors.append('The question must have at least one choice.')
+
+        choices = question_dict['choices']
+        for index in range(0, len(choices)):
+            choice = choices[index]
+            if not choice['text'].strip():
+                errors.append('Choice %s has no response text.' % (index + 1))
+            try:
+                float(choice['score'])
+            except ValueError:
+                errors.append(
+                    'Choice %s must have a numeric score.' % (index + 1))
+
+        return (question_dict, errors)
+
 
 class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     """REST handler for editing short answer questions."""
@@ -244,10 +291,18 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     URI = '/rest/question/sa'
 
     REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list']
+        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
+        'inputex-hidden']
 
     TYPE = QuestionDTO.SHORT_ANSWER
     XSRF_TOKEN = 'sa-question-edit'
+
+    GRADER_TYPES = [
+        ('case_insensitive', 'Case insensitive string match'),
+        ('regex', 'Regular expression'),
+        ('numeric', 'Numeric')]
+
+    SCHEMA_VERSION = '1.5'
 
     @classmethod
     def get_schema(cls):
@@ -257,6 +312,8 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             description='short answer question',
             extra_schema_dict_values={'className': 'sa-container'})
 
+        sa_question.add_property(schema_fields.SchemaField(
+            'version', '', 'string', optional=True, hidden=True))
         sa_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
             extra_schema_dict_values={'className': 'sa-question'}))
@@ -272,11 +329,8 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             'score', 'Score', 'string', optional=True,
             extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
-            'matcher', 'Grading', 'select', optional=True,
-            select_data=[
-                ('case_insensitive', 'Case insensitive string match'),
-                ('regex', 'Regular expression'),
-                ('hnumeric', 'Numeric')],
+            'matcher', 'Grading', 'string', optional=True,
+            select_data=cls.GRADER_TYPES,
             extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
             'response', 'Response', 'string', optional=True,
@@ -310,6 +364,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict = question.dict
         else:
             payload_dict = {
+                'version': self.SCHEMA_VERSION,
                 'question': '',
                 'description': '',
                 'graders': [
@@ -323,3 +378,43 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             self, 200, 'Success',
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
+
+    def import_and_validate(self, unvalidated_dict):
+        version = unvalidated_dict.get('version')
+        if self.SCHEMA_VERSION != version:
+            return (None, ['Version %s question not supported.' % version])
+        return self._import_and_validate15(unvalidated_dict)
+
+    def _import_and_validate15(self, unvalidated_dict):
+        errors = []
+        try:
+            question_dict = transforms.json_to_dict(
+                unvalidated_dict, self.get_schema().get_json_schema_dict())
+        except ValueError as err:
+            errors.append(str(err))
+            return (None, errors)
+
+        if not question_dict['question'].strip():
+            errors.append('The question must have a non-empty body.')
+
+        if not question_dict['description'].strip():
+            errors.append('The description must be non-empty.')
+
+        if not question_dict['graders']:
+            errors.append('The question must have at least one answer.')
+
+        graders = question_dict['graders']
+        for index in range(0, len(graders)):
+            grader = graders[index]
+            assert grader['matcher'] in [
+                matcher for (matcher, unused_text) in self.GRADER_TYPES]
+            if not grader['response'].strip():
+                errors.append('Answer %s has no response text.' % (index + 1))
+            try:
+                float(grader['score'])
+            except ValueError:
+                errors.append(
+                    'Answer %s must have a numeric score.' % (index + 1))
+
+        return (question_dict, errors)
+

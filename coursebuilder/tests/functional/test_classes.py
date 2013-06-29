@@ -1269,6 +1269,7 @@ class CourseAuthorAspectTest(actions.TestBase):
             payload_dict['title'] = u'My Test Title Мой заголовок теста'
             payload_dict['date'] = '2012/12/31'
             payload_dict['is_draft'] = True
+            payload_dict['send_email'] = False
             request = {}
             request['key'] = str(item.key())
             request['payload'] = transforms.dumps(payload_dict)

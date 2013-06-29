@@ -205,7 +205,7 @@ function updateSetScoresToggleButtonLabel() {
  */
 function initState() {
   singleSelection = (Y.all('div.mc-selection input:checked').get('value') ==
-      'single');
+      'false');
   setScores = !isInNormalForm(getScores());
 }
 
@@ -241,7 +241,7 @@ function init() {
 
   // Add click handler to the single/multiple selection widget
   Y.all('div.mc-selection input').on('click', function(e) {
-    singleSelection = ('single' == e.target.get('value'));
+    singleSelection = ('false' == e.target.get('value'));
     updateScoreInputs();
   });
 

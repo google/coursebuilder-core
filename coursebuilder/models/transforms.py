@@ -25,8 +25,8 @@ from google.appengine.ext import db
 
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
-JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array',
-              'object']
+JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'number',
+              'array', 'object']
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
 # sync with modules/oeditor/oeditor.html.
 _JSON_XSSI_PREFIX = ")]}'\n"
@@ -96,10 +96,24 @@ def loads(s, prefix=_JSON_XSSI_PREFIX, **kwargs):
 
 def json_to_dict(source_dict, schema):
     """Converts JSON dictionary into Python dictionary using schema."""
+
+    def convert_bool(value, key):
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, basestring):
+            value = value.lower()
+            if value == 'true':
+                return True
+            elif value == 'false':
+                return False
+        raise ValueError('Bad boolean value for %s: %s' % (key, value))
+
     output = {}
     for key, attr in schema['properties'].items():
         # Skip schema elements that don't exist in source.
         if key not in source_dict:
+            if 'true' != attr.get('optional'):
+                raise ValueError('Missing required attribute: %s' % key)
             continue
 
         attr_type = attr['type']
@@ -110,6 +124,10 @@ def json_to_dict(source_dict, schema):
         elif attr_type == 'date':
             output[key] = datetime.datetime.strptime(
                 source_dict[key], JSON_DATE_FORMAT).date()
+        elif attr_type == 'number':
+            output[key] = float(source_dict[key])
+        elif attr_type == 'boolean':
+            output[key] = convert_bool(source_dict[key], key)
         elif attr_type == 'array':
             subschema = attr['items']
             array = []
@@ -379,32 +397,3 @@ class JsonFile(object):
             template = template[1:]
             self._first = False
         self._file.write(template % dumps(python_object))
-
-
-def run_all_unit_tests():
-    """Runs all unit tests."""
-    assert value_to_string(True, bool) == 'True'
-    assert value_to_string(False, bool) == 'False'
-    assert value_to_string(None, bool) == 'False'
-
-    assert string_to_value('True', bool)
-    assert string_to_value('1', bool)
-    assert string_to_value(1, bool)
-
-    assert not string_to_value('False', bool)
-    assert not string_to_value('0', bool)
-    assert not string_to_value('5', bool)
-    assert not string_to_value(0, bool)
-    assert not string_to_value(5, bool)
-    assert not string_to_value(None, bool)
-
-    assert string_to_value('15', int) == 15
-    assert string_to_value(15, int) == 15
-    assert string_to_value(None, int) == 0
-
-    assert string_to_value('foo', str) == 'foo'
-    assert string_to_value(None, str) == str('')
-
-
-if __name__ == '__main__':
-    run_all_unit_tests()

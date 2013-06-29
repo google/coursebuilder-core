@@ -75,7 +75,7 @@ class QuestionTag(tags.BaseTag):
         if question_dto.type == question_dto.MULTIPLE_CHOICE:
             template_file = 'templates/mc_question.html'
 
-            multi = (template_values['multiple_selections'] == 'multiple')
+            multi = template_values['multiple_selections']
             template_values.update({
                 'button_type': 'checkbox' if multi else 'radio',
                 'js_data': transforms.dumps([{

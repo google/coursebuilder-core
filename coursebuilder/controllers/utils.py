@@ -328,6 +328,14 @@ class BaseRESTHandler(BaseHandler):
             return False
         return True
 
+    def validation_error(self, message, key=None):
+        """Deliver a validation message."""
+        if key:
+            transforms.send_json_response(
+                self, 412, message, payload_dict={'key': key})
+        else:
+            transforms.send_json_response(self, 412, message)
+
 
 class PreviewHandler(BaseHandler):
     """Handler for viewing course preview."""

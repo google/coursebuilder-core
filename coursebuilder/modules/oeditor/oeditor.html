@@ -113,7 +113,8 @@
   div.mc-choice + a,
   div.mc-choice-container > a,
   div.sa-grader + a,
-  div.sa-grader-container > a {
+  div.sa-grader-container > a,
+  div.quiz-items a {
     width: auto;
     background-color: #666;
     color: #FFFFFF;
@@ -374,8 +375,9 @@
   div.sa-description {
     margin-left: 87px;
   }
-  div.sa-description input {
-    width: 546px;  /* allow for 2px padding */
+  div.sa-description input,
+  div.sa-grader-text input {
+    width: 506px;  /* allow for 2px padding */
     margin: 0;
   }
   div.sa-grader-text, div.sa-grader-feedback {
@@ -425,6 +427,9 @@
   }
   div.quiz-weight input {
     width: 50px;
+  }
+  div.quiz-items a:hover {
+    text-decoration: none;
   }
   div.quiz-items div.inputEx-ListField-childContainer > div {
     position: relative;

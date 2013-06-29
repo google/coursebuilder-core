@@ -123,6 +123,29 @@ class QuizRESTHandler(BaseRESTHandler):
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
+    def validate(self, quiz_dict):
+        """Validate the quiz data sent from the form."""
+        errors = []
+
+        assert quiz_dict['version'] == self.SCHEMA_VERSION
+
+        if not quiz_dict['name'].strip():
+            errors.append('The quiz must have a non-empty name.')
+
+        if not quiz_dict['items']:
+            errors.append('The question must contain at least one question.')
+
+        items = quiz_dict['items']
+        for index in range(0, len(items)):
+            item = items[index]
+            try:
+                float(item['weight'])
+            except ValueError:
+                errors.append(
+                    'Item %s must have a numeric weight.' % (index + 1))
+
+        return errors
+
     def put(self):
         """Store a quiz in the datastore in response to a PUT."""
         request = transforms.loads(self.request.get('request'))
@@ -141,6 +164,11 @@ class QuizRESTHandler(BaseRESTHandler):
         quiz_dict = transforms.json_to_dict(
             transforms.loads(payload),
             self.get_schema().get_json_schema_dict())
+
+        validation_errors = self.validate(quiz_dict)
+        if validation_errors:
+            self.validation_error('\n'.join(validation_errors), key=key)
+            return
 
         assert self.SCHEMA_VERSION == quiz_dict.get('version')
 
