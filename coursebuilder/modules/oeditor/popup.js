@@ -16,6 +16,7 @@ FramedEditorControls.prototype = {
     return {
       type: 'submit-link',
       value: 'Save',
+      className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
       onClick: function() {
         that._frameProxy.setValue(that._env.form.getValue());
         that._frameProxy.submit();
@@ -28,6 +29,7 @@ FramedEditorControls.prototype = {
     return {
       type: 'link',
       value: 'Close',
+      className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
       onClick: function() {
         that._frameProxy.close();
       }

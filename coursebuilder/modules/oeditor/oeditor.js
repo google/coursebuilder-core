@@ -297,7 +297,9 @@ TopLevelEditorControls.prototype = {
   getSaveButton: function() {
     var that = this;
     if (cb_global.save_url && cb_global.save_method) {
-      return {type: 'submit-link', value: cb_global.save_button_caption, onClick: function() {
+      return {type: 'submit-link', value: cb_global.save_button_caption,
+        className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
+        onClick: function() {
         cbShowMsg("Saving...");
 
         // record current state
@@ -372,7 +374,9 @@ TopLevelEditorControls.prototype = {
   },
 
   getCloseButton: function() {
-    return {type: 'link', value: cb_global.exit_button_caption, onClick:function(e) {
+    return {type: 'link', value: cb_global.exit_button_caption,
+        className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
+        onClick:function(e) {
       if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
               confirm("Abandon all changes?")) {
             window.location = cb_global.exit_url;
