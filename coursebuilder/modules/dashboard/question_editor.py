@@ -113,8 +113,10 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         question_dict = transforms.loads(payload)
+        question_dict['description'] = question_dict['description'].strip()
 
-        question_dict, errors = self.import_and_validate(question_dict)
+        question_dict, errors = self.import_and_validate(question_dict, key)
+
         if errors:
             self.validation_error('\n'.join(errors), key=key)
             return
@@ -160,6 +162,13 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
 
         QuestionDAO.delete(question)
         transforms.send_json_response(self, 200, 'Deleted.')
+
+    def validate_no_description_collision(self, description, key, errors):
+        descriptions = {q.description for q in QuestionDAO.get_all()
+                        if not key or q.id != long(key)}
+        if description in descriptions:
+            errors.append(
+                'The description must be different from existing questions.')
 
 
 class McQuestionRESTHandler(BaseQuestionRESTHandler):
@@ -267,13 +276,13 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
-    def import_and_validate(self, unvalidated_dict):
+    def import_and_validate(self, unvalidated_dict, key):
         version = unvalidated_dict.get('version')
         if self.SCHEMA_VERSION != version:
             return (None, ['Version %s question not supported.' % version])
-        return self._import_and_validate15(unvalidated_dict)
+        return self._import_and_validate15(unvalidated_dict, key)
 
-    def _import_and_validate15(self, unvalidated_dict):
+    def _import_and_validate15(self, unvalidated_dict, key):
         errors = []
         try:
             question_dict = transforms.json_to_dict(
@@ -285,8 +294,11 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
         if not question_dict['question'].strip():
             errors.append('The question must have a non-empty body.')
 
-        if not question_dict['description'].strip():
+        if not question_dict['description']:
             errors.append('The description must be non-empty.')
+
+        self.validate_no_description_collision(
+            question_dict['description'], key, errors)
 
         if not question_dict['choices']:
             errors.append('The question must have at least one choice.')
@@ -407,13 +419,13 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
-    def import_and_validate(self, unvalidated_dict):
+    def import_and_validate(self, unvalidated_dict, key):
         version = unvalidated_dict.get('version')
         if self.SCHEMA_VERSION != version:
             return (None, ['Version %s question not supported.' % version])
-        return self._import_and_validate15(unvalidated_dict)
+        return self._import_and_validate15(unvalidated_dict, key)
 
-    def _import_and_validate15(self, unvalidated_dict):
+    def _import_and_validate15(self, unvalidated_dict, key):
         errors = []
         try:
             question_dict = transforms.json_to_dict(
@@ -425,8 +437,11 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         if not question_dict['question'].strip():
             errors.append('The question must have a non-empty body.')
 
-        if not question_dict['description'].strip():
+        if not question_dict['description']:
             errors.append('The description must be non-empty.')
+
+        self.validate_no_description_collision(
+            question_dict['description'], key, errors)
 
         if not question_dict['graders']:
             errors.append('The question must have at least one answer.')
