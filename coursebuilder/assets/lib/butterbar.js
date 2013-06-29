@@ -34,7 +34,7 @@ ButterBar.keepInView = function() {
   $(container).removeClass('fixed');
 
   var offset = $(popup).offset().top;
-  if (offset - window.scrollY <= 10) {
+  if (offset - $(document).scrollTop() <= 10) {
     $(container).addClass('fixed');
     container.style.top = (10 - popup.offsetTop) + "px";
   }
