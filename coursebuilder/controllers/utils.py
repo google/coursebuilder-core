@@ -21,6 +21,7 @@ import hmac
 import os
 import time
 import urlparse
+
 import appengine_config
 from common import jinja_utils
 from models import models
@@ -33,9 +34,9 @@ from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
 import webapp2
+
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
-
 
 # The name of the template dict key that stores a course's base location.
 COURSE_BASE_KEY = 'gcb_course_base'
@@ -102,6 +103,35 @@ HUMAN_READABLE_DATE_FORMAT = '%Y-%m-%d'
 
 # Time format string for displaying times. Example: 01:16:40 UTC.
 HUMAN_READABLE_TIME_FORMAT = '%H:%M:%S UTC'
+
+
+class PageInitializer(object):
+    """Abstract class that defines an interface to initialize page headers."""
+
+    @classmethod
+    def initialize(cls, template_value):
+        raise NotImplementedError
+
+
+class DefaultPageInitializer(PageInitializer):
+    """Implements default page initializer."""
+
+    @classmethod
+    def initialize(cls, template_value):
+        pass
+
+
+class PageInitializerService(object):
+    """Installs the appropriate PageInitializer."""
+    _page_initializer = DefaultPageInitializer
+
+    @classmethod
+    def get(cls):
+        return cls._page_initializer
+
+    @classmethod
+    def set(cls, page_initializer):
+        cls._page_initializer = page_initializer
 
 
 class ReflectiveRequestHandler(object):
@@ -258,6 +288,7 @@ class BaseHandler(ApplicationHandler):
     def personalize_page_and_get_user(self):
         """If the user exists, add personalized fields to the navbar."""
         user = self.get_user()
+        PageInitializerService.get().initialize(self.template_value)
         if user:
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = (
@@ -468,7 +499,7 @@ class ForumHandler(BaseHandler):
 
 
 class StudentProfileHandler(BaseHandler):
-    """Handles the click to 'My Profile' link in the nav bar."""
+    """Handles the click to 'Progress' link in the nav bar."""
 
     def get(self):
         """Handles GET requests."""
@@ -482,7 +513,7 @@ class StudentProfileHandler(BaseHandler):
         if profile:
             name = profile.nick_name
 
-        self.template_value['navbar'] = {'myprofile': True}
+        self.template_value['navbar'] = {'progress': True}
         self.template_value['student'] = student
         self.template_value['student_name'] = name
         self.template_value['date_enrolled'] = student.enrolled_on.strftime(

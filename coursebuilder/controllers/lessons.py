@@ -137,6 +137,8 @@ class CourseHandler(BaseHandler):
             student = TRANSIENT_STUDENT
         else:
             student = Student.get_enrolled_student_by_email(user.email())
+            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+            self.template_value['has_global_profile'] = profile is not None
             if not student:
                 student = TRANSIENT_STUDENT
 

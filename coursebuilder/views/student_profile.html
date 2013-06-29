@@ -1,8 +1,8 @@
-{% extends 'base.html' %}
+{% extends 'base_course.html' %}
 
 {% block subtitle %}
-  {# I18N: Title of the webpage. #}
-  - {{ gettext('My Profile') }}
+  {# I18N: Title of the course progress webpage. #}
+  {{ gettext('Course Progress') }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -13,9 +13,8 @@
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
       <h2>
-        {# I18N: Title of the student profile page. Followed by a student's name. #}
-        {{ gettext('Student Profile for ') }}
-        {{ student.key().name() }}
+        {# I18N: Title of the student progress page.#}
+        {{ gettext('Student Progress') }}
       </h2>
 
       {% if student %}
@@ -41,17 +40,26 @@
               </button>
             </p>
           </form>
+
+          <h2>
+            {# I18N: Shown on the student profile page. #}
+            {{ gettext('To leave the course permanently, click on Unenroll') }}
+          </h2>
+
+          <p>
+            <a role="button" href="student/unenroll" class="gcb-button">
+              {# I18N: Button that allows the student to unenroll from a course. #}
+              {{ gettext('Unenroll') }}
+            </a>
+          </p>
+        {% else %}
+          <p>
+            <a href="/explorer/profile">
+              {# I18N: Text shown on progress page of course to redirect student to profile page. #}
+              {{ gettext('Manage course registration from your profile') }}
+            </a>
+          </p>
         {% endif %}
-
-        <h2>
-          {# I18N: Shown on the student profile page. #}
-          {{ gettext('To leave the course permanently, click on Unenroll') }}
-        </h2>
-
-        <p><a role="button" href="student/unenroll" class="gcb-button">
-          {# I18N: Button that allows the student to unenroll from a course. #}
-          {{ gettext('Unenroll') }}
-        </a></p>
 
       {% else %}
         {# I18N: Shown when the student profile cannot be found in the database. #}

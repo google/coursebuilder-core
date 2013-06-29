@@ -1,0 +1,63 @@
+{% extends 'modules/course_explorer/views/base_student.html' %}
+
+{% block content_header %}
+  {# I18N: Title of the student profile page. Followed by a student's name. #}
+  {{ gettext('Student Profile for') }} '{{ student.nick_name }}'
+{% endblock %}
+
+{% block sub_content %}
+  <table class="gcb-student-data-table">
+    <colgroup>
+      <col style="width: 10%">
+      </col>
+    </colgroup>
+    <tr>
+      {# I18N: Table header for the student's name. #}
+      <th class="gcb-align-left">{{ gettext('Name') }}</th>
+      <td>{{ student.nick_name }}</td>
+    </tr>
+    <tr>
+      {# I18N: Table header for the student's email address. This is a noun. #}
+      <th class="gcb-align-left">{{ gettext('Email') }}</th>
+      <td>{{ student.email }}</td>
+    </tr>
+  </table>
+
+  {% if courses %}
+    <h3>
+      {# I18N: Heading on the profile page shown above table of registered courses. #}
+      {{ gettext('Enrolled Courses') }}
+    </h3>
+    <table class="gcb-student-data-table">
+      <colgroup>
+        <col style="width: 10%">
+        </col>
+      </colgroup>
+      {% for course in courses %}
+        <tr>
+          <th class="gcb-align-left">
+            <a class="gcb-pull-left" href="{{course.course.course_preview_url}}">{{ course.course.title }} </a>
+          </th>
+          <td>
+            <a class="gcb-pull-left gcb-profile-padding" href="{{course.course.slug}}/student/home">
+              {# I18N: Text for representing student progress in a course. #}
+              {{ gettext('Progress') }}
+            </a>
+            {% if course.course.is_completed %}
+              <a class="gcb-pull-left" href="{{course.course.slug}}/student/home">
+                {# I18N: Text for a button on the 'list of courses' page that takes students to a page where they can view score. #}
+                {{ gettext('View score') }}
+              </a>
+            {% else %}
+              <a class="gcb-pull-left" href="{{course.course.slug}}/student/unenroll">
+                {# I18N: Text on the student profile page which on clicking will take you to unenroll course page. #}
+                {{ gettext('Withdraw') }}
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+{% endblock %}
+

@@ -1,0 +1,16 @@
+{% extends 'modules/course_explorer/views/base_explorer.html' %}
+
+{% block main_content %}
+  <div id="gcb-main">
+    <div class="gcb-article tab-content">
+      <div class="gcb-aside">
+        <h2>
+          {% block content_header %}
+          {% endblock %}
+        </h2>
+        {% block sub_content %}
+        {% endblock %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

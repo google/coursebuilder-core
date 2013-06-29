@@ -17,7 +17,6 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
-
 import webapp2
 
 # The following import is needed in order to add third-party libraries.
@@ -26,16 +25,15 @@ import appengine_config  # pylint: disable-msg=unused-import
 from common import tags
 from controllers import sites
 from models import custom_modules
-
 import modules.admin.admin
 import modules.announcements.announcements
 import modules.assessment_tags.questions
+import modules.course_explorer.course_explorer
 import modules.courses.courses
 import modules.dashboard.dashboard
 import modules.oauth2.oauth2
 import modules.oeditor.oeditor
 import modules.review.review
-
 
 # use this flag to control debug only features
 debug = not appengine_config.PRODUCTION_MODE
@@ -47,6 +45,7 @@ modules.dashboard.dashboard.register_module().enable()
 modules.announcements.announcements.register_module().enable()
 modules.review.review.register_module().enable()
 modules.courses.courses.register_module().enable()
+modules.course_explorer.course_explorer.register_module().enable()
 modules.assessment_tags.questions.register_module().enable()
 
 # register modules that are not enabled by default.

@@ -770,7 +770,7 @@ def _courses_config_validator(rules_text, errors):
     """Validates a textual definition of courses entries."""
     try:
         _validate_appcontext_list(
-            get_all_courses(rules_text=rules_text), strict=True)
+            get_all_courses(rules_text=rules_text))
     except Exception as e:  # pylint: disable-msg=broad-except
         errors.append(str(e))
 

@@ -1,6 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'base_course.html' %}
 
 {% block top_content %}
+{% endblock %}
+
+{% block navbar %}
 {% endblock %}
 
 {% block main_content %}
@@ -13,7 +16,7 @@
         {{ gettext('You have been unenrolled from ') }}
         {{course_info.course.title}}.
       </h3>
-      <form action="preview" method='get'>
+      <form action='/' method='get'>
         <button class="gcb-button" type="submit">
           {# I18N: Confirmation button, shown when a student has unenrolled from a course. #}
           {{ gettext('OK') }}

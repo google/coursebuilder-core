@@ -1,0 +1,50 @@
+{% extends 'modules/course_explorer/views/base_explorer.html' %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+  <div class="gcb-cols">
+    <ul class="gcb-explorer-list">
+      {% for course in courses %}
+        <li class="gcb-explorer-list-item">
+          <h1 class="gcb-product-headers-large">
+            <a href="{{course.course.course_preview_url}}" class="gcb-explorer-course-title">{{course.course.title}}</a>
+            {% if course.course.is_completed %}
+              <a href="{{course.course.slug}}/student/home" class="gcb-button gcb-explorer-button">
+                {# I18N: Text for a button on the 'list of courses' page that takes students to a page where they can view score. #}
+                {{ gettext('View score') }}
+              </a>
+            {% elif course.course.is_registered %}
+              <a href="{{course.course.course_preview_url}}" class="gcb-button gcb-explorer-button">
+                {# I18N: Text for a button on the 'list of courses' page that takes students to the page for that course. #}
+                {{ gettext('Go to course') }}
+              </a>
+            {% else %}
+              <a href="{{course.course.slug}}/register" class="gcb-button gcb-explorer-button">
+                {# I18N: Registration button on the main course page. #}
+                {{ gettext('Register') }}
+              </a>
+            {% endif %}
+          </h1>
+          <p class="gcb-product-headers">{{course.course.blurb}}</p>
+          <p class="gcb-product-headers">{{course.course.instructor_details | safe}}</p>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <p class="gcb-product-headers">
+      {% if not courses %}
+        {# I18N: Shown to the student on the page that shows his/her list of courses, when he/she is not enrolled in courses. #}
+        {{ gettext('You are not currently enrolled in any courses.') }}
+      {% endif %}
+
+      {% if can_enroll_more_courses %}
+        <a href='/'>
+          {# I18N: Shown to the student on the page that shows his/her list of courses, when he/she wants to view all courses. #}
+          {{ gettext('View course list.') }}
+        </a>
+      {% endif %}
+    </p>
+  </div>
+{% endblock %}
