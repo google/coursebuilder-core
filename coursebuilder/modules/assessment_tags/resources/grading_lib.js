@@ -101,7 +101,7 @@ McQuestion.prototype.grade = function() {
   });
   return {
     answer: answer,
-    score: Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100,
+    score: Math.min(Math.max(score, 0), 1).toFixed(2),
     feedback: feedback
   };
 };
@@ -307,31 +307,38 @@ QuestionGroup.prototype.makeReadOnly = function(state) {
 
 function gradeScoredLesson(questions, messages) {
   var score = 0.0;
+  var totalWeight = 0.0;
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     score += grade.score * question.getWeight();
+    totalWeight += question.getWeight();
     question.displayFeedback(grade.feedback);
   });
   $('div.qt-grade-report')
-      .text(messages.yourScoreIs + score)
+      .text(messages.yourScoreIs + score + '/' + totalWeight)
       .removeClass('qt-hidden');
 }
 
 function gradeAssessment(questions, unitId, xsrfToken) {
   var score = 0.0;
+  // The following prevents division-by-zero errors.
+  var totalWeight = 1e-12;
   var answers = {'version': '1.5'};
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     score += grade.score * question.getWeight();
+    totalWeight += question.getWeight();
     answers[question.id] = question.getStudentAnswer();
   });
+
+  var percentScore = (score / totalWeight * 100.0).toFixed(2);
   $('body').append(
       $('<form/>')
           .css('display', 'none')
           .attr('method', 'post')
           .attr('action', 'answer')
           .append($('<input type="hidden" name="assessment_type">').val(unitId))
-          .append($('<input type="hidden" name="score">').val(score))
+          .append($('<input type="hidden" name="score">').val(percentScore))
           .append($('<input type="hidden" name="answers">')
               .val(JSON.stringify(answers)))
           .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken))
