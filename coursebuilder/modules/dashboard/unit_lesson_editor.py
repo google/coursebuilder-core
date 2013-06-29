@@ -1511,8 +1511,8 @@ class ExportAssessmentRESTHandler(BaseRESTHandler):
         elif 'correctAnswerRegex' in question:
             question_dict = self.import_short_answer_question(
                 question.get('questionHTML'),
-                'case_insensitive',
-                question.get('correctAnswerRegex'))
+                'regex',
+                question.get('correctAnswerRegex').value)
             question_type = m_models.QuestionDTO.SHORT_ANSWER
         else:
             raise ValueError('Unknown question type')

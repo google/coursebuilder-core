@@ -192,6 +192,17 @@ describe('assessment tags', function() {
       var grade = sa.grade();
       expect(grade.score).toBe(expectedScore);
     }
+    describe('regular expression selection', function() {
+      it('will accept the string repn of a JS regex with flags', function() {
+        expect(SaQuestion.parseRegExp('/a.*c/i').toString()).toBe('/a.*c/i');
+      });
+      it('will accept the string repn of a JS regex without flags', function() {
+        expect(SaQuestion.parseRegExp('/a.*c/').toString()).toBe('/a.*c/');
+      });
+      it('will accept a bare string as a regular expression', function() {
+        expect(SaQuestion.parseRegExp('a.*c').toString()).toBe('/a.*c/');
+      });
+    });
     describe('case-insensitive grading', function() {
       it('makes case-insensitive matches', function() {
         testMatcherWithResponse('case_insensitive', 'FaLaFeL', 1);
@@ -203,6 +214,9 @@ describe('assessment tags', function() {
     describe('regex grading', function() {
       it('makes regex matches', function() {
         testMatcherWithResponse('regex', 'f[a-z]{5}l', 1);
+      });
+      it('makes regex matches with flags', function() {
+        testMatcherWithResponse('regex', '/F[A-Z]{5}L/i', 1);
       });
       it('rejects regex misses', function() {
         testMatcherWithResponse('regex', 'G[a-z]{5}l', 0);

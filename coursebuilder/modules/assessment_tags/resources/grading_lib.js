@@ -101,7 +101,7 @@ McQuestion.prototype.grade = function() {
   });
   return {
     answer: answer,
-    score: Math.min(Math.max(score, 0), 1).toFixed(2),
+    score: Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100,
     feedback: feedback
   };
 };
@@ -132,7 +132,7 @@ function SaQuestion(el, questionData, messages, componentAudit) {
   BaseQuestion.call(this, el, questionData, messages, componentAudit);
 }
 BaseQuestion.bindSubclass(SaQuestion);
-SaQuestion.prototype.MATCHERS = {
+SaQuestion.MATCHERS = {
   case_insensitive: {
     matches: function(answer, response) {
       return answer.toLowerCase() == response.toLowerCase();
@@ -140,13 +140,21 @@ SaQuestion.prototype.MATCHERS = {
   },
   regex: {
     matches: function(answer, response) {
-      return new RegExp(answer).test(response);
+      return SaQuestion.parseRegExp(answer).test(response);
     }
   },
   numeric: {
     matches: function(answer, response) {
       return parseFloat(answer) == parseFloat(response);
     }
+  }
+};
+SaQuestion.parseRegExp = function(regexpString) {
+  var matches = regexpString.match(/\/(.*)\/([gim]*)/);
+  if (matches) {
+    return new RegExp(matches[1], matches[2]);
+  } else {
+    return new RegExp(regexpString);
   }
 };
 SaQuestion.prototype.bindHintButton = function() {
@@ -180,7 +188,8 @@ SaQuestion.prototype.grade = function() {
   var response = this.el.find('div.qt-response > input').val();
   for (var i = 0; i < this.data.graders.length; i++) {
     var grader = this.data.graders[i];
-    if (this.MATCHERS[grader.matcher].matches(grader.response, response)) {
+    if (SaQuestion.MATCHERS[grader.matcher].matches(
+        grader.response, response)) {
       return {
         score: Math.min(Math.max(parseFloat(grader.score), 0), 1),
         feedback: $('<div/>').html(grader.feedback)
