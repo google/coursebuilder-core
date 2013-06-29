@@ -127,9 +127,10 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
             question = QuestionDTO(None, question_dict)
 
         question.type = self.TYPE
-        QuestionDAO.save(question)
+        key_after_save = QuestionDAO.save(question)
 
-        transforms.send_json_response(self, 200, 'Saved.')
+        transforms.send_json_response(
+            self, 200, 'Saved.', payload_dict={'key': key_after_save})
 
     def delete(self):
         """Remove a question from the datastore in response to DELETE."""

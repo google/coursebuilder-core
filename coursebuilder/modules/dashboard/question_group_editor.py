@@ -128,7 +128,7 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
             payload_dict=payload_dict,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
-    def validate(self, question_group_dict):
+    def validate(self, question_group_dict, key):
         """Validate the question group data sent from the form."""
         errors = []
 
@@ -136,6 +136,13 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
 
         if not question_group_dict['description'].strip():
             errors.append('The question group must have a description.')
+
+        descriptions = {question_group.description for question_group
+                        in QuestionGroupDAO.get_all()
+                        if not key or question_group.id != long(key)}
+        if question_group_dict['description'] in descriptions:
+            errors.append('The description must be different '
+                          'from existing question groups.')
 
         if not question_group_dict['items']:
             errors.append(
@@ -171,7 +178,7 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
             transforms.loads(payload),
             self.get_schema().get_json_schema_dict())
 
-        validation_errors = self.validate(question_group_dict)
+        validation_errors = self.validate(question_group_dict, key)
         if validation_errors:
             self.validation_error('\n'.join(validation_errors), key=key)
             return
@@ -183,8 +190,9 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
         else:
             question_group = QuestionGroupDTO(None, question_group_dict)
 
-        QuestionGroupDAO.save(question_group)
-        transforms.send_json_response(self, 200, 'Saved.')
+        key_after_save = QuestionGroupDAO.save(question_group)
+        transforms.send_json_response(
+            self, 200, 'Saved.', payload_dict={'key': key_after_save})
 
     def delete(self):
         """Delete the question_group in response to REST request."""

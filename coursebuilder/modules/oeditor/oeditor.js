@@ -377,13 +377,24 @@ TopLevelEditorControls.prototype = {
                     return;
                   }
 
-                if (json.status != 200) {
-                  cbShowMsg(formatServerErrorMessage(json.status, json.message));
-                  return;
-                }
+                  if (json.status != 200) {
+                    cbShowMsg(formatServerErrorMessage(
+                        json.status, json.message));
+                    return;
+                  }
 
-                // save lastSavedFormValue
-                cb_global.lastSavedFormValue = lastSavedFormValue;
+                  // save lastSavedFormValue
+                  cb_global.lastSavedFormValue = lastSavedFormValue;
+
+                  // If the REST handler returns a key value for an artifact
+                  // which previously had no key, update the form's key so as to
+                  // correctly reference the asset in future calls.
+                  if (json.payload) {
+                    var payload = JSON.parse(json.payload);
+                    if (payload.key && !cb_global.save_args.key) {
+                      cb_global.save_args.key = payload.key;
+                    }
+                  }
 
                   // update UI
                   cbShowMsg(json.message);
