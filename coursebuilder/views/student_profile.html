@@ -22,24 +22,26 @@
 
         {% include 'student_data_table.html' %}
 
-        <form action='student/editstudent' method='post'>
-          <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
-          <h2><label for="name">
-            {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
-            {{ gettext('New Name') }}
-          </label></h2>
-          <fieldset style="border: none;">
-            <p><input name="name" id="name" type="text" size="40">
-              <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
-          </fieldset>
+        {% if can_edit_name %}
+          <form action='student/editstudent' method='post'>
+            <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
+            <h2><label for="name">
+              {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+              {{ gettext('New Name') }}
+            </label></h2>
+            <fieldset style="border: none;">
+              <p><input name="name" id="name" type="text" size="40">
+                <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
+            </fieldset>
 
-          <p>
-            <button class="gcb-button" type="submit">
-              {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
-              {{ gettext('Change Name') }}
-            </button>
-          </p>
-        </form>
+            <p>
+              <button class="gcb-button" type="submit">
+                {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
+                {{ gettext('Change Name') }}
+              </button>
+            </p>
+          </form>
+        {% endif %}
 
         <h2>
           {# I18N: Shown on the student profile page. #}

@@ -23,6 +23,7 @@ import time
 import urlparse
 import appengine_config
 from common import jinja_filters
+from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -467,6 +468,8 @@ class StudentProfileHandler(BaseHandler):
         self.template_value['overall_score'] = course.get_overall_score(student)
         self.template_value['student_edit_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('student-edit'))
+        self.template_value['can_edit_name'] = (
+            not models.CAN_SHARE_STUDENT_PROFILE.value)
         self.render('student_profile.html')
 
 
