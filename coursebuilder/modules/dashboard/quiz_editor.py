@@ -71,20 +71,24 @@ class QuizRESTHandler(BaseRESTHandler):
         quiz.add_property(schema_fields.SchemaField(
             'introduction', 'Introduction', 'html', optional=True))
 
-        item_type = schema_fields.FieldRegistry('Item')
+        item_type = schema_fields.FieldRegistry(
+            'Item', extra_schema_dict_values={'className': 'quiz-item'})
         item_type.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'string', optional=True))
+            'weight', 'Weight', 'string', optional=True,
+            extra_schema_dict_values={'className': 'quiz-weight'}))
 
         question_select_data = [
             (q.id, q.description) for q in QuestionDAO.get_all()]
 
         item_type.add_property(schema_fields.SchemaField(
             'question', 'Question', 'string', optional=True,
-            select_data=question_select_data))
+            select_data=question_select_data,
+            extra_schema_dict_values={'className': 'quiz-question'}))
 
         item_array = schema_fields.FieldArray(
             'items', '', item_type=item_type,
             extra_schema_dict_values={
+                'className': 'quiz-items',
                 'sortable': 'true',
                 'listAddLabel': 'Add an item',
                 'listRemoveLabel': 'Delete item'})
