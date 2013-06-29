@@ -1,0 +1,29 @@
+<div class="gcb-border-box">
+  <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
+  <script>
+    questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
+  </script>
+
+  <div class="qt-mc-question">
+    <div class="qt-question">{{question}}</div>
+    <div class="qt-choices">
+      {% for choice in choices %}
+        <div>
+          <input type="{{button_type}}" name="{{quid}}" id="{{quid}}-{{loop.index0}}"/>
+          <label for="{{quid}}-{{loop.index0}}">
+            {{choice['text']}}
+          </label>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="qt-check-answer">
+      <button class="gcb-button">
+        {{ gettext(' Check Answer ') }}
+      </button>
+    </div>
+
+    <div class="qt-feedback" style="display: none">
+    </div>
+  </div>
+</div>

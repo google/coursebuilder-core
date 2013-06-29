@@ -1,0 +1,26 @@
+<div class="gcb-border-box">
+  <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
+  <script>
+    questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
+  </script>
+
+  <div class="qt-sa-question">
+    <div class="qt-question">{{question}}</div>
+
+    <div class="qt-response">
+      <input type="text"/>
+    </div>
+
+    <div class="qt-check-answer">
+      <button class="gcb-button">
+        {{ gettext(' Check Answer ') }}
+      </button>
+      <button class="gcb-button">
+        {{ gettext(' Skip and Show Answer ') }}
+      </button>
+    </div>
+
+    <div class="qt-feedback" style="display: none">
+    </div>
+  </div>
+</div>

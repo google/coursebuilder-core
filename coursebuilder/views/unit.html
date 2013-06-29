@@ -9,6 +9,9 @@
 {% endblock %}
 
 {% block main_content %}
+<script>
+  var questionData = {};
+</script>
 
 <div id="gcb-main">
   {% if is_read_write_course and is_course_admin %}
@@ -66,13 +69,6 @@
                     </span>
                   {% endif %}
                 </h1>
-
-                {% if objectives %}
-                  <div class="gcb-lesson-content">
-                    {{ objectives | gcb_tags}}
-                  </div>
-                {% endif %}
-
               </div>
               <div class="gcb-col-3">
                 <p style="float:right; margin-top: 0px;">
@@ -85,6 +81,13 @@
                 </p>
               </div>
             </div><!-- /gcb-cols -->
+
+            {% if objectives %}
+              <div class="gcb-lesson-content">
+                {{ objectives | gcb_tags}}
+              </div>
+            {% endif %}
+
             {% if lesson.video %}
               <p class="gcb-video-container">
                 {# I18N: Alt text for an embedded YouTube video player. #}

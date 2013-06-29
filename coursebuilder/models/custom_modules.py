@@ -33,9 +33,10 @@ class Module(object):
         Registry.registered_modules[self._name] = self
 
     def disable(self):
-        Registry.enabled_module_names.remove(self.name)
-        if self._notify_module_disabled:
-            self._notify_module_disabled()
+        if self.name in Registry.enabled_module_names:
+            Registry.enabled_module_names.remove(self.name)
+            if self._notify_module_disabled:
+                self._notify_module_disabled()
 
     def enable(self):
         Registry.enabled_module_names.add(self.name)

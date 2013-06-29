@@ -115,9 +115,6 @@ class ResourcesHandler(webapp2.RequestHandler):
             path = path[1:]
         path = os.path.normpath(path)
 
-        if not path.startswith(os.path.join('extensions', 'tags')):
-            self.error(404)
-
         if os.path.basename(os.path.dirname(path)) != 'resources':
             self.error(404)
 
@@ -146,8 +143,14 @@ class Registry(object):
 
     @classmethod
     def add_tag_binding(cls, tag_name, clazz):
-        """Registeres a tag name to class binding."""
+        """Registers a tag name to class binding."""
         cls._bindings[tag_name] = clazz
+
+    @classmethod
+    def remove_tag_binding(cls, tag_name):
+        """Unregisters a tag binding."""
+        if tag_name in cls._bindings:
+            del cls._bindings[tag_name]
 
     @classmethod
     def get_all_tags(cls):

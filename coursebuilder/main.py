@@ -29,6 +29,7 @@ from models import custom_modules
 
 import modules.admin.admin
 import modules.announcements.announcements
+import modules.assessment_tags.questions
 import modules.courses.courses
 import modules.dashboard.dashboard
 import modules.oauth2.oauth2
@@ -46,6 +47,7 @@ modules.dashboard.dashboard.register_module().enable()
 modules.announcements.announcements.register_module().enable()
 modules.review.review.register_module().enable()
 modules.courses.courses.register_module().enable()
+modules.assessment_tags.questions.register_module().enable()
 
 # register modules that are not enabled by default.
 modules.oauth2.oauth2.register_module()

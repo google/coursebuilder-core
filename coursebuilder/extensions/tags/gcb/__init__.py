@@ -251,35 +251,8 @@ class Activity(tags.BaseTag):
         reg = schema_fields.FieldRegistry('Activity')
         reg.add_property(
             schema_fields.SchemaField(
-              'activityid', 'Activity Id', 'string', optional=True,
-              select_data=activity_list,
-              description=(
-                  'The ID of the activity (e.g. activity-2.4.js). '
-                  'Note /assets/js/ is not required')))
-        return reg
-
-
-class Question(tags.BaseTag):
-
-    def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/question.png'
-
-    def get_schema(self, handler):
-        questions = m_models.QuestionDAO.get_all()
-        question_list = [(q.id, q.description) for q in questions]
-
-        reg = schema_fields.FieldRegistry('Question')
-        if question_list:
-            reg.add_property(
-                schema_fields.SchemaField(
-                  'quid', 'Question', 'string', optional=True,
-                  select_data=question_list))
-        else:
-            reg.add_property(
-                schema_fields.SchemaField(
-                  'quid', 'Question', 'string', optional=True,
-                  select_data={('', '[No questions available]')}))
-
+                'activityid', 'Activity Id', 'string', optional=True,
+                select_data=activity_list))
         return reg
 
 
@@ -302,7 +275,7 @@ class Quiz(tags.BaseTag):
             reg.add_property(
                 schema_fields.SchemaField(
                   'quid', 'Quiz', 'string', optional=True,
-                  select_data={('', '[No quizzes available]')}))
+                  select_data=[('', '[No quizzes available]')]))
         return reg
 
 
