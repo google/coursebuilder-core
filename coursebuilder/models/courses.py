@@ -41,6 +41,13 @@ import vfs
 COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
 
+# 1.4 assessments are JavaScript files
+ASSESSMENT_MODEL_VERSION_1_4 = '1.4'
+# 1.5 assessments are HTML text, with embedded question tags
+ASSESSMENT_MODEL_VERSION_1_5 = '1.5'
+SUPPORTED_ASSESSMENT_MODEL_VERSIONS = frozenset(
+    [ASSESSMENT_MODEL_VERSION_1_4, ASSESSMENT_MODEL_VERSION_1_5])
+
 
 # Date format string for validating input in ISO 8601 format without a
 # timezone. All such strings are assumed to refer to UTC datetimes.
@@ -568,6 +575,9 @@ class CourseModel12(object):
         return self._get_assessment_as_dict(
             self.get_assessment_filename(unit.unit_id))
 
+    def get_assessment_model_version(self, unused_unit):
+        return ASSESSMENT_MODEL_VERSION_1_4
+
     def get_review_form_content(self, unit):
         """Returns the schema for a review form as a Python dict."""
         return self._get_assessment_as_dict(
@@ -611,6 +621,11 @@ class Unit13(object):
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.weight = 0
+
+        # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
+        self.html_content = None
+        self.html_check_answers = False
+        self.html_review_form = None
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.workflow_yaml = DEFAULT_AUTO_GRADER_WORKFLOW
@@ -698,7 +713,10 @@ class PersistentCourse13(object):
             for unit_dict in unit_dicts:
                 unit = Unit13()
                 defaults = {
-                    'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW}
+                    'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW,
+                    'html_content': '',
+                    'html_check_answers': False,
+                    'html_review_form': ''}
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
@@ -1129,6 +1147,9 @@ class CourseModel13(object):
 
         if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
             existing_unit.weight = unit.weight
+            existing_unit.html_content = unit.html_content
+            existing_unit.html_check_answers = unit.html_check_answers
+            existing_unit.html_review_form = unit.html_review_form
             existing_unit.workflow_yaml = unit.workflow_yaml
 
         self._dirty_units.append(existing_unit)
@@ -1210,6 +1231,14 @@ class CourseModel13(object):
         """Returns the schema for an assessment as a Python dict."""
         return self._get_assessment_as_dict(
             self.get_assessment_filename(unit.unit_id))
+
+    def get_assessment_model_version(self, unit):
+        filename = self.get_assessment_filename(unit.unit_id)
+        path = self._app_context.fs.impl.physical_to_logical(filename)
+        if self.app_context.fs.isfile(path):
+            return ASSESSMENT_MODEL_VERSION_1_4
+        else:
+            return ASSESSMENT_MODEL_VERSION_1_5
 
     def get_review_form_content(self, unit):
         """Returns the schema for a review form as a Python dict."""
@@ -1841,6 +1870,9 @@ class Course(object):
     def get_assessment_content(self, unit):
         """Returns the schema for an assessment as a Python dict."""
         return self._model.get_assessment_content(unit)
+
+    def get_assessment_model_version(self, unit):
+        return self._model.get_assessment_model_version(unit)
 
     def get_review_form_content(self, unit):
         """Returns the schema for a review form as a Python dict."""

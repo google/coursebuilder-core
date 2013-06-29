@@ -15,6 +15,10 @@
     class="gcb-button gcb-button-action">Edit assessment</a>
 {% endif %}
 
+{% if model_version == '1.5' %}
+  {% import 'assessment_html_content.html' as html_assessment %}
+{% endif %}
+
 <div id="gcb-main">
   <div class="gcb-article">
     {% if assessment_script_src %}
@@ -60,14 +64,23 @@
       <hr>
     {% endif %}
 
-    {% import 'readonly_assessment.html' as readonly_assessment %}
+    {% if model_version == '1.4' %}
+      {% import 'readonly_assessment.html' as readonly_assessment %}
+    {% endif %}
 
     {% if readonly_student_assessment is defined %}
       {# I18N: Header text for a previously-submitted assignment. #}
       <h3>{{ gettext('Submitted assignment') }}</h3>
 
       <div class="gcb-border-box">
-        {{ readonly_assessment.display(readonly_student_assessment) }}
+        {% if model_version == '1.4' %}
+          {{ readonly_assessment.display(readonly_student_assessment) }}
+        {% elif model_version == '1.5' %}
+          {{
+            html_assessment.render(
+                unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True)
+          }}
+        {% endif %}
       </div>
 
       {% if reviews_received is defined or not due_date_exceeded %}
@@ -96,7 +109,14 @@
         {% for review in reviews_received %}
           <h4>Review {{ loop.index }}</h4>
           <div class="gcb-border-box">
-            {{ readonly_assessment.display(review) }}
+            {% if model_version == '1.4' %}
+              {{ readonly_assessment.display(review) }}
+            {% elif model_version == '1.5' %}
+              {{
+                  html_assessment.render(unit_id, assessment_xsrf_token,
+                      review['saved_answers'], review['content'], readonly=True)
+              }}
+            {% endif %}
           </div>
         {% endfor %}
       {% endif %}
@@ -104,7 +124,15 @@
     {% endif %}
 
     <div style="width: 970px;" id="assessmentContents"></div>
+
+    {% if model_version == '1.5' and not readonly_student_assessment %}
+      {{
+        html_assessment.render(
+            unit_id, assessment_xsrf_token, html_saved_answers, html_content,
+            check_answers=html_check_answers)
+      }}
+    {% endif %}
+
   </div>
 </div>
-
 {% endblock %}

@@ -27,7 +27,7 @@
   width: 600px;
 }
 .qt-hidden {
-  display: none;
+  display: none !important;
 }
 div.qt-warning {
   border: solid 1px #000;

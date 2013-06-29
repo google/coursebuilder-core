@@ -1,0 +1,49 @@
+{%
+  macro render(
+      unit_id, xsrf_token, saved_answers, content, readonly=False,
+      check_answers=False, is_review_form=False, review_key=None)
+%}
+  <script>
+    var questionData = questionData || {};
+    questionData.scored = true;
+    questionData.unitId = '{{ unit_id }}';
+    questionData.xsrfToken = '{{ xsrf_token }}';
+    {% if saved_answers %}
+      questionData.savedAnswers = questionData.savedAnswers || {};
+      $.extend(questionData.savedAnswers,
+          JSON.parse("{{saved_answers | js_string}}"));
+    {% endif %}
+    {% if is_review_form and review_key %}
+      questionData.reviewKey = '{{ review_key }}';
+    {% endif %}
+  </script>
+  <div class="gcb-assessment-body{% if readonly %} assessment-readonly{% endif %}{% if is_review_form %} review-form{% endif %}">
+    {{ content | gcb_tags }}
+  </div>
+  {% if is_review_form %}
+    <div class="qt-review-form-controls">
+      <button class="gcb-button qt-save-draft">
+        {{ gettext(' Save Draft ') }}
+      </button>
+      <button class="gcb-button qt-submit-review">
+        {{ gettext(' Submit Review ') }}
+      </button>
+    </div>
+  {% else %}
+    {% if not readonly %}
+      {% if check_answers %}
+        <div class="qt-grade-scored-lesson qt-hidden">
+          <button class="gcb-button qt-check-answer-button">
+            {{ gettext(' Check Answers ') }}
+          </button>
+        </div>
+      {% endif %}
+      <div class="qt-grade-report qt-hidden"></div>
+      <div class="qt-grade-assessment qt-hidden">
+        <button class="gcb-button qt-check-answer-button">
+          {{ gettext(' Submit Answers ') }}
+        </button>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endmacro %}

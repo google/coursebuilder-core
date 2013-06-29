@@ -248,7 +248,8 @@ class UnitLessonEditor(ApplicationHandler):
         """Shows assessment editor."""
         self._render_edit_form_for(
             AssessmentRESTHandler, 'Assessment',
-            page_description=messages.ASSESSMENT_EDITOR_DESCRIPTION)
+            page_description=messages.ASSESSMENT_EDITOR_DESCRIPTION,
+            extra_js_files=['assessment_editor_lib.js', 'assessment_editor.js'])
 
     def get_edit_lesson(self):
         """Shows the lesson/activity editor."""
@@ -584,9 +585,20 @@ def create_assessment_registry():
         SchemaField('title', 'Title', 'string', optional=True))
     course_opts.add_property(
         SchemaField('weight', 'Weight', 'string', optional=True))
-    course_opts.add_property(
-        SchemaField('content', 'Assessment Content', 'text', optional=True,
-                    description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION)))
+    course_opts.add_property(SchemaField(
+        'content', 'Assessment Content', 'text', optional=True,
+        description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
+        extra_schema_dict_values={'className': 'inputEx-Field content'}))
+    course_opts.add_property(SchemaField(
+        'html_content', 'Assessment Content (HTML)', 'html', optional=True,
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'className': 'inputEx-Field html-content'}))
+    course_opts.add_property(SchemaField(
+        'html_check_answers', '"Check Answers" Buttons', 'boolean',
+        optional=True,
+        extra_schema_dict_values={
+            'className': 'inputEx-Field assessment-editor-check-answers'}))
     course_opts.add_property(
         SchemaField(workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
                     'Submission Due Date', 'string', optional=True,
@@ -613,7 +625,15 @@ def create_assessment_registry():
     review_opts.add_property(
         SchemaField(
             'review_form', 'Reviewer Feedback Form', 'text', optional=True,
-            description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION)))
+            description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION),
+            extra_schema_dict_values={
+                'className': 'inputEx-Field review-form'}))
+    review_opts.add_property(SchemaField(
+        'html_review_form', 'Reviewer Feedback Form (HTML)', 'html',
+        optional=True,
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'className': 'inputEx-Field html-review-form'}))
     review_opts.add_property(
         SchemaField(
             workflow_key(courses.REVIEW_DUE_DATE_KEY),
@@ -644,8 +664,9 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     SCHEMA_ANNOTATIONS_DICT = REG.get_schema_dict()
 
     REQUIRED_MODULES = [
-        'inputex-select', 'inputex-string', 'inputex-textarea',
-        'inputex-uneditable', 'inputex-integer', 'inputex-hidden']
+        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
+        'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
+        'inputex-checkbox']
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
@@ -693,6 +714,8 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 'title': unit.title,
                 'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
                 'content': content,
+                'html_content': unit.html_content,
+                'html_check_answers': unit.html_check_answers,
                 'is_draft': not unit.now_available,
                 workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
                     submission_due_date),
@@ -706,6 +729,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 workflow_key(courses.REVIEW_WINDOW_MINS_KEY): (
                     workflow.get_review_window_mins()),
                 'review_form': review_form,
+                'html_review_form': unit.html_review_form
                 }
             }
 
@@ -713,7 +737,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         """Store the updated assessment."""
 
         entity_dict = {}
-        AssessmentRESTHandler.REG.import_json_to_entity(
+        AssessmentRESTHandler.REG.convert_json_to_entity(
             updated_unit_dict, entity_dict)
         unit.title = entity_dict.get('title')
 
@@ -726,8 +750,13 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
 
         unit.now_available = not entity_dict.get('is_draft')
         course = courses.Course(self)
-        course.set_assessment_content(
-            unit, entity_dict.get('content'), errors=errors)
+        content = entity_dict.get('content')
+        if content:
+            course.set_assessment_content(
+                unit, entity_dict.get('content'), errors=errors)
+
+        unit.html_content = entity_dict.get('html_content')
+        unit.html_check_answers = entity_dict.get('html_check_answers')
 
         workflow_dict = entity_dict.get('workflow')
         if len(ALLOWED_MATCHERS_NAMES) == 1:
@@ -739,8 +768,11 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         # Only save the review form if the assessment needs human grading.
         if not errors:
             if course.needs_human_grader(unit):
-                course.set_review_form(
-                    unit, entity_dict.get('review_form'), errors=errors)
+                review_form = entity_dict.get('review_form')
+                if review_form:
+                    course.set_review_form(
+                        unit, review_form, errors=errors)
+                unit.html_review_form = entity_dict.get('html_review_form')
             elif entity_dict.get('review_form'):
                 errors.append(
                     'Review forms for auto-graded assessments should be empty.')

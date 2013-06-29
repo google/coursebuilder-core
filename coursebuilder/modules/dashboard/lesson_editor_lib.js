@@ -55,7 +55,7 @@ ActivityImporter.prototype.doImport = function() {
 
         var payload = JSON.parse(json.payload);
         var importedActivity = payload.content;
-        var rte = that.findLessonBodyRte(cb_global.form);
+        var rte = that.findLessonBodyRte();
         rte.setValue(rte.getValue() + '\n\n\n' + importedActivity);
 
         that.notify('Your activity has been imported into the lesson body.');

@@ -138,7 +138,7 @@ class DashboardHandler(
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
         return jinja_utils.get_template(
-            template_name, dirs + [os.path.dirname(__file__)])
+            template_name, dirs + [os.path.dirname(__file__)], handler=self)
 
     def _get_alerts(self):
         alerts = []

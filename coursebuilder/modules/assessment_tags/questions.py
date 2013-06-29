@@ -23,7 +23,6 @@ from xml.etree import cElementTree
 from common import jinja_utils
 from common import schema_fields
 from common import tags
-from controllers import utils
 import jinja2
 from models import custom_modules
 from models import models as m_models
@@ -107,8 +106,7 @@ class QuestionTag(tags.BaseTag):
 
     def render(self, node, handler):
         """Renders a question."""
-        locale = (
-            handler.template_value[utils.COURSE_INFO_KEY]['course']['locale'])
+        locale = handler.app_context.get_environ()['course']['locale']
 
         quid = node.attrib.get('quid')
         try:
@@ -119,7 +117,7 @@ class QuestionTag(tags.BaseTag):
         instanceid = node.attrib.get('instanceid')
 
         progress = None
-        if not handler.student.is_transient:
+        if hasattr(handler, 'student') and not handler.student.is_transient:
             progress = handler.get_course().get_progress_tracker(
                 ).get_component_progress(
                     handler.student, handler.unit_id, handler.lesson_id,
@@ -175,8 +173,8 @@ class QuestionGroupTag(tags.BaseTag):
 
     def render(self, node, handler):
         """Renders a question."""
-        locale = (
-            handler.template_value[utils.COURSE_INFO_KEY]['course']['locale'])
+
+        locale = handler.app_context.get_environ()['course']['locale']
 
         qgid = node.attrib.get('qgid')
         group_instanceid = node.attrib.get('instanceid')
@@ -187,7 +185,7 @@ class QuestionGroupTag(tags.BaseTag):
         template_values['instanceid'] = group_instanceid
         template_values['resources_path'] = RESOURCES_PATH
 
-        if not handler.student.is_transient:
+        if hasattr(handler, 'student') and not handler.student.is_transient:
             progress = handler.get_course().get_progress_tracker(
                 ).get_component_progress(
                     handler.student, handler.unit_id, handler.lesson_id,

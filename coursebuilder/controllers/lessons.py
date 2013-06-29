@@ -20,6 +20,7 @@ import datetime
 import urllib
 import urlparse
 
+from models import courses
 from models import models
 from models import student_work
 from models import transforms
@@ -370,6 +371,21 @@ class AssessmentHandler(BaseHandler):
             self.error(404)
             return
 
+        model_version = course.get_assessment_model_version(unit)
+        assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
+        self.template_value['model_version'] = model_version
+
+        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
+            configure_readonly_view = self.configure_readonly_view_1_4
+            configure_active_view = self.configure_active_view_1_4
+            get_review_received = self.get_review_received_1_4
+        elif model_version == courses.ASSESSMENT_MODEL_VERSION_1_5:
+            configure_readonly_view = self.configure_readonly_view_1_5
+            configure_active_view = self.configure_active_view_1_5
+            get_review_received = self.get_review_received_1_5
+        else:
+            raise ValueError('Bad assessment model version: %s' % model_version)
+
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit_id
         self.template_value['assessment_xsrf_token'] = (
@@ -424,11 +440,8 @@ class AssessmentHandler(BaseHandler):
                 reviews_for_student = rp.get_reviews_by_keys(
                     unit.unit_id, review_keys_for_student)
 
-                self.template_value['reviews_received'] = [
-                    create_readonly_assessment_params(
-                        course.get_review_form_content(unit),
-                        StudentWorkUtils.get_answer_list(review)
-                    ) for review in reviews_for_student]
+                self.template_value['reviews_received'] = [get_review_received(
+                    unit, review) for review in reviews_for_student]
             else:
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
@@ -436,28 +449,55 @@ class AssessmentHandler(BaseHandler):
             # Determine whether to show the assessment in readonly mode.
             if submission_contents or due_date_exceeded:
                 readonly_view = True
-                self.template_value['readonly_student_assessment'] = (
-                    create_readonly_assessment_params(
-                        course.get_assessment_content(unit),
-                        StudentWorkUtils.get_answer_list(submission_contents)
-                    )
-                )
+                configure_readonly_view(unit, submission_contents)
 
         if not readonly_view:
-            self.template_value['assessment_script_src'] = (
-                self.get_course().get_assessment_filename(unit_id))
-
+            submission_contents = None
             if not student.is_transient:
-                # If a previous submission exists, reinstate it.
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
-                saved_answers = (
-                    StudentWorkUtils.get_answer_list(submission_contents)
-                    if submission_contents else [])
-                self.template_value['saved_answers'] = transforms.dumps(
-                    saved_answers)
+            configure_active_view(unit, submission_contents)
 
         self.render('assessment.html')
+
+    def configure_readonly_view_1_4(self, unit, submission_contents):
+        self.template_value['readonly_student_assessment'] = (
+            create_readonly_assessment_params(
+                self.get_course().get_assessment_content(unit),
+                StudentWorkUtils.get_answer_list(submission_contents)))
+
+    def configure_readonly_view_1_5(self, unit, submission_contents):
+        self.template_value['readonly_student_assessment'] = True
+        self.template_value['html_content'] = unit.html_content
+        self.template_value['html_saved_answers'] = transforms.dumps(
+            submission_contents)
+
+    def configure_active_view_1_4(self, unit, submission_contents):
+        self.template_value['assessment_script_src'] = (
+            self.get_course().get_assessment_filename(unit.unit_id))
+        if submission_contents:
+            # If a previous submission exists, reinstate it.
+            self.template_value['saved_answers'] = transforms.dumps(
+                StudentWorkUtils.get_answer_list(submission_contents))
+
+    def configure_active_view_1_5(self, unit, submission_contents):
+        self.template_value['html_content'] = unit.html_content
+        self.template_value['html_check_answers'] = unit.html_check_answers
+        if submission_contents:
+            # If a previous submission exists, reinstate it.
+            self.template_value['html_saved_answers'] = transforms.dumps(
+                submission_contents)
+
+    def get_review_received_1_4(self, unit, review):
+        return create_readonly_assessment_params(
+            self.get_course().get_review_form_content(unit),
+            StudentWorkUtils.get_answer_list(review))
+
+    def get_review_received_1_5(self, unit, review):
+        return {
+            'content': unit.html_review_form,
+            'saved_answers': transforms.dumps(review)
+        }
 
 
 class ReviewDashboardHandler(BaseHandler):
@@ -634,6 +674,21 @@ class ReviewHandler(BaseHandler):
             self.error(404)
             return
 
+        model_version = course.get_assessment_model_version(unit)
+        assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
+        self.template_value['model_version'] = model_version
+
+        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
+            configure_assessment_view = self.configure_assessment_view_1_4
+            configure_readonly_review = self.configure_readonly_review_1_4
+            configure_active_review = self.configure_active_review_1_4
+        elif model_version == courses.ASSESSMENT_MODEL_VERSION_1_5:
+            configure_assessment_view = self.configure_assessment_view_1_5
+            configure_readonly_review = self.configure_readonly_review_1_5
+            configure_active_review = self.configure_active_review_1_5
+        else:
+            raise ValueError('Bad assessment model version: %s' % model_version)
+
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit.unit_id
         self.template_value['key'] = review_step_key
@@ -642,13 +697,7 @@ class ReviewHandler(BaseHandler):
         submission_contents = student_work.Submission.get_contents_by_key(
             submission_key)
 
-        readonly_student_assessment = create_readonly_assessment_params(
-            course.get_assessment_content(unit),
-            StudentWorkUtils.get_answer_list(submission_contents)
-        )
-        self.template_value['readonly_student_assessment'] = (
-            readonly_student_assessment
-        )
+        configure_assessment_view(unit, submission_contents)
 
         review_due_date = unit.workflow.get_review_due_date()
         if review_due_date:
@@ -667,19 +716,10 @@ class ReviewHandler(BaseHandler):
         self.template_value['due_date_exceeded'] = (time_now > review_due_date)
 
         if show_readonly_review:
-            readonly_review_form = create_readonly_assessment_params(
-                course.get_review_form_content(unit),
-                StudentWorkUtils.get_answer_list(rev)
-            )
-            self.template_value['readonly_review_form'] = readonly_review_form
+            configure_readonly_review(unit, rev)
         else:
             # Populate the review form,
-            self.template_value['assessment_script_src'] = (
-                self.get_course().get_review_form_filename(unit.unit_id))
-            saved_answers = (StudentWorkUtils.get_answer_list(rev)
-                             if rev else [])
-            self.template_value['saved_answers'] = transforms.dumps(
-                saved_answers)
+            configure_active_review(unit, rev)
 
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('review-post'))
@@ -687,6 +727,43 @@ class ReviewHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('event-post'))
 
         self.render('review.html')
+
+    def configure_assessment_view_1_4(self, unit, submission_contents):
+        readonly_student_assessment = create_readonly_assessment_params(
+            self.get_course().get_assessment_content(unit),
+            StudentWorkUtils.get_answer_list(submission_contents))
+        self.template_value[
+            'readonly_student_assessment'] = readonly_student_assessment
+
+    def configure_assessment_view_1_5(self, unit, submission_contents):
+        self.template_value['html_review_content'] = unit.html_content
+        self.template_value['html_reviewee_answers'] = transforms.dumps(
+            submission_contents)
+
+    def configure_readonly_review_1_4(self, unit, review_contents):
+        readonly_review_form = create_readonly_assessment_params(
+            self.get_course().get_review_form_content(unit),
+            StudentWorkUtils.get_answer_list(review_contents))
+        self.template_value['readonly_review_form'] = readonly_review_form
+
+    def configure_readonly_review_1_5(self, unit, review_contents):
+        self.template_value['readonly_review_form'] = True
+        self.template_value['html_review_form'] = unit.html_review_form
+        self.template_value['html_review_answers'] = transforms.dumps(
+            review_contents)
+
+    def configure_active_review_1_4(self, unit, review_contents):
+        self.template_value['assessment_script_src'] = (
+            self.get_course().get_review_form_filename(unit.unit_id))
+        saved_answers = (
+            StudentWorkUtils.get_answer_list(review_contents)
+            if review_contents else [])
+        self.template_value['saved_answers'] = transforms.dumps(saved_answers)
+
+    def configure_active_review_1_5(self, unit, review_contents):
+        self.template_value['html_review_form'] = unit.html_review_form
+        self.template_value['html_review_answers'] = transforms.dumps(
+            review_contents)
 
     def post(self):
         """Handles POST requests, when a reviewer submits a review."""

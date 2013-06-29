@@ -15,6 +15,10 @@
     class="gcb-button gcb-button-action">Edit assessment</a>
 {% endif %}
 
+{% if model_version == '1.5' %}
+  {% import 'assessment_html_content.html' as html_assessment %}
+{% endif %}
+
 <div id="gcb-main">
   <div class="gcb-article">
     {% if assessment_script_src %}
@@ -75,14 +79,30 @@
     {% import 'readonly_assessment.html' as readonly_assessment %}
 
     <div class="gcb-border-box">
-      {{ readonly_assessment.display(readonly_student_assessment) }}
+        {% if model_version == '1.4' %}
+          {{ readonly_assessment.display(readonly_student_assessment) }}
+        {% elif model_version == '1.5' %}
+          {{
+            html_assessment.render(
+                unit_id, assessment_xsrf_token, html_reviewee_answers,
+                html_review_content, readonly=True)
+          }}
+        {% endif %}
     </div>
 
     {% if readonly_review_form is defined %}
       {# I18N: Header text for a review the student has previously submitted. #}
       <h3>{{ gettext('Submitted review') }}</h3>
       <div class="gcb-border-box">
-        {{ readonly_assessment.display(readonly_review_form) }}
+        {% if model_version == '1.4' %}
+          {{ readonly_assessment.display(readonly_review_form) }}
+        {% elif model_version == '1.5' %}
+          {{
+            html_assessment.render(
+                unit_id, assessment_xsrf_token, html_review_answers,
+                html_review_form, readonly=True)
+          }}
+        {% endif %}
       </div>
     {% else %}
       {# I18N: Header text for a review form that a student has to complete when reviewing another student's assignment. #}
@@ -90,6 +110,15 @@
     {% endif %}
 
     <div style="width: 970px;" id="assessmentContents"></div>
+
+    {% if model_version == '1.5' and not readonly_review_form %}
+      {{
+        html_assessment.render(
+            unit_id, assessment_xsrf_token, html_review_answers,
+            html_review_form, is_review_form=True, review_key=key)
+      }}
+    {% endif %}
+
   </div>
 </div>
 

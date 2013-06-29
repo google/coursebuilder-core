@@ -1,6 +1,11 @@
 <h3>Assignment (with feedback) for {{reviewee_id}}</h3>
 
-{% import 'readonly_assessment.html' as readonly_assessment %}
+{% if model_version == '1.4' %}
+  {% import 'readonly_assessment.html' as readonly_assessment %}
+{% elif model_version == '1.5' %}
+  <script src="assets/lib/jquery-1.7.2.min.js"></script>
+  {% import 'readonly_html_assessment.html' as readonly_assessment %}
+{% endif %}
 
 <h4>Student's Assignment</h4>
 <div class="border-box">

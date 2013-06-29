@@ -28,6 +28,7 @@ from models import models
 from models import review
 from models import roles
 from models import student_work
+from models import transforms
 from modules.review import domain
 
 import messages
@@ -59,7 +60,7 @@ class AssignmentManager(ApplicationHandler):
     def get_assignment_html(
         self, peer_reviewed_units, unit_id=None, reviewee_id=None,
         error_msg=None, readonly_assessment=None, review_steps=None,
-        reviewers=None, reviews_params=None):
+        reviewers=None, reviews_params=None, model_version=None):
         """Renders a template allowing an admin to select an assignment."""
         edit_url = self.canonicalize_url('/dashboard')
 
@@ -82,6 +83,7 @@ class AssignmentManager(ApplicationHandler):
             'reviews_params': reviews_params,
             'review_steps': review_steps,
             'unit_id': unit_id,
+            'model_version': model_version
         }, autoescape=True))
 
     def parse_request(self, course, unit_id, reviewee_id, reviewer_id=None):
@@ -172,8 +174,20 @@ class AssignmentManager(ApplicationHandler):
             self.render_page(template_values)
             return
 
+        model_version = course.get_assessment_model_version(unit)
+        assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
+
+        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
+            get_readonly_assessment = self.get_readonly_assessment_1_4
+            get_readonly_review = self.get_readonly_review_1_4
+        elif model_version == courses.ASSESSMENT_MODEL_VERSION_1_5:
+            get_readonly_assessment = self.get_readonly_assessment_1_5
+            get_readonly_review = self.get_readonly_review_1_5
+        else:
+            raise ValueError('Bad assessment model version: %s' % model_version)
+
         # Render content.
-        assessment_content = course.get_assessment_content(unit)
+
         rp = course.get_reviews_processor()
 
         submission_and_review_steps = rp.get_submission_and_review_steps(
@@ -186,15 +200,8 @@ class AssignmentManager(ApplicationHandler):
             self.render_page(template_values)
             return
 
-        submission_contents = submission_and_review_steps[0]
-        answer_list = student_work.StudentWorkUtils.get_answer_list(
-            submission_contents)
-
-        readonly_assessment = create_readonly_assessment_params(
-            assessment_content, answer_list
-        )
-
-        review_form = course.get_review_form_content(unit)
+        readonly_assessment = get_readonly_assessment(
+            unit, submission_and_review_steps[0])
 
         review_steps = submission_and_review_steps[1]
         reviews = rp.get_reviews_by_keys(
@@ -205,10 +212,7 @@ class AssignmentManager(ApplicationHandler):
         reviews_params = []
         reviewers = []
         for idx, review_step in enumerate(review_steps):
-            params = create_readonly_assessment_params(
-                review_form,
-                student_work.StudentWorkUtils.get_answer_list(reviews[idx])
-            )
+            params = get_readonly_review(unit, reviews[idx])
             reviews_params.append(params)
 
             reviewer = models.Student.get_student_by_user_id(
@@ -222,8 +226,31 @@ class AssignmentManager(ApplicationHandler):
             peer_reviewed_units, unit_id=unit_id, reviewee_id=reviewee_id,
             readonly_assessment=readonly_assessment, review_steps=review_steps,
             error_msg=post_error_msg, reviewers=reviewers,
-            reviews_params=reviews_params)
+            reviews_params=reviews_params,
+            model_version=model_version)
         self.render_page(template_values)
+
+    def get_readonly_assessment_1_4(self, unit, submission_content):
+        return create_readonly_assessment_params(
+            courses.Course(self).get_assessment_content(unit),
+            student_work.StudentWorkUtils.get_answer_list(submission_content))
+
+    def get_readonly_assessment_1_5(self, unit, submission_content):
+        return {
+            'content': unit.html_content,
+            'saved_answers': transforms.dumps(submission_content)
+        }
+
+    def get_readonly_review_1_4(self, unit, review_content):
+        return create_readonly_assessment_params(
+            courses.Course(self).get_review_form_content(unit),
+            student_work.StudentWorkUtils.get_answer_list(review_content))
+
+    def get_readonly_review_1_5(self, unit, review_content):
+        return {
+            'content': unit.html_review_form,
+            'saved_answers': transforms.dumps(review_content)
+        }
 
     def post_add_reviewer(self):
         """Adds a new reviewer to a human-reviewed assignment."""
