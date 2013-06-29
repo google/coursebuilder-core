@@ -230,14 +230,15 @@ def register_module():
         tags.Registry.remove_tag_binding('question-group')
 
     # Add a static handler for icons shown in the rich text editor.
-    extensions_tag_resource_routes = [(
+    global_routes = [(
         os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     global custom_module
     custom_module = custom_modules.Module(
         'Question tags',
         'A set of tags for rendering questions within a lesson body.',
-        extensions_tag_resource_routes, [],
+        global_routes,
+        [],
         notify_module_enabled=when_module_enabled,
         notify_module_disabled=when_module_disabled)
     return custom_module

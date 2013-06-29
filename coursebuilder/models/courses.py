@@ -22,11 +22,13 @@ import logging
 import os
 import pickle
 import sys
+from xml.etree import cElementTree
 
 import appengine_config
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 import common.tags
+import html5lib
 from tools import verify
 import yaml
 
@@ -1811,6 +1813,35 @@ class Course(object):
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
+
+    def get_components(self, unit_id, lesson_id):
+        """Returns a list of dicts representing the components in a lesson.
+
+        Args:
+            unit_id: the id of the unit containing the lesson
+            lesson_id: the id of the lesson
+
+        Returns:
+            A list of dicts. Each dict represents one component and has two
+            keys:
+            - instanceid: the instance id of the component
+            - name: the name of the component tag (e.g. gcb-googlegroup)
+        """
+        unit = self.find_unit_by_id(unit_id)
+        lesson = self.find_lesson_by_id(unit, lesson_id)
+        if not lesson.objectives:
+            return []
+
+        parser = html5lib.HTMLParser(
+            tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+            namespaceHTMLElements=False)
+        lesson_content = parser.parseFragment(
+            '<div>%s</div>' % lesson.objectives)[0]
+
+        return [{
+            'instanceid': component.attrib.get('instanceid'),
+            'name': component.tag,
+        } for component in lesson_content.findall('.//*[@instanceid]')]
 
     def needs_human_grader(self, unit):
         return unit.workflow.get_grader() == HUMAN_GRADER

@@ -1849,7 +1849,8 @@ class ActivityTest(actions.TestBase):
         # no progress yet.
         response = self.get('course')
         assert_equals(response.status_int, 200)
-        assert_contains(u'id="progress-notstarted-%s"' % unit_id, response.body)
+        assert_contains(
+            u'id="progress-notstarted-%s"' % unit_id, response.body)
 
         old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace(self.namespace)
@@ -1858,7 +1859,8 @@ class ActivityTest(actions.TestBase):
 
             # Check that the current activity shows no progress yet.
             assert_contains(
-                u'id="progress-notstarted-%s"' % lesson_id, response.body)
+                u'id="progress-notstarted-%s-activity"' %
+                lesson_id, response.body)
 
             # Prepare activity submission event.
             args['source'] = 'attempt-activity'
@@ -1879,7 +1881,8 @@ class ActivityTest(actions.TestBase):
             # Check that the current activity shows partial progress.
             response, args = self.get_activity(unit_id, lesson_id, {})
             assert_contains(
-                u'id="progress-inprogress-%s"' % lesson_id, response.body)
+                u'id="progress-inprogress-%s-activity"' %
+                lesson_id, response.body)
 
             # Navigate to the course overview page and check that the unit shows
             # partial progress.
@@ -1907,45 +1910,66 @@ class ActivityTest(actions.TestBase):
             assert unit_progress[key] == 0
         lesson_progress = tracker.get_lesson_progress(student, 1)
         for key in lesson_progress:
-            assert lesson_progress[key] == 0
+            assert lesson_progress[key] == {'html': 0, 'activity': 0}
 
         # The blocks in Lesson 1.2 with activities are blocks 3 and 6.
         # Submitting block 3 should trigger an in-progress update.
         tracker.put_block_completed(student, 1, 2, 3)
         assert tracker.get_unit_progress(student)['1'] == 1
-        assert tracker.get_lesson_progress(student, 1)[2] == 1
+        assert tracker.get_lesson_progress(student, 1)[2] == {
+            'html': 0, 'activity': 1
+        }
 
-        # Submitting block 6 should trigger a completion update for Lesson 1.2.
+        # Submitting block 6 should trigger a completion update for the
+        # activity, but Lesson 1.2 is still incomplete.
         tracker.put_block_completed(student, 1, 2, 6)
         assert tracker.get_unit_progress(student)['1'] == 1
-        assert tracker.get_lesson_progress(student, 1)[2] == 2
+        assert tracker.get_lesson_progress(student, 1)[2] == {
+            'html': 0, 'activity': 2
+        }
+
+        # Visiting the HTML page for Lesson 1.2 completes the lesson.
+        tracker.put_html_accessed(student, 1, 2)
+        assert tracker.get_unit_progress(student)['1'] == 1
+        assert tracker.get_lesson_progress(student, 1)[2] == {
+            'html': 2, 'activity': 2
+        }
 
         # Test a lesson with no interactive blocks in its activity. It should
         # change its status to 'completed' once it is accessed.
         tracker.put_activity_accessed(student, 2, 1)
         assert tracker.get_unit_progress(student)['2'] == 1
-        assert tracker.get_lesson_progress(student, 2)[1] == 2
+        assert tracker.get_lesson_progress(student, 2)[1] == {
+            'html': 0, 'activity': 2
+        }
 
         # Test that a lesson without activities (Lesson 1.1) doesn't count.
         # Complete lessons 1.3, 1.4, 1.5 and 1.6; unit 1 should then be marked
         # as 'completed' even though we have no events associated with
         # Lesson 1.1.
+        tracker.put_html_accessed(student, 1, 1)
+        tracker.put_html_accessed(student, 1, 3)
+        tracker.put_html_accessed(student, 1, 4)
+        tracker.put_html_accessed(student, 1, 5)
+        tracker.put_html_accessed(student, 1, 6)
         tracker.put_activity_completed(student, 1, 3)
-        assert tracker.get_unit_progress(student)['1'] == 1
         tracker.put_activity_completed(student, 1, 4)
-        assert tracker.get_unit_progress(student)['1'] == 1
         tracker.put_activity_completed(student, 1, 5)
         assert tracker.get_unit_progress(student)['1'] == 1
         tracker.put_activity_completed(student, 1, 6)
         assert tracker.get_unit_progress(student)['1'] == 2
 
-        # Test that a unit is not completed until all activity pages have been,
-        # at least, visited. Unit 6 has 3 lessons; the last one has no
-        # activity block.
+        # Test that a unit is not completed until all HTML and activity pages
+        # have been, at least, visited. Unit 6 has 3 lessons; the last one has
+        # no activity block.
+        tracker.put_html_accessed(student, 6, 1)
+        tracker.put_html_accessed(student, 6, 2)
         tracker.put_activity_completed(student, 6, 1)
         tracker.put_activity_completed(student, 6, 2)
         assert tracker.get_unit_progress(student)['6'] == 1
         tracker.put_activity_accessed(student, 6, 3)
+        assert tracker.get_unit_progress(student)['6'] == 1
+        tracker.put_html_accessed(student, 6, 3)
         assert tracker.get_unit_progress(student)['6'] == 2
 
         # Test assessment counters.
@@ -2961,6 +2985,93 @@ class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(DatastoreBackedSampleCourseTest, self).setUp()
         self.init_course_data(self.upload_all_sample_course_files)
+
+
+class LessonComponentsTest(DatastoreBackedCourseTest):
+    """Test operations that make use of components in a lesson body."""
+
+    def setUp(self):
+        """Set up the dummy course for each test case in this class."""
+        super(LessonComponentsTest, self).setUp()
+        self.course = courses.Course(None, app_context=self.app_context)
+        self.unit = self.course.add_unit()
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.objectives = """
+            <question quid="123" weight="1" instanceid="QN"></question>
+            random_text
+            <gcb-youtube videoid="Kdg2drcUjYI" instanceid="VD"></gcb-youtube>
+            more_random_text
+            <question-group qgid="456" instanceid="QG"></question-group>
+            yet_more_random_text
+        """
+        self.lesson.has_activity = False
+        self.course.update_lesson(self.lesson)
+        self.course.save()
+
+        self.tracker = self.course.get_progress_tracker()
+
+    def test_component_discovery(self):
+        """Test extraction of components from a lesson body."""
+        cpt_list = self.course.get_components(
+            self.unit.unit_id, self.lesson.lesson_id)
+        assert cpt_list == [
+            {'instanceid': 'QN', 'name': 'question'},
+            {'instanceid': 'VD', 'name': 'gcb-youtube'},
+            {'instanceid': 'QG', 'name': 'question-group'}
+        ]
+
+        valid_cpt_ids = self.tracker.get_valid_component_ids(
+            self.unit.unit_id, self.lesson.lesson_id)
+        assert valid_cpt_ids == ['QN', 'QG']
+
+    def test_component_progress(self):
+        """Test that progress tracking for components is done correctly."""
+        unit_id = self.unit.unit_id
+        lesson_id = self.lesson.lesson_id
+
+        student = models.Student(key_name='lesson-body-test-student')
+
+        assert self.tracker.get_unit_progress(student)[unit_id] == 0
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 0, 'activity': 0}
+
+        # Visiting the lesson page has no effect on progress, since it contains
+        # trackable components.
+        self.tracker.put_html_accessed(student, unit_id, lesson_id)
+        assert self.tracker.get_unit_progress(student)[unit_id] == 0
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 0, 'activity': 0}
+
+        # Marking progress for a non-existent component id has no effect.
+        self.tracker.put_component_completed(student, unit_id, lesson_id, 'a')
+        assert self.tracker.get_unit_progress(student)[unit_id] == 0
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 0, 'activity': 0}
+
+        # Marking progress for a non-trackable component id has no effect.
+        self.tracker.put_component_completed(student, unit_id, lesson_id, 'VD')
+        assert self.tracker.get_unit_progress(student)[unit_id] == 0
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 0, 'activity': 0}
+
+        # Completing a trackable component marks the lesson as in-progress,
+        self.tracker.put_component_completed(student, unit_id, lesson_id, 'QN')
+        assert self.tracker.get_unit_progress(student)[unit_id] == 1
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 1, 'activity': 0}
+
+        # Completing the same component again has no further effect.
+        self.tracker.put_component_completed(student, unit_id, lesson_id, 'QN')
+        assert self.tracker.get_unit_progress(student)[unit_id] == 1
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 1, 'activity': 0}
+
+        # Completing the other trackable component marks the lesson (and unit)
+        # as completed.
+        self.tracker.put_component_completed(student, unit_id, lesson_id, 'QG')
+        assert self.tracker.get_unit_progress(student)[unit_id] == 2
+        assert self.tracker.get_lesson_progress(
+            student, unit_id)[lesson_id] == {'html': 2, 'activity': 0}
 
 
 class FakeEnvironment(object):

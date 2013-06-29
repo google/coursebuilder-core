@@ -250,11 +250,17 @@ class UnitHandler(BaseHandler):
 
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value)
+            CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
-            self.template_value['progress'] = (
+            self.template_value['lesson_progress'] = (
                 self.get_progress_tracker().get_lesson_progress(
                     student, unit_id))
+
+            # Mark this page as accessed. This is done after setting the
+            # student progress template value, so that the mark only shows up
+            # after the student visits the page for the first time.
+            self.get_course().get_progress_tracker().put_html_accessed(
+                student, unit_id, lesson_id)
 
         self.render('unit.html')
 
@@ -319,20 +325,20 @@ class ActivityHandler(BaseHandler):
 
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value)
+            CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
-            self.template_value['progress'] = (
+            self.template_value['lesson_progress'] = (
                 self.get_progress_tracker().get_lesson_progress(
                     student, unit_id))
 
+            # Mark this page as accessed. This is done after setting the
+            # student progress template value, so that the mark only shows up
+            # after the student visits the page for the first time.
+            self.get_course().get_progress_tracker().put_activity_accessed(
+                student, unit_id, lesson_id)
+
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
-
-        # Mark this page as accessed. This is done after setting the student
-        # progress template value, so that the mark only shows up after the
-        # student visits the page for the first time.
-        self.get_course().get_progress_tracker().put_activity_accessed(
-            student, unit_id, lesson_id)
 
         self.render('activity.html')
 
@@ -780,13 +786,26 @@ class EventsRESTHandler(BaseRESTHandler):
     def process_event(self, user, source, payload_json):
         """Processes an event after it has been recorded in the event stream."""
 
+        student = models.Student.get_enrolled_student_by_email(user.email())
+        if not student:
+            return
+
+        payload = transforms.loads(payload_json)
+
+        if 'location' not in payload:
+            return
+
+        source_url = payload['location']
+
         if source == 'attempt-activity':
-            student = models.Student.get_enrolled_student_by_email(user.email())
-            if not student:
-                return
-            payload = transforms.loads(payload_json)
-            source_url = payload['location']
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
+        elif source == 'attempt-component':
+            unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
+            cpt_id = payload['instanceid']
+            if all([unit_id, lesson_id, cpt_id]):
+                self.get_course().get_progress_tracker(
+                    ).put_component_completed(
+                        student, unit_id, lesson_id, cpt_id)

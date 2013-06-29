@@ -19,7 +19,7 @@ describe('assessment tags', function() {
   describe('base question methods', function() {
     var bq;
     beforeEach(function() {
-      bq = new BaseQuestion($('#mc-0'), {}, MESSAGES);
+      bq = new BaseQuestion($('#mc-0'), {}, MESSAGES, null);
       bq.data = {};
     });
     describe('the message about the score', function() {

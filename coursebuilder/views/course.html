@@ -48,13 +48,13 @@
                           <img src="assets/lib/completed.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                               class="gcb-progress-circle"
+                               class="gcb-progress-icon"
                                id="progress-completed-{{unit.unit_id}}">
                         {% else %}
                           <img src="assets/lib/not_started.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                               class="gcb-progress-circle"
+                               class="gcb-progress-icon"
                                id="progress-notstarted-{{unit.unit_id}}">
                         {% endif %}
                       {% else %}
@@ -76,19 +76,19 @@
                               <img src="assets/lib/completed.png"
                                    alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                    title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                                   class="gcb-progress-circle"
+                                   class="gcb-progress-icon"
                                    id="progress-completed-review-{{unit.unit_id}}">
                             {% elif unit.review_progress == 1 %}
                               <img src="assets/lib/in_progress.png"
                                    alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                    title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                                   class="gcb-progress-circle"
+                                   class="gcb-progress-icon"
                                    id="progress-inprogress-review-{{unit.unit_id}}">
                             {% else %}
                               <img src="assets/lib/not_started.png"
                                    alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
                                    title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                                   class="gcb-progress-circle"
+                                   class="gcb-progress-icon"
                                    id="progress-notstarted-review-{{unit.unit_id}}">
                             {% endif %}
                           {% endif %}
@@ -118,19 +118,19 @@
                           <img src="assets/lib/completed.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                               class="gcb-progress-circle"
+                               class="gcb-progress-icon"
                                id="progress-completed-{{unit.unit_id}}">
                         {% elif progress[unit.unit_id] == 1 %}
                           <img src="assets/lib/in_progress.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                               class="gcb-progress-circle"
+                               class="gcb-progress-icon"
                                id="progress-inprogress-{{unit.unit_id}}">
                         {% else %}
                           <img src="assets/lib/not_started.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
                                title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                               class="gcb-progress-circle"
+                               class="gcb-progress-icon"
                                id="progress-notstarted-{{unit.unit_id}}">
                         {% endif %}
                       {% else %}

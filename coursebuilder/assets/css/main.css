@@ -634,7 +634,7 @@ a.gcb-button-action, button.gcb-button-action {
 }
 
 /* Styles for the circular progress indicators. */
-.gcb-progress-circle {
+.gcb-progress-icon {
   margin: 2px 7px 0 0;
   opacity: 0.7;
 }
@@ -643,6 +643,16 @@ a.gcb-button-action, button.gcb-button-action {
   height: 14px;
   margin: 2px 7px 0 0;
   width: 15px;
+}
+.gcb-progress-icon-holder {
+  float: left;
+  width: 20px;
+}
+.gcb-lesson-title-with-progress {
+  margin-left: 20px;
+}
+.gcb-activity-title-with-progress {
+  margin-left: 35px;
 }
 
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */

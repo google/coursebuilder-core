@@ -17,12 +17,13 @@
 /**
  * Base class for rendering questions.
  */
-function BaseQuestion(el, questionData, messages) {
+function BaseQuestion(el, questionData, messages, componentAudit) {
   this.el = el;
   this.id = this.el.attr('id');
   this.data = questionData[this.id];
   this.scored = questionData.scored;
   this.messages = messages;
+  this.componentAudit = componentAudit;
 }
 BaseQuestion.bindSubclass = function(subclass) {
   var tmp = function () {};
@@ -45,6 +46,14 @@ BaseQuestion.prototype.onCheckAnswer = function() {
       $('<div/>')
           .append($("<p/>").text(this.getMessageAboutScore(grade.score)))
           .append(grade.feedback));
+
+  if (grade.answer) {
+    this.componentAudit({
+      'instanceid': this.id,
+      'answer': grade.answer,
+      'score': grade.score
+    });
+  }
 };
 BaseQuestion.prototype.displayFeedback = function(feedback) {
   this.el.find('div.qt-feedback')
@@ -60,8 +69,8 @@ BaseQuestion.prototype.getWeight = function() {
 /**
  * A class to handle multiple choice questions.
  */
-function McQuestion(el, questionData, messages) {
-  BaseQuestion.call(this, el, questionData, messages);
+function McQuestion(el, questionData, messages, componentAudit) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit);
 }
 BaseQuestion.bindSubclass(McQuestion);
 McQuestion.prototype.bind = function () {
@@ -78,10 +87,12 @@ McQuestion.prototype.bind = function () {
   };
 McQuestion.prototype.grade = function() {
   var that = this;
+  var answer = [];
   var score = 0.0;
   var feedback = $('<ul/>');
   this.el.find('div.qt-choices > div > input').each(function(i, input) {
     if (input.checked) {
+      answer.push(i);
       score += parseFloat(that.data.choices[i].score);
       if (that.data.choices[i].feedback) {
         feedback.append($('<li/>').text(that.data.choices[i].feedback));
@@ -89,16 +100,17 @@ McQuestion.prototype.grade = function() {
     }
   });
   return {
+    answer: answer,
     score: Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100,
     feedback: feedback
   };
-}
+};
 
 /**
  * A class to handle short answer questions.
  */
-function SaQuestion(el, questionData, messages) {
-  BaseQuestion.call(this, el, questionData, messages);
+function SaQuestion(el, questionData, messages, componentAudit) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit);
 }
 BaseQuestion.bindSubclass(SaQuestion);
 SaQuestion.prototype.MATCHERS = {
@@ -151,7 +163,7 @@ SaQuestion.prototype.grade = function() {
       };
     }
   }
-  return {score: 0.0, feedback: this.data.defaultFeedback};
+  return {answer: response, score: 0.0, feedback: this.data.defaultFeedback};
 };
 
 /**
@@ -160,8 +172,8 @@ SaQuestion.prototype.grade = function() {
  * @param el JQuery root node of the question group
  * @param questionData the global question data object
  */
-function QuestionGroup(el, questionData, messages) {
-  BaseQuestion.call(this, el, questionData, messages);
+function QuestionGroup(el, questionData, messages, componentAudit) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit);
   this.questionData = questionData;
   this.questions = [];
   this.init();
@@ -218,14 +230,16 @@ QuestionGroup.prototype.onCheckAnswer = function() {
 };
 QuestionGroup.prototype.grade = function() {
   var that = this;
+  var answer = [];
   var score = 0.0;
   var feedback = [];
   $.each(this.questions, function (index, question) {
     var grade = question.grade();
+    answer.push(grade.answer);
     score += that.data[question.id].weight * grade.score;
     feedback.push(grade.feedback);
   });
-  return {score: score, feedback: feedback};
+  return {answer: answer, score: score, feedback: feedback};
 };
 
 function gradeScoredLesson(questions) {
@@ -250,16 +264,16 @@ function findGcbQuestions() {
   };
   var gcbQuestions = [];
   $('div.qt-mc-question.qt-standalone').each(function(index, element) {
-    gcbQuestions.push(new McQuestion($(element), window.questionData, messages)
-        .bind());
+    gcbQuestions.push(new McQuestion(
+      $(element), window.questionData, messages, gcbComponentAudit).bind());
   });
   $('div.qt-sa-question.qt-standalone').each(function(index, element) {
-    gcbQuestions.push(new SaQuestion($(element), window.questionData, messages)
-        .bind());
+    gcbQuestions.push(new SaQuestion(
+      $(element), window.questionData, messages, gcbComponentAudit).bind());
   });
   $('div.qt-question-group').each(function(index, element) {
-    gcbQuestions.push(
-        new QuestionGroup($(element), window.questionData, messages).bind());
+    gcbQuestions.push(new QuestionGroup(
+      $(element), window.questionData, messages, gcbComponentAudit).bind());
   });
   if (window.questionData.scored && gcbQuestions.length > 0) {
     $('div.qt-grade-scored-lesson')
