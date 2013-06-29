@@ -32,12 +32,19 @@ function getFreshTag() {
 }
 
 // controls sending events to the server; off by default; override to enable
+var gcbCanPostTagEvents = false;
 var gcbCanPostPageEvents = false;
 var gcbCanPostEvents = false;
 
 // various XSRF tokens
 var eventXsrfToken = '';
 var assessmentXsrfToken = '';
+
+function gcbTagEventAudit(data_dict, name) {
+  if (gcbCanPostTagEvents) {
+    gcbAudit(data_dict, 'tag-' + name, true);
+  }
+}
 
 function gcbPageEventAudit(data_dict, name) {
   if (gcbCanPostPageEvents) {

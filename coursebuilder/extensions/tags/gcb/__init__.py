@@ -18,8 +18,10 @@ __author__ = 'John Orr (jorr@google.com)', 'Aparna Kadakia (akadakia@google.com)
 
 import urllib
 import urlparse
+from common import jinja_filters
 from common import schema_fields
 from common import tags
+from controllers import utils
 from models import courses
 from models.models import QuestionEntity
 from xml.etree import cElementTree
@@ -129,6 +131,13 @@ class YouTube(tags.BaseTag):
 
     def render(self, node):
         video_id = node.attrib.get('videoid')
+        if utils.CAN_PERSIST_TAG_EVENTS.value:
+            return self._render_with_tracking(video_id)
+        else:
+            return self._render_no_tracking(video_id)
+
+    def _render_no_tracking(self, video_id):
+        """Embed video without event tracking support."""
         you_tube_url = (
             'https://www.youtube.com/embed/%s'
             '?feature=player_embedded&amp;rel=0') % video_id
@@ -141,6 +150,17 @@ class YouTube(tags.BaseTag):
 </p>""")
         iframe[0].set('src', you_tube_url)
         return iframe
+
+    def _render_with_tracking(self, video_id):
+        """Embed video and enable event tracking."""
+        video_id = jinja_filters.js_string_raw(video_id)
+        return cElementTree.XML("""
+<p>
+    <script src='/extensions/tags/gcb/resources/youtube_video.js'></script>
+    <script>
+      gcbTagYoutubeEnqueueVideo('""" + video_id + """');
+    </script>
+</p>""")
 
     def get_icon_url(self):
         """Return the URL for the icon to be displayed in the rich text editor.
@@ -248,6 +268,7 @@ class Activity(tags.BaseTag):
                   'The ID of the activity (e.g. activity-2.4.js). '
                   'Note /assets/js/ is not required')))
         return reg
+
 
 class Question(tags.BaseTag):
 

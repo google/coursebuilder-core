@@ -28,7 +28,7 @@ def finalize(x):
     return x
 
 
-def js_string(data):
+def js_string_raw(data):
     """Escape a string so that it can be put in a JS quote."""
     if not isinstance(data, basestring):
         return data
@@ -41,7 +41,11 @@ def js_string(data):
     data = data.replace('<', '\\u003c')
     data = data.replace('>', '\\u003e')
     data = data.replace('&', '\\u0026')
-    return jinja2.utils.Markup(data)
+    return data
+
+
+def js_string(data):
+    return jinja2.utils.Markup(js_string_raw(data))
 
 
 def gcb_tags(data):

@@ -35,6 +35,7 @@ from tools import verify
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import CAN_PERSIST_PAGE_EVENTS
+from utils import CAN_PERSIST_TAG_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
 from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
@@ -748,7 +749,10 @@ class EventsRESTHandler(BaseRESTHandler):
         """Receives event and puts it into datastore."""
 
         COURSE_EVENTS_RECEIVED.inc()
-        can = CAN_PERSIST_ACTIVITY_EVENTS.value or CAN_PERSIST_PAGE_EVENTS.value
+        can = (
+            CAN_PERSIST_ACTIVITY_EVENTS.value or
+            CAN_PERSIST_PAGE_EVENTS.value or
+            CAN_PERSIST_TAG_EVENTS.value)
         if not can:
             return
 
