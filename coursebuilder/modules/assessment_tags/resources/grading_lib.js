@@ -341,17 +341,17 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   });
 
   var percentScore = (score / totalWeight * 100.0).toFixed(2);
-  $('body').append(
-      $('<form/>')
-          .css('display', 'none')
-          .attr('method', 'post')
-          .attr('action', 'answer')
-          .append($('<input type="hidden" name="assessment_type">').val(unitId))
-          .append($('<input type="hidden" name="score">').val(percentScore))
-          .append($('<input type="hidden" name="answers">')
-              .val(JSON.stringify(answers)))
-          .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken))
-          .submit());
+  var form = $('<form/>')
+    .css('display', 'none')
+    .attr('method', 'post')
+    .attr('action', 'answer')
+    .append($('<input type="hidden" name="assessment_type">').val(unitId))
+    .append($('<input type="hidden" name="score">').val(percentScore))
+    .append($('<input type="hidden" name="answers">')
+        .val(JSON.stringify(answers)))
+    .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken));
+  $('body').append(form);
+  form.submit();
 }
 
 function submitReview(isDraft, questions, unitId, xsrfToken, key) {
@@ -364,18 +364,18 @@ function submitReview(isDraft, questions, unitId, xsrfToken, key) {
       answers[question.id] = question.getStudentAnswer();
     }
   });
-  $('body').append(
-    $('<form/>')
-        .css('display', 'none')
-        .attr('method', 'post')
-        .attr('action', 'review')
-        .append($('<input type="hidden" name="is_draft">').val(isDraft))
-        .append($('<input type="hidden" name="unit_id">').val(unitId))
-        .append($('<input type="hidden" name="answers">')
-            .val(JSON.stringify(answers)))
-        .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken))
-        .append($('<input type="hidden" name="key">').val(key))
-        .submit());
+  var form = $('<form/>')
+    .css('display', 'none')
+    .attr('method', 'post')
+    .attr('action', 'review')
+    .append($('<input type="hidden" name="is_draft">').val(isDraft))
+    .append($('<input type="hidden" name="unit_id">').val(unitId))
+    .append($('<input type="hidden" name="answers">')
+        .val(JSON.stringify(answers)))
+    .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken))
+    .append($('<input type="hidden" name="key">').val(key));
+  $('body').append(form);
+  form.submit();
 }
 
 function findGcbQuestions() {
