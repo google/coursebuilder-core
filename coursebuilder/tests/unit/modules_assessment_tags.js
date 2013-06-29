@@ -298,10 +298,10 @@ describe('assessment tags', function() {
       qg = new QuestionGroup(el, questionData, MESSAGES);
     });
     it('computes a weighted grade', function() {
-      $('#qg-0-mc-0-0').prop('checked', true);
+      $('#qg-0-mc-0-0').prop('checked', false);
       $('#qg-0-sa-0 > .qt-response > input').val('falafel');
       var grade = qg.grade();
-      expect(grade.score).toBe(25);
+      expect(grade.score).toBeCloseTo(0.6, 10);
     });
     it('gets the feedback from all the questions', function() {
       $('#qg-0-mc-0-0').prop('checked', true);

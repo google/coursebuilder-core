@@ -237,7 +237,9 @@ QuestionGroup.prototype.init = function() {
       });
 };
 QuestionGroup.prototype.getWeight = function() {
-  return 1.0;
+  // The following ensures that the weight is always strictly positive, thus
+  // preventing division-by-zero errors.
+  return this.getTotalPoints() + 1e-12;
 };
 QuestionGroup.prototype.bind = function() {
   var that = this;
@@ -269,8 +271,7 @@ QuestionGroup.prototype.onCheckAnswer = function() {
   var grade = this.grade();
   this.el.find('> div.qt-feedback')
       .empty()
-      .append($('<p/>').text(this.getMessageAboutScore(
-          grade.score / this.getTotalPoints())))
+      .append($('<p/>').text(this.getMessageAboutScore(grade.score)))
       .removeClass('qt-hidden');
   this.displayFeedback(grade.feedback);
 
@@ -281,6 +282,7 @@ QuestionGroup.prototype.onCheckAnswer = function() {
   });
 };
 QuestionGroup.prototype.grade = function() {
+  // This returns a score that is normalized to a total weight of 1.
   var that = this;
   var answer = [];
   var score = 0.0;
@@ -291,7 +293,9 @@ QuestionGroup.prototype.grade = function() {
     score += that.data[question.id].weight * grade.score;
     feedback.push(grade.feedback);
   });
-  return {answer: answer, score: score, feedback: feedback};
+
+  var totalWeight = this.getWeight();
+  return {answer: answer, score: score / totalWeight, feedback: feedback};
 };
 
 QuestionGroup.prototype.getStudentAnswer = function() {
@@ -324,7 +328,8 @@ function gradeScoredLesson(questions, messages) {
     question.displayFeedback(grade.feedback);
   });
   $('div.qt-grade-report')
-      .text(messages.yourScoreIs + score + '/' + totalWeight)
+      .text(messages.yourScoreIs + score.toFixed(2) +
+          '/' + totalWeight.toFixed(0))
       .removeClass('qt-hidden');
 }
 
