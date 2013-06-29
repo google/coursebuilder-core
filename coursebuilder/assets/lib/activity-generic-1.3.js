@@ -579,9 +579,10 @@ function renderAssessment(assessment, domRoot) {
     if (assessmentGlobals.grader == 'human') {
       buttonText = trans.SUBMIT_ASSIGNMENT_TEXT;
     }
+    var disabledHtml = transientStudent ? ' disabled="true" ' : '';
     domRoot.append(
-        '<br><button type="button" class="gcb-button" id="submitAnswersBtn">' +
-        buttonText + '</button>');
+        '<br><button type="button" class="gcb-button" id="submitAnswersBtn" ' +
+        disabledHtml + '>' + buttonText + '</button>');
   }
 
   function checkOrSubmitAnswers(submitAnswers) {

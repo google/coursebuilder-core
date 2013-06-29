@@ -17,6 +17,7 @@
 """A collection of actions for testing Course Builder pages."""
 
 import cgi
+import functools
 import logging
 import os
 import re
@@ -61,6 +62,8 @@ class ShouldHaveFailedByNow(Exception):
 
 class TestBase(suite.AppEngineTestBase):
     """Contains methods common to all functional tests."""
+
+    last_request_url = None
 
     def getApp(self):  # pylint: disable-msg=g-bad-name
         main.debug = True
@@ -110,6 +113,8 @@ class TestBase(suite.AppEngineTestBase):
         """Modify response.goto() to compute URL using <base>, if defined."""
         if response.status_int == 200:
             self.check_response_hrefs(response)
+
+        self.last_request_url = self.canonicalize(response.request.path)
 
         gotox = response.goto
 
@@ -221,6 +226,17 @@ def assert_none_fail(browser, callbacks):
         callback(browser)
 
 
+def assert_at_least_one_succeeds(callbacks):
+    """Invokes all callbacks and expects at least one to succeed."""
+    for callback in callbacks:
+        try:
+            callback()
+            return True
+        except Exception:  # pylint: disable-msg=broad-except
+            pass
+    raise Exception('All callbacks failed.')
+
+
 def assert_all_fail(browser, callbacks):
     """Invokes all callbacks and expects each one to fail."""
 
@@ -261,9 +277,6 @@ def logout():
 def register(browser, name):
     """Registers a new student with the given name."""
 
-    response = browser.get('/')
-    assert_equals(response.status_int, 302)
-
     response = view_registration(browser)
 
     response.form.set('form01', name)
@@ -283,6 +296,7 @@ def check_profile(browser, name):
 
 def view_registration(browser):
     response = browser.get('register')
+    check_personalization(browser, response)
     assert_contains('What is your name?', response.body)
     assert_contains_all_of([
         '<!-- reg_form.additional_registration_fields -->'], response.body)
@@ -306,6 +320,32 @@ def register_with_additional_fields(browser, name, data2, data3):
     check_profile(browser, name)
 
 
+def check_logout_link(response_body):
+    assert_contains(get_current_user_email(), response_body)
+
+
+def check_login_link(response_body):
+    assert_contains('Login', response_body)
+
+
+def check_personalization(browser, response):
+    """Checks that the login/logout text is correct."""
+    sites.set_path_info(browser.last_request_url)
+    app_context = sites.get_course_for_current_request()
+    sites.unset_path_info()
+
+    browsable = app_context.get_environ()['course']['browsable']
+
+    if browsable:
+        callbacks = [
+            functools.partial(check_login_link, response.body),
+            functools.partial(check_logout_link, response.body)
+        ]
+        assert_at_least_one_succeeds(callbacks)
+    else:
+        check_logout_link(response.body)
+
+
 def view_preview(browser):
     """Views /preview page."""
     response = browser.get('preview')
@@ -327,7 +367,7 @@ def view_course(browser):
     assert_contains(' the stakes are high.', response.body)
     assert_contains('<a href="assessment?name=Pre">Pre-course assessment</a>',
                     response.body)
-    assert_contains(get_current_user_email(), response.body)
+    check_personalization(browser, response)
 
     assert_contains_all_of(BASE_HOOK_POINTS, response.body)
     assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
@@ -344,7 +384,7 @@ def view_unit(browser):
     assert_contains('1.3 How search works', response.body)
     assert_contains('1.6 Finding text on a web page', response.body)
     assert_contains('https://www.youtube.com/embed/1ppwmxidyIE', response.body)
-    assert_contains(get_current_user_email(), response.body)
+    check_personalization(browser, response)
 
     assert_contains_all_of(BASE_HOOK_POINTS, response.body)
     assert_contains_all_of(UNIT_HOOK_POINTS, response.body)
@@ -357,21 +397,20 @@ def view_activity(browser):
     response = browser.get('activity?unit=1&lesson=2')
     assert_contains('<script src="assets/js/activity-1.2.js"></script>',
                     response.body)
-    assert_contains(get_current_user_email(), response.body)
+    check_personalization(browser, response)
     return response
 
 
 def view_announcements(browser):
     response = browser.get('announcements')
     assert_equals(response.status_int, 200)
-    assert_contains(get_current_user_email(), response.body)
     return response
 
 
 def view_my_profile(browser):
     response = browser.get('student/home')
     assert_contains('Date enrolled', response.body)
-    assert_contains(get_current_user_email(), response.body)
+    check_personalization(browser, response)
     return response
 
 
@@ -379,7 +418,7 @@ def view_forum(browser):
     response = browser.get('forum')
     assert_contains('document.getElementById("forum_embed").src =',
                     response.body)
-    assert_contains(get_current_user_email(), response.body)
+    check_personalization(browser, response)
     return response
 
 
@@ -388,7 +427,7 @@ def view_assessments(browser):
         response = browser.get('assessment?name=%s' % name)
         assert 'assets/js/assessment-%s.js' % name in response.body
         assert_equals(response.status_int, 200)
-        assert_contains(get_current_user_email(), response.body)
+        check_personalization(browser, response)
 
 
 def submit_assessment(browser, unit_id, args, base='', presubmit_checks=True):
@@ -532,14 +571,25 @@ class Permissions(object):
     """Defines who can see what."""
 
     @classmethod
+    def get_browsable_pages(cls):
+        """Returns all pages that can be accessed by a logged-out user."""
+        return [view_announcements, view_forum, view_course, view_unit,
+                view_assessments, view_activity]
+
+    @classmethod
+    def get_nonbrowsable_pages(cls):
+        """Returns all non-browsable pages."""
+        return [view_preview, view_my_profile, view_registration]
+
+    @classmethod
     def get_logged_out_allowed_pages(cls):
         """Returns all pages that a logged-out user can see."""
-        return [view_preview]
+        return [view_announcements, view_preview]
 
     @classmethod
     def get_logged_out_denied_pages(cls):
         """Returns all pages that a logged-out user can't see."""
-        return [view_announcements, view_forum, view_course, view_assessments,
+        return [view_forum, view_course, view_assessments,
                 view_unit, view_activity, view_my_profile, view_registration]
 
     @classmethod
@@ -556,7 +606,7 @@ class Permissions(object):
     @classmethod
     def get_unenrolled_student_allowed_pages(cls):
         """Returns all pages that a logged-in, unenrolled student can see."""
-        return [view_registration, view_preview]
+        return [view_announcements, view_registration, view_preview]
 
     @classmethod
     def get_unenrolled_student_denied_pages(cls):
@@ -566,6 +616,12 @@ class Permissions(object):
             if allowed in pages:
                 pages.remove(allowed)
         return pages
+
+    @classmethod
+    def assert_can_browse(cls, browser):
+        """Check that pages for a browsing user are visible."""
+        assert_none_fail(browser, Permissions.get_browsable_pages())
+        assert_all_fail(browser, Permissions.get_nonbrowsable_pages())
 
     @classmethod
     def assert_logged_out(cls, browser):

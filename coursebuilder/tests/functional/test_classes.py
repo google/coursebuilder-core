@@ -1443,6 +1443,7 @@ class StudentAspectTest(actions.TestBase):
         def get_environ_new(self):
             """Insert additional fields into course.yaml."""
             environ = get_environ_old(self)
+            environ['course']['browsable'] = False
             environ['reg_form']['additional_registration_fields'] = (
                 '\'<!-- reg_form.additional_registration_fields -->'
                 '<li>'
@@ -1482,6 +1483,16 @@ class StudentAspectTest(actions.TestBase):
         email = 'test_permissions@example.com'
         name = 'Test Permissions'
 
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['browsable'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
         actions.login(email)
 
         actions.register(self, name)
@@ -1493,8 +1504,21 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
         actions.Permissions.assert_enrolled(self)
 
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
     def test_login_and_logout(self):
         """Test if login and logout behave as expected."""
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['browsable'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
         email = 'test_login_logout@example.com'
 
         actions.Permissions.assert_logged_out(self)
@@ -1504,6 +1528,9 @@ class StudentAspectTest(actions.TestBase):
 
         actions.logout()
         actions.Permissions.assert_logged_out(self)
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
 
     def test_lesson_activity_navigation(self):
         """Test navigation between lesson/activity pages."""
@@ -1645,11 +1672,41 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('no-cache', response.headers['Pragma'])
         assert_contains('Mon, 01 Jan 1990', response.headers['Expires'])
 
+    def test_browsability_permissions(self):
+        """Tests that the course browsability flag works correctly."""
+
+        # By default, courses are browsable.
+        response = self.get('course')
+        assert_equals(response.status_int, 200)
+        assert_contains('<a href="assessment?name=Pre"', response.body)
+        assert_does_not_contain('progress-notstarted-Pre', response.body)
+
+        actions.Permissions.assert_can_browse(self)
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['browsable'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        actions.Permissions.assert_logged_out(self)
+
+        # Check course page redirects.
+        response = self.get('course', expect_errors=True)
+        assert_equals(response.status_int, 302)
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
 
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""
 
-    def test_disabled_modules_has_no_roites(self):
+    def test_disabled_modules_has_no_routes(self):
         """Test that disabled modules has no routes."""
         assert modules.oeditor.oeditor.custom_module.enabled
         assert modules.oeditor.oeditor.custom_module.global_routes
@@ -2214,6 +2271,16 @@ class MultipleCoursesTestBase(actions.TestBase):
         self, course, first_time=True, is_admin=False, logout=True):
         """Visit a course as a Student would."""
 
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['browsable'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
         # Check normal user has no access.
         actions.login(course.email, is_admin=is_admin)
 
@@ -2264,6 +2331,9 @@ class MultipleCoursesTestBase(actions.TestBase):
 
         if logout:
             actions.logout()
+
+        # Clean up.
+        sites.ApplicationContext.get_environ = get_environ_old
 
 
 class MultipleCoursesTest(MultipleCoursesTestBase):
@@ -2324,7 +2394,7 @@ class I18NTest(MultipleCoursesTestBase):
             rows.append(row)
         assert title_ru == rows[6][3].decode('utf-8')
 
-        response = self.get('/courses/%s/preview' % self.course_ru.path)
+        response = self.get('/courses/%s/course' % self.course_ru.path)
         assert_contains(title_ru, response.body)
 
         # Tests student perspective.
@@ -2355,7 +2425,7 @@ class I18NTest(MultipleCoursesTestBase):
 
     def test_i18n(self):
         """Test course is properly internationalized."""
-        response = self.get('/courses/%s/preview' % self.course_ru.path)
+        response = self.get('/courses/%s/course' % self.course_ru.path)
         assert_contains_all_of(
             [u'Войти', u'Регистрация', u'Расписание', u'Курс'], response.body)
 
@@ -2559,8 +2629,6 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         lesson_2_2_title = '2.2 Thinking more deeply about your search'
 
         # Check units and lessons are indexed correctly.
-        response = self.get('/test/preview')
-        assert_contains(unit_2_title, response.body)
         actions.register(self, name)
         response = self.get('/test/course')
         assert_contains(unit_2_title, response.body)
@@ -2624,13 +2692,13 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
                 ) == json_dict['content'])
 
     def test_empty_course(self):
-        """Test course with no assets and the simlest possible course.yaml."""
+        """Test course with no assets and the simplest possible course.yaml."""
 
         email = 'test_empty_course@google.com'
         actions.login(email, is_admin=True)
 
-        # Check minimal preview page comes up.
-        response = self.get('preview')
+        # Check minimal course page comes up.
+        response = self.get('course')
         assert_contains('UNTITLED COURSE', response.body)
         assert_contains('Registration', response.body)
 
@@ -2699,7 +2767,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # Clean up.
         sites.reset_courses()
 
-    def test_imported_course_performace(self):
+    def test_imported_course_performance(self):
         """Tests various pages of the imported course."""
         self.import_sample_course()
 
@@ -2718,6 +2786,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         def get_environ_new(self):
             environ = get_environ_old(self)
             environ['course']['now_available'] = True
+            environ['course']['browsable'] = False
             return environ
 
         sites.ApplicationContext.get_environ = get_environ_new
@@ -2794,7 +2863,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         actions.login(email, is_admin=True)
 
-        response = self.get('preview')
+        response = self.get('course')
         assert_contains('Putting it all together', response.body)
 
         actions.register(self, name)

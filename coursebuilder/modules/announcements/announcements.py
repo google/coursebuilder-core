@@ -128,8 +128,7 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def get_list(self):
         """Shows a list of announcements."""
-        if not self.personalize_page_and_get_enrolled():
-            return
+        self.personalize_page_and_get_user()
 
         items = AnnouncementEntity.get_announcements()
         if not items and AnnouncementsRights.can_edit(self):

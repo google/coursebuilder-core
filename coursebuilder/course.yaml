@@ -75,6 +75,10 @@ course:
   # available locales.
   locale: 'en_US'
 
+  # Whether the course material can be accessed without requiring users to log
+  # in or register.
+  browsable: true
+
 
 ####################################
 # Information about your institution

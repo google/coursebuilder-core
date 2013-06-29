@@ -27,6 +27,7 @@ from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
 from models.courses import Course
 from models.models import Student
+from models.models import TransientStudent
 from models.roles import Roles
 import webapp2
 from google.appengine.api import namespace_manager
@@ -38,6 +39,8 @@ COURSE_BASE_KEY = 'gcb_course_base'
 
 # The name of the template dict key that stores data from course.yaml.
 COURSE_INFO_KEY = 'course_info'
+
+TRANSIENT_STUDENT = TransientStudent()
 
 XSRF_SECRET_LENGTH = 20
 
@@ -219,13 +222,8 @@ class BaseHandler(ApplicationHandler):
         return self.get_course().get_progress_tracker()
 
     def get_user(self):
-        """Validate user exists."""
-        user = users.get_current_user()
-        if not user:
-            self.redirect(
-                users.create_login_url(self.request.uri), normalize=False)
-        else:
-            return user
+        """Get the current user."""
+        return users.get_current_user()
 
     def personalize_page_and_get_user(self):
         """If the user exists, add personalized fields to the navbar."""
@@ -234,27 +232,45 @@ class BaseHandler(ApplicationHandler):
             self.template_value['email'] = user.email()
             self.template_value['logoutUrl'] = (
                 users.create_logout_url(self.request.uri))
+            self.template_value['transient_student'] = False
 
             # configure page events
             self.template_value['record_page_events'] = (
                 CAN_PERSIST_PAGE_EVENTS.value)
             self.template_value['event_xsrf_token'] = (
                 XsrfTokenManager.create_xsrf_token('event-post'))
+        else:
+            self.template_value['loginUrl'] = users.create_login_url(
+                self.request.uri)
+            self.template_value['transient_student'] = True
+            return None
 
         return user
 
-    def personalize_page_and_get_enrolled(self):
+    def personalize_page_and_get_enrolled(
+        self, supports_transient_student=False):
         """If the user is enrolled, add personalized fields to the navbar."""
         user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect(
-                users.create_login_url(self.request.uri), normalize=False)
-            return None
+        if user is None:
+            student = TRANSIENT_STUDENT
+        else:
+            student = Student.get_enrolled_student_by_email(user.email())
+            if not student:
+                self.template_value['transient_student'] = True
+                student = TRANSIENT_STUDENT
 
-        student = Student.get_enrolled_student_by_email(user.email())
-        if not student:
-            self.redirect('/preview')
-            return None
+        if student.is_transient:
+            if supports_transient_student and (
+                    self.app_context.get_environ()['course']['browsable']):
+                return TRANSIENT_STUDENT
+            elif user is None:
+                self.redirect(
+                    users.create_login_url(self.request.uri), normalize=False
+                )
+                return None
+            else:
+                self.redirect('/preview')
+                return None
 
         # Patch Student models which (for legacy reasons) do not have a user_id
         # attribute set.
@@ -298,20 +314,24 @@ class PreviewHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        user = users.get_current_user()
-        if not user:
-            self.template_value['loginUrl'] = (
-                users.create_login_url(self.request.uri))
+        user = self.personalize_page_and_get_user()
+        if user is None:
+            student = TRANSIENT_STUDENT
         else:
-            self.template_value['email'] = user.email()
-            self.template_value['logoutUrl'] = (
-                users.create_logout_url(self.request.uri))
+            student = Student.get_enrolled_student_by_email(user.email())
+            if not student:
+                student = TRANSIENT_STUDENT
 
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['units'] = self.get_units()
-        if user and Student.get_enrolled_student_by_email(user.email()):
+        self.template_value['transient_student'] = TRANSIENT_STUDENT
+
+        # If the course is browsable, or the student is logged in and
+        # registered, redirect to the main course page.
+        if ((student and not student.is_transient) or
+            self.app_context.get_environ()['course']['browsable']):
             self.redirect('/course')
         else:
+            self.template_value['navbar'] = {'course': True}
+            self.template_value['units'] = self.get_units()
             self.render('preview.html')
 
 
@@ -320,7 +340,6 @@ class RegisterHandler(BaseHandler):
 
     def get(self):
         """Handles GET request."""
-
         user = self.personalize_page_and_get_user()
         if not user:
             self.redirect(
@@ -384,7 +403,9 @@ class ForumHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        if not self.personalize_page_and_get_enrolled():
+        student = self.personalize_page_and_get_enrolled(
+            supports_transient_student=True)
+        if not student:
             return
 
         self.template_value['navbar'] = {'forum': True}

@@ -78,6 +78,7 @@ DEFAULT_COURSE_YAML_DICT = {
         'title': 'UNTITLED COURSE',
         'locale': 'en_US',
         'main_image': {},
+        'browsable': True,
         'now_available': False},
     'base': {
         'show_gplus_button': True},
@@ -254,6 +255,9 @@ def create_course_registry():
         'course:start_date', 'Course Start Date', 'string', optional=True))
     course_opts.add_property(SchemaField(
         'course:now_available', 'Make Course Available', 'boolean'))
+    course_opts.add_property(SchemaField(
+        'course:browsable', 'Make Course Browsable', 'boolean',
+        description='Allow non-registered users to view course content.'))
 
     # Course registration settings.
     reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')

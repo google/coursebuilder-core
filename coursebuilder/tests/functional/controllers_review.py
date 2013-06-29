@@ -17,6 +17,7 @@
 
 __author__ = 'Sean Lip'
 
+from controllers import sites
 from models import transforms
 import actions
 from actions import assert_contains
@@ -51,6 +52,16 @@ class PeerReviewControllerTest(actions.TestBase):
 
     def test_submit_assignment(self):
         """Test submission of peer-reviewed assignments."""
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['course']['browsable'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
 
         email = 'test_peer_reviewed_assignment_submission@google.com'
         name = 'Test Peer Reviewed Assignment Submission'
@@ -168,6 +179,9 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_contains('Review a new assignment', response.body)
 
         actions.logout()
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
 
     def test_handling_of_fake_review_step_key(self):
         """Test that bad keys result in the appropriate responses."""

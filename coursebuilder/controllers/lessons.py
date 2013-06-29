@@ -25,6 +25,7 @@ from models import student_work
 from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
+from models.models import Student
 from models.review import ReviewUtils
 from models.roles import Roles
 from models.student_work import StudentWorkUtils
@@ -35,6 +36,7 @@ from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import CAN_PERSIST_PAGE_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
+from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
 
 from google.appengine.ext import db
@@ -140,19 +142,27 @@ class CourseHandler(BaseHandler):
     def get(self):
         """Handles GET requests."""
         user = self.personalize_page_and_get_user()
-        if not user:
-            self.redirect('/preview')
-            return None
+        if user is None:
+            student = TRANSIENT_STUDENT
+        else:
+            student = Student.get_enrolled_student_by_email(user.email())
+            if not student:
+                student = TRANSIENT_STUDENT
 
-        student = self.personalize_page_and_get_enrolled()
-        if not student:
+        self.template_value['transient_student'] = student.is_transient
+
+        if (student.is_transient and
+            not self.app_context.get_environ()['course']['browsable']):
+            self.redirect('/preview')
             return
 
         self.template_value['units'] = self.get_units()
-        self.augment_assessment_units(student)
+        if student and not student.is_transient:
+            self.augment_assessment_units(student)
 
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
+
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value)
         self.template_value['navbar'] = {'course': True}
@@ -164,7 +174,8 @@ class UnitHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled()
+        student = self.personalize_page_and_get_enrolled(
+            supports_transient_student=True)
         if not student:
             return
 
@@ -248,7 +259,8 @@ class ActivityHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled()
+        student = self.personalize_page_and_get_enrolled(
+            supports_transient_student=True)
         if not student:
             return
 
@@ -328,7 +340,8 @@ class AssessmentHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled()
+        student = self.personalize_page_and_get_enrolled(
+            supports_transient_student=True)
         if not student:
             return
 
@@ -364,7 +377,7 @@ class AssessmentHandler(BaseHandler):
                 due_date_exceeded = True
                 self.template_value['due_date_exceeded'] = True
 
-        if course.needs_human_grader(unit):
+        if course.needs_human_grader(unit) and not student.is_transient:
             self.template_value['matcher'] = unit.workflow.get_matcher()
 
             rp = course.get_reviews_processor()
@@ -418,14 +431,15 @@ class AssessmentHandler(BaseHandler):
             self.template_value['assessment_script_src'] = (
                 self.get_course().get_assessment_filename(unit_id))
 
-            # If a previous submission exists, reinstate it.
-            submission_contents = student_work.Submission.get_contents(
-                unit.unit_id, student.get_key())
-            saved_answers = (
-                StudentWorkUtils.get_answer_list(submission_contents)
-                if submission_contents else [])
-            self.template_value['saved_answers'] = transforms.dumps(
-                saved_answers)
+            if not student.is_transient:
+                # If a previous submission exists, reinstate it.
+                submission_contents = student_work.Submission.get_contents(
+                    unit.unit_id, student.get_key())
+                saved_answers = (
+                    StudentWorkUtils.get_answer_list(submission_contents)
+                    if submission_contents else [])
+                self.template_value['saved_answers'] = transforms.dumps(
+                    saved_answers)
 
         self.render('assessment.html')
 

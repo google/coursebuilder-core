@@ -147,6 +147,10 @@ class Student(BaseEntity):
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
 
+    @property
+    def is_transient(self):
+        return False
+
     @classmethod
     def _memcache_key(cls, key):
         """Makes a memcache key from primary key."""
@@ -227,6 +231,14 @@ class Student(BaseEntity):
     def has_same_key_as(self, key):
         """Checks if the key of the student and the given key are equal."""
         return key == self.get_key()
+
+
+class TransientStudent(object):
+    """A transient student (i.e. a user who hasn't logged in or registered)."""
+
+    @property
+    def is_transient(self):
+        return True
 
 
 class EventEntity(BaseEntity):

@@ -112,6 +112,12 @@
         gcbCanPostPageEvents = true;
         eventXsrfToken = '{{ event_xsrf_token }}';
       {% endif %}
+
+      {% if transient_student %}
+        var transientStudent = true;
+      {% else %}
+        var transientStudent = false;
+      {% endif %}
     </script>
 
     {% if course_info.base.show_gplus_button %}
@@ -180,10 +186,19 @@
             <a href="forum">{{ gettext('Forum') }}</a>
           </li>
           {% endif %}
-          <li {% if navbar.myprofile %}class='active'{% endif %}>
-            {# I18N: Navbar tab. #}
-            <a href="student/home">{{ gettext('My Profile') }}</a>
-          </li>
+
+          {% if not transient_student %}
+            <li {% if navbar.myprofile %}class='active'{% endif %}>
+              {# I18N: Navbar tab. #}
+              <a href="student/home">{{ gettext('My Profile') }}</a>
+            </li>
+          {% else %}
+            <li {% if navbar.registration %}class='active'{% endif %}>
+              {# I18N: Navbar tab. #}
+              <a href="register">{{ gettext('Registration') }}</a>
+            </li>
+          {% endif %}
+
           {{course_info.base.before_navbar_ends | safe}}
           {% if is_super_admin %}
           <li class="gcb-pull-right">

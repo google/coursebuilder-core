@@ -103,6 +103,17 @@ class AnswerHandler(BaseHandler):
 
         return student
 
+    def get(self):
+        """Handles GET requests.
+
+        This method is here because if a student logs out when on the
+        reviewed_assessment_confirmation page, that student is redirected to
+        the GET method of the corresponding handler. It might be a good idea to
+        merge this class with lessons.AssessmentHandler, which currently only
+        has a GET handler.
+        """
+        self.redirect('/course')
+
     def post(self):
         """Handles POST requests."""
         student = self.personalize_page_and_get_enrolled()

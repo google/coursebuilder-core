@@ -287,6 +287,15 @@ th, td {
   transition: all .218s ease-in;
 }
 
+.gcb-button[disabled], .gcb-button[disabled]:hover {
+  background: none;
+  background-image: -moz-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
+  background-image: -webkit-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
+  background-image: linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
+  border-color: #f3f3f3;
+  color: #b8b8b8;
+}
+
 .gcb-button-large {
   width: 200px;
   height: 48px;

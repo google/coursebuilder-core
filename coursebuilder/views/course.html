@@ -25,18 +25,22 @@
                 {% if unit.now_available or is_course_admin %}
                   {% if unit.type == 'A' %}
                     <li><p class="gcb-top-content">
-                      {% if progress[unit.unit_id] > 0 %}
-                        <img src="assets/lib/completed.png"
-                             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                             class="gcb-progress-circle"
-                             id="progress-completed-{{unit.unit_id}}">
+                      {% if not transient_student %}
+                        {% if progress[unit.unit_id] > 0 %}
+                          <img src="assets/lib/completed.png"
+                               alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                               title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                               class="gcb-progress-circle"
+                               id="progress-completed-{{unit.unit_id}}">
+                        {% else %}
+                          <img src="assets/lib/not_started.png"
+                               alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                               title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                               class="gcb-progress-circle"
+                               id="progress-notstarted-{{unit.unit_id}}">
+                        {% endif %}
                       {% else %}
-                        <img src="assets/lib/not_started.png"
-                             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                             class="gcb-progress-circle"
-                             id="progress-notstarted-{{unit.unit_id}}">
+                        <span class="gcb-progress-empty"></span>
                       {% endif %}
                       <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
 
@@ -48,24 +52,27 @@
                         <li>
                           <p class="gcb-top-content">
                             <span class="gcb-progress-empty"></span>
-                          {% if unit.review_progress == 2 %}
-                            <img src="assets/lib/completed.png"
-                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                                 class="gcb-progress-circle"
-                                 id="progress-completed-review-{{unit.unit_id}}">
-                          {% elif unit.review_progress == 1 %}
-                            <img src="assets/lib/in_progress.png"
-                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                                 class="gcb-progress-circle"
-                                 id="progress-inprogress-review-{{unit.unit_id}}">
-                          {% else %}
-                            <img src="assets/lib/not_started.png"
-                                 alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                                 title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
-                                 class="gcb-progress-circle"
-                                 id="progress-notstarted-review-{{unit.unit_id}}">
+
+                          {% if not transient_student %}
+                            {% if unit.review_progress == 2 %}
+                              <img src="assets/lib/completed.png"
+                                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                                   class="gcb-progress-circle"
+                                   id="progress-completed-review-{{unit.unit_id}}">
+                            {% elif unit.review_progress == 1 %}
+                              <img src="assets/lib/in_progress.png"
+                                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                                   class="gcb-progress-circle"
+                                   id="progress-inprogress-review-{{unit.unit_id}}">
+                            {% else %}
+                              <img src="assets/lib/not_started.png"
+                                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                                   class="gcb-progress-circle"
+                                   id="progress-notstarted-review-{{unit.unit_id}}">
+                            {% endif %}
                           {% endif %}
 
                           {% if unit.is_submitted %}
@@ -88,7 +95,7 @@
 
                   {% elif unit.type == 'U' %}
                     <li><p class="gcb-top-content">
-                      {% if is_progress_recorded %}
+                      {% if is_progress_recorded and not transient_student %}
                         {% if progress[unit.unit_id] == 2 %}
                           <img src="assets/lib/completed.png"
                                alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
