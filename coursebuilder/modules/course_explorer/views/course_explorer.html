@@ -27,7 +27,7 @@
               </a>
             {% endif %}
           </h1>
-          <p class="gcb-product-headers">{{course.course.blurb}}</p>
+          <p class="gcb-product-headers">{{course.course.blurb | gcb_tags}}</p>
           <p class="gcb-product-headers">{{course.course.instructor_details | safe}}</p>
         </li>
       {% endfor %}
