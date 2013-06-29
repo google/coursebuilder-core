@@ -67,7 +67,8 @@ class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
         template_values['main_content'] = self.get_form(
-            rest_handler, key=key, extra_js_files=['question_editor.js'])
+            rest_handler, key=key,
+            extra_js_files=['question_editor_lib.js', 'question_editor.js'])
 
         return template_values
 
