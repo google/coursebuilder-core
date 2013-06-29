@@ -402,12 +402,12 @@ function findGcbQuestions() {
   if (window.questionData.scored && gcbQuestions.length > 0) {
     $('div.qt-grade-scored-lesson')
         .removeClass('qt-hidden')
-        .click(function() {
+        .children('button').click(function() {
           gradeScoredLesson(gcbQuestions, messages);
         });
     $('div.qt-grade-assessment')
         .removeClass('qt-hidden')
-        .click(function() {
+        .children('button').click(function() {
           gradeAssessment(gcbQuestions, questionData.unitId,
               questionData.xsrfToken);
         });
