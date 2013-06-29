@@ -247,6 +247,8 @@ class BaseHandler(ApplicationHandler):
             self.template_value['transient_student'] = False
 
             # configure page events
+            self.template_value['record_tag_events'] = (
+                CAN_PERSIST_TAG_EVENTS.value)
             self.template_value['record_page_events'] = (
                 CAN_PERSIST_PAGE_EVENTS.value)
             self.template_value['event_xsrf_token'] = (
