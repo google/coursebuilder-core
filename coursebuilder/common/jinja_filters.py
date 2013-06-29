@@ -48,11 +48,13 @@ def js_string(data):
     return jinja2.utils.Markup(js_string_raw(data))
 
 
-def gcb_tags(data):
-    """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
-    if not isinstance(data, basestring):
-        return data
-    if tags.CAN_USE_DYNAMIC_TAGS.value:
-        return jinja2.utils.Markup(tags.html_to_safe_dom(data))
-    else:
-        return jinja2.utils.Markup(data)
+def get_gcb_tags_filter(handler):
+    def gcb_tags(data):
+        """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
+        if not isinstance(data, basestring):
+            return data
+        if tags.CAN_USE_DYNAMIC_TAGS.value:
+            return jinja2.utils.Markup(tags.html_to_safe_dom(data, handler))
+        else:
+            return jinja2.utils.Markup(data)
+    return gcb_tags

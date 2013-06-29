@@ -22,6 +22,7 @@ import os
 import time
 import urlparse
 import appengine_config
+from common import jinja_filters
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -184,10 +185,13 @@ class ApplicationHandler(webapp2.RequestHandler):
             'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
-        return self.app_context.get_template_environ(
+        template_environ = self.app_context.get_template_environ(
             self.template_value[COURSE_INFO_KEY]['course']['locale'],
             additional_dirs
-            ).get_template(template_file)
+            )
+        template_environ.filters[
+            'gcb_tags'] = jinja_filters.get_gcb_tags_filter(self)
+        return template_environ.get_template(template_file)
 
     def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""

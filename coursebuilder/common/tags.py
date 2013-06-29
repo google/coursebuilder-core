@@ -54,7 +54,7 @@ class BaseTag(object):
         """Lists the inputEx modules required by the editor."""
         return []
 
-    def render(self, unused_node):
+    def render(self, unused_node, unused_handler):
         """Receive a node and return a node."""
         return cElementTree.XML('[Unimplemented custom tag]')
 
@@ -179,7 +179,7 @@ def get_tag_bindings():
     return dict(bindings.items() + Registry.get_all_tags().items())
 
 
-def html_to_safe_dom(html_string):
+def html_to_safe_dom(html_string, handler):
     """Render HTML text as a tree of safe_dom elements."""
 
     tag_bindings = get_tag_bindings()
@@ -194,7 +194,7 @@ def html_to_safe_dom(html_string):
         tail = elt.tail
 
         if elt.tag in tag_bindings:
-            elt = tag_bindings[elt.tag]().render(elt)
+            elt = tag_bindings[elt.tag]().render(elt, handler)
 
         if elt.tag.lower() == 'script':
             out_elt = safe_dom.ScriptElement()

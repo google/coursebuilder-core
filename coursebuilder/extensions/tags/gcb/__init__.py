@@ -44,7 +44,7 @@ class GoogleDoc(tags.BaseTag):
     def name(cls):
         return'Google Doc'
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
         url = _escape_url('%s?embedded=true' % link)
@@ -87,7 +87,7 @@ class GoogleSpreadsheet(tags.BaseTag):
     def name(cls):
         return'Google Spreadsheet'
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
         url = _escape_url('%s&amp;chrome=false' % link.split('&output')[0])
@@ -130,7 +130,7 @@ class YouTube(tags.BaseTag):
     def name(cls):
         return'YouTube Video'
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         video_id = node.attrib.get('videoid')
         if utils.CAN_PERSIST_TAG_EVENTS.value:
             return self._render_with_tracking(video_id)
@@ -181,7 +181,7 @@ class GoogleGroup(tags.BaseTag):
     def name(cls):
         return 'Google Group'
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         group_name = node.attrib.get('group')
         category_name = node.attrib.get('category')
         embedded_forum_url = (
@@ -215,7 +215,7 @@ class GoogleGroup(tags.BaseTag):
 
 class Activity(tags.BaseTag):
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         activity_id = node.attrib.get('activityid')
         script = cElementTree.XML("""
 <div>
@@ -297,7 +297,7 @@ class Quiz(tags.BaseTag):
 
 class IFrame(tags.BaseTag):
 
-    def render(self, node):
+    def render(self, node, unused_handler):
         src = node.attrib.get('src')
         title = node.attrib.get('title')
         height = node.attrib.get('height') or '400'
