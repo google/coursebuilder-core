@@ -90,6 +90,14 @@
             {% if objectives %}
               <div class="gcb-lesson-content">
                 {{ objectives | gcb_tags}}
+                {% if lesson.scored %}
+                  <div class="qt-grade-scored-lesson qt-hidden">
+                    <button class="gcb-button qt-check-answer-button">
+                      {{ gettext(' Grade Questions ') }}
+                    </button>
+                  </div>
+                  <div class="qt-grade-report qt-hidden"></div>
+                {% endif %}
               </div>
             {% endif %}
 

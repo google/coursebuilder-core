@@ -26,7 +26,7 @@
 .qt-feedback {
   width: 600px;
 }
-.qt-feedback.qt-hidden {
+.qt-hidden {
   display: none;
 }
 div.qt-warning {

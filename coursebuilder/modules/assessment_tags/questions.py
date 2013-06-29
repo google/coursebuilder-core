@@ -33,7 +33,7 @@ from models import transforms
 RESOURCES_PATH = '/modules/assessment_tags/resources'
 
 
-def render_question(quid, instanceid, locale, embedded=False):
+def render_question(quid, instanceid, locale, embedded=False, weight=None):
     """Generates the HTML for a question.
 
     Args:
@@ -45,6 +45,8 @@ def render_question(quid, instanceid, locale, embedded=False):
           generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
+      weight: float. The weight to be used when grading the question in a
+          scored lesson.
 
     Returns:
       a Jinja markup string that represents the HTML for the question.
@@ -57,23 +59,26 @@ def render_question(quid, instanceid, locale, embedded=False):
     template_values['resources_path'] = RESOURCES_PATH
 
     template_file = None
+    js_data = {}
     if question_dto.type == question_dto.MULTIPLE_CHOICE:
         template_file = 'templates/mc_question.html'
 
         multi = template_values['multiple_selections']
-        template_values.update({
-            'button_type': 'checkbox' if multi else 'radio',
-            'js_data': transforms.dumps([{
-                'score': choice['score'], 'feedback': choice['feedback']
-            } for choice in template_values['choices']])
-        })
+        template_values['button_type'] = 'checkbox' if multi else 'radio'
+
+        choices = [{
+            'score': choice['score'], 'feedback': choice['feedback']
+        } for choice in template_values['choices']]
+        js_data['choices'] = choices
     elif question_dto.type == question_dto.SHORT_ANSWER:
         template_file = 'templates/sa_question.html'
-        template_values['js_data'] = transforms.dumps({
-            'graders': template_values['graders'],
-            'hint': template_values.get('hint'),
-            'defaultFeedback': template_values.get('defaultFeedback')
-        })
+        js_data['graders'] = template_values['graders']
+        js_data['hint'] = template_values.get('hint')
+        js_data['defaultFeedback'] = template_values.get('defaultFeedback')
+
+    if not embedded:
+        js_data['weight'] = weight
+    template_values['js_data'] = transforms.dumps(js_data)
 
     template = jinja_utils.get_template(
         template_file, [os.path.dirname(__file__)], locale=locale)
@@ -100,8 +105,15 @@ class QuestionTag(tags.BaseTag):
             handler.template_value[utils.COURSE_INFO_KEY]['course']['locale'])
 
         quid = node.attrib.get('quid')
+        try:
+            weight = float(node.attrib.get('weight'))
+        except TypeError:
+            weight = 1.0
+
         instanceid = node.attrib.get('instanceid')
-        div = cElementTree.XML(render_question(quid, instanceid, locale))
+
+        div = cElementTree.XML(render_question(
+            quid, instanceid, locale, embedded=False, weight=weight))
         return div
 
     def get_schema(self, unused_handler):
@@ -115,6 +127,11 @@ class QuestionTag(tags.BaseTag):
                 schema_fields.SchemaField(
                     'quid', 'Question', 'string', optional=True,
                     select_data=question_list))
+            reg.add_property(
+                schema_fields.SchemaField(
+                    'weight', 'Weight', 'string', optional=True,
+                    extra_schema_dict_values={'value': '1'},
+                    description='The number of points for a correct answer.'))
         else:
             reg.add_property(
                 schema_fields.SchemaField(
