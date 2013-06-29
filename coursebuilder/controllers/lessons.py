@@ -185,6 +185,9 @@ class CourseHandler(BaseHandler):
 class UnitHandler(BaseHandler):
     """Handler for generating unit page."""
 
+    def _show_activity_on_separate_page(self, lesson):
+        return lesson.activity and lesson.activity_listed
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled(
@@ -234,7 +237,7 @@ class UnitHandler(BaseHandler):
             self.template_value['back_button_url'] = ''
         else:
             prev_lesson = lessons[index - 1]
-            if prev_lesson.activity:
+            if self._show_activity_on_separate_page(prev_lesson):
                 self.template_value['back_button_url'] = (
                     'activity?unit=%s&lesson=%s' % (
                         unit_id, prev_lesson.lesson_id))
@@ -243,7 +246,7 @@ class UnitHandler(BaseHandler):
                     'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.lesson_id))
 
         # Format next button.
-        if lesson.activity:
+        if self._show_activity_on_separate_page(lesson):
             self.template_value['next_button_url'] = (
                 'activity?unit=%s&lesson=%s' % (
                     unit_id, lesson_id))
