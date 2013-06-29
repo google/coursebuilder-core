@@ -90,8 +90,8 @@ DEFAULT_COURSE_YAML_DICT = {
     'unit': {},
     'reg_form': {
         'can_register': True,
-        'additional_registration_fields': (
-            '<!-- reg_form.additional_registration_fields -->')}
+        'additional_registration_fields': ''
+        }
 }
 
 # Here are the defaults for an existing course.

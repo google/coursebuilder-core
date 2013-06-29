@@ -8,10 +8,20 @@
       cbShowMsg(regConfirmationMsg);
       setTimeout(function() {cbHideMsg();}, 20000);
     }
+    {# I18N: This is shown to the student in a popup if registrations for the course are not open. #}
+    var regClosedMsg = "{{ gettext('Registrations for this course are not open.') }}";
+    if(window.location.hash == '#registration_closed') {
+      cbShowMsg(regClosedMsg);
+      setTimeout(function() {cbHideMsg();}, 20000);
+    }
   </script>
   <div class="gcb-cols">
     <div class="gcb-col-11 gcb-aside">
       {% include 'summary.html' %}
+
+      {% if transient_student %}
+        {% include 'registration_module.html' %}
+      {% endif %}
     </div>
 </div>
 {% endblock %}

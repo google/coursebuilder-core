@@ -2437,7 +2437,7 @@ class I18NTest(MultipleCoursesTestBase):
         """Test course is properly internationalized."""
         response = self.get('/courses/%s/course' % self.course_ru.path)
         assert_contains_all_of(
-            [u'Войти', u'Регистрация', u'Расписание', u'Курс'], response.body)
+            [u'Войти', u'Расписание', u'Курс'], response.body)
 
 
 class CourseUrlRewritingTestBase(actions.TestBase):

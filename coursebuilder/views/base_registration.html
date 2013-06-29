@@ -13,10 +13,6 @@
         {# I18N: Navbar tab. #}
         <a href="course">{{ gettext('Course') }}</a>
       </li>
-      <li {% if navbar.registration %}class='active'{% endif %}>
-        {# I18N: Navbar tab. #}
-        <a href="register">{{ gettext('Registration') }}</a>
-      </li>
       {% if is_super_admin %}
       <li class='gcb-pull-right'>
         <a href="/admin">Admin</a>

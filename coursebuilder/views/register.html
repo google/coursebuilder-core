@@ -26,7 +26,11 @@
                 name="form01" id="form01" type="text"
                 value="{{ current_name|escape }}">
             </li>
-            {{course_info.reg_form.additional_registration_fields | safe}}
+            {% if course_info.reg_form.additional_registration_fields %}
+              {{course_info.reg_form.additional_registration_fields | safe}}
+            {% else %}
+              <!-- reg_form.additional_registration_fields -->
+            {% endif %}
           </ol>
         </fieldset>
 

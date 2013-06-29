@@ -5,15 +5,7 @@
     <div class="gcb-col-11 gcb-aside">
 
       {% include 'summary.html' %}
-
-      <div class="gcb-col-5">
-        <center>
-          <a class="gcb-button gcb-button-large" href="register" role="button">
-            {# I18N: Registration button on the main course page. #}
-            {{ gettext('Register') }}
-          </a>
-        </center>
-      </div>
+      {% include 'registration_module.html' %}
     </div>
   </div>
   {{course_info.preview.after_top_content_ends | safe}}

@@ -1,0 +1,21 @@
+{% if can_register %}
+  <div class="gcb-col-5">
+    <center>
+      {% if show_registration_page %}
+        <a class="gcb-button gcb-button-large" href="register" role="button">
+          {# I18N: Registration button on the main course page. #}
+          {{ gettext('Register') }}
+        </a>
+      {% else %}
+        <form action='register' method='post'>
+          <input type="hidden" name="xsrf_token" value="{{ register_xsrf_token|escape }}">
+          <input type="hidden" name="name_from_profile">
+          <button class="gcb-button gcb-button-large" type="submit">
+            {# I18N: Registration button on the main course page. #}
+            {{ gettext('Register') }}
+          </button>
+        </form>
+      {% endif %}
+    </center>
+  </div>
+{% endif %}

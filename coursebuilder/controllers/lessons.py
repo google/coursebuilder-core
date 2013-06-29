@@ -26,6 +26,7 @@ from models import transforms
 from models.config import ConfigProperty
 from models.counters import PerfCounter
 from models.models import Student
+from models.models import StudentProfileDAO
 from models.review import ReviewUtils
 from models.roles import Roles
 from models.student_work import StudentWorkUtils
@@ -150,17 +151,28 @@ class CourseHandler(BaseHandler):
             if not student:
                 student = TRANSIENT_STUDENT
 
-        self.template_value['transient_student'] = student.is_transient
-
         if (student.is_transient and
             not self.app_context.get_environ()['course']['browsable']):
             self.redirect('/preview')
             return
 
         self.template_value['units'] = self.get_units()
+        self.template_value['show_registration_page'] = True
+
         if student and not student.is_transient:
             self.augment_assessment_units(student)
+        elif user:
+            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+            additional_registration_fields = self.app_context.get_environ(
+                )['reg_form']['additional_registration_fields']
+            if profile is not None and not additional_registration_fields:
+                self.template_value['show_registration_page'] = False
+                self.template_value['register_xsrf_token'] = (
+                    XsrfTokenManager.create_xsrf_token('register-post'))
 
+        self.template_value['transient_student'] = student.is_transient
+        self.template_value['can_register'] = self.app_context.get_environ(
+            )['reg_form']['can_register']
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
 

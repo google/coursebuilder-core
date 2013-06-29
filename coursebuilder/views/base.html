@@ -206,11 +206,6 @@
               {# I18N: Navbar tab. #}
               <a href="student/home">{{ gettext('My Profile') }}</a>
             </li>
-          {% else %}
-            <li {% if navbar.registration %}class='active'{% endif %}>
-              {# I18N: Navbar tab. #}
-              <a href="register">{{ gettext('Registration') }}</a>
-            </li>
           {% endif %}
 
           {{course_info.base.before_navbar_ends | safe}}

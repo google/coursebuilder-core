@@ -341,17 +341,29 @@ class PreviewHandler(BaseHandler):
             if not student:
                 student = TRANSIENT_STUDENT
 
-        self.template_value['transient_student'] = TRANSIENT_STUDENT
-
         # If the course is browsable, or the student is logged in and
         # registered, redirect to the main course page.
         if ((student and not student.is_transient) or
             self.app_context.get_environ()['course']['browsable']):
             self.redirect('/course')
-        else:
-            self.template_value['navbar'] = {'course': True}
-            self.template_value['units'] = self.get_units()
-            self.render('preview.html')
+            return
+
+        self.template_value['transient_student'] = TRANSIENT_STUDENT
+        self.template_value['can_register'] = self.app_context.get_environ(
+            )['reg_form']['can_register']
+        self.template_value['navbar'] = {'course': True}
+        self.template_value['units'] = self.get_units()
+        self.template_value['show_registration_page'] = True
+
+        if user:
+            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+            additional_registration_fields = self.app_context.get_environ(
+                )['reg_form']['additional_registration_fields']
+            if profile is not None and not additional_registration_fields:
+                self.template_value['show_registration_page'] = False
+                self.template_value['register_xsrf_token'] = (
+                    XsrfTokenManager.create_xsrf_token('register-post'))
+        self.render('preview.html')
 
 
 class RegisterHandler(BaseHandler):
@@ -370,13 +382,19 @@ class RegisterHandler(BaseHandler):
             self.redirect('/course')
             return
 
+        can_register = self.app_context.get_environ(
+            )['reg_form']['can_register']
+        if not can_register:
+            self.redirect('/course#registration_closed')
+            return
+
         # pre-fill nick name from the profile if available
         self.template_value['current_name'] = ''
         profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
         if profile and profile.nick_name:
             self.template_value['current_name'] = profile.nick_name
 
-        self.template_value['navbar'] = {'registration': True}
+        self.template_value['navbar'] = {}
         self.template_value['register_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('register-post'))
 
@@ -396,14 +414,18 @@ class RegisterHandler(BaseHandler):
         can_register = self.app_context.get_environ(
             )['reg_form']['can_register']
         if not can_register:
-            self.template_value['course_status'] = 'full'
-        else:
-            Student.add_new_student_for_current_user(
-                self.request.get('form01'),
-                transforms.dumps(self.request.POST.items()))
+            self.redirect('/course#registration_closed')
+            return
 
+        if 'name_from_profile' in self.request.POST.keys():
+            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+            name = profile.nick_name
+        else:
+            name = self.request.get('form01')
+
+        Student.add_new_student_for_current_user(
+            name, transforms.dumps(self.request.POST.items()))
         # Render registration confirmation page
-        self.template_value['navbar'] = {'registration': True}
         self.redirect('/course#registration_confirmation')
 
 
@@ -431,9 +453,14 @@ class StudentProfileHandler(BaseHandler):
             return
 
         course = self.get_course()
+        name = student.name
+        profile = student.profile
+        if profile:
+            name = profile.nick_name
 
         self.template_value['navbar'] = {'myprofile': True}
         self.template_value['student'] = student
+        self.template_value['student_name'] = name
         self.template_value['date_enrolled'] = student.enrolled_on.strftime(
             HUMAN_READABLE_DATE_FORMAT)
         self.template_value['score_list'] = course.get_all_scores(student)
@@ -470,7 +497,7 @@ class StudentUnenrollHandler(BaseHandler):
             return
 
         self.template_value['student'] = student
-        self.template_value['navbar'] = {'registration': True}
+        self.template_value['navbar'] = {}
         self.template_value['student_unenroll_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('student-unenroll'))
         self.render('unenroll_confirmation_check.html')
@@ -486,7 +513,7 @@ class StudentUnenrollHandler(BaseHandler):
 
         Student.set_enrollment_status_for_current(False)
 
-        self.template_value['navbar'] = {'registration': True}
+        self.template_value['navbar'] = {}
         self.render('unenroll_confirmation.html')
 
 

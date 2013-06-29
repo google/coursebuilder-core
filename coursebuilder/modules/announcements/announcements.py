@@ -31,6 +31,7 @@ from models import notify
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
+from models.models import Student
 import modules.announcements.samples as samples
 from modules.oeditor import oeditor
 
@@ -128,7 +129,15 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
 
     def get_list(self):
         """Shows a list of announcements."""
-        self.personalize_page_and_get_user()
+        user = self.personalize_page_and_get_user()
+        transient_student = False
+        if user is None:
+            transient_student = True
+        else:
+            student = Student.get_enrolled_student_by_email(user.email())
+            if not student:
+                transient_student = True
+        self.template_value['transient_student'] = transient_student
 
         items = AnnouncementEntity.get_announcements()
         if not items and AnnouncementsRights.can_edit(self):
