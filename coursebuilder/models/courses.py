@@ -22,13 +22,11 @@ import logging
 import os
 import pickle
 import sys
-from xml.etree import cElementTree
 
 import appengine_config
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 import common.tags
-import html5lib
 from tools import verify
 import yaml
 
@@ -1832,16 +1830,7 @@ class Course(object):
         if not lesson.objectives:
             return []
 
-        parser = html5lib.HTMLParser(
-            tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
-            namespaceHTMLElements=False)
-        lesson_content = parser.parseFragment(
-            '<div>%s</div>' % lesson.objectives)[0]
-
-        return [{
-            'instanceid': component.attrib.get('instanceid'),
-            'name': component.tag,
-        } for component in lesson_content.findall('.//*[@instanceid]')]
+        return common.tags.get_components_from_html(lesson.objectives)
 
     def needs_human_grader(self, unit):
         return unit.workflow.get_grader() == HUMAN_GRADER

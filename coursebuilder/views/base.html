@@ -5,10 +5,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <title>
-      {{course_info.course.title}} -
+      {{course_info.course.title}}
       {% block subtitle %}
-        {# I18N: Title of the webpage. #}
-        {{ gettext('Course') }}
       {% endblock subtitle %}
     </title>
 
@@ -94,16 +92,25 @@
 
       {# I18N: Text appearing in a confirmation dialog after the student has tried to submit an assignment. #}
       trans.SUBMIT_ASSIGNMENT_CONFIRMATION =
-          "{{ gettext(' Are you sure you want to submit this assignment? ') }}"
+          "{{ gettext(' Are you sure you want to submit this assignment? ') }}";
 
       {# I18N: Text appearing in a confirmation dialog after the student has tried to submit a review. #}
       trans.SUBMIT_REVIEW_CONFIRMATION =
-          "{{ gettext(' Are you sure you want to submit this review? ') }}"
+          "{{ gettext(' Are you sure you want to submit this review? ') }}";
 
       {# I18N: Text appearing in a confirmation dialog after 'Are you sure you want to submit this assignment/review?' #}
       trans.CONFIRMATION_EXPLANATION =
-          "{{ gettext(' You cannot edit or delete it after you have done so. ') }}"
+          "{{ gettext(' You cannot edit or delete it after you have done so. ') }}";
 
+      var assessmentTagMessages = {};
+
+      {# I18N: Confirmation text for the answer given to a question by a student. #}
+      assessmentTagMessages.correctAnswer = "{{ gettext(' Yes, the answer is correct. ') }}";
+      assessmentTagMessages.incorrectAnswer = "{{ gettext(' No, the answer is incorrect. ') }}";
+      assessmentTagMessages.partiallyCorrectAnswer = "{{ gettext(' The answer is partially correct. ') }}";
+
+      {# I18N: Text appearing at the bottom of a lesson page after the student asks for it to be graded. #}
+      assessmentTagMessages.yourScoreIs = "{{ gettext(' Your score is: ') }}";
     </script>
     <script src="assets/lib/activity-generic-1.3.js"></script>
 

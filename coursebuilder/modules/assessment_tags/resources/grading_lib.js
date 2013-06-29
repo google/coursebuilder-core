@@ -254,26 +254,26 @@ function gradeScoredLesson(questions) {
       .removeClass('qt-hidden');
 }
 
+function gcbAssessmentTagAudit(data_dict) {
+  gcbTagEventAudit(data_dict, 'assessment');
+}
+
 function findGcbQuestions() {
-  // TODO(jorr): Internationalize these messages
-  var messages = {
-    correctAnswer: 'Yes, the answer is correct.',
-    incorrectAnswer: 'No, the answer is incorrect.',
-    partiallyCorrectAnswer: 'The answer is partially correct.',
-    yourScoreIs: 'Your score is: '
-  };
   var gcbQuestions = [];
   $('div.qt-mc-question.qt-standalone').each(function(index, element) {
     gcbQuestions.push(new McQuestion(
-      $(element), window.questionData, messages, gcbComponentAudit).bind());
+      $(element), window.questionData, assessmentTagMessages,
+      gcbAssessmentTagAudit).bind());
   });
   $('div.qt-sa-question.qt-standalone').each(function(index, element) {
     gcbQuestions.push(new SaQuestion(
-      $(element), window.questionData, messages, gcbComponentAudit).bind());
+      $(element), window.questionData, assessmentTagMessages,
+      gcbAssessmentTagAudit).bind());
   });
   $('div.qt-question-group').each(function(index, element) {
     gcbQuestions.push(new QuestionGroup(
-      $(element), window.questionData, messages, gcbComponentAudit).bind());
+      $(element), window.questionData, assessmentTagMessages,
+      gcbAssessmentTagAudit).bind());
   });
   if (window.questionData.scored && gcbQuestions.length > 0) {
     $('div.qt-grade-scored-lesson')

@@ -64,12 +64,6 @@ function gcbAssessmentAudit(data_dict) {
   }
 }
 
-function gcbComponentAudit(data_dict) {
-  if (gcbCanPostEvents) {
-    gcbAudit(data_dict, 'attempt-component', true);
-  }
-}
-
 function gcbAudit(data_dict, source, is_async) {
   data_dict['location'] = '' + window.location;
   var request = {

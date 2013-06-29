@@ -1,0 +1,18 @@
+<div {% if not embedded %}class="gcb-border-box"{% endif %}>
+  <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
+  <script>
+    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
+  </script>
+  <script src="{{resources_path}}/grading_lib.js"></script>
+  <script src="{{resources_path}}/grading.js"></script>
+  <noscript>
+    <div class='qt-warning'>
+      {# I18N: Error message that is shown to a student when they are using a browser that does not have JavaScript enabled. #}
+      {{ gettext(' JavaScript should be enabled to grade this question. ') }}
+    </div>
+  </noscript>
+
+  {% block question %}
+  {% endblock question %}
+
+</div>

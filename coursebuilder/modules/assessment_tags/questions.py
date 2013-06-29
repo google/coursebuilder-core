@@ -169,6 +169,7 @@ class QuestionGroupTag(tags.BaseTag):
         question_group_dto = m_models.QuestionGroupDAO.load(qgid)
 
         template_values = question_group_dto.dict
+        template_values['embedded'] = False
         template_values['instanceid'] = group_instanceid
         template_values['resources_path'] = RESOURCES_PATH
 

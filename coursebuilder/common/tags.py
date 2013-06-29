@@ -228,3 +228,27 @@ def html_to_safe_dom(html_string, handler):
         node_list.append(_process_html_tree(elt))
 
     return node_list
+
+
+def get_components_from_html(html):
+    """Returns a list of dicts representing the components in a lesson.
+
+    Args:
+        html: a block of html that may contain some HTML tags representing
+          custom components.
+
+    Returns:
+        A list of dicts. Each dict represents one component and has two
+        keys:
+        - instanceid: the instance id of the component
+        - name: the name of the component tag (e.g. gcb-googlegroup)
+    """
+    parser = html5lib.HTMLParser(
+        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+        namespaceHTMLElements=False)
+    content = parser.parseFragment('<div>%s</div>' % html)[0]
+
+    return [{
+        'instanceid': component.attrib.get('instanceid'),
+        'name': component.tag,
+    } for component in content.findall('.//*[@instanceid]')]

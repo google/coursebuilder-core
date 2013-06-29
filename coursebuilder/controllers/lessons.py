@@ -802,7 +802,7 @@ class EventsRESTHandler(BaseRESTHandler):
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
-        elif source == 'attempt-component':
+        elif source == 'tag-assessment':
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
             cpt_id = payload['instanceid']
             if all([unit_id, lesson_id, cpt_id]):

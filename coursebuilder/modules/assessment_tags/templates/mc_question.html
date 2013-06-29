@@ -1,15 +1,6 @@
-<div {% if not embedded %}class="gcb-border-box"{% endif %}>
-  <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
-  <script>
-    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
-  </script>
-  <script src="{{resources_path}}/grading_lib.js"></script>
-  <script src="{{resources_path}}/grading.js"></script>
-  <noscript>
-    <div class='qt-warning'>
-      {{ gettext(' JavaScript should be enabled to grade this question. ') }}
-    </div>
-  </noscript>
+{% extends 'templates/base_assessment_tag.html' %}
+
+{% block question %}
   <div id="{{instanceid}}"
       class="qt-mc-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
     <div class="qt-question">{{question}}</div>
@@ -27,6 +18,7 @@
     {% if not embedded %}
       <div class="qt-check-answer">
         <button class="gcb-button qt-check-answer-button">
+          {# I18N: Text on the button for checking a student's answer. #}
           {{ gettext(' Check Answer ') }}
         </button>
       </div>
@@ -35,4 +27,4 @@
     <div class="qt-feedback qt-hidden">
     </div>
   </div>
-</div>
+{% endblock question %}
