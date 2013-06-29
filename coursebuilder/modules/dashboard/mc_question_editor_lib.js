@@ -87,7 +87,9 @@ function normalizeScoresForSingleSelectionModel(scores) {
 
 /*
  * All the scores which are over zero are given a common weight which sums to 1;
- * all others are set to 0.
+ * all others are set to -1. This is so that the only way to score 1.0 is to
+ * select all correct choices and no incorrect choices. Selecting even one
+ * incorrect choice will always result in a score of zero.
  */
 function normalizeScoresForMultipleSelectionModel(scores) {
   var posCount = Y.Array.reduce(scores, 0, function(prevVal, score) {
@@ -102,10 +104,10 @@ function normalizeScoresForMultipleSelectionModel(scores) {
   // There may be rounding error, so fudge the final value so the sum is 1
   var finalValue = Math.floor(100.5 - 100 * commonValue * (posCount - 1))/100;
   var retVal = Y.Array.map(scores, function(score) {
-    return score > 0 ? commonValue : 0;
+    return score > 0 ? commonValue : -1;
   });
   var lastPosIdx = retVal.length - 1;
-  while (retVal[lastPosIdx] == 0) {
+  while (retVal[lastPosIdx] == -1) {
     --lastPosIdx;
   }
   retVal[lastPosIdx] = finalValue;

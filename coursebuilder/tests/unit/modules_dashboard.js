@@ -81,7 +81,7 @@ describe('normalize scores', function() {
   describe('multiple selection', function() {
     it('it splits score evenly between the positive entries', function() {
       var scores = [0, 1, 0, 1];
-      var expected = [0, 0.5, 0, 0.5];
+      var expected = [-1, 0.5, -1, 0.5];
       expect(normalizeScoresForMultipleSelectionModel(scores))
           .toBeArrayEqual(expected);
     });
