@@ -687,12 +687,12 @@ class QuestionDAO(BaseJsonDao):
     ENTITY = QuestionEntity
 
 
-class QuizEntity(BaseEntity):
-    """An object representing a quiz in the datastore."""
+class QuestionGroupEntity(BaseEntity):
+    """An object representing a question group in the datastore."""
     data = db.TextProperty(indexed=False)
 
 
-class QuizDTO(object):
+class QuestionGroupDTO(object):
     def __init__(self, the_id, the_dict):
         self.id = the_id
         self.dict = the_dict
@@ -706,7 +706,7 @@ class QuizDTO(object):
         return self.dict['introduction']
 
 
-class QuizDAO(BaseJsonDao):
-    DTO = QuizDTO
-    ENTITY = QuizEntity
+class QuestionGroupDAO(BaseJsonDao):
+    DTO = QuestionGroupDTO
+    ENTITY = QuestionGroupEntity
 

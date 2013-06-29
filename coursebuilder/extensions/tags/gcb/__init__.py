@@ -256,27 +256,31 @@ class Activity(tags.BaseTag):
         return reg
 
 
-class Quiz(tags.BaseTag):
+class QuestionGroup(tags.BaseTag):
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/quiz.png'
+        return '/extensions/tags/gcb/resources/question_group.png'
+
+    @classmethod
+    def name(cls):
+        return 'Question Group'
 
     def get_schema(self, handler):
-        quizzes = m_models.QuizDAO.get_all()
-        quiz_list = [(q.id, q.name) for q in quizzes]
+        question_groups = m_models.QuestionGroupDAO.get_all()
+        question_group_list = [(q.id, q.name) for q in question_groups]
 
-        reg = schema_fields.FieldRegistry('Quiz')
-        if quiz_list:
+        reg = schema_fields.FieldRegistry('Question Group')
+        if question_group_list:
             reg.add_property(
                 schema_fields.SchemaField(
-                  'quid', 'Quiz', 'string', optional=True,
-                  select_data=quiz_list))
+                  'quid', 'Question Group', 'string', optional=True,
+                  select_data=question_group_list))
         else:
             reg.add_property(
                 schema_fields.SchemaField(
                     'quid', '', 'string', optional=True,
                     editable=False, extra_schema_dict_values={
-                        'value': 'No quizzes available',
+                        'value': 'No question groups available',
                         'visu': {
                             'visuType': 'funcName',
                             'funcName': 'disableSave'}}))

@@ -36,7 +36,7 @@ from models import transforms
 from models import utils
 from models import vfs
 from models.models import QuestionDAO
-from models.models import QuizDAO
+from models.models import QuestionGroupDAO
 from models.models import Student
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
@@ -50,8 +50,8 @@ from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
 from question_editor import QuestionManagerAndEditor
 from question_editor import SaQuestionRESTHandler
-from quiz_editor import QuizManagerAndEditor
-from quiz_editor import QuizRESTHandler
+from question_group_editor import QuestionGroupManagerAndEditor
+from question_group_editor import QuestionGroupRESTHandler
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
@@ -65,7 +65,7 @@ from google.appengine.api import users
 
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    QuestionManagerAndEditor, QuizManagerAndEditor, AssignmentManager,
+    QuestionManagerAndEditor, QuestionGroupManagerAndEditor, AssignmentManager,
     ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
@@ -75,8 +75,8 @@ class DashboardHandler(
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'import_course', 'edit_assignment',
-        'add_mc_question', 'add_sa_question', 'edit_question', 'add_quiz',
-        'edit_quiz']
+        'add_mc_question', 'add_sa_question', 'edit_question',
+        'add_question_group', 'edit_question_group']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -101,7 +101,7 @@ class DashboardHandler(
             (UnitRESTHandler.URI, UnitRESTHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
-            (QuizRESTHandler.URI, QuizRESTHandler)
+            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler)
         ]
 
     def can_view(self):
@@ -571,31 +571,32 @@ class DashboardHandler(
 
         return output
 
-    def list_quizzes(self):
-        """Prepare a list of quizzes."""
+    def list_question_groups(self):
+        """Prepare a list of question groups."""
         if not filer.is_editable_fs(self.app_context):
             return safe_dom.NodeList()
 
         output = safe_dom.NodeList().append(
             safe_dom.Element(
                 'a', className='gcb-button gcb-pull-right',
-                href='dashboard?action=add_quiz'
-            ).add_text('Add Quiz')
+                href='dashboard?action=add_question_group'
+            ).add_text('Add Question Group')
         ).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
         ).append(
-            safe_dom.Element('h3').add_text('Quizzes')
+            safe_dom.Element('h3').add_text('Question Groups')
         )
 
         # TODO(jorr): Hook this into the datastore
-        all_quizzes = QuizDAO.get_all()
-        if all_quizzes:
+        all_question_groups = QuestionGroupDAO.get_all()
+        if all_question_groups:
             ol = safe_dom.Element('ol')
-            for quiz in all_quizzes:
-                edit_url = 'dashboard?action=edit_quiz&key=%s' % quiz.id
+            for question_group in all_question_groups:
+                edit_url = 'dashboard?action=edit_question_group&key=%s' % (
+                    question_group.id)
                 li = safe_dom.Element('li')
                 li.add_text(
-                    quiz.name
+                    question_group.name
                 ).add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_child(
@@ -616,7 +617,7 @@ class DashboardHandler(
         items = safe_dom.NodeList().append(
             self.list_questions()
         ).append(
-            self.list_quizzes()
+            self.list_question_groups()
         ).append(
             self.list_and_format_file_list(
                 'Assessments', '/assets/js/', links=True,
