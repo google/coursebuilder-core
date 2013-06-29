@@ -35,20 +35,34 @@ import yaml
 import messages
 from google.appengine.api import users
 
-
-# Set of string. The relative, normalized path bases we allow uploading into.
-ALLOWED_ASSET_UPLOAD_BASES = set([
-    'assets/css',
+# Set of string. The relative, normalized path bases we allow uploading of
+# binary data into.
+ALLOWED_ASSET_BINARY_BASES = frozenset([
     'assets/img',
+])
+# Set of string. The relative, normalized path bases we allow uploading of text
+# data into.
+ALLOWED_ASSET_TEXT_BASES = frozenset([
+    'assets/css',
     'assets/lib',
     'views'
 ])
-
+# Set of string. The relative, normalized path bases we allow uploading into.
+ALLOWED_ASSET_UPLOAD_BASES = ALLOWED_ASSET_BINARY_BASES.union(
+    ALLOWED_ASSET_TEXT_BASES)
 MAX_ASSET_UPLOAD_SIZE_K = 500
 
 
 def is_editable_fs(app_context):
     return app_context.fs.impl.__class__ == vfs.DatastoreBackedFileSystem
+
+
+def is_text_payload(payload):
+    try:
+        transforms.dumps(payload)
+        return True
+    except:  # All errors are equivalently bad. pylint: disable-msg=bare-except
+        return False
 
 
 def is_readonly_asset(asset):
@@ -213,6 +227,10 @@ class FileManagerAndEditor(ApplicationHandler):
                 'All your customizations will be lost.' % uri)
             delete_button_caption = 'Restore original'
 
+        # Disable the save button if the payload is not text by setting method
+        # to ''.
+        save_method = 'put' if is_text_payload(asset.read()) else ''
+
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             TextAssetRESTHandler.SCHEMA.get_json_schema(),
@@ -225,6 +243,7 @@ class FileManagerAndEditor(ApplicationHandler):
             delete_message=delete_message,
             delete_url=delete_url,
             required_modules=TextAssetRESTHandler.REQUIRED_MODULES,
+            save_method=save_method,
         )
         self.render_page({
             'page_title': self.format_title('Edit ' + uri),
@@ -235,6 +254,8 @@ class FileManagerAndEditor(ApplicationHandler):
 class TextAssetRESTHandler(BaseRESTHandler):
     """REST endpoints for text assets."""
 
+    ERROR_MESSAGE_UNEDITABLE = (
+        'Error: contents are not text and cannot be edited.')
     REQUIRED_MODULES = [
         'inputex-hidden',
         'inputex-textarea',
@@ -242,6 +263,9 @@ class TextAssetRESTHandler(BaseRESTHandler):
     SCHEMA = schema_fields.FieldRegistry('Edit asset', description='Text Asset')
     SCHEMA.add_property(schema_fields.SchemaField(
         'contents', 'Contents', 'text',
+    ))
+    SCHEMA.add_property(schema_fields.SchemaField(
+        'is_text', 'Is Text', 'boolean', hidden=True,
     ))
     SCHEMA.add_property(schema_fields.SchemaField(
         'readonly', 'ReadOnly', 'boolean', hidden=True,
@@ -281,11 +305,19 @@ class TextAssetRESTHandler(BaseRESTHandler):
             os.path.join(appengine_config.BUNDLE_ROOT, filename))
         assert asset
 
+        contents = asset.read()
+        is_text = is_text_payload(contents)
+        if not is_text:
+            contents = self.ERROR_MESSAGE_UNEDITABLE
+        json_message = 'Success.' if is_text else self.ERROR_MESSAGE_UNEDITABLE
+
         json_payload = {
-            'contents': asset.read(), 'readonly': is_readonly_asset(asset),
+            'contents': contents,
+            'is_text': is_text,
+            'readonly': is_readonly_asset(asset),
         }
         transforms.send_json_response(
-            self, 200, 'Success.', payload_dict=json_payload,
+            self, 200, json_message, payload_dict=json_payload,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN_NAME))
 
     def put(self):
@@ -505,6 +537,14 @@ class AssetItemRESTHandler(BaseRESTHandler):
         'inputex-string', 'inputex-uneditable', 'inputex-file',
         'io-upload-iframe']
 
+    def _can_write_payload_to_base(self, payload, base):
+        """Determine if a given payload type can be put in a base directory."""
+        # Binary data can go in images; text data can go anywhere else.
+        if base in ALLOWED_ASSET_BINARY_BASES:
+            return True
+        else:
+            return is_text_payload(payload) and base in ALLOWED_ASSET_TEXT_BASES
+
     def get(self):
         """Provides empty initial content for asset upload editor."""
         # TODO(jorr): Pass base URI through as request param when generalized.
@@ -531,20 +571,33 @@ class AssetItemRESTHandler(BaseRESTHandler):
         payload = transforms.loads(request['payload'])
         base = payload['base']
         assert base in ALLOWED_ASSET_UPLOAD_BASES
-
         upload = self.request.POST['file']
+
+        if not isinstance(upload, cgi.FieldStorage):
+            transforms.send_json_file_upload_response(
+                self, 403, 'No file specified.')
+            return
+
         filename = os.path.split(upload.filename)[1]
         assert filename
+
         physical_path = os.path.join(base, filename)
 
         fs = self.app_context.fs.impl
         path = fs.physical_to_logical(physical_path)
+
         if fs.isfile(path):
             transforms.send_json_file_upload_response(
                 self, 403, 'Cannot overwrite existing file.')
             return
 
         content = upload.file.read()
+
+        if not self._can_write_payload_to_base(content, base):
+            transforms.send_json_file_upload_response(
+                self, 403, 'Cannot write binary data to %s.' % base)
+            return
+
         upload.file.seek(0)
         if len(content) > MAX_ASSET_UPLOAD_SIZE_K * 1024:
             transforms.send_json_response(
