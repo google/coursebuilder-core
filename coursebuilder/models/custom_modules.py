@@ -20,19 +20,27 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 class Module(object):
     """A class that holds module information."""
 
-    def __init__(self, name, desc, global_routes, namespaced_routes):
+    def __init__(
+        self, name, desc, global_routes, namespaced_routes,
+        notify_module_enabled=None, notify_module_disabled=None):
         self._name = name
         self._desc = desc
         self._global_routes = global_routes
         self._namespaced_routes = namespaced_routes
+        self._notify_module_enabled = notify_module_enabled
+        self._notify_module_disabled = notify_module_disabled
 
         Registry.registered_modules[self._name] = self
 
     def disable(self):
         Registry.enabled_module_names.remove(self.name)
+        if self._notify_module_disabled:
+            self._notify_module_disabled()
 
     def enable(self):
         Registry.enabled_module_names.add(self.name)
+        if self._notify_module_enabled:
+            self._notify_module_enabled()
 
     @property
     def enabled(self):
