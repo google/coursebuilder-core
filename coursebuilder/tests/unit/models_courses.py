@@ -119,6 +119,13 @@ class WorkflowValidationTests(unittest.TestCase):
         workflow.validate(self.errors)
         self.assertFalse(self.errors)
 
+    def test_empty_submission_date_in_grader(self):
+        """Validation should pass for empty submission date."""
+        workflow = Workflow(self.to_yaml(
+            {'grader': 'auto', 'submission_due_date': ''}))
+        workflow.validate(self.errors)
+        self.assertFalse(self.errors)
+
     def test_invalid_human_grader(self):
         """Validation should fail for invalid human grading specifications."""
         workflow = Workflow(self.to_yaml({'grader': 'human'}))

@@ -57,6 +57,25 @@ class SchemaFieldTests(BaseFieldTests):
         expected = '[[["_inputex"], {"a": "A", "b": "B", "label": "aLabel"}]]'
         self.assert_schema_dict_value(expected, field)
 
+    def test_uneditable_field(self):
+        field = schema_fields.SchemaField(
+            'aName', 'aLabel', 'aType', editable=False)
+        expected = '{"type":"aType"}'
+        self.assert_json_schema_value(expected, field)
+        expected = ('[[["_inputex"], {"_type": "uneditable", '
+                    '"label": "aLabel"}]]')
+        self.assert_schema_dict_value(expected, field)
+        self.assertEquals('aName', field.name)
+
+    def test_hidden_field(self):
+        field = schema_fields.SchemaField('aName', 'aLabel', 'aType',
+                                          hidden=True)
+        expected = '{"type":"aType"}'
+        self.assert_json_schema_value(expected, field)
+        expected = '[[["_inputex"], {"_type": "hidden", "label": "aLabel"}]]'
+        self.assert_schema_dict_value(expected, field)
+        self.assertEquals('aName', field.name)
+
 
 class FieldArrayTests(BaseFieldTests):
     """Unit tests for common.schema_fields.FieldArray."""
@@ -159,13 +178,13 @@ class FieldRegistryTests(BaseFieldTests):
         reg = schema_fields.FieldRegistry(
             'registry_name', 'registry_description')
         reg.add_property(schema_fields.SchemaField(
-            'field_name', 'field_label', 'select',
+            'field_name', 'field_label', 'string',
             select_data=[('a', 'A'), ('b', 'B')]))
         expected = """
 {
   "properties": {
     "field_name": {
-      "type": "select"
+      "type": "string"
     }
   },
   "type": "object",
@@ -177,6 +196,7 @@ class FieldRegistryTests(BaseFieldTests):
 [
   [["title"],"registry_name"],
   [["properties","field_name","_inputex"],{
+    "_type": "select",
     "choices":[
       {"value": "a", "label": "A"},
       {"value": "b","label": "B"}],

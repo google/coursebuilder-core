@@ -194,7 +194,7 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         schema = schema_fields.FieldRegistry('Add a Component')
         type_select = schema.add_sub_registry('type', 'Component Type')
         type_select.add_property(schema_fields.SchemaField(
-            'tag', 'Name', 'select', select_data=select_data))
+            'tag', 'Name', 'string', select_data=select_data))
         schema.add_sub_registry('attributes', registry=tag_schema)
 
         template_values = {}

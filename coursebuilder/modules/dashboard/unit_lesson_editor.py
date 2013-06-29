@@ -21,15 +21,19 @@ import cgi
 import logging
 import urllib
 from common import tags
+from common.schema_fields import FieldRegistry
+from common.schema_fields import SchemaField
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
+from models import review
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
 from tools import verify
+import yaml
 import filer
 import messages
 
@@ -49,6 +53,21 @@ PUBLISHED_TEXT = 'Public'
 STATUS_ANNOTATION = oeditor.create_bool_select_annotation(
     ['properties', 'is_draft'], 'Status', DRAFT_TEXT,
     PUBLISHED_TEXT, class_name='split-from-main-group')
+
+
+# Allowed matchers. Keys of this dict represent internal keys for the matcher
+# type, and the value represents the corresponding string that will appear in
+# the dashboard UI.
+ALLOWED_MATCHERS_NAMES = {review.PEER_MATCHER: messages.PEER_MATCHER_NAME}
+
+
+# Allowed graders. Keys of this dict represent internal keys for the grader
+# type, and the value represents the corresponding string that will appear in
+# the dashboard UI.
+ALLOWED_GRADERS_NAMES = {
+    courses.AUTO_GRADER: messages.AUTO_GRADER_NAME,
+    courses.HUMAN_GRADER: messages.HUMAN_GRADER_NAME,
+    }
 
 
 class CourseOutlineRights(object):
@@ -540,53 +559,87 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         transforms.send_json_response(self, 200, 'Imported.')
 
 
+def workflow_key(key):
+    return 'workflow:%s' % key
+
+
+def create_assessment_registry():
+    """Create the registry for course properties."""
+
+    reg = FieldRegistry('Assessment Entity', description='Assessment')
+
+    # Course level settings.
+    course_opts = reg.add_sub_registry('assessment', 'Assessment Config')
+    course_opts.add_property(
+        SchemaField('key', 'ID', 'string', editable=False))
+    course_opts.add_property(
+        SchemaField('type', 'Type', 'string', editable=False))
+    course_opts.add_property(
+        SchemaField('title', 'Title', 'string', optional=True))
+    course_opts.add_property(
+        SchemaField('weight', 'Weight', 'string', optional=True))
+    course_opts.add_property(
+        SchemaField('content', 'Assessment Content', 'text', optional=True,
+                    description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION)))
+    course_opts.add_property(
+        SchemaField(workflow_key(courses.SUBMISSION_DUE_DATE_KEY),
+                    'Submission Due Date', 'string', optional=True,
+                    description=str(messages.DUE_DATE_FORMAT_DESCRIPTION)))
+    course_opts.add_property(
+        SchemaField(workflow_key(courses.GRADER_KEY), 'Grading Method',
+                    'string',
+                    select_data=ALLOWED_GRADERS_NAMES.items()))
+    course_opts.add_property(
+        SchemaField('is_draft', 'Status', 'boolean',
+                    select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
+                    extra_schema_dict_values={
+                        'className': 'split-from-main-group'}))
+
+    review_opts = reg.add_sub_registry(
+        'review_opts', 'Review Config',
+        description=str(messages.ASSESSMENT_DETAILS_DESCRIPTION))
+    if len(ALLOWED_MATCHERS_NAMES) > 1:
+        review_opts.add_property(
+            SchemaField(workflow_key(courses.MATCHER_KEY), 'Review Matcher',
+                        'string', optional=True,
+                        select_data=ALLOWED_MATCHERS_NAMES.items()))
+
+    review_opts.add_property(
+        SchemaField(
+            'review_form', 'Reviewer Feedback Form', 'text', optional=True,
+            description=str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION)))
+    review_opts.add_property(
+        SchemaField(
+            workflow_key(courses.REVIEW_DUE_DATE_KEY),
+            'Review Due Date', 'string', optional=True,
+            description=str(messages.REVIEW_DUE_DATE_FORMAT_DESCRIPTION)))
+    review_opts.add_property(
+        SchemaField(workflow_key(courses.REVIEW_MIN_COUNT_KEY),
+                    'Review Min Count', 'integer', optional=True,
+                    description=str(messages.REVIEW_MIN_COUNT_DESCRIPTION)))
+    review_opts.add_property(
+        SchemaField(workflow_key(courses.REVIEW_WINDOW_MINS_KEY),
+                    'Review Window Timeout', 'integer', optional=True,
+                    description=str(messages.REVIEW_TIMEOUT_IN_MINUTES)))
+    return reg
+
+
 class AssessmentRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to assessment."""
 
     URI = '/rest/course/assessment'
 
-    SCHEMA_JSON = """
-    {
-        "id": "Assessment Entity",
-        "type": "object",
-        "description": "Assessment",
-        "properties": {
-            "key" : {"type": "string"},
-            "type": {"type": "string"},
-            "title": {"optional": true, "type": "string"},
-            "weight": {"optional": true, "type": "string"},
-            "content": {"optional": true, "type": "text"},
-            "workflow_yaml": {"optional": true, "type": "text"},
-            "review_form": {"optional": true, "type": "text"},
-            "is_draft": {"type": "boolean"}
-            }
-    }
-    """
+    REG = create_assessment_registry()
 
-    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
+    SCHEMA_JSON = REG.get_json_schema()
 
-    SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Assessment'),
-        (['properties', 'key', '_inputex'], {
-            'label': 'ID', '_type': 'uneditable'}),
-        (['properties', 'type', '_inputex'], {
-            'label': 'Type', '_type': 'uneditable'}),
-        (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        (['properties', 'weight', '_inputex'], {'label': 'Weight'}),
-        (['properties', 'content', '_inputex'], {
-            'label': 'Assessment Content',
-            'description': str(messages.ASSESSMENT_CONTENT_DESCRIPTION)}),
-        (['properties', 'workflow_yaml', '_inputex'], {
-            'label': 'Assessment Details',
-            'description': str(messages.ASSESSMENT_DETAILS_DESCRIPTION)}),
-        (['properties', 'review_form', '_inputex'], {
-            'label': 'Reviewer Feedback Form',
-            'description': str(messages.REVIEWER_FEEDBACK_FORM_DESCRIPTION)}),
-        STATUS_ANNOTATION]
+    SCHEMA_DICT = REG.get_json_schema_dict()
+
+    SCHEMA_ANNOTATIONS_DICT = REG.get_schema_dict()
 
     REQUIRED_MODULES = [
         'inputex-select', 'inputex-string', 'inputex-textarea',
-        'inputex-uneditable']
+        'inputex-uneditable', 'inputex-integer', 'inputex-hidden']
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
@@ -613,42 +666,76 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         else:
             review_form = ''
 
+        workflow = unit.workflow
+
+        if workflow.get_submission_due_date():
+            submission_due_date = workflow.get_submission_due_date().strftime(
+                courses.ISO_8601_DATE_FORMAT)
+        else:
+            submission_due_date = ''
+
+        if workflow.get_review_due_date():
+            review_due_date = workflow.get_review_due_date().strftime(
+                courses.ISO_8601_DATE_FORMAT)
+        else:
+            review_due_date = ''
+
         return {
-            'key': unit.unit_id,
-            'type': verify.UNIT_TYPE_NAMES[unit.type],
-            'title': unit.title,
-            'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
-            'content': content,
-            'workflow_yaml': unit.workflow_yaml,
-            'review_form': review_form,
-            'is_draft': not unit.now_available,
-        }
+            'assessment': {
+                'key': unit.unit_id,
+                'type': verify.UNIT_TYPE_NAMES[unit.type],
+                'title': unit.title,
+                'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
+                'content': content,
+                'is_draft': not unit.now_available,
+                workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
+                    submission_due_date),
+                workflow_key(courses.GRADER_KEY): workflow.get_grader(),
+                },
+            'review_opts': {
+                workflow_key(courses.MATCHER_KEY): workflow.get_matcher(),
+                workflow_key(courses.REVIEW_DUE_DATE_KEY): review_due_date,
+                workflow_key(courses.REVIEW_MIN_COUNT_KEY): (
+                    workflow.get_review_min_count()),
+                workflow_key(courses.REVIEW_WINDOW_MINS_KEY): (
+                    workflow.get_review_window_mins()),
+                'review_form': review_form,
+                }
+            }
 
     def apply_updates(self, unit, updated_unit_dict, errors):
         """Store the updated assessment."""
-        unit.title = updated_unit_dict.get('title')
+
+        entity_dict = {}
+        AssessmentRESTHandler.REG.convert_json_to_entity(
+            updated_unit_dict, entity_dict)
+        unit.title = entity_dict.get('title')
 
         try:
-            unit.weight = int(updated_unit_dict.get('weight'))
+            unit.weight = int(entity_dict.get('weight'))
             if unit.weight < 0:
                 errors.append('The weight must be a non-negative integer.')
         except ValueError:
             errors.append('The weight must be an integer.')
 
-        unit.now_available = not updated_unit_dict.get('is_draft')
+        unit.now_available = not entity_dict.get('is_draft')
         course = courses.Course(self)
         course.set_assessment_content(
-            unit, updated_unit_dict.get('content'), errors=errors)
+            unit, entity_dict.get('content'), errors=errors)
 
-        unit.workflow_yaml = updated_unit_dict.get('workflow_yaml')
+        workflow_dict = entity_dict.get('workflow')
+        if len(ALLOWED_MATCHERS_NAMES) == 1:
+            workflow_dict[courses.MATCHER_KEY] = (
+                ALLOWED_MATCHERS_NAMES.keys()[0])
+        unit.workflow_yaml = yaml.safe_dump(workflow_dict)
         unit.workflow.validate(errors=errors)
 
         # Only save the review form if the assessment needs human grading.
         if not errors:
             if course.needs_human_grader(unit):
                 course.set_review_form(
-                    unit, updated_unit_dict.get('review_form'), errors=errors)
-            elif updated_unit_dict.get('review_form'):
+                    unit, entity_dict.get('review_form'), errors=errors)
+            elif entity_dict.get('review_form'):
                 errors.append(
                     'Review forms for auto-graded assessments should be empty.')
 

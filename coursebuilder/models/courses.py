@@ -1412,6 +1412,8 @@ class Workflow(object):
 
     def _convert_date_string_to_datetime(self, date_str):
         """Returns a datetime object."""
+        if not date_str:
+            return None
         return datetime.strptime(date_str, ISO_8601_DATE_FORMAT)
 
     def get_grader(self):
@@ -1465,18 +1467,35 @@ class Workflow(object):
                 'invalid grader, should be one of: %s' %
                 ', '.join(ALLOWED_GRADERS))
 
+            workflow_errors = []
+            submission_due_date = None
+            if SUBMISSION_DUE_DATE_KEY in workflow_dict.keys():
+                try:
+                    submission_due_date = self._convert_date_string_to_datetime(
+                        workflow_dict[SUBMISSION_DUE_DATE_KEY])
+                except Exception as e:  # pylint: disable-msg=broad-except
+                    workflow_errors.append(
+                        'dates should be formatted as YYYY-MM-DD hh:mm '
+                        '(e.g. 1997-07-16 19:20) and be specified in the UTC '
+                        'timezone')
+
+            if workflow_errors:
+                raise Exception('%s.' % '; '.join(workflow_errors))
+
             if workflow_dict[GRADER_KEY] == HUMAN_GRADER:
 
                 missing_keys = []
                 for key in HUMAN_GRADED_ASSESSMENT_KEY_LIST:
                     if key not in workflow_dict:
                         missing_keys.append(key)
+                    elif (isinstance(workflow_dict[key], basestring) and not
+                          workflow_dict[key]):
+                        missing_keys.append(key)
 
                 assert not missing_keys, (
                     'missing key(s) for a human-reviewed assessment: %s.' %
                     ', '.join(missing_keys))
 
-                workflow_errors = []
                 if (workflow_dict[MATCHER_KEY] not in
                     review.ALLOWED_MATCHERS):
                     workflow_errors.append(
@@ -1489,8 +1508,6 @@ class Workflow(object):
                     workflow_dict, REVIEW_WINDOW_MINS_KEY, workflow_errors)
 
                 try:
-                    submission_due_date = self._convert_date_string_to_datetime(
-                        workflow_dict[SUBMISSION_DUE_DATE_KEY])
                     review_due_date = self._convert_date_string_to_datetime(
                         workflow_dict[REVIEW_DUE_DATE_KEY])
 

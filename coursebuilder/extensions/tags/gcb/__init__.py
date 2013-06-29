@@ -241,7 +241,7 @@ class Activity(tags.BaseTag):
         reg = schema_fields.FieldRegistry('Activity')
         reg.add_property(
             schema_fields.SchemaField(
-              'activityid', 'Activity Id', 'select', optional=True,
+              'activityid', 'Activity Id', 'string', optional=True,
               select_data=activity_list,
               description=(
                   'The ID of the activity (e.g. activity-2.4.js). '

@@ -171,11 +171,6 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).verify_not_publicly_available()  # confirm that we're on the dashboard
 
-        # Test Add Assessment
-        self.load_dashboard(name).click_add_assessment(
-        ).click_close(
-        ).verify_not_publicly_available()  # confirm that we're on the dashboard
-
         # Test Add Link
         self.load_dashboard(name).click_add_link(
         ).click_close(

@@ -23,7 +23,8 @@ from google.appengine.ext import db
 
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
-JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array']
+JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array',
+              'object']
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
 # sync with modules/oeditor/oeditor.html.
 _JSON_XSSI_PREFIX = ")]}'\n"
@@ -96,7 +97,9 @@ def json_to_dict(source_dict, schema):
         attr_type = attr['type']
         if attr_type not in JSON_TYPES:
             raise ValueError('Unsupported JSON type: %s' % attr_type)
-        if attr_type == 'date':
+        if attr_type == 'object':
+            output[key] = json_to_dict(source_dict[key], attr)
+        elif attr_type == 'date':
             output[key] = datetime.datetime.strptime(
                 source_dict[key], JSON_DATE_FORMAT).date()
         elif attr_type == 'array':

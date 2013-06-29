@@ -39,7 +39,7 @@ Assessment questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
 
 ASSESSMENT_DETAILS_DESCRIPTION = assemble_sanitized_message("""
-Properties and restrictions of your assessment (YAML format).
+Properties and restrictions of your assessment.
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
 ASSESSMENT_EDITOR_DESCRIPTION = assemble_sanitized_message(
@@ -143,3 +143,25 @@ UPLOAD_ASSET_DESCRIPTION = assemble_sanitized_message("""
 Choose a file to upload to this Google App Engine instance. Learn more about
 file storage and hosting.
 """, 'https://code.google.com/p/course-builder/wiki/Dashboard#Assets')
+
+DUE_DATE_FORMAT_DESCRIPTION = assemble_sanitized_message("""
+Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
+in the UTC timezone.""", None)
+
+REVIEW_DUE_DATE_FORMAT_DESCRIPTION = assemble_sanitized_message("""
+Should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and be specified
+in the UTC timezone.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+REVIEW_TIMEOUT_IN_MINUTES = assemble_sanitized_message("""
+This value should be specified in minutes.
+""", 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+REVIEW_MIN_COUNT_DESCRIPTION = assemble_sanitized_message(
+    None, 'https://code.google.com/p/course-builder/wiki/PeerReview')
+
+AUTO_GRADER_NAME = 'Automatic Grading'
+
+HUMAN_GRADER_NAME = 'Peer Review'
+
+PEER_MATCHER_NAME = 'Peer'

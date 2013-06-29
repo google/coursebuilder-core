@@ -25,8 +25,19 @@ from models.property import Registry
 class SchemaField(Property):
     """SchemaField defines a simple field in REST API."""
 
+    def __init__(
+        self, name, label, property_type, select_data=None, description=None,
+        optional=False, hidden=False, editable=True,
+        extra_schema_dict_values=None):
+        Property.__init__(
+            self, name, label, property_type, select_data=select_data,
+            description=description, optional=optional,
+            extra_schema_dict_values=extra_schema_dict_values)
+        self._hidden = hidden
+        self._editable = editable
+
     def get_json_schema_dict(self):
-        """Get the JSCON schema for this field."""
+        """Get the JSON schema for this field."""
         prop = {}
         prop['type'] = self._property_type
         if self._optional:
@@ -42,11 +53,17 @@ class SchemaField(Property):
         else:
             schema = {}
         schema['label'] = self._label
+        if self._hidden:
+            schema['_type'] = 'hidden'
+        elif not self._editable:
+            schema['_type'] = 'uneditable'
+        elif self._select_data:
+            schema['_type'] = 'select'
 
         if 'date' is self._property_type:
             schema['dateFormat'] = 'Y/m/d'
             schema['valueFormat'] = 'Y/m/d'
-        elif 'select' is self._property_type:
+        elif self._select_data:
             choices = []
             for value, label in self._select_data:
                 choices.append({'value': value, 'label': label})
@@ -90,7 +107,7 @@ class FieldRegistry(Registry):
         self, name, title=None, description=None, registry=None):
         """Add a sub registry to for this Registry."""
         if not registry:
-            registry = FieldRegistry(title, description)
+            registry = FieldRegistry(title, description=description)
         self._sub_registories[name] = registry
         return registry
 
