@@ -3,7 +3,7 @@
 {% block question %}
   <div id="{{instanceid}}" class="qt-question-group">
     <div class="qt-introduction">
-      {{ introduction }}
+      {{ introduction | safe }}
     </div>
 
     <ol class="qt-question-list">

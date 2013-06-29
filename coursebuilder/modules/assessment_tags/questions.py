@@ -18,7 +18,6 @@ __author__ = 'sll@google.com (Sean Lip)'
 
 
 import os
-from xml.etree import cElementTree
 
 from common import jinja_utils
 from common import schema_fields
@@ -123,10 +122,10 @@ class QuestionTag(tags.BaseTag):
                     handler.student, handler.unit_id, handler.lesson_id,
                     instanceid)
 
-        div = cElementTree.XML(render_question(
+        html_string = render_question(
             quid, instanceid, locale, embedded=False, weight=weight,
-            progress=progress))
-        return div
+            progress=progress)
+        return tags.html_string_to_element_tree(html_string)
 
     def get_schema(self, unused_handler):
         """Get the schema for specifying the question."""
@@ -207,8 +206,8 @@ class QuestionGroupTag(tags.BaseTag):
         template = jinja_utils.get_template(
             template_file, [os.path.dirname(__file__)], locale=locale)
 
-        div = cElementTree.XML(template.render(template_values))
-        return div
+        html_string = template.render(template_values)
+        return tags.html_string_to_element_tree(html_string)
 
     def get_schema(self, unused_handler):
         """Get the schema for specifying the question group."""

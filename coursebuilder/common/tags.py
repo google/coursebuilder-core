@@ -185,6 +185,13 @@ def get_tag_bindings():
     return dict(bindings.items() + Registry.get_all_tags().items())
 
 
+def html_string_to_element_tree(html_string):
+    parser = html5lib.HTMLParser(
+        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+        namespaceHTMLElements=False)
+    return parser.parseFragment('<div>%s</div>' % html_string)[0]
+
+
 def html_to_safe_dom(html_string, handler):
     """Render HTML text as a tree of safe_dom elements."""
 
@@ -216,11 +223,7 @@ def html_to_safe_dom(html_string, handler):
             node_list.append(safe_dom.Text(tail))
         return node_list
 
-    parser = html5lib.HTMLParser(
-        tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
-        namespaceHTMLElements=False)
-    root = parser.parseFragment('<div>%s</div>' % html_string)[0]
-
+    root = html_string_to_element_tree(html_string)
     if root.text:
         node_list.append(safe_dom.Text(root.text))
 

@@ -95,7 +95,7 @@ McQuestion.prototype.grade = function() {
       answer.push(i);
       score += parseFloat(that.data.choices[i].score);
       if (that.data.choices[i].feedback) {
-        feedback.append($('<li/>').text(that.data.choices[i].feedback));
+        feedback.append($('<li/>').html(that.data.choices[i].feedback));
       }
     }
   });
@@ -173,7 +173,7 @@ SaQuestion.prototype.bind = function() {
 SaQuestion.prototype.onShowHint = function() {
   this.el.find('div.qt-feedback')
       .empty()
-      .append($('<div/>').text(this.data.hint))
+      .append($('<div/>').html(this.data.hint))
       .removeClass('qt-hidden');
 };
 SaQuestion.prototype.grade = function() {
@@ -183,7 +183,7 @@ SaQuestion.prototype.grade = function() {
     if (this.MATCHERS[grader.matcher].matches(grader.response, response)) {
       return {
         score: Math.min(Math.max(parseFloat(grader.score), 0), 1),
-        feedback: $('<div/>').text(grader.feedback)
+        feedback: $('<div/>').html(grader.feedback)
       };
     }
   }

@@ -73,6 +73,16 @@ describe('assessment tags', function() {
         expect(grade.score).toBe(1);
         expect(getOuterHTML(grade.feedback)).toBe('<ul></ul>');
       });
+      it('can give HTML formatted feedback', function() {
+        var questionData = {'mc-0': {choices: [
+            {score: '1', feedback: '<b>yes</b>'},
+            {score: '0', feedback: '<u>no</u>'}]}};
+        var mc = new McQuestion(el, questionData, MESSAGES);
+        var grade = mc.grade();
+        expect(grade.score).toBe(1);
+        expect(getOuterHTML(grade.feedback))
+            .toBe('<ul><li><b>yes</b></li></ul>');
+      });
       it('doesn\'t give negative scores', function() {
         var questionData = {'mc-0': {choices: [{score: '-1'}, {score: '-5'}]}};
         var mc = new McQuestion(el, questionData, MESSAGES);
@@ -163,8 +173,8 @@ describe('assessment tags', function() {
       // Enter 'falafel' as the response
       el.find('> .qt-response > input').val('falafel');
     });
-    function getQuestion(matcher, response) {
-      var questionData = {'sa-0': {
+    function getQuestionData(matcher, response) {
+      return {'sa-0': {
         hint: 'it\s \'falafel\'',
         graders: [{
           matcher: matcher,
@@ -173,7 +183,9 @@ describe('assessment tags', function() {
           feedback: 'good'
         }]
       }};
-      return new SaQuestion(el, questionData, MESSAGES);
+    }
+    function getQuestion(matcher, response) {
+      return new SaQuestion(el, getQuestionData(matcher, response), MESSAGES);
     }
     function testMatcherWithResponse(matcher, response, expectedScore) {
       var sa = getQuestion(matcher, response);
@@ -209,6 +221,12 @@ describe('assessment tags', function() {
         el.find('> .qt-response > input').val('3.01');
         testMatcherWithResponse('numeric', '3.00', 0);
       });
+    });
+    it('gives HTML feedback', function() {
+      var questionData = getQuestionData('case_insensitive', 'falafel');
+      questionData['sa-0'].graders[0].feedback = '<b>good</b>';
+      var sa = new SaQuestion(el, questionData, MESSAGES);
+      expect(getOuterHTML(sa.grade().feedback)).toBe('<div><b>good</b></div>');
     });
     it('serializes the student answer', function() {
       var sa = getQuestion('case insensitive', 'Falafel');

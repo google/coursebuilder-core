@@ -3,13 +3,13 @@
 {% block question %}
   <div id="{{instanceid}}"
       class="qt-mc-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
-    <div class="qt-question">{{question}}</div>
+    <div class="qt-question">{{ question | safe }}</div>
     <div class="qt-choices">
       {% for choice in choices %}
         <div>
           <input type="{{button_type}}" name="{{instanceid}}" id="{{instanceid}}.{{loop.index0}}"/>
           <label for="{{instanceid}}.{{loop.index0}}">
-            {{ choice['text'] }}
+            {{ choice['text'] | safe }}
           </label>
         </div>
       {% endfor %}
