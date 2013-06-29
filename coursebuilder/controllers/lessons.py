@@ -745,6 +745,11 @@ class ReviewHandler(BaseHandler):
 class EventsRESTHandler(BaseRESTHandler):
     """Provides REST API for an Event."""
 
+    def get(self):
+        """Returns a 404 error; this handler should not be GET-accessible."""
+        self.error(404)
+        return
+
     def post(self):
         """Receives event and puts it into datastore."""
 
