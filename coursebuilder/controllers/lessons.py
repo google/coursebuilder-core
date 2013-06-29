@@ -891,18 +891,17 @@ class EventsRESTHandler(BaseRESTHandler):
         if 'location' not in payload:
             return
 
+        source_url = payload['location']
+        unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
+
         if source == 'attempt-activity':
-            source_url = payload['location']
-            unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
         elif source == 'tag-assessment':
-            unit, lesson = extract_unit_and_lesson(self)
-            unit_id = unit.unit_id
-            lesson_id = lesson.lesson_id
             cpt_id = payload['instanceid']
-            if all([unit_id, lesson_id, cpt_id]):
+            if (unit_id is not None and lesson_id is not None and
+                cpt_id is not None):
                 self.get_course().get_progress_tracker(
                     ).put_component_completed(
                         student, unit_id, lesson_id, cpt_id)
