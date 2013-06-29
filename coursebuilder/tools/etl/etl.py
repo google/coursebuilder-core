@@ -193,6 +193,12 @@ PARSER.add_argument(
         'process; all models are processed by default' % _TYPE_DATASTORE),
     type=lambda s: s.split(','))
 PARSER.add_argument(
+    '--disable_remote', action='store_true',
+    help=(
+        'If mode is %s, pass this flag to skip authentication and remote '
+        'environment setup. Should only pass for jobs that run entirely '
+        'locally and do not require RPCs') % _MODE_RUN)
+PARSER.add_argument(
     '--force_overwrite', action='store_true',
     help=(
         'If mode is download and type is course, forces overwrite of entities '
@@ -798,6 +804,8 @@ def _validate_arguments(parsed_args):
         _die(
             'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
+    if parsed_args.disable_remote and parsed_args.mode != _MODE_RUN:
+        _die('--disable_remote supported only if mode is ' + _MODE_RUN)
     if parsed_args.force_overwrite and not (
             parsed_args.mode == _MODE_UPLOAD and
             parsed_args.type == _TYPE_COURSE):
@@ -826,8 +834,9 @@ def main(parsed_args, environment_class=None):
         'Target is url %s from application_id %s on server %s',
         parsed_args.course_url_prefix, parsed_args.application_id,
         parsed_args.server)
-    environment_class(
-        parsed_args.application_id, parsed_args.server).establish()
+    if not parsed_args.disable_remote:
+        environment_class(
+            parsed_args.application_id, parsed_args.server).establish()
     if parsed_args.mode == _MODE_DOWNLOAD:
         _download(
             parsed_args.type, parsed_args.archive_path,

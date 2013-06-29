@@ -3060,6 +3060,13 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             src_course_out.get_units()) == len(dst_course_out.get_units())
         dst_course_out.save()
 
+    def test_disable_remote_cannot_be_passed_for_mode_other_than_run(self):
+        bad_args = etl.PARSER.parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_course_args +
+            ['--disable_remote'])
+        self.assertRaises(
+            SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
+
     def test_download_course_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
         self.upload_all_sample_course_files([])
@@ -3199,6 +3206,12 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             'oldest_item_age': 0,
         }
         self.assertTrue(expected in stdout.getvalue())
+
+    def test_run_skips_remote_env_setup_when_disable_remote_passed(self):
+        args = etl.PARSER.parse_args(
+            ['run', 'tools.etl.etl_lib.Job'] + self.common_args +
+            ['--disable_remote'])
+        etl.main(args)
 
     def test_run_upload_file_to_course_succeeds(self):
         """Tests upload of a single local file to a course."""

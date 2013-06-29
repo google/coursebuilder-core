@@ -33,6 +33,7 @@ class MapReduceJob(etl_lib.Job):
 
     Usage:
         python etl.py run path.to.my.job / appid server.appspot.com \
+            --disable_remote \
             --job_args='path_to_input_file path_to_output_directory'
     """
 
