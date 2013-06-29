@@ -66,6 +66,11 @@ function getGcbRteDefs(env, Dom, Editor) {
         autoHeight: true,
         focusAtStart: true,
       };
+      // TODO(emichael,jorr): Remove browser sniffing
+      if (navigator.userAgent.match(/MSIE/)) {
+        _def.autoHeight = false;
+        _def.height = '300px';
+      }
       // Merge options.opts into the default options
       var opts = options.opts;
       for (var i in opts) {
