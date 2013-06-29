@@ -876,6 +876,7 @@ class LessonRESTHandler(BaseRESTHandler):
             "title" : {"type": "string"},
             "unit_id": {"type": "string"},
             "video" : {"type": "string", "optional": true},
+            "scored": {"type": "string"},
             "objectives" : {
                 "type": "string", "format": "html", "optional": true},
             "notes" : {"type": "string", "optional": true},
@@ -911,6 +912,15 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'unit_id', '_inputex'], {
                 'label': 'Parent Unit', '_type': 'select',
                 'choices': unit_list}),
+            (['properties', 'scored', '_inputex'], {
+                '_type': 'select',
+                'choices': [
+                    {'label': 'Questions are scored', 'value': 'scored'},
+                    {
+                        'label': 'Questions only give feedback',
+                        'value': 'not_scored'}],
+                'label': 'Scored',
+                'description': messages.LESSON_SCORED_DESCRIPTION}),
             # TODO(sll): The internal 'objectives' property should also be
             # renamed.
             (['properties', 'objectives', '_inputex'], {
@@ -958,6 +968,7 @@ class LessonRESTHandler(BaseRESTHandler):
             'key': key,
             'title': lesson.title,
             'unit_id': lesson.unit_id,
+            'scored': 'scored' if lesson.scored else 'not_scored',
             'objectives': lesson.objectives,
             'video': lesson.video,
             'notes': lesson.notes,
@@ -1003,6 +1014,7 @@ class LessonRESTHandler(BaseRESTHandler):
 
         lesson.title = updates_dict['title']
         lesson.unit_id = updates_dict['unit_id']
+        lesson.scored = (updates_dict['scored'] == 'scored')
         lesson.objectives = updates_dict['objectives']
         lesson.video = updates_dict['video']
         lesson.notes = updates_dict['notes']

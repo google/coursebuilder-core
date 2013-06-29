@@ -412,6 +412,7 @@ class Lesson12(object):
         self.lesson_id = 0  # primary key
         self.unit_id = 0  # unit.unit_id of parent
         self.title = ''
+        self.scored = False
         self.objectives = ''
         self.video = ''
         self.notes = ''
@@ -634,6 +635,7 @@ class Lesson13(object):
         self.lesson_id = 0  # primary key
         self.unit_id = 0  # unit.unit_id of parent
         self.title = ''
+        self.scored = False
         self.objectives = ''
         self.video = ''
         self.notes = ''
@@ -695,7 +697,8 @@ class PersistentCourse13(object):
         if unit_dicts:
             for unit_dict in unit_dicts:
                 unit = Unit13()
-                defaults = {'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW}
+                defaults = {
+                    'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW}
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
@@ -704,7 +707,9 @@ class PersistentCourse13(object):
         if lesson_dicts:
             for lesson_dict in lesson_dicts:
                 lesson = Lesson13()
-                defaults = {'activity_listed': True}
+                defaults = {
+                    'activity_listed': True,
+                    'scored': False}
                 transforms.dict_to_instance(
                     lesson_dict, lesson, defaults=defaults)
                 self.lessons.append(lesson)

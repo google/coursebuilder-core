@@ -11,6 +11,11 @@
 {% block main_content %}
 <script>
   var questionData = {};
+  {% if lesson and lesson.scored %}
+    questionData.scored = true;
+  {% else %}
+    questionData.scored = false;
+  {% endif %}
 </script>
 
 <div id="gcb-main">

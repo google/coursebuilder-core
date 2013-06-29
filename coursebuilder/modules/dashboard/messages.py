@@ -113,6 +113,11 @@ The lesson body is displayed to students above the video in the default
 template.
 """
 
+LESSON_SCORED_DESCRIPTION = """
+Whether questions in this lesson will be scored (summative) or only
+provide textual feedback (formative).
+"""
+
 LESSON_VIDEO_ID_DESCRIPTION = """
 Provide a YouTube video ID to embed a video.
 """
