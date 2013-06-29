@@ -632,8 +632,8 @@ class BaseJsonDao(object):
         return entity
 
     @classmethod
-    def delete(cls, quiz_dto):
-        entity = cls._load_entity(quiz_dto.id)
+    def delete(cls, dto):
+        entity = cls._load_entity(dto.id)
         entity.delete()
         MemcacheManager.delete(cls._memcache_key(entity.key().id()))
 

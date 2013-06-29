@@ -269,10 +269,16 @@ class Question(tags.BaseTag):
         question_list = [(q.id, q.description) for q in questions]
 
         reg = schema_fields.FieldRegistry('Question')
-        reg.add_property(
-            schema_fields.SchemaField(
-              'quid', 'Question', 'string', optional=True,
-              select_data=question_list))
+        if question_list:
+            reg.add_property(
+                schema_fields.SchemaField(
+                  'quid', 'Question', 'string', optional=True,
+                  select_data=question_list))
+        else:
+            reg.add_property(
+                schema_fields.SchemaField(
+                  'quid', 'Question', 'string', optional=True,
+                  select_data={('', '[No questions available]')}))
 
         return reg
 
@@ -287,11 +293,16 @@ class Quiz(tags.BaseTag):
         quiz_list = [(q.id, q.name) for q in quizzes]
 
         reg = schema_fields.FieldRegistry('Quiz')
-        reg.add_property(
-            schema_fields.SchemaField(
-              'quid', 'Quiz', 'string', optional=True,
-              select_data=quiz_list))
-
+        if quiz_list:
+            reg.add_property(
+                schema_fields.SchemaField(
+                  'quid', 'Quiz', 'string', optional=True,
+                  select_data=quiz_list))
+        else:
+            reg.add_property(
+                schema_fields.SchemaField(
+                  'quid', 'Quiz', 'string', optional=True,
+                  select_data={('', '[No quizzes available]')}))
         return reg
 
 

@@ -142,7 +142,7 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
             transforms.send_json_response(
                 self, 404, 'Question not found.', {'key': key})
             return
-        question.delete()
+        QuestionDAO.delete(question)
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
@@ -265,31 +265,31 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             description=messages.QUESTION_DESCRIPTION))
 
         grader_type = schema_fields.FieldRegistry(
-            'Grader',
-            extra_schema_dict_values={'className': 'sa-choice'})
+            'Answer',
+            extra_schema_dict_values={'className': 'sa-grader'})
         grader_type.add_property(schema_fields.SchemaField(
             'score', 'Score', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-choice-score'}))
+            extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
             'matcher', 'Grading', 'select', optional=True,
             select_data=[
                 ('case_insensitive', 'Case insensitive string match'),
                 ('regex', 'Regular expression'),
                 ('hnumeric', 'Numeric')],
-            extra_schema_dict_values={'className': 'sa-choice-score'}))
+            extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
             'response', 'Response', 'string', optional=True,
-            extra_schema_dict_values={'className': 'sa-choice-text'}))
+            extra_schema_dict_values={'className': 'sa-grader-text'}))
         grader_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-choice-feedback'}))
+            extra_schema_dict_values={'className': 'sa-grader-feedback'}))
 
         graders_array = schema_fields.FieldArray(
-            'choices', '', item_type=grader_type,
+            'graders', '', item_type=grader_type,
             extra_schema_dict_values={
-                'className': 'sa-choice-container',
-                'listAddLabel': 'Add a response',
-                'listRemoveLabel': 'Delete response'})
+                'className': 'sa-grader-container',
+                'listAddLabel': 'Add an answer',
+                'listRemoveLabel': 'Delete this answer'})
 
         sa_question.add_property(graders_array)
 
@@ -311,7 +311,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict = {
                 'question': '',
                 'description': '',
-                'choices': [
+                'graders': [
                     {
                         'score': '1.0',
                         'matcher': 'case_insensitive',
