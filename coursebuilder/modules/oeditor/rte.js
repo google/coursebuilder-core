@@ -124,6 +124,8 @@ function getGcbRteDefs(env, Dom, Editor) {
             setTimeout(arguments.callee, 100);
           }
         })();
+      } else {
+        this._customTagManager = new DummyCustomTagManager();
       }
 
       this.editor = editor;
@@ -149,9 +151,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       editor.get('element_cont').addClass('yui-editor-container');
       editor._setDesignMode('on');
       editor.setEditorHTML(textArea.value);
-      if (this.options.supportCustomTags) {
-        this._customTagManager.insertMarkerTags();
-      }
+      this._customTagManager.insertMarkerTags();
     },
 
     hideRte: function() {
@@ -388,4 +388,16 @@ CustomTagManager.prototype = {
       e.parentNode.removeChild(e);
     }
   }
+};
+
+/**
+ * A dummy tag manager used when the RTE is in a context where custom tags are
+ * not supported.
+ */
+function DummyCustomTagManager() {};
+
+DummyCustomTagManager.prototype = {
+  addCustomTag: function() {},
+  insertMarkerTags: function() {},
+  removeMarkerTags: function() {}
 };
