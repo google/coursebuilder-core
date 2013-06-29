@@ -151,6 +151,7 @@ class PersonalProfile(BaseEntity):
     nick_name = db.StringProperty(indexed=False)
     date_of_birth = db.DateProperty(indexed=False)
     enrollment_info = db.TextProperty()
+    course_info = db.TextProperty()
 
     @property
     def user_id(self):
@@ -162,6 +163,7 @@ class PersonalProfileDTO(object):
 
     def __init__(self, personal_profile=None):
         self.enrollment_info = '{}'
+        self.course_info = '{}'
         if personal_profile:
             self.user_id = personal_profile.user_id
             self.email = personal_profile.email
@@ -169,6 +171,7 @@ class PersonalProfileDTO(object):
             self.nick_name = personal_profile.nick_name
             self.date_of_birth = personal_profile.date_of_birth
             self.enrollment_info = personal_profile.enrollment_info
+            self.course_info = personal_profile.course_info
 
 
 class StudentProfileDAO(object):
@@ -224,7 +227,8 @@ class StudentProfileDAO(object):
     def _update_attributes(
         cls, profile, student,
         email=None, legal_name=None, nick_name=None,
-        date_of_birth=None, is_enrolled=None):
+        date_of_birth=None, is_enrolled=None, final_grade=None,
+        course_info=None):
         """Modifies various attributes of Student and Profile."""
 
         # we allow profile to be null
@@ -245,14 +249,29 @@ class StudentProfileDAO(object):
         if date_of_birth is not None:
             profile.date_of_birth = date_of_birth
 
+        from controllers import sites  # pylint: disable=C6204
+        course = sites.get_course_for_current_request()
+        course_key = course.get_namespace_name()
+
         if is_enrolled is not None:
-            from controllers import sites  # pylint: disable=C6204
-            course = sites.get_course_for_current_request()
             enrollment_dict = transforms.loads(profile.enrollment_info)
-            enrollment_dict[course.get_namespace_name()] = is_enrolled
+            enrollment_dict[course_key] = is_enrolled
             profile.enrollment_info = transforms.dumps(enrollment_dict)
 
             student.is_enrolled = is_enrolled
+
+        if final_grade is not None or course_info is not None:
+            course_info_dict = transforms.loads(profile.course_info)
+            if course_key in course_info_dict.keys():
+                info = course_info_dict[course_key]
+            else:
+                info = {}
+            if final_grade:
+                info['final_grade'] = final_grade
+            if course_info:
+                info['info'] = course_info
+            course_info_dict[course_key] = info
+            profile.course_info = transforms.dumps(course_info_dict)
 
     @classmethod
     def _put_profile(cls, profile):
@@ -268,8 +287,8 @@ class StudentProfileDAO(object):
     @db.transactional(xg=True)
     def _update_in_transaction(
         cls, user_id,
-        email, legal_name=None, nick_name=None,
-        date_of_birth=None, is_enrolled=None):
+        email, legal_name=None, nick_name=None, date_of_birth=None,
+        is_enrolled=None, final_grade=None, course_info=None):
         """Updates various Student and Profile attributes transactionally."""
 
         # load profile; it can be None
@@ -284,7 +303,8 @@ class StudentProfileDAO(object):
         cls._update_attributes(
             profile, student,
             email=email, legal_name=legal_name, nick_name=nick_name,
-            date_of_birth=date_of_birth, is_enrolled=is_enrolled)
+            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
+            final_grade=final_grade, course_info=course_info)
 
         # update both
         student.put()
@@ -348,14 +368,16 @@ class StudentProfileDAO(object):
     @classmethod
     def update(
         cls, user_id, email,
-        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None):
+        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None,
+        final_grade=None, course_info=None):
         profile = cls.get_profile_by_user_id(user_id)
         if not profile:
             profile = cls.add_new_profile(user_id, email)
         cls._update_in_transaction(
             user_id, email=email,
             legal_name=legal_name, nick_name=nick_name,
-            date_of_birth=date_of_birth, is_enrolled=is_enrolled)
+            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
+            final_grade=final_grade, course_info=course_info)
 
 
 class Student(BaseEntity):
