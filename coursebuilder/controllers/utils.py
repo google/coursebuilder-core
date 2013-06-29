@@ -371,7 +371,7 @@ class PreviewHandler(BaseHandler):
             self.redirect('/course')
             return
 
-        self.template_value['transient_student'] = TRANSIENT_STUDENT
+        self.template_value['transient_student'] = True
         self.template_value['can_register'] = self.app_context.get_environ(
             )['reg_form']['can_register']
         self.template_value['navbar'] = {'course': True}
@@ -418,6 +418,7 @@ class RegisterHandler(BaseHandler):
             self.template_value['current_name'] = profile.nick_name
 
         self.template_value['navbar'] = {}
+        self.template_value['transient_student'] = True
         self.template_value['register_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('register-post'))
 
@@ -539,6 +540,7 @@ class StudentUnenrollHandler(BaseHandler):
         Student.set_enrollment_status_for_current(False)
 
         self.template_value['navbar'] = {}
+        self.template_value['transient_student'] = True
         self.render('unenroll_confirmation.html')
 
 
