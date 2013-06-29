@@ -18,12 +18,11 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import urllib
 import urlparse
-from common import jinja_filters
+from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
 from models import courses
-from models import models as m_models
 from xml.etree import cElementTree
 
 
@@ -154,7 +153,7 @@ class YouTube(tags.BaseTag):
 
     def _render_with_tracking(self, video_id):
         """Embed video and enable event tracking."""
-        video_id = jinja_filters.js_string_raw(video_id)
+        video_id = jinja_utils.js_string_raw(video_id)
         return cElementTree.XML("""
 <p>
     <script src='/extensions/tags/gcb/resources/youtube_video.js'></script>

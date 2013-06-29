@@ -22,7 +22,7 @@ import os
 import time
 import urlparse
 import appengine_config
-from common import jinja_filters
+from common import jinja_utils
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -201,9 +201,9 @@ class ApplicationHandler(webapp2.RequestHandler):
         template_environ = self.app_context.get_template_environ(
             self.template_value[COURSE_INFO_KEY]['course']['locale'],
             additional_dirs
-            )
+        )
         template_environ.filters[
-            'gcb_tags'] = jinja_filters.get_gcb_tags_filter(self)
+            'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         return template_environ.get_template(template_file)
 
     def canonicalize_url(self, location):

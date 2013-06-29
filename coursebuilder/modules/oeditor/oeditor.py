@@ -19,7 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import os
 import urllib
 import appengine_config
-from common import jinja_filters
+from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
@@ -148,13 +148,8 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
 
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
-
-        jinja_environment = jinja2.Environment(
-            autoescape=True, finalize=jinja_filters.finalize,
-            loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
-        jinja_environment.filters['js_string'] = jinja_filters.js_string
-
-        return jinja_environment.get_template(template_name)
+        return jinja_utils.get_template(
+            template_name, dirs + [os.path.dirname(__file__)])
 
     def get_edit_custom_tag(self):
         """Return the the page used to edit a custom HTML tag in a popup."""

@@ -20,7 +20,7 @@ __author__ = 'sll@google.com (Sean Lip)'
 import os
 from xml.etree import cElementTree
 
-from common import jinja_filters
+from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
@@ -28,25 +28,9 @@ import jinja2
 from models import custom_modules
 from models import models as m_models
 from models import transforms
-from webapp2_extras import i18n
 
 
 RESOURCES_PATH = '/modules/assessment_tags/resources'
-
-
-def get_template(template_name, locale):
-    """Sets up an environment and gets jinja template."""
-
-    jinja_environment = jinja2.Environment(
-        autoescape=True, finalize=jinja_filters.finalize,
-        extensions=['jinja2.ext.i18n'],
-        loader=jinja2.FileSystemLoader([os.path.dirname(__file__)]))
-    jinja_environment.filters['js_string'] = jinja_filters.js_string
-
-    i18n.get_i18n().set_locale(locale)
-    jinja_environment.install_gettext_translations(i18n)
-
-    return jinja_environment.get_template(template_name)
 
 
 def render_question(quid, locale, embedded=False, id_prefix=''):
@@ -90,7 +74,8 @@ def render_question(quid, locale, embedded=False, id_prefix=''):
             'defaultFeedback': template_values.get('defaultFeedback')
         })
 
-    template = get_template(template_file, locale)
+    template = jinja_utils.get_template(
+        template_file, [os.path.dirname(__file__)], locale=locale)
     return jinja2.utils.Markup(template.render(template_values))
 
 
@@ -175,7 +160,8 @@ class QuestionGroupTag(tags.BaseTag):
             ))
 
         template_file = 'templates/question_group.html'
-        template = get_template(template_file, locale)
+        template = jinja_utils.get_template(
+            template_file, [os.path.dirname(__file__)], locale=locale)
 
         div = cElementTree.XML(template.render(template_values))
         return div

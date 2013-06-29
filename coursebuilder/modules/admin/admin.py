@@ -24,12 +24,11 @@ import sys
 import time
 import urllib
 from appengine_config import PRODUCTION_MODE
-from common import jinja_filters
+from common import jinja_utils
 from common import safe_dom
 from common import tags
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
-import jinja2
 from models import config
 from models import counters
 from models import custom_modules
@@ -128,11 +127,8 @@ class AdminHandler(
 
     def get_template(self, template_name, dirs):
         """Sets up an environment and Gets jinja template."""
-        jinja_environment = jinja2.Environment(
-            autoescape=True, finalize=jinja_filters.finalize,
-            loader=jinja2.FileSystemLoader(dirs + [os.path.dirname(__file__)]))
-        jinja_environment.filters['js_string'] = jinja_filters.js_string
-        return jinja_environment.get_template(template_name)
+        return jinja_utils.get_template(
+            template_name, dirs + [os.path.dirname(__file__)])
 
     def _get_user_nav(self):
         current_action = self.request.get('action')

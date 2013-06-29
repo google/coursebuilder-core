@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import jinja2
+from webapp2_extras import i18n
 import safe_dom
 import tags
 
@@ -58,3 +59,19 @@ def get_gcb_tags_filter(handler):
         else:
             return jinja2.utils.Markup(data)
     return gcb_tags
+
+
+def get_template(template_name, dirs, locale=None):
+    """Sets up an environment and gets jinja template."""
+
+    jinja_environment = jinja2.Environment(
+        autoescape=True, finalize=finalize,
+        extensions=['jinja2.ext.i18n'],
+        loader=jinja2.FileSystemLoader(dirs))
+    jinja_environment.filters['js_string'] = js_string
+
+    if locale:
+        i18n.get_i18n().set_locale(locale)
+        jinja_environment.install_gettext_translations(i18n)
+
+    return jinja_environment.get_template(template_name)
