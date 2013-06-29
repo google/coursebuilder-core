@@ -492,9 +492,8 @@ function renderAssessment(assessment, domRoot) {
     domRoot.append(assessment.preamble);
   }
 
-  domRoot.append('<ol></ol>');
-
-  var questionsOL = domRoot.find('ol');
+  var questionsOL = $('<ol></ol>');
+  domRoot.append(questionsOL);
 
   $.each(assessment.questionsList, function(questionNum, q) {
     questionsOL.append('<li></li>');
