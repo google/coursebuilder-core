@@ -169,12 +169,12 @@ SaQuestion.prototype.bind = function() {
   var that = this;
   if (this.scored) {
     this.el.find('> div.qt-check-answer').addClass('qt-hidden');
-    return this;
+  } else {
+    this.el.find('div.qt-check-answer > button.qt-check-answer-button')
+        .click(function() {
+          that.onCheckAnswer();
+        });
   }
-  this.el.find('div.qt-check-answer > button.qt-check-answer-button')
-      .click(function() {
-        that.onCheckAnswer();
-      });
   this.bindHintButton();
   return this;
 };
