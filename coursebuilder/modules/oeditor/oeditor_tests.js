@@ -252,3 +252,143 @@ describe('FrameProxy', function() {
     expect(root.className).toEqual('hidden');
   });
 });
+
+describe('CustomTagManager', function() {
+  var customTagManager, win, editor, customRteTagIcons, frameProxyOpener,
+      serviceUrlProvider;
+
+  beforeEach(function() {
+    win = {
+      document: {
+        body: {},
+        getElementsByTagName: function() {
+          return [];
+        }
+      }
+    };
+    editor = {
+      execCommand: function() {}
+    };
+    customRteTagIcons = [
+      {name: 'tag_1', iconUrl: 'http://www.icon.com/foo_1.png'},
+      {name: 'tag_2', iconUrl: 'http://www.icon.com/foo_2.png'}
+    ];
+    frameProxyOpener = {
+      open: function(url, value, submit, cancel) {}
+    };
+    serviceUrlProvider = {
+      getAddUrl: function() {
+        return 'add_url';
+      },
+      getEditUrl: function(tag) {
+        return 'edit_url?' + tag;
+      }
+    };
+
+    customTagManager = new CustomTagManager(win, editor, customRteTagIcons,
+      frameProxyOpener, serviceUrlProvider);
+  });
+
+  it('replaces a tag with marker images', function() {
+    // Mocking
+    var tag = {
+      parentNode: {
+        replaceChild: function() {}
+      }
+    };
+    spyOn(tag.parentNode, 'replaceChild');
+    win.document.getElementsByTagName = function(tagName) {
+      return tagName == 'tag_1' ? [tag] : [];
+    };
+    var img = {
+      style: {}
+    };
+    win.document.createElement = function(name) {
+      if (name == 'img') {
+        return img;
+      }
+    };
+
+    // Testing
+    customTagManager.insertMarkerTags();
+
+    // Verification
+    expect(tag.parentNode.replaceChild).toHaveBeenCalledWith(img, tag);
+    expect(img.src).toEqual('http://www.icon.com/foo_1.png');
+    expect(img.className).toEqual('gcbMarker');
+  });
+
+
+  it('restores tags from marker images', function() {
+    // Mocking
+    var tag = {};
+    var img = {
+      gcbTag: tag,
+      parentNode: {
+        replaceChild: function() {}
+      }
+    };
+    spyOn(img.parentNode, 'replaceChild');
+    win.document.querySelectorAll = function(selector) {
+      return selector == '.gcbMarker' ? [img] : [];
+    };
+
+    // Testing
+    customTagManager.removeMarkerTags();
+
+    // Verification
+    expect(img.parentNode.replaceChild).toHaveBeenCalledWith(tag, img);
+  });
+
+
+  it('removes marker images with no stored tags', function() {
+    // Mocking
+    var img = {
+      parentNode: {
+        removeChild: function() {}
+      }
+    };
+    spyOn(img.parentNode, 'removeChild');
+    win.document.querySelectorAll = function(selector) {
+      return selector == '.gcbMarker' ? [img] : [];
+    };
+
+    // Testing
+    customTagManager.removeMarkerTags();
+
+    // Verification
+    expect(img.parentNode.removeChild).toHaveBeenCalled();
+  });
+
+  it('opens a lightbox to add a tag', function() {
+    // Mocking
+    spyOn(frameProxyOpener, 'open');
+
+    // Testing
+    customTagManager.addCustomTag();
+
+    // Verification
+    expect(frameProxyOpener.open).toHaveBeenCalled();
+    expect(frameProxyOpener.open.mostRecentCall.args[0]).toEqual('add_url');
+  });
+
+  it('opens a lightbox to edit a tag', function() {
+    // Mocking
+    var node = {
+      tagName: 'tagName',
+      attributes: [
+        {name: 'name_1', value: 'value_1'},
+        {name: 'name_2', value: 'value_2'}
+      ]
+    };
+    spyOn(frameProxyOpener, 'open');
+
+    // Testing
+    customTagManager._editCustomTag(node);
+
+    // Verification
+    expect(frameProxyOpener.open).toHaveBeenCalled();
+    expect(frameProxyOpener.open.mostRecentCall.args[0])
+        .toEqual('edit_url?tagname');
+  });
+});
