@@ -715,15 +715,13 @@ class DashboardHandler(
         template_values = {}
         template_values['page_title'] = self.format_title('Analytics')
 
-        at_least_one_job_exists = False
-        at_least_one_job_finished = False
+        all_jobs_have_finished = True
 
         basic_analytics_job = ComputeStudentStats(self.app_context).load()
         stats_html = self.get_markup_for_basic_analytics(basic_analytics_job)
-        if basic_analytics_job:
-            at_least_one_job_exists = True
-            if basic_analytics_job.status_code == jobs.STATUS_CODE_COMPLETED:
-                at_least_one_job_finished = True
+        if (basic_analytics_job and
+            basic_analytics_job.status_code != jobs.STATUS_CODE_COMPLETED):
+            all_jobs_have_finished = False
 
         for callback in DashboardRegistry.analytics_handlers:
             handler = callback()
@@ -734,16 +732,13 @@ class DashboardHandler(
             job = handler.stats_computer(self.app_context).load()
             stats_html += handler.get_markup(job)
 
-            if job:
-                at_least_one_job_exists = True
-                if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                    at_least_one_job_finished = True
+            if job and job.status_code != jobs.STATUS_CODE_COMPLETED:
+                all_jobs_have_finished = False
 
         template_values['main_content'] = jinja2.utils.Markup(self.get_template(
             'analytics.html', [os.path.dirname(__file__)]
         ).render({
-            'show_recalculate_button': (
-                at_least_one_job_finished or not at_least_one_job_exists),
+            'show_recalculate_button': all_jobs_have_finished,
             'stats_html': stats_html,
             'xsrf_token': self.create_xsrf_token('compute_student_stats'),
         }, autoescape=True))
