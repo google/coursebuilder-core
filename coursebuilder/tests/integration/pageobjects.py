@@ -44,7 +44,7 @@ class PageObject(object):
     def expect_status_message_to_be(self, value):
         wait.WebDriverWait(self._tester.driver, 15).until(
             ec.text_to_be_present_in_element(
-                (by.By.ID, 'formStatusMessage'), value))
+                (by.By.ID, 'gcb-butterbar-message'), value))
 
 
 class EditorPageObject(PageObject):
@@ -54,9 +54,10 @@ class EditorPageObject(PageObject):
         super(EditorPageObject, self).__init__(tester)
 
         def successful_butter_bar(driver):
-            form_status_message = driver.find_element_by_id('formStatusMessage')
-            return 'Success.' in form_status_message.text or (
-                not form_status_message.is_displayed())
+            butter_bar_message = driver.find_element_by_id(
+                'gcb-butterbar-message')
+            return 'Success.' in butter_bar_message.text or (
+                not butter_bar_message.is_displayed())
 
         wait.WebDriverWait(self._tester.driver, 15).until(successful_butter_bar)
 

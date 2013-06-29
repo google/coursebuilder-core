@@ -2320,13 +2320,10 @@ class MultipleCoursesTestBase(actions.TestBase):
             response.form.action = '/courses/%s/register' % course.path
             response = self.submit(response.form)
 
-            assert_contains(course.title, response.body)
-            assert_contains(course.head, response.body)
-            assert_contains(course.title, response.body)
+            assert_equals(response.status_int, 302)
             assert_contains(
-                '//groups.google.com/group/My-Course-Announce', response.body)
-            assert_contains(
-                '//groups.google.com/group/My-Course', response.body)
+                'course#registration_confirmation', response.headers[
+                    'location'])
 
         # Check lesson page.
         response = self.testapp.get(

@@ -1,24 +1,3 @@
-describe('ButterBar', function() {
-  var popup, message, butterBar;
-
-  beforeEach(function() {
-    popup = {style: {}}; // mock
-    message = {style: {}}; // mock
-    butterBar = new ButterBar(popup, message);
-  });
-
-  it('can display text', function() {
-    butterBar.showMessage('Hello, World');
-    expect(message.textContent).toBe('Hello, World');
-    expect(message.innerText).toBe('Hello, World');
-    expect(popup.style.display).toBe('block');
-  });
-  it('can be hidden', function() {
-    butterBar.hide();
-    expect(popup.style.display).toBe('none');
-  });
-});
-
 describe('deepEquals', function() {
   it('matches objects which are equal', function() {
     var a = {

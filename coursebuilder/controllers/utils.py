@@ -400,7 +400,7 @@ class RegisterHandler(BaseHandler):
 
         # Render registration confirmation page
         self.template_value['navbar'] = {'registration': True}
-        self.render('confirmation.html')
+        self.redirect('/course#registration_confirmation')
 
 
 class ForumHandler(BaseHandler):

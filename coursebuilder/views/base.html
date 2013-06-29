@@ -107,6 +107,9 @@
     </script>
     <script src="assets/lib/activity-generic-1.3.js"></script>
 
+    <script src="assets/lib/butterbar.js"></script>
+    <link rel="stylesheet" type="text/css" href="assets/css/butterbar.css" media="screen" />
+
     <script>
         eventXsrfToken = '{{ event_xsrf_token }}';
       {% if record_tag_events %}
@@ -132,6 +135,14 @@
 
   <body>
     {{course_info.base.after_body_tag_begins | safe}}
+
+    <!-- ButterBar -->
+    <div class="gcb-butterbar-container">
+      <div id="gcb-butterbar-top" class="gcb-butterbar" style='margin-top:50px'>
+        <p id="gcb-butterbar-message"></p>
+        <a id="gcb-butterbar-close">X</a>
+      </div>
+    </div>
 
     <!-- logo bar -->
     <div id="gcb-header" role="banner">

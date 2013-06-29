@@ -3,44 +3,6 @@ var ajaxRpcTimeoutMillis = 15 * 1000;
 // XSSI prefix. Must be kept in sync with models/transforms.py.
 var xssiPrefix = ")]}'";
 
-function ButterBar(popup, message) {
-  this.popup = popup;
-  this.message = message;
-}
-ButterBar.prototype.showMessage = function(text) {
-  this.message.textContent = text;  // FF, Chrome
-  this.message.innerText = text;    // IE
-  this.popup.style.display = "block";
-};
-ButterBar.prototype.hide = function() {
-  this.popup.style.display = "none";
-};
-ButterBar.getButterBar = function() {
-  return new ButterBar(document.getElementById("formStatusPopup"),
-    document.getElementById("formStatusMessage"));
-};
-ButterBar.keepInView = function(Y) {
-  var container = Y.one('#oeditor-container');
-  var popup = Y.one('#formStatusPopup');
-  // The 'absolute' style positions the popup 45px above the top of the
-  // container and we want 'fixed' to pin it at 10px below the top of the
-  // window, so check that the container isn't less than 55px from the top of
-  // the window.
-  if (container.getY() - container.get('docScrollY') <= 55) {
-    popup.addClass('fixed');
-    popup.removeClass('absolute');
-  } else {
-    popup.removeClass('fixed');
-    popup.addClass('absolute');
-  }
-};
-function cbShowMsg(text){
-  ButterBar.getButterBar().showMessage(text);
-}
-function cbHideMsg(){
-  ButterBar.getButterBar().hide();
-}
-
 /**
  * Compare two JS objects for equality by value.
  */
@@ -185,8 +147,6 @@ function onPageLoad(env) {
     env.required_modules,
     mainYuiFunction);
 
-  document.getElementById("close-status-popup-button").onclick = cbHideMsg;
-
   env.inputEx = env.inputEx || {};
   env.inputEx.visus = env.inputEx.visus || {};
   env.inputEx.visus.renderAsset = renderAsset;
@@ -268,10 +228,6 @@ function mainYuiFunction(Y) {
       return cb_global.inputEx.visus[options.funcName](Y, value);
     }
   }
-
-  Y.on('scroll', function(e) {
-    ButterBar.keepInView(Y);
-  });
 
   // here is the object schema
   var schema = {

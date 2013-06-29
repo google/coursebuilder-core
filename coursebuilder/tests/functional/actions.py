@@ -282,7 +282,9 @@ def register(browser, name):
     response.form.set('form01', name)
     response = browser.submit(response.form)
 
-    assert_contains('Thank you for registering for', response.body)
+    assert_equals(response.status_int, 302)
+    assert_contains(
+        'course#registration_confirmation', response.headers['location'])
     check_profile(browser, name)
 
 
@@ -316,7 +318,9 @@ def register_with_additional_fields(browser, name, data2, data3):
     response.form.set('form03', data3)
     response = browser.submit(response.form)
 
-    assert_contains('Thank you for registering for', response.body)
+    assert_equals(response.status_int, 302)
+    assert_contains(
+        'course#registration_confirmation', response.headers['location'])
     check_profile(browser, name)
 
 

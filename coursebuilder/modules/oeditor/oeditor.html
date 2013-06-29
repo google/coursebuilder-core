@@ -5,6 +5,9 @@
     src="/static/yui_3.6.0/yui/build/yui/yui.js"></script>
 <link rel="stylesheet" type="text/css"
     href="/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css">
+<link rel="stylesheet" type="text/css" href="/assets/css/butterbar.css">
+<script src="assets/lib/jquery-1.7.2.min.js"></script>
+<script src="/assets/lib/butterbar.js" type='text/javascript'></script>
 <script
     src="/static/inputex-3.1.0/src/loader.js" type='text/javascript'></script>
 <script
@@ -14,36 +17,6 @@
 <style>
   div#oeditor-container {
     position: relative;
-  }
-  div.status-popup {
-    width:400px;   /* adjust */
-    left:50%;
-    margin-left: -200px;  /* half of the width */
-    background-color: #ffffB7;
-    border: solid #cccca0 1px;
-    border-radius: 5px;
-    text-align: center;
-    padding: 2px;
-    z-index: 999;
-  }
-  .status-popup.fixed {
-    position: fixed;
-    top: 10px;
-  }
-  .status-popup.absolute {
-    position: absolute;
-    top: -45px;
-  }
-  div.status-controlbar {
-    float: right;
-  }
-  div.status-controlbar button {
-    font-weight: bold;
-    text-decoration: none;
-    padding: 0 0.2em;
-  }
-  div.status-message {
-    padding: 0.2em;
   }
 
   div.form {
@@ -359,11 +332,11 @@
 </style>
 
 <div id='oeditor-container'>
-  <div class='status-popup absolute' id='formStatusPopup' style='display: none;'>
-    <div class='status-controlbar'>
-      <button id='close-status-popup-button'>X</button>
+  <div class='gcb-butterbar-container'>
+    <div class='gcb-butterbar' id='gcb-butterbar-top' style='top:-45px'>
+      <p id='gcb-butterbar-message'></p>
+      <a id='gcb-butterbar-close'>X</a>
     </div>
-    <div class='status-message' id='formStatusMessage'></div>
   </div>
   <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
     <div class='form' id='formContainer'></div>

@@ -1,11 +1,19 @@
 {% extends 'base.html' %}
 
 {% block top_content %}
-    <div class="gcb-cols">
-      <div class="gcb-col-11 gcb-aside">
-        {% include 'summary.html' %}
-      </div>
+  <script>
+    {# I18N: This is shown to the student in a popup after registration. #}
+    var regConfirmationMsg = "{{ gettext('Thank you for registering for the course. Click the Announcements tab for important information.') }}";
+    if(window.location.hash == '#registration_confirmation') {
+      cbShowMsg(regConfirmationMsg);
+      setTimeout(function() {cbHideMsg();}, 20000);
+    }
+  </script>
+  <div class="gcb-cols">
+    <div class="gcb-col-11 gcb-aside">
+      {% include 'summary.html' %}
     </div>
+</div>
 {% endblock %}
 
 {% block main_content %}
