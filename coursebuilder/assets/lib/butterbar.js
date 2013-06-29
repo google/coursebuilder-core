@@ -30,12 +30,12 @@ ButterBar.keepInView = function() {
   var popup = ButterBar.getButterBar().popup;
   var container = popup.parentElement;
 
-  container.removeAttribute('style');
+  container.style.top = null;
   $(container).removeClass('fixed');
 
   var offset = $(popup).offset().top;
   if (offset - window.scrollY <= 10) {
     $(container).addClass('fixed');
-    container.setAttribute('style', 'top: ' + (10 - popup.offsetTop) + "px");
+    container.style.top = (10 - popup.offsetTop) + "px";
   }
 };
