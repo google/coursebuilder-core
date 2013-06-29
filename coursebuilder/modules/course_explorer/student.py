@@ -37,6 +37,9 @@ DIR = appengine_config.BUNDLE_ROOT
 LOCALE = Courses.COURSE_TEMPLATE_DICT['base']['locale']
 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 
+# Int. Maximum number of bytes App Engine's db.StringProperty can store.
+_STRING_PROPERTY_MAX_BYTES = 500
+
 
 class IndexPageHandler(webapp2.RequestHandler):
     """Handles routing of root url."""
@@ -145,6 +148,12 @@ class BaseStudentHandler(webapp2.RequestHandler):
 class ProfileHandler(BaseStudentHandler):
     """Global profile handler for a student."""
 
+    def _storable_in_string_property(self, value):
+        # db.StringProperty can hold 500B. len(1_unicode_char) == 1, so len() is
+        # not a good proxy for unicode string size. Instead, cast to utf-8-
+        # encoded str first.
+        return len(value.encode('utf-8')) <= _STRING_PROPERTY_MAX_BYTES
+
     def get(self):
         """Handles GET requests."""
         user = self.initialize_page_and_get_user()
@@ -173,12 +182,12 @@ class ProfileHandler(BaseStudentHandler):
             return
 
         new_name = self.request.get('name')
-        if not new_name or len(new_name) > 500:
+        if not (new_name and self._storable_in_string_property(new_name)):
             self.error(400)
             return
 
-        StudentProfileDAO.update_global_profile(
-            user.user_id(), nick_name=new_name)
+        StudentProfileDAO.update(
+            user.user_id(), None, nick_name=new_name, profile_only=True)
         self.redirect('/explorer/profile')
 
 

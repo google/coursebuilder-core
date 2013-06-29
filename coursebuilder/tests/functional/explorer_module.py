@@ -22,6 +22,7 @@ from models import models
 from models import transforms
 from models.models import PersonalProfile
 from modules.course_explorer import course_explorer
+from modules.course_explorer import student
 
 import actions
 from actions import assert_contains
@@ -219,10 +220,28 @@ class GlobalProfileTest(BaseExplorerTest):
         response = response.form.submit(expect_errors=True)
         assert_equals(response.status_int, 403)
 
-        # Change name with a bad name shold fail.
+        # Change name with empty name shold fail.
         response = self.get('/explorer/profile')
         assert_equals(response.status_int, 200)
         new_name = ''
+        response.form.set('name', new_name)
+        response = response.form.submit(expect_errors=True)
+        assert_equals(response.status_int, 400)
+
+        # Change name with overlong name should fail for str.
+        response = self.get('/explorer/profile')
+        assert_equals(response.status_int, 200)
+        # Constant is module-protected. pylint: disable-msg=protected-access
+        new_name = 'a' * (student._STRING_PROPERTY_MAX_BYTES + 1)
+        response.form.set('name', new_name)
+        response = response.form.submit(expect_errors=True)
+        assert_equals(response.status_int, 400)
+
+        # Change name with overlong name should fail for unicode.
+        response = self.get('/explorer/profile')
+        assert_equals(response.status_int, 200)
+        # \u03a3 == Sigma. len == 1 for unicode; 2 for utf-8 encoded str.
+        new_name = u'\u03a3' + ('a' * (student._STRING_PROPERTY_MAX_BYTES - 1))
         response.form.set('name', new_name)
         response = response.form.submit(expect_errors=True)
         assert_equals(response.status_int, 400)

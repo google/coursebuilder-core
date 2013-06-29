@@ -235,7 +235,6 @@ class StudentProfileDAO(object):
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None):
         """Modifies various attributes of Student's Global Profile."""
-
         # TODO(psimakov): update of email does not work for student
         if email is not None:
             profile.email = email
@@ -249,32 +248,34 @@ class StudentProfileDAO(object):
         if date_of_birth is not None:
             profile.date_of_birth = date_of_birth
 
-        if is_enrolled is None and final_grade is None and course_info is None:
-            return
+        if not (is_enrolled is None and final_grade is None and
+                course_info is None):
 
-        from controllers import sites  # pylint: disable=C6204
-        course = sites.get_course_for_current_request()
-        course_key = course.get_namespace_name()
+            # Defer to avoid circular import.
+            # pylint: disable-msg=g-import-not-at-top
+            from controllers import sites
+            course = sites.get_course_for_current_request()
+            course_namespace = course.get_namespace_name()
 
-        if is_enrolled is not None:
-            enrollment_dict = transforms.loads(profile.enrollment_info)
-            enrollment_dict[course_key] = is_enrolled
-            profile.enrollment_info = transforms.dumps(enrollment_dict)
+            if is_enrolled is not None:
+                enrollment_dict = transforms.loads(profile.enrollment_info)
+                enrollment_dict[course_namespace] = is_enrolled
+                profile.enrollment_info = transforms.dumps(enrollment_dict)
 
-        if final_grade is not None or course_info is not None:
-            course_info_dict = {}
-            if profile.course_info:
-                course_info_dict = transforms.loads(profile.course_info)
-            if course_key in course_info_dict.keys():
-                info = course_info_dict[course_key]
-            else:
-                info = {}
-            if final_grade:
-                info['final_grade'] = final_grade
-            if course_info:
-                info['info'] = course_info
-            course_info_dict[course_key] = info
-            profile.course_info = transforms.dumps(course_info_dict)
+            if final_grade is not None or course_info is not None:
+                course_info_dict = {}
+                if profile.course_info:
+                    course_info_dict = transforms.loads(profile.course_info)
+                if course_namespace in course_info_dict.keys():
+                    info = course_info_dict[course_namespace]
+                else:
+                    info = {}
+                if final_grade:
+                    info['final_grade'] = final_grade
+                if course_info:
+                    info['info'] = course_info
+                course_info_dict[course_namespace] = info
+                profile.course_info = transforms.dumps(course_info_dict)
 
     @classmethod
     def _update_course_profile_attributes(
@@ -315,33 +316,6 @@ class StudentProfileDAO(object):
         MemcacheManager.delete(
             cls._memcache_key(profile.user_id),
             namespace=cls.TARGET_NAMESPACE)
-
-    @classmethod
-    @db.transactional(xg=True)
-    def _update_in_transaction(
-        cls, user_id,
-        email, legal_name=None, nick_name=None, date_of_birth=None,
-        is_enrolled=None, final_grade=None, course_info=None):
-        """Updates various Student and Profile attributes transactionally."""
-
-        # load profile; it can be None
-        profile = cls._get_profile_by_user_id(user_id)
-
-        # load student
-        student = Student.get_by_email(email)
-        if not student:
-            raise Exception('Unable to find student for: %s' % user_id)
-
-        # mutate both
-        cls._update_attributes(
-            profile, student,
-            email=email, legal_name=legal_name, nick_name=nick_name,
-            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
-            final_grade=final_grade, course_info=course_info)
-
-        # update both
-        student.put()
-        cls._put_profile(profile)
 
     @classmethod
     def get_profile_by_user_id(cls, user_id):
@@ -398,40 +372,6 @@ class StudentProfileDAO(object):
         student.put()
 
     @classmethod
-    def update(
-        cls, user_id, email,
-        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None,
-        final_grade=None, course_info=None):
-        profile = cls.get_profile_by_user_id(user_id)
-        if not profile:
-            profile = cls.add_new_profile(user_id, email)
-        cls._update_in_transaction(
-            user_id, email=email,
-            legal_name=legal_name, nick_name=nick_name,
-            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
-            final_grade=final_grade, course_info=course_info)
-
-    @classmethod
-    @db.transactional
-    def update_global_profile(
-        cls, user_id, email=None,
-        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None,
-        final_grade=None, course_info=None):
-        """Update the global profile of a studnet."""
-
-        # load profile; it can be None
-        profile = cls._get_profile_by_user_id(user_id)
-        if not profile:
-            raise Exception('Unable to find student for: %s' % user_id)
-
-        cls._update_attributes(
-            profile, None,
-            email=email, legal_name=legal_name, nick_name=nick_name,
-            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
-            final_grade=final_grade, course_info=course_info)
-        cls._put_profile(profile)
-
-    @classmethod
     def get_enrolled_student_by_email_for(cls, email, app_context):
         """Returns student for a specific course."""
         old_namespace = namespace_manager.get_namespace()
@@ -440,6 +380,33 @@ class StudentProfileDAO(object):
             return Student.get_enrolled_student_by_email(email)
         finally:
             namespace_manager.set_namespace(old_namespace)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def update(
+        cls, user_id, email, legal_name=None, nick_name=None,
+        date_of_birth=None, is_enrolled=None, final_grade=None,
+        course_info=None, profile_only=False):
+        """Updates a student and/or their global profile."""
+        student = None
+        if not profile_only:
+            student = Student.get_by_email(email)
+            if not student:
+                raise Exception('Unable to find student for: %s' % user_id)
+
+        profile = cls._get_profile_by_user_id(user_id)
+        if not profile:
+            profile = cls.add_new_profile(user_id, email)
+
+        cls._update_attributes(
+            profile, student, email=email, legal_name=legal_name,
+            nick_name=nick_name, date_of_birth=date_of_birth,
+            is_enrolled=is_enrolled, final_grade=final_grade,
+            course_info=course_info)
+
+        cls._put_profile(profile)
+        if not profile_only:
+            student.put()
 
 
 class Student(BaseEntity):
