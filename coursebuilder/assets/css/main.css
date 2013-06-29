@@ -256,6 +256,7 @@ th, td {
 
 .gcb-button-box {
   text-align: center;
+  overflow: hidden;
 }
 
 .gcb-nav ul {
