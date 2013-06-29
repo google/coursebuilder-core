@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-06-20 15:23-0700\n"
+"POT-Creation-Date: 2013-06-27 12:43-0700\n"
 "PO-Revision-Date: 2012-12-12 15:10-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -104,14 +104,14 @@ msgstr ""
 
 #. Label for the input field that allows the student to change the name on
 #. his/her certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:68
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:67
 #: experimental/coursebuilder/views/student_profile.html:29
 msgid "New Name"
 msgstr ""
 
 #. Text for a button that allows the student to save changes to his/her name
 #. for the certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:80
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:78
 #: experimental/coursebuilder/views/student_profile.html:39
 msgid "Change Name"
 msgstr ""
@@ -217,7 +217,7 @@ msgstr ""
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:40
+#: experimental/coursebuilder/views/assessment.html:44
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -225,12 +225,12 @@ msgid ""
 msgstr ""
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:45
+#: experimental/coursebuilder/views/assessment.html:49
 msgid "Due date for this assignment: "
 msgstr ""
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:55
+#: experimental/coursebuilder/views/assessment.html:59
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -238,17 +238,17 @@ msgid ""
 msgstr ""
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:67
+#: experimental/coursebuilder/views/assessment.html:73
 msgid "Submitted assignment"
 msgstr ""
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:75
+#: experimental/coursebuilder/views/assessment.html:88
 msgid "Reviews received"
 msgstr ""
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:82
+#: experimental/coursebuilder/views/assessment.html:95
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -256,23 +256,42 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:89
+#: experimental/coursebuilder/views/assessment.html:102
 msgid "Go to the review dashboard"
 msgstr ""
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:94
+#: experimental/coursebuilder/views/assessment.html:107
 msgid "You have not received any peer reviews yet."
+msgstr ""
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/views/assessment_html_content.html:26
+#: experimental/coursebuilder/views/base.html:40
+msgid " Save Draft "
+msgstr ""
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/views/assessment_html_content.html:29
+#: experimental/coursebuilder/views/base.html:52
+msgid " Submit Review "
+msgstr ""
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:37
+#: experimental/coursebuilder/views/base.html:28
+msgid " Check Answers "
+msgstr ""
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:44
+#: experimental/coursebuilder/views/base.html:44
+msgid " Submit Answers "
 msgstr ""
 
 #. Text on the button for checking an answer.
 #: experimental/coursebuilder/views/base.html:24
 msgid " Check Answer "
-msgstr ""
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/base.html:28
-msgid " Check Answers "
 msgstr ""
 
 #. Text on the button for showing the answer to a question.
@@ -285,24 +304,9 @@ msgstr ""
 msgid " Save Answers "
 msgstr ""
 
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/base.html:40
-msgid " Save Draft "
-msgstr ""
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/base.html:44
-msgid " Submit Answers "
-msgstr ""
-
 #. Text on the button for submitting a peer-reviewed assignment.
 #: experimental/coursebuilder/views/base.html:48
 msgid " Submit Assignment "
-msgstr ""
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/base.html:52
-msgid " Submit Review "
 msgstr ""
 
 #. Text to prompt the student to select a multiple-choice answer.
@@ -560,13 +564,13 @@ msgid "Review"
 msgstr ""
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:39
+#: experimental/coursebuilder/views/review.html:43
 msgid "Back to the review dashboard."
 msgstr ""
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:47
+#: experimental/coursebuilder/views/review.html:51
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -575,36 +579,36 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:52
+#: experimental/coursebuilder/views/review.html:56
 msgid "Due date for this review: "
 msgstr ""
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:65
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
 msgstr ""
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:69
+#: experimental/coursebuilder/views/review.html:73
 msgid "Reviewed assignment"
 msgstr ""
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:72
+#: experimental/coursebuilder/views/review.html:76
 msgid "Assignment to review"
 msgstr ""
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:95
 msgid "Submitted review"
 msgstr ""
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:109
 msgid "Review form"
 msgstr ""
 
@@ -769,7 +773,7 @@ msgid "Student profile not found ..."
 msgstr ""
 
 #. Alt text for an embedded YouTube video player.
-#: experimental/coursebuilder/views/summary.html:22
+#: experimental/coursebuilder/views/summary.html:27
 #: experimental/coursebuilder/views/unit.html:108
 msgid "YouTube Video Player"
 msgstr ""

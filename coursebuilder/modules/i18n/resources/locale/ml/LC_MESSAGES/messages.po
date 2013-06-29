@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-06-20 15:23-0700\n"
-"PO-Revision-Date: 2013-05-16 18:20-0700\n"
+"POT-Creation-Date: 2013-06-27 12:43-0700\n"
+"PO-Revision-Date: 2013-06-27 12:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ml <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -21,32 +21,32 @@ msgstr ""
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
 msgid "Explore Courses"
-msgstr ""
+msgstr "കോഴ്‌സുകൾ പര്യവേക്ഷണം ചെയ്യുക"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
 #: experimental/coursebuilder/views/base_course.html:48
 msgid "My Courses"
-msgstr ""
+msgstr "എന്റെ കോഴ്‌സുകൾ"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
 #: experimental/coursebuilder/views/base_course.html:53
 msgid "Profile"
-msgstr ""
+msgstr "പ്രൊഫൈല്‍"
 
 #. Text for a button on the 'list of courses' page that takes students to a
 #. page where they can view score.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:16
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:49
 msgid "View score"
-msgstr ""
+msgstr "സ്‌കോർ കാണുക"
 
 #. Text for a button on the 'list of courses' page that takes students to the
 #. page for that course.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:21
 msgid "Go to course"
-msgstr ""
+msgstr "കോഴ്‌സിലേക്ക് പോകുക"
 
 #. Registration button on the main course page.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:26
@@ -59,18 +59,18 @@ msgstr "രജിസ്റ്റർ ചെയ്യുക"
 #. he/she is not enrolled in courses.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:39
 msgid "You are not currently enrolled in any courses."
-msgstr ""
+msgstr "നിങ്ങൾ നിലവിൽ കോഴ്‌സുകളിലൊന്നിലും എൻറോൾ ചെയ്‌തിട്ടില്ല."
 
 #. Shown to the student on the page that shows his/her list of courses, when
 #. he/she wants to view all courses.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:45
 msgid "View course list."
-msgstr ""
+msgstr "കോഴ്‌സ് ലിസ്റ്റ് കാണുക."
 
 #. Title of the student profile page. Followed by a student's name.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:5
 msgid "Student Profile for"
-msgstr ""
+msgstr "ഇതിനായുള്ള വിദ്യാർത്ഥിയുടെ പ്രൊഫൈൽ"
 
 #. Table header for the student's name.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:16
@@ -87,31 +87,31 @@ msgstr "ഇമെയില്‍"
 #. Heading on the profile page shown above table of registered courses.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:29
 msgid "Enrolled Courses"
-msgstr ""
+msgstr "എൻറോൾ ചെയ്‌ത കോഴ്‌സുകൾ"
 
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
 #: experimental/coursebuilder/views/base_course.html:60
 msgid "Progress"
-msgstr ""
+msgstr "പുരോഗതി"
 
 #. Text on the student profile page which on clicking will take you to unenroll
 #. course page.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:54
 msgid "Withdraw"
-msgstr ""
+msgstr "പിൻവലിക്കുക"
 
 #. Label for the input field that allows the student to change the name on
 #. his/her certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:68
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:67
 #: experimental/coursebuilder/views/student_profile.html:29
 msgid "New Name"
 msgstr "പുതിയ പേര്"
 
 #. Text for a button that allows the student to save changes to his/her name
 #. for the certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:80
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:78
 #: experimental/coursebuilder/views/student_profile.html:39
 msgid "Change Name"
 msgstr "പേര് മാറ്റുക"
@@ -217,7 +217,7 @@ msgstr "മൂല്യനിർണ്ണയം"
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:40
+#: experimental/coursebuilder/views/assessment.html:44
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -227,12 +227,12 @@ msgstr ""
 "%(submission_due_date)s ആയിരുന്നു."
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:45
+#: experimental/coursebuilder/views/assessment.html:49
 msgid "Due date for this assignment: "
 msgstr "ഈ അസൈന്മെന്റ് സമർപ്പിക്കേണ്ട അവസാന തീയതി: "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:55
+#: experimental/coursebuilder/views/assessment.html:59
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -244,17 +244,17 @@ msgstr ""
 "നിങ്ങളുടെ സഹപാഠികൾ അവലോകനം ചെയ്യും."
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:67
+#: experimental/coursebuilder/views/assessment.html:73
 msgid "Submitted assignment"
 msgstr "സമർപ്പിച്ച അസൈന്മെന്റ്"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:75
+#: experimental/coursebuilder/views/assessment.html:88
 msgid "Reviews received"
 msgstr "ലഭിച്ച അവലോകനങ്ങൾ"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:82
+#: experimental/coursebuilder/views/assessment.html:95
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -264,24 +264,43 @@ msgstr ""
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:89
+#: experimental/coursebuilder/views/assessment.html:102
 msgid "Go to the review dashboard"
 msgstr "അവലോകന ഡാഷ്‌ബോർഡിലേക്ക് പോകുക"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:94
+#: experimental/coursebuilder/views/assessment.html:107
 msgid "You have not received any peer reviews yet."
 msgstr "നിങ്ങൾക്ക് ഇതുവരെ സഹപാഠികളുടെ അവലോകനങ്ങളൊന്നും ലഭിച്ചിട്ടില്ല."
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/views/assessment_html_content.html:26
+#: experimental/coursebuilder/views/base.html:40
+msgid " Save Draft "
+msgstr " ഡ്രാഫ്റ്റ് സംരക്ഷിക്കുക "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/views/assessment_html_content.html:29
+#: experimental/coursebuilder/views/base.html:52
+msgid " Submit Review "
+msgstr " അവലോകനം സമർപ്പിക്കുക "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:37
+#: experimental/coursebuilder/views/base.html:28
+msgid " Check Answers "
+msgstr " ഉത്തരങ്ങൾ പരിശോധിക്കുക "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:44
+#: experimental/coursebuilder/views/base.html:44
+msgid " Submit Answers "
+msgstr " ഉത്തരങ്ങൾ സമർപ്പിക്കുക "
 
 #. Text on the button for checking an answer.
 #: experimental/coursebuilder/views/base.html:24
 msgid " Check Answer "
 msgstr " ഉത്തരം പരിശോധിക്കുക "
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/base.html:28
-msgid " Check Answers "
-msgstr " ഉത്തരങ്ങൾ പരിശോധിക്കുക "
 
 #. Text on the button for showing the answer to a question.
 #: experimental/coursebuilder/views/base.html:32
@@ -293,25 +312,10 @@ msgstr " ഒഴിവാക്കി ഉത്തരം കാണിക്കു
 msgid " Save Answers "
 msgstr " ഉത്തരങ്ങൾ സംരക്ഷിക്കുക "
 
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/base.html:40
-msgid " Save Draft "
-msgstr " ഡ്രാഫ്റ്റ് സംരക്ഷിക്കുക "
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/base.html:44
-msgid " Submit Answers "
-msgstr " ഉത്തരങ്ങൾ സമർപ്പിക്കുക "
-
 #. Text on the button for submitting a peer-reviewed assignment.
 #: experimental/coursebuilder/views/base.html:48
 msgid " Submit Assignment "
 msgstr " അസൈന്മെന്റ് സമർപ്പിക്കുക "
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/base.html:52
-msgid " Submit Review "
-msgstr " അവലോകനം സമർപ്പിക്കുക "
 
 #. Text to prompt the student to select a multiple-choice answer.
 #: experimental/coursebuilder/views/base.html:56
@@ -384,23 +388,23 @@ msgstr " സമർപ്പിച്ച് കഴിഞ്ഞാൽ നിങ്
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:97
 msgid " Yes, the answer is correct. "
-msgstr ""
+msgstr " അതെ, ഉത്തരം ശരിയാണ്. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:99
 msgid " No, the answer is incorrect. "
-msgstr ""
+msgstr " അല്ല, ഉത്തരം തെറ്റാണ്. "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:101
 msgid " The answer is partially correct. "
-msgstr ""
+msgstr " ഉത്തരം ഭാഗികമായി ശരിയാണ്. "
 
 #. Text appearing at the bottom of a lesson page after the student asks for it
 #. to be graded.
 #: experimental/coursebuilder/views/base.html:104
 msgid " Your score is: "
-msgstr ""
+msgstr " നിങ്ങളുടെ സ്‌കോർ ഇതാണ്: "
 
 #. Navbar text.
 #: experimental/coursebuilder/views/base.html:171
@@ -436,12 +440,14 @@ msgid ""
 "Thank you for registering for the course. Click the Announcements tab for"
 " important information."
 msgstr ""
+"കോഴ്‌സിനായി രജിസ്റ്റർ ചെയ്‌തതിന് നന്ദി. പ്രധാനപ്പെട്ട വിവരങ്ങൾക്കായി "
+"അറിയിപ്പ് ടാബിൽ ക്ലിക്കുചെയ്യുക."
 
 #. This is shown to the student in a popup if registrations for the course are
 #. not open.
 #: experimental/coursebuilder/views/course.html:12
 msgid "Registrations for this course are not open."
-msgstr ""
+msgstr "ഈ കോഴ്‌സിനുള്ള രജിസ്‌ട്രേഷൻ തുടങ്ങിയിട്ടില്ല."
 
 #. This should be interpreted as a noun. It is the title for the course
 #. schedule on the main contents page.
@@ -527,9 +533,9 @@ msgid ""
 "%(time_now)s. The deadline for submitting assignments was "
 "%(submission_due_date)s."
 msgstr ""
-"നിങ്ങളുടെ അസൈൻമെന്റ് %(time_now)s-ന് സമർപ്പിച്ചതിനാൽ അത് സംരക്ഷിച്ചില്ല. "
-"അസൈൻമെന്റുകൾ സമർപ്പിക്കുന്നതിനുള്ള അവസാന തീയതി %(submission_due_date)s "
-"ആയിരുന്നു."
+"നിങ്ങളുടെ അസൈൻമെന്റ് %(time_now)s-ന് സമർപ്പിച്ചതിനാൽ അത് "
+"സംരക്ഷിച്ചിട്ടില്ല. അസൈൻമെന്റുകൾ സമർപ്പിക്കുന്നതിനുള്ള അവസാന തീയതി "
+"%(submission_due_date)s ആയിരുന്നു."
 
 #. Error text for when a student tries to get a new assignment to review before
 #. submitting his/her own assignment.
@@ -590,13 +596,13 @@ msgid "Review"
 msgstr "അവലോകനം"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:39
+#: experimental/coursebuilder/views/review.html:43
 msgid "Back to the review dashboard."
 msgstr "അവലോകന ഡാഷ്‌ബോർഡിലേക്ക് മടങ്ങുക."
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:47
+#: experimental/coursebuilder/views/review.html:51
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -607,13 +613,13 @@ msgstr ""
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:52
+#: experimental/coursebuilder/views/review.html:56
 msgid "Due date for this review: "
 msgstr "ഈ അവലോകനം സമർപ്പിക്കേണ്ട അവസാന തീയതി: "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:65
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
@@ -623,23 +629,23 @@ msgstr ""
 "എഡിറ്റുചെയ്യാനാകില്ല."
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:69
+#: experimental/coursebuilder/views/review.html:73
 msgid "Reviewed assignment"
 msgstr "അവലോകനം ചെയ്‌ത അസൈന്മെന്റ്"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:72
+#: experimental/coursebuilder/views/review.html:76
 msgid "Assignment to review"
 msgstr "അവലോകനം ചെയ്യേണ്ട അസൈന്മെന്റ്"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:95
 msgid "Submitted review"
 msgstr "സമർപ്പിച്ച അവലോകനം"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:109
 msgid "Review form"
 msgstr "അവലോകന ഫോം"
 
@@ -788,12 +794,12 @@ msgstr "മൊത്തത്തിലുള്ള കോഴ്‌സ് സ്�
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/views/student_profile.html:5
 msgid "Course Progress"
-msgstr ""
+msgstr "കോഴ്‌സ് പുരോഗതി"
 
 #. Title of the student progress page.
 #: experimental/coursebuilder/views/student_profile.html:17
 msgid "Student Progress"
-msgstr ""
+msgstr "വിദ്യാർത്ഥിയുടെ പുരോഗതി"
 
 #. Shown on the student profile page.
 #: experimental/coursebuilder/views/student_profile.html:46
@@ -810,7 +816,7 @@ msgstr "എൻറോൾ ചെയ്‌തത് ഒഴിവാക്കുക"
 #. Text shown on progress page of course to redirect student to profile page.
 #: experimental/coursebuilder/views/student_profile.html:59
 msgid "Manage course registration from your profile"
-msgstr ""
+msgstr "നിങ്ങളുടെ പ്രൊഫൈലിൽ നിന്ന് കോഴ്‌സ് രജിസ്‌ട്രേഷൻ നിയന്ത്രിക്കുക"
 
 #. Shown when the student profile cannot be found in the database.
 #: experimental/coursebuilder/views/student_profile.html:66
@@ -818,7 +824,7 @@ msgid "Student profile not found ..."
 msgstr "വിദ്യാർത്ഥിയുടെ പ്രൊഫൈൽ കണ്ടെത്തിയില്ല ..."
 
 #. Alt text for an embedded YouTube video player.
-#: experimental/coursebuilder/views/summary.html:22
+#: experimental/coursebuilder/views/summary.html:27
 #: experimental/coursebuilder/views/unit.html:108
 msgid "YouTube Video Player"
 msgstr "YouTube വീഡിയോ പ്ലേയർ"
@@ -854,5 +860,5 @@ msgstr "ഇല്ല"
 #. to grade his/her answers.
 #: experimental/coursebuilder/views/unit.html:97
 msgid "Grade Questions"
-msgstr ""
+msgstr "ചോദ്യങ്ങൾ ഗ്രേഡുചെയ്യുക"
 

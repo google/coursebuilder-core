@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-06-20 15:23-0700\n"
-"PO-Revision-Date: 2013-05-16 18:20-0700\n"
+"POT-Creation-Date: 2013-06-27 12:43-0700\n"
+"PO-Revision-Date: 2013-06-27 12:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_TW <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -21,32 +21,32 @@ msgstr ""
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
 msgid "Explore Courses"
-msgstr ""
+msgstr "探索課程"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
 #: experimental/coursebuilder/views/base_course.html:48
 msgid "My Courses"
-msgstr ""
+msgstr "我的課程"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
 #: experimental/coursebuilder/views/base_course.html:53
 msgid "Profile"
-msgstr ""
+msgstr "個人資料"
 
 #. Text for a button on the 'list of courses' page that takes students to a
 #. page where they can view score.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:16
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:49
 msgid "View score"
-msgstr ""
+msgstr "查看分數"
 
 #. Text for a button on the 'list of courses' page that takes students to the
 #. page for that course.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:21
 msgid "Go to course"
-msgstr ""
+msgstr "開始上課"
 
 #. Registration button on the main course page.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:26
@@ -59,18 +59,18 @@ msgstr "報名"
 #. he/she is not enrolled in courses.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:39
 msgid "You are not currently enrolled in any courses."
-msgstr ""
+msgstr "您目前尚未註冊任何課程。"
 
 #. Shown to the student on the page that shows his/her list of courses, when
 #. he/she wants to view all courses.
 #: experimental/coursebuilder/modules/course_explorer/views/course_explorer.html:45
 msgid "View course list."
-msgstr ""
+msgstr "查看課程清單。"
 
 #. Title of the student profile page. Followed by a student's name.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:5
 msgid "Student Profile for"
-msgstr ""
+msgstr "以下學生的個人資料："
 
 #. Table header for the student's name.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:16
@@ -87,31 +87,31 @@ msgstr "電子郵件"
 #. Heading on the profile page shown above table of registered courses.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:29
 msgid "Enrolled Courses"
-msgstr ""
+msgstr "註冊的課程"
 
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
 #: experimental/coursebuilder/views/base_course.html:60
 msgid "Progress"
-msgstr ""
+msgstr "進度"
 
 #. Text on the student profile page which on clicking will take you to unenroll
 #. course page.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:54
 msgid "Withdraw"
-msgstr ""
+msgstr "退選"
 
 #. Label for the input field that allows the student to change the name on
 #. his/her certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:68
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:67
 #: experimental/coursebuilder/views/student_profile.html:29
 msgid "New Name"
 msgstr "新的姓名"
 
 #. Text for a button that allows the student to save changes to his/her name
 #. for the certificate.
-#: experimental/coursebuilder/modules/course_explorer/views/profile.html:80
+#: experimental/coursebuilder/modules/course_explorer/views/profile.html:78
 #: experimental/coursebuilder/views/student_profile.html:39
 msgid "Change Name"
 msgstr "變更姓名"
@@ -217,7 +217,7 @@ msgstr "評估"
 
 #. Text shown to students when they visit an assignment page for which the due
 #. date has passed.
-#: experimental/coursebuilder/views/assessment.html:40
+#: experimental/coursebuilder/views/assessment.html:44
 #, python-format
 msgid ""
 "The due date for submitting this assignment has passed. It was due on "
@@ -225,12 +225,12 @@ msgid ""
 msgstr "這項作業的提交期限 (%(submission_due_date)s) 已過。"
 
 #. Shown to the student on the assignment page.
-#: experimental/coursebuilder/views/assessment.html:45
+#: experimental/coursebuilder/views/assessment.html:49
 msgid "Due date for this assignment: "
 msgstr "這項作業的截止日期： "
 
 #. Instructions to the student for a peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:55
+#: experimental/coursebuilder/views/assessment.html:59
 msgid ""
 "You may only submit this assignment once. After you submit it, the "
 "assignment will become read-only, and you will not be able to modify your"
@@ -238,17 +238,17 @@ msgid ""
 msgstr "您只有一次提交作業的機會。提交後，這項作業將會設成唯讀，您無法再修改答案。您在這裡提交的答案則會交由其他同學評分。"
 
 #. Header text for a previously-submitted assignment.
-#: experimental/coursebuilder/views/assessment.html:67
+#: experimental/coursebuilder/views/assessment.html:73
 msgid "Submitted assignment"
 msgstr "已提交的作業"
 
 #. Header text for the list of reviews received for an assignment.
-#: experimental/coursebuilder/views/assessment.html:75
+#: experimental/coursebuilder/views/assessment.html:88
 msgid "Reviews received"
 msgstr "收到的評分"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:82
+#: experimental/coursebuilder/views/assessment.html:95
 msgid ""
 "After you have completed the required number of peer reviews for this "
 "assignment, the reviews you have received will appear here."
@@ -256,23 +256,42 @@ msgstr "達到這項作業所需的同學評分次數後，您所獲得的評分
 
 #. Text shown on a button that allows the student to navigate from an
 #. assignment submission page to the peer review dashboard for that assignment.
-#: experimental/coursebuilder/views/assessment.html:89
+#: experimental/coursebuilder/views/assessment.html:102
 msgid "Go to the review dashboard"
 msgstr "前往評分資訊主頁"
 
 #. Text shown below a student's peer-reviewed assignment.
-#: experimental/coursebuilder/views/assessment.html:94
+#: experimental/coursebuilder/views/assessment.html:107
 msgid "You have not received any peer reviews yet."
 msgstr "您尚未獲得任何同學評分。"
+
+#. Text on the button for saving a draft answer.
+#: experimental/coursebuilder/views/assessment_html_content.html:26
+#: experimental/coursebuilder/views/base.html:40
+msgid " Save Draft "
+msgstr " 儲存草稿 "
+
+#. Text on the button for submitting a peer review.
+#: experimental/coursebuilder/views/assessment_html_content.html:29
+#: experimental/coursebuilder/views/base.html:52
+msgid " Submit Review "
+msgstr " 提交評分 "
+
+#. Text on the button for checking a set of answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:37
+#: experimental/coursebuilder/views/base.html:28
+msgid " Check Answers "
+msgstr " 核對答案 "
+
+#. Text on the button for submitting answers.
+#: experimental/coursebuilder/views/assessment_html_content.html:44
+#: experimental/coursebuilder/views/base.html:44
+msgid " Submit Answers "
+msgstr " 提交答案 "
 
 #. Text on the button for checking an answer.
 #: experimental/coursebuilder/views/base.html:24
 msgid " Check Answer "
-msgstr " 核對答案 "
-
-#. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/base.html:28
-msgid " Check Answers "
 msgstr " 核對答案 "
 
 #. Text on the button for showing the answer to a question.
@@ -285,25 +304,10 @@ msgstr " 略過並顯示答案 "
 msgid " Save Answers "
 msgstr " 儲存答案 "
 
-#. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/base.html:40
-msgid " Save Draft "
-msgstr " 儲存草稿 "
-
-#. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/base.html:44
-msgid " Submit Answers "
-msgstr " 提交答案 "
-
 #. Text on the button for submitting a peer-reviewed assignment.
 #: experimental/coursebuilder/views/base.html:48
 msgid " Submit Assignment "
 msgstr " 提交作業 "
-
-#. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/base.html:52
-msgid " Submit Review "
-msgstr " 提交評分 "
 
 #. Text to prompt the student to select a multiple-choice answer.
 #: experimental/coursebuilder/views/base.html:56
@@ -368,23 +372,23 @@ msgstr " 提交後即無法加以編輯或刪除。 "
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:97
 msgid " Yes, the answer is correct. "
-msgstr ""
+msgstr " 是，答對了。 "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:99
 msgid " No, the answer is incorrect. "
-msgstr ""
+msgstr " 否，答錯了。 "
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/views/base.html:101
 msgid " The answer is partially correct. "
-msgstr ""
+msgstr " 答對一部分。 "
 
 #. Text appearing at the bottom of a lesson page after the student asks for it
 #. to be graded.
 #: experimental/coursebuilder/views/base.html:104
 msgid " Your score is: "
-msgstr ""
+msgstr " 您的分數： "
 
 #. Navbar text.
 #: experimental/coursebuilder/views/base.html:171
@@ -419,13 +423,13 @@ msgstr "報名"
 msgid ""
 "Thank you for registering for the course. Click the Announcements tab for"
 " important information."
-msgstr ""
+msgstr "感謝您註冊本課程，請按一下 [公告] 標籤查看重要資訊。"
 
 #. This is shown to the student in a popup if registrations for the course are
 #. not open.
 #: experimental/coursebuilder/views/course.html:12
 msgid "Registrations for this course are not open."
-msgstr ""
+msgstr "本課程未開放註冊。"
 
 #. This should be interpreted as a noun. It is the title for the course
 #. schedule on the main contents page.
@@ -498,7 +502,7 @@ msgstr "尚未開始"
 msgid ""
 "Your review has not been saved, because it was submitted on %(time_now)s."
 " The deadline for submitting reviews was %(review_due_date)s."
-msgstr "系統並未儲存您的評分 (提交時間：%(time_now)s)，因為已超過提交評分的期限：%(review_due_date)s。"
+msgstr "系統並未儲存您的評分，因為您的提交時間 (%(time_now)s) 已超過提交評分的期限 (%(review_due_date)s)。"
 
 #. Error text for when a student submits an assignment after the deadline.
 #: experimental/coursebuilder/views/error.html:21
@@ -507,7 +511,7 @@ msgid ""
 "Your assignment has not been saved, because it was submitted on "
 "%(time_now)s. The deadline for submitting assignments was "
 "%(submission_due_date)s."
-msgstr "系統並未儲存您的作業 (提交時間：%(time_now)s)，因為已超過提交作業的期限：%(submission_due_date)s。"
+msgstr "系統並未儲存您的作業，因為您的提交時間 (%(time_now)s) 已超過提交作業的期限 (%(submission_due_date)s)。"
 
 #. Error text for when a student tries to get a new assignment to review before
 #. submitting his/her own assignment.
@@ -536,7 +540,7 @@ msgstr "您必須先對系統指派的所有作業完成評分，才能要求為
 #. submit it again.
 #: experimental/coursebuilder/views/error.html:41
 msgid "You have already submitted this review. Your latest review was not saved."
-msgstr "您已提交過這項評分，因此系統並未儲存您最近提交的評分。"
+msgstr "您已提交過這項評分，因此系統並未儲存您新提交的評分。"
 
 #. Text appearing just before an input field containing a student's answer.
 #: experimental/coursebuilder/views/readonly_assessment.html:31
@@ -560,13 +564,13 @@ msgid "Review"
 msgstr "評分"
 
 #. Link to return to the list of peer reviews.
-#: experimental/coursebuilder/views/review.html:39
+#: experimental/coursebuilder/views/review.html:43
 msgid "Back to the review dashboard."
 msgstr "返回評分資訊主頁。"
 
 #. Text shown to students when they visit a review submission page for which
 #. the due date has passed.
-#: experimental/coursebuilder/views/review.html:47
+#: experimental/coursebuilder/views/review.html:51
 #, python-format
 msgid ""
 "The due date for submitting this review has passed. It was due on "
@@ -575,36 +579,36 @@ msgstr "這項評分的提交期限 (%(review_due_date)s) 已過。"
 
 #. Shown to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:52
+#: experimental/coursebuilder/views/review.html:56
 msgid "Due date for this review: "
 msgstr "這項評分的截止日期： "
 
 #. Instructions to a student who is asked to complete a peer review of another
 #. student's assignment.
-#: experimental/coursebuilder/views/review.html:61
+#: experimental/coursebuilder/views/review.html:65
 msgid ""
 "The scores and comments you submit here will be viewed by your peers. "
 "Once you submit your review, you may not edit it."
 msgstr "您在這裡提交的分數和評論將會開放讓其他同學查看。提交評分後，即無法再修改。"
 
 #. Header text for a reviewed assignment.
-#: experimental/coursebuilder/views/review.html:69
+#: experimental/coursebuilder/views/review.html:73
 msgid "Reviewed assignment"
 msgstr "已評分的作業"
 
 #. Header text for an assignment that a student still needs to review.
-#: experimental/coursebuilder/views/review.html:72
+#: experimental/coursebuilder/views/review.html:76
 msgid "Assignment to review"
 msgstr "待評分的作業"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:83
+#: experimental/coursebuilder/views/review.html:95
 msgid "Submitted review"
 msgstr "已提交的評分"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:89
+#: experimental/coursebuilder/views/review.html:109
 msgid "Review form"
 msgstr "評分表"
 
@@ -741,12 +745,12 @@ msgstr "整體課程分數"
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/views/student_profile.html:5
 msgid "Course Progress"
-msgstr ""
+msgstr "課程進度"
 
 #. Title of the student progress page.
 #: experimental/coursebuilder/views/student_profile.html:17
 msgid "Student Progress"
-msgstr ""
+msgstr "學習進度"
 
 #. Shown on the student profile page.
 #: experimental/coursebuilder/views/student_profile.html:46
@@ -761,7 +765,7 @@ msgstr "取消註冊"
 #. Text shown on progress page of course to redirect student to profile page.
 #: experimental/coursebuilder/views/student_profile.html:59
 msgid "Manage course registration from your profile"
-msgstr ""
+msgstr "透過您的個人資料管理課程註冊"
 
 #. Shown when the student profile cannot be found in the database.
 #: experimental/coursebuilder/views/student_profile.html:66
@@ -769,7 +773,7 @@ msgid "Student profile not found ..."
 msgstr "找不到學生個人資料..."
 
 #. Alt text for an embedded YouTube video player.
-#: experimental/coursebuilder/views/summary.html:22
+#: experimental/coursebuilder/views/summary.html:27
 #: experimental/coursebuilder/views/unit.html:108
 msgid "YouTube Video Player"
 msgstr "YouTube 影片播放器"
@@ -805,5 +809,5 @@ msgstr "否"
 #. to grade his/her answers.
 #: experimental/coursebuilder/views/unit.html:97
 msgid "Grade Questions"
-msgstr ""
+msgstr "問答評分"
 
