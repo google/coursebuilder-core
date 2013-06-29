@@ -193,6 +193,12 @@ PARSER.add_argument(
         'process; all models are processed by default' % _TYPE_DATASTORE),
     type=lambda s: s.split(','))
 PARSER.add_argument(
+    '--force_overwrite', action='store_true',
+    help=(
+        'If mode is download and type is course, forces overwrite of entities '
+        'on the target system that are also present in the archive. Note that '
+        'this operation is dangerous and may result in data loss'))
+PARSER.add_argument(
     '--job_args', default=[],
     help=(
         'If mode is %s, string containing args delegated to etl_lib.Job '
@@ -626,6 +632,14 @@ def _clear_course_cache(context):
     courses.CachedCourse13.delete(context)  # Force update in UI.
 
 
+@_retry(message='Checking if the specified course is empty failed; retrying')
+def _context_is_for_empty_course(context):
+    empty_course_files = [os.path.join(
+        appengine_config.BUNDLE_ROOT, _COURSE_YAML_PATH_SUFFIX)]
+    return empty_course_files == context.fs.impl.list(
+        appengine_config.BUNDLE_ROOT)
+
+
 @_retry(message='Getting list of datastore_types failed; retrying')
 def _get_datastore_kinds():
     # Return only user-defined names, not __internal_appengine_names__.
@@ -686,7 +700,11 @@ def _process_models_batch(kind, cursor, batch_size, json_file):
 
 
 @_retry(message='Upload failed; retrying')
-def _put(context, content, path, is_draft):
+def _put(context, content, path, is_draft, force_overwrite):
+    path = os.path.join(appengine_config.BUNDLE_ROOT, path)
+    if force_overwrite and context.fs.impl.isfile(path):
+        _LOG.info('File %s found on target system; forcing overwrite', path)
+        context.fs.impl.delete(path)
     context.fs.impl.non_transactional_put(
         os.path.join(appengine_config.BUNDLE_ROOT, path), content,
         is_draft=is_draft)
@@ -707,7 +725,7 @@ def _run_custom(parsed_args):
     job.run()
 
 
-def _upload(upload_type, archive_path, course_url_prefix):
+def _upload(upload_type, archive_path, course_url_prefix, force_overwrite):
     _LOG.info(
         'Processing course with URL prefix %s from archive path %s',
         course_url_prefix, archive_path)
@@ -715,14 +733,14 @@ def _upload(upload_type, archive_path, course_url_prefix):
     if not context:
         _die('No course found with course_url_prefix %s' % course_url_prefix)
     if upload_type == _TYPE_COURSE:
-        _upload_course(context, archive_path, course_url_prefix)
+        _upload_course(
+            context, archive_path, course_url_prefix, force_overwrite)
     elif upload_type == _TYPE_DATASTORE:
         _upload_datastore()
 
 
-def _upload_course(context, archive_path, course_url_prefix):
-    course = _get_course_from(context)
-    if course.get_units():
+def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
+    if not _context_is_for_empty_course(context) and not force_overwrite:
         _die(
             'Cannot upload to non-empty course with course_url_prefix %s' % (
                 course_url_prefix))
@@ -755,7 +773,7 @@ def _upload_course(context, archive_path, course_url_prefix):
         external_path = _Archive.get_external_path(entity.path)
         _put(
             context, _ReadWrapper(archive.get(entity.path)), external_path,
-            entity.is_draft)
+            entity.is_draft, force_overwrite)
         count += 1
         _LOG.info('Uploaded ' + external_path)
     _clear_course_cache(context)
@@ -780,6 +798,12 @@ def _validate_arguments(parsed_args):
         _die(
             'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
+    if parsed_args.force_overwrite and not (
+            parsed_args.mode == _MODE_UPLOAD and
+            parsed_args.type == _TYPE_COURSE):
+        _die(
+            '--force_overwrite supported only if mode is %s and type is %s' % (
+                _MODE_UPLOAD, _TYPE_COURSE))
 
 
 def main(parsed_args, environment_class=None):
@@ -814,7 +838,7 @@ def main(parsed_args, environment_class=None):
     elif parsed_args.mode == _MODE_UPLOAD:
         _upload(
             parsed_args.type, parsed_args.archive_path,
-            parsed_args.course_url_prefix)
+            parsed_args.course_url_prefix, parsed_args.force_overwrite)
 
 
 if __name__ == '__main__':

@@ -2972,6 +2972,15 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         sites.reset_courses()
         super(EtlMainTestCase, self).tearDown()
 
+    def create_app_yaml(self, context, title=None):
+        yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
+        if title:
+            yaml['course']['title'] = title
+        context.fs.impl.put(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH_SUFFIX),
+            etl._ReadWrapper(str(yaml)), is_draft=False)
+
     def create_archive(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
@@ -2981,8 +2990,10 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
     def create_empty_course(self, raw):
         sites.setup_courses(raw)
+        context = etl_lib.get_context(self.url_prefix)
         course = etl._get_course_from(etl_lib.get_context(self.url_prefix))
         course.delete_all()
+        self.create_app_yaml(context)
 
     def import_sample_course(self):
         """Imports a sample course."""
@@ -2992,15 +3003,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         src_app_context = sites.get_all_courses()[1]
 
         # Patch in a course.yaml.
-        yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
-        yaml['course']['title'] = self.new_course_title
-        dst_app_context.fs.impl.put(
-            os.path.join(
-                appengine_config.BUNDLE_ROOT, etl._COURSE_YAML_PATH_SUFFIX),
-            etl._ReadWrapper(str(yaml)), is_draft=False)
+        self.create_app_yaml(dst_app_context, title=self.new_course_title)
 
         dst_course = courses.Course(None, app_context=dst_app_context)
-
         errors = []
         src_course_out, dst_course_out = dst_course.import_from(
             src_app_context, errors)
@@ -3222,12 +3227,20 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             SystemExit, etl.main, self.upload_course_args,
             environment_class=FakeEnvironment)
 
-    def test_upload_course_fails_if_course_with_units_found(self):
+    def test_upload_course_fails_if_course_has_non_course_yaml_contents(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
         self.assertRaises(
             SystemExit, etl.main, self.upload_course_args,
             environment_class=FakeEnvironment)
+
+    def test_upload_course_fails_if_force_overwrite_passed_with_bad_args(self):
+        self.create_archive()
+        bad_args = etl.PARSER.parse_args(
+            [etl._MODE_UPLOAD] + self.common_datastore_args + [
+                '--force_overwrite'])
+        self.assertRaises(
+            SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
 
     def test_upload_course_fails_if_no_course_with_url_prefix_found(self):
         self.create_archive()
@@ -3243,6 +3256,35 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         self.assertNotEqual(self.new_course_title, context.get_title())
         etl.main(self.upload_course_args, environment_class=FakeEnvironment)
+        archive = etl._Archive(self.archive_path)
+        archive.open('r')
+        context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
+        filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
+        self.assertEqual(
+            len(archive.manifest.entities), len(filesystem_contents))
+        self.assertEqual(self.new_course_title, context.get_title())
+        units = etl._get_course_from(context).get_units()
+        spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
+        self.assertEqual('Interpreting results', spot_check_single_unit.title)
+        for unit in units:
+            self.assertTrue(unit.title)
+        for entity in archive.manifest.entities:
+            full_path = os.path.join(
+                appengine_config.BUNDLE_ROOT,
+                etl._Archive.get_external_path(entity.path))
+            stream = context.fs.impl.get(full_path)
+            self.assertEqual(entity.is_draft, stream.metadata.is_draft)
+
+    def test_upload_course_with_force_overwrite_succeeds(self):
+        """Tests upload into non-empty course with --force_overwrite."""
+
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        etl.main(self.download_course_args, environment_class=FakeEnvironment)
+        force_overwrite_args = etl.PARSER.parse_args(
+            [etl._MODE_UPLOAD] + self.common_course_args + [
+                '--force_overwrite'])
+        etl.main(force_overwrite_args, environment_class=FakeEnvironment)
         archive = etl._Archive(self.archive_path)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
