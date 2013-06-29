@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 
 import cgi
+import copy
 import urllib
 from common import schema_fields
 from controllers.utils import ApplicationHandler
@@ -219,6 +220,14 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
     def get(self):
         """Get the data to populate the question editor form."""
+
+        def export(q_dict):
+            p_dict = copy.deepcopy(q_dict)
+            # InputEx does not correctly roundtrip booleans, so pass strings
+            p_dict['multiple_selections'] = (
+                'true' if q_dict.get('multiple_selections') else 'false')
+            return p_dict
+
         key = self.request.get('key')
 
         if not CourseOutlineRights.can_view(self):
@@ -228,7 +237,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
 
         if key:
             question = QuestionDAO.load(key)
-            payload_dict = question.dict
+            payload_dict = export(question.dict)
         else:
             payload_dict = {
                 'version': self.SCHEMA_VERSION,
