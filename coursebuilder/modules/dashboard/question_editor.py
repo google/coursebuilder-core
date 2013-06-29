@@ -32,7 +32,7 @@ from unit_lesson_editor import CourseOutlineRights
 
 
 class BaseDatastoreAssetEditor(ApplicationHandler):
-    def get_form(self, rest_handler, key=''):
+    def get_form(self, rest_handler, key='', extra_js_files=None):
         """Build the Jinja template for adding a question."""
         rest_url = self.canonicalize_url(rest_handler.URI)
         exit_url = self.canonicalize_url('/dashboard?action=assets')
@@ -55,7 +55,8 @@ class BaseDatastoreAssetEditor(ApplicationHandler):
             schema.get_schema_dict(),
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
-            required_modules=rest_handler.REQUIRED_MODULES)
+            required_modules=rest_handler.REQUIRED_MODULES,
+            extra_js_files=extra_js_files)
 
 
 class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
@@ -65,7 +66,8 @@ class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
         """Build the Jinja template for adding a question."""
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
-        template_values['main_content'] = self.get_form(rest_handler, key=key)
+        template_values['main_content'] = self.get_form(
+            rest_handler, key=key, extra_js_files=['question_editor.js'])
 
         return template_values
 
@@ -116,8 +118,8 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
             question = QuestionDTO(key, question_dict)
         else:
             question = QuestionDTO(None, question_dict)
-            question.type = self.TYPE
 
+        question.type = self.TYPE
         QuestionDAO.save(question)
 
         transforms.send_json_response(self, 200, 'Saved.')
@@ -150,7 +152,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
     URI = '/rest/question/mc'
 
     REQUIRED_MODULES = [
-        'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list']
+        'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
+        'inputex-string', 'inputex-list']
 
     TYPE = QuestionDTO.MULTIPLE_CHOICE
     XSRF_TOKEN = 'mc-question-edit'
@@ -168,7 +171,17 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             extra_schema_dict_values={'className': 'mc-question'}))
         mc_question.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'mc-description'},
             description=messages.QUESTION_DESCRIPTION))
+        mc_question.add_property(schema_fields.SchemaField(
+            'multiple_selections', 'Selection', 'boolean',
+            optional=True,
+            select_data=[
+                ('single', 'Allow only one selection'),
+                ('multiple', 'Allow multiple selections')],
+            extra_schema_dict_values={
+                '_type': 'radio',
+                'className': 'mc-selection'}))
 
         choice_type = schema_fields.FieldRegistry(
             'Choice',
@@ -210,9 +223,12 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             payload_dict = {
                 'question': '',
                 'description': '',
+                'multiple_selections': 'single',
                 'choices': [
-                    {'score': '', 'text': '', 'feedback': ''},
-                    {'score': '', 'text': '', 'feedback': ''}
+                    {'score': '1', 'text': '', 'feedback': ''},
+                    {'score': '0', 'text': '', 'feedback': ''},
+                    {'score': '0', 'text': '', 'feedback': ''},
+                    {'score': '0', 'text': '', 'feedback': ''}
                 ]}
 
         transforms.send_json_response(
@@ -238,39 +254,40 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         sa_question = schema_fields.FieldRegistry(
             'Short Answer Question',
             description='short answer question',
-            extra_schema_dict_values={'className': 'mc-container'})
+            extra_schema_dict_values={'className': 'sa-container'})
 
         sa_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={'className': 'mc-question'}))
+            extra_schema_dict_values={'className': 'sa-question'}))
         sa_question.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'sa-description'},
             description=messages.QUESTION_DESCRIPTION))
 
         grader_type = schema_fields.FieldRegistry(
             'Grader',
-            extra_schema_dict_values={'className': 'mc-choice'})
+            extra_schema_dict_values={'className': 'sa-choice'})
         grader_type.add_property(schema_fields.SchemaField(
             'score', 'Score', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-score'}))
+            extra_schema_dict_values={'className': 'sa-choice-score'}))
         grader_type.add_property(schema_fields.SchemaField(
             'matcher', 'Grading', 'select', optional=True,
             select_data=[
                 ('case_insensitive', 'Case insensitive string match'),
                 ('regex', 'Regular expression'),
                 ('hnumeric', 'Numeric')],
-            extra_schema_dict_values={'className': 'mc-choice-score'}))
+            extra_schema_dict_values={'className': 'sa-choice-score'}))
         grader_type.add_property(schema_fields.SchemaField(
             'response', 'Response', 'string', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-text'}))
+            extra_schema_dict_values={'className': 'sa-choice-text'}))
         grader_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-feedback'}))
+            extra_schema_dict_values={'className': 'sa-choice-feedback'}))
 
         graders_array = schema_fields.FieldArray(
             'choices', '', item_type=grader_type,
             extra_schema_dict_values={
-                'className': 'mc-choice-container',
+                'className': 'sa-choice-container',
                 'listAddLabel': 'Add a response',
                 'listRemoveLabel': 'Delete response'})
 

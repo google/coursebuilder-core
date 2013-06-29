@@ -111,7 +111,9 @@
   div.inputEx-Button,
   div.inputEx-Field input.inputEx-Button,
   div.mc-choice + a,
-  div.mc-choice-container > a {
+  div.mc-choice-container > a,
+  div.sa-choice + a,
+  div.sa-choice-container > a {
     width: auto;
     background-color: #666;
     color: #FFFFFF;
@@ -245,46 +247,160 @@
    * CSS for multiple choice question creation.
    */
 
-  div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-    width: 80px;
+  form.mc-container > fieldset {
+    padding: 15px 0;
   }
   div.mc-container a:hover {
     text-decoration: none;
-  }
-  div.mc-container textarea {
-    height: 75px;
-    width: 550px;
-    margin: 0;
-    padding: 0;
-  }
-  div.mc-question, div.mc-choice-text, div.mc-choice-feedback {
-    margin-top: 30px;
-  }
-  div.mc-question {
-    margin-left: 87px;
-  }
-  div.mc-choice-text, div.mc-choice-feedback {
-    margin-left: 67px;
-  }
-  div.mc-choice-question {
-    width: 660px;
-  }
-  div.mc-choice {
-    width: 650px;
-  }
-  div.mc-choice > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
-    width:60px;
-  }
-  div.mc-choice + a { /* The delete choice button */
-    float: right;
-  }
-  div.mc-choice-score input {
-    width: 50px;
   }
   div.mc-container div.yui-editor-container {
     width: 550px;
     height: 350px;
   }
+  div.mc-container textarea {
+    /* The question statement. */
+    height: 45px;
+    width: 550px;
+    margin: 0;
+    padding: 0;
+  }
+  div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    width: 80px;
+  }
+  div.mc-question,
+  div.mc-description,
+  div.mc-selection,
+  div.set-scores-toggle {
+    margin-left: 87px;
+  }
+  form.mc-container > fieldset > legend + div > div.rte-control {
+    /* The control for the question statement. */
+    left: 640px;
+  }
+  div.mc-description input {
+    width: 546px;  /* allow for 2px padding */
+    margin: 0;
+  }
+  div.set-scores-toggle {
+    margin-top: 10px;
+  }
+  div.mc-choice-container > div.inputEx-ListField-childContainer > div {
+    width: 650px;
+    position: relative;
+  }
+  div.mc-choice {
+    float: none;
+    margin: 0;
+  }
+  div.mc-choice > fieldset {
+    width: 627px; /* hack to make the width of the first element match the rest */
+    border-top: none !important;
+  }
+  div.mc-choice > fieldset > legend {
+    display: none;
+  }
+  div.mc-choice > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    display: none;
+  }
+  div.mc-choice > fieldset > legend + div {
+    /* The score input. */
+    position: absolute;
+    top: 22px;
+    left: 20px;
+  }
+  div.mc-choice > fieldset > legend + div + div,
+  div.mc-choice > fieldset > legend + div + div + div {
+    /* The choice text and the feedback text. */
+    margin-left: 50px;
+  }
+  div.mc-choice div.rte-control {
+    left: 554px;
+  }
+  div.mc-choice > div.toggle-feedback {
+    /* The show-feedback button. */
+    position: absolute;
+    top: 34px;
+    left: 620px;
+    width: 150px;
+  }
+  div.mc-choice > div.toggle-feedback > button,
+  div.mc-choice + a {
+    /* The show-feedback and the delete-choice button */
+    color: #000;
+    background-color: #f2f2f2;
+    border: solid #808080 1px;
+    padding: 3px;
+    font-weight: bold;
+    font-size: 10px;
+  }
+  div.mc-choice + a {
+    /* The delete-choice button */
+    position: absolute;
+    bottom: -10px;
+    left: 58px;
+  }
+  div.mc-choice-score input {
+    width: 25px;
+  }
+  div.mc-choice-container > div.inputEx-ListField-childContainer {
+    margin-bottom: 40px;
+  }
+
+  /*
+   * CSS for short answer question creation.
+   */
+  div.sa-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    width: 80px;
+  }
+  div.sa-container a:hover {
+    text-decoration: none;
+  }
+  div.sa-container textarea {
+    height: 75px;
+    width: 510px;
+    margin: 0;
+    padding: 0;
+  }
+  div.sa-container div.yui-editor-container {
+    width: 510px;
+    height: 350px;
+  }
+  div.sa-question,
+  div.sa-choice-text,
+  div.sa-choice-feedback {
+    margin-top: 30px;
+  }
+  div.sa-question,
+  div.sa-description {
+    margin-left: 87px;
+  }
+  div.sa-description input {
+    width: 546px;  /* allow for 2px padding */
+    margin: 0;
+  }
+  div.sa-choice-text, div.sa-choice-feedback {
+    margin-left: 67px;
+  }
+  div.sa-choice-question {
+    width: 660px;
+  }
+  div.sa-choice {
+    width: 650px;
+  }
+  div.sa-choice > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    width:60px;
+  }
+  div.sa-choice div.rte-control {
+    left: 580px;
+  }
+  div.sa-choice + a { /* The delete choice button */
+    float: right;
+  }
+  div.sa-choice-score input {
+    width: 50px;
+  }
+
+
 
   /*
    * CSS for quiz creation.

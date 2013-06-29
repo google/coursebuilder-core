@@ -57,7 +57,7 @@ class SchemaField(Property):
             schema['_type'] = 'hidden'
         elif not self._editable:
             schema['_type'] = 'uneditable'
-        elif self._select_data:
+        elif self._select_data and '_type' not in schema:
             schema['_type'] = 'select'
 
         if 'date' is self._property_type:
