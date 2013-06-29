@@ -116,29 +116,35 @@ function normalizeScoresForMultipleSelectionModel(scores) {
 
 function getScores() {
   var scores = [];
-  Y.all('div.mc-choice-score input').each(function(input) {
+  Y.all('div.mc-choice-score input[type=text]').each(function(input) {
     scores.push(input.get('value'));
   });
   return scores;
 }
 
 function updateScoreInputs() {
+  hideAllScoreInputs();
   if (setScores) {
-    Y.all('div.mc-choice-score input').setAttribute('type', 'text');
+    Y.all('div.mc-choice-score input[type=text]').removeClass('hidden');
     return;
   }
 
-  //Update the type of input tags shown
   if (singleSelection) {
-    Y.all('div.mc-choice-score input').setAttribute('type', 'radio');
+    Y.all('div.mc-choice-score input[type=radio]').removeClass('hidden');
   } else {
-    Y.all('div.mc-choice-score input').setAttribute('type', 'checkbox');
+    Y.all('div.mc-choice-score input[type=checkbox]').removeClass('hidden');
   }
 
   // Update the values of the scores to be in normalized form
   var scores = normalizeScores(getScores());
-  Y.all('div.mc-choice-score input').each(function(input, idx) {
+
+  Y.all('div.mc-choice-score input[type=text]').each(function(input, idx) {
     input.set('value', scores[idx]);
+  });
+  Y.all('div.mc-choice-score input[type=radio]').each(function(input, idx) {
+    input.set('checked', scores[idx] > 0);
+  });
+  Y.all('div.mc-choice-score input[type=checkbox]').each(function(input, idx) {
     input.set('checked', scores[idx] > 0);
   });
 }
@@ -166,30 +172,6 @@ function addToggleFeedbackButtonToChoiceDiv(choiceDiv) {
       }
   );
   choiceDiv.appendChild(toggleFeedbackDiv);
-}
-
-function bindRadioButtonClickHandlers() {
-  Y.all('div.mc-choice-score input').each(function(input) {
-    if (!input.hasClickHandler) {
-      input.on('click', function(ev) {
-        if (setScores) {
-          return;
-        } else if (singleSelection) {
-          ev.target.set('value', '1');
-          // Unset all the other radio buttons
-          Y.all('div.mc-choice-score input').each(function(input) {
-            if (input != ev.target) {
-              input.set('value', '0');
-              input.set('checked', false);
-            }
-          });
-        } else { // multiple selection
-          ev.target.set('value', ev.target.get('value') > 0 ? '0' : '1');
-        }
-      });
-      input.hasClickHandler = true;
-    }
-  });
 }
 
 function updateSetScoresToggleButtonLabel() {
@@ -234,12 +216,51 @@ function initSetScoresToggleButton() {
   Y.one('div.mc-selection').get('parentNode').appendChild(setScoresDiv);
 }
 
+function hideAllScoreInputs() {
+  Y.all('div.mc-choice-score input').addClass('hidden')
+}
+
+function initAlternateScoreInputs() {
+  // The value for the score is held in a <input type="text"> element.
+  // However because IE does not allow dynamically changing the type of
+  // an input element, we associate a checkbox and a radio button with each
+  // text input, and we show the appropriate one depending on which selection
+  // mode applies. Click handlers on the radio button and checkbox keep the
+  // base text input's value in sync.
+  Y.all('div.mc-choice-score input[type=text]').each(function(input) {
+    if (input.getDOMNode().hasBeenAugmented) {
+      return;
+    }
+
+    var radio = Y.Node.create('<input type="radio">');
+    var checkbox = Y.Node.create('<input type="checkbox">');
+    var parent = input.get('parentNode');
+    parent.appendChild(radio);
+    parent.appendChild(checkbox);
+
+    radio.on('click', function() {
+      Y.all('div.mc-choice-score input[type=text]').set('value', '0');
+      input.set('value', '1');
+      updateScoreInputs();
+    });
+
+    checkbox.on('click', function() {
+      input.set('value', checkbox.get('checked') ? '1' : '0');
+      updateScoreInputs();
+    });
+
+    input.getDOMNode().hasBeenAugmented = true;
+
+    hideAllScoreInputs();
+  });
+}
+
 function init() {
   initState();
   initSetScoresToggleButton();
+  initAlternateScoreInputs();
   updateScoreInputs();
   updateToggleFeedbackButtons();
-  bindRadioButtonClickHandlers();
 
   // Add click handler to the single/multiple selection widget
   Y.all('div.mc-selection input').on('click', function(e) {
@@ -249,9 +270,9 @@ function init() {
 
   // Add change handler to the entire InputEx form
   cb_global.form.getFieldByName('choices').on('updated', function() {
+    initAlternateScoreInputs();
     updateScoreInputs();
     updateToggleFeedbackButtons();
-    bindRadioButtonClickHandlers();
     updateSetScoresToggleButtonLabel();
   });
 }
