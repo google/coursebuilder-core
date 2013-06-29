@@ -33,7 +33,7 @@ class QuestionGroupManagerAndEditor(question_editor.BaseDatastoreAssetEditor):
 
     def get_template_values(self, key):
         template_values = {}
-        template_values['page_title'] = self.format_title('Edit Question')
+        template_values['page_title'] = self.format_title('Edit Question Group')
         template_values['main_content'] = self.get_form(
             QuestionGroupRESTHandler, key)
 
