@@ -10,7 +10,8 @@
       {{ gettext(' JavaScript should be enabled to grade this question. ') }}
     </div>
   </noscript>
-  <div id="{{quid}}" class="qt-mc-question">
+  <div id="{{quid}}"
+      class="qt-mc-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
     <div class="qt-question">{{question}}</div>
     <div class="qt-choices">
       {% for choice in choices %}

@@ -153,11 +153,14 @@ class QuestionGroupTag(tags.BaseTag):
         template_values['resources_path'] = RESOURCES_PATH
 
         template_values['question_html_array'] = []
+        js_data = {}
         for ind, item in enumerate(question_group_dto.dict['items']):
             id_prefix = '%s-%s-' % (qgid, ind)
             template_values['question_html_array'].append(render_question(
                 item['question'], locale, embedded=True, id_prefix=id_prefix
             ))
+            js_data['%s%s' % (id_prefix, item['question'])] = item
+        template_values['js_data'] = transforms.dumps(js_data)
 
         template_file = 'templates/question_group.html'
         template = jinja_utils.get_template(

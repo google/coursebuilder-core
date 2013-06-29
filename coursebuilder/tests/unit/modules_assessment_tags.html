@@ -1,6 +1,6 @@
 <!-- A multiple choice question which accepts only one selection. -->
 <div id="mc-0" class="qt-mc-question">
-  <div class="qt-question">Pick 'a'</div>
+  <div class="qt-question qt-standalone">Pick 'a'</div>
   <div class="qt-choices">
     <div>
       <input type="radio" name="mc-0" id="mc-0-0"/>
@@ -18,7 +18,7 @@
 </div>
 
 <!-- A multiple choice question which accepts multiple selections. -->
-<div id="mc-1" class="qt-mc-question">
+<div id="mc-1" class="qt-mc-question qt-standalone">
   <div class="qt-question">Pick 'a' and 'b'</div>
   <div class="qt-choices">
     <div>
@@ -37,7 +37,7 @@
 </div>
 
 <!--  A short answer question -->
-<div id="sa-0" class="qt-sa-question">
+<div id="sa-0" class="qt-sa-question qt-standalone">
   <div class="qt-question">Enter 'falafel'</div>
   <div class="qt-response">
     <input type="text"/>
@@ -51,3 +51,54 @@
   <div class="qt-feedback qt-hidden">
   </div>
 </div>
+
+<!-- A question group consisting of a multiple choice and a short answer. -->
+<div id="qg-0" class="qt-question-group">
+  <div class="qt-introduction">Introduction</div>
+  <ol class="qt-question-list">
+    <li class="qt-question-item">
+      <div>
+        <div id="qg-0-mc-0" class="qt-mc-question qt-embedded">
+          <div class="qt-question">Pick 'a'</div>
+          <div class="qt-choices">
+            <div>
+              <input type="radio" name="qg-0-mc-0" id="qg-0-mc-0-0"/>
+              <label for="qg-0-mc-0-0">a</label>
+            </div>
+            <div>
+              <input type="radio" name="qg-0-mc-0" id="qg-0-mc-0-1"/>
+              <label for="qg-0-mc-0-1">b</label>
+            </div>
+          </div>
+          <div class="qt-check-answer">
+            <button class="gcb-button">Check Answer</button>
+          </div>
+          <div class="qt-feedback qt-hidden"></div>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <div id="qg-0-sa-0" class="qt-sa-question qt-embedded">
+          <div class="qt-question">Enter 'falafel'</div>
+          <div class="qt-response">
+            <input type="text"/>
+          </div>
+          <div class="qt-check-answer">
+            <button class="gcb-button qt-check-answer-button">Check Answer</button>
+            <button class="gcb-button qt-skip-and-show-answer-button">
+              Skip and Show Answer
+            </button>
+          </div>
+          <div class="qt-feedback qt-hidden">
+          </div>
+        </div>
+      </div>
+    </li>
+  </ol>
+  <div class="qt-check-answer">
+    <button class="gcb-button qt-check-answer-button">Check Answer</button>
+  </div>
+  <div class="qt-feedback qt-hidden"></div>
+</div>
+

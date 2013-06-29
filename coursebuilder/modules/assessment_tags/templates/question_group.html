@@ -1,21 +1,33 @@
 <div class="gcb-border-box">
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
+  <script>
+    questionData['{{qgid}}'] = JSON.parse("{{js_data | js_string}}");
+  </script>
+  <script src="{{resources_path}}/grading_lib.js"></script>
+  <script src="{{resources_path}}/grading.js"></script>
+  <noscript>
+    <div class='qt-warning'>
+      {{ gettext(' JavaScript should be enabled to grade this question. ') }}
+    </div>
+  </noscript>
+  <div id="{{qgid}}" class="qt-question-group">
+    <div class="qt-introduction">
+      {{ introduction }}
+    </div>
 
-  <div class="qt-introduction">
-    {{ introduction }}
-  </div>
+    <ol class="qt-question-list">
+      {% for question_html in question_html_array %}
+        <li class="qt-question-item">
+          {{ question_html }}
+        </li>
+      {% endfor %}
+    </ol>
 
-  <ol class="qt-question-list">
-    {% for question_html in question_html_array %}
-      <li class="qt-question-item">
-        {{ question_html }}
-      </li>
-    {% endfor %}
-  </ol>
-
-  <div class="qt-check-answer">
-    <button class="gcb-button">
-      {{ gettext(' Check Answer ') }}
-    </button>
+    <div class="qt-check-answer">
+      <button class="gcb-button qt-check-answer-button">
+        {{ gettext(' Check Answer ') }}
+      </button>
+    </div>
+    <div class="qt-feedback qt-hidden"></div>
   </div>
 </div>

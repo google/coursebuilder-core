@@ -1,4 +1,11 @@
 describe('assessment tags', function() {
+  /**
+   * Extract the outerHTML value from the first element in a set of matched
+   * elements (analogous to jQuery.html()).
+   */
+  function getOuterHTML(jqueryElementList) {
+    return jqueryElementList[0].outerHTML;
+  }
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
     loadFixtures('tests/unit/modules_assessment_tags.html');
@@ -18,14 +25,14 @@ describe('assessment tags', function() {
         var mc = new McQuestion(el, questionData);
         var grade = mc.grade();
         expect(grade.score).toBe(1);
-        expect(grade.feedback[0].outerHTML).toBe('<ul><li>yes</li></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe('<ul><li>yes</li></ul>');
       });
       it('can omit feedback if none provided', function() {
         var questionData = {'mc-0': [{score: '1'}, {score: '0'}]};
         var mc = new McQuestion(el, questionData);
         var grade = mc.grade();
         expect(grade.score).toBe(1);
-        expect(grade.feedback[0].outerHTML).toBe('<ul></ul>');
+        expect(getOuterHTML(grade.feedback)).toBe('<ul></ul>');
       });
       it('doesn\'t give negative scores', function() {
         var questionData = {'mc-0': [{score: '-1'}, {score: '-5'}]};
@@ -62,7 +69,7 @@ describe('assessment tags', function() {
         var mc = new McQuestion(el, questionData);
         var grade = mc.grade();
         expect(grade.score).toBe(0.9);
-        expect(grade.feedback[0].outerHTML)
+        expect(getOuterHTML(grade.feedback))
             .toBe('<ul><li>good</li><li>better</li></ul>');
       });
     });
@@ -117,6 +124,44 @@ describe('assessment tags', function() {
         el.find('> .qt-response > input').val('3.01');
         testMatcherWithResponse('numeric', '3.00', 0);
       });
+    });
+  });
+  describe('question group', function() {
+    var qg;
+    beforeEach(function() {
+      var el = $('#qg-0');
+      var questionData = {
+        'qg-0': {
+          'qg-0-mc-0': {'weight': 10},
+          'qg-0-sa-0': {'weight': 15},
+        },
+        'qg-0-mc-0': [
+          {score: '1', feedback: 'yes'},
+          {score: '0', feedback: 'no'}],
+        'qg-0-sa-0': {
+          hint: 'it\s \'falafel\'',
+          graders: [{
+            matcher: 'case_insensitive',
+            response: 'falafel',
+            score: '1.0',
+            feedback: 'good'
+          }]
+        }
+      };
+      qg = new QuestionGroup(el, questionData);
+    });
+    it('computes a weighted grade', function() {
+      $('#qg-0-mc-0-0').prop('checked', true);
+      $('#qg-0-sa-0 > .qt-response > input').val('falafel');
+      var grade = qg.grade();
+      expect(grade.score).toBe(25);
+    });
+    it('gets the feedback from all the questions', function() {
+      $('#qg-0-mc-0-0').prop('checked', true);
+      $('#qg-0-sa-0 > .qt-response > input').val('falafel');
+      var grade = qg.grade();
+      expect(getOuterHTML(grade.feedback[0])).toBe('<ul><li>yes</li></ul>');
+      expect(getOuterHTML(grade.feedback[1])).toBe('<div>good</div>');
     });
   });
 });
