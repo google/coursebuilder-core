@@ -59,5 +59,25 @@
       {% endfor %}
     </table>
   {% endif %}
+  <form action='/explorer/profile' method='post'>
+    <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
+    <h2>
+      <label for="name">
+        {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+        {{ gettext('New Name') }}
+      </label>
+    </h2>
+    <fieldset style="border: none;">
+      <p>
+        <input name="name" id="name" type="text" size="40" maxlength="500">
+      </p>
+    </fieldset>
+    <p>
+      <button class="gcb-button" type="submit">
+        {# I18N: Text for a button that allows the student to save changes to his/her name for the certificate. #}
+        {{ gettext('Change Name') }}
+      </button>
+    </p>
+  </form>
 {% endblock %}
 

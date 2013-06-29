@@ -35,6 +35,7 @@ from google.appengine.api import users
 # We want to use views file in both /views and /modules/course_explorer/views.
 DIR = appengine_config.BUNDLE_ROOT
 LOCALE = Courses.COURSE_TEMPLATE_DICT['base']['locale']
+STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 
 
 class IndexPageHandler(webapp2.RequestHandler):
@@ -135,6 +136,11 @@ class BaseStudentHandler(webapp2.RequestHandler):
             self.template_values['logoutUrl'] = users.create_logout_url('/')
         return user
 
+    def is_valid_xsrf_token(self, action):
+        """Asserts the current request has proper XSRF token or fails."""
+        token = self.request.get('xsrf_token')
+        return token and XsrfTokenManager.is_xsrf_token_valid(token, action)
+
 
 class ProfileHandler(BaseStudentHandler):
     """Global profile handler for a student."""
@@ -147,6 +153,9 @@ class ProfileHandler(BaseStudentHandler):
             StudentProfileDAO.get_profile_by_user_id(user.user_id()))
         self.template_values['navbar'] = {'profile': True}
         self.template_values['courses'] = self.get_enrolled_courses(courses)
+        self.template_values['student_edit_xsrf_token'] = (
+            XsrfTokenManager.create_xsrf_token(
+                STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID))
 
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/profile.html', DIR, LOCALE)
@@ -154,11 +163,23 @@ class ProfileHandler(BaseStudentHandler):
 
     def post(self):
         """Handles post requests."""
-        user = users.get_current_user()
+        user = self.initialize_page_and_get_user()
+        if not user:
+            self.error(403)
+            return
+
+        if not self.is_valid_xsrf_token(STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID):
+            self.error(403)
+            return
+
         new_name = self.request.get('name')
-        StudentProfileDAO.update(
-            user.user_id(), user.email(), nick_name=new_name)
-        self.redirect('/profile')
+        if not new_name or len(new_name) > 500:
+            self.error(400)
+            return
+
+        StudentProfileDAO.update_global_profile(
+            user.user_id(), nick_name=new_name)
+        self.redirect('/explorer/profile')
 
 
 class AllCoursesHandler(BaseStudentHandler):

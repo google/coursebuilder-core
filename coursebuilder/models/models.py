@@ -229,16 +229,12 @@ class StudentProfileDAO(object):
             namespace_manager.set_namespace(old_namespace)
 
     @classmethod
-    def _update_attributes(
-        cls, profile, student,
+    def _update_global_profile_attributes(
+        cls, profile,
         email=None, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
         course_info=None):
-        """Modifies various attributes of Student and Profile."""
-
-        # we allow profile to be null
-        if not profile:
-            profile = PersonalProfileDTO()
+        """Modifies various attributes of Student's Global Profile."""
 
         # TODO(psimakov): update of email does not work for student
         if email is not None:
@@ -249,10 +245,12 @@ class StudentProfileDAO(object):
 
         if nick_name is not None:
             profile.nick_name = nick_name
-            student.name = nick_name
 
         if date_of_birth is not None:
             profile.date_of_birth = date_of_birth
+
+        if is_enrolled is None and final_grade is None and course_info is None:
+            return
 
         from controllers import sites  # pylint: disable=C6204
         course = sites.get_course_for_current_request()
@@ -262,8 +260,6 @@ class StudentProfileDAO(object):
             enrollment_dict = transforms.loads(profile.enrollment_info)
             enrollment_dict[course_key] = is_enrolled
             profile.enrollment_info = transforms.dumps(enrollment_dict)
-
-            student.is_enrolled = is_enrolled
 
         if final_grade is not None or course_info is not None:
             course_info_dict = {}
@@ -279,6 +275,36 @@ class StudentProfileDAO(object):
                 info['info'] = course_info
             course_info_dict[course_key] = info
             profile.course_info = transforms.dumps(course_info_dict)
+
+    @classmethod
+    def _update_course_profile_attributes(
+        cls, student, nick_name=None, is_enrolled=None):
+        """Modifies various attributes of Student's Course Profile."""
+
+        if nick_name is not None:
+            student.name = nick_name
+
+        if is_enrolled is not None:
+            student.is_enrolled = is_enrolled
+
+    @classmethod
+    def _update_attributes(
+        cls, profile, student,
+        email=None, legal_name=None, nick_name=None,
+        date_of_birth=None, is_enrolled=None, final_grade=None,
+        course_info=None):
+        """Modifies various attributes of Student and Profile."""
+
+        if profile:
+            cls._update_global_profile_attributes(
+                profile, email=email, legal_name=legal_name,
+                nick_name=nick_name, date_of_birth=date_of_birth,
+                is_enrolled=is_enrolled, final_grade=final_grade,
+                course_info=course_info)
+
+        if student:
+            cls._update_course_profile_attributes(
+                student, nick_name=nick_name, is_enrolled=is_enrolled)
 
     @classmethod
     def _put_profile(cls, profile):
@@ -361,8 +387,7 @@ class StudentProfileDAO(object):
 
         # update profile
         cls._update_attributes(
-            profile, student,
-            nick_name=nick_name, is_enrolled=True)
+            profile, student, nick_name=nick_name, is_enrolled=True)
 
         # update student
         student.user_id = user_id
@@ -385,6 +410,26 @@ class StudentProfileDAO(object):
             legal_name=legal_name, nick_name=nick_name,
             date_of_birth=date_of_birth, is_enrolled=is_enrolled,
             final_grade=final_grade, course_info=course_info)
+
+    @classmethod
+    @db.transactional
+    def update_global_profile(
+        cls, user_id, email=None,
+        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None,
+        final_grade=None, course_info=None):
+        """Update the global profile of a studnet."""
+
+        # load profile; it can be None
+        profile = cls._get_profile_by_user_id(user_id)
+        if not profile:
+            raise Exception('Unable to find student for: %s' % user_id)
+
+        cls._update_attributes(
+            profile, None,
+            email=email, legal_name=legal_name, nick_name=nick_name,
+            date_of_birth=date_of_birth, is_enrolled=is_enrolled,
+            final_grade=final_grade, course_info=course_info)
+        cls._put_profile(profile)
 
     @classmethod
     def get_enrolled_student_by_email_for(cls, email, app_context):

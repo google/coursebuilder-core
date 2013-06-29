@@ -173,3 +173,56 @@ class CourseExplorerDisabledTest(actions.TestBase):
         # 'My courses' and 'Profile' tab should not be present in tab bar.
         assert_does_not_contain('My Courses', response.body)
         assert_does_not_contain('Profile', response.body)
+
+
+class GlobalProfileTest(BaseExplorerTest):
+    """Tests course_explorer module."""
+
+    def test_change_of_name(self):
+        """Tests for a single available course."""
+        # This call should redirect to explorer page.
+        response = self.get('/')
+        assert_contains('/explorer', response.location)
+
+        name = 'Test global profile page'
+        email = 'student_global_profile@example.com'
+
+        actions.login(email)
+
+        # Test the explorer page.
+        response = self.get('/explorer')
+        assert_equals(response.status_int, 200)
+        assert_contains('Register', response.body)
+
+        # Test 'my courses' page when a student is enrolled in all courses.
+        actions.register(self, name)
+        # Test profile page.
+        response = self.get('/explorer/profile')
+        assert_contains('<td>%s</td>' % email, response.body)
+        assert_contains('<td>%s</td>' % name, response.body)
+
+        # Change the name now
+        new_name = 'New global name'
+        response.form.set('name', new_name)
+        response = self.submit(response.form)
+        assert_equals(response.status_int, 302)
+        response = self.get('/explorer/profile')
+        assert_contains('<td>%s</td>' % email, response.body)
+        assert_contains('<td>%s</td>' % new_name, response.body)
+
+        # Change name with bad xsrf token.
+        response = self.get('/explorer/profile')
+        assert_equals(response.status_int, 200)
+        new_name = 'New Bad global name'
+        response.form.set('name', new_name)
+        response.form.set('xsrf_token', 'asdfsdf')
+        response = response.form.submit(expect_errors=True)
+        assert_equals(response.status_int, 403)
+
+        # Change name with a bad name shold fail.
+        response = self.get('/explorer/profile')
+        assert_equals(response.status_int, 200)
+        new_name = ''
+        response.form.set('name', new_name)
+        response = response.form.submit(expect_errors=True)
+        assert_equals(response.status_int, 400)
