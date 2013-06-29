@@ -74,6 +74,49 @@ courses.Course.create_new_default_course = (
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_value_cached_in_one_namespace_invisible_in_another(self):
+        """Value cached in one namespace is not visible in another."""
+
+        # set value and check it's visible in one namespace
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace('test_memcache_manager_a')
+            models.MemcacheManager.set('foo', 'bar')
+            assert 'bar' == models.MemcacheManager.get('foo')
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        # check same value is not visible in another namespace
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace('test_memcache_manager_b')
+            assert not models.MemcacheManager.get('foo')
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        # check same value is not visible in default namespace
+        assert not models.MemcacheManager.get('foo')
+
+        # check same value is not visible in None namespace
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(None)
+            assert not models.MemcacheManager.get('foo')
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        # set value and check it's visible in default namespace
+        models.MemcacheManager.set('foo', 'bar')
+        assert 'bar' == models.MemcacheManager.get('foo')
+
+        # check value is not visible in another namespace
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace('test_memcache_manager_c')
+            assert not models.MemcacheManager.get('foo')
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
     def test_response_content_type_is_application_json_in_utf_8(self):
         response = self.testapp.get(
             '/rest/config/item?key=gcb_config_update_interval_sec')
@@ -330,8 +373,8 @@ class InfrastructureTest(actions.TestBase):
 
         # Setup a new course.
         sites.setup_courses('course:/test::ns_test, course:/:/')
-        config.Registry.test_overrides[
-            models.CAN_USE_MEMCACHE.name] = True
+        self.base = '/test'
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
 
         app_context = sites.get_all_courses()[0]
         course = courses.Course(None, app_context=app_context)
@@ -401,35 +444,35 @@ class InfrastructureTest(actions.TestBase):
         actions.register(self, name)
 
         # Accessing a unit that is not available redirects to the main page.
-        response = self.get('/test/unit?unit=%s' % unit_1.unit_id)
+        response = self.get('unit?unit=%s' % unit_1.unit_id)
         assert_equals(response.status_int, 302)
 
-        response = self.get('/test/unit?unit=%s' % unit_2.unit_id)
+        response = self.get('unit?unit=%s' % unit_2.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 2.1', response.body)
         assert_contains('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s&lesson=%s' % (
+        response = self.get('unit?unit=%s&lesson=%s' % (
             unit_2.unit_id, lesson_2_2.lesson_id))
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 2.2', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_3.unit_id)
+        response = self.get('unit?unit=%s' % unit_3.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 3.1', response.body)
         assert_contains('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_4.unit_id)
+        response = self.get('unit?unit=%s' % unit_4.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 4.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_5.unit_id)
+        response = self.get('unit?unit=%s' % unit_5.unit_id)
         assert_equals(response.status_int, 200)
         assert_does_not_contain('Lesson', response.body)
         assert_contains(
@@ -446,36 +489,36 @@ class InfrastructureTest(actions.TestBase):
         actions.register(self, name)
 
         # The course admin can access a unit that is not available.
-        response = self.get('/test/unit?unit=%s' % unit_1.unit_id)
+        response = self.get('unit?unit=%s' % unit_1.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 1.1', response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_2.unit_id)
+        response = self.get('unit?unit=%s' % unit_2.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 2.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_contains(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s&lesson=%s' % (
+        response = self.get('unit?unit=%s&lesson=%s' % (
             unit_2.unit_id, lesson_2_2.lesson_id))
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 2.2', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_3.unit_id)
+        response = self.get('unit?unit=%s' % unit_3.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 3.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_contains(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_4.unit_id)
+        response = self.get('unit?unit=%s' % unit_4.unit_id)
         assert_equals(response.status_int, 200)
         assert_contains('Lesson 4.1', response.body)
         assert_does_not_contain('This lesson is not available.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('/test/unit?unit=%s' % unit_5.unit_id)
+        response = self.get('unit?unit=%s' % unit_5.unit_id)
         assert_equals(response.status_int, 200)
         assert_does_not_contain('Lesson', response.body)
         assert_contains(
@@ -492,8 +535,9 @@ class InfrastructureTest(actions.TestBase):
 
         # Setup a new course.
         sites.setup_courses('course:/test::ns_test, course:/:/')
-        config.Registry.test_overrides[
-            models.CAN_USE_MEMCACHE.name] = True
+        self.base = '/test'
+        self.namespace = 'ns_test'
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
 
         app_context = sites.get_all_courses()[0]
         course = courses.Course(None, app_context=app_context)
@@ -554,9 +598,9 @@ class InfrastructureTest(actions.TestBase):
         actions.register(self, name)
 
         # Submit assessment 1.
-        actions.submit_assessment(
-            self, assessment_1.unit_id, first, base='/test')
-        student = models.Student.get_enrolled_student_by_email(email)
+        actions.submit_assessment(self, assessment_1.unit_id, first)
+        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
+            email, app_context)
         student_scores = course.get_all_scores(student)
 
         assert len(student_scores) == 2
@@ -577,7 +621,7 @@ class InfrastructureTest(actions.TestBase):
         assert overall_score is None
 
         # View the student profile page.
-        response = self.get('/test/student/home')
+        response = self.get('student/home')
         assert_does_not_contain('Overall course score', response.body)
 
         # Add a weight to the first assessment.
@@ -586,11 +630,11 @@ class InfrastructureTest(actions.TestBase):
         assert overall_score == 1
 
         # Submit assessment 2.
-        actions.submit_assessment(
-            self, assessment_2.unit_id, second, base='/test')
+        actions.submit_assessment(self, assessment_2.unit_id, second)
         # We need to reload the student instance, because its properties have
         # changed.
-        student = models.Student.get_enrolled_student_by_email(email)
+        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
+            email, app_context)
         student_scores = course.get_all_scores(student)
 
         assert len(student_scores) == 2
@@ -607,7 +651,7 @@ class InfrastructureTest(actions.TestBase):
         course.save()
 
         # View the student profile page.
-        response = self.get('/test/student/home')
+        response = self.get('student/home')
         assert_contains('assessment-score-first">1</span>', response.body)
         assert_contains('assessment-score-second">3</span>', response.body)
         assert_contains('Overall course score', response.body)
@@ -617,9 +661,9 @@ class InfrastructureTest(actions.TestBase):
         # the scores, since the system records the maximum score that has ever
         # been achieved on any assessment.
         first_retry = {'score': '0', 'assessment_type': assessment_1.unit_id}
-        actions.submit_assessment(
-            self, assessment_1.unit_id, first_retry, base='/test')
-        student = models.Student.get_enrolled_student_by_email(email)
+        actions.submit_assessment(self, assessment_1.unit_id, first_retry)
+        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
+            email, app_context)
         student_scores = course.get_all_scores(student)
 
         assert len(student_scores) == 2
@@ -2585,8 +2629,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         self.namespace = 'ns_test'
         self.base = '/test'
-        config.Registry.test_overrides[
-            models.CAN_USE_MEMCACHE.name] = True
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
 
         # Format import payload and URL.
         payload_dict = {}
@@ -2594,11 +2637,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         request = {}
         request['payload'] = transforms.dumps(payload_dict)
         import_put_url = (
-            '/test/rest/course/import?%s' % urllib.urlencode(
+            'rest/course/import?%s' % urllib.urlencode(
                 {'request': transforms.dumps(request)}))
 
         # Check non-logged user has no rights.
-        response = self.testapp.put(import_put_url, {}, expect_errors=True)
+        response = self.put(import_put_url, {}, expect_errors=True)
         assert_equals(404, response.status_int)
 
         # Login as admin.
@@ -2607,7 +2650,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         actions.login(email, is_admin=True)
 
         # Check course is empty.
-        response = self.get('/test/dashboard')
+        response = self.get('dashboard')
         assert_equals(200, response.status_int)
         assert_does_not_contain('Filter image results by color', response.body)
 
@@ -2615,23 +2658,23 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         request[
             'xsrf_token'] = XsrfTokenManager.create_xsrf_token('import-course')
         import_put_url = (
-            '/test/rest/course/import?%s' % urllib.urlencode(
+            'rest/course/import?%s' % urllib.urlencode(
                 {'request': transforms.dumps(request)}))
         response = self.put(import_put_url, {})
         assert_equals(200, response.status_int)
         assert_contains('Imported.', response.body)
 
         # Check course is not empty.
-        response = self.get('/test/dashboard')
+        response = self.get('dashboard')
         assert_contains('Filter image results by color', response.body)
 
         # Check assessment is copied.
-        response = self.get('/test/assets/js/assessment-21.js')
+        response = self.get('assets/js/assessment-21.js')
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
         # Check activity is copied.
-        response = self.get('/test/assets/js/activity-37.js')
+        response = self.get('assets/js/activity-37.js')
         assert_equals(200, response.status_int)
         assert_contains('explore ways to keep yourself updated', response.body)
 
@@ -2640,12 +2683,16 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         lesson_2_2_title = '2.2 Thinking more deeply about your search'
 
         # Check units and lessons are indexed correctly.
-        actions.register(self, name)
-        response = self.get('/test/course')
+        response = actions.register(self, name)
+        assert (
+            'http://localhost'
+            '/test/course'
+            '#registration_confirmation' == response.location)
+        response = self.get('course')
         assert_contains(unit_2_title, response.body)
 
         # Unit page.
-        response = self.get('/test/unit?unit=9')
+        response = self.get('unit?unit=9')
         assert_contains(  # A unit title.
             unit_2_title, response.body)
         assert_contains(  # First child lesson without link.
@@ -2656,7 +2703,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             ['Unit 2</a></li>', 'Lesson 1</li>'], response.body)
 
         # Unit page.
-        response = self.get('/test/activity?unit=9&lesson=10')
+        response = self.get('activity?unit=9&lesson=10')
         assert_contains(  # A unit title.
             unit_2_title, response.body)
         assert_contains(  # An activity title.

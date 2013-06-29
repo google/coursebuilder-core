@@ -91,16 +91,18 @@ class TestBase(suite.AppEngineTestBase):
         super(TestBase, self).tearDown()
 
     def canonicalize(self, href, response=None):
-        """Create absolute URL using <base> if defined, '/' otherwise."""
+        """Create absolute URL using <base> if defined, self.base otherwise."""
         if href.startswith('/') or utils.ApplicationHandler.is_absolute(href):
             pass
         else:
-            base = '/'
+            base = self.base
             if response:
                 match = re.search(
                     r'<base href=[\'"]?([^\'" >]+)', response.body)
                 if match and not href.startswith('/'):
                     base = match.groups()[0]
+            if not base.endswith('/'):
+                base += '/'
             href = '%s%s' % (base, href)
         self.audit_url(href)
         return href
@@ -155,10 +157,10 @@ class TestBase(suite.AppEngineTestBase):
         response = self.testapp.post(url, params, expect_errors=expect_errors)
         return self.hook_response(response)
 
-    def put(self, url, params):
+    def put(self, url, params, expect_errors=False):
         url = self.canonicalize(url)
         logging.info('HTTP Put: %s', url)
-        response = self.testapp.put(url, params)
+        response = self.testapp.put(url, params, expect_errors=expect_errors)
         return self.hook_response(response)
 
     def click(self, response, name):
@@ -286,6 +288,7 @@ def register(browser, name):
     assert_contains(
         'course#registration_confirmation', response.headers['location'])
     check_profile(browser, name)
+    return response
 
 
 def check_profile(browser, name):
@@ -434,16 +437,15 @@ def view_assessments(browser):
         check_personalization(browser, response)
 
 
-def submit_assessment(browser, unit_id, args, base='', presubmit_checks=True):
+def submit_assessment(browser, unit_id, args, presubmit_checks=True):
     """Submits an assessment."""
-    response = browser.get('%s/assessment?name=%s' % (base, unit_id))
+    response = browser.get('assessment?name=%s' % unit_id)
 
     if presubmit_checks:
         assert_contains(
             '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
             response.body)
-        js_response = browser.get(
-            '%s/assets/js/assessment-%s.js' % (base, unit_id))
+        js_response = browser.get('assets/js/assessment-%s.js' % unit_id)
         assert_equals(js_response.status_int, 200)
 
     # Extract XSRF token from the page.
@@ -452,14 +454,14 @@ def submit_assessment(browser, unit_id, args, base='', presubmit_checks=True):
     xsrf_token = match.group(1)
     args['xsrf_token'] = xsrf_token
 
-    response = browser.post('%s/answer' % base, args)
+    response = browser.post('answer', args)
     assert_equals(response.status_int, 200)
     return response
 
 
-def request_new_review(browser, unit_id, base='', expected_status_code=302):
+def request_new_review(browser, unit_id, expected_status_code=302):
     """Requests a new assignment to review."""
-    response = browser.get('%s/reviewdashboard?unit=%s' % (base, unit_id))
+    response = browser.get('reviewdashboard?unit=%s' % unit_id)
     assert_contains('Assignments for your review', response.body)
 
     # Extract XSRF token from the page.
@@ -473,8 +475,7 @@ def request_new_review(browser, unit_id, base='', expected_status_code=302):
     expect_errors = (expected_status_code not in [200, 302])
 
     response = browser.post(
-        '%s/reviewdashboard?unit=%s' % (base, unit_id), args,
-        expect_errors=expect_errors)
+        'reviewdashboard?unit=%s' % unit_id, args, expect_errors=expect_errors)
     assert_equals(response.status_int, expected_status_code)
 
     if expected_status_code == 302:
@@ -487,11 +488,10 @@ def request_new_review(browser, unit_id, base='', expected_status_code=302):
     return response
 
 
-def view_review(
-    browser, unit_id, review_step_key, base='', expected_status_code=200):
+def view_review(browser, unit_id, review_step_key, expected_status_code=200):
     """View a review page."""
     response = browser.get(
-        '%s/review?unit=%s&key=%s' % (base, unit_id, review_step_key),
+        'review?unit=%s&key=%s' % (unit_id, review_step_key),
         expect_errors=(expected_status_code != 200))
     assert_equals(response.status_int, expected_status_code)
     if expected_status_code == 200:
@@ -500,17 +500,16 @@ def view_review(
 
 
 def submit_review(
-    browser, unit_id, review_step_key, args, base='', presubmit_checks=True):
+    browser, unit_id, review_step_key, args, presubmit_checks=True):
     """Submits a review."""
     response = browser.get(
-        '%s/review?unit=%s&key=%s' % (base, unit_id, review_step_key))
+        'review?unit=%s&key=%s' % (unit_id, review_step_key))
 
     if presubmit_checks:
         assert_contains(
             '<script src="assets/js/review-%s.js"></script>' % unit_id,
             response.body)
-        js_response = browser.get(
-            '%s/assets/js/review-%s.js' % (base, unit_id))
+        js_response = browser.get('assets/js/review-%s.js' % unit_id)
         assert_equals(js_response.status_int, 200)
 
     # Extract XSRF token from the page.
@@ -522,7 +521,7 @@ def submit_review(
     args['key'] = review_step_key
     args['unit_id'] = unit_id
 
-    response = browser.post('%s/review' % base, args)
+    response = browser.post('review', args)
     assert_equals(response.status_int, 200)
     return response
 

@@ -65,13 +65,21 @@ class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
 
     @classmethod
+    def _get_namespace(cls, namespace):
+        """Look up namespace from namespace_manager or use default."""
+        if namespace is not None:
+            return namespace
+        namespace = namespace_manager.get_namespace()
+        if namespace:
+            return namespace
+        return appengine_config.DEFAULT_NAMESPACE_NAME
+
+    @classmethod
     def get(cls, key, namespace=None):
         """Gets an item from memcache if memcache is enabled."""
         if not CAN_USE_MEMCACHE.value:
             return None
-        if not namespace:
-            namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-        value = memcache.get(key, namespace=namespace)
+        value = memcache.get(key, namespace=cls._get_namespace(namespace))
 
         # We store some objects in memcache that don't evaluate to True, but are
         # real objects, '{}' for example. Count a cache miss only in a case when
@@ -88,26 +96,23 @@ class MemcacheManager(object):
         """Sets an item in memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
             CACHE_PUT.inc()
-            if not namespace:
-                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-            memcache.set(key, value, ttl, namespace=namespace)
-
-    @classmethod
-    def incr(cls, key, delta, namespace=None):
-        """Incr an item in memcache if memcache is enabled."""
-        if CAN_USE_MEMCACHE.value:
-            if not namespace:
-                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-            memcache.incr(key, delta, namespace=namespace, initial_value=0)
+            memcache.set(
+                key, value, ttl, namespace=cls._get_namespace(namespace))
 
     @classmethod
     def delete(cls, key, namespace=None):
         """Deletes an item from memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
             CACHE_DELETE.inc()
-            if not namespace:
-                namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-            memcache.delete(key, namespace=namespace)
+            memcache.delete(key, namespace=cls._get_namespace(namespace))
+
+    @classmethod
+    def incr(cls, key, delta, namespace=None):
+        """Incr an item in memcache if memcache is enabled."""
+        if CAN_USE_MEMCACHE.value:
+            memcache.incr(
+                key, delta,
+                namespace=cls._get_namespace(namespace), initial_value=0)
 
 
 CAN_AGGREGATE_COUNTERS = ConfigProperty(
@@ -380,6 +385,16 @@ class StudentProfileDAO(object):
             legal_name=legal_name, nick_name=nick_name,
             date_of_birth=date_of_birth, is_enrolled=is_enrolled,
             final_grade=final_grade, course_info=course_info)
+
+    @classmethod
+    def get_enrolled_student_by_email_for(cls, email, app_context):
+        """Returns student for a specific course."""
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(app_context.get_namespace_name())
+            return Student.get_enrolled_student_by_email(email)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
 
 class Student(BaseEntity):
