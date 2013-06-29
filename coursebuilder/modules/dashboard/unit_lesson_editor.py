@@ -714,7 +714,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 'title': unit.title,
                 'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
                 'content': content,
-                'html_content': unit.html_content,
+                'html_content': unit.html_content or '',
                 'html_check_answers': unit.html_check_answers,
                 'is_draft': not unit.now_available,
                 workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
@@ -729,7 +729,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 workflow_key(courses.REVIEW_WINDOW_MINS_KEY): (
                     workflow.get_review_window_mins()),
                 'review_form': review_form,
-                'html_review_form': unit.html_review_form
+                'html_review_form': unit.html_review_form or ''
                 }
             }
 
