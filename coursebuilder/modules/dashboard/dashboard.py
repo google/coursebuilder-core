@@ -56,6 +56,7 @@ from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
+from unit_lesson_editor import ExportAssessmentRESTHandler
 from unit_lesson_editor import ImportActivityRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
@@ -108,7 +109,8 @@ class DashboardHandler(
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
-            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler)
+            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
+            (ExportAssessmentRESTHandler.URI, ExportAssessmentRESTHandler)
         ]
 
     def can_view(self):

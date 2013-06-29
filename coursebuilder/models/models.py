@@ -661,6 +661,22 @@ class BaseJsonDao(object):
         return entity.key().id()
 
     @classmethod
+    def save_all(cls, dtos):
+        """Performs a block persist of a list of DTO's."""
+        entities = []
+        for dto in dtos:
+            entity = cls._load_entity(dto.id)
+            if not entity:
+                entity = cls.ENTITY()
+            entity.data = transforms.dumps(dto.dict)
+            entities.append(entity)
+
+        keys = db.put(entities)
+        for key, entity in zip(keys, entities):
+            MemcacheManager.set(cls._memcache_key(key.id()), entity)
+        return [key.id() for key in keys]
+
+    @classmethod
     def delete(cls, dto):
         entity = cls._load_entity(dto.id)
         entity.delete()

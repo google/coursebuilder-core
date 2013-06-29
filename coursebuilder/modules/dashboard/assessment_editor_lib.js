@@ -1,9 +1,46 @@
-function AssessmentEditorController(inputExForm, confirm) {
+function AssessmentEditorController(Y, inputExForm, xsrfToken, confirm, notify,
+    formatError) {
+  this.Y = Y;
   this.inputExForm = inputExForm;
+  this.xsrfToken = xsrfToken;
   this.confirm = confirm;
+  this.notify = notify;
+  this.formatError = formatError;
 }
 AssessmentEditorController.prototype.exportToHTMLAssessment = function() {
-  // TODO(jorr): Implement exporting
+  var that = this;
+  var key = this.Y.one('div.keyHolder').get('text');
+  var requestSave = {
+    'payload': this.inputExForm.getValue(),
+    'key': key,
+    'xsrf_token': this.xsrfToken
+  };
+
+  this.notify("Saving...");
+  this.Y.io('rest/course/asessment/export', {
+    method: 'put',
+    data: {
+      'request': JSON.stringify(requestSave)
+    },
+    on: {
+      complete: function(transactionId, response, args) {
+        var json;
+        if (response && response.responseText) {
+          json = parseJson(response.responseText);
+        } else {
+          that.notify('The server did not respond. ' +
+              'Please reload the page to try again.');
+          return;
+        }
+
+        if (json.status != 200) {
+          that.notify(that.formatError(json.status, json.message));
+          return;
+        }
+        that.notify(json.message);
+      }
+    }
+  });
 };
 AssessmentEditorController.prototype.revertToJSAssessment = function() {
   var CONFIRM_MESSAGE =
@@ -30,50 +67,49 @@ AssessmentEditorController.prototype.eraseHTMLContent = function() {
       .setValue('');
 };
 AssessmentEditorController.prototype.hideHTMLEditors = function() {
-  Y.one('div.html-content').get('parentNode').addClass('hidden');
-  Y.one('div.html-review-form').get('parentNode').addClass('hidden');
-  Y.one('div.assessment-editor-check-answers').get('parentNode')
+  this.Y.one('div.html-content').get('parentNode').addClass('hidden');
+  this.Y.one('div.html-review-form').get('parentNode').addClass('hidden');
+  this.Y.one('div.assessment-editor-check-answers').get('parentNode')
       .addClass('hidden');
 };
 AssessmentEditorController.prototype.hideJSEditors = function() {
-  Y.one('div.content').get('parentNode').addClass('hidden');
-  Y.one('div.review-form').get('parentNode').addClass('hidden');
+  this.Y.one('div.content').get('parentNode').addClass('hidden');
+  this.Y.one('div.review-form').get('parentNode').addClass('hidden');
 };
 AssessmentEditorController.prototype.showJSEditors = function() {
-  Y.one('div.content').get('parentNode').removeClass('hidden');
-  Y.one('div.review-form').get('parentNode').removeClass('hidden');
+  this.Y.one('div.content').get('parentNode').removeClass('hidden');
+  this.Y.one('div.review-form').get('parentNode').removeClass('hidden');
 };
 AssessmentEditorController.prototype.showButton = function(label, action) {
   var that = this;
-  var button = Y.Node.create(
+  var button = this.Y.Node.create(
       '<button class="oeditor-control">' + label + '</button>');
   button.on('click', function(evt) {
     evt.preventDefault();
     action.apply(that);
   })
-  var buttonDiv = Y.Node.create(
+  var buttonDiv = this.Y.Node.create(
       '<div class="assessment-editor-button-holder"/>');
   buttonDiv.append(button);
-  Y.one('#cb-oeditor-form > fieldset > legend').insert(buttonDiv, 'after');
+  this.Y.one('#cb-oeditor-form > fieldset > legend').insert(buttonDiv, 'after');
 };
 AssessmentEditorController.prototype.removeButtons = function() {
-  Y.one('#cb-oeditor-form > fieldset > div.assessment-editor-button-holder')
+  this.Y.one('#cb-oeditor-form > fieldset > div.assessment-editor-button-holder')
       .remove();
 };
 AssessmentEditorController.prototype.showExportButton = function() {
-  // TODO(jorr): Uncomment the following line when export is added
-  // this.showButton('Export to HTML assessment', this.exportToHTMLAssessment);
+  this.showButton('Export to HTML assessment', this.exportToHTMLAssessment);
 };
 AssessmentEditorController.prototype.showRevertButton = function() {
   this.showButton('Revert to Javascript assessment', this.revertToJSAssessment);
 };
 AssessmentEditorController.prototype.isJSAssessment = function() {
-  return Y.one('textarea[name=content]').get('value') ||
-      Y.one('textarea[name=review_form]').get('value');
+  return this.Y.one('textarea[name=content]').get('value') ||
+      this.Y.one('textarea[name=review_form]').get('value');
 };
 AssessmentEditorController.prototype.isHTMLAssessment = function() {
-  return Y.one('textarea[name=html_content]').get('value') ||
-      Y.one('textarea[name=html_review_form]').get('value');
+  return this.Y.one('textarea[name=html_content]').get('value') ||
+      this.Y.one('textarea[name=html_review_form]').get('value');
 };
 AssessmentEditorController.prototype.findRte = function(inputs, rteName) {
   for (var i = 0; i < inputs.length; i++) {
