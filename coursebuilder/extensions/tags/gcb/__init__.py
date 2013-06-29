@@ -14,7 +14,7 @@
 
 """GCB-provided custom tags."""
 
-__author__ = 'John Orr (jorr@google.com)', 'Aparna Kadakia (akadakia@google.com)'
+__author__ = 'John Orr (jorr@google.com)'
 
 import urllib
 import urlparse
@@ -27,10 +27,11 @@ from models import models as m_models
 from xml.etree import cElementTree
 
 
-def _escape_url(url):
-    """Escapes/quotes url parts to sane user input; force https."""
+def _escape_url(url, force_https=True):
+    """Escapes/quotes url parts to sane user input."""
     scheme, netloc, path, query, unused_fragment = urlparse.urlsplit(url)
-    scheme = 'https'
+    if force_https:
+        scheme = 'https'
     path = urllib.quote(path)
     query = urllib.quote_plus(query, '=?&;')
     return urlparse.urlunsplit((scheme, netloc, path, query, unused_fragment))
@@ -163,21 +164,9 @@ class YouTube(tags.BaseTag):
 </p>""")
 
     def get_icon_url(self):
-        """Return the URL for the icon to be displayed in the rich text editor.
-
-        Images should be placed in a folder called 'resources' inside the main
-        package for the tag definitions."""
-
         return '/extensions/tags/gcb/resources/youtube.png'
 
     def get_schema(self, unused_handler):
-        """Return the list of fields which will be displayed in the editor.
-
-        This method assembles the list of fields which will be displayed in
-        the rich text editor when a user double-clicks on the icon for the tag.
-        The fields are a list of SchemaField objects in a FieldRegistry
-        container. Each SchemaField has the actual attribute name as used in the
-        tag, the display name for the form, and the type (usually string)."""
         reg = schema_fields.FieldRegistry(YouTube.name())
         reg.add_property(
             schema_fields.SchemaField('videoid', 'Video Id', 'string',
@@ -303,4 +292,55 @@ class Quiz(tags.BaseTag):
               'quid', 'Quiz', 'string', optional=True,
               select_data=quiz_list))
 
+        return reg
+
+
+class IFrame(tags.BaseTag):
+
+    def render(self, node):
+        src = node.attrib.get('src')
+        title = node.attrib.get('title')
+        height = node.attrib.get('height') or '400'
+        width = node.attrib.get('width') or '650'
+
+        iframe = cElementTree.XML(
+            '<iframe style="border: 0;"></iframe>'
+        )
+
+        iframe.set('src', _escape_url(src, force_https=False))
+        iframe.set('title', title)
+        iframe.set('width', width)
+        iframe.set('height', height)
+        return iframe
+
+    def get_icon_url(self):
+        """Return the URL for the icon to be displayed in the rich text editor.
+
+        Images should be placed in a folder called 'resources' inside the main
+        package for the tag definitions."""
+
+        return '/extensions/tags/gcb/resources/iframe.png'
+
+    def get_schema(self, unused_handler):
+        reg = schema_fields.FieldRegistry(IFrame.name())
+        reg.add_property(
+            schema_fields.SchemaField('src', 'Source URL', 'string',
+            optional=True,
+            description='Provide source URL for iframe (including http/https)'))
+        reg.add_property(
+            schema_fields.SchemaField('title', 'Title', 'string',
+            optional=True,
+            description='Provide title of iframe'))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'height', 'Height', 'string',
+                optional=True,
+                extra_schema_dict_values={'value': '400'},
+                description=('Height of the iframe')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'width', 'Width', 'string',
+                optional=True,
+                extra_schema_dict_values={'value': '650'},
+                description=('Width of the iframe')))
         return reg

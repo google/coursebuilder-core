@@ -59,7 +59,15 @@ class BaseTag(object):
         return cElementTree.XML('[Unimplemented custom tag]')
 
     def get_icon_url(self):
-        """Provide an icon for the visual editor."""
+        """Return the URL for the icon to be displayed in the rich text editor.
+
+        Images should be placed in a folder called 'resources' inside the main
+        package for the tag definitions.
+
+        Returns:
+          the URL for the icon to be displayed in the editor.
+        """
+
         return """
 data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs
 4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90EGgAIFHpT6h
@@ -80,7 +88,19 @@ SPB+uxAAAAAElFTkSuQmCC
 """
 
     def get_schema(self, unused_handler):
-        """Get the schema for the tag's attributes using schema_fields."""
+        """Return the list of fields which will be displayed in the editor.
+
+        This method assembles the list of fields which will be displayed in
+        the rich text editor when a user double-clicks on the icon for the tag.
+        The fields are a list of SchemaField objects in a FieldRegistry
+        container. Each SchemaField has the actual attribute name as used in
+        the tag, the display name for the form, and the type (usually
+        string).
+
+        Returns:
+          the list of fields to be displayed in the editor.
+        """
+
         reg = schema_fields.FieldRegistry('Unimplemented Custom Tag')
         return reg
 
