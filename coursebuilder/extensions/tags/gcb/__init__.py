@@ -23,7 +23,7 @@ from common import schema_fields
 from common import tags
 from controllers import utils
 from models import courses
-from models.models import QuestionEntity
+from models import models as m_models
 from xml.etree import cElementTree
 
 
@@ -272,8 +272,11 @@ class Activity(tags.BaseTag):
 
 class Question(tags.BaseTag):
 
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/question.png'
+
     def get_schema(self, handler):
-        questions = QuestionEntity.get_all_questions()
+        questions = m_models.QuestionDAO.get_all()
         question_list = [(q.id, q.description) for q in questions]
 
         reg = schema_fields.FieldRegistry('Question')
@@ -281,5 +284,23 @@ class Question(tags.BaseTag):
             schema_fields.SchemaField(
               'quid', 'Question', 'string', optional=True,
               select_data=question_list))
+
+        return reg
+
+
+class Quiz(tags.BaseTag):
+
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/quiz.png'
+
+    def get_schema(self, handler):
+        quizzes = m_models.QuizDAO.get_all()
+        quiz_list = [(q.id, q.name) for q in quizzes]
+
+        reg = schema_fields.FieldRegistry('Quiz')
+        reg.add_property(
+            schema_fields.SchemaField(
+              'quid', 'Quiz', 'string', optional=True,
+              select_data=quiz_list))
 
         return reg

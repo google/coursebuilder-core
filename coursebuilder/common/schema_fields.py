@@ -66,7 +66,8 @@ class SchemaField(Property):
         elif self._select_data:
             choices = []
             for value, label in self._select_data:
-                choices.append({'value': value, 'label': label})
+                choices.append(
+                    {'value': unicode(value), 'label': unicode(label)})
             schema['choices'] = choices
 
         if self._description:
