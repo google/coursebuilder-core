@@ -54,6 +54,8 @@ def render_question(
       a Jinja markup string that represents the HTML for the question.
     """
     question_dto = m_models.QuestionDAO.load(quid)
+    if not question_dto:
+        return '[Question deleted]'
 
     template_values = question_dto.dict
     template_values['embedded'] = embedded
@@ -178,6 +180,8 @@ class QuestionGroupTag(tags.BaseTag):
         qgid = node.attrib.get('qgid')
         group_instanceid = node.attrib.get('instanceid')
         question_group_dto = m_models.QuestionGroupDAO.load(qgid)
+        if not question_group_dto:
+            return tags.html_string_to_element_tree('[Deleted question group]')
 
         template_values = question_group_dto.dict
         template_values['embedded'] = False
