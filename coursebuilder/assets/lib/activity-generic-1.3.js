@@ -58,6 +58,12 @@ function gcbActivityAudit(data_dict) {
   }
 }
 
+function gcbLessonAudit(data_dict) {
+  if (gcbCanPostEvents) {
+    gcbAudit(data_dict, 'attempt-lesson', true);
+  }
+}
+
 function gcbAssessmentAudit(data_dict) {
   if (gcbCanPostEvents) {
     gcbAudit(data_dict, 'attempt-assessment', true);

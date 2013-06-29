@@ -56,6 +56,12 @@ UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
 
 
+def get_first_lesson(handler, unit_id):
+    """Returns the first lesson in the unit."""
+    lessons = handler.get_course().get_lessons(unit_id)
+    return lessons[0] if lessons else None
+
+
 def extract_unit_and_lesson(handler):
     """Loads unit and lesson specified in the request."""
 
@@ -74,20 +80,29 @@ def extract_unit_and_lesson(handler):
     # Find lesson requested or a first lesson in the unit.
     l = handler.request.get('lesson')
     lesson = None
-    lessons = handler.get_course().get_lessons(unit.unit_id)
     if not l:
-        if lessons:
-            lesson = lessons[0]
+        lesson = get_first_lesson(handler, unit.unit_id)
     else:
         lesson = handler.get_course().find_lesson_by_id(unit, l)
     return unit, lesson
 
 
-def get_unit_and_lesson_id_from_url(url):
+def get_unit_and_lesson_id_from_url(handler, url):
     """Extracts unit and lesson ids from a URL."""
     url_components = urlparse.urlparse(url)
     query_dict = urlparse.parse_qs(url_components.query)
-    unit_id, lesson_id = query_dict['unit'][0], query_dict['lesson'][0]
+
+    if 'unit' not in query_dict:
+        return None, None
+
+    unit_id = query_dict['unit'][0]
+
+    lesson_id = None
+    if 'lesson' in query_dict:
+        lesson_id = query_dict['lesson'][0]
+    else:
+        lesson_id = get_first_lesson(handler, unit_id).lesson_id
+
     return unit_id, lesson_id
 
 
@@ -236,6 +251,7 @@ class UnitHandler(BaseHandler):
         self.student = student
         self.unit_id = unit_id
         self.lesson_id = lesson_id
+        self.lesson_is_scored = lesson.scored
 
         index = lesson.index - 1  # indexes are 1-based
 
@@ -892,15 +908,24 @@ class EventsRESTHandler(BaseRESTHandler):
         source_url = payload['location']
 
         if source == 'attempt-activity':
-            unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
+            unit_id, lesson_id = get_unit_and_lesson_id_from_url(
+                self, source_url)
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
         elif source == 'tag-assessment':
-            unit_id, lesson_id = get_unit_and_lesson_id_from_url(source_url)
+            unit_id, lesson_id = get_unit_and_lesson_id_from_url(
+                self, source_url)
             cpt_id = payload['instanceid']
             if (unit_id is not None and lesson_id is not None and
                 cpt_id is not None):
                 self.get_course().get_progress_tracker(
                     ).put_component_completed(
                         student, unit_id, lesson_id, cpt_id)
+        elif source == 'attempt-lesson':
+            # Records progress for scored lessons.
+            unit_id, lesson_id = get_unit_and_lesson_id_from_url(
+                self, source_url)
+            if unit_id is not None and lesson_id is not None:
+                self.get_course().get_progress_tracker().put_html_completed(
+                    student, unit_id, lesson_id)

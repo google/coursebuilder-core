@@ -321,16 +321,23 @@ QuestionGroup.prototype.makeReadOnly = function(state) {
 function gradeScoredLesson(questions, messages) {
   var score = 0.0;
   var totalWeight = 0.0;
+  var answers = {'version': '1.5'};
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     score += grade.score * question.getWeight();
     totalWeight += question.getWeight();
+    answers[question.id] = question.getStudentAnswer();
     question.displayFeedback(grade.feedback);
   });
   $('div.qt-grade-report')
       .text(messages.yourScoreIs + score.toFixed(2) +
           '/' + totalWeight.toFixed(0))
       .removeClass('qt-hidden');
+
+  gcbLessonAudit({
+    'answers': answers,
+    'score': score
+  });
 }
 
 function gradeAssessment(questions, unitId, xsrfToken) {
