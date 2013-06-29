@@ -39,6 +39,7 @@ from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from models.models import Student
+from tools import verify
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -247,7 +248,7 @@ class DashboardHandler(
 
         lines = safe_dom.Element('ul', style='list-style: none;')
         for unit in course.get_units():
-            if unit.type == 'A':
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 li = safe_dom.Element('li').add_child(
                     safe_dom.Element(
                         'a', href='assessment?name=%s' % unit.unit_id,
@@ -263,7 +264,7 @@ class DashboardHandler(
                 lines.add_child(li)
                 continue
 
-            if unit.type == 'O':
+            if unit.type == verify.UNIT_TYPE_LINK:
                 li = safe_dom.Element('li').add_child(
                     safe_dom.Element(
                         'a', href=unit.href, className='strong'
@@ -278,7 +279,7 @@ class DashboardHandler(
                 lines.add_child(li)
                 continue
 
-            if unit.type == 'U':
+            if unit.type == verify.UNIT_TYPE_UNIT:
                 li = safe_dom.Element('li').add_child(
                     safe_dom.Element(
                         'a', href='unit?unit=%s' % unit.unit_id,
@@ -331,7 +332,8 @@ class DashboardHandler(
                 'id': 'edit_unit_lesson',
                 'caption': 'Organize',
                 'href': self.get_action_url('edit_unit_lesson')})
-            if courses.Course(self).get_units():
+            all_units = courses.Course(self).get_units()
+            if any([unit.type == verify.UNIT_TYPE_UNIT for unit in all_units]):
                 outline_actions.append({
                     'id': 'add_lesson',
                     'caption': 'Add Lesson',
