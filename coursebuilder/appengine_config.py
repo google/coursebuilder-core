@@ -67,9 +67,9 @@ THIRD_PARTY_LIBS = [
     _Library(
         'google-api-python-client-1.1.zip',
         relative_path='google-api-python-client-1.1'),
-    # I repackaged this zip, which is available only as .tar.gz, because Python
-    # can import directly from zips but not from tarballs. In real life we'd
-    # need to find a better way of packaging this stuff.
+    # .zip repackaged from .tar.gz download.
+    _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
+    # .zip repackaged from .tar.gz download.
     _Library('python-gflags-2.0.zip', relative_path='python-gflags-2.0'),
     _Library('pyparsing-1.5.7.zip'),
 ]
