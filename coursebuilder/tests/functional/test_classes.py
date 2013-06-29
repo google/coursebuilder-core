@@ -1703,6 +1703,19 @@ class StudentAspectTest(actions.TestBase):
         sites.ApplicationContext.get_environ = get_environ_old
 
 
+class StudentUnifiedProfileTest(StudentAspectTest):
+    """Tests student actions having unified profile enabled."""
+
+    def setUp(self):  # pylint: disable-msg=g-bad-name
+        super(StudentUnifiedProfileTest, self).setUp()
+        config.Registry.test_overrides[
+            models.CAN_SHARE_STUDENT_PROFILE] = True
+
+    def tearDown(self):  # pylint: disable-msg=g-bad-name
+        config.Registry.test_overrides = {}
+        super(StudentUnifiedProfileTest, self).tearDown()
+
+
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""
 

@@ -27,6 +27,7 @@ from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
 from models.courses import Course
 from models.models import Student
+from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
 import webapp2
@@ -365,9 +366,16 @@ class RegisterHandler(BaseHandler):
             self.redirect('/course')
             return
 
+        # pre-fill nick name from the profile if available
+        self.template_value['current_name'] = ''
+        profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
+        if profile and profile.nick_name:
+            self.template_value['current_name'] = profile.nick_name
+
         self.template_value['navbar'] = {'registration': True}
         self.template_value['register_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('register-post'))
+
         self.render('register.html')
 
     def post(self):
@@ -386,26 +394,9 @@ class RegisterHandler(BaseHandler):
         if not can_register:
             self.template_value['course_status'] = 'full'
         else:
-            name = self.request.get('form01')
-            additional_fields = transforms.dumps(self.request.POST.items())
-
-            # create new or re-enroll old student
-            student = Student.get_by_email(user.email())
-            if not student:
-                student = Student(key_name=user.email())
-                student.user_id = user.user_id()
-
-            student_by_uid = Student.get_student_by_user_id(user.user_id())
-            is_valid_student = (student_by_uid is None or
-                                student_by_uid.user_id == student.user_id)
-            assert is_valid_student, (
-                'Student\'s email and user id do not match.')
-
-            student.user_id = user.user_id()
-            student.is_enrolled = True
-            student.name = name
-            student.additional_fields = additional_fields
-            student.put()
+            Student.add_new_student_for_current_user(
+                self.request.get('form01'),
+                transforms.dumps(self.request.POST.items()))
 
         # Render registration confirmation page
         self.template_value['navbar'] = {'registration': True}

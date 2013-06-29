@@ -25,6 +25,7 @@ from entities import BaseEntity
 import transforms
 import utils
 from google.appengine.api import memcache
+from google.appengine.api import namespace_manager
 from google.appengine.api import users
 from google.appengine.ext import db
 
@@ -136,8 +137,230 @@ counters.get_counter_global_value = get_counter_global_value
 counters.incr_counter_global_value = incr_counter_global_value
 
 
+# Whether to record tag events in a database.
+CAN_SHARE_STUDENT_PROFILE = ConfigProperty(
+    'gcb_can_share_student_profile', bool, (
+        'Whether or not to share student profile between different courses.'),
+    False)
+
+
+class PersonalProfile(BaseEntity):
+    """Personal information not specific to any course instance."""
+
+    email = db.StringProperty(indexed=False)
+    legal_name = db.StringProperty(indexed=False)
+    nick_name = db.StringProperty(indexed=False)
+    date_of_birth = db.DateProperty(indexed=False)
+    enrollment_info = db.TextProperty()
+
+    @property
+    def user_id(self):
+        return self.key().name()
+
+
+class PersonalProfileDTO(object):
+    """DTO for PersonalProfile."""
+
+    def __init__(self, personal_profile=None):
+        self.enrollment_info = '{}'
+        if personal_profile:
+            self.user_id = personal_profile.user_id
+            self.email = personal_profile.email
+            self.legal_name = personal_profile.legal_name
+            self.nick_name = personal_profile.nick_name
+            self.date_of_birth = personal_profile.date_of_birth
+            self.enrollment_info = personal_profile.enrollment_info
+
+
+class StudentProfileDAO(object):
+    """All access and mutation methods for PersonalProfile and Student."""
+
+    TARGET_NAMESPACE = appengine_config.DEFAULT_NAMESPACE_NAME
+
+    @classmethod
+    def _memcache_key(cls, key):
+        """Makes a memcache key from primary key."""
+        return 'entity:personal-profile:%s' % key
+
+    @classmethod
+    def _get_profile_by_user_id(cls, user_id):
+        """Loads profile given a user_id and returns Entity object."""
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(cls.TARGET_NAMESPACE)
+
+            profile = MemcacheManager.get(
+                cls._memcache_key(user_id), namespace=cls.TARGET_NAMESPACE)
+            if profile == NO_OBJECT:
+                return None
+            if profile:
+                return profile
+            profile = PersonalProfile.get_by_key_name(user_id)
+            MemcacheManager.set(
+                cls._memcache_key(user_id), profile if profile else NO_OBJECT,
+                namespace=cls.TARGET_NAMESPACE)
+            return profile
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+    @classmethod
+    def _add_new_profile(cls, user_id, email):
+        """Adds new profile for a user_id and returns Entity object."""
+        if not CAN_SHARE_STUDENT_PROFILE.value:
+            return None
+
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(cls.TARGET_NAMESPACE)
+
+            profile = PersonalProfile(key_name=user_id)
+            profile.email = email
+            profile.enrollment_info = '{}'
+            profile.put()
+            return profile
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+    @classmethod
+    def _update_attributes(
+        cls, profile, student,
+        email=None, legal_name=None, nick_name=None,
+        date_of_birth=None, is_enrolled=None):
+        """Modifies various attributes of Student and Profile."""
+
+        # we allow profile to be null
+        if not profile:
+            profile = PersonalProfileDTO()
+
+        # TODO(psimakov): update of email does not work for student
+        if email is not None:
+            profile.email = email
+
+        if legal_name is not None:
+            profile.legal_name = legal_name
+
+        if nick_name is not None:
+            profile.nick_name = nick_name
+            student.name = nick_name
+
+        if date_of_birth is not None:
+            profile.date_of_birth = date_of_birth
+
+        if is_enrolled is not None:
+            from controllers import sites  # pylint: disable=C6204
+            course = sites.get_course_for_current_request()
+            enrollment_dict = transforms.loads(profile.enrollment_info)
+            enrollment_dict[course.get_namespace_name()] = is_enrolled
+            profile.enrollment_info = transforms.dumps(enrollment_dict)
+
+            student.is_enrolled = is_enrolled
+
+    @classmethod
+    def _put_profile(cls, profile):
+        """Does a put() on profile objects."""
+        if not profile:
+            return
+        profile.put()
+        MemcacheManager.delete(
+            cls._memcache_key(profile.user_id),
+            namespace=cls.TARGET_NAMESPACE)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _update_in_transaction(
+        cls, user_id,
+        email, legal_name=None, nick_name=None,
+        date_of_birth=None, is_enrolled=None):
+        """Updates various Student and Profile attributes transactionally."""
+
+        # load profile; it can be None
+        profile = cls._get_profile_by_user_id(user_id)
+
+        # load student
+        student = Student.get_by_email(email)
+        if not student:
+            raise Exception('Unable to find student for: %s' % user_id)
+
+        # mutate both
+        cls._update_attributes(
+            profile, student,
+            email=email, legal_name=legal_name, nick_name=nick_name,
+            date_of_birth=date_of_birth, is_enrolled=is_enrolled)
+
+        # update both
+        student.put()
+        cls._put_profile(profile)
+
+    @classmethod
+    def get_profile_by_user_id(cls, user_id):
+        """Loads profile given a user_id and returns DTO object."""
+        profile = cls._get_profile_by_user_id(user_id)
+        if profile:
+            return PersonalProfileDTO(personal_profile=profile)
+        return None
+
+    @classmethod
+    def add_new_profile(cls, user_id, email):
+        return cls._add_new_profile(user_id, email)
+
+    @classmethod
+    def add_new_student_for_current_user(cls, nick_name, additional_fields):
+        user = users.get_current_user()
+
+        student_by_uid = Student.get_student_by_user_id(user.user_id())
+        is_valid_student = (student_by_uid is None or
+                            student_by_uid.user_id == user.user_id())
+        assert is_valid_student, (
+            'Student\'s email and user id do not match.')
+
+        cls._add_new_student_for_current_user(
+            user.user_id(), user.email(), nick_name, additional_fields)
+
+    @classmethod
+    @db.transactional(xg=True)
+    def _add_new_student_for_current_user(
+        cls, user_id, email, nick_name, additional_fields):
+        """Create new or re-enroll old student."""
+
+        # create profile if does not exist
+        profile = cls._get_profile_by_user_id(user_id)
+        if not profile:
+            profile = cls._add_new_profile(user_id, email)
+
+        # create new student or re-enroll existing
+        student = Student.get_by_email(email)
+        if not student:
+            # TODO(psimakov): we must move to user_id as a key
+            student = Student(key_name=email)
+
+        # update profile
+        cls._update_attributes(
+            profile, student,
+            nick_name=nick_name, is_enrolled=True)
+
+        # update student
+        student.user_id = user_id
+        student.additional_fields = additional_fields
+
+        # put both
+        cls._put_profile(profile)
+        student.put()
+
+    @classmethod
+    def update(
+        cls, user_id, email,
+        legal_name=None, nick_name=None, date_of_birth=None, is_enrolled=None):
+        profile = cls.get_profile_by_user_id(user_id)
+        if not profile:
+            profile = cls.add_new_profile(user_id, email)
+        cls._update_in_transaction(
+            user_id, email=email,
+            legal_name=legal_name, nick_name=nick_name,
+            date_of_birth=date_of_birth, is_enrolled=is_enrolled)
+
+
 class Student(BaseEntity):
-    """Student profile."""
+    """Student data specific to a course instance."""
     enrolled_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
     user_id = db.StringProperty(indexed=True)
     name = db.StringProperty(indexed=False)
@@ -150,6 +373,14 @@ class Student(BaseEntity):
     @property
     def is_transient(self):
         return False
+
+    @property
+    def email(self):
+        return self.key().name()
+
+    @property
+    def profile(self):
+        return StudentProfileDAO.get_profile_by_user_id(self.user_id)
 
     @classmethod
     def _memcache_key(cls, key):
@@ -166,6 +397,11 @@ class Student(BaseEntity):
         """Do the normal delete() and also remove the object from memcache."""
         super(Student, self).delete()
         MemcacheManager.delete(self._memcache_key(self.key().name()))
+
+    @classmethod
+    def add_new_student_for_current_user(cls, nick_name, additional_fields):
+        StudentProfileDAO.add_new_student_for_current_user(
+            nick_name, additional_fields)
 
     @classmethod
     def get_by_email(cls, email):
@@ -189,22 +425,8 @@ class Student(BaseEntity):
             return None
 
     @classmethod
-    def rename_current(cls, new_name):
-        """Gives student a new name."""
-        user = users.get_current_user()
-        if not user:
-            raise Exception('No current user.')
-        if new_name:
-            student = Student.get_by_email(user.email())
-            if not student:
-                raise Exception('Student instance corresponding to user %s not '
-                                'found.' % user.email())
-            student.name = new_name
-            student.put()
-
-    @classmethod
-    def set_enrollment_status_for_current(cls, is_enrolled):
-        """Changes student enrollment status."""
+    def _get_user_and_student(cls):
+        """Loads user and student and asserts both are present."""
         user = users.get_current_user()
         if not user:
             raise Exception('No current user.')
@@ -212,8 +434,21 @@ class Student(BaseEntity):
         if not student:
             raise Exception('Student instance corresponding to user %s not '
                             'found.' % user.email())
-        student.is_enrolled = is_enrolled
-        student.put()
+        return user, student
+
+    @classmethod
+    def rename_current(cls, new_name):
+        """Gives student a new name."""
+        _, student = cls._get_user_and_student()
+        StudentProfileDAO.update(
+            student.user_id, student.email, nick_name=new_name)
+
+    @classmethod
+    def set_enrollment_status_for_current(cls, is_enrolled):
+        """Changes student enrollment status."""
+        _, student = cls._get_user_and_student()
+        StudentProfileDAO.update(
+            student.user_id, student.email, is_enrolled=is_enrolled)
 
     def get_key(self):
         if not self.user_id:
