@@ -86,7 +86,9 @@ class QuestionTag(tags.BaseTag):
             template_file = 'templates/sa_question.html'
 
             template_values['js_data'] = transforms.dumps({
-                'graders': template_values['graders']
+                'graders': template_values['graders'],
+                'hint': template_values.get('hint'),
+                'defaultFeedback': template_values.get('defaultFeedback')
             })
 
         template = self.get_template(

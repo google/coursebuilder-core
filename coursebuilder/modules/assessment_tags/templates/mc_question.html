@@ -3,8 +3,14 @@
   <script>
     questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
   </script>
-
-  <div class="qt-mc-question">
+  <script src="{{resources_path}}/grading_lib.js"></script>
+  <script src="{{resources_path}}/grading.js"></script>
+  <noscript>
+    <div class='qt-warning'>
+      {{ gettext(' JavaScript should be enabled to grade this question. ') }}
+    </div>
+  </noscript>
+  <div id="{{quid}}" class="qt-mc-question">
     <div class="qt-question">{{question}}</div>
     <div class="qt-choices">
       {% for choice in choices %}
@@ -18,12 +24,12 @@
     </div>
 
     <div class="qt-check-answer">
-      <button class="gcb-button">
+      <button class="gcb-button qt-check-answer-button">
         {{ gettext(' Check Answer ') }}
       </button>
     </div>
 
-    <div class="qt-feedback" style="display: none">
+    <div class="qt-feedback qt-hidden">
     </div>
   </div>
 </div>

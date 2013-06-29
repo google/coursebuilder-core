@@ -136,6 +136,10 @@ PAGES_DESCRIPTION = assemble_sanitized_message(
 
 QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
 
+INCORRECT_ANSWER_FEEDBACK = """
+Shown when the student response does not match any of the possible answers.
+"""
+
 REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
 Review form questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')

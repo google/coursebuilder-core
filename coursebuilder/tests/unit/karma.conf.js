@@ -6,6 +6,7 @@
 basePath = '../../';
 
 var YUI_BASE = process.env.YUI_BASE;
+var KARMA_LIB = process.env.KARMA_LIB;
 
 // list of files / patterns to load in the browser
 files = [
@@ -49,12 +50,15 @@ files = [
   YUI_BASE + '/event-delegate/event-delegate.js',
   YUI_BASE + '/node-event-delegate/node-event-delegate.js',
   YUI_BASE + '/dom-style/dom-style.js',
+  KARMA_LIB + '/jasmine-jquery-1.5.2.js',
 
   // Load the test files
   'tests/unit/*.js',
+  {pattern: 'tests/unit/*.html', watched: true, included: false, served: true},
 
   // Files to test
   'assets/lib/butterbar.js',
+  'modules/assessment_tags/resources/grading_lib.js',
   'modules/dashboard/mc_question_editor_lib.js',
   'modules/oeditor/oeditor.js',
   'modules/oeditor/popup.js',

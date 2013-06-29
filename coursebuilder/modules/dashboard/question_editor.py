@@ -322,6 +322,13 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             'description', 'Description', 'string', optional=True,
             extra_schema_dict_values={'className': 'sa-description'},
             description=messages.QUESTION_DESCRIPTION))
+        sa_question.add_property(schema_fields.SchemaField(
+            'hint', 'Hint', 'html', optional=True,
+            extra_schema_dict_values={'className': 'sa-hint'}))
+        sa_question.add_property(schema_fields.SchemaField(
+            'defaultFeedback', 'Feedback', 'html', optional=True,
+            extra_schema_dict_values={'className': 'sa-feedback'},
+            description=messages.INCORRECT_ANSWER_FEEDBACK))
 
         grader_type = schema_fields.FieldRegistry(
             'Answer',
