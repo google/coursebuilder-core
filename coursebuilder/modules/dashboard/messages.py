@@ -72,6 +72,12 @@ lesson between units, edit that lesson from the outline page and change its
 parent unit.
 """, None)
 
+COURSE_TEMPLATE_DESCRIPTION = assemble_sanitized_message("""
+The course_template.yaml file contains the common template settings
+for all courses. You can override the template settings for this
+course by editing your course.yaml file.
+""", None)
+
 DATA_FILES_DESCRIPTION = assemble_sanitized_message("""
 The lesson.csv file contains the contents of your lesson. The unit.csv file
 contains the course related content shown on the homepage. These files are

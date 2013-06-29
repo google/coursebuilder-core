@@ -421,7 +421,7 @@ class DashboardHandler(
                 'xsrf_token': self.create_xsrf_token(
                     'edit_basic_course_settings')})
 
-        # Yaml file content.
+        # course.yaml file content.
         yaml_info = []
         yaml_stream = self.app_context.fs.open(
             self.app_context.get_config_filename())
@@ -431,6 +431,18 @@ class DashboardHandler(
                 yaml_info.append(line)
         else:
             yaml_info.append('< empty file >')
+
+        # course_template.yaml file contents
+        course_template_info = []
+        course_template_stream = open(os.path.join(os.path.dirname(
+            __file__), '../../course_template.yaml'), 'r')
+        if course_template_stream:
+            course_template_lines = course_template_stream.read().decode(
+                'utf-8')
+            for line in course_template_lines.split('\n'):
+                course_template_info.append(line)
+        else:
+            course_template_info.append('< empty file >')
 
         # Prepare template values.
         template_values = {}
@@ -446,7 +458,11 @@ class DashboardHandler(
                 'title': 'Contents of course.yaml file',
                 'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
                 'actions': yaml_actions,
-                'children': yaml_info}]
+                'children': yaml_info},
+            {
+                'title': 'Contents of course_template.yaml file',
+                'description': messages.COURSE_TEMPLATE_DESCRIPTION,
+                'children': course_template_info}]
 
         self.render_page(template_values)
 

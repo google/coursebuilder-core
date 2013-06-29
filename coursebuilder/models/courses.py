@@ -71,6 +71,12 @@ def deep_dict_merge(real_values_dict, default_values_dict):
     _deep_merge(result, default_values_dict)
     return result
 
+# The template dict for all courses
+course_template_yaml = open(os.path.join(os.path.dirname(
+    __file__), '../course_template.yaml'), 'r')
+
+COURSE_TEMPLATE_DICT = yaml.safe_load(
+    course_template_yaml.read().decode('utf-8'))
 
 # Here are the defaults for a new course.
 DEFAULT_COURSE_YAML_DICT = {
@@ -80,11 +86,6 @@ DEFAULT_COURSE_YAML_DICT = {
         'main_image': {},
         'browsable': True,
         'now_available': False},
-    'base': {
-        'show_gplus_button': True},
-    'institution': {
-        'logo': {},
-        'url': ''},
     'preview': {},
     'unit': {},
     'reg_form': {
@@ -1546,7 +1547,8 @@ class Course(object):
         if app_context.fs.isfile(course_data_filename):
             course_yaml = app_context.fs.open(course_data_filename)
         if not course_yaml:
-            return DEFAULT_COURSE_YAML_DICT
+            return deep_dict_merge(DEFAULT_COURSE_YAML_DICT,
+                                   COURSE_TEMPLATE_DICT)
         try:
             course_yaml_dict = yaml.safe_load(
                 course_yaml.read().decode('utf-8'))
@@ -1556,9 +1558,11 @@ class Course(object):
                 'loading defaults. %s', course_data_filename, e)
 
         if not course_yaml_dict:
-            return DEFAULT_COURSE_YAML_DICT
-        return deep_dict_merge(
-            course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT)
+            return deep_dict_merge(DEFAULT_COURSE_YAML_DICT,
+                                   COURSE_TEMPLATE_DICT)
+        return deep_dict_merge(deep_dict_merge(
+            course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT),
+                               COURSE_TEMPLATE_DICT)
 
     @property
     def version(self):
