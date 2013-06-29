@@ -101,6 +101,22 @@ function disableSave(Y, value, env) {
   return div;
 }
 
+function disableAllControlButtons(form) {
+  if (form) {
+    for (var i = 0; i < form.buttons.length; i++) {
+      form.buttons[i].disable();
+    }
+  }
+}
+
+function enableAllControlButtons(form) {
+  if (form) {
+    for (var i = 0; i < form.buttons.length; i++) {
+      form.buttons[i].enable();
+    }
+  }
+}
+
 /**
  * If there is a form element marked with class 'split-from-main-group'
  * then this is pulled out of the fieldset and inserted between the fieldset
@@ -325,6 +341,7 @@ TopLevelEditorControls.prototype = {
         className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
         onClick: function() {
         cbShowMsg("Saving...");
+        disableAllControlButtons(cb_global.form);
 
         // record current state
         var lastSavedFormValue = cb_global.form.getValue();
@@ -350,6 +367,8 @@ TopLevelEditorControls.prototype = {
             timeout : ajaxRpcTimeoutMillis,
             on: {
                 complete: function(transactionId, response, args) {
+                  enableAllControlButtons(cb_global.form)
+
                   var json;
                   if (response && response.responseText) {
                     json = parseJson(response.responseText);
@@ -398,14 +417,19 @@ TopLevelEditorControls.prototype = {
   },
 
   getCloseButton: function() {
-    return {type: 'link', value: cb_global.exit_button_caption,
-        className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
-        onClick:function(e) {
-      if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
-              confirm("Abandon all changes?")) {
-            window.location = cb_global.exit_url;
-          }
-      }};
+    return {
+      type: 'link', value: cb_global.exit_button_caption,
+      className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
+      onClick: function(e) {
+        disableAllControlButtons(cb_global.form);
+        if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
+            confirm("Abandon all changes?")) {
+          window.location = cb_global.exit_url;
+        } else {
+          enableAllControlButtons(cb_global.form);
+        }
+      }
+    };
   },
 
   getDeleteButton: function() {
@@ -414,6 +438,7 @@ TopLevelEditorControls.prototype = {
       return {type: 'link', value: cb_global.delete_button_caption,
         className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
         onClick:function(e) {
+            disableAllControlButtons(cb_global.form);
             if (confirm(cb_global.delete_message)) {
               if (cb_global.delete_method == 'delete') {
                 // async delete
@@ -422,6 +447,7 @@ TopLevelEditorControls.prototype = {
                   timeout : ajaxRpcTimeoutMillis,
                   on: {
                     success: function(id, o, args) {
+                      enableAllControlButtons(cb_global.form);
                       var json = parseJson(o.responseText);
                       if (json.status != 200) {
                         cbShowMsg(formatServerErrorMessage(json.status, json.message));
@@ -431,6 +457,7 @@ TopLevelEditorControls.prototype = {
                       }
                     },
                     failure : function (x,o) {
+                      enableAllControlButtons(cb_global.form);
                       cbShowMsg("Server did not respond. Please reload the page to try again.");
                     }
                   }
@@ -443,6 +470,8 @@ TopLevelEditorControls.prototype = {
                 document.body.appendChild(form);
                 form.submit();
               }
+            } else {
+              enableAllControlButtons(cb_global.form);
             }
           }};
     } else {
