@@ -1345,9 +1345,9 @@ class CourseModel13(object):
             # avoid all logical validations of their content. This is done for
             # a purpose - at this layer we don't care what is in those files.
             if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
-                if dst_unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
+                if src_unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
                     dst_unit.weight = (
-                        DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[dst_unit.unit_id])
+                        DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[src_unit.unit_id])
 
                 filepath_mappings = [{
                     'src': src_course.get_assessment_filename(src_unit.unit_id),
@@ -1370,6 +1370,13 @@ class CourseModel13(object):
                             self.app_context.fs.put(dst_filename, astream)
 
                 dst_unit.workflow_yaml = src_unit.workflow_yaml
+
+        def copy_unit13_into_unit13(src_unit, dst_unit):
+            """Copies unit13 attributes to a new unit."""
+            copy_unit12_into_unit13(src_unit, dst_unit)
+
+            if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
+                dst_unit.weight = src_unit.weight
 
         def copy_lesson12_into_lesson13(
             src_unit, src_lesson, unused_dst_unit, dst_lesson):
@@ -1416,7 +1423,12 @@ class CourseModel13(object):
         # Iterate over course structure and assets and import each item.
         for unit in src_course.get_units():
             new_unit = self.add_unit(unit.type, unit.title)
-            copy_unit12_into_unit13(unit, new_unit)
+            # TODO(johncox): Create a full flow for importing a
+            # Course13 into a Course13
+            if src_course.version == self.VERSION:
+                copy_unit13_into_unit13(unit, new_unit)
+            else:
+                copy_unit12_into_unit13(unit, new_unit)
             for lesson in src_course.get_lessons(unit.unit_id):
                 new_lesson = self.add_lesson(new_unit, lesson.title)
                 copy_lesson12_into_lesson13(unit, lesson, new_unit, new_lesson)
