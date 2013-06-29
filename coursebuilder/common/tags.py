@@ -18,6 +18,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 
 import inspect
+import logging
 import mimetypes
 import os
 import pkgutil
@@ -39,6 +40,9 @@ CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
         '<gcb-youtube videoid="...">. If this is enabled some legacy content '
         'may be rendered differently. '),
     default_value=True)
+
+
+INVALID_HTML_TAG_MESSAGE = 'Invalid HTML tag'
 
 
 class BaseTag(object):
@@ -222,15 +226,23 @@ def html_to_safe_dom(html_string, handler):
         if elt.tag in tag_bindings:
             elt = tag_bindings[elt.tag]().render(elt, handler)
 
-        if elt.tag.lower() == 'script':
-            out_elt = safe_dom.ScriptElement()
-        else:
-            out_elt = safe_dom.Element(elt.tag)
-        out_elt.add_attribute(**elt.attrib)
-        if elt.text:
-            out_elt.add_text(elt.text)
-        for child in elt:
-            out_elt.add_children(_process_html_tree(child))
+        try:
+            if elt.tag.lower() == 'script':
+                out_elt = safe_dom.ScriptElement()
+            else:
+                out_elt = safe_dom.Element(elt.tag)
+            out_elt.add_attribute(**elt.attrib)
+
+            if elt.text:
+                out_elt.add_text(elt.text)
+            for child in elt:
+                out_elt.add_children(_process_html_tree(child))
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error('Invalid HTML tag: %s. %s', elt, e)
+            out_elt = safe_dom.Element('span')
+            out_elt.add_attribute(className='gcb-error-tag')
+            out_elt.add_text(INVALID_HTML_TAG_MESSAGE)
+
         node_list.append(out_elt)
         if tail:
             node_list.append(safe_dom.Text(tail))

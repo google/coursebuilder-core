@@ -732,3 +732,11 @@ a.gcb-explorer-course-title {
   padding-right: 20px;
 }
 
+/* Error tag, e.g. for invalid HTML. */
+.gcb-error-tag {
+  background-color: #ccc;
+  border-radius: 3px;
+  color: red;
+  font-weight: bold;
+  padding: 0 5px;
+}
