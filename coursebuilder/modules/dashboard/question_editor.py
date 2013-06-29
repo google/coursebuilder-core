@@ -24,32 +24,32 @@ from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import transforms
-from models.models import QuestionEntity
+from models.models import QuestionDAO
+from models.models import QuestionDTO
 from modules.oeditor import oeditor
 import messages
 from unit_lesson_editor import CourseOutlineRights
 
 
-class QuestionManagerAndEditor(ApplicationHandler):
-    """An editor for editing and managing questions."""
-
-    def prepare_template(self, rest_handler=None, key='', xsrf_token=None):
+class BaseDatastoreAssetEditor(ApplicationHandler):
+    def get_form(self, rest_handler, key=''):
         """Build the Jinja template for adding a question."""
-        exit_url = self.canonicalize_url('/dashboard?action=assets')
         rest_url = self.canonicalize_url(rest_handler.URI)
+        exit_url = self.canonicalize_url('/dashboard?action=assets')
         if key:
             delete_url = '%s?%s' % (
                 self.canonicalize_url(rest_handler.URI),
                 urllib.urlencode({
                     'key': key,
                     'xsrf_token': cgi.escape(
-                        self.create_xsrf_token(xsrf_token))
+                        self.create_xsrf_token(rest_handler.XSRF_TOKEN))
                     }))
         else:
             delete_url = None
 
         schema = rest_handler.get_schema()
-        form_html = oeditor.ObjectEditor.get_html_for(
+
+        return oeditor.ObjectEditor.get_html_for(
             self,
             schema.get_json_schema(),
             schema.get_schema_dict(),
@@ -57,37 +57,37 @@ class QuestionManagerAndEditor(ApplicationHandler):
             delete_url=delete_url, delete_method='delete',
             required_modules=rest_handler.REQUIRED_MODULES)
 
+
+class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
+    """An editor for editing and managing questions."""
+
+    def prepare_template(self, rest_handler, key=''):
+        """Build the Jinja template for adding a question."""
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
-        template_values['main_content'] = form_html
+        template_values['main_content'] = self.get_form(rest_handler, key=key)
 
         return template_values
 
     def get_add_mc_question(self):
-        self.render_page(self.prepare_template(
-            rest_handler=McQuestionRESTHandler,
-            xsrf_token=McQuestionRESTHandler.XSRF_TOKEN))
+        self.render_page(self.prepare_template(McQuestionRESTHandler))
 
     def get_add_sa_question(self):
-        self.render_page(self.prepare_template(
-            rest_handler=SaQuestionRESTHandler,
-            xsrf_token=SaQuestionRESTHandler.XSRF_TOKEN))
+        self.render_page(self.prepare_template(SaQuestionRESTHandler))
 
     def get_edit_question(self):
         key = self.request.get('key')
-        question = QuestionEntity.find_question_by_id(key)
+        question = QuestionDAO.load(key)
 
         if not question:
             raise Exception('No question found')
 
-        if question.type == QuestionEntity.MULTIPLE_CHOICE:
-            self.render_page(self.prepare_template(
-                rest_handler=McQuestionRESTHandler, key=key,
-                xsrf_token='mc-question-edit'))
-        elif question.type == QuestionEntity.SHORT_ANSWER:
-            self.render_page(self.prepare_template(
-                rest_handler=SaQuestionRESTHandler, key=key,
-                xsrf_token='sa-question-edit'))
+        if question.type == QuestionDTO.MULTIPLE_CHOICE:
+            self.render_page(
+                self.prepare_template(McQuestionRESTHandler, key=key))
+        elif question.type == QuestionDTO.SHORT_ANSWER:
+            self.render_page(
+                self.prepare_template(SaQuestionRESTHandler, key=key))
         else:
             raise Exception('Unknown question type: %s' % question.type)
 
@@ -113,12 +113,12 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
         question_dict = transforms.loads(payload)
 
         if key:
-            question = QuestionEntity.find_question_by_id(key)
-            question.set_question_dict(question_dict)
+            question = QuestionDTO(key, question_dict)
         else:
-            question = QuestionEntity.create(self.TYPE, question_dict)
+            question = QuestionDTO(None, question_dict)
+            question.type = self.TYPE
 
-        question.put()
+        QuestionDAO.save(question)
 
         transforms.send_json_response(self, 200, 'Saved.')
 
@@ -135,7 +135,7 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': key})
             return
 
-        question = QuestionEntity.find_question_by_id(key)
+        question = QuestionDAO.load(key)
         if not question:
             transforms.send_json_response(
                 self, 404, 'Question not found.', {'key': key})
@@ -152,7 +152,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list']
 
-    TYPE = QuestionEntity.MULTIPLE_CHOICE
+    TYPE = QuestionDTO.MULTIPLE_CHOICE
     XSRF_TOKEN = 'mc-question-edit'
 
     @classmethod
@@ -204,8 +204,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             return
 
         if key:
-            question = QuestionEntity.find_question_by_id(key)
-            payload_dict = question.get_question_dict()
+            question = QuestionDAO.load(key)
+            payload_dict = question.dict
         else:
             payload_dict = {
                 'question': '',
@@ -218,7 +218,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
         transforms.send_json_response(
             self, 200, 'Success',
             payload_dict=payload_dict,
-            xsrf_token=XsrfTokenManager.create_xsrf_token('mc-question-edit'))
+            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))
 
 
 class SaQuestionRESTHandler(BaseQuestionRESTHandler):
@@ -229,7 +229,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list']
 
-    TYPE = QuestionEntity.SHORT_ANSWER
+    TYPE = QuestionDTO.SHORT_ANSWER
     XSRF_TOKEN = 'sa-question-edit'
 
     @classmethod
@@ -288,8 +288,8 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             return
 
         if key:
-            question = QuestionEntity.find_question_by_id(key)
-            payload_dict = question.get_question_dict()
+            question = QuestionDAO.load(key)
+            payload_dict = question.dict
         else:
             payload_dict = {
                 'question': '',
@@ -304,4 +304,4 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
         transforms.send_json_response(
             self, 200, 'Success',
             payload_dict=payload_dict,
-            xsrf_token=XsrfTokenManager.create_xsrf_token('sa-question-edit'))
+            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN))

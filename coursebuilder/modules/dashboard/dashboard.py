@@ -35,7 +35,8 @@ from models import roles
 from models import transforms
 from models import utils
 from models import vfs
-from models.models import QuestionEntity
+from models.models import QuestionDAO
+from models.models import QuizDAO
 from models.models import Student
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
@@ -49,6 +50,8 @@ from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
 from question_editor import QuestionManagerAndEditor
 from question_editor import SaQuestionRESTHandler
+from quiz_editor import QuizManagerAndEditor
+from quiz_editor import QuizRESTHandler
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
@@ -62,8 +65,8 @@ from google.appengine.api import users
 
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    QuestionManagerAndEditor, AssignmentManager, ApplicationHandler,
-    ReflectiveRequestHandler):
+    QuestionManagerAndEditor, QuizManagerAndEditor, AssignmentManager,
+    ApplicationHandler, ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
@@ -72,7 +75,8 @@ class DashboardHandler(
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'import_course', 'edit_assignment',
-        'add_mc_question', 'add_sa_question', 'edit_question']
+        'add_mc_question', 'add_sa_question', 'edit_question', 'add_quiz',
+        'edit_quiz']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -96,7 +100,8 @@ class DashboardHandler(
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
-            (SaQuestionRESTHandler.URI, SaQuestionRESTHandler)
+            (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
+            (QuizRESTHandler.URI, QuizRESTHandler)
         ]
 
     def can_view(self):
@@ -531,7 +536,7 @@ class DashboardHandler(
             safe_dom.Element('h3').add_text('Question Bank')
         )
 
-        all_questions = QuestionEntity.get_all_questions()
+        all_questions = QuestionDAO.get_all()
         if all_questions:
             ol = safe_dom.Element('ol')
             for question in all_questions:
@@ -539,6 +544,42 @@ class DashboardHandler(
                 li = safe_dom.Element('li')
                 li.add_text(
                     question.description
+                ).add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_child(
+                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
+                ol.add_child(li)
+            output.append(ol)
+        else:
+            output.append(safe_dom.Element('blockquote').add_text('< none >'))
+
+        return output
+
+    def list_quizzes(self):
+        """Prepare a list of quizzes."""
+        if not filer.is_editable_fs(self.app_context):
+            return safe_dom.NodeList()
+
+        output = safe_dom.NodeList().append(
+            safe_dom.Element(
+                'a', className='gcb-button gcb-pull-right',
+                href='dashboard?action=add_quiz'
+            ).add_text('Add Quiz')
+        ).append(
+            safe_dom.Element('div', style='clear: both; padding-top: 2px;')
+        ).append(
+            safe_dom.Element('h3').add_text('Quizzes')
+        )
+
+        # TODO(jorr): Hook this into the datastore
+        all_quizzes = QuizDAO.get_all()
+        if all_quizzes:
+            ol = safe_dom.Element('ol')
+            for quiz in all_quizzes:
+                edit_url = 'dashboard?action=edit_quiz&key=%s' % quiz.id
+                li = safe_dom.Element('li')
+                li.add_text(
+                    quiz.name
                 ).add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_child(
@@ -558,6 +599,8 @@ class DashboardHandler(
 
         items = safe_dom.NodeList().append(
             self.list_questions()
+        ).append(
+            self.list_quizzes()
         ).append(
             self.list_and_format_file_list(
                 'Assessments', '/assets/js/', links=True,

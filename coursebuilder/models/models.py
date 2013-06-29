@@ -23,7 +23,6 @@ import counters
 from counters import PerfCounter
 from entities import BaseEntity
 import transforms
-import utils
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
@@ -562,72 +561,113 @@ class StudentPropertyEntity(BaseEntity):
         return value
 
 
+class BaseJsonDao(object):
+    """Base DAO class for entities storing their data in a single JSON blob."""
+
+    @classmethod
+    def _memcache_key(cls, obj_id):
+        """Makes a memcache key from datastore id."""
+        return '(entity:%s:%s)' % (obj_id.__class__.__name__, obj_id)
+
+    @classmethod
+    def get_all(cls):
+        entities = cls.ENTITY.all().fetch(1000)
+        return [
+            cls.DTO(e.key().id(), transforms.loads(e.data)) for e in entities]
+
+    @classmethod
+    def _load_entity(cls, obj_id):
+        if not obj_id:
+            return None
+        memcache_key = cls._memcache_key(obj_id)
+        entity = MemcacheManager.get(memcache_key)
+        if NO_OBJECT == entity:
+            return None
+        if not entity:
+            entity = cls.ENTITY.get_by_id(int(obj_id))
+            if entity:
+                MemcacheManager.set(memcache_key, entity)
+            else:
+                MemcacheManager.set(memcache_key, NO_OBJECT)
+        return entity
+
+    @classmethod
+    def load(cls, obj_id):
+        entity = cls._load_entity(obj_id)
+        if entity:
+            return cls.DTO(obj_id, transforms.loads(entity.data))
+        else:
+            return None
+
+    @classmethod
+    def save(cls, dto):
+        entity = cls._load_entity(dto.id)
+        if not entity:
+            entity = cls.ENTITY()
+        entity.data = transforms.dumps(dto.dict)
+        entity.put()
+        MemcacheManager.set(cls._memcache_key(entity.key().id()), entity)
+        return entity
+
+    @classmethod
+    def delete(cls, quiz_dto):
+        entity = cls._load_entity(quiz_dto.id)
+        entity.delete()
+        MemcacheManager.delete(cls._memcache_key(entity.key().id()))
+
+
 class QuestionEntity(BaseEntity):
     """An object representing a top-level question."""
+    data = db.TextProperty(indexed=False)
 
+
+class QuestionDTO(object):
+    """DTO for question entities."""
     MULTIPLE_CHOICE = 0
     SHORT_ANSWER = 1
 
-    type = db.IntegerProperty(
-        indexed=False, choices=[MULTIPLE_CHOICE, SHORT_ANSWER])
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
 
-    # A string representation of a JSON dict.
-    data = db.TextProperty(indexed=False)
+    @property
+    def type(self):
+        return self.dict.get('type')
 
-    @classmethod
-    def _memcache_key(cls, question_id):
-        """Makes a memcache key from datastore id."""
-        return '(entity:question:%s)' % question_id
-
-    def get_question_dict(self):
-        return transforms.loads(self.data)
-
-    def set_question_dict(self, question_dict):
-        self.data = transforms.dumps(question_dict)
+    @type.setter
+    def type(self, value):
+        self.dict['type'] = value
 
     @property
     def description(self):
-        return self.get_question_dict().get('description')
+        return self.dict.get('description')
+
+
+class QuestionDAO(BaseJsonDao):
+    DTO = QuestionDTO
+    ENTITY = QuestionEntity
+
+
+class QuizEntity(BaseEntity):
+    """An object representing a quiz in the datastore."""
+    data = db.TextProperty(indexed=False)
+
+
+class QuizDTO(object):
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
 
     @property
-    def id(self):
-        return self.key().id()
+    def name(self):
+        return self.dict['name']
 
-    @classmethod
-    def create(cls, question_type, question_dict):
-        return QuestionEntity(
-            type=question_type, data=transforms.dumps(question_dict))
+    @property
+    def introduction(self):
+        return self.dict['introduction']
 
-    @classmethod
-    def get_all_questions(cls):
-        questions = []
-        # pylint: disable=unnecessary-lambda
-        utils.QueryMapper(cls.all(), batch_size=100).run(
-            lambda item: questions.append(item))
-        # pylint: enable=unnecessary-lambda
-        return questions
 
-    def put(self):
-        """Do the normal put() and also add the object to memcache."""
-        result = super(QuestionEntity, self).put()
-        MemcacheManager.set(self._memcache_key(self.key().id()), self)
-        return result
+class QuizDAO(BaseJsonDao):
+    DTO = QuizDTO
+    ENTITY = QuizEntity
 
-    def delete(self):
-        """Do the normal delete() and also remove the object from memcache."""
-        super(QuestionEntity, self).delete()
-        MemcacheManager.delete(self._memcache_key(self.key().id()))
-
-    @classmethod
-    def find_question_by_id(cls, question_id):
-        """Load the question from memcache or datastore."""
-        question = MemcacheManager.get(cls._memcache_key(question_id))
-        if NO_OBJECT == question:
-            return None
-        if not question:
-            question = QuestionEntity.get_by_id(int(question_id))
-            if question:
-                MemcacheManager.set(cls._memcache_key(question_id), question)
-            else:
-                MemcacheManager.set(cls._memcache_key(question_id), NO_OBJECT)
-        return question
