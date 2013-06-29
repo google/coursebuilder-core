@@ -66,6 +66,18 @@ CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
     False)
 
 
+# Whether to record tag events in a database.
+CAN_PERSIST_TAG_EVENTS = ConfigProperty(
+    'gcb_can_persist_tag_events', bool, (
+        'Whether or not to record student tag interactions in a '
+        'datastore. Without event recording, you cannot analyze student '
+        'tag interactions. On the other hand, no event recording reduces '
+        'the number of datastore operations and minimizes the use of Google '
+        'App Engine quota. Turn event recording on if you want to analyze '
+        'this data.'),
+    False)
+
+
 # Date format string for displaying datetimes in UTC.
 # Example: 2013-03-21 13:00 UTC
 HUMAN_READABLE_DATETIME_FORMAT = '%Y-%m-%d, %H:%M UTC'
