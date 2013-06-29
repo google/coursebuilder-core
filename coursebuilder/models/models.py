@@ -618,7 +618,8 @@ class BaseJsonDao(object):
     @classmethod
     def _memcache_key(cls, obj_id):
         """Makes a memcache key from datastore id."""
-        return '(entity:%s:%s)' % (obj_id.__class__.__name__, obj_id)
+        # Keeping case-sensitivity in kind() because Foo(object) != foo(object).
+        return '(entity:%s:%s)' % (cls.ENTITY.kind(), obj_id)
 
     @classmethod
     def get_all(cls):
