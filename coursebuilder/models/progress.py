@@ -389,6 +389,9 @@ class UnitLessonCompletionTracker(object):
 
     def get_lesson_progress(self, student, unit_id):
         """Returns a dict saying which lessons in this unit are completed."""
+        if student.is_transient:
+            return {}
+
         lessons = self._get_course().get_lessons(unit_id)
         progress = self.get_or_create_progress(student)
 
