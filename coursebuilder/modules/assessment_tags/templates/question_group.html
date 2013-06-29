@@ -1,7 +1,7 @@
 <div class="gcb-border-box">
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
-    questionData['{{qgid}}'] = JSON.parse("{{js_data | js_string}}");
+    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
   </script>
   <script src="{{resources_path}}/grading_lib.js"></script>
   <script src="{{resources_path}}/grading.js"></script>
@@ -10,7 +10,7 @@
       {{ gettext(' JavaScript should be enabled to grade this question. ') }}
     </div>
   </noscript>
-  <div id="{{qgid}}" class="qt-question-group">
+  <div id="{{instanceid}}" class="qt-question-group">
     <div class="qt-introduction">
       {{ introduction }}
     </div>

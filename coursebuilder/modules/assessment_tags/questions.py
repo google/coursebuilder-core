@@ -33,17 +33,18 @@ from models import transforms
 RESOURCES_PATH = '/modules/assessment_tags/resources'
 
 
-def render_question(quid, locale, embedded=False, id_prefix=''):
+def render_question(quid, instanceid, locale, embedded=False):
     """Generates the HTML for a question.
 
     Args:
       quid: String. The question id.
+      instanceid: String. The unique reference id for the question instance
+         (different instances of the same question in a page will have
+         different instanceids).
       locale: String. The locale for the Jinja environment that is used to
           generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
-      id_prefix: String. Prefix to add to the question id; it carries
-          information about the question's container
 
     Returns:
       a Jinja markup string that represents the HTML for the question.
@@ -52,7 +53,7 @@ def render_question(quid, locale, embedded=False, id_prefix=''):
 
     template_values = question_dto.dict
     template_values['embedded'] = embedded
-    template_values['quid'] = '%s%s' % (id_prefix, quid)
+    template_values['instanceid'] = instanceid
     template_values['resources_path'] = RESOURCES_PATH
 
     template_file = None
@@ -99,7 +100,8 @@ class QuestionTag(tags.BaseTag):
             handler.template_value[utils.COURSE_INFO_KEY]['course']['locale'])
 
         quid = node.attrib.get('quid')
-        div = cElementTree.XML(render_question(quid, locale))
+        instanceid = node.attrib.get('instanceid')
+        div = cElementTree.XML(render_question(quid, instanceid, locale))
         return div
 
     def get_schema(self, unused_handler):
@@ -146,20 +148,22 @@ class QuestionGroupTag(tags.BaseTag):
             handler.template_value[utils.COURSE_INFO_KEY]['course']['locale'])
 
         qgid = node.attrib.get('qgid')
+        group_instanceid = node.attrib.get('instanceid')
         question_group_dto = m_models.QuestionGroupDAO.load(qgid)
 
         template_values = question_group_dto.dict
-        template_values['qgid'] = qgid
+        template_values['instanceid'] = group_instanceid
         template_values['resources_path'] = RESOURCES_PATH
 
         template_values['question_html_array'] = []
         js_data = {}
         for ind, item in enumerate(question_group_dto.dict['items']):
-            id_prefix = '%s-%s-' % (qgid, ind)
+            quid = item['question']
+            question_instanceid = '%s.%s.%s' % (group_instanceid, ind, quid)
             template_values['question_html_array'].append(render_question(
-                item['question'], locale, embedded=True, id_prefix=id_prefix
+                quid, question_instanceid, locale, embedded=True
             ))
-            js_data['%s%s' % (id_prefix, item['question'])] = item
+            js_data[question_instanceid] = item
         template_values['js_data'] = transforms.dumps(js_data)
 
         template_file = 'templates/question_group.html'

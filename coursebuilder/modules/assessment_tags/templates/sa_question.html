@@ -1,7 +1,7 @@
 <div {% if not embedded %}class="gcb-border-box"{% endif %}>
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
-    questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
+    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
   </script>
   <script src="{{resources_path}}/grading_lib.js"></script>
   <script src="{{resources_path}}/grading.js"></script>
@@ -10,7 +10,7 @@
       {{ gettext(' JavaScript should be enabled to grade this question. ') }}
     </div>
   </noscript>
-  <div id="{{quid}}"
+  <div id="{{instanceid}}"
       class="qt-sa-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
     <div class="qt-question">{{question}}</div>
 
@@ -18,16 +18,19 @@
       <input type="text"/>
     </div>
 
+    {% if hint %}
+      <div class="qt-hint">
+        <button class="gcb-button qt-hint-button">
+          {{ gettext(' Hint ') }}
+        </button>
+      </div>
+    {% endif %}
+
     {% if not embedded %}
       <div class="qt-check-answer">
         <button class="gcb-button qt-check-answer-button">
           {{ gettext(' Check Answer ') }}
         </button>
-        {% if hint %}
-          <button class="gcb-button qt-skip-and-show-answer-button">
-            {{ gettext(' Skip and Show Answer ') }}
-          </button>
-        {% endif %}
       </div>
     {% endif %}
 

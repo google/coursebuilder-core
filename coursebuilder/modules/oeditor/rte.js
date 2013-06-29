@@ -250,6 +250,30 @@ CustomTagManager.prototype = {
     };
   },
 
+  /**
+   * Returns an instanceid that is unique within the context of the RTE.
+   */
+  _getNewInstanceId: function(value) {
+    var ALPHANUM_CHARS = (
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789');
+    var REFID_LENGTH = 12;
+
+    var documentContent = this._win.document.documentElement.innerHTML;
+    var foundUniqueInstanceId = false;
+
+    while (true) {
+      var newInstanceId = '';
+      for (var i = 0; i < REFID_LENGTH; i++) {
+        newInstanceId += ALPHANUM_CHARS.charAt(
+            Math.floor(Math.random() * ALPHANUM_CHARS.length));
+      }
+
+      if(documentContent.indexOf(newInstanceId) == -1) {
+        return newInstanceId;
+      }
+    }
+  },
+
   addCustomTag: function() {
     var that = this;
     this._insertInsertionPointTag();
@@ -272,10 +296,12 @@ CustomTagManager.prototype = {
         el.setAttribute(name, value.attributes[name]);
       }
     }
+    el.setAttribute('instanceid', this._getNewInstanceId());
+
     var insertionPoint = this._win.document.querySelector('.gcbInsertionPoint');
     insertionPoint.parentNode.replaceChild(el, insertionPoint);
 
-    this._refreshMarkerTags()
+    this._refreshMarkerTags();
   },
 
   /**
@@ -290,11 +316,13 @@ CustomTagManager.prototype = {
       this._serviceUrlProvider.getEditUrl(node.tagName.toLowerCase()),
       value,
       function(newValue) { // on submit
+        var instanceid = node.getAttribute('instanceid');
         for (var name in newValue) {
           if (newValue.hasOwnProperty(name)) {
             node.setAttribute(name, newValue[name]);
           }
         }
+        node.setAttribute('instanceid', instanceid);
       },
       function () { /* on cancel */ }
     );

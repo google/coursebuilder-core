@@ -85,14 +85,13 @@ SaQuestion.prototype.bind = function() {
       .click(function () {
         that.onCheckAnswer();
       });
-  this.el
-      .find('div.qt-check-answer > button.qt-skip-and-show-answer-button')
+  this.el.find('div.qt-hint > button.qt-hint-button')
       .click(function () {
-        that.onSkipAndShowAnswer();
+        that.onShowHint();
       });
   return this;
 };
-SaQuestion.prototype.onSkipAndShowAnswer = function() {
+SaQuestion.prototype.onShowHint = function() {
   this.el.find('div.qt-feedback')
       .empty()
       .append($('<div/>').text(this.data.hint))

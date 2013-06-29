@@ -1,7 +1,7 @@
 <div {% if not embedded %}class="gcb-border-box"{% endif %}>
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
-    questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
+    questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
   </script>
   <script src="{{resources_path}}/grading_lib.js"></script>
   <script src="{{resources_path}}/grading.js"></script>
@@ -10,14 +10,14 @@
       {{ gettext(' JavaScript should be enabled to grade this question. ') }}
     </div>
   </noscript>
-  <div id="{{quid}}"
+  <div id="{{instanceid}}"
       class="qt-mc-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
     <div class="qt-question">{{question}}</div>
     <div class="qt-choices">
       {% for choice in choices %}
         <div>
-          <input type="{{button_type}}" name="{{quid}}" id="{{quid}}-{{loop.index0}}"/>
-          <label for="{{quid}}-{{loop.index0}}">
+          <input type="{{button_type}}" name="{{instanceid}}" id="{{instanceid}}.{{loop.index0}}"/>
+          <label for="{{instanceid}}.{{loop.index0}}">
             {{ choice['text'] }}
           </label>
         </div>

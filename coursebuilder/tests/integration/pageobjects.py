@@ -343,6 +343,7 @@ class AddLesson(DashboardEditor):
 
     def __init__(self, tester):
         super(AddLesson, self).__init__(tester)
+        self.instanceid_list_snapshot = []
         self.expect_status_message_to_be(
             'New lesson has been created and saved.')
 
@@ -424,9 +425,36 @@ class AddLesson(DashboardEditor):
         self._tester.driver.switch_to_default_content()
         return self
 
-    def ensure_objectives_textarea_matches(self, text):
-        self._tester.assertEqual(text, self.find_element_by_id(
-            AddLesson.RTE_TEXTAREA_ID).get_attribute('value'))
+    def _get_rte_contents(self):
+        return self.find_element_by_id(
+            AddLesson.RTE_TEXTAREA_ID).get_attribute('value')
+
+    def _get_instanceid_list(self):
+        """Returns a list of the instanceid attrs in the lesson body."""
+        html = self._get_rte_contents()
+        html_list = html.split(' instanceid="')
+        instanceid_list = []
+        for item in html_list[1:]:
+            closing_quote_ind = item.find('"')
+            instanceid_list.append(item[:closing_quote_ind])
+        return instanceid_list
+
+    def ensure_instanceid_count_equals(self, value):
+        self._tester.assertEqual(value, len(self._get_instanceid_list()))
+        return self
+
+    def take_snapshot_of_instanceid_list(self):
+        self.instanceid_list_snapshot = self._get_instanceid_list()
+        return self
+
+    def ensure_instanceid_list_matches_last_snapshot(self):
+        self._tester.assertEqual(
+            self.instanceid_list_snapshot, self._get_instanceid_list())
+        return self
+
+    def ensure_lesson_body_textarea_matches_regex(self, regex):
+        rte_contents = self._get_rte_contents()
+        self._tester.assertRegexpMatches(rte_contents, regex)
         return self
 
 

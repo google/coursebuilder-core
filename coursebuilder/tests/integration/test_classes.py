@@ -215,6 +215,8 @@ class AdminTests(BaseIntegrationTest):
 
     def test_add_and_edit_custom_tags(self):
         name = self.create_new_course()[0]
+        instanceid_regex = 'instanceid="[A-Za-z0-9]{12}"'
+
         self.load_dashboard(
             name
         ).click_add_unit(
@@ -232,6 +234,11 @@ class AdminTests(BaseIntegrationTest):
         ).set_rte_lightbox_field(
             'input[name=videoid]', '123'
         ).click_rte_save(
+        ).click_plain_text(
+        ).ensure_instanceid_count_equals(
+            1
+        ).take_snapshot_of_instanceid_list(
+        ).click_rich_text(
         ).doubleclick_rte_element(
             'img.gcbMarker'
         ).ensure_rte_lightbox_field_has_value(
@@ -240,8 +247,10 @@ class AdminTests(BaseIntegrationTest):
             'input[name=videoid]', '321'
         ).click_rte_save(
         ).click_plain_text(
-        ).ensure_objectives_textarea_matches(
-            'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
+        ).ensure_lesson_body_textarea_matches_regex(
+            'YouTube:<gcb-youtube videoid="321" %s>'
+            '</gcb-youtube>' % instanceid_regex
+        ).ensure_instanceid_list_matches_last_snapshot(
         ).click_rich_text(
         ).send_rte_text(
             'Google Group:'
@@ -254,9 +263,10 @@ class AdminTests(BaseIntegrationTest):
             'input[name=category]', 'def'
         ).click_rte_save(
         ).click_plain_text(
-        ).ensure_objectives_textarea_matches(
+        ).ensure_lesson_body_textarea_matches_regex(
             'Google Group:'
-            '<gcb-googlegroup group="abc" category="def"></gcb-googlegroup>'
-            'YouTube:<gcb-youtube videoid="321"></gcb-youtube>'
+            '<gcb-googlegroup group="abc" category="def" %s></gcb-googlegroup>'
+            'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>' % (
+                instanceid_regex, instanceid_regex
+            )
         )
-
