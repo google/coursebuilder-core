@@ -21,6 +21,8 @@ import base64
 import cgi
 import os
 import urllib
+import appengine_config
+from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -34,13 +36,28 @@ import messages
 from google.appengine.api import users
 
 
-ALLOWED_ASSET_UPLOAD_BASE = 'assets/img'
+# Set of string. The relative, normalized path bases we allow uploading into.
+ALLOWED_ASSET_UPLOAD_BASES = set([
+    'assets/css',
+    'assets/img',
+    'assets/lib',
+    'views'
+])
 
 MAX_ASSET_UPLOAD_SIZE_K = 500
 
 
 def is_editable_fs(app_context):
     return app_context.fs.impl.__class__ == vfs.DatastoreBackedFileSystem
+
+
+def is_readonly_asset(asset):
+    return not getattr(asset, 'metadata', None)
+
+
+def strip_leading_and_trailing_slashes(path_base):
+    """Given a path base string of the form '/foo/bar/', return 'foo/bar'."""
+    return path_base.lstrip('/').rstrip('/')
 
 
 class FilesRights(object):
@@ -65,6 +82,25 @@ class FilesRights(object):
 
 class FileManagerAndEditor(ApplicationHandler):
     """An editor for editing and managing files."""
+
+    local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
+
+    def _get_delete_url(self, base_url, key, xsrf_token_name):
+        return '%s?%s' % (
+            self.canonicalize_url(base_url),
+            urllib.urlencode({
+                'key': key,
+                'xsrf_token': cgi.escape(
+                    self.create_xsrf_token(xsrf_token_name)),
+            }))
+
+    def _get_normalized_base(self):
+        """Gets base arg from URL and normalizes it for membership checks."""
+        base = self.request.get('base')
+        assert base
+        base = strip_leading_and_trailing_slashes(base)
+        assert base in ALLOWED_ASSET_UPLOAD_BASES
+        return base
 
     def post_create_or_edit_settings(self):
         """Handles creation or/and editing of course.yaml."""
@@ -102,6 +138,7 @@ class FileManagerAndEditor(ApplicationHandler):
     def get_add_asset(self):
         """Show an upload dialog for assets."""
 
+        key = self._get_normalized_base()
         exit_url = self.canonicalize_url('/dashboard?action=assets')
         rest_url = self.canonicalize_url(
             AssetItemRESTHandler.URI)
@@ -109,7 +146,7 @@ class FileManagerAndEditor(ApplicationHandler):
             self,
             AssetItemRESTHandler.SCHEMA_JSON,
             AssetItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            '', rest_url, exit_url, save_method='upload', auto_return=True,
+            key, rest_url, exit_url, save_method='upload', auto_return=True,
             required_modules=AssetItemRESTHandler.REQUIRED_MODULES,
             save_button_caption='Upload')
 
@@ -127,12 +164,8 @@ class FileManagerAndEditor(ApplicationHandler):
         exit_url = self.canonicalize_url('/dashboard?action=assets')
         rest_url = self.canonicalize_url(
             AssetUriRESTHandler.URI)
-        delete_url = '%s?%s' % (
-            self.canonicalize_url(FilesItemRESTHandler.URI),
-            urllib.urlencode({
-                'key': uri,
-                'xsrf_token': cgi.escape(self.create_xsrf_token('delete-asset'))
-                }))
+        delete_url = self._get_delete_url(
+            FilesItemRESTHandler.URI, uri, 'delete-asset')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             AssetUriRESTHandler.SCHEMA_JSON,
@@ -144,6 +177,141 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values['page_title'] = self.format_title('View Asset')
         template_values['main_content'] = form_html
         self.render_page(template_values)
+
+    def get_manage_text_asset(self):
+        """Show an edit/save/delete/revert form for a text asset."""
+        assert is_editable_fs(self.app_context)
+        uri = self.request.get('uri')
+        assert uri
+
+        asset = self.app_context.fs.impl.get(
+            os.path.join(appengine_config.BUNDLE_ROOT, uri))
+        assert asset
+        asset_in_datastore_fs = not is_readonly_asset(asset)
+
+        try:
+            asset_in_local_fs = bool(self.local_fs.get(uri))
+        except IOError:
+            asset_in_local_fs = False
+
+        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        rest_url = self.canonicalize_url(TextAssetRESTHandler.URI)
+
+        delete_button_caption = 'Delete'
+        delete_message = None
+        delete_url = None
+
+        if asset_in_datastore_fs:
+            delete_message = 'Are you sure you want to delete %s?' % uri
+            delete_url = self._get_delete_url(
+                TextAssetRESTHandler.URI, uri,
+                TextAssetRESTHandler.XSRF_TOKEN_NAME)
+
+        if asset_in_local_fs:
+            delete_message = (
+                'Are you sure you want to restore %s to the original version? '
+                'All your customizations will be lost.' % uri)
+            delete_button_caption = 'Restore original'
+
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self,
+            TextAssetRESTHandler.SCHEMA.get_json_schema(),
+            TextAssetRESTHandler.SCHEMA.get_schema_dict(),
+            uri,
+            rest_url,
+            exit_url,
+            delete_button_caption=delete_button_caption,
+            delete_method='delete',
+            delete_message=delete_message,
+            delete_url=delete_url,
+            required_modules=TextAssetRESTHandler.REQUIRED_MODULES,
+        )
+        self.render_page({
+            'page_title': self.format_title('Edit ' + uri),
+            'main_content': form_html,
+        })
+
+
+class TextAssetRESTHandler(BaseRESTHandler):
+    """REST endpoints for text assets."""
+
+    REQUIRED_MODULES = [
+        'inputex-hidden',
+        'inputex-textarea',
+    ]
+    SCHEMA = schema_fields.FieldRegistry('Edit asset', description='Text Asset')
+    SCHEMA.add_property(schema_fields.SchemaField(
+        'contents', 'Contents', 'text',
+    ))
+    SCHEMA.add_property(schema_fields.SchemaField(
+        'readonly', 'ReadOnly', 'boolean', hidden=True,
+    ))
+    URI = '/rest/assets/text'
+    XSRF_TOKEN_NAME = 'manage-text-asset'
+
+    def _check_asset_in_allowed_bases(self, filename):
+        assert os.path.dirname(filename) in ALLOWED_ASSET_UPLOAD_BASES
+
+    def delete(self):
+        """Handles the delete verb."""
+        assert is_editable_fs(self.app_context)
+        filename = self.request.get('key')
+
+        if not (filename and self.assert_xsrf_token_or_fail(
+                self.request, self.XSRF_TOKEN_NAME, {'key': filename})):
+            return
+
+        if not FilesRights.can_delete(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': filename})
+            return
+
+        self._check_asset_in_allowed_bases(filename)
+
+        self.app_context.fs.impl.delete(
+            os.path.join(appengine_config.BUNDLE_ROOT, filename))
+        transforms.send_json_response(self, 200, 'Done.')
+
+    def get(self):
+        """Handles the get verb."""
+        assert FilesRights.can_edit(self)
+        filename = self.request.get('key')
+        assert filename
+        asset = self.app_context.fs.impl.get(
+            os.path.join(appengine_config.BUNDLE_ROOT, filename))
+        assert asset
+
+        json_payload = {
+            'contents': asset.read(), 'readonly': is_readonly_asset(asset),
+        }
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict=json_payload,
+            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN_NAME))
+
+    def put(self):
+        """Handles the put verb."""
+        assert is_editable_fs(self.app_context)
+        request = self.request.get('request')
+        assert request
+        request = transforms.loads(request)
+        payload = transforms.loads(request.get('payload'))
+        filename = request.get('key')
+
+        if not (filename and self.assert_xsrf_token_or_fail(
+                request, self.XSRF_TOKEN_NAME, {'key': filename})):
+            return
+
+        if not FilesRights.can_edit(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': filename})
+            return
+
+        self._check_asset_in_allowed_bases(filename)
+
+        self.app_context.fs.impl.put(
+            os.path.join(appengine_config.BUNDLE_ROOT, filename),
+            vfs.string_to_stream(unicode(payload.get('contents'))))
+        transforms.send_json_response(self, 200, 'Saved.')
 
 
 class FilesItemRESTHandler(BaseRESTHandler):
@@ -340,7 +508,9 @@ class AssetItemRESTHandler(BaseRESTHandler):
     def get(self):
         """Provides empty initial content for asset upload editor."""
         # TODO(jorr): Pass base URI through as request param when generalized.
-        json_payload = {'file': '', 'base': ALLOWED_ASSET_UPLOAD_BASE}
+        base = self.request.get('key')
+        assert base in ALLOWED_ASSET_UPLOAD_BASES
+        json_payload = {'file': '', 'base': base}
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict=json_payload,
             xsrf_token=XsrfTokenManager.create_xsrf_token('asset-upload'))
@@ -360,7 +530,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
         payload = transforms.loads(request['payload'])
         base = payload['base']
-        assert base == ALLOWED_ASSET_UPLOAD_BASE
+        assert base in ALLOWED_ASSET_UPLOAD_BASES
 
         upload = self.request.POST['file']
         filename = os.path.split(upload.filename)[1]

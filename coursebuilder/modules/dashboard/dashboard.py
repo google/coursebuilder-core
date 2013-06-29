@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import os
 import urllib
+import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from controllers import sites
@@ -45,6 +46,7 @@ from filer import AssetItemRESTHandler
 from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
+from filer import TextAssetRESTHandler
 import messages
 from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
@@ -75,15 +77,17 @@ class DashboardHandler(
         default_action, 'assets', 'settings', 'analytics',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
-        'add_asset', 'delete_asset', 'import_course', 'edit_assignment',
-        'add_mc_question', 'add_sa_question', 'edit_question',
-        'add_question_group', 'edit_question_group']
+        'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
+        'edit_assignment', 'add_mc_question', 'add_sa_question',
+        'edit_question', 'add_question_group', 'edit_question_group']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson',
         'edit_basic_course_settings', 'add_reviewer', 'delete_reviewer']
+
+    local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
 
     @classmethod
     def get_child_routes(cls):
@@ -103,6 +107,7 @@ class DashboardHandler(
             (UnitRESTHandler.URI, UnitRESTHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
+            (TextAssetRESTHandler.URI, TextAssetRESTHandler),
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler)
         ]
 
@@ -463,40 +468,60 @@ class DashboardHandler(
 
         self.render_page(template_values)
 
-    def list_files(self, subfolder):
-        """Makes a list of files in a subfolder."""
+    def list_files(self, subfolder, merge_local_files=False):
+        """Makes a list of files in a subfolder.
+
+        Args:
+            subfolder: string. Relative path of the subfolder to list.
+            merge_local_files: boolean. If True, the returned list will
+                contain files found on either the datastore filesystem or the
+                read-only local filesystem. If a file is found on both, its
+                datastore filesystem version will trump its local filesystem
+                version.
+
+        Returns:
+            List of relative, normalized file path strings.
+        """
         home = sites.abspath(self.app_context.get_home_folder(), '/')
-        files = self.app_context.fs.list(
-            sites.abspath(self.app_context.get_home_folder(), subfolder))
+        all_paths = set(self.app_context.fs.list(
+            sites.abspath(self.app_context.get_home_folder(), subfolder)))
+
+        if merge_local_files:
+            all_paths = all_paths.union(set([
+                os.path.join(appengine_config.BUNDLE_ROOT, path) for path in
+                self.local_fs.list(subfolder[1:])]))
+
         result = []
-        for abs_filename in sorted(files):
+        for abs_filename in all_paths:
             filename = os.path.relpath(abs_filename, home)
             result.append(vfs.AbstractFileSystem.normpath(filename))
-        return result
+        return sorted(result)
 
     def list_and_format_file_list(
         self, title, subfolder,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
-        edit_url_template=None, sub_title=None):
+        edit_url_template=None, merge_local_files=False, sub_title=None):
         """Walks files in folders and renders their names in a section."""
 
         items = safe_dom.NodeList()
         count = 0
-        for filename in self.list_files(subfolder):
+        for filename in self.list_files(
+                subfolder, merge_local_files=merge_local_files):
             if prefix and not filename.startswith(prefix):
                 continue
             li = safe_dom.Element('li')
             if links:
                 li.add_child(safe_dom.Element(
                     'a', href=urllib.quote(filename)).add_text(filename))
-                if edit_url_template:
-                    edit_url = edit_url_template % urllib.quote(filename)
-                    li.add_child(
-                        safe_dom.Entity('&nbsp;')
-                    ).add_child(
-                        safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
             else:
                 li.add_text(filename)
+            if (edit_url_template and
+                self.app_context.fs.impl.is_read_write()):
+                edit_url = edit_url_template % urllib.quote(filename)
+                li.add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_child(
+                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
             count += 1
             items.append(li)
 
@@ -508,7 +533,9 @@ class DashboardHandler(
                     'a', className='gcb-button gcb-pull-right',
                     href='dashboard?%s' % urllib.urlencode(
                         {'action': 'add_asset', 'base': subfolder})
-                ).add_text('Upload')
+                ).add_text(
+                    'Upload to ' +
+                    filer.strip_leading_and_trailing_slashes(subfolder))
             ).append(
                 safe_dom.Element('div', style='clear: both; padding-top: 2px;'))
         if title:
@@ -611,6 +638,8 @@ class DashboardHandler(
         def inherits_from(folder):
             return '< inherited from %s >' % folder
 
+        text_asset_url_template = 'dashboard?action=manage_text_asset&uri=%s'
+
         items = safe_dom.NodeList().append(
             self.list_questions()
         ).append(
@@ -627,20 +656,25 @@ class DashboardHandler(
             self.list_and_format_file_list(
                 'Images & Documents', '/assets/img/', links=True, upload=True,
                 edit_url_template='dashboard?action=delete_asset&uri=%s',
-                sub_title='< inherited from /assets/img/ >',
-                caption_if_empty=None)
+                caption_if_empty=inherits_from('/assets/img/'))
         ).append(
             self.list_and_format_file_list(
                 'Cascading Style Sheets', '/assets/css/', links=True,
-                caption_if_empty=inherits_from('/assets/css/'))
+                upload=True, edit_url_template=text_asset_url_template,
+                caption_if_empty=inherits_from('/assets/css/'),
+                merge_local_files=True)
         ).append(
             self.list_and_format_file_list(
                 'JavaScript Libraries', '/assets/lib/', links=True,
-                caption_if_empty=inherits_from('/assets/lib/'))
+                upload=True, edit_url_template=text_asset_url_template,
+                caption_if_empty=inherits_from('/assets/lib/'),
+                merge_local_files=True)
         ).append(
             self.list_and_format_file_list(
-                'View Templates', '/views/',
-                caption_if_empty=inherits_from('/views/'))
+                'View Templates', '/views/', upload=True,
+                edit_url_template=text_asset_url_template,
+                caption_if_empty=inherits_from('/views/'),
+                merge_local_files=True)
         )
 
         template_values = {}

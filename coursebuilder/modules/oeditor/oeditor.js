@@ -411,11 +411,10 @@ TopLevelEditorControls.prototype = {
   getDeleteButton: function() {
     var that = this;
     if (cb_global.delete_url != '') {
-      return {type: 'link', value: 'Delete',
+      return {type: 'link', value: cb_global.delete_button_caption,
         className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
         onClick:function(e) {
-            if (confirm("Are you sure you want to delete this " +
-                cb_global.type_label + "?")) {
+            if (confirm(cb_global.delete_message)) {
               if (cb_global.delete_method == 'delete') {
                 // async delete
                 that._Y.io(cb_global.delete_url, {

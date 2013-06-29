@@ -252,7 +252,7 @@ class AssetsPage(PageObject):
     """Page object for the dashboard's assets tab."""
 
     def click_upload(self):
-        self.find_element_by_link_text('Upload').click()
+        self.find_element_by_link_text('Upload to assets/img').click()
         return AssetsEditorPage(self._tester)
 
     def verify_image_file_by_name(self, name):

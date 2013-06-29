@@ -140,7 +140,7 @@
   }
   /*
    * CSS for the unit/lesson organizer
-   * TODO(jorr): Rework this CSS to have clearer headers for nested properties 
+   * TODO(jorr): Rework this CSS to have clearer headers for nested properties
    */
 
   div#formContainer div.organizer fieldset {
@@ -497,13 +497,14 @@
     cb_global.delete_method = '{{ delete_method }}';
 
     // button captions
+    cb_global.delete_button_caption = '{{ delete_button_caption }}'
     cb_global.save_button_caption = '{{ save_button_caption }}'
     cb_global.custom_rte_tag_icons = JSON.parse("{{ custom_rte_tag_icons|js_string }}");
 
     cb_global.required_modules = [{% for module in required_modules %}
         '{{ module }}'{% if not loop.last %},{% endif %}{% endfor %}];
     cb_global.schema = JSON.parse("{{ schema|js_string }}");
-    cb_global.type_label = '{{ type_label }}';
+    cb_global.delete_message = '{{ delete_message }}';
     cb_global.load_schema_with_annotations = function(schema) {
       {% for annotation in schema_annotations %}
         schema.root{% for element in annotation[0] %}['{{element}}']{% endfor %}

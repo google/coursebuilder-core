@@ -49,10 +49,11 @@ class ObjectEditor(object):
         rest_url, exit_url,
         extra_args=None,
         save_method='put',
-        delete_url=None, delete_method='post',
+        delete_url=None, delete_message=None, delete_method='post',
         auto_return=False, read_only=False,
         required_modules=None,
         extra_js_files=None,
+        delete_button_caption='Delete',
         save_button_caption='Save',
         exit_button_caption='Close'):
         """Creates an HTML code needed to embed and operate this form.
@@ -70,11 +71,13 @@ class ObjectEditor(object):
             extra_args: extra request params passed back in GET and POST
             save_method: how the data should be saved to the server (put|upload)
             delete_url: optional URL for delete operation
+            delete_message: string. Optional custom delete confirmation message
             delete_method: optional HTTP method for delete operation
             auto_return: whether to return to the exit_url on successful save
             read_only: optional flag; if set, removes Save and Delete operations
             required_modules: list of inputex modules required for this editor
             extra_js_files: list of extra JS files to be included
+            delete_button_caption: string. A caption for the 'Delete' button
             save_button_caption: a caption for the 'Save' button
             exit_button_caption: a caption for the 'Close' button
 
@@ -83,10 +86,11 @@ class ObjectEditor(object):
         """
         required_modules = required_modules or ALL_MODULES
 
-        # extract label
-        type_label = transforms.loads(schema_json).get('description')
-        if not type_label:
-            type_label = 'Generic Object'
+        if not delete_message:
+            kind = transforms.loads(schema_json).get('description')
+            if not kind:
+                kind = 'Generic Object'
+            delete_message = 'Are you sure you want to delete this %s?' % kind
 
         # construct parameters
         get_url = rest_url
@@ -111,7 +115,6 @@ class ObjectEditor(object):
         template_values = {
             'enabled': custom_module.enabled,
             'schema': schema_json,
-            'type_label': type_label,
             'get_url': '%s?%s' % (get_url, urllib.urlencode(get_args, True)),
             'save_url': post_url,
             'save_args': transforms.dumps(post_args),
@@ -123,8 +126,10 @@ class ObjectEditor(object):
                 (item[0], transforms.dumps(item[1])) for item in annotations],
             'save_method': save_method,
             'auto_return': auto_return,
+            'delete_button_caption': delete_button_caption,
             'save_button_caption': save_button_caption,
-            'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons)
+            'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons),
+            'delete_message': delete_message,
             }
 
         if delete_url and not read_only:
