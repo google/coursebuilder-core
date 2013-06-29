@@ -62,7 +62,9 @@ function getGcbRteDefs(env, Dom, Editor) {
       var _def = {
         // YUI will set the style.width attribute on the container, so provide
         // a broken value so this can be overriden by CSS class.
-        width: 'broken'
+        width: 'broken',
+        autoHeight: true,
+        focusAtStart: true,
       };
       // Merge options.opts into the default options
       var opts = options.opts;
