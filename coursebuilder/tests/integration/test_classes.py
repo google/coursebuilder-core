@@ -86,18 +86,12 @@ class SampleCourseTests(BaseIntegrationTest):
     def test_admin_can_add_announcement(self):
         uid = self.get_uid()
         login = 'test-%s@example.com' % uid
-        name = 'A Student (%s)' % uid
         title = 'Test announcement (%s)' % uid
 
         self.load_root_page(
         ).click_login(
         ).login(
             login, admin=True
-        ).click_register(
-        ).enroll(
-            name
-        ).verify_enrollment(
-        ).click_course(
         ).click_announcements(
         ).click_add_new(
         ).enter_fields(
