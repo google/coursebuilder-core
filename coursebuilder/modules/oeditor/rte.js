@@ -25,6 +25,7 @@ function getGcbRteDefs(env, Dom, Editor) {
       }
 
       this.fieldContainer.appendChild(this.el);
+      this.isInRteMode = false;
 
       // Make a button to toggle between plain text and rich text
       var showRteText = "Rich Text";
@@ -45,9 +46,11 @@ function getGcbRteDefs(env, Dom, Editor) {
             self.showNewRte();
           }
           toggleText.nodeValue = hideRteText;
+          self.isInRteMode = true;
         } else {
           self.hideRte();
           toggleText.nodeValue = showRteText;
+          self.isInRteMode = false;
         }
       };
       this.divEl.appendChild(toggle);
@@ -179,7 +182,11 @@ function getGcbRteDefs(env, Dom, Editor) {
     },
 
     setValue: function(value, sendUpdatedEvt) {
-      this.el.value = value;
+      if (this.isInRteMode) {
+        this.editor.setEditorHTML(value);
+      } else {
+        this.el.value = value;
+      }
       if(sendUpdatedEvt !== false) {
         this.fireUpdatedEvt();
       }

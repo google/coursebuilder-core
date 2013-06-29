@@ -69,7 +69,7 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
         question_group.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
         question_group.add_property(schema_fields.SchemaField(
-            'name', 'Name', 'string', optional=True))
+            'description', 'Description', 'string', optional=True))
         question_group.add_property(schema_fields.SchemaField(
             'introduction', 'Introduction', 'html', optional=True))
 
@@ -134,8 +134,8 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
 
         assert question_group_dict['version'] == self.SCHEMA_VERSION
 
-        if not question_group_dict['name'].strip():
-            errors.append('The question group must have a non-empty name.')
+        if not question_group_dict['description'].strip():
+            errors.append('The question group must have a description.')
 
         if not question_group_dict['items']:
             errors.append(

@@ -54,6 +54,7 @@ from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
+from unit_lesson_editor import ImportActivityRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
 from unit_lesson_editor import LinkRESTHandler
@@ -94,6 +95,7 @@ class DashboardHandler(
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
+            (ImportActivityRESTHandler.URI, ImportActivityRESTHandler),
             (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
             (LessonRESTHandler.URI, LessonRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
@@ -591,7 +593,7 @@ class DashboardHandler(
                     question_group.id)
                 li = safe_dom.Element('li')
                 li.add_text(
-                    question_group.name
+                    question_group.description
                 ).add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_child(

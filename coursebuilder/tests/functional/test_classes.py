@@ -49,6 +49,7 @@ from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
 from tools.etl import remote
+from webtest.app import AppError
 import actions
 from actions import assert_contains
 from actions import assert_contains_all_of
@@ -3578,6 +3579,234 @@ class TransformsJsonFileTestCase(actions.TestBase):
         self.reader.reset()
         self.assertEqual(
             {'rows': [self.first, self.second]}, self.reader.read())
+
+
+class ImportActivityTests(DatastoreBackedCourseTest):
+    """Functional tests for importing legacy activities into lessons."""
+
+    URI = '/rest/course/lesson/activity'
+
+    FREETEXT_QUESTION = """
+var activity = [
+  { questionType: 'freetext',
+    correctAnswerRegex: /abc/i,
+    correctAnswerOutput: "Correct.",
+    incorrectAnswerOutput: "Try again.",
+    showAnswerOutput: "A hint."
+  }
+];
+"""
+    MULTPLE_CHOICE_QUESTION = """
+var activity = [
+  {questionType: 'multiple choice',
+    choices: [
+      ['a', false, 'A'],
+      ['b', true, 'B'],
+      ['c', false, 'C'],
+      ['d', false, 'D']
+    ]
+  }
+];
+"""
+    MULTPLE_CHOICE_GROUP_QUESTION = """
+var activity = [
+  {questionType: 'multiple choice group',
+    questionsList: [
+      {
+        questionHTML: 'choose a',
+        choices: ['aa', 'bb'],
+        correctIndex: 0
+      },
+      {
+        questionHTML: 'choose b or c',
+        choices: ['aa', 'bb', 'cc'],
+        correctIndex: [1, 2]
+      }
+    ]
+    allCorrectOutput: 'unused',
+    someIncorrectOutput: 'also unused'
+  }
+];
+"""
+
+    def setUp(self):
+        super(ImportActivityTests, self).setUp()
+        course = courses.Course(None, app_context=self.app_context)
+        self.unit = course.add_unit()
+        self.lesson = course.add_lesson(self.unit)
+        course.update_lesson(self.lesson)
+        course.save()
+
+        email = 'test_admin@google.com'
+        actions.login(email, is_admin=True)
+
+    def load_dto(self, dao, entity_id):
+        old_namespace = namespace_manager.get_namespace()
+        new_namespace = self.app_context.get_namespace_name()
+        try:
+            namespace_manager.set_namespace(new_namespace)
+            return dao.load(entity_id)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+    def get_response_dict(self, activity_text):
+        request = {
+            'xsrf_token': XsrfTokenManager.create_xsrf_token('lesson-edit'),
+            'key': self.lesson.lesson_id,
+            'text': activity_text
+        }
+        response = self.testapp.put(
+            self.URI, params={'request': transforms.dumps(request)})
+        return transforms.loads(response.body)
+
+    def get_content_from_service(self, activity_text):
+        response_dict = self.get_response_dict(activity_text)
+        self.assertEqual(response_dict['status'], 200)
+        return transforms.loads(response_dict['payload'])['content']
+
+    def test_import_multiple_choice(self):
+        """Should be able to import a single multiple choice question."""
+        content = self.get_content_from_service(self.MULTPLE_CHOICE_QUESTION)
+        m = re.match((
+            r'^<question quid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
+            r'</question>$'), content)
+        assert m
+
+        quid = m.group(1)
+        question = self.load_dto(models.QuestionDAO, quid)
+        self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+        self.assertEqual(question.dict['question'], '')
+        self.assertEqual(question.dict['multiple_selections'], False)
+        self.assertEqual(len(question.dict['choices']), 4)
+
+        choices = question.dict['choices']
+        choices_data = [
+            ['a', 0.0, 'A'], ['b', 1.0, 'B'], ['c', 0.0, 'C'],
+            ['d', 0.0, 'D']]
+        for i, choice in enumerate(choices):
+            self.assertEqual(choice['text'], choices_data[i][0])
+            self.assertEqual(choice['score'], choices_data[i][1])
+            self.assertEqual(choice['feedback'], choices_data[i][2])
+
+    def test_import_multiple_choice_group(self):
+        """Should be able to import a single 'multiple choice group'."""
+        content = self.get_content_from_service(
+            self.MULTPLE_CHOICE_GROUP_QUESTION)
+        # The tag links to a question group which embeds two questions
+        m = re.match((
+            r'^<question-group qgid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
+            r'</question-group>$'), content)
+        assert m
+
+        quid = m.group(1)
+        question_group = self.load_dto(models.QuestionGroupDAO, quid)
+        self.assertEqual(question_group.dict['version'], '1.5')
+        self.assertEqual(
+            question_group.dict['name'],
+            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+        self.assertEqual(len(question_group.dict['items']), 2)
+
+        items = question_group.dict['items']
+        self.assertEqual(items[0]['weight'], 1.0)
+        self.assertEqual(items[1]['weight'], 1.0)
+
+        # The first question is multiple choice with single selection
+        quid = items[0]['question']
+        question = self.load_dto(models.QuestionDAO, quid)
+        self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            (
+                'Imported from unit "New Unit", lesson "New Lesson" '
+                '(question #1, part #1)'))
+        self.assertEqual(question.dict['question'], 'choose a')
+        self.assertEqual(question.dict['multiple_selections'], False)
+        self.assertEqual(len(question.dict['choices']), 2)
+
+        choices = question.dict['choices']
+        self.assertEqual(choices[0]['text'], 'aa')
+        self.assertEqual(choices[0]['score'], 1.0)
+        self.assertEqual(choices[1]['text'], 'bb')
+        self.assertEqual(choices[1]['score'], 0.0)
+
+        # The second question is multiple choice with multiple selection
+        quid = items[1]['question']
+        question = self.load_dto(models.QuestionDAO, quid)
+        self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            (
+                'Imported from unit "New Unit", lesson "New Lesson" '
+                '(question #1, part #2)'))
+        self.assertEqual(question.dict['question'], 'choose b or c')
+        self.assertEqual(question.dict['multiple_selections'], True)
+        self.assertEqual(len(question.dict['choices']), 3)
+
+        choices = question.dict['choices']
+        self.assertEqual(choices[0]['text'], 'aa')
+        self.assertEqual(choices[0]['score'], -1.0)
+        self.assertEqual(choices[1]['text'], 'bb')
+        self.assertEqual(choices[1]['score'], 0.5)
+        self.assertEqual(choices[1]['text'], 'bb')
+        self.assertEqual(choices[1]['score'], 0.5)
+
+    def test_import_freetext(self):
+        """Should be able to import a single feettext question."""
+        content = self.get_content_from_service(self.FREETEXT_QUESTION)
+        m = re.match((
+            r'^<question quid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
+            r'</question>$'), content)
+        assert m
+
+        quid = m.group(1)
+        question = self.load_dto(models.QuestionDAO, quid)
+        self.assertEqual(question.type, models.QuestionDTO.SHORT_ANSWER)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+        self.assertEqual(question.dict['question'], '')
+        self.assertEqual(question.dict['hint'], 'A hint.')
+        self.assertEqual(question.dict['defaultFeedback'], 'Try again.')
+        self.assertEqual(len(question.dict['graders']), 1)
+
+        grader = question.dict['graders'][0]
+        self.assertEqual(grader['score'], 1.0)
+        self.assertEqual(grader['matcher'], 'regex')
+        self.assertEqual(grader['response'], '/abc/i')
+        self.assertEqual(grader['feedback'], 'Correct.')
+
+    def test_repeated_imports_are_rejected(self):
+        response_dict = self.get_response_dict(self.FREETEXT_QUESTION)
+        self.assertEqual(response_dict['status'], 200)
+        response_dict = self.get_response_dict(self.FREETEXT_QUESTION)
+        self.assertEqual(response_dict['status'], 412)
+        self.assertTrue(response_dict['message'].startswith(
+            'This activity has already been imported.'))
+
+    def test_user_must_be_logged_in(self):
+        actions.logout()
+        try:
+            self.get_response_dict(self.FREETEXT_QUESTION)
+            self.fail('Expected 404')
+        except AppError:
+            pass
+
+    def test_user_must_have_valid_xsrf_token(self):
+        request = {
+            'key': self.lesson.lesson_id,
+            'text': self.FREETEXT_QUESTION
+        }
+        response = self.testapp.put(
+            self.URI, params={'request': transforms.dumps(request)})
+        response_dict = transforms.loads(response.body)
+        self.assertEqual(response_dict['status'], 403)
 
 
 ALL_COURSE_TESTS = (

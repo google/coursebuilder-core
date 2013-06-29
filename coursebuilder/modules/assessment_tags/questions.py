@@ -67,7 +67,7 @@ def render_question(quid, instanceid, locale, embedded=False, weight=None):
         template_values['button_type'] = 'checkbox' if multi else 'radio'
 
         choices = [{
-            'score': choice['score'], 'feedback': choice['feedback']
+            'score': choice['score'], 'feedback': choice.get('feedback')
         } for choice in template_values['choices']]
         js_data['choices'] = choices
     elif question_dto.type == question_dto.SHORT_ANSWER:
@@ -194,7 +194,7 @@ class QuestionGroupTag(tags.BaseTag):
     def get_schema(self, unused_handler):
         """Get the schema for specifying the question group."""
         question_groups = m_models.QuestionGroupDAO.get_all()
-        question_group_list = [(q.id, q.name) for q in question_groups]
+        question_group_list = [(q.id, q.description) for q in question_groups]
 
         reg = schema_fields.FieldRegistry('Question Group')
         if question_group_list:

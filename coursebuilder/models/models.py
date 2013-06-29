@@ -646,7 +646,7 @@ class BaseJsonDao(object):
         entity.data = transforms.dumps(dto.dict)
         entity.put()
         MemcacheManager.set(cls._memcache_key(entity.key().id()), entity)
-        return entity
+        return entity.key().id()
 
     @classmethod
     def delete(cls, dto):
@@ -679,7 +679,7 @@ class QuestionDTO(object):
 
     @property
     def description(self):
-        return self.dict.get('description')
+        return self.dict.get('description') or ''
 
 
 class QuestionDAO(BaseJsonDao):
@@ -698,12 +698,12 @@ class QuestionGroupDTO(object):
         self.dict = the_dict
 
     @property
-    def name(self):
-        return self.dict['name']
+    def description(self):
+        return self.dict.get('description') or ''
 
     @property
     def introduction(self):
-        return self.dict['introduction']
+        return self.dict.get('introduction') or ''
 
 
 class QuestionGroupDAO(BaseJsonDao):

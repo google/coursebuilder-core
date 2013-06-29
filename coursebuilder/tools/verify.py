@@ -1161,7 +1161,7 @@ class Verifier(object):
         assert final_slash_index > 0
 
         base = regex_str[1:final_slash_index]
-        modifiers = regex_str[final_slash_index+1:]
+        modifiers = regex_str[final_slash_index + 1:]
         func_str = 'gcb_regex(' + repr(base) + ', ' + repr(modifiers) + ')'
         return func_str
 
