@@ -19,6 +19,8 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import base64
 import datetime
 import json
+
+from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
 
@@ -29,7 +31,11 @@ JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'array',
 # sync with modules/oeditor/oeditor.html.
 _JSON_XSSI_PREFIX = ")]}'\n"
 SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
-SUPPORTED_TYPES = (db.GeoPt, datetime.date)
+SUPPORTED_TYPES = (
+    datastore_types.Key,
+    datetime.date,
+    db.GeoPt,
+)
 
 
 def dict_to_json(source_dict, unused_schema):
@@ -38,6 +44,8 @@ def dict_to_json(source_dict, unused_schema):
     for key, value in source_dict.items():
         if value is None or isinstance(value, SIMPLE_TYPES):
             output[key] = value
+        elif isinstance(value, datastore_types.Key):
+            output[key] = str(value)
         elif isinstance(value, datetime.date):
             output[key] = value.strftime(JSON_DATE_FORMAT)
         elif isinstance(value, db.GeoPt):
