@@ -19,13 +19,6 @@
   <script src="{{ activity_script_src }}"></script>
 {% endif %}
 
-{% if record_events %}
-<script>
-  gcbCanPostEvents = true;
-  eventXsrfToken = '{{ event_xsrf_token }}';
-</script>
-{% endif %}
-
 <div id="gcb-main">
   <ul class="gcb-breadcrumb">
     {# I18N: Navigation breadcrumb. #}

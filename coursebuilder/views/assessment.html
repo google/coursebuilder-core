@@ -23,10 +23,6 @@
 
     <script>
       assessmentXsrfToken = '{{ assessment_xsrf_token }}';
-      {% if record_events %}
-        gcbCanPostEvents = true;
-        eventXsrfToken = '{{ event_xsrf_token }}';
-      {% endif %}
 
       var assessmentGlobals = {};
       assessmentGlobals.isReviewForm = false;

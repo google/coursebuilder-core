@@ -81,6 +81,18 @@ CAN_PERSIST_TAG_EVENTS = ConfigProperty(
     False)
 
 
+# Whether to record events in a database.
+CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
+    'gcb_can_persist_activity_events', bool, (
+        'Whether or not to record student activity interactions in a '
+        'datastore. Without event recording, you cannot analyze student '
+        'activity interactions. On the other hand, no event recording reduces '
+        'the number of datastore operations and minimizes the use of Google '
+        'App Engine quota. Turn event recording on if you want to analyze '
+        'this data.'),
+    False)
+
+
 # Date format string for displaying datetimes in UTC.
 # Example: 2013-03-21 13:00 UTC
 HUMAN_READABLE_DATETIME_FORMAT = '%Y-%m-%d, %H:%M UTC'
@@ -257,6 +269,8 @@ class BaseHandler(ApplicationHandler):
                 CAN_PERSIST_TAG_EVENTS.value)
             self.template_value['record_page_events'] = (
                 CAN_PERSIST_PAGE_EVENTS.value)
+            self.template_value['record_events'] = (
+                CAN_PERSIST_ACTIVITY_EVENTS.value)
             self.template_value['event_xsrf_token'] = (
                 XsrfTokenManager.create_xsrf_token('event-post'))
         else:

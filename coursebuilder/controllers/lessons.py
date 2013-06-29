@@ -23,7 +23,6 @@ import urlparse
 from models import models
 from models import student_work
 from models import transforms
-from models.config import ConfigProperty
 from models.counters import PerfCounter
 from models.models import Student
 from models.models import StudentProfileDAO
@@ -35,6 +34,7 @@ from tools import verify
 
 from utils import BaseHandler
 from utils import BaseRESTHandler
+from utils import CAN_PERSIST_ACTIVITY_EVENTS
 from utils import CAN_PERSIST_PAGE_EVENTS
 from utils import CAN_PERSIST_TAG_EVENTS
 from utils import HUMAN_READABLE_DATETIME_FORMAT
@@ -42,17 +42,6 @@ from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
 
 from google.appengine.ext import db
-
-# Whether to record events in a database.
-CAN_PERSIST_ACTIVITY_EVENTS = ConfigProperty(
-    'gcb_can_persist_activity_events', bool, (
-        'Whether or not to record student activity interactions in a '
-        'datastore. Without event recording, you cannot analyze student '
-        'activity interactions. On the other hand, no event recording reduces '
-        'the number of datastore operations and minimizes the use of Google '
-        'App Engine quota. Turn event recording on if you want to analyze '
-        'this data.'),
-    False)
 
 COURSE_EVENTS_RECEIVED = PerfCounter(
     'gcb-course-events-received',
@@ -328,9 +317,6 @@ class ActivityHandler(BaseHandler):
                 'unit?unit=%s&lesson=%s' % (
                     unit_id, next_lesson.lesson_id))
 
-        # Set template value for event recording
-        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
-
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value)
@@ -371,7 +357,6 @@ class AssessmentHandler(BaseHandler):
 
         self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = unit_id
-        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (
@@ -681,7 +666,6 @@ class ReviewHandler(BaseHandler):
             self.template_value['saved_answers'] = transforms.dumps(
                 saved_answers)
 
-        self.template_value['record_events'] = CAN_PERSIST_ACTIVITY_EVENTS.value
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('review-post'))
         self.template_value['event_xsrf_token'] = (

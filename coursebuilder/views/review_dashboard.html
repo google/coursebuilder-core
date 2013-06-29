@@ -12,13 +12,6 @@
 
 <div id="gcb-main">
   <div class="gcb-article">
-    <script>
-      {% if record_events %}
-        gcbCanPostEvents = true;
-        eventXsrfToken = '{{ event_xsrf_token }}';
-      {% endif %}
-    </script>
-
     {# I18N: Header text for a list of assignments that can be reviewed by the student. #}
     <h2>{{ gettext('Assignments for your review') }}</h2>
 
