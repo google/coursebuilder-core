@@ -79,6 +79,29 @@ function renderAsset(Y, uri) {
 }
 
 /**
+ * Expose a method to disable the save button by means of an annotation in the
+ * schema. Use the 'uneditable' schema type with visuType=functName and
+ * funcname=disableSave.
+ *
+ * @param {YUI Root} Y the current YUI root object
+ * @param {string} value the value of the uneditable schema field
+ * @param {object} env the CB environment table
+ */
+function disableSave(Y, value, env) {
+  if (env.form) {
+    for (var i = 0; i < env.form.buttons.length; i++) {
+      var button = env.form.buttons[i];
+      if (button.options.type == 'submit-link') {
+        env.form.buttons[i].disable();
+      }
+    }
+  }
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(value));
+  return div;
+}
+
+/**
  * If there is a form element marked with class 'split-from-main-group'
  * then this is pulled out of the fieldset and inserted between the fieldset
  * and the button bar.
@@ -150,6 +173,7 @@ function onPageLoad(env) {
   env.inputEx = env.inputEx || {};
   env.inputEx.visus = env.inputEx.visus || {};
   env.inputEx.visus.renderAsset = renderAsset;
+  env.inputEx.visus.disableSave = disableSave;
 
   // set initial UI state
   document.getElementById("formContainer").style.display = "none";
@@ -225,7 +249,7 @@ function mainYuiFunction(Y) {
   // widget initialized to render the given data.
   if (Y.inputEx.visus) {
     Y.inputEx.visus.funcName = function(options, value) {
-      return cb_global.inputEx.visus[options.funcName](Y, value);
+      return cb_global.inputEx.visus[options.funcName](Y, value, cb_global);
     }
   }
 

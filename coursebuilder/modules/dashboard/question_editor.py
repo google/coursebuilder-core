@@ -32,7 +32,7 @@ from unit_lesson_editor import CourseOutlineRights
 
 
 class BaseDatastoreAssetEditor(ApplicationHandler):
-    def get_form(self, rest_handler, key='', extra_js_files=None):
+    def get_form(self, rest_handler, key=''):
         """Build the Jinja template for adding a question."""
         rest_url = self.canonicalize_url(rest_handler.URI)
         exit_url = self.canonicalize_url('/dashboard?action=assets')
@@ -56,7 +56,7 @@ class BaseDatastoreAssetEditor(ApplicationHandler):
             key, rest_url, exit_url,
             delete_url=delete_url, delete_method='delete',
             required_modules=rest_handler.REQUIRED_MODULES,
-            extra_js_files=extra_js_files)
+            extra_js_files=rest_handler.EXTRA_JS_FILES)
 
 
 class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
@@ -66,9 +66,7 @@ class QuestionManagerAndEditor(BaseDatastoreAssetEditor):
         """Build the Jinja template for adding a question."""
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
-        template_values['main_content'] = self.get_form(
-            rest_handler, key=key,
-            extra_js_files=['question_editor_lib.js', 'question_editor.js'])
+        template_values['main_content'] = self.get_form(rest_handler, key=key)
 
         return template_values
 
@@ -160,6 +158,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
     REQUIRED_MODULES = [
         'array-extras', 'gcb-rte', 'inputex-radio', 'inputex-select',
         'inputex-string', 'inputex-list', 'inputex-number', 'inputex-hidden']
+    EXTRA_JS_FILES = ['mc_question_editor_lib.js', 'mc_question_editor.js']
 
     TYPE = QuestionDTO.MULTIPLE_CHOICE
     XSRF_TOKEN = 'mc-question-edit'
@@ -198,7 +197,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             extra_schema_dict_values={'className': 'mc-choice'})
         choice_type.add_property(schema_fields.SchemaField(
             'score', 'Score', 'number', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-score'}))
+            extra_schema_dict_values={
+                'className': 'mc-choice-score', 'value': '0'}))
         choice_type.add_property(schema_fields.SchemaField(
             'text', 'Text', 'html', optional=True,
             extra_schema_dict_values={'className': 'mc-choice-text'}))
@@ -293,6 +293,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
         'inputex-hidden']
+    EXTRA_JS_FILES = []
 
     TYPE = QuestionDTO.SHORT_ANSWER
     XSRF_TOKEN = 'sa-question-edit'
@@ -417,4 +418,3 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
                     'Answer %s must have a numeric score.' % (index + 1))
 
         return (question_dict, errors)
-

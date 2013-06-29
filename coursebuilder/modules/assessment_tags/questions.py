@@ -112,8 +112,12 @@ class QuestionTag(tags.BaseTag):
         else:
             reg.add_property(
                 schema_fields.SchemaField(
-                    'quid', 'Question', 'string', optional=True,
-                    select_data=[('', '[No questions available]')]))
+                    'quid', '', 'string', optional=True,
+                    editable=False, extra_schema_dict_values={
+                        'value': 'No questions available',
+                        'visu': {
+                            'visuType': 'funcName',
+                            'funcName': 'disableSave'}}))
 
         return reg
 

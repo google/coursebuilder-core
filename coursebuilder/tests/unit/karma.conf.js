@@ -55,7 +55,7 @@ files = [
 
   // Files to test
   'assets/lib/butterbar.js',
-  'modules/dashboard/question_editor_lib.js',
+  'modules/dashboard/mc_question_editor_lib.js',
   'modules/oeditor/oeditor.js',
   'modules/oeditor/popup.js',
   'modules/oeditor/rte.js'

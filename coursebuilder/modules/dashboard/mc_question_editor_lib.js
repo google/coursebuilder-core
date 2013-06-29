@@ -56,7 +56,7 @@ function normalizeScores(scores) {
 }
 
 function isInNormalForm(scores) {
-  normScores = normalizeScores(scores);
+  var normScores = normalizeScores(scores);
   return Y.Array.reduce(scores, true, function(prevVal, score, idx) {
     return prevVal && score == normScores[idx];
   });
@@ -133,8 +133,8 @@ function updateScoreInputs() {
     Y.all('div.mc-choice-score input').setAttribute('type', 'checkbox');
   }
 
-  // Update the values of the scores to be in normaluized form
-  scores = normalizeScores(getScores());
+  // Update the values of the scores to be in normalized form
+  var scores = normalizeScores(getScores());
   Y.all('div.mc-choice-score input').each(function(input, idx) {
     input.set('value', scores[idx]);
     input.set('checked', scores[idx] > 0);

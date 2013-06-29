@@ -274,8 +274,12 @@ class Quiz(tags.BaseTag):
         else:
             reg.add_property(
                 schema_fields.SchemaField(
-                  'quid', 'Quiz', 'string', optional=True,
-                  select_data=[('', '[No quizzes available]')]))
+                    'quid', '', 'string', optional=True,
+                    editable=False, extra_schema_dict_values={
+                        'value': 'No quizzes available',
+                        'visu': {
+                            'visuType': 'funcName',
+                            'funcName': 'disableSave'}}))
         return reg
 
 
