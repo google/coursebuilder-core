@@ -207,6 +207,7 @@ class AnswerHandler(BaseHandler):
             # version if it exists.
             submission_key = student_work.Submission.write(
                 unit.unit_id, student.get_key(), answers)
+            course.update_final_grades(student)
 
             self.template_value['result'] = course.get_overall_result(student)
             self.template_value['score'] = score

@@ -746,6 +746,7 @@ class ReviewHandler(BaseHandler):
         try:
             rp.write_review(
                 unit.unit_id, review_step_key, review_payload, mark_completed)
+            course.update_final_grades(student)
         except domain.TransitionError:
             self.template_value['error_code'] = 'review_already_submitted'
             self.render('error.html')

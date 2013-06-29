@@ -261,7 +261,9 @@ class StudentProfileDAO(object):
             student.is_enrolled = is_enrolled
 
         if final_grade is not None or course_info is not None:
-            course_info_dict = transforms.loads(profile.course_info)
+            course_info_dict = {}
+            if profile.course_info:
+                course_info_dict = transforms.loads(profile.course_info)
             if course_key in course_info_dict.keys():
                 info = course_info_dict[course_key]
             else:

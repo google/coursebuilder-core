@@ -30,6 +30,7 @@ import common.tags
 from tools import verify
 import yaml
 
+import models
 from models import MemcacheManager
 import progress
 import review
@@ -1694,6 +1695,22 @@ class Course(object):
             return None
 
         return int(float(overall_score) / total_weight)
+
+    def is_course_complete(self, student):
+        """Returns true if the student has completed the course."""
+        score_list = self.get_all_scores(student)
+        for unit in score_list:
+            if not unit['completed']:
+                return False
+        return True
+
+    def update_final_grades(self, student):
+        """Updates the final grades of the student."""
+        if (models.CAN_SHARE_STUDENT_PROFILE.value and
+            self.is_course_complete(student)):
+            overall_score = self.get_overall_score(student)
+            models.StudentProfileDAO.update(
+                student.user_id, student.email, final_grade=overall_score)
 
     def get_overall_result(self, student):
         """Gets the overall result based on a student's score profile."""
