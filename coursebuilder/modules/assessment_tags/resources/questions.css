@@ -20,6 +20,9 @@
   @author: sll@google.com (Sean Lip)
 */
 
+.qt-question-item {
+  margin: 20px 0;
+}
 .qt-feedback {
   width: 600px;
 }
@@ -32,3 +35,4 @@ div.qt-warning {
   background-color: #ffffb7;
   color: #f00;
 }
+.

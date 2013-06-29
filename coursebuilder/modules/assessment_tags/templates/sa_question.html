@@ -1,4 +1,4 @@
-<div class="gcb-border-box">
+<div {% if not embedded %}class="gcb-border-box"{% endif %}>
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
     questionData['{{quid}}'] = JSON.parse("{{js_data | js_string}}");
@@ -17,16 +17,18 @@
       <input type="text"/>
     </div>
 
-    <div class="qt-check-answer">
-      <button class="gcb-button qt-check-answer-button">
-        {{ gettext(' Check Answer ') }}
-      </button>
-      {% if hint %}
-        <button class="gcb-button qt-skip-and-show-answer-button">
-          {{ gettext(' Skip and Show Answer ') }}
+    {% if not embedded %}
+      <div class="qt-check-answer">
+        <button class="gcb-button qt-check-answer-button">
+          {{ gettext(' Check Answer ') }}
         </button>
-      {% endif %}
-    </div>
+        {% if hint %}
+          <button class="gcb-button qt-skip-and-show-answer-button">
+            {{ gettext(' Skip and Show Answer ') }}
+          </button>
+        {% endif %}
+      </div>
+    {% endif %}
 
     <div class="qt-feedback qt-hidden">
     </div>

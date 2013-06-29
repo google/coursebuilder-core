@@ -1,0 +1,21 @@
+<div class="gcb-border-box">
+  <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
+
+  <div class="qt-introduction">
+    {{ introduction }}
+  </div>
+
+  <ol class="qt-question-list">
+    {% for question_html in question_html_array %}
+      <li class="qt-question-item">
+        {{ question_html }}
+      </li>
+    {% endfor %}
+  </ol>
+
+  <div class="qt-check-answer">
+    <button class="gcb-button">
+      {{ gettext(' Check Answer ') }}
+    </button>
+  </div>
+</div>
