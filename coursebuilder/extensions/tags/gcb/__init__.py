@@ -230,6 +230,10 @@ class Activity(tags.BaseTag):
     def get_schema(self, handler):
         course = courses.Course(handler)
 
+        if course.version == courses.COURSE_MODEL_VERSION_1_2:
+            return self.unavailable_schema(
+                'Not available in file-based courses.')
+
         lesson_id = handler.request.get('lesson_id')
 
         activity_list = []

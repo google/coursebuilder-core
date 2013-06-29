@@ -134,27 +134,19 @@ class QuestionTag(tags.BaseTag):
         questions = m_models.QuestionDAO.get_all()
         question_list = [(q.id, q.description) for q in questions]
 
-        reg = schema_fields.FieldRegistry('Question')
-        if question_list:
-            reg.add_property(
-                schema_fields.SchemaField(
-                    'quid', 'Question', 'string', optional=True,
-                    select_data=question_list))
-            reg.add_property(
-                schema_fields.SchemaField(
-                    'weight', 'Weight', 'string', optional=True,
-                    extra_schema_dict_values={'value': '1'},
-                    description='The number of points for a correct answer.'))
-        else:
-            reg.add_property(
-                schema_fields.SchemaField(
-                    'quid', '', 'string', optional=True,
-                    editable=False, extra_schema_dict_values={
-                        'value': 'No questions available',
-                        'visu': {
-                            'visuType': 'funcName',
-                            'funcName': 'disableSave'}}))
+        if not question_list:
+            return self.unavailable_schema('No questions available')
 
+        reg = schema_fields.FieldRegistry('Question')
+        reg.add_property(
+            schema_fields.SchemaField(
+                'quid', 'Question', 'string', optional=True,
+                select_data=question_list))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'weight', 'Weight', 'string', optional=True,
+                extra_schema_dict_values={'value': '1'},
+                description='The number of points for a correct answer.'))
         return reg
 
 
@@ -218,21 +210,14 @@ class QuestionGroupTag(tags.BaseTag):
         question_groups = m_models.QuestionGroupDAO.get_all()
         question_group_list = [(q.id, q.description) for q in question_groups]
 
+        if not question_group_list:
+            return self.unavailable_schema('No question groups available')
+
         reg = schema_fields.FieldRegistry('Question Group')
-        if question_group_list:
-            reg.add_property(
-                schema_fields.SchemaField(
-                    'qgid', 'Question Group', 'string', optional=True,
-                    select_data=question_group_list))
-        else:
-            reg.add_property(
-                schema_fields.SchemaField(
-                    'qgid', '', 'string', optional=True,
-                    editable=False, extra_schema_dict_values={
-                        'value': 'No question groups available',
-                        'visu': {
-                            'visuType': 'funcName',
-                            'funcName': 'disableSave'}}))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'qgid', 'Question Group', 'string', optional=True,
+                select_data=question_group_list))
         return reg
 
 

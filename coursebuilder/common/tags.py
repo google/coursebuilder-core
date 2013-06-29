@@ -107,6 +107,19 @@ SPB+uxAAAAAElFTkSuQmCC
         reg = schema_fields.FieldRegistry('Unimplemented Custom Tag')
         return reg
 
+    def unavailable_schema(self, message):
+        """Utility to generate a schema for a "not available" message."""
+        reg = schema_fields.FieldRegistry(self.name())
+        reg.add_property(
+            schema_fields.SchemaField(
+                'unused_id', '', 'string', optional=True,
+                editable=False, extra_schema_dict_values={
+                    'value': message,
+                    'visu': {
+                        'visuType': 'funcName',
+                        'funcName': 'disableSave'}}))
+        return reg
+
 
 class ResourcesHandler(webapp2.RequestHandler):
     """Content handler for resources associated with custom tags."""
