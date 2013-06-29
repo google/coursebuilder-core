@@ -77,9 +77,11 @@ describe('parseJson', function() {
 });
 
 describe('FramedEditorControls', function() {
-  var framedEditorControls, frameProxy, env;
+  var framedEditorControls, Y, frameProxy, env;
 
   beforeEach(function() {
+    Y = {};
+
     frameProxy = {
       getValue: function() {},
       setValue: function() {},
@@ -104,7 +106,7 @@ describe('FramedEditorControls', function() {
     spyOn(env.form, 'setValue');
     spyOn(env, 'onFormLoad');
 
-    framedEditorControls = new FramedEditorControls(frameProxy, env);
+    framedEditorControls = new FramedEditorControls(Y, frameProxy, env);
   });
 
   describe('the save button', function() {

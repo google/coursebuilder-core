@@ -133,7 +133,9 @@
   }
   a.inputEx-Button,
   div.inputEx-Button,
-  div.inputEx-Field input.inputEx-Button {
+  div.inputEx-Field input.inputEx-Button,
+  div.mc-choice + a,
+  div.mc-choice-container > a {
     width: auto;
     background-color: #666;
     color: #FFFFFF;
@@ -151,36 +153,39 @@
     float: right;
   }
 
-  /* TODO(jorr): Rework this CSS to have clearer headers for nested properties */
+  /*
+   * CSS for the unit/lesson organizer
+   * TODO(jorr): Rework this CSS to have clearer headers for nested properties 
+   */
 
-  div#formContainer div.inputEx-ListField fieldset {
+  div#formContainer div.organizer fieldset {
     border: none;
     min-width: 300px;
     margin-bottom: 0;
     -webkit-padding-before: 0;
     -webkit-padding-after: 0;
   }
-  div#formContainer div.inputEx-ListField div.inputEx-label {
+  div#formContainer div.organizer div.inputEx-label {
     width: auto;
   }
-  div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper {
+  div.organizer div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper {
     white-space: nowrap;
   }
-  div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper > div {
+  div.organizer div.inputEx-ListField-subFieldEl > fieldset > div.inputEx-fieldWrapper > div {
     float: none;
     display: inline;
     vertical-align: top;
   }
-  div.inputEx-ListField-childContainer > div {
+  div.organizer div.inputEx-ListField-childContainer > div {
     white-space: nowrap;
     border-top: solid 1px #eee;
   }
-  div.inputEx-ListField-Arrow {
+  div.organizer div.inputEx-ListField-Arrow {
     float: none;
     display: inline-block;
     float: right;
   }
-  a.inputEx-List-link {
+  div.organizer a.inputEx-List-link {
     display: none;
   }
 
@@ -192,7 +197,7 @@
   }
 
   /*
-   * CSS for the lightbox used by the Rich Text Editor.
+   * CSS for the lightbox used by the GCB Rich Text Editor.
    */
 
   #modal-editor > .background {
@@ -238,6 +243,10 @@
     float:  right;
     cursor: pointer;
   }
+  div.inputEx-Field > div.yui-editor-container {
+    width: 510px;
+    height: 350px;
+  }
   div.rte-control + div.inputEx-Field {
     /* Style the container for the textarea/RTE */
     clear: both;
@@ -248,10 +257,71 @@
     background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB90EExI1FHIRmjUAAAA7dEVYdENvbW1lbnQARWRpdGVkIGJ5IFBhdWwgU2hlcm1hbiBmb3IgV1BDbGlwYXJ0LCBQdWJsaWMgRG9tYWlucCd6AAAAAtJJREFUOMu9k1uIVWUUx39r73P25ex9zoziKDENY8LoRIM+2EXLTGIk6AISXnAgkIKiHtQoULQeYgbTSBwirJcek24iCCEYFE2g08PIoFNWyDBoeMSp6czM0b3P2Wd/q4dd40yW+tR6+uD7+K3ff7E+mzur5bZtb1DVIYAWYeeuPAeW26z5xbA0hlO3A+S6ulYc37LpOfPIw+sU2LYnz8VKgP4WoH0ueqIg2ibsuiWlrW1xuPHZHuO6bv8Gm+FDDqoh+pGLHvZEk6JoWhT90pf0lqCCX3i6s6OzMeBjTIj+4KO9Dno5zABpUfRUQfRNR/S/GH6Xxbuvu5ZZVwo1DdGDLnrMvwEwRdFDrugJX3Q0uBlkLxR29jtUTYiaED3pofsdNJplcT7ILCZC0SgU3THbyIHH38gzWgmyOVSCLMb3wVyLw57oJ352/qYgus8VPe6LCkC77739cnvrbo1jwuo0SXUaR+EVB/5u9bvCh3XYnFfOpHBZhZU2PGbDpwnk1s5v+qq3Y0l3KZ+bsbsYxyz58RyKoMCRBkwZWGEpr96/nsbIEEdrfxBI1ug6TFmrm5uXzYYAtHse+/wmYoW+GqyxMru+xfcRo9wbTRNI9jZWONnQYbuUy3V3lYKO0LbnrvK8ZvovldnvCRXg/ToMRjUeHf+VdzTCFmEghY2Rvvd1Sk9uIknOluP6k6cnJlFgkevwYFMJz7JYZWVzKQrsdeGJxiQPqCAi9Na5+lZNNxkYABCg56e1D30cGQPAeD1hsDJJYpTzY2N84Anz5YbpzwZeivWz71KeB67N/CVg5ML1iFbPBaDFyfPMwgUkRll6aWwGIlm8ZE9Nt1XhyD8X0AJGviiPE6VmzoWi5P+CTAFbI77dXtPWf4MA2IAOT1cPfl6+OlppNIo1Y+5p930aKOGVMoOpaHeku4cML86Ocie1qMXJv/bC3XedecrmAtDJ/1l/AuP2RBQ/TdETAAAAAElFTkSuQmCC) !important;
     left: 5px;
   }
-  div.yui-toolbar-titlebar,
-  div.dompath {
-    /* Hide the top titlebar and bottom status bar on the RTE. */
+  div.yui-toolbar-titlebar {
+    /* Hide the top titlebar on the RTE. */
     display: none;
+  }
+
+  /*
+   * CSS for multiple choice question creation.
+   */
+
+  div.mc-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    width: 80px;
+  }
+  div.mc-container div.inputEx-fieldWrapper {
+    position:relative; /* so we can absolutely position the rte control */
+  }
+  div.mc-container a:hover {
+    text-decoration: none;
+  }
+  div.mc-container textarea {
+    height: 75px;
+    width: 550px;
+    margin: 0;
+    padding: 0;
+  }
+  div.mc-question, div.mc-choice-text, div.mc-choice-feedback {
+    margin-top: 30px;
+  }
+  div.mc-question {
+    margin-left: 87px;
+  }
+  div.mc-choice-text, div.mc-choice-feedback {
+    margin-left: 67px;
+  }
+  div.mc-choice-question {
+    width: 660px;
+  }
+  div.mc-choice {
+    width: 650px;
+  }
+  div.mc-choice > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+    width:60px;
+  }
+  div.mc-choice + a { /* The delete choice button */
+    float: right;
+  }
+  div.mc-choice-score input {
+    width: 50px;
+  }
+  div.mc-container div.rte-control.inputEx-Button {
+    position: absolute;
+    right: 10px;
+    margin: -25px 0 0 0;
+    width: 55px;
+    text-align: center;
+    padding: 3px 0;
+    background-color: #f2f2f2;
+    border: solid #808080 1px;
+    color: #000;
+    font-weight: bold;
+    font-size: 10px;
+    text-decoration: none;
+  }
+  div.mc-container div.yui-editor-container {
+    width: 550px;
+    height: 350px;
   }
 </style>
 
@@ -303,7 +373,7 @@
           = JSON.parse("{{ annotation[1]|js_string }}")
       {% endfor %}
     }
-    cb_global.onFormLoad = function() {
+    cb_global.onFormLoad = function(Y) {
       {% for file in extra_js_files %}
         {% include file %}
       {% endfor %}

@@ -200,7 +200,8 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         template_values = {}
         template_values['form_html'] = ObjectEditor.get_html_for(
             self, schema.get_json_schema(), schema.get_schema_dict(), None,
-            None, None, extra_js_files=['add_custom_tag.js'])
+            None, None, required_modules=tag_class.required_modules(),
+            extra_js_files=['add_custom_tag.js'])
         self.response.out.write(
             self.get_template('popup.html', []).render(template_values))
 

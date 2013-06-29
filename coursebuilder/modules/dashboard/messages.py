@@ -128,6 +128,8 @@ Links to external sites must start with 'http' or https'.
 PAGES_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
+QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
+
 REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
 Review form questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')

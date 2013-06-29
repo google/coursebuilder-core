@@ -288,7 +288,7 @@ function mainYuiFunction(Y) {
   var inputExDefinition = builder.schemaToInputEx(schema.root);
 
   var editorControls = isFramed() ?
-      new FramedEditorControls(window.parent.frameProxy, cb_global) :
+      new FramedEditorControls(Y, window.parent.frameProxy, cb_global) :
       new TopLevelEditorControls(Y);
 
   // choose buttons to show
@@ -469,6 +469,7 @@ TopLevelEditorControls.prototype = {
 
   populateForm: function() {
     // async request data for the object being edited
+    var that = this;
     this._Y.io(cb_global.get_url, {
       method: 'GET',
       timeout : ajaxRpcTimeoutMillis,
@@ -518,7 +519,7 @@ TopLevelEditorControls.prototype = {
           } else {
             cbHideMsg();
           }
-          cb_global.onFormLoad();
+          cb_global.onFormLoad(that._Y);
         },
         failure : function (x,o) {
             cbShowMsg("Server did not respond. Please reload the page to try again.");

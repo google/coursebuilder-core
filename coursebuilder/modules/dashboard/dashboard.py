@@ -35,6 +35,7 @@ from models import roles
 from models import transforms
 from models import utils
 from models import vfs
+from models.models import QuestionEntity
 from models.models import Student
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
@@ -45,6 +46,9 @@ from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 import messages
 from peer_review import AssignmentManager
+from question_editor import McQuestionRESTHandler
+from question_editor import QuestionManagerAndEditor
+from question_editor import SaQuestionRESTHandler
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
@@ -58,7 +62,8 @@ from google.appengine.api import users
 
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    AssignmentManager, ApplicationHandler, ReflectiveRequestHandler):
+    QuestionManagerAndEditor, AssignmentManager, ApplicationHandler,
+    ReflectiveRequestHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
@@ -66,7 +71,8 @@ class DashboardHandler(
         default_action, 'assets', 'settings', 'analytics',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
-        'add_asset', 'delete_asset', 'import_course', 'edit_assignment']
+        'add_asset', 'delete_asset', 'import_course', 'edit_assignment',
+        'add_mc_question', 'add_sa_question', 'edit_question']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -89,6 +95,8 @@ class DashboardHandler(
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler),
+            (McQuestionRESTHandler.URI, McQuestionRESTHandler),
+            (SaQuestionRESTHandler.URI, SaQuestionRESTHandler)
         ]
 
     def can_view(self):
@@ -502,6 +510,46 @@ class DashboardHandler(
                     safe_dom.Element('blockquote').add_text(caption_if_empty))
         return output
 
+    def list_questions(self):
+        """Prepare a list of the question bank contents."""
+        if not filer.is_editable_fs(self.app_context):
+            return safe_dom.NodeList()
+
+        output = safe_dom.NodeList().append(
+            safe_dom.Element(
+                'a', className='gcb-button gcb-pull-right',
+                href='dashboard?action=add_mc_question'
+            ).add_text('Add Multiple Choice')
+        ).append(
+            safe_dom.Element(
+                'a', className='gcb-button gcb-pull-right',
+                href='dashboard?action=add_sa_question'
+            ).add_text('Add Short Answer')
+        ).append(
+            safe_dom.Element('div', style='clear: both; padding-top: 2px;')
+        ).append(
+            safe_dom.Element('h3').add_text('Question Bank')
+        )
+
+        all_questions = QuestionEntity.get_all_questions()
+        if all_questions:
+            ol = safe_dom.Element('ol')
+            for question in all_questions:
+                edit_url = 'dashboard?action=edit_question&key=%s' % question.id
+                li = safe_dom.Element('li')
+                li.add_text(
+                    question.description
+                ).add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_child(
+                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
+                ol.add_child(li)
+            output.append(ol)
+        else:
+            output.append(safe_dom.Element('blockquote').add_text('< none >'))
+
+        return output
+
     def get_assets(self):
         """Renders course assets view."""
 
@@ -509,6 +557,8 @@ class DashboardHandler(
             return '< inherited from %s >' % folder
 
         items = safe_dom.NodeList().append(
+            self.list_questions()
+        ).append(
             self.list_and_format_file_list(
                 'Assessments', '/assets/js/', links=True,
                 prefix='assets/js/assessment-')

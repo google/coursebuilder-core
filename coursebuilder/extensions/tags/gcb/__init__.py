@@ -21,6 +21,7 @@ import urlparse
 from common import schema_fields
 from common import tags
 from models import courses
+from models.models import QuestionEntity
 from xml.etree import cElementTree
 
 
@@ -248,3 +249,16 @@ class Activity(tags.BaseTag):
                   'Note /assets/js/ is not required')))
         return reg
 
+class Question(tags.BaseTag):
+
+    def get_schema(self, handler):
+        questions = QuestionEntity.get_all_questions()
+        question_list = [(q.id, q.description) for q in questions]
+
+        reg = schema_fields.FieldRegistry('Question')
+        reg.add_property(
+            schema_fields.SchemaField(
+              'quid', 'Question', 'string', optional=True,
+              select_data=question_list))
+
+        return reg

@@ -5,7 +5,8 @@
  *     the parent window.
  * @param env The shared GCB envronment variables.
  */
-function FramedEditorControls(frameProxy, env) {
+function FramedEditorControls(Y, frameProxy, env) {
+  this._Y = Y;
   this._frameProxy = frameProxy;
   this._env = env;
 }
@@ -42,7 +43,7 @@ FramedEditorControls.prototype = {
     cbHideMsg();
     document.getElementById("formContainer").style.display = "block";
     this._frameProxy.onLoad();
-    this._env.onFormLoad();
+    this._env.onFormLoad(this._Y);
   }
 };
 
@@ -81,7 +82,15 @@ FrameProxy.prototype = {
   },
 
   onLoad: function() {
+    this.refresh();
+  },
+
+  refresh: function() {
     var height = this._iframe.contentWindow.document.body.clientHeight + 50;
+    // TODO(jorr): Use Y.one('body').get('winHeight') after we get access to Y
+    if (window.innerHeight) {
+      height = Math.min(height, window.innerHeight - 20);
+    }
     this._iframe.style.height = height + 'px';
     this._iframe.style.marginTop = (-height / 2) + 'px';
   },

@@ -49,6 +49,11 @@ class BaseTag(object):
     def vendor(cls):
         return cls.__module__
 
+    @classmethod
+    def required_modules(cls):
+        """Lists the inputEx modules required by the editor."""
+        return []
+
     def render(self, unused_node):
         """Receive a node and return a node."""
         return cElementTree.XML('[Unimplemented custom tag]')

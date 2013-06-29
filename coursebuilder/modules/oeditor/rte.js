@@ -57,9 +57,9 @@ function getGcbRteDefs(env, Dom, Editor) {
       var that = this;
       var options = this.options;
       var _def = {
-        height: '350px',
-        width: '510px',
-        dompath: true,
+        // YUI will set the style.width attribute on the container, so provide
+        // a broken value so this can be overriden by CSS class.
+        width: 'broken'
       };
       // Merge options.opts into the default options
       var opts = options.opts;

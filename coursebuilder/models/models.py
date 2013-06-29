@@ -22,6 +22,8 @@ from config import ConfigProperty
 import counters
 from counters import PerfCounter
 from entities import BaseEntity
+import transforms
+import utils
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -311,3 +313,74 @@ class StudentPropertyEntity(BaseEntity):
             else:
                 MemcacheManager.set(cls._memcache_key(key), NO_OBJECT)
         return value
+
+
+class QuestionEntity(BaseEntity):
+    """An object representing a top-level question."""
+
+    MULTIPLE_CHOICE = 0
+    SHORT_ANSWER = 1
+
+    type = db.IntegerProperty(
+        indexed=False, choices=[MULTIPLE_CHOICE, SHORT_ANSWER])
+
+    # A string representation of a JSON dict.
+    data = db.TextProperty(indexed=False)
+
+    @classmethod
+    def _memcache_key(cls, question_id):
+        """Makes a memcache key from datastore id."""
+        return '(entity:question:%s)' % question_id
+
+    def get_question_dict(self):
+        return transforms.loads(self.data)
+
+    def set_question_dict(self, question_dict):
+        self.data = transforms.dumps(question_dict)
+
+    @property
+    def description(self):
+        return self.get_question_dict().get('description')
+
+    @property
+    def id(self):
+        return self.key().id()
+
+    @classmethod
+    def create(cls, question_type, question_dict):
+        return QuestionEntity(
+            type=question_type, data=transforms.dumps(question_dict))
+
+    @classmethod
+    def get_all_questions(cls):
+        questions = []
+        # pylint: disable=unnecessary-lambda
+        utils.QueryMapper(cls.all(), batch_size=100).run(
+            lambda item: questions.append(item))
+        # pylint: enable=unnecessary-lambda
+        return questions
+
+    def put(self):
+        """Do the normal put() and also add the object to memcache."""
+        result = super(QuestionEntity, self).put()
+        MemcacheManager.set(self._memcache_key(self.key().id()), self)
+        return result
+
+    def delete(self):
+        """Do the normal delete() and also remove the object from memcache."""
+        super(QuestionEntity, self).delete()
+        MemcacheManager.delete(self._memcache_key(self.key().id()))
+
+    @classmethod
+    def find_question_by_id(cls, question_id):
+        """Load the question from memcache or datastore."""
+        question = MemcacheManager.get(cls._memcache_key(question_id))
+        if NO_OBJECT == question:
+            return None
+        if not question:
+            question = QuestionEntity.get_by_id(int(question_id))
+            if question:
+                MemcacheManager.set(cls._memcache_key(question_id), question)
+            else:
+                MemcacheManager.set(cls._memcache_key(question_id), NO_OBJECT)
+        return question
