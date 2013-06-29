@@ -409,6 +409,16 @@ class PreviewHandler(BaseHandler):
         self.template_value['units'] = self.get_units()
         self.template_value['show_registration_page'] = True
 
+        course = self.app_context.get_environ()['course']
+        self.template_value['video_exists'] = bool(
+            'main_video' in course and
+            'url' in course['main_video'] and
+            course['main_video']['url'])
+        self.template_value['image_exists'] = bool(
+            'main_image' in course and
+            'url' in course['main_image'] and
+            course['main_image']['url'])
+
         if user:
             profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
             additional_registration_fields = self.app_context.get_environ(

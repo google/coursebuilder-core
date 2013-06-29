@@ -1,4 +1,8 @@
-<div class="gcb-col-5">
+{% if video_exists or image_exists %}
+  <div class="gcb-col-5">
+{% else %}
+  <div class="gcb-col-11">
+{% endif %}
 
   <h1 class="gcb-product-headers-large">
     {{course_info.course.title}}
@@ -14,16 +18,20 @@
 
 </div>
 
-<div class="gcb-col-5">
+{% if video_exists or image_exists %}
+  <div class="gcb-col-5">
 
-  {% if course_info.course.main_video %}
-    {# I18N: Alt text for an embedded YouTube video player. #}
-    <iframe class="youtube-player" type="text/html" width="430"
-     title="{{ gettext('YouTube Video Player') }}"
-     height="300" src="{{course_info.course.main_video.url}}"
-     frameborder="0" allowfullscreen></iframe>
-  {% else %}
-    <img height="300" src="{{course_info.course.main_image.url}}">
-  {% endif %}
+    {% if video_exists %}
+      {# I18N: Alt text for an embedded YouTube video player. #}
+      <iframe class="youtube-player" type="text/html" width="430"
+          title="{{ gettext('YouTube Video Player') }}"
+          height="300" src="{{course_info.course.main_video.url}}"
+          frameborder="0" allowfullscreen></iframe>
+    {% else%}
+      <img height="300"
+          alt="{{course_info.course.main_image.alt_text}}"
+          src="{{course_info.course.main_image.url}}">
+    {% endif %}
 
-</div>
+  </div>
+{% endif %}

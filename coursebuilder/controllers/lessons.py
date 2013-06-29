@@ -168,6 +168,16 @@ class CourseHandler(BaseHandler):
         self.template_value['progress'] = (
             self.get_progress_tracker().get_unit_progress(student))
 
+        course = self.app_context.get_environ()['course']
+        self.template_value['video_exists'] = bool(
+            'main_video' in course and
+            'url' in course['main_video'] and
+            course['main_video']['url'])
+        self.template_value['image_exists'] = bool(
+            'main_image' in course and
+            'url' in course['main_image'] and
+            course['main_image']['url'])
+
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value)
         self.template_value['navbar'] = {'course': True}
