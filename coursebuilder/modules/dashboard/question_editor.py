@@ -147,6 +147,17 @@ class BaseQuestionRESTHandler(BaseRESTHandler):
             transforms.send_json_response(
                 self, 404, 'Question not found.', {'key': key})
             return
+
+        used_by = QuestionDAO.used_by(question.id)
+        if used_by:
+            group_names = ['"%s"' % x for x in used_by]
+            transforms.send_json_response(
+                self, 403,
+                ('Question in use by question groups:\n%s.\nPlease delete it '
+                 'from those groups and try again.') % ',\n'.join(group_names),
+                {'key': key})
+            return
+
         QuestionDAO.delete(question)
         transforms.send_json_response(self, 200, 'Deleted.')
 

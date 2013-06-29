@@ -715,6 +715,26 @@ class QuestionDAO(BaseJsonDao):
     DTO = QuestionDTO
     ENTITY = QuestionEntity
 
+    @classmethod
+    def used_by(cls, question_dto_id):
+        """Returns descriptions of the question groups using a question.
+
+        Args:
+            question_dto_id: int. Identifier of the question we're testing.
+
+        Returns:
+            List of unicode. The lexicographically-sorted list of the
+            descriptions of all question groups that use the given question.
+        """
+        # O(num_question_groups), but deserialization of 1 large group takes
+        # ~1ms so practically speaking latency is OK for the admin console.
+        matches = []
+        for group in QuestionGroupDAO.get_all():
+            if long(question_dto_id) in [long(x) for x in group.question_ids]:
+                matches.append(group.description)
+
+        return sorted(matches)
+
 
 class QuestionGroupEntity(BaseEntity):
     """An object representing a question group in the datastore."""
@@ -722,6 +742,8 @@ class QuestionGroupEntity(BaseEntity):
 
 
 class QuestionGroupDTO(object):
+    """Data transfer object for question groups."""
+
     def __init__(self, the_id, the_dict):
         self.id = the_id
         self.dict = the_dict
@@ -733,6 +755,10 @@ class QuestionGroupDTO(object):
     @property
     def introduction(self):
         return self.dict.get('introduction') or ''
+
+    @property
+    def question_ids(self):
+        return [item['question'] for item in self.dict.get('items', [])]
 
 
 class QuestionGroupDAO(BaseJsonDao):
