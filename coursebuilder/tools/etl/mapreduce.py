@@ -90,6 +90,9 @@ class MapReduceBase(mrs.MapReduce):
 class JsonWriter(mrs.fileformats.Writer):
     """Outputs one JSON literal per line.
 
+    writepair() expects kvpair to be a tuple of unused key and either a list of
+    dicts, or a single dict.
+
     Example JSON output may look like:
     {'foo': 123, 'bar': 456, 'quz': 789}
     {'foo': 321, 'bar': 654, 'quz': 987}
@@ -105,52 +108,19 @@ class JsonWriter(mrs.fileformats.Writer):
     def __init__(self, fileobj, *args, **kwds):
         super(JsonWriter, self).__init__(fileobj, *args, **kwds)
 
+    def _write_json(self, writer, python_object):
+        if isinstance(python_object, dict):
+            writer(unicode(
+                transforms.dumps(python_object) + '\n').encode('utf-8'))
+        elif isinstance(python_object, list):
+            for item in python_object:
+                self._write_json(writer, item)
+        else:
+            raise TypeError('Value must be a dict or a list of dicts.')
+
     def writepair(self, kvpair, **unused_kwds):
         unused_key, value = kvpair
-        write = self.fileobj.write
-        write(unicode(value).encode('utf-8'))
-        write('\n')
-
-
-class EventFlattener(MapReduceBase):
-    """Flattens JSON event data.
-
-    Input file: EventEntity JSON file.
-
-    Each event has a 'source' that defines a place in a code where the event was
-    recorded. Each event has a 'user_id' to represent an actor who triggered
-    the event. The event 'data' is a JSON object.
-    """
-
-    def _flatten_data(self, json):
-        # json['data']['foo'] = 'bar' -> json['data_foo'] = 'bar', with
-        # json['data'] removed.
-        for k, v in transforms.loads(json.pop('data')).iteritems():
-            json['data_' + k] = v
-        return json
-
-    def map(self, key, value):
-        """Maps key string, value string -> key string, flattened_json_dict."""
-        json = self.json_parse(value)
-        if json:
-            if json.get('data'):
-                json = self._flatten_data(json)
-            yield key, json
-
-    def reduce(self, unused_key, values):
-        yield [value for value in values][0]
-
-
-class FlattenEvents(MapReduceJob):
-    """MapReduce Job that flattens EventEntities.
-
-    Usage:
-    python etl.py run path.to.mapreduce.FlattenEvents /coursename \
-        appid server.appspot.com \
-        --job_args='path_to_EventEntity.json path_to_output_directory'
-    """
-
-    MAPREDUCE_CLASS = EventFlattener
+        self._write_json(self.fileobj.write, value)
 
 
 class Histogram(object):
@@ -231,8 +201,7 @@ class YoutubeHistogramGenerator(MapReduceBase):
             values: a generator over video playhead positions.
 
         Yields:
-            A string representation of JSON dictionary with video_id,
-            instance_id, and histogram.
+            A dictionary with video_id, instance_id, and histogram.
             The time histogram is a list in which each index represents
             sequential milestone events and the corresponding item at each
             index represents the number of users watching the video.
@@ -243,8 +212,11 @@ class YoutubeHistogramGenerator(MapReduceBase):
         histogram = Histogram()
         for value in values:
             histogram.add(value)
-        yield transforms.dumps({'video_id': key[0], 'instance_id': key[1],
-                                'histogram': histogram.to_list()})
+        yield {
+            'video_id': key[0],
+            'instance_id': key[1],
+            'histogram': histogram.to_list()
+        }
 
 
 class YoutubeHistogram(MapReduceJob):
