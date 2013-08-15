@@ -27,6 +27,8 @@
   <div class="gcb-nav gcb-complex" id="gcb-nav-x">
     <div class="gcb-aux">
       <ul>
+
+        <!-- left-aligned links in order -->
         {{course_info.base.after_navbar_begins | safe}}
         <li {% if navbar.announcements %}class='active'{% endif %}>
           {# I18N: Navbar tab. #}
@@ -40,6 +42,18 @@
           <li {% if navbar.forum %}class='active'{% endif %}>
             {# I18N: Navbar tab. #}
             <a href="forum">{{ gettext('Forum') }}</a>
+          </li>
+        {% endif %}
+
+        <!-- right-aligned links are in order -->
+        {% if is_super_admin %}
+          <li class="gcb-pull-right">
+            <a href="/admin">Admin</a>
+          </li>
+        {% endif %}
+        {% if is_course_admin %}
+          <li class="gcb-pull-right">
+            <a href="dashboard">Dashboard</a>
           </li>
         {% endif %}
         {% if show_course_explorer_tab and logoutUrl %}
@@ -63,16 +77,6 @@
           <li {% if navbar.registration %}class='active'{% endif %}>
             {# I18N: Navbar tab. #}
             <a href="register">{{ gettext('Registration') }}</a>
-          </li>
-        {% endif %}
-        {% if is_super_admin %}
-          <li class="gcb-pull-right">
-            <a href="/admin">Admin</a>
-          </li>
-        {% endif %}
-        {% if is_course_admin %}
-          <li class="gcb-pull-right">
-            <a href="dashboard">Dashboard</a>
           </li>
         {% endif %}
         {{course_info.base.before_navbar_ends | safe}}
