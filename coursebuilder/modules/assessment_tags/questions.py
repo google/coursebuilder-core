@@ -44,7 +44,7 @@ def render_question(
           generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
-      weight: float. The weight to be used when grading the question in a
+      weight: int/float. The weight to be used when grading the question in a
           scored lesson.
       progress: None, 0 or 1. If None, no progress marker should be shown. If
           0, a 'not-started' progress marker should be shown. If 1, a
@@ -89,8 +89,10 @@ def render_question(
         template_values['columns'] = template_values.get(
             'columns', m_models.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
 
+    template_values['displayed_weight'] = weight
+
     if not embedded:
-        js_data['weight'] = weight
+        js_data['weight'] = float(weight)
     template_values['js_data'] = transforms.dumps(js_data)
 
     template = jinja_utils.get_template(
@@ -117,10 +119,11 @@ class QuestionTag(tags.BaseTag):
         locale = handler.app_context.get_environ()['course']['locale']
 
         quid = node.attrib.get('quid')
+        weight = node.attrib.get('weight')
         try:
-            weight = float(node.attrib.get('weight'))
+            float(weight)
         except TypeError:
-            weight = 1.0
+            weight = 1
 
         instanceid = node.attrib.get('instanceid')
 
@@ -204,7 +207,8 @@ class QuestionGroupTag(tags.BaseTag):
             quid = item['question']
             question_instanceid = '%s.%s.%s' % (group_instanceid, ind, quid)
             template_values['question_html_array'].append(render_question(
-                quid, question_instanceid, locale, embedded=True
+                quid, question_instanceid, locale, weight=item['weight'],
+                embedded=True
             ))
             js_data[question_instanceid] = item
         template_values['js_data'] = transforms.dumps(js_data)

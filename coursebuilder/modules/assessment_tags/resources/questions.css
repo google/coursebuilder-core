@@ -39,6 +39,9 @@ div.qt-warning {
   display: inline-block;
   margin: 10px 0;
 }
+.qt-points {
+  float: right;
+}
 
 .qt-grade-scored-lesson, .qt-grade-report, .qt-grade-assessment {
   margin-bottom: 10px;

@@ -3,6 +3,18 @@
 {% block question %}
   <div id="{{instanceid}}"
       class="qt-sa-question {% if embedded %}qt-embedded{% else %}qt-standalone{% endif %}">
+    <div class="qt-points">
+      <em>
+        {% if displayed_weight == 1 %}
+          {# I18N: Displayed next to a question. Indicates that the question is worth 1 point. #}
+          {{ gettext('1 point') }}
+        {% else %}
+          {# I18N: Displayed next to a question to indicate its point value. In this particular message, the number of points will be plural. #}
+          {{ gettext('%(points)s points', points=displayed_weight) }}
+        {% endif %}
+      </em>
+    </div>
+
     <div class="qt-question">{{ question | safe }}</div>
 
     <div class="qt-response">
