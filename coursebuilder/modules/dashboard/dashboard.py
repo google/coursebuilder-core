@@ -527,7 +527,7 @@ class DashboardHandler(
             # show different captions depending if the override exists or not
             has_override = filename in unmerged_files
             link_caption = '[Override]'
-            if has_override:
+            if has_override or not merge_local_files:
                 link_caption = '[Edit]'
 
             # make a <li> item
