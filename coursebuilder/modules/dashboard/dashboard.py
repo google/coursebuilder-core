@@ -39,6 +39,7 @@ from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from models.models import Student
+from modules.search.search import SearchDashboardHandler
 from tools import verify
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
@@ -71,12 +72,12 @@ from google.appengine.api import users
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
     QuestionManagerAndEditor, QuestionGroupManagerAndEditor, AssignmentManager,
-    ApplicationHandler, ReflectiveRequestHandler):
+    ApplicationHandler, ReflectiveRequestHandler, SearchDashboardHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
     get_actions = [
-        default_action, 'assets', 'settings', 'analytics',
+        default_action, 'assets', 'settings', 'analytics', 'search',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
@@ -86,13 +87,15 @@ class DashboardHandler(
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
-        'add_link', 'add_assessment', 'add_lesson',
-        'edit_basic_course_settings', 'add_reviewer', 'delete_reviewer']
+        'add_link', 'add_assessment', 'add_lesson', 'index_course',
+        'clear_index', 'edit_basic_course_settings', 'add_reviewer',
+        'delete_reviewer']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
         ('settings', 'Settings'),
         ('analytics', 'Analytics'),
+        ('search', 'Search'),
         ('edit_assignment', 'Peer Review')]
 
     local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')

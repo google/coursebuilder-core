@@ -28,7 +28,7 @@ from google.appengine.ext import deferred
 
 
 # A job can be in one of these states.
-STATUS_CODE_NONE = 0
+STATUS_CODE_QUEUED = 0
 STATUS_CODE_STARTED = 1
 STATUS_CODE_COMPLETED = 2
 STATUS_CODE_FAILED = 3
@@ -36,6 +36,9 @@ STATUS_CODE_FAILED = 3
 
 class DurableJob(object):
     """A class that represents a deferred durable job at runtime."""
+
+    # The methods in DurableJobEntity are module-level protected
+    # pylint: disable-msg=protected-access
 
     def __init__(self, app_context):
         self._namespace = app_context.get_namespace_name()
@@ -54,29 +57,35 @@ class DurableJob(object):
         try:
             namespace_manager.set_namespace(self._namespace)
             try:
+                db.run_in_transaction(DurableJobEntity._start_job,
+                                      self._job_name)
                 result = self.run()
-                DurableJobEntity.complete_job(
-                    self._job_name, transforms.dumps(result),
-                    long(time.time() - time_started))
+                db.run_in_transaction(DurableJobEntity._complete_job,
+                                      self._job_name, transforms.dumps(result),
+                                      long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
             except Exception as e:
                 logging.error(traceback.format_exc())
                 logging.error('Job failed: %s\n%s', self._job_name, e)
-                DurableJobEntity.fail_job(
-                    self._job_name, traceback.format_exc(),
-                    long(time.time() - time_started))
+                db.run_in_transaction(DurableJobEntity._fail_job,
+                                      self._job_name, traceback.format_exc(),
+                                      long(time.time() - time_started))
                 raise deferred.PermanentTaskFailure(e)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
     def submit(self):
         """Submits this job for deferred execution."""
-        DurableJobEntity.create_job(self._job_name)
+        db.run_in_transaction(DurableJobEntity._create_job, self._job_name)
+        deferred.defer(self.main)
+
+    def non_transactional_submit(self):
+        DurableJobEntity._create_job(self._job_name)
         deferred.defer(self.main)
 
     def load(self):
         """Loads the last known state of this job from the datastore."""
-        return DurableJobEntity.get_by_name(self._job_name)
+        return DurableJobEntity._get_by_name(self._job_name)
 
 
 class DurableJobEntity(entities.BaseEntity):
@@ -88,50 +97,47 @@ class DurableJobEntity(entities.BaseEntity):
     output = db.TextProperty(indexed=False)
 
     @classmethod
-    def get_by_name(cls, name):
+    def _get_by_name(cls, name):
         return DurableJobEntity.get_by_key_name(name)
 
     @classmethod
-    def update(cls, name, status_code, output, execution_time_sec):
+    def _update(cls, name, status_code, output, execution_time_sec):
         """Updates job state in a datastore."""
+        assert db.is_in_transaction()
 
-        def mutation():
-            job = DurableJobEntity.get_by_name(name)
-            if not job:
-                logging.error('Job was not started or was deleted: %s', name)
-                return
-            job.updated_on = datetime.now()
-            job.execution_time_sec = execution_time_sec
-            job.status_code = status_code
-            job.output = output
-            job.put()
-        db.run_in_transaction(mutation)
+        job = DurableJobEntity._get_by_name(name)
+        if not job:
+            logging.error('Job was not started or was deleted: %s', name)
+            return
+        job.updated_on = datetime.now()
+        job.execution_time_sec = execution_time_sec
+        job.status_code = status_code
+        job.output = output
+        job.put()
 
     @classmethod
-    def create_job(cls, name):
+    def _create_job(cls, name):
         """Creates new or reset a state of existing job in a datastore."""
+        assert db.is_in_transaction()
 
-        def mutation():
-            job = DurableJobEntity.get_by_name(name)
-            if not job:
-                job = DurableJobEntity(key_name=name)
-
-            job.updated_on = datetime.now()
-            job.execution_time_sec = 0
-            job.status_code = STATUS_CODE_NONE
-            job.output = None
-            job.put()
-        db.run_in_transaction(mutation)
+        job = DurableJobEntity._get_by_name(name)
+        if not job:
+            job = DurableJobEntity(key_name=name)
+        job.updated_on = datetime.now()
+        job.execution_time_sec = 0
+        job.status_code = STATUS_CODE_QUEUED
+        job.output = None
+        job.put()
 
     @classmethod
-    def start_job(cls, name):
-        return cls.update(name, STATUS_CODE_STARTED, None, 0)
+    def _start_job(cls, name):
+        return cls._update(name, STATUS_CODE_STARTED, None, 0)
 
     @classmethod
-    def complete_job(cls, name, output, execution_time_sec):
-        return cls.update(
+    def _complete_job(cls, name, output, execution_time_sec):
+        return cls._update(
             name, STATUS_CODE_COMPLETED, output, execution_time_sec)
 
     @classmethod
-    def fail_job(cls, name, output, execution_time_sec):
-        return cls.update(name, STATUS_CODE_FAILED, output, execution_time_sec)
+    def _fail_job(cls, name, output, execution_time_sec):
+        return cls._update(name, STATUS_CODE_FAILED, output, execution_time_sec)

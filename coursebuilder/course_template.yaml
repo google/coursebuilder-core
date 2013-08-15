@@ -53,7 +53,18 @@ base:
   before_head_tag_ends: '<!-- base.before_head_tag_ends -->'
   after_body_tag_begins: '<!-- base.after_body_tag_begins -->'
   after_navbar_begins: '<!-- base.after_navbar_begins -->'
-  before_navbar_ends: '<!-- base.before_navbar_ends -->'
+  before_navbar_ends: '<!-- base.before_navbar_ends -->
+    <!-- Here we enable the search module. -->
+    <script src="/modules/search/assets/search.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="/modules/search/assets/search.css" />
+    <li class="gcb-pull-right">
+      <form class="gcb-search-form" action="search" method="get">
+        <input class="gcb-search-box" name="query" type="text" >
+        <input value="Search"
+            class="gcb-button gcb-search-button" type="submit">
+      </form>
+    </li>'
   after_top_content_ends: '<!-- base.after_top_content_ends -->'
   after_main_content_ends: '<!-- base.after_main_content_ends -->'
   before_body_tag_ends: '<!-- base.before_body_tag_ends -->'

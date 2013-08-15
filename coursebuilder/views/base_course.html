@@ -65,8 +65,6 @@
             <a href="register">{{ gettext('Registration') }}</a>
           </li>
         {% endif %}
-
-        {{course_info.base.before_navbar_ends | safe}}
         {% if is_super_admin %}
           <li class="gcb-pull-right">
             <a href="/admin">Admin</a>
@@ -77,6 +75,7 @@
             <a href="dashboard">Dashboard</a>
           </li>
         {% endif %}
+        {{course_info.base.before_navbar_ends | safe}}
       </ul>
     </div>
   </div>

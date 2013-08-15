@@ -28,6 +28,7 @@ from controllers import sites
 from controllers import utils
 import main
 from models import config
+from models import custom_modules
 from tests import suite
 from google.appengine.api import namespace_manager
 
@@ -137,13 +138,26 @@ class TestBase(suite.AppEngineTestBase):
                 absolute = url.startswith('//')
                 root = url == '/'
                 canonical = url.startswith(self.base)
-                allowed = url.startswith('/admin') or url.startswith('/_ah/')
+                allowed = self.url_allowed(url)
 
                 if not (absolute or root or canonical or allowed):
                     raise Exception('Invalid reference \'%s\' in:\n%s' % (
                         url, response.body))
 
             self.audit_url(self.canonicalize(url, response=response))
+
+    def url_allowed(self, url):
+        """Check whether a URL should be allowed as a href in the response."""
+        if url.startswith('/_ah/'):
+            return True
+        global_routes = []
+        for module in custom_modules.Registry.registered_modules.values():
+            for route, unused_handler in module.global_routes:
+                global_routes.append(route)
+        if any(re.match(route, url) for route in global_routes):
+            return True
+
+        return False
 
     def get(self, url, **kwargs):
         url = self.canonicalize(url)
@@ -253,6 +267,17 @@ def assert_all_fail(browser, callbacks):
             pass
 
 
+def get_form_by_action(response, action):
+    """Gets a form give an action string or returns None."""
+    form = None
+    try:
+        form = next(
+            form for form in response.forms.values() if form.action == action)
+    except StopIteration:
+        pass
+    return form
+
+
 def login(email, is_admin=False):
     os.environ['USER_EMAIL'] = email
     os.environ['USER_ID'] = email
@@ -281,8 +306,9 @@ def register(browser, name):
 
     response = view_registration(browser)
 
-    response.form.set('form01', name)
-    response = browser.submit(response.form)
+    register_form = get_form_by_action(response, 'register')
+    register_form.set('form01', name)
+    response = browser.submit(register_form)
 
     assert_equals(response.status_int, 302)
     assert_contains(
@@ -316,10 +342,11 @@ def register_with_additional_fields(browser, name, data2, data3):
 
     response = view_registration(browser)
 
-    response.form.set('form01', name)
-    response.form.set('form02', data2)
-    response.form.set('form03', data3)
-    response = browser.submit(response.form)
+    register_form = get_form_by_action(response, 'register')
+    register_form.set('form01', name)
+    register_form.set('form02', data2)
+    register_form.set('form03', data3)
+    response = browser.submit(register_form)
 
     assert_equals(response.status_int, 302)
     assert_contains(
@@ -553,21 +580,25 @@ def add_reviewer(browser, unit_id, reviewee_email, reviewer_email):
 
 
 def change_name(browser, new_name):
+    """Change the name of a student."""
     response = browser.get('student/home')
 
-    response.form.set('name', new_name)
-    response = browser.submit(response.form)
+    edit_form = get_form_by_action(response, 'student/editstudent')
+    edit_form.set('name', new_name)
+    response = browser.submit(edit_form)
 
     assert_equals(response.status_int, 302)
     check_profile(browser, new_name)
 
 
 def unregister(browser):
+    """Unregister a student."""
     response = browser.get('student/home')
     response = browser.click(response, 'Unenroll')
 
     assert_contains('to unenroll from', response.body)
-    browser.submit(response.form)
+    unregister_form = get_form_by_action(response, 'student/unenroll')
+    browser.submit(unregister_form)
 
 
 class Permissions(object):

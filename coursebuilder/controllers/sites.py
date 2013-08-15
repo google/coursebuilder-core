@@ -402,7 +402,7 @@ def get_all_courses(rules_text=None):
 
 
 def get_course_for_current_request():
-    """Chooses course that matches current request context path."""
+    """Chooses app_context that matches current request context path."""
 
     # get path if defined
     if not has_path_info():
@@ -410,16 +410,30 @@ def get_course_for_current_request():
     path = get_path_info()
 
     # Get all rules.
-    courses = get_all_courses()
+    app_contexts = get_all_courses()
 
-    # Match a path to a course.
+    # Match a path to an app_context.
     # TODO(psimakov): linear search is unacceptable
-    for course in courses:
-        if path == course.get_slug() or path.startswith(
-                '%s/' % course.get_slug()) or course.get_slug() == '/':
-            return course
+    for app_context in app_contexts:
+        if (path == app_context.get_slug() or
+            path.startswith('%s/' % app_context.get_slug()) or
+            app_context.get_slug() == '/'):
+            return app_context
 
     debug('No mapping for: %s' % path)
+    return None
+
+
+def get_app_context_for_namespace(namespace):
+    """Chooses the app_context that matches the current namespace."""
+
+    app_contexts = get_all_courses()
+
+    # TODO(psimakov): linear search is unacceptable
+    for app_context in app_contexts:
+        if app_context.get_namespace_name() == namespace:
+            return app_context
+    debug('No app_context in namespace: %s' % namespace)
     return None
 
 

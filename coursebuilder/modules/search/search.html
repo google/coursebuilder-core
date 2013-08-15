@@ -1,0 +1,53 @@
+{% extends 'base_course.html' %}
+
+{% block subtitle %}
+  {# I18N: Title of the webpage. #}
+  {{ gettext('Search') }}
+{% endblock subtitle %}
+
+{% block main_content %}
+  {% if search_error %}
+    <div class="gcb-search-info">
+      {# I18N: Message displayed on search results page when error occurs. #}
+      {{ gettext('Search is currently unavailable.') }}
+    </div>
+  {% elif search_results %}
+    <div class="gcb-search-info">
+      <!-- TODO(emichael): Put the queries in <strong> tags -->
+      {# I18N: Status message above search results. #}
+      {{ gettext('Results for "%(query)s"', query=query) }}
+      <div class="gcb-search-time">
+        {# I18N: The amount of time the search took, displayed above search results. #}
+        {{ gettext('Search took %(num_seconds)s seconds.', num_seconds=time) }}
+      </div>
+    </div>
+
+    {% for result in search_results %}
+      {{ result.get_html() }}
+    {% endfor %}
+    <div class="gcb-search-navigation-bar">
+      {% if previous_link %}
+        <a class="gcb-search-previous" href="{{ previous_link }}">
+          {# I18N: Link to the previous page. #}
+          {{ gettext('Previous') }}
+        </a>
+      {% endif %}
+      <div class="gcb-search-page-display">
+        {# I18N: Indicator for current page in search results. #}
+        {{ gettext('Page %(number)s of %(total)s',
+                   number=page_number, total=total_pages) }}
+      </div>
+      {% if next_link %}
+        <a class="gcb-search-next" href="{{ next_link }}">
+          {# I18N: Link to the next page. #}
+          {{ gettext('Next') }}
+        </a>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="gcb-search-info">
+      {# I18N: The search returned no results. #}
+      {{ gettext('No results for "%(query)s"', query=query) }}
+    </div>
+  {% endif %}
+{% endblock %}

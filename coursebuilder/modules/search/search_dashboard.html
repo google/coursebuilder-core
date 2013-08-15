@@ -1,0 +1,107 @@
+<!-- TODO(emichael): Use the butterbar from assets/lib -->
+<style>
+  div#oeditor-container {
+    position: relative;
+  }
+  div.status-popup {
+    width:400px;   /* adjust */
+    left:50%;
+    margin-left: -200px;  /* half of the width */
+    background-color: #ffffB7;
+    border: solid #cccca0 1px;
+    border-radius: 5px;
+    text-align: center;
+    padding: 2px;
+    z-index: 999;
+  }
+  .status-popup.fixed {
+    position: fixed;
+    top: 10px;
+  }
+  .status-popup.absolute {
+    position: absolute;
+    top: -14px;
+  }
+  div.status-controlbar {
+    float: right;
+  }
+  div.status-controlbar button {
+    font-weight: bold;
+    text-decoration: none;
+    padding: 0 0.2em;
+  }
+  div.status-message {
+    padding: 0.2em;
+  }
+
+  .border-box {
+    border: 1px solid black;
+    margin: auto;
+    padding: 10px 10px 0 10px;
+    width: 90%;
+  }
+  .right-button {
+    float: right;
+    margin-right: 5%;
+  }
+  .translucent {
+    opacity: 0.5;
+  }
+
+</style>
+
+<div id='oeditor-container'>
+  <div class='status-popup absolute' id='formStatusPopup'>
+    <div class='status-controlbar'>
+      <button id='close-status-popup-button' onclick='javascript:cbHideMsg()'>X</button>
+    </div>
+    <div class='status-message' id='formStatusMessage'></div>
+  </div>
+  <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
+    <div class='form' id='formContainer'></div>
+  </div>
+</div>
+
+<script>
+  function cbShowMsg(msg) {
+    var popup = document.getElementById("formStatusPopup");
+    var message = document.getElementById('formStatusMessage')
+    message.textContent = msg;
+    message.innerContent = msg;
+    popup.style.display = null;
+  }
+  function cbHideMsg() {
+    var elem = document.getElementById("formStatusPopup");
+    elem.style.display = "none";
+  }
+  cbHideMsg();
+</script>
+
+<script src="/modules/search/assets/searchDashboard.js"></script>
+
+{% if module_enabled %}
+  <form id="gcb-index-course">
+    <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
+    <button class="gcb-button">Index Course</button>
+  </form>
+
+  <form id="gcb-clear-index">
+    <input type="hidden" name="xsrf_token" value="{{clear_index_xsrf_token}}">
+    <button class="gcb-button">Clear Index</button>
+  </form>
+
+  <div id="gcb-index-status">
+    {% if status == 'indexed' %}
+        The index was last updated on {{ last_updated }}.
+        {{ num_indexed_docs }} documents were added.
+    {% elif status == 'clearing' %}
+      The index is cleared.
+    {% elif status == 'indexing_in_progress' %}
+      Indexing in progress.
+    {% endif %}
+  </div>
+{% else %}
+  <div id="gcb-index-status">
+    The search module is currently disabled.
+  </div>
+{% endif %}

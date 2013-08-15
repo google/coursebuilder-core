@@ -1672,6 +1672,13 @@ class Course(object):
     def get_lessons(self, unit_id):
         return self._model.get_lessons(unit_id)
 
+    def get_lessons_for_all_units(self):
+        lessons = []
+        for unit in self.get_units():
+            for lesson in self.get_lessons(unit.unit_id):
+                lessons.append(lesson)
+        return lessons
+
     def save(self):
         return self._model.save()
 

@@ -1682,10 +1682,12 @@ class StudentAspectTest(actions.TestBase):
         actions.register(self, name)
 
         response = self.get('student/home')
-        response.form.set('name', 'My New Name')
-        response.form.set('xsrf_token', 'bad token')
 
-        response = response.form.submit(expect_errors=True)
+        edit_form = actions.get_form_by_action(response, 'student/editstudent')
+        edit_form.set('name', 'My New Name')
+        edit_form.set('xsrf_token', 'bad token')
+
+        response = edit_form.submit(expect_errors=True)
         assert_equals(response.status_int, 403)
 
     def test_autoescaping(self):
@@ -2386,9 +2388,11 @@ class MultipleCoursesTestBase(actions.TestBase):
             response = self.get('/courses/%s/register' % course.path)
             assert_contains(course.title, response.body)
             assert_contains(course.head, response.body)
-            response.form.set('form01', course.name)
-            response.form.action = '/courses/%s/register' % course.path
-            response = self.submit(response.form)
+
+            register_form = actions.get_form_by_action(response, 'register')
+            register_form.set('form01', course.name)
+            register_form.action = '/courses/%s/register' % course.path
+            response = self.submit(register_form)
 
             assert_equals(response.status_int, 302)
             assert_contains(

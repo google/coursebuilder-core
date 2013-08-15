@@ -50,6 +50,7 @@ import unittest
 import appengine_config  # pylint: disable-msg=unused-import
 import webtest
 
+from google.appengine.api.search import simple_search_stub
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext import deferred
 from google.appengine.ext import testbed
@@ -194,6 +195,10 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.init_datastore_v3_stub(consistency_policy=policy)
         self.testbed.init_taskqueue_stub()
         self.taskq = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
+        self.testbed.init_urlfetch_stub()
+        # TODO(emichael): Fix this when an official stub is created
+        self.testbed._register_stub(
+            'search', simple_search_stub.SearchServiceStub())
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.testbed.deactivate()
