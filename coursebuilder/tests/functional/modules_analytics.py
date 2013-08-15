@@ -24,9 +24,11 @@ from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from models import models
 from models import transforms
 
 from models.progress import ProgressStats
+from models.progress import UnitLessonCompletionTracker
 from modules.dashboard import analytics
 
 
@@ -302,6 +304,94 @@ class QuestionAnalyticsTest(actions.TestBase):
         config.Registry.test_overrides[
             utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
 
+    def _get_sample_v15_course(self):
+        """Creates a course with different types of questions and returns it."""
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        unit1 = course.add_unit()
+        lesson1 = course.add_lesson(unit1)
+        assessment_old = course.add_assessment()
+        assessment_old.title = 'Old assessment'
+        assessment_new = course.add_assessment()
+        assessment_new.title = 'New assessment'
+        assessment_peer = course.add_assessment()
+        assessment_peer.title = 'Peer review assessment'
+
+        # Create a multiple choice question.
+        mcq_new_id = 1
+        mcq_new_dict = {
+            'description': 'mcq_new',
+            'type': 0,  # Multiple choice question.
+            'choices': [{
+                'text': 'answer',
+                'score': 1.0
+            }],
+            'version': '1.5'
+        }
+        mcq_new_dto = models.QuestionDTO(mcq_new_id, mcq_new_dict)
+
+        # Create a short answer question.
+        frq_new_id = 2
+        frq_new_dict = {
+            'defaultFeedback': '',
+            'rows': 1,
+            'description': 'short answer',
+            'hint': '',
+            'graders': [{
+                'matcher': 'case_insensitive',
+                'score': '1.0',
+                'response': 'hi',
+                'feedback': ''
+            }],
+            'question': 'short answer question',
+            'version': '1.5',
+            'type': 1,  # Short answer question.
+            'columns': 100
+        }
+        frq_new_dto = models.QuestionDTO(frq_new_id, frq_new_dict)
+
+        # Save these questions to datastore.
+        models.QuestionDAO.save_all([mcq_new_dto, frq_new_dto])
+
+        # Create a question group.
+        question_group_id = 3
+        question_group_dict = {
+            'description': 'question_group',
+            'items': [
+                {'question': str(mcq_new_id)},
+                {'question': str(frq_new_id)}
+            ],
+            'version': '1.5',
+            'introduction': ''
+        }
+        question_group_dto = models.QuestionGroupDTO(
+            question_group_id, question_group_dict)
+
+        # Save the question group to datastore.
+        models.QuestionGroupDAO.save_all([question_group_dto])
+
+        # Add a MC question and a question group to leesson1.
+        lesson1.objectives = """
+            <question quid="1" weight="1" instanceid="QN"></question>
+            random_text
+            <gcb-youtube videoid="Kdg2drcUjYI" instanceid="VD"></gcb-youtube>
+            more_random_text
+            <question-group qgid="3" instanceid="QG"></question-group>
+        """
+
+        # Add a MC question, a short answer question, and a question group to
+        # new style assessment.
+        assessment_new.html_content = """
+            <question quid="1" weight="1" instanceid="QN2"></question>
+            <question quid="2" weight="1" instanceid="FRQ2"></question>
+            random_text
+            <gcb-youtube videoid="Kdg2drcUjYI" instanceid="VD"></gcb-youtube>
+            more_random_text
+            <question-group qgid="3" instanceid="QG2"></question-group>
+        """
+
+        return course
+
     def test_get_summarized_question_list_from_event(self):
         """Tests the transform functions per event type."""
         sites.setup_courses('course:/test::ns_test, course:/:/')
@@ -331,3 +421,48 @@ class QuestionAnalyticsTest(actions.TestBase):
         id_to_questions, id_to_assessments = question_stats_computer.run()
         assert_equals({}, id_to_questions)
         assert_equals({}, id_to_assessments)
+
+    def test_id_to_question_dict_constructed_correctly(self):
+        """Tests id_to_question dicts are constructed correctly."""
+        course = self._get_sample_v15_course()
+        tracker = UnitLessonCompletionTracker(course)
+        assert_equals(
+            tracker.get_id_to_questions_dict(),
+            {
+                'u.1.l.2.c.QN': {
+                    'answer_counts': [0],
+                    'label': 'Unit 1 Lesson 1, Question mcq_new',
+                    'location': 'unit?unit=1&lesson=2',
+                    'num_attempts': 0,
+                    'score': 0
+                },
+                'u.1.l.2.c.QG.i.0': {
+                    'answer_counts': [0],
+                    'label': ('Unit 1 Lesson 1, Question Group question_group '
+                              'Question mcq_new'),
+                    'location': 'unit?unit=1&lesson=2',
+                    'num_attempts': 0,
+                    'score': 0
+                }
+            }
+        )
+        assert_equals(
+            tracker.get_id_to_assessments_dict(),
+            {
+                's.4.c.QN2': {
+                    'answer_counts': [0],
+                    'label': 'New assessment, Question mcq_new',
+                    'location': 'assessment?name=4',
+                    'num_attempts': 0,
+                    'score': 0
+                },
+                's.4.c.QG2.i.0': {
+                    'answer_counts': [0],
+                    'label': ('New assessment, Question Group question_group '
+                              'Question mcq_new'),
+                    'location': 'assessment?name=4',
+                    'num_attempts': 0,
+                    'score': 0
+                }
+            }
+        )
