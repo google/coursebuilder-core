@@ -102,6 +102,19 @@ describe('assessment tags', function() {
         var grade = mc.grade();
         expect(grade.score).toBe(1);
       });
+      it('sends event logging', function() {
+        var auditDict;
+        var eventPayloads = JSON.parse(
+            readFixtures('tests/unit/common/event_payloads.json'));
+        var questionData = {'mc-0': {choices: [
+            {score: '1', feedback: 'yes'},
+            {score: '0', feedback: 'no'}]}};
+        var mc = new McQuestion(el, questionData, MESSAGES, function(arg) {
+          auditDict = arg;
+        });
+        mc.onCheckAnswer();
+        expect(auditDict).toEqual(eventPayloads.multiple_choice_15.event_data);
+      });
     });
     describe('multiple selection', function() {
       var SAMPLE_QUESTION_DATA = {
@@ -281,9 +294,20 @@ describe('assessment tags', function() {
       expect(el.find('> .qt-response > input, .qt-response > textarea')
           .prop('disabled')).toBe(true);
     });
+    it('sends event logging', function() {
+      var auditDict;
+      var eventPayloads = JSON.parse(
+          readFixtures('tests/unit/common/event_payloads.json'));
+      var questionData = getQuestionData('case_insensitive', 'FaLaFeL');
+      var sa = new SaQuestion(el, questionData, MESSAGES, function(arg) {
+        auditDict = arg;
+      });
+      sa.onCheckAnswer();
+      expect(auditDict).toEqual(eventPayloads.short_answer_15.event_data);
+    });
   });
   describe('question group', function() {
-    var qg;
+    var auditDict, qg;
     beforeEach(function() {
       var el = $('#qg-0');
       var questionData = {
@@ -304,7 +328,10 @@ describe('assessment tags', function() {
           }]
         }
       };
-      qg = new QuestionGroup(el, questionData, MESSAGES);
+      var componentAudit = function(arg) {
+        auditDict = arg;
+      }
+      qg = new QuestionGroup(el, questionData, MESSAGES, componentAudit);
     });
     it('computes a weighted grade', function() {
       $('#qg-0-mc-0-0').prop('checked', false);
@@ -323,6 +350,15 @@ describe('assessment tags', function() {
     });
     it('computes the total points available', function() {
       expect(qg.getTotalPoints()).toBe(25);
+    });
+    it('sends event logging', function() {
+      var eventPayloads = JSON.parse(
+          readFixtures('tests/unit/common/event_payloads.json'));
+      $('#qg-0-mc-0-0').prop('checked', true);
+      $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+          .val('falafel');
+      qg.onCheckAnswer();
+      expect(auditDict).toEqual(eventPayloads.question_group_15.event_data);
     });
     it('serializes the student answer', function() {
       $('#qg-0-mc-0-0').prop('checked', true);

@@ -209,6 +209,7 @@ SaQuestion.prototype.grade = function() {
         grader.response, response)) {
       var score = Math.min(Math.max(parseFloat(grader.score), 0), 1);
       return {
+        answer: response,
         score: score,
         feedback: $('<div/>').html(grader.feedback),
         type: this.type
@@ -308,7 +309,8 @@ QuestionGroup.prototype.onCheckAnswer = function() {
     'answer': grade.answer,
     'score': grade.score,
     'individualScores': grade.individualScores,
-    'containedTypes': grade.containedTypes
+    'containedTypes': grade.containedTypes,
+    'type': this.type
   });
 };
 QuestionGroup.prototype.grade = function() {
@@ -331,7 +333,7 @@ QuestionGroup.prototype.grade = function() {
   var totalWeight = this.getWeight();
   return {
     answer: answer,
-    score: score / totalWeight,
+    score: Math.round(100 * score / totalWeight) / 100,
     feedback: feedback,
     individualScores: individualScores,
     containedTypes: containedTypes

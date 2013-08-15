@@ -11,14 +11,22 @@ files = [
   // Test files
   'tests/unit/javascript_tests/modules_assessment_tags/*.js',
 
-  // Files to test
-  'modules/assessment_tags/resources/grading_lib.js',
+  // Test resources
+  {
+    pattern: 'tests/unit/common/event_payloads.json',
+    watched: true,
+    included: false,
+    served: true
+  },
   {
     pattern: 'tests/unit/javascript_tests/modules_assessment_tags/*.html',
     watched: true,
     included: false,
     served: true
-  }
+  },
+
+  // Files to test
+  'modules/assessment_tags/resources/grading_lib.js'
 ];
 
 exclude = [
