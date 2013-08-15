@@ -66,7 +66,7 @@ class UnitLessonCompletionTracker(object):
 
     MULTIPLE_CHOICE = 'multiple choice'
     MULTIPLE_CHOICE_GROUP = 'multiple choice group'
-    QUESTION_GROUP = 'question_group'
+    QUESTION_GROUP = 'question-group'
     QUESTION = 'question'
 
     EVENT_CODE_MAPPING = {
@@ -362,7 +362,7 @@ class UnitLessonCompletionTracker(object):
             question = QuestionDAO.load(quid)
             if question.type == question.MULTIPLE_CHOICE:
                 q_id = 's.%s.c.%s.i.%s' % (
-                    assessment.title, cpt['instanceid'], ind)
+                    assessment.unit_id, cpt['instanceid'], ind)
                 label = '%s, Question Group %s Question %s' % (
                     assessment.title, question_group.description,
                     question.description)
@@ -414,7 +414,7 @@ class UnitLessonCompletionTracker(object):
             if 'choices' in question:
                 questions.update(
                     {
-                        's.%s.i.%s' % (assessment.title, ind): {
+                        's.%s.i.%s' % (assessment.unit_id, ind): {
                             'answer_counts': [0] * len(question['choices']),
                             'label': '%s, Question %s' % (
                                 assessment.title, ind + 1),

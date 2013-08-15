@@ -500,12 +500,12 @@ class ComputeQuestionStats(jobs.DurableJob):
                     question_list = (
                         self._get_questions_from_submit_and_attempt_assessment(
                             data))
-                return question_list
-
             except Exception as e:  # pylint: disable-msg=broad-except
                 logging.error(
                     'Failed to process question analytics event: '
                     'source %s, data %s, error %s', source, data, e)
+
+            return question_list
 
         def visit(self, event_entity):
             """Records question data from given event_entity."""
