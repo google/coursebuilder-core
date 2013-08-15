@@ -22,6 +22,7 @@ __author__ = [
 import os
 import sys
 
+from xml.etree import ElementTree
 from models import transforms
 
 import mrs
@@ -69,7 +70,8 @@ class MapReduceBase(mrs.MapReduce):
 
     def json_parse(self, value):
         """Parses JSON file into Python."""
-        value = value.strip()[:-1]
+        if value.strip()[-1] == ',':
+            value = value.strip()[:-1]
         try:
             return transforms.loads(value)
         # Skip unparseable rows like the first and last
@@ -114,6 +116,7 @@ class EventFlattener(MapReduceBase):
     """Flattens JSON event data.
 
     Input file: EventEntity JSON file.
+
     Each event has a 'source' that defines a place in a code where the event was
     recorded. Each event has a 'user_id' to represent an actor who triggered
     the event. The event 'data' is a JSON object.
@@ -256,4 +259,100 @@ class YoutubeHistogram(MapReduceJob):
     MAPREDUCE_CLASS = YoutubeHistogramGenerator
 
 
+class XmlWriter(mrs.fileformats.Writer):
+    """Writes file in XML format.
+
+    The writer does not use the key from kvpair and expects the value to be a
+    list of string representation of XML elements.
+
+    Example:
+        kvpair: some_key, ['<row><name>Jane</name></row>',
+                           '<row><name>John</name></row>']
+
+        Output:
+            <rows>
+                <row>
+                    <name>Jane</name>
+                </row>
+                <row>
+                    <name>John</name>
+                </row>
+            </rows>
+    """
+
+    ext = 'xml'
+
+    def __init__(self, fileobj, *args, **kwds):
+        super(XmlWriter, self).__init__(fileobj, *args, **kwds)
+        self.fileobj.write('<rows>')
+
+    def writepair(self, kvpair, **unused_kwds):
+        unused_key, values = kvpair
+        write = self.fileobj.write
+        for value in values:
+            write(value)
+            write('\n')
+
+    def finish(self):
+        self.fileobj.write('</rows>')
+        self.fileobj.flush()
+
+
+class XmlGenerator(MapReduceBase):
+    """Generates a XML file from a JSON formatted input file."""
+
+    def map(self, key, value):
+        """Converts JSON object to xml.
+
+        Args:
+            key: int. line number of the value in Entity file.
+            value: str. A line of JSON literal extracted from Entity file.
+
+        Yields:
+            A tuple with the string 'key' and a tuple containing line number and
+            string representaiton of the XML element.
+        """
+        json = self.json_parse(value)
+        if json:
+            root = ElementTree.Element('row')
+            transforms.convert_dict_to_xml(root, json)
+            yield 'key', (key, ElementTree.tostring(root, encoding='utf-8'))
+
+    def reduce(self, unused_key, values):
+        """Sorts the values by line number to keep the order of the document.
+
+        Args:
+            unused_key: str. The arbitrary string 'key' set to accumulate all
+                        values under one key.
+            values: list of tuples. Each tuple contains line number and JSON
+                    literal converted to XML string.
+
+        Yields:
+            A list of XML strings sorted by the line number.
+        """
+
+        sorted_values = sorted(values, key=lambda x: x[0])
+        yield [value[1] for value in sorted_values]
+
+    def make_reduce_data(self, job, interm_data):
+        """Change the outout format to XML."""
+        outdir = self.output_dir()
+        output_data = job.reduce_data(
+            interm_data, self.reduce, outdir=outdir, format=XmlWriter)
+        return output_data
+
+
+class JsonToXml(MapReduceJob):
+    """MapReduce Job that converts JSON formatted Entity files to XML.
+
+    Usage:
+    python etl.py run path.to.mapreduce.JsonToXml /coursename \
+        appid server.appspot.com \
+        --job_args='path_to_any_Entity_file path_to_output_directory'
+    """
+
+    MAPREDUCE_CLASS = XmlGenerator
+
+
 mrs.fileformats.writer_map['json'] = JsonWriter
+mrs.fileformats.writer_map['xml'] = XmlWriter
