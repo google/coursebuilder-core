@@ -18,14 +18,51 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import datetime
+
 from models import models
 from tests.functional import actions
+
+# Disable complaints about docstrings for self-documenting tests.
+# pylint: disable-msg=g-missing-docstring
+
+
+class EventEntityTestCase(actions.ExportTestBase):
+
+    def test_for_export_transforms_correctly(self):
+        event = models.EventEntity(source='source', user_id='1')
+        key = event.put()
+        exported = event.for_export(self.transform)
+
+        self.assert_blacklisted_properties_removed(event, exported)
+        self.assertEqual('source', event.source)
+        self.assertEqual('transformed_1', exported.user_id)
+        self.assertEqual(key, models.EventEntity.safe_key(key, self.transform))
+
+
+class PersonalProfileTestCase(actions.ExportTestBase):
+
+    def test_for_export_transforms_correctly_and_sets_safe_key(self):
+        date_of_birth = datetime.date.today()
+        email = 'test@example.com'
+        legal_name = 'legal_name'
+        nick_name = 'nick_name'
+        user_id = '1'
+        profile = models.PersonalProfile(
+            date_of_birth=date_of_birth, email=email, key_name=user_id,
+            legal_name=legal_name, nick_name=nick_name)
+        profile.put()
+        exported = profile.for_export(self.transform)
+
+        self.assert_blacklisted_properties_removed(profile, exported)
+        self.assertEqual(
+            self.transform(user_id), exported.safe_key.name())
 
 
 class QuestionDAOTestCase(actions.TestBase):
     """Functional tests for QuestionDAO."""
 
-    # Method name set by superclass. pylint: disable-msg=g-bad-name
+    # Name determined by parent. pylint: disable-msg=g-bad-name
     def setUp(self):
         """Sets up datastore contents."""
         super(QuestionDAOTestCase, self).setUp()
@@ -87,3 +124,32 @@ class QuestionDAOTestCase(actions.TestBase):
         not_found_id = 7
         self.assertFalse(models.QuestionDAO.load(not_found_id))
         self.assertEqual([], models.QuestionDAO.used_by(not_found_id))
+
+
+class StudentTestCase(actions.ExportTestBase):
+
+    def test_for_export_transforms_correctly(self):
+        user_id = '1'
+        student = models.Student(key_name='name', user_id='1', is_enrolled=True)
+        key = student.put()
+        exported = student.for_export(self.transform)
+
+        self.assert_blacklisted_properties_removed(student, exported)
+        self.assertTrue(exported.is_enrolled)
+        self.assertEqual('transformed_1', exported.user_id)
+        self.assertEqual(
+            'transformed_' + user_id, exported.key_by_user_id.name())
+        self.assertEqual(
+            models.Student.safe_key(key, self.transform), exported.safe_key)
+
+    def test_get_key_does_not_transform_by_default(self):
+        user_id = 'user_id'
+        student = models.Student(key_name='name', user_id=user_id)
+        student.put()
+        self.assertEqual(user_id, student.get_key().name())
+
+    def test_safe_key_transforms_name(self):
+        key = models.Student(key_name='name').put()
+        self.assertEqual(
+            'transformed_name',
+            models.Student.safe_key(key, self.transform).name())

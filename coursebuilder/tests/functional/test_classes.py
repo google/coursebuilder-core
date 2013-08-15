@@ -22,6 +22,7 @@ import copy
 import cStringIO
 import csv
 import datetime
+import hashlib
 import logging
 import os
 import re
@@ -3280,6 +3281,81 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             [model.name for model in [first_entity, second_entity]],
             [entity['name'] for entity in entities])
 
+    def test_download_datastore_with_privacy_maintains_references(self):
+        """Test download of datastore data and archive creation."""
+        unsafe_user_id = '1'
+        download_datastore_args = etl.PARSER.parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_datastore_args +
+            ['--datastore_types', 'EventEntity,Student', '--privacy',
+             '--privacy_secret', 'super_seekrit'])
+        context = etl_lib.get_context(download_datastore_args.course_url_prefix)
+
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            event = models.EventEntity(user_id=unsafe_user_id)
+            student = models.Student(
+                key_name='first_student', user_id=unsafe_user_id)
+            db.put([event, student])
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        etl.main(
+            download_datastore_args, environment_class=FakeEnvironment)
+        archive = etl._Archive(self.archive_path)
+        archive.open('r')
+        self.assertEqual(
+            ['EventEntity.json', 'Student.json'],
+            sorted(
+                [os.path.basename(e.path) for e in archive.manifest.entities]))
+        event_entity_entity = [
+            e for e in archive.manifest.entities
+            if e.path.endswith('EventEntity.json')][0]
+        student_entity = [
+            e for e in archive.manifest.entities
+            if e.path.endswith('Student.json')][0]
+        # Ensure .json files are deserializable into Python objects...
+        event_entities = transforms.loads(
+            archive.get(event_entity_entity.path))['rows']
+        students = transforms.loads(archive.get(student_entity.path))['rows']
+        # Reference maintained.
+        self.assertEqual(event_entities[0]['user_id'], students[0]['user_id'])
+        # But user_id transformed.
+        self.assertNotEqual(unsafe_user_id, event_entities[0]['user_id'])
+        self.assertNotEqual(unsafe_user_id, students[0]['user_id'])
+
+    def test_privacy_fails_if_not_downloading_datastore(self):
+        wrong_mode = etl.PARSER.parse_args(
+            [etl._MODE_UPLOAD] + self.common_datastore_args + ['--privacy'])
+        self.assertRaises(
+            SystemExit, etl.main, wrong_mode, environment_class=FakeEnvironment)
+        wrong_type = etl.PARSER.parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_course_args + ['--privacy'])
+        self.assertRaises(
+            SystemExit, etl.main, wrong_type, environment_class=FakeEnvironment)
+
+    def test_privacy_secret_fails_if_not_download_datastore_with_privacy(self):
+        """Tests invalid flag combinations related to --privacy."""
+        missing_privacy = etl.PARSER.parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_datastore_args +
+            ['--privacy_secret', 'foo'])
+        self.assertRaises(
+            SystemExit, etl.main, missing_privacy,
+            environment_class=FakeEnvironment)
+        self.assertRaises(
+            SystemExit, etl.main, missing_privacy,
+            environment_class=FakeEnvironment)
+        wrong_mode = etl.PARSER.parse_args(
+            [etl._MODE_UPLOAD] + self.common_datastore_args +
+            ['--privacy_secret', 'foo', '--privacy'])
+        self.assertRaises(
+            SystemExit, etl.main, wrong_mode, environment_class=FakeEnvironment)
+        wrong_type = etl.PARSER.parse_args(
+            [etl._MODE_DOWNLOAD] + self.common_course_args +
+            ['--privacy_secret', 'foo', '--privacy'])
+        self.assertRaises(
+            SystemExit, etl.main, wrong_type, environment_class=FakeEnvironment)
+
     def test_run_fails_when_delegated_argument_parsing_fails(self):
         bad_args = etl.PARSER.parse_args(
             ['run', 'tools.etl_lib.Job'] + self.common_args +
@@ -3485,6 +3561,26 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertRaises(
             NotImplementedError, etl.main, upload_datastore_args,
             environment_class=FakeEnvironment)
+
+
+class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
+
+    # Testing protected functions. pylint: disable-msg=protected-access
+    def test_is_identity_transform_when_privacy_false(self):
+        self.assertEqual(
+            1, etl._get_privacy_transform_fn(False, 'no_effect')(1))
+        self.assertEqual(
+            1, etl._get_privacy_transform_fn(False, 'other_value')(1))
+
+    def test_transform_is_stable_sha256_with_repeated_secret(self):
+        transform_fn = etl._get_privacy_transform_fn(True, 'secret')
+        first = transform_fn('value')
+        second = transform_fn('value')
+        # We really want explicit concat.
+        # pylint: disable-msg=g-explicit-string-concatenation
+        self.assertEqual(
+            hashlib.sha256('secret' + 'value').hexdigest(), first)
+        self.assertEqual(first, second)
 
 
 # TODO(johncox): re-enable these tests once we figure out how to make webtest

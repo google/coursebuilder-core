@@ -91,6 +91,27 @@ class BaseEntity(entities.BaseEntity):
         """Returns a key_name for use with cls's constructor."""
         raise NotImplementedError
 
+    @classmethod
+    def _split_key(cls, key_name):
+        """Takes a key_name and returns its components."""
+        _, unit_id, student_key = key_name.strip('()').split(':')
+        return unit_id, student_key
+
+    # Suppress spurious num args error.
+    # pylint: disable-msg=too-many-function-args
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        unit_id, student_key_str = cls._split_key(db_key.name())
+        student_key = cls._get_student_key(student_key_str)
+        safe_student_key = models.Student.safe_key(student_key, transform_fn)
+        return db.Key.from_path(
+            cls.kind(), cls.key_name(unit_id, safe_student_key))
+
+    @classmethod
+    def _get_student_key(cls, value):
+        """Given a value string, return a db.Key for a models.Student."""
+        raise NotImplementedError
+
 
 class Review(BaseEntity):
     """Datastore model for a student review of a Submission."""
@@ -115,6 +136,10 @@ class Review(BaseEntity):
         super(Review, self).__init__(*args, **kwargs)
 
     @classmethod
+    def _get_student_key(cls, value):
+        return db.Key(encoded=value)
+
+    @classmethod
     def key_name(cls, unit_id, reviewer_key):
         """Creates a key_name string for datastore operations.
 
@@ -130,6 +155,12 @@ class Review(BaseEntity):
             String.
         """
         return '(review:%s:%s)' % (unit_id, reviewer_key)
+
+    def for_export(self, transform_fn):
+        model = super(Review, self).for_export(transform_fn)
+        model.reviewer_key = models.Student.safe_key(
+            model.reviewer_key, transform_fn)
+        return model
 
 
 class Submission(BaseEntity):
@@ -155,6 +186,10 @@ class Submission(BaseEntity):
         super(Submission, self).__init__(*args, **kwargs)
 
     @classmethod
+    def _get_student_key(cls, value):
+        return db.Key.from_path(models.Student.kind(), value)
+
+    @classmethod
     def key_name(cls, unit_id, reviewee_key):
         """Creates a key_name string for datastore operations.
 
@@ -173,7 +208,7 @@ class Submission(BaseEntity):
 
     @classmethod
     def get_key(cls, unit_id, reviewee_key):
-        """Returns a db,Key for a submission."""
+        """Returns a db.Key for a submission."""
         return db.Key.from_path(
             cls.kind(), cls.key_name(unit_id, reviewee_key))
 
@@ -207,6 +242,12 @@ class Submission(BaseEntity):
         """Returns the contents of a submission, given a db.Key."""
         submission = entities.get(submission_key)
         return transforms.loads(submission.contents) if submission else None
+
+    def for_export(self, transform_fn):
+        model = super(Submission, self).for_export(transform_fn)
+        model.reviewee_key = models.Student.safe_key(
+            model.reviewee_key, transform_fn)
+        return model
 
 
 class StudentWorkUtils(object):

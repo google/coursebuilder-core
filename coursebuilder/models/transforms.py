@@ -22,6 +22,7 @@ import json
 
 from xml.etree import ElementTree
 
+import entities
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
@@ -144,7 +145,14 @@ def json_to_dict(source_dict, schema):
 def entity_to_dict(entity, force_utf_8_encoding=False):
     """Puts model object attributes into a Python dictionary."""
     output = {}
-    for key, prop in entity.properties().iteritems():
+    for_export = isinstance(entity, entities.ExportEntity)
+    properties = entity.properties()
+
+    if for_export:
+        for name in entity.instance_properties():
+            properties[name] = getattr(entity, name)
+
+    for key, prop in properties.iteritems():
         value = getattr(entity, key)
         if value is None or isinstance(value, SIMPLE_TYPES) or isinstance(
                 value, SUPPORTED_TYPES):
@@ -164,7 +172,10 @@ def entity_to_dict(entity, force_utf_8_encoding=False):
             raise ValueError('Failed to encode: %s' % prop)
 
     # explicitly add entity key as a 'string' attribute
-    output['key'] = str(entity.key())
+    output['key'] = str(entity.safe_key) if for_export else str(entity.key())
+
+    if for_export:
+        output.pop('safe_key')
 
     return output
 

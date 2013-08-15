@@ -158,9 +158,15 @@ class PersonalProfile(BaseEntity):
     enrollment_info = db.TextProperty()
     course_info = db.TextProperty()
 
+    _PROPERTY_EXPORT_BLACKLIST = [email, legal_name, nick_name, date_of_birth]
+
     @property
     def user_id(self):
         return self.key().name()
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.name()))
 
 
 class PersonalProfileDTO(object):
@@ -420,6 +426,25 @@ class Student(BaseEntity):
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
 
+    _PROPERTY_EXPORT_BLACKLIST = [additional_fields, name]
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+    def for_export(self, transform_fn):
+        """Creates an ExportEntity populated from this entity instance."""
+        assert not hasattr(self, 'key_by_user_id')
+        model = super(Student, self).for_export(transform_fn)
+        model.user_id = transform_fn(self.user_id)
+        # Add a version of the key that always uses the user_id for the name
+        # component. This can be used to establish relationships between objects
+        # where the student key used was created via get_key(). In general,
+        # this means clients will join exports on this field, not the field made
+        # from safe_key().
+        model.key_by_user_id = self.get_key(transform_fn=transform_fn)
+        return model
+
     @property
     def is_transient(self):
         return False
@@ -500,10 +525,12 @@ class Student(BaseEntity):
         StudentProfileDAO.update(
             student.user_id, student.email, is_enrolled=is_enrolled)
 
-    def get_key(self):
+    def get_key(self, transform_fn=None):
+        """Gets a version of the key that uses user_id for the key name."""
         if not self.user_id:
             raise Exception('Student instance has no user_id set.')
-        return db.Key.from_path(Student.kind(), self.user_id)
+        user_id = transform_fn(self.user_id) if transform_fn else self.user_id
+        return db.Key.from_path(Student.kind(), user_id)
 
     @classmethod
     def get_student_by_user_id(cls, user_id):
@@ -550,6 +577,11 @@ class EventEntity(BaseEntity):
         event.user_id = user.user_id()
         event.data = data
         event.put()
+
+    def for_export(self, transform_fn):
+        model = super(EventEntity, self).for_export(transform_fn)
+        model.user_id = transform_fn(self.user_id)
+        return model
 
 
 class StudentAnswersEntity(BaseEntity):
@@ -764,4 +796,3 @@ class QuestionGroupDTO(object):
 class QuestionGroupDAO(BaseJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
-

@@ -188,6 +188,22 @@ class TestBase(suite.AppEngineTestBase):
         return self.hook_response(response)
 
 
+class ExportTestBase(TestBase):
+    """Base test class for classes that implement export functionality.
+
+    If your entities.BaseEntity class implements a custom for_export or
+    safe_key, you probably want to test them with this TestCase.
+    """
+
+    def assert_blacklisted_properties_removed(self, original_model, exported):
+        # Treating as module-protected. pylint: disable-msg=protected-access
+        for prop in original_model._get_export_blacklist():
+            self.assertFalse(hasattr(exported, prop.name))
+
+    def transform(self, value):
+        return 'transformed_' + value
+
+
 def assert_equals(actual, expected):
     if expected != actual:
         raise Exception('Expected \'%s\', does not match actual \'%s\'.' %

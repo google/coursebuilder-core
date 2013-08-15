@@ -25,6 +25,10 @@ from tests.functional import actions
 from google.appengine.ext import db
 
 
+# Don't require docstrings on tests. pylint: disable-msg=g-missing-docstring
+# setUp is a name chosen by parent. pylint: disable-msg=g-bad-name
+
+
 class ReferencedModel(entities.BaseEntity):
     pass
 
@@ -40,7 +44,7 @@ class ValidatedReference(entities.BaseEntity):
 class KeyPropertyTest(actions.TestBase):
     """Tests KeyProperty."""
 
-    def setUp(self):  # From superclass. pylint: disable-msg=g-bad-name
+    def setUp(self):
         super(KeyPropertyTest, self).setUp()
         self.referenced_model_key = ReferencedModel().put()
 
@@ -76,27 +80,72 @@ class KeyPropertyTest(actions.TestBase):
             referenced_model_key=model_key)
 
 
-class ReviewTest(actions.TestBase):
+class ReviewTest(actions.ExportTestBase):
+
+    def setUp(self):
+        super(ReviewTest, self).setUp()
+        self.reviewer_email = 'reviewer@example.com'
+        self.unit_id = 'unit_id'
+        self.reviewer = models.Student(key_name=self.reviewer_email)
+        self.reviewer_key = self.reviewer.put()
+        self.review = student_work.Review(
+            reviewer_key=self.reviewer_key, unit_id=self.unit_id)
+        self.review_key = self.review.put()
 
     def test_constructor_sets_key_name(self):
-        """Tests construction of key_name, put of entity with key_name set."""
-        unit_id = 'unit_id'
-        reviewer_key = models.Student(key_name='reviewer@example.com').put()
-        review_key = student_work.Review(
-            reviewer_key=reviewer_key, unit_id=unit_id).put()
         self.assertEqual(
-            student_work.Review.key_name(unit_id, reviewer_key),
-            review_key.name())
+            student_work.Review.key_name(self.unit_id, self.reviewer_key),
+            self.review_key.name())
+
+    def test_for_export_transforms_correctly(self):
+        exported = self.review.for_export(self.transform)
+        self.assert_blacklisted_properties_removed(self.review, exported)
+        self.assertEqual(
+            'transformed_' + self.reviewer_key.name(),
+            exported.reviewer_key.name())
+
+    def test_safe_key_makes_reviewer_key_name_safe(self):
+        safe_review_key = student_work.Review.safe_key(
+            self.review_key, self.transform)
+        # Treat as module-protected. pylint: disable-msg=protected-access
+        safe_unit_id, safe_reviewer_key_str = (
+            student_work.Review._split_key(safe_review_key.name()))
+        safe_reviewer_key = db.Key(encoded=safe_reviewer_key_str)
+        self.assertEqual(
+            'transformed_' + self.reviewer_email, safe_reviewer_key.name())
+        self.assertEqual(self.unit_id, safe_unit_id)
 
 
-class SubmissionTest(actions.TestBase):
+class SubmissionTest(actions.ExportTestBase):
+
+    def setUp(self):
+        super(SubmissionTest, self).setUp()
+        self.reviewee_email = 'reviewee@example.com'
+        self.unit_id = 'unit_id'
+        self.reviewee = models.Student(key_name=self.reviewee_email)
+        self.reviewee_key = self.reviewee.put()
+        self.submission = student_work.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id)
+        self.submission_key = self.submission.put()
 
     def test_constructor_sets_key_name(self):
-        """Tests construction of key_name, put of entity with key_name set."""
-        unit_id = 'unit_id'
-        reviewee_key = models.Student(key_name='reviewee@example.com').put()
-        review_key = student_work.Submission(
-            reviewee_key=reviewee_key, unit_id=unit_id).put()
         self.assertEqual(
-            student_work.Submission.key_name(unit_id, reviewee_key),
-            review_key.name())
+            student_work.Submission.key_name(self.unit_id, self.reviewee_key),
+            self.submission_key.name())
+
+    def test_for_export_transforms_correctly(self):
+        exported = self.submission.for_export(self.transform)
+        self.assert_blacklisted_properties_removed(self.submission, exported)
+        self.assertEqual(
+            'transformed_' + self.reviewee_key.name(),
+            exported.reviewee_key.name())
+
+    def test_safe_key_makes_reviewee_key_name_safe(self):
+        safe_submission_key = student_work.Submission.safe_key(
+            self.submission_key, self.transform)
+        # Treat as module-protected. pylint: disable-msg=protected-access
+        safe_unit_id, safe_reviewee_key_name = (
+            student_work.Submission._split_key(safe_submission_key.name()))
+        self.assertEqual(
+            'transformed_' + self.reviewee_email, safe_reviewee_key_name)
+        self.assertEqual(self.unit_id, safe_unit_id)

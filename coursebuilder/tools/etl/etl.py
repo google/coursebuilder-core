@@ -91,8 +91,11 @@ __author__ = [
 ]
 
 import argparse
+import functools
+import hashlib
 import logging
 import os
+import random
 import re
 import sys
 import traceback
@@ -103,6 +106,7 @@ import yaml
 # Placeholders for modules we'll import after setting up sys.path. This allows
 # us to avoid lint suppressions at every callsite.
 appengine_config = None
+config = None
 courses = None
 db = None
 etl_lib = None
@@ -119,6 +123,8 @@ _ARCHIVE_PATH_PREFIX = 'files'
 _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 # String. End of the path to course.yaml in an archive.
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
+# Function that takes one arg and returns it.
+_IDENTITY_TRANSFORM = lambda x: x
 # Regex. Format of __internal_names__ used by datastore kinds.
 _INTERNAL_DATASTORE_KIND_REGEX = re.compile(r'^__.*__$')
 # Path prefix strings from local disk that will be included in the archive.
@@ -211,6 +217,18 @@ PARSER.add_argument(
     '--log_level', choices=_LOG_LEVEL_CHOICES,
     help='Level of logging messages to emit', default='INFO',
     type=lambda s: s.upper())
+PARSER.add_argument(
+    '--privacy', action='store_true',
+    help=(
+        "When mode is '%s' and type is '%s', passing this flag will strip or "
+        "obfuscate information that can identify a single user" % (
+            _MODE_DOWNLOAD, _TYPE_DATASTORE)))
+PARSER.add_argument(
+    '--privacy_secret',
+    help=(
+        "When mode is '%s', type is '%s', and --privacy is passed,  pass this "
+        "secret to have user ids transformed with it rather than with random "
+        "bits") % (_MODE_DOWNLOAD, _TYPE_DATASTORE), type=str)
 
 
 class _Archive(object):
@@ -413,7 +431,7 @@ def _die(message, with_trace=False):
 
 def _download(
     download_type, archive_path, course_url_prefix, datastore_types,
-    batch_size):
+    batch_size, privacy_transform_fn):
     """Validates and dispatches to a specific download method."""
     archive_path = os.path.abspath(archive_path)
     context = etl_lib.get_context(course_url_prefix)
@@ -427,7 +445,8 @@ def _download(
         try:
             namespace_manager.set_namespace(context.get_namespace_name())
             _download_datastore(
-                context, course, archive_path, datastore_types, batch_size)
+                context, course, archive_path, datastore_types, batch_size,
+                privacy_transform_fn)
         finally:
             namespace_manager.set_namespace(old_namespace)
 
@@ -465,7 +484,8 @@ def _download_course(context, course, archive_path, course_url_prefix):
 
 
 def _download_datastore(
-    context, course, archive_path, datastore_types, batch_size):
+    context, course, archive_path, datastore_types, batch_size,
+    privacy_transform_fn):
     available_types = set(_get_datastore_kinds())
     if not datastore_types:
         datastore_types = available_types
@@ -488,7 +508,9 @@ def _download_datastore(
             found_type, json_path)
         json_file = transforms.JsonFile(json_path)
         json_file.open('w')
-        _process_models(db.class_for_kind(found_type), json_file, batch_size)
+        _process_models(
+            db.class_for_kind(found_type), json_file, batch_size,
+            privacy_transform_fn)
         json_file.close()
         internal_path = _Archive.get_internal_path(
             os.path.basename(json_file.name))
@@ -531,6 +553,33 @@ def _finalize_download(archive, manifest):
     _LOG.info('Done; archive saved to ' + archive.path)
 
 
+def _force_config_reload():
+    # For some reason config properties aren't being automatically pulled from
+    # the datastore with the remote environment. Force an update of all of them.
+    config.Registry.get_overrides(force_update=True)
+
+
+def _get_privacy_transform_fn(privacy, privacy_secret):
+    """Returns a transform function to use for export."""
+
+    if not privacy:
+        return _IDENTITY_TRANSFORM
+    else:  # Hash of secret + value, curried to 1-arg.
+
+        def privacy_transform(privacy_secret, value):
+            return hashlib.sha256(str(privacy_secret) + str(value)).hexdigest()
+
+        return functools.partial(privacy_transform, privacy_secret)
+
+
+def _get_privacy_secret(privacy_secret):
+    """Gets the passed privacy secret (or 128 random bits if None)."""
+    secret = privacy_secret
+    if secret is None:
+        secret = random.getrandbits(128)
+    return secret
+
+
 def _get_course_from(app_context):
     """Gets a courses.Course from the given sites.ApplicationContext."""
 
@@ -566,6 +615,7 @@ def _import_modules_into_global_scope():
     global namespace_manager
     global db
     global metadata
+    global config
     global courses
     global transforms
     global vfs
@@ -576,6 +626,7 @@ def _import_modules_into_global_scope():
         from google.appengine.api import namespace_manager
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
+        from models import config
         from models import courses
         from models import transforms
         from models import vfs
@@ -660,14 +711,14 @@ def _list_all(context, include_inherited=False):
         appengine_config.BUNDLE_ROOT, include_inherited=include_inherited)
 
 
-def _process_models(kind, json_file, batch_size):
+def _process_models(kind, json_file, batch_size, privacy_transform_fn):
     """Fetch all rows in batches."""
     reportable_chunk = batch_size * 10
     total_count = 0
     cursor = None
     while True:
         batch_count, cursor = _process_models_batch(
-            kind, cursor, batch_size, json_file)
+            kind, cursor, batch_size, json_file, privacy_transform_fn)
         if not batch_count:
             break
         if not cursor:
@@ -678,7 +729,8 @@ def _process_models(kind, json_file, batch_size):
 
 
 @_retry(message='Fetching datastore entity batch failed; retrying')
-def _process_models_batch(kind, cursor, batch_size, json_file):
+def _process_models_batch(
+    kind, cursor, batch_size, json_file, privacy_transform_fn):
     """Fetch and write out a batch_size number of rows using cursor query."""
     query = kind.all()
     if cursor:
@@ -687,9 +739,7 @@ def _process_models_batch(kind, cursor, batch_size, json_file):
     count = 0
     empty = True
     for model in query.fetch(limit=batch_size):
-        entity_dict = transforms.entity_to_dict(
-            model, force_utf_8_encoding=True)
-        entity_dict['key.name'] = unicode(model.key().name())
+        entity_dict = _get_entity_dict(model, privacy_transform_fn)
         json_file.write(transforms.dict_to_json(entity_dict, None))
         count += 1
         empty = False
@@ -698,6 +748,18 @@ def _process_models_batch(kind, cursor, batch_size, json_file):
     if not empty:
         cursor = query.cursor()
     return count, cursor
+
+
+def _get_entity_dict(model, privacy_transform_fn):
+    key = model.safe_key(model.key(), privacy_transform_fn)
+
+    if privacy_transform_fn is not _IDENTITY_TRANSFORM:
+        model = model.for_export(privacy_transform_fn)
+
+    entity_dict = transforms.entity_to_dict(model, force_utf_8_encoding=True)
+    entity_dict['key.name'] = unicode(key.name())
+
+    return entity_dict
 
 
 @_retry(message='Upload failed; retrying')
@@ -807,6 +869,18 @@ def _validate_arguments(parsed_args):
         _die(
             '--force_overwrite supported only if mode is %s and type is %s' % (
                 _MODE_UPLOAD, _TYPE_COURSE))
+    if parsed_args.privacy and not (
+            parsed_args.mode == _MODE_DOWNLOAD and
+            parsed_args.type == _TYPE_DATASTORE):
+        _die(
+            '--privacy supported only if mode is %s and type is %s' % (
+                _MODE_DOWNLOAD, _TYPE_DATASTORE))
+    if parsed_args.privacy_secret and not (
+            parsed_args.mode == _MODE_DOWNLOAD and
+            parsed_args.type == _TYPE_DATASTORE and parsed_args.privacy):
+        _die(
+            '--privacy_secret supported only if mode is %s, type is %s, and '
+            '--privacy is passed' % (_MODE_DOWNLOAD, _TYPE_DATASTORE))
 
 
 def main(parsed_args, environment_class=None):
@@ -822,21 +896,31 @@ def main(parsed_args, environment_class=None):
     _LOG.setLevel(parsed_args.log_level.upper())
     _import_modules_into_global_scope()
     _import_entity_modules()
+
     if not environment_class:
         environment_class = remote.Environment
+
+    privacy_secret = _get_privacy_secret(parsed_args.privacy_secret)
+    privacy_transform_fn = _get_privacy_transform_fn(
+        parsed_args.privacy, privacy_secret)
+
     _LOG.info('Mode is %s', parsed_args.mode)
     _LOG.info(
         'Target is url %s from application_id %s on server %s',
         parsed_args.course_url_prefix, parsed_args.application_id,
         parsed_args.server)
+
     if not parsed_args.disable_remote:
         environment_class(
             parsed_args.application_id, parsed_args.server).establish()
+
+    _force_config_reload()
+
     if parsed_args.mode == _MODE_DOWNLOAD:
         _download(
             parsed_args.type, parsed_args.archive_path,
             parsed_args.course_url_prefix, parsed_args.datastore_types,
-            parsed_args.batch_size)
+            parsed_args.batch_size, privacy_transform_fn)
     if parsed_args.mode == _MODE_RUN:
         _run_custom(parsed_args)
     elif parsed_args.mode == _MODE_UPLOAD:
