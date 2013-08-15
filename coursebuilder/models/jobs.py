@@ -76,16 +76,32 @@ class DurableJob(object):
 
     def submit(self):
         """Submits this job for deferred execution."""
-        db.run_in_transaction(DurableJobEntity._create_job, self._job_name)
-        deferred.defer(self.main)
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(self._namespace)
+            db.run_in_transaction(DurableJobEntity._create_job, self._job_name)
+            deferred.defer(self.main)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
     def non_transactional_submit(self):
-        DurableJobEntity._create_job(self._job_name)
-        deferred.defer(self.main)
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(self._namespace)
+            DurableJobEntity._create_job(self._job_name)
+            deferred.defer(self.main)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
     def load(self):
         """Loads the last known state of this job from the datastore."""
-        return DurableJobEntity._get_by_name(self._job_name)
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(self._namespace)
+            entity = DurableJobEntity._get_by_name(self._job_name)
+            return entity
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
 
 class DurableJobEntity(entities.BaseEntity):

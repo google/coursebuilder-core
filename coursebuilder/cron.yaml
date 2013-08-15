@@ -2,3 +2,6 @@ cron:
 - description: expires old assigned review steps
   url: /cron/expire_old_assigned_reviews
   schedule: every 15 minutes  # Max execution is 10 minutes.
+- description: indexes all courses
+  url: /cron/search/index_courses
+  schedule: every day 06:00

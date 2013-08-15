@@ -25,9 +25,11 @@ import time
 import traceback
 
 import appengine_config
+from common import safe_dom
 from controllers import sites
 from controllers import utils
 import jinja2
+from models import config
 from models import courses
 from models import custom_modules
 from models import jobs
@@ -42,6 +44,14 @@ from google.appengine.ext import db
 
 
 MODULE_NAME = 'Full Text Search'
+
+CAN_INDEX_ALL_COURSES_IN_CRON = config.ConfigProperty(
+    'gcb_can_index_automatically', bool, safe_dom.Text(
+        'Whether the search module can automatically index the course daily '
+        'using a cron job. If enabled, this job would index the course '
+        'incrementally so that only new items or items which have not been '
+        'recently indexed are indexed.'),
+    default_value=False)
 
 INDEX_NAME = 'gcb_search_index'
 RESULTS_LIMIT = 10
@@ -348,6 +358,42 @@ class SearchDashboardHandler(object):
                 self, 409, 'Index currently busy.')
 
 
+class CronHandler(utils.BaseHandler):
+    """Iterates through all courses and starts an indexing job for each one.
+
+    All jobs should be submitted through the transactional check_jobs_and_submit
+    method to prevent multiple index operations from running at the same time.
+    If an index job is currently running when this cron job attempts to start
+    one, this operation will be a noop for that course.
+    """
+
+    def get(self):
+        """Start an index job for each course."""
+        cron_logger = logging.getLogger('modules.search.cron')
+        self.response.headers['Content-Type'] = 'text/plain'
+
+        if CAN_INDEX_ALL_COURSES_IN_CRON.value:
+            counter = 0
+            for context in sites.get_all_courses():
+                namespace = context.get_namespace_name()
+                counter += 1
+                try:
+                    check_jobs_and_submit(IndexCourse(context), context)
+                except db.TransactionFailedError as e:
+                    cron_logger.info(
+                        'Failed to submit job #%s in namespace %s: %s',
+                        counter, namespace, e)
+                else:
+                    cron_logger.info(
+                        'Index job #%s submitted for namespace %s.',
+                        counter, namespace)
+            cron_logger.info('All %s indexing jobs started; cron job complete.',
+                             counter)
+        else:
+            cron_logger.info('Automatic indexing disabled. Cron job halting.')
+        self.response.write('OK\n')
+
+
 @db.transactional(xg=True)
 def check_jobs_and_submit(job, app_context):
     """Determines whether an indexing job is running and submits if not."""
@@ -399,7 +445,8 @@ def register_module():
     """Registers this module in the registry."""
 
     global_routes = [
-        ('/modules/search/assets/.*', AssetsHandler)
+        ('/modules/search/assets/.*', AssetsHandler),
+        ('/cron/search/index_courses', CronHandler)
     ]
     namespaced_routes = [
         ('/search', SearchHandler)

@@ -27,7 +27,7 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
   secure: always
-- url: /cron/expire_old_assigned_reviews
+- url: /cron/.*
   script: main.app
   login: admin
   secure: always
