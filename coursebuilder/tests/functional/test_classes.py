@@ -3122,6 +3122,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.common_course_args = [etl._TYPE_COURSE] + self.common_command_args
         self.common_datastore_args = [
             etl._TYPE_DATASTORE] + self.common_command_args
+        self.delete_datastore_args = etl.PARSER.parse_args(
+            [etl._MODE_DELETE, etl._TYPE_DATASTORE] + self.common_args)
         self.download_course_args = etl.PARSER.parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args)
         self.upload_course_args = etl.PARSER.parse_args(
@@ -3175,6 +3177,53 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         assert len(
             src_course_out.get_units()) == len(dst_course_out.get_units())
         dst_course_out.save()
+
+    def test_delete_course_fails(self):
+        args = etl.PARSER.parse_args(
+            [etl._MODE_DELETE, etl._TYPE_COURSE] + self.common_args)
+        self.assertRaises(
+            NotImplementedError,
+            etl.main, args, environment_class=FakeEnvironment)
+
+    def test_delete_datastore_fails_if_user_does_not_confirm(self):
+        self.swap(
+            etl, '_raw_input',
+            lambda x: 'not' + etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
+        self.assertRaises(
+            SystemExit, etl.main, self.delete_datastore_args,
+            environment_class=FakeEnvironment)
+
+    def test_delete_datastore_succeeds(self):
+        """Tests delete datastore success for populated and empty datastores."""
+        self.import_sample_course()
+        context = etl_lib.get_context(
+            self.delete_datastore_args.course_url_prefix)
+        self.swap(
+            etl, '_raw_input',
+            lambda x: etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
+
+        # Spot check that some kinds are populated.
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            self.assertTrue(vfs.FileDataEntity.all().get())
+            self.assertTrue(vfs.FileMetadataEntity.all().get())
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        # Delete against a datastore with contents runs successfully.
+        etl.main(self.delete_datastore_args, environment_class=FakeEnvironment)
+
+        # Spot check that those kinds are now empty.
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            self.assertFalse(vfs.FileDataEntity.all().get())
+            self.assertFalse(vfs.FileMetadataEntity.all().get())
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+        # Delete against a datastore without contents runs successfully.
+        etl.main(self.delete_datastore_args, environment_class=FakeEnvironment)
 
     def test_disable_remote_cannot_be_passed_for_mode_other_than_run(self):
         bad_args = etl.PARSER.parse_args(

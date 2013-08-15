@@ -14,7 +14,7 @@
 
 """Extract-transform-load utility.
 
-There are three features:
+There are four features:
 
 1. Download and upload of Course Builder 1.3 data:
 
@@ -43,7 +43,26 @@ and model2 instances found in the specified course, identified as above. The
 archive will contain serialized data along with a manifest. The format of
 archive.zip will change and should not be relied upon.
 
-3. Execution of custom jobs.
+3. Deletion of all datastore entities in a single course. Delete of the course
+   itself not supported. To run:
+
+$ python etl.py delete datastore /cs101 myapp server.appspot.com
+
+Before delete commences, you will be told what entity kinds will be deleted and
+you will be prompted for confirmation. Note that this process is irreversible,
+and, if interrupted, may leave the course in an invalid state. Note also that it
+races with writes against your datastore unless you first disable writes.
+
+Finally, note that only the datastore entities of the kinds listed will be
+deleted, and those will only be deleted from the namespace corresponding to the
+target course. Custom entities you added to base Course Builder may or may not
+be processed. Entities in the global namespace and those created by App Engine
+will not be processed.
+
+Deleting a course flushes caches. Because memcache does not support namespaced
+flush all operations, all caches for all courses will be flushed.
+
+4. Execution of custom jobs.
 
 $ python etl.py run path.to.my.Job /cs101 myapp server.appspot.com \
     --job_args='more_args --delegated_to my.Job'
@@ -55,26 +74,26 @@ etl_lib.Job for more information.
 
 In order to run this script, you must add the following to the head of sys.path:
 
-1. The absolute path of your Course Builder installation.
-2. The absolute path of your App Engine SDK.
-3. The absolute paths of third party libraries from the SDK used by Course
-   Builder:
+  1. The absolute path of your Course Builder installation.
+  2. The absolute path of your App Engine SDK.
+  3. The absolute paths of third party libraries from the SDK used by Course
+     Builder:
 
-   fancy_urllib
-   jinja2
-   webapp2
-   webob
+     fancy_urllib
+     jinja2
+     webapp2
+     webob
 
-   Their locations in the supported 1.7.7 App Engine SDK are
+     Their locations in the supported 1.7.7 App Engine SDK are
 
-   <sdk_path>/lib/fancy_urllib
-   <sdk_path>/lib/jinja2-2.6
-   <sdk_path>/lib/webapp2-2.5.2
-   <sdk_path>/lib/webob-1.2.3
+     <sdk_path>/lib/fancy_urllib
+     <sdk_path>/lib/jinja2-2.6
+     <sdk_path>/lib/webapp2-2.5.2
+     <sdk_path>/lib/webob-1.2.3
 
-   where <sdk_path> is the absolute path of the 1.7.7 App Engine SDK.
-4. If you are running a custom job, the absolute paths of all code required by
-   your custom job, unless covered above.
+     where <sdk_path> is the absolute path of the 1.7.7 App Engine SDK.
+  4. If you are running a custom job, the absolute paths of all code required
+     by your custom job, unless covered above.
 
 When running etl.py against a remote endpoint you will be prompted for a
 username and password. If the remote endpoint is a development server, you may
@@ -111,6 +130,7 @@ config = None
 courses = None
 db = None
 etl_lib = None
+memcache = None
 metadata = None
 namespace_manager = None
 remote = None
@@ -124,6 +144,8 @@ _ARCHIVE_PATH_PREFIX = 'files'
 _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 # String. End of the path to course.yaml in an archive.
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
+# String. Message the user must type to confirm datastore deletion.
+_DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
 # Function that takes one arg and returns it.
 _IDENTITY_TRANSFORM = lambda x: x
 # Regex. Format of __internal_names__ used by datastore kinds.
@@ -140,6 +162,8 @@ logging.basicConfig()
 _LOG_LEVEL_CHOICES = ['DEBUG', 'ERROR', 'INFO', 'WARNING']
 # String. Name of the manifest file.
 _MANIFEST_FILENAME = 'manifest.json'
+# String. Identifier for delete mode.
+_MODE_DELETE = 'delete'
 # String. Identifier for download mode.
 _MODE_DOWNLOAD = 'download'
 # String. Identifier for custom run mode.
@@ -147,7 +171,7 @@ _MODE_RUN = 'run'
 # String. Identifier for upload mode.
 _MODE_UPLOAD = 'upload'
 # List of all modes.
-_MODES = [_MODE_DOWNLOAD, _MODE_RUN, _MODE_UPLOAD]
+_MODES = [_MODE_DELETE, _MODE_DOWNLOAD, _MODE_RUN, _MODE_UPLOAD]
 # Int. The number of times to retry remote_api calls.
 _RETRIES = 3
 # String. Identifier for type corresponding to course definition data.
@@ -159,7 +183,7 @@ _TYPE_DATASTORE = 'datastore'
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
     'mode', choices=_MODES,
-    help='Indicates whether we are downloading or uploading data', type=str)
+    help='Indicates the kind of operation we are performing', type=str)
 PARSER.add_argument(
     'type',
     help=(
@@ -418,6 +442,60 @@ class _ReadWrapper(object):
         return self._data
 
 
+def _confirm_delete_datastore_or_die(kind_names, namespace, title):
+    context = {
+        'confirmation_message': _DELETE_DATASTORE_CONFIRMATION_INPUT,
+        'kinds': ', '.join(kind_names),
+        'linebreak': os.linesep,
+        'namespace': namespace,
+        'title': title,
+    }
+    response = _raw_input(
+        ('You are about to delete all entities of the kinds "%(kinds)s" from '
+         'the course %(title)s in namespace %(namespace)s.%(linebreak)sYou are '
+         'also about to flush all caches for all courses on your production '
+         'instance.%(linebreak)sYou cannot undo this operation.%(linebreak)sTo '
+         'confirm, type "%(confirmation_message)s": ') % context)
+    if response != _DELETE_DATASTORE_CONFIRMATION_INPUT:
+        _die('Delete not confirmed. Aborting')
+
+
+def _delete(course_url_prefix, delete_type, batch_size):
+    context = _get_context_or_die(course_url_prefix)
+    if delete_type == _TYPE_COURSE:
+        _delete_course()
+    elif delete_type == _TYPE_DATASTORE:
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(context.get_namespace_name())
+            _delete_datastore(context, batch_size)
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
+
+def _delete_course():
+    """Stub for possible future course deleter."""
+    raise NotImplementedError
+
+
+def _delete_datastore(context, batch_size):
+    kind_names = _get_datastore_kinds()
+    _confirm_delete_datastore_or_die(
+        kind_names, context.get_namespace_name(), context.get_title())
+    # Fetch all classes before the loop so we cannot hit an import error partway
+    # through issuing delete RPCs.
+    model_classes = [db.class_for_kind(kind_name) for kind_name in kind_names]
+    _LOG.info('Beginning datastore delete')
+
+    for model_class in model_classes:
+        _LOG.info('Deleting entities of kind %s', model_class.kind())
+        _process_models(model_class, batch_size, delete=True)
+
+    _LOG.info('Flushing all caches')
+    memcache.flush_all()
+    _LOG.info('Done')
+
+
 def _die(message, with_trace=False):
     if with_trace:  # Also logs most recent traceback.
         info = sys.exc_info()
@@ -435,13 +513,11 @@ def _download(
     batch_size, privacy_transform_fn):
     """Validates and dispatches to a specific download method."""
     archive_path = os.path.abspath(archive_path)
-    context = etl_lib.get_context(course_url_prefix)
-    if not context:
-        _die('No course found with course_url_prefix %s' % course_url_prefix)
+    context = _get_context_or_die(course_url_prefix)
     course = _get_course_from(context)
     if download_type == _TYPE_COURSE:
         _download_course(context, course, archive_path, course_url_prefix)
-    if download_type == _TYPE_DATASTORE:
+    elif download_type == _TYPE_DATASTORE:
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(context.get_namespace_name())
@@ -509,9 +585,11 @@ def _download_datastore(
             found_type, json_path)
         json_file = transforms.JsonFile(json_path)
         json_file.open('w')
+        model_map_fn = functools.partial(
+            _write_model_to_json_file, json_file, privacy_transform_fn)
         _process_models(
-            db.class_for_kind(found_type), json_file, batch_size,
-            privacy_transform_fn)
+            db.class_for_kind(found_type), batch_size,
+            model_map_fn=model_map_fn)
         json_file.close()
         internal_path = _Archive.get_internal_path(
             os.path.basename(json_file.name))
@@ -558,6 +636,13 @@ def _force_config_reload():
     # For some reason config properties aren't being automatically pulled from
     # the datastore with the remote environment. Force an update of all of them.
     config.Registry.get_overrides(force_update=True)
+
+
+def _get_context_or_die(course_url_prefix):
+    context = etl_lib.get_context(course_url_prefix)
+    if not context:
+        _die('No course found with course_url_prefix %s' % course_url_prefix)
+    return context
 
 
 def _get_privacy_transform_fn(privacy, privacy_secret):
@@ -618,6 +703,7 @@ def _import_modules_into_global_scope():
     # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
     # pylint: disable-msg=redefined-outer-name,unused-variable
     global appengine_config
+    global memcache
     global namespace_manager
     global db
     global metadata
@@ -629,6 +715,7 @@ def _import_modules_into_global_scope():
     global remote
     try:
         import appengine_config
+        from google.appengine.api import memcache
         from google.appengine.api import namespace_manager
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
@@ -692,10 +779,14 @@ def _clear_course_cache(context):
 
 @_retry(message='Checking if the specified course is empty failed; retrying')
 def _context_is_for_empty_course(context):
+    # True if course is entirely empty or contains only a course.yaml.
+    current_course_files = context.fs.impl.list(
+        appengine_config.BUNDLE_ROOT)
     empty_course_files = [os.path.join(
         appengine_config.BUNDLE_ROOT, _COURSE_YAML_PATH_SUFFIX)]
-    return empty_course_files == context.fs.impl.list(
-        appengine_config.BUNDLE_ROOT)
+    return (
+        (not current_course_files) or
+        current_course_files == empty_course_files)
 
 
 @_retry(message='Getting list of datastore_types failed; retrying')
@@ -717,38 +808,46 @@ def _list_all(context, include_inherited=False):
         appengine_config.BUNDLE_ROOT, include_inherited=include_inherited)
 
 
-def _process_models(kind, json_file, batch_size, privacy_transform_fn):
+def _process_models(model_class, batch_size, delete=False, model_map_fn=None):
     """Fetch all rows in batches."""
+    assert (delete or model_map_fn) or (not delete and model_map_fn)
     reportable_chunk = batch_size * 10
     total_count = 0
     cursor = None
     while True:
         batch_count, cursor = _process_models_batch(
-            kind, cursor, batch_size, json_file, privacy_transform_fn)
+            model_class, cursor, batch_size, delete, model_map_fn)
         if not batch_count:
             break
         if not cursor:
             break
         total_count += batch_count
         if not total_count % reportable_chunk:
-            _LOG.info('Loaded records: %s', total_count)
+            _LOG.info('Processed records: %s', total_count)
 
 
-@_retry(message='Fetching datastore entity batch failed; retrying')
+@_retry(message='Processing datastore entity batch failed; retrying')
 def _process_models_batch(
-    kind, cursor, batch_size, json_file, privacy_transform_fn):
-    """Fetch and write out a batch_size number of rows using cursor query."""
-    query = kind.all()
+    model_class, cursor, batch_size, delete, model_map_fn):
+    """Processes or deletes models in batches."""
+    query = model_class.all(keys_only=delete)
     if cursor:
         query.with_cursor(start_cursor=cursor)
 
     count = 0
     empty = True
-    for model in query.fetch(limit=batch_size):
-        entity_dict = _get_entity_dict(model, privacy_transform_fn)
-        json_file.write(transforms.dict_to_json(entity_dict, None))
-        count += 1
+    results = query.fetch(limit=batch_size)
+
+    if results:
         empty = False
+        if delete:
+            key_count = len(results)
+            db.delete(results)
+            count += key_count
+        else:
+            for result in results:
+                model_map_fn(result)
+                count += 1
 
     cursor = None
     if not empty:
@@ -779,6 +878,11 @@ def _put(context, content, path, is_draft, force_overwrite):
         is_draft=is_draft)
 
 
+def _raw_input(message):
+    """raw_input wrapper scoped to the module for swapping during tests."""
+    return raw_input(message)
+
+
 def _run_custom(parsed_args):
     try:
         module_name, job_class_name = parsed_args.type.rsplit('.', 1)
@@ -798,9 +902,7 @@ def _upload(upload_type, archive_path, course_url_prefix, force_overwrite):
     _LOG.info(
         'Processing course with URL prefix %s from archive path %s',
         course_url_prefix, archive_path)
-    context = etl_lib.get_context(course_url_prefix)
-    if not context:
-        _die('No course found with course_url_prefix %s' % course_url_prefix)
+    context = _get_context_or_die(course_url_prefix)
     if upload_type == _TYPE_COURSE:
         _upload_course(
             context, archive_path, course_url_prefix, force_overwrite)
@@ -851,7 +953,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
 
 
 def _upload_datastore():
-    """Stub for future datastore entity uploader."""
+    """Stub for possible future datastore entity uploader."""
     raise NotImplementedError
 
 
@@ -889,6 +991,11 @@ def _validate_arguments(parsed_args):
             '--privacy is passed' % (_MODE_DOWNLOAD, _TYPE_DATASTORE))
 
 
+def _write_model_to_json_file(json_file, privacy_transform_fn, model):
+    entity_dict = _get_entity_dict(model, privacy_transform_fn)
+    json_file.write(transforms.dict_to_json(entity_dict, None))
+
+
 def main(parsed_args, environment_class=None):
     """Performs the requested ETL operation.
 
@@ -922,12 +1029,16 @@ def main(parsed_args, environment_class=None):
 
     _force_config_reload()
 
-    if parsed_args.mode == _MODE_DOWNLOAD:
+    if parsed_args.mode == _MODE_DELETE:
+        _delete(
+            parsed_args.course_url_prefix, parsed_args.type,
+            parsed_args.batch_size)
+    elif parsed_args.mode == _MODE_DOWNLOAD:
         _download(
             parsed_args.type, parsed_args.archive_path,
             parsed_args.course_url_prefix, parsed_args.datastore_types,
             parsed_args.batch_size, privacy_transform_fn)
-    if parsed_args.mode == _MODE_RUN:
+    elif parsed_args.mode == _MODE_RUN:
         _run_custom(parsed_args)
     elif parsed_args.mode == _MODE_UPLOAD:
         _upload(
