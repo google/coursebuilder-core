@@ -400,14 +400,14 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   var totalWeight = 1e-12;
   var answers = {
     'version': '1.5', 'individualScores': {},
-    'containedTypes': {}, 'gradedAnswers': {}
+    'containedTypes': {}, 'answers': {}
   };
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     score += grade.score * question.getWeight();
     totalWeight += question.getWeight();
     answers[question.id] = question.getStudentAnswer();
-    answers.gradedAnswers[question.id] = grade.answer;
+    answers.answers[question.id] = grade.answer;
     if (question instanceof QuestionGroup) {
       answers.individualScores[question.id] = grade.individualScores;
       answers.containedTypes[question.id] = grade.containedTypes;
@@ -418,17 +418,12 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   });
 
   var percentScore = (score / totalWeight * 100.0).toFixed(2);
-  var form = $('<form/>')
-    .css('display', 'none')
-    .attr('method', 'post')
-    .attr('action', 'answer')
-    .append($('<input type="hidden" name="assessment_type">').val(unitId))
-    .append($('<input type="hidden" name="score">').val(percentScore))
-    .append($('<input type="hidden" name="answers">')
-        .val(JSON.stringify(answers)))
-    .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken));
-  $('body').append(form);
-  form.submit();
+  submitForm('answer', {
+    'assessment_type': unitId,
+    'score': percentScore,
+    'answers': JSON.stringify(answers),
+    'xsrf_token': xsrfToken
+  });
 }
 
 function submitReview(isDraft, questions, unitId, xsrfToken, key) {
@@ -441,16 +436,23 @@ function submitReview(isDraft, questions, unitId, xsrfToken, key) {
       answers[question.id] = question.getStudentAnswer();
     }
   });
+  submitForm('review', {
+    'is_draft': isDraft,
+    'unit_id': unitId,
+    'answers': JSON.stringify(answers),
+    'xsrf_token': xsrfToken,
+    'key': key
+  });
+}
+
+function submitForm(action, hiddenData) {
   var form = $('<form/>')
-    .css('display', 'none')
-    .attr('method', 'post')
-    .attr('action', 'review')
-    .append($('<input type="hidden" name="is_draft">').val(isDraft))
-    .append($('<input type="hidden" name="unit_id">').val(unitId))
-    .append($('<input type="hidden" name="answers">')
-        .val(JSON.stringify(answers)))
-    .append($('<input type="hidden" name="xsrf_token">').val(xsrfToken))
-    .append($('<input type="hidden" name="key">').val(key));
+      .css('display', 'none')
+      .attr('method', 'post')
+      .attr('action', action);
+  $.each(hiddenData, function(key, value) {
+    form.append($('<input type="hidden">').attr('name', key).val(value));
+  });
   $('body').append(form);
   form.submit();
 }

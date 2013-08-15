@@ -423,6 +423,42 @@ describe('assessment tags', function() {
       expectDisabled(true, true, true);
     });
   });
+
+  function initTwoQuestions() {
+    // Set up a multiple choice question
+    var mcQuestionData = {
+      'mc-0': {
+        choices: [
+          {score: '1', feedback: 'yes'},
+          {score: '0', feedback: 'no'}
+        ]
+      }
+    };
+    var mc = new McQuestion($('#mc-0'), mcQuestionData, MESSAGES);
+    // Select the first out of two possible choices
+    $('#mc-0-0').prop('checked', true);
+
+    // Set up a short answer question
+    var saQuestionData = {
+      'sa-0': {
+        hint: 'it\'s \'falafel\'',
+        graders: [
+          {
+            matcher: 'case_insensitive',
+            response: 'FaLaFeL',
+            score: '1.0',
+            feedback: 'good'
+          }
+        ]
+      }
+    };
+    var sa = new SaQuestion($('#sa-0'), saQuestionData, MESSAGES);
+    // Enter 'falafel' as the response
+    $('#sa-0 > .qt-response > input, .qt-response > textarea').val('falafel');
+
+    return [mc, sa];
+  }
+
   describe('scored lesson', function() {
     var auditDict, questions;
 
@@ -433,45 +469,41 @@ describe('assessment tags', function() {
         auditDict.location = LOGGING_LOCATION;
       };
 
-      // Set up a multiple choice question
-      var mcQuestionData = {
-        'mc-0': {
-          choices: [
-            {score: '1', feedback: 'yes'},
-            {score: '0', feedback: 'no'}
-          ]
-        }
-      };
-      var mc = new McQuestion($('#mc-0'), mcQuestionData, MESSAGES);
-      // Select the first out of two possible choices
-      $('#mc-0-0').prop('checked', true);
-
-      // Set up a short answer question
-      var saQuestionData = {
-        'sa-0': {
-          hint: 'it\'s \'falafel\'',
-          graders: [
-            {
-              matcher: 'case_insensitive',
-              response: 'FaLaFeL',
-              score: '1.0',
-              feedback: 'good'
-            }
-          ]
-        }
-      };
-      var sa = new SaQuestion($('#sa-0'), saQuestionData, MESSAGES);
-      // Enter 'falafel' as the response
-      $('#sa-0 > .qt-response > input, .qt-response > textarea').val('falafel');
-
       // Make a list of questions in the scored lesson
-      questions = [mc, sa];
+      questions = initTwoQuestions();
     });
     it('sends event logging', function() {
       var eventPayloads = JSON.parse(
         readFixtures('tests/unit/common/event_payloads.json'));
       gradeScoredLesson(questions, MESSAGES);
       expect(auditDict).toEqual(eventPayloads.scored_lesson_15.event_data);
+    });
+  });
+  describe('graded assessment', function() {
+    var questions, action, hiddenData;
+
+    beforeEach(function() {
+      // Mock the global function submitForm
+      window.submitForm = function(_action, _hiddenData) {
+        action = _action;
+        hiddenData = _hiddenData;
+      };
+
+      // Make a list of questions in the scored lesson
+      questions = initTwoQuestions();
+    });
+    it('prepares event logging data', function() {
+      var eventPayloads = JSON.parse(
+        readFixtures('tests/unit/common/event_payloads.json'));
+      gradeAssessment(questions, '6', 'xsrf_tok');
+      // Assemble the event payload in the same form as is done by
+      // assessments.AnswerHandler.update_assessment_transaction.
+      eventPayload = {
+        'type': 'assessment-6',
+        'values': JSON.parse(hiddenData.answers),
+        'location': 'AnswerHandler'
+      };
+      expect(eventPayload).toEqual(eventPayloads.assessment_15.event_data);
     });
   });
 });
