@@ -132,12 +132,16 @@ CAN_AGGREGATE_COUNTERS = ConfigProperty(
 
 def incr_counter_global_value(name, delta):
     if CAN_AGGREGATE_COUNTERS.value:
-        MemcacheManager.incr('counter:' + name, delta)
+        MemcacheManager.incr(
+            'counter:' + name, delta,
+            namespace=appengine_config.DEFAULT_NAMESPACE_NAME)
 
 
 def get_counter_global_value(name):
     if CAN_AGGREGATE_COUNTERS.value:
-        return MemcacheManager.get('counter:' + name)
+        return MemcacheManager.get(
+            'counter:' + name,
+            namespace=appengine_config.DEFAULT_NAMESPACE_NAME)
     else:
         return None
 
