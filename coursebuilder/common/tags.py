@@ -156,6 +156,22 @@ class ResourcesHandler(webapp2.RequestHandler):
             self.error(404)
 
 
+class EditorBlacklists(object):
+    """Lists tags which should not be supported by various editors."""
+
+    COURSE_SCOPE = set()
+    ASSESSMENT_SCOPE = set()
+
+    @classmethod
+    def register(cls, tag_name, editor_set):
+        editor_set.add(tag_name)
+
+    @classmethod
+    def unregister(cls, tag_name, editor_set):
+        if tag_name in editor_set:
+            editor_set.remove(tag_name)
+
+
 class Registry(object):
     """A class that holds all dynamically registered tags."""
 

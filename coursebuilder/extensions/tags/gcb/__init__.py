@@ -212,53 +212,6 @@ class GoogleGroup(tags.BaseTag):
         return reg
 
 
-class Activity(tags.BaseTag):
-
-    def render(self, node, unused_handler):
-        activity_id = node.attrib.get('activityid')
-        script = cElementTree.XML("""
-<div>
-  <script></script>
-  <div style="width: 785px;" id="activityContents"></div>
-</div>""")
-        script[0].set('src', 'assets/js/%s' % activity_id)
-        return script
-
-    def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/activity.png'
-
-    def get_schema(self, handler):
-        course = courses.Course(handler)
-
-        if course.version == courses.COURSE_MODEL_VERSION_1_2:
-            return self.unavailable_schema(
-                'Not available in file-based courses.')
-
-        lesson_id = handler.request.get('lesson_id')
-
-        activity_list = []
-        for unit in course.get_units():
-            for lesson in course.get_lessons(unit.unit_id):
-                filename = 'activity-%s.js' % lesson.lesson_id
-                if lesson.has_activity:
-                    if lesson.activity_title:
-                        title = lesson.activity_title
-                    else:
-                        title = filename
-                    name = '%s - %s (%s) ' % (unit.title, lesson.title, title)
-                    activity_list.append((filename, name))
-                elif str(lesson.lesson_id) == lesson_id:
-                    name = 'Current Lesson (%s)' % filename
-                    activity_list.append((filename, name))
-
-        reg = schema_fields.FieldRegistry('Activity')
-        reg.add_property(
-            schema_fields.SchemaField(
-                'activityid', 'Activity Id', 'string', optional=True,
-                select_data=activity_list))
-        return reg
-
-
 class IFrame(tags.BaseTag):
 
     def render(self, node, unused_handler):

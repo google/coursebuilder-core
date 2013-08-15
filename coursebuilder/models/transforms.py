@@ -73,6 +73,16 @@ def dumps(*args, **kwargs):
     Returns:
         string. The converted JSON.
     """
+
+    class SetAsListJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, set):
+                return list(obj)
+            return super(SetAsListJSONEncoder, self).default(obj)
+
+    if 'cls' not in kwargs:
+        kwargs['cls'] = SetAsListJSONEncoder
+
     return json.dumps(*args, **kwargs)
 
 

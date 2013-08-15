@@ -156,10 +156,16 @@ def register_module():
 
     def on_module_disable():
         tags.Registry.remove_tag_binding(TextFileUploadTag.binding_name)
+        tags.EditorBlacklists.unregister(
+            TextFileUploadTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
 
     def on_module_enable():
         tags.Registry.add_tag_binding(
             TextFileUploadTag.binding_name, TextFileUploadTag)
+        tags.EditorBlacklists.register(
+            TextFileUploadTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
 
     global_routes = [
         (os.path.join(_RESOURCES_PATH, '.*'), tags.ResourcesHandler),

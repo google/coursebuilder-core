@@ -288,7 +288,9 @@ def create_course_registry():
         description='Text, shown on the course homepage, that explains what '
         'the course is about.',
         extra_schema_dict_values={
-            'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value}))
+            'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags':
+            common.tags.EditorBlacklists.COURSE_SCOPE}))
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
         description='URL for the preview video shown on the course homepage '

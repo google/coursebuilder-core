@@ -121,6 +121,8 @@ def render_question(
 class QuestionTag(tags.BaseTag):
     """A tag for rendering questions."""
 
+    binding_name = 'question'
+
     def get_icon_url(self):
         return '/modules/assessment_tags/resources/question.png'
 
@@ -179,6 +181,8 @@ class QuestionTag(tags.BaseTag):
 
 class QuestionGroupTag(tags.BaseTag):
     """A tag for rendering question groups."""
+
+    binding_name = 'question-group'
 
     def get_icon_url(self):
         return '/modules/assessment_tags/resources/question_group.png'
@@ -260,13 +264,29 @@ def register_module():
 
     def when_module_enabled():
         # Register custom tags.
-        tags.Registry.add_tag_binding('question', QuestionTag)
-        tags.Registry.add_tag_binding('question-group', QuestionGroupTag)
+        tags.Registry.add_tag_binding(
+            QuestionTag.binding_name, QuestionTag)
+        tags.EditorBlacklists.register(
+            QuestionTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
+
+        tags.Registry.add_tag_binding(
+            QuestionGroupTag.binding_name, QuestionGroupTag)
+        tags.EditorBlacklists.register(
+            QuestionGroupTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
 
     def when_module_disabled():
         # Unregister custom tags.
-        tags.Registry.remove_tag_binding('question')
-        tags.Registry.remove_tag_binding('question-group')
+        tags.Registry.remove_tag_binding(QuestionTag.binding_name)
+        tags.EditorBlacklists.unregister(
+            QuestionTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
+
+        tags.Registry.remove_tag_binding(QuestionGroupTag.binding_name)
+        tags.EditorBlacklists.unregister(
+            QuestionGroupTag.binding_name,
+            tags.EditorBlacklists.COURSE_SCOPE)
 
     # Add a static handler for icons shown in the rich text editor.
     global_routes = [(

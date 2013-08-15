@@ -250,7 +250,9 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             (['properties', 'title', '_inputex'], {'label': 'Title'}),
             (['properties', 'html', '_inputex'], {
                 'label': 'Body', '_type': 'html',
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value}),
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags':
+                tags.EditorBlacklists.COURSE_SCOPE}),
             oeditor.create_bool_select_annotation(
                 ['properties', 'is_draft'], 'Status', 'Draft', 'Published'),
             (['properties', 'send_email', '_inputex'], {

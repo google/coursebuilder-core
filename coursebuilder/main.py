@@ -25,6 +25,7 @@ import appengine_config  # pylint: disable-msg=unused-import
 from common import tags
 from controllers import sites
 from models import custom_modules
+import modules.activity_tag.activity_tag
 import modules.admin.admin
 import modules.announcements.announcements
 import modules.assessment_tags.questions
@@ -41,6 +42,7 @@ import modules.upload.upload
 debug = not appengine_config.PRODUCTION_MODE
 
 # init and enable most known modules
+modules.activity_tag.activity_tag.register_module().enable()
 modules.admin.admin.register_module().enable()
 modules.announcements.announcements.register_module().enable()
 modules.assessment_tags.questions.register_module().enable()

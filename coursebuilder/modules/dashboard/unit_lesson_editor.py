@@ -593,6 +593,7 @@ def create_assessment_registry():
         'html_content', 'Assessment Content (HTML)', 'html', optional=True,
         extra_schema_dict_values={
             'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
             'className': 'inputEx-Field html-content'}))
     course_opts.add_property(SchemaField(
         'html_check_answers', '"Check Answers" Buttons', 'boolean',
@@ -633,6 +634,7 @@ def create_assessment_registry():
         optional=True,
         extra_schema_dict_values={
             'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags': tags.EditorBlacklists.ASSESSMENT_SCOPE,
             'className': 'inputEx-Field html-review-form'}))
     review_opts.add_property(
         SchemaField(

@@ -6,6 +6,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     setOptions: function(options) {
       GcbRteField.superclass.setOptions.call(this, options);
       this.options.opts = options.opts || {};
+      this.options.excludedCustomTags = options.excludedCustomTags || [];
       this.options.supportCustomTags = options.supportCustomTags || false;
     },
 
@@ -157,6 +158,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
               ed.contentWindow.document.readyState == 'complete') {
             that._customTagManager = new CustomTagManager(ed.contentWindow,
                 editor, env.custom_rte_tag_icons,
+                that.options.excludedCustomTags,
                 new FrameProxyOpener(window),
                 {
                   getAddUrl: function() {
@@ -262,12 +264,13 @@ function FrameProxyOpener(win) {
   this._win = win;
 }
 
-FrameProxyOpener.prototype.open = function(url, value, submit, cancel) {
+FrameProxyOpener.prototype.open = function(url, value, context, submit,
+    cancel) {
   if (this._win.frameProxy) {
     this._win.frameProxy.close();
   }
-  this._win.frameProxy = new FrameProxy('modal-editor', url, value, submit,
-      cancel);
+  this._win.frameProxy = new FrameProxy('modal-editor', url, value, context,
+      submit, cancel);
   this._win.frameProxy.open();
 };
 
@@ -280,11 +283,12 @@ FrameProxyOpener.prototype.open = function(url, value, submit, cancel) {
  * @param frameProxyOpener the opener object for the lightbox
  * @param serviceUrlProvider a provider for the urls the lightbox will use
  */
-function CustomTagManager(win, editor, customRteTagIcons, frameProxyOpener,
-    serviceUrlProvider) {
+function CustomTagManager(win, editor, customRteTagIcons, excludedCustomTags,
+    frameProxyOpener, serviceUrlProvider) {
   this._win = win;
   this._editor = editor;
   this._customRteTagIcons = customRteTagIcons;
+  this._excludedCustomTags = excludedCustomTags;
   this._frameProxyOpener = frameProxyOpener;
   this._serviceUrlProvider = serviceUrlProvider;
 
@@ -334,6 +338,7 @@ CustomTagManager.prototype = {
     this._frameProxyOpener.open(
       this._serviceUrlProvider.getAddUrl(),
       null,
+      {excludedCustomTags: this._excludedCustomTags}, // context object
       function(value) { // on submit
         that._insertCustomTag(value);
       },
@@ -369,6 +374,7 @@ CustomTagManager.prototype = {
     this._frameProxyOpener.open(
       this._serviceUrlProvider.getEditUrl(node.tagName.toLowerCase()),
       value,
+      {excludedCustomTags: this._excludedCustomTags}, // context object
       function(newValue) { // on submit
         var instanceid = node.getAttribute('instanceid');
         for (var name in newValue) {

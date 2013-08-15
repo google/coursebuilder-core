@@ -58,10 +58,11 @@ FramedEditorControls.prototype = {
  *     value object as a parameter
  * @param onClose a callback when the user clicks close
  */
-function FrameProxy(rootId, url, value, onSubmit, onClose) {
+function FrameProxy(rootId, url, value, context, onSubmit, onClose) {
   this._rootId = rootId;
   this._url = url;
   this._value = value;
+  this._context = context;
   this._onSubmit = onSubmit;
   this._onClose = onClose;
 }
@@ -81,6 +82,10 @@ FrameProxy.prototype = {
 
   setValue: function(value) {
     this._value = value;
+  },
+
+  getContext: function() {
+    return this._context;
   },
 
   onLoad: function() {

@@ -147,6 +147,7 @@ describe('FramedEditorControls', function() {
 
 describe('FrameProxy', function() {
   var DEFAULT_VALUE = {value: 'one'};
+  var DEFAULT_CONTEXT = {};
   var proxy, root, iframe, callbacks;
 
   beforeEach(function() {
@@ -177,6 +178,7 @@ describe('FrameProxy', function() {
         'rootid',
         'http://url',
         DEFAULT_VALUE,
+        DEFAULT_CONTEXT,
         callbacks.onSubmit,
         callbacks.onClose);
   });
@@ -235,8 +237,8 @@ describe('FrameProxy', function() {
 });
 
 describe('CustomTagManager', function() {
-  var customTagManager, win, editor, customRteTagIcons, frameProxyOpener,
-      serviceUrlProvider;
+  var customTagManager, win, editor, customRteTagIcons, excludedCustomTags,
+      frameProxyOpener, serviceUrlProvider;
 
   beforeEach(function() {
     win = {
@@ -254,6 +256,7 @@ describe('CustomTagManager', function() {
       {name: 'tag_1', iconUrl: 'http://www.icon.com/foo_1.png'},
       {name: 'tag_2', iconUrl: 'http://www.icon.com/foo_2.png'}
     ];
+    excludedCustomTags = [];
     frameProxyOpener = {
       open: function(url, value, submit, cancel) {}
     };
@@ -267,7 +270,7 @@ describe('CustomTagManager', function() {
     };
 
     customTagManager = new CustomTagManager(win, editor, customRteTagIcons,
-      frameProxyOpener, serviceUrlProvider);
+      excludedCustomTags, frameProxyOpener, serviceUrlProvider);
   });
 
   it('replaces a tag with marker images', function() {
