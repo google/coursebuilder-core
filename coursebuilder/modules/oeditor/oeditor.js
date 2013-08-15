@@ -455,6 +455,7 @@ TopLevelEditorControls.prototype = {
                 // async delete
                 that._Y.io(cb_global.delete_url, {
                   method: 'DELETE',
+                  data: '',
                   timeout : ajaxRpcTimeoutMillis,
                   on: {
                     success: function(id, o, args) {
