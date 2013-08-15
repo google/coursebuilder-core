@@ -223,10 +223,10 @@ def html_to_safe_dom(html_string, handler):
 
         tail = elt.tail
 
-        if elt.tag in tag_bindings:
-            elt = tag_bindings[elt.tag]().render(elt, handler)
-
         try:
+            if elt.tag in tag_bindings:
+                elt = tag_bindings[elt.tag]().render(elt, handler)
+
             if elt.tag.lower() == 'script':
                 out_elt = safe_dom.ScriptElement()
             else:
