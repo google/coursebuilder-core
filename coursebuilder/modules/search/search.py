@@ -143,11 +143,10 @@ def clear_index(course):
 def _get_index_metadata(index):
     """Returns dict from doc_id to timestamp and one from doc_id to doc_type."""
 
-    current_docs = None
     timestamps = []
     doc_types = []
     cursor = search.Cursor()
-    while not current_docs or current_docs.results:
+    while cursor:
         options = search.QueryOptions(
             limit=1000,
             cursor=cursor,
