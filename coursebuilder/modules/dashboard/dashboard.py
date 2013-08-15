@@ -19,28 +19,26 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import os
 import urllib
+
 import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from controllers import sites
 from controllers.utils import ApplicationHandler
-from controllers.utils import HUMAN_READABLE_TIME_FORMAT
 from controllers.utils import ReflectiveRequestHandler
 import jinja2
 import jinja2.exceptions
 from models import config
 from models import courses
 from models import custom_modules
-from models import jobs
 from models import roles
-from models import transforms
-from models import utils
 from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
-from models.models import Student
+from modules.dashboard import analytics
 from modules.search.search import SearchDashboardHandler
 from tools import verify
+
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -66,6 +64,7 @@ from unit_lesson_editor import LinkRESTHandler
 from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
+
 from google.appengine.api import users
 
 
@@ -176,8 +175,10 @@ class DashboardHandler(
                 'a', href='/admin').add_text('Admin'))
 
         nav.append(safe_dom.Element(
-            'a', href='https://code.google.com/p/course-builder/wiki/Dashboard',
-            target='_blank').add_text('Help'))
+            'a',
+            href='https://code.google.com/p/course-builder/wiki/Dashboard',
+            target='_blank'
+        ).add_text('Help'))
 
         return nav
 
@@ -545,7 +546,10 @@ class DashboardHandler(
                     'Upload to ' +
                     filer.strip_leading_and_trailing_slashes(subfolder))
             ).append(
-                safe_dom.Element('div', style='clear: both; padding-top: 2px;'))
+                safe_dom.Element(
+                    'div', style='clear: both; padding-top: 2px;'
+                )
+            )
         if title:
             h3 = safe_dom.Element('h3')
             if count:
@@ -617,7 +621,10 @@ class DashboardHandler(
                     href='dashboard?action=add_question_group'
                 ).add_text('Add Question Group')
             ).append(
-                safe_dom.Element('div', style='clear: both; padding-top: 2px;'))
+                safe_dom.Element(
+                    'div', style='clear: both; padding-top: 2px;'
+                )
+            )
         output.append(
             safe_dom.Element('h3').add_text('Question Groups')
         )
@@ -694,76 +701,13 @@ class DashboardHandler(
         template_values['main_content'] = items
         self.render_page(template_values)
 
-    def get_markup_for_basic_analytics(self, job):
-        """Renders markup for basic enrollment and assessment analytics."""
-        subtemplate_values = {}
-        errors = []
-        stats_calculated = False
-        update_message = safe_dom.Text('')
-
-        if not job:
-            update_message = safe_dom.Text(
-                'Enrollment/assessment statistics have not been calculated '
-                'yet.')
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                stats = transforms.loads(job.output)
-                stats_calculated = True
-
-                subtemplate_values['enrolled'] = stats['enrollment']['enrolled']
-                subtemplate_values['unenrolled'] = (
-                    stats['enrollment']['unenrolled'])
-
-                scores = []
-                total_records = 0
-                for key, value in stats['scores'].items():
-                    total_records += value[0]
-                    avg = round(value[1] / value[0], 1) if value[0] else 0
-                    scores.append({'key': key, 'completed': value[0],
-                                   'avg': avg})
-                subtemplate_values['scores'] = scores
-                subtemplate_values['total_records'] = total_records
-
-                update_message = safe_dom.Text("""
-                    Enrollment and assessment statistics were last updated at
-                    %s in about %s second(s).""" % (
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
-                        job.execution_time_sec))
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = safe_dom.NodeList().append(
-                    safe_dom.Text("""
-                        There was an error updating enrollment/assessment
-                        statistics. Here is the message:""")
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
-            else:
-                update_message = safe_dom.Text(
-                    'Enrollment and assessment statistics update started at %s'
-                    ' and is running now. Please come back shortly.' %
-                    job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT))
-
-        subtemplate_values['stats_calculated'] = stats_calculated
-        subtemplate_values['errors'] = errors
-        subtemplate_values['update_message'] = update_message
-
-        return jinja2.utils.Markup(self.get_template(
-            'basic_analytics.html', [os.path.dirname(__file__)]
-        ).render(subtemplate_values, autoescape=True))
-
     def get_analytics(self):
         """Renders course analytics view."""
         template_values = {}
         template_values['page_title'] = self.format_title('Analytics')
 
         all_jobs_have_finished = True
-
-        basic_analytics_job = ComputeStudentStats(self.app_context).load()
-        stats_html = self.get_markup_for_basic_analytics(basic_analytics_job)
-        if basic_analytics_job and not basic_analytics_job.has_finished:
-            all_jobs_have_finished = False
+        stats_html = ''
 
         for callback in DashboardRegistry.analytics_handlers:
             handler = callback()
@@ -791,8 +735,6 @@ class DashboardHandler(
 
     def post_compute_student_stats(self):
         """Submits a new student statistics calculation task."""
-        job = ComputeStudentStats(self.app_context)
-        job.submit()
 
         for callback in DashboardRegistry.analytics_handlers:
             job = callback().stats_computer(self.app_context)
@@ -801,79 +743,15 @@ class DashboardHandler(
         self.redirect('/dashboard?action=analytics')
 
 
-class ScoresAggregator(object):
-    """Aggregates scores statistics."""
-
-    def __init__(self):
-        # We store all data as tuples keyed by the assessment type name. Each
-        # tuple keeps:
-        #     (student_count, sum(score))
-        self.name_to_tuple = {}
-
-    def visit(self, student):
-        if student.scores:
-            scores = transforms.loads(student.scores)
-            for key in scores.keys():
-                if key in self.name_to_tuple:
-                    count = self.name_to_tuple[key][0]
-                    score_sum = self.name_to_tuple[key][1]
-                else:
-                    count = 0
-                    score_sum = 0
-                self.name_to_tuple[key] = (
-                    count + 1, score_sum + float(scores[key]))
-
-
-class EnrollmentAggregator(object):
-    """Aggregates enrollment statistics."""
-
-    def __init__(self):
-        self.enrolled = 0
-        self.unenrolled = 0
-
-    def visit(self, student):
-        if student.is_enrolled:
-            self.enrolled += 1
-        else:
-            self.unenrolled += 1
-
-
-class ComputeStudentStats(jobs.DurableJob):
-    """A job that computes student statistics."""
-
-    def run(self):
-        """Computes student statistics."""
-        enrollment = EnrollmentAggregator()
-        scores = ScoresAggregator()
-        mapper = utils.QueryMapper(
-            Student.all(), batch_size=500, report_every=1000)
-
-        def map_fn(student):
-            enrollment.visit(student)
-            scores.visit(student)
-
-        mapper.run(map_fn)
-
-        data = {
-            'enrollment': {
-                'enrolled': enrollment.enrolled,
-                'unenrolled': enrollment.unenrolled},
-            'scores': scores.name_to_tuple}
-
-        return data
-
-
 class DashboardRegistry(object):
     """Holds registered handlers that produce HTML code for the dashboard."""
-    analytics_handlers = []
+    analytics_handlers = [analytics.StudentEnrollmentAndScoresHandler]
 
     @classmethod
-    def add_custom_analytics_section(cls, handler):
-        """Adds handlers that provide additional data for the Analytics page."""
+    def add_analytics_section(cls, handler):
+        """Adds handlers that provide data for the Analytics page."""
         if handler not in cls.analytics_handlers:
             existing_names = [h.name for h in cls.analytics_handlers]
-            existing_names.append('enrollment')
-            existing_names.append('scores')
             if handler.name in existing_names:
                 raise Exception('Stats handler name %s is being duplicated.'
                                 % handler.name)

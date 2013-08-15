@@ -1061,7 +1061,7 @@ def register_module():
     from modules.review import cron  # pylint: disable-msg=g-import-not-at-top
 
     # register custom dashboard section
-    modules.dashboard.dashboard.DashboardRegistry.add_custom_analytics_section(
+    modules.dashboard.dashboard.DashboardRegistry.add_analytics_section(
         stats.PeerReviewStatsHandler)
 
     # register this peer review implementation
