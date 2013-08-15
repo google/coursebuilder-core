@@ -157,30 +157,6 @@
                       {% endif %}
                       </p>
                     </li>
-                {% else %}
-                  {% if unit.type == 'A' or unit.type == 'O' %}
-                    <li>
-                      <p class="gcb-top-content">
-                        <span class="gcb-progress-empty"></span>
-                        {{ unit.title }}
-                      </p>
-                    </li>
-                  {% elif unit.type == 'U' %}
-                    <li>
-                      <p class="gcb-top-content">
-                        <span class="gcb-progress-empty"></span>
-                        {# I18N: A row in the course schedule. #}
-                        {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
-                      </p>
-                    </li>
-                  {% else %}
-                    <li>
-                      <p class="gcb-top-content">
-                        <span class="gcb-progress-empty"></span>
-                        Error: unit type not recognized.
-                      </p>
-                    </li>
-                  {% endif %}
                 {% endif %}
 
               {% endfor %}
