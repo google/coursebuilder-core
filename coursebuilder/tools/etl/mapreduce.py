@@ -19,6 +19,7 @@ __author__ = [
     'juliaoh@google.com (Julia Oh)',
 ]
 
+import csv
 import os
 import sys
 
@@ -42,9 +43,9 @@ class MapReduceJob(etl_lib.Job):
     """Parent classes for custom jobs that run a mapreduce.
 
     Usage:
-        python etl.py run path.to.my.job / appid server.appspot.com \
-            --disable_remote \
-            --job_args='path_to_input_file path_to_output_directory'
+    python etl.py run path.to.my.job / appid server.appspot.com \
+        --disable_remote \
+        --job_args='path_to_input_file path_to_output_directory'
     """
 
     # Subclass of mrs.MapReduce; override in child.
@@ -90,9 +91,6 @@ class MapReduceBase(mrs.MapReduce):
 class JsonWriter(mrs.fileformats.Writer):
     """Outputs one JSON literal per line.
 
-    writepair() expects kvpair to be a tuple of unused key and either a list of
-    dicts, or a single dict.
-
     Example JSON output may look like:
     {'foo': 123, 'bar': 456, 'quz': 789}
     {'foo': 321, 'bar': 654, 'quz': 987}
@@ -108,13 +106,22 @@ class JsonWriter(mrs.fileformats.Writer):
     def __init__(self, fileobj, *args, **kwds):
         super(JsonWriter, self).__init__(fileobj, *args, **kwds)
 
-    def _write_json(self, writer, python_object):
+    def _write_json(self, write_fn, python_object):
+        """Writes serialized JSON representation of python_object to file.
+
+        Args:
+            write_fn: Python file object write() method.
+            python_object: object. Contents to write. Must be JSON-serializable.
+
+        Raises:
+            TypeError: if python_object is not a dict or a list.
+        """
         if isinstance(python_object, dict):
-            writer(unicode(
+            write_fn(unicode(
                 transforms.dumps(python_object) + '\n').encode('utf-8'))
         elif isinstance(python_object, list):
             for item in python_object:
-                self._write_json(writer, item)
+                self._write_json(write_fn, item)
         else:
             raise TypeError('Value must be a dict or a list of dicts.')
 
@@ -148,7 +155,7 @@ class Histogram(object):
         """Returns self._values converted into a list, sorted by its keys."""
         try:
             max_key = max(self._values.iterkeys())
-            return [self._values.get(n, 0) for n in xrange(max_key+1)]
+            return [self._values.get(n, 0) for n in xrange(1, max_key+1)]
         except ValueError:
             return []
 
@@ -222,9 +229,10 @@ class YoutubeHistogramGenerator(MapReduceBase):
 class YoutubeHistogram(MapReduceJob):
     """MapReduce Job that generates a histogram for user video engagement.
 
-    Usage:
-    python etl.py run path.to.mapreduce.VideoHistogram /coursename \
-        appid server.appspot.com \
+    Usage: run the following command from the app root folder.
+
+    python tools/etl/etl.py run tools.etl.mapreduce.YoutubeHistogram \
+        /coursename appid server.appspot.com \
         --job_args='path_to_EventEntity.json path_to_output_directory'
     """
 
@@ -317,14 +325,138 @@ class XmlGenerator(MapReduceBase):
 class JsonToXml(MapReduceJob):
     """MapReduce Job that converts JSON formatted Entity files to XML.
 
-    Usage:
-    python etl.py run path.to.mapreduce.JsonToXml /coursename \
-        appid server.appspot.com \
+    Usage: run the following command from the app root folder.
+
+    python tools/etl/etl.py run tools.etl.mapreduce.JsonToXml \
+        /coursename appid server.appspot.com \
         --job_args='path_to_any_Entity_file path_to_output_directory'
     """
 
     MAPREDUCE_CLASS = XmlGenerator
 
 
+class CsvWriter(mrs.fileformats.Writer):
+    """Writes file in CSV format.
+
+    The default value to be written if the dictionary is missing a key is an
+    empty string.
+
+    Example:
+        kvpair: (some_key, (['bar', 'foo', 'quz'],
+                            [{'foo': 1, 'bar': 2, 'quz': 3},
+                            {'bar': 2, 'foo': 3}])
+
+        Output:
+            'bar', 'foo', 'quz'
+            2, 1, 3
+            2, 3, ''
+    """
+
+    ext = 'csv'
+
+    def __init__(self, fileobj, *args, **kwds):
+        super(CsvWriter, self).__init__(fileobj, *args, **kwds)
+
+    def writepair(self, kvpair, **unused_kwds):
+        """Writes list of JSON objects to CSV format.
+
+        Args:
+            kvpair: tuple of unused_key, and a tuple of master_list and
+                json_list. Master_list is a list that contains all the
+                fieldnames across json_list sorted in alphabetical order, and
+                json_list is a list of JSON objects.
+            **unused_kwds: keyword args that won't be used.
+        """
+        unused_key, (master_list, json_list) = kvpair
+        writer = csv.DictWriter(
+            self.fileobj, fieldnames=master_list, restval='')
+        writer.writeheader()
+        writer.writerows(json_list)
+
+
+class CSVGenerator(MapReduceBase):
+    """Generates a CSV file from a JSON formatted input file."""
+
+    @classmethod
+    def _flatten_json(cls, json, prefix=''):
+        """Flattens given JSON object and encodes all the values in utf-8."""
+        for k, v in json.items():
+            try:
+                if type(transforms.loads(v)) == dict:
+                    flattened = cls._flatten_json(
+                        transforms.loads(json.pop(k)), prefix=prefix + k + '_')
+                    json.update(flattened)
+            # pylint: disable=bare-except
+            except:
+                json[prefix + k] = unicode(json.pop(k)).encode('utf-8')
+        return json
+
+    def map(self, unused_key, value):
+        """Loads JSON object and flattens it.
+
+        Example:
+            json['data']['foo'] = 'bar' -> json['data_foo'] = 'bar', with
+            json['data'] removed.
+
+        Args:
+            unused_key: int. line number of the value in Entity file.
+            value: str. instance of Entity file extracted from file.
+
+        Yields:
+            A tuple of string key and flattened dictionary. map() outputs
+            constant string 'key' as the key so that all the values can be
+            accumulated under one key in reduce(). This accumulation is
+            necessary because reduce() must go through the list of all JSON
+            literals and determine all existing fieldnames. Then, reduce()
+            supplies the master_list of fieldnames to CSVWriter's writepair()
+            which uses the list as csv header.
+        """
+        json = self.json_parse(value)
+        if json:
+            json = CSVGenerator._flatten_json(json)
+            yield 'key', json
+
+    def reduce(self, unused_key, values):
+        """Creates a master_list of all the keys present in an Entity file.
+
+        Args:
+            unused_key: str. constant string 'key' emitted by map().
+            values: a generator over list of json objects.
+
+        Yields:
+            A tuple of master_list and list of json objects.
+            master_list is a list of all keys present across every json object.
+            This list is used to create header for CSV files.
+        """
+        master_list = []
+        values = [value for value in values]
+        for value in values:
+            for k, _ in value.iteritems():
+                if k not in master_list:
+                    master_list.append(k)
+        yield sorted(master_list), values
+
+    def make_reduce_data(self, job, interm_data):
+        """Set the output data format to CSV."""
+        outdir = self.output_dir()
+        output_data = job.reduce_data(
+            interm_data, self.reduce, outdir=outdir, format=CsvWriter)
+        return output_data
+
+
+class JsonToCsv(MapReduceJob):
+    """MapReduce Job that converts JSON formatted Entity files to CSV format.
+
+    Usage: run the following command from the app root folder.
+
+    python tools/etl/etl.py run tools.etl.mapreduce.JsonToCSV
+        /coursename appid server.appspot.com \
+        --job_args='path_to_an_Entity_file path_to_output_directory'
+    """
+
+    MAPREDUCE_CLASS = CSVGenerator
+
+
+mrs.fileformats.writer_map['csv'] = CsvWriter
 mrs.fileformats.writer_map['json'] = JsonWriter
 mrs.fileformats.writer_map['xml'] = XmlWriter

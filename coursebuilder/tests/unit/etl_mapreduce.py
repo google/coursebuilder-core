@@ -18,6 +18,7 @@ __author__ = 'juliaoh@google.com (Julia Oh)'
 
 import unittest
 
+from models import transforms
 from tools.etl import mapreduce
 
 
@@ -57,11 +58,37 @@ class HistogramTests(unittest.TestCase):
         histogram.add(60)
         histogram.add(61)
         histogram.add(123)
-        self.assertEquals(histogram.to_list(), [2, 2, 1, 0, 1])
+        self.assertEquals(histogram.to_list(), [2, 1, 0, 1])
         histogram = mapreduce.Histogram()
         histogram.add(121)
-        self.assertEquals(histogram.to_list(), [0, 0, 0, 0, 1])
+        self.assertEquals(histogram.to_list(), [0, 0, 0, 1])
 
     def test_to_list_returns_empty_list(self):
         histogram = mapreduce.Histogram()
         self.assertEquals(histogram.to_list(), [])
+
+
+class FlattenJsonTests(unittest.TestCase):
+
+    def test_empty_json_flattened_returns_empty_json(self):
+        empty_json = transforms.loads(transforms.dumps({}))
+        flattened_json = mapreduce.CSVGenerator._flatten_json(empty_json)
+        self.assertEquals(empty_json, flattened_json)
+
+    def test_flat_json_flattened_returns_same_json(self):
+        flat_json = transforms.loads(
+            transforms.dumps({'foo': 1, 'bar': 2, 'quz': 3}))
+        flattened_json = mapreduce.CSVGenerator._flatten_json(flat_json)
+        self.assertEquals(flat_json, flattened_json)
+
+    def test_nested_json_flattens_correctly(self):
+        dict1 = dict(aaa=111)
+        dict2 = dict(aa=11, bb=22, cc=transforms.dumps(dict1))
+        dict3 = dict(a=transforms.dumps(dict2), b=2)
+        json = transforms.loads(transforms.dumps(dict3))
+        flattened_json = mapreduce.CSVGenerator._flatten_json(json)
+        result_json = transforms.loads(
+            transforms.dumps(
+                {'a_aa': '11', 'a_bb': '22', 'b': '2', 'a_cc_aaa': '111'}))
+        self.assertEquals(result_json, flattened_json)
+
