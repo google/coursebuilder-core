@@ -93,6 +93,7 @@ __author__ = [
 import argparse
 import functools
 import hashlib
+import hmac
 import logging
 import os
 import random
@@ -562,14 +563,12 @@ def _force_config_reload():
 def _get_privacy_transform_fn(privacy, privacy_secret):
     """Returns a transform function to use for export."""
 
+    assert privacy_secret is not None
+
     if not privacy:
         return _IDENTITY_TRANSFORM
-    else:  # Hash of secret + value, curried to 1-arg.
-
-        def privacy_transform(privacy_secret, value):
-            return hashlib.sha256(str(privacy_secret) + str(value)).hexdigest()
-
-        return functools.partial(privacy_transform, privacy_secret)
+    else:
+        return functools.partial(_hmac_sha_2_256, privacy_secret)
 
 
 def _get_privacy_secret(privacy_secret):
@@ -588,6 +587,13 @@ def _get_course_from(app_context):
             self.app_context = app_context
 
     return courses.Course(_Adapter(app_context))
+
+
+def _hmac_sha_2_256(privacy_secret, value):
+    """HMAC-SHA-2-256 for use as a privacy transformation function."""
+    return hmac.new(
+        str(privacy_secret), msg=str(value), digestmod=hashlib.sha256
+    ).hexdigest()
 
 
 def _import_entity_modules():

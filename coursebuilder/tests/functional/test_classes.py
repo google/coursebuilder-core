@@ -22,7 +22,6 @@ import copy
 import cStringIO
 import csv
 import datetime
-import hashlib
 import logging
 import os
 import re
@@ -3564,23 +3563,24 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
 
 class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
+    """Tests privacy transforms."""
 
     # Testing protected functions. pylint: disable-msg=protected-access
+    def test_hmac_sha_2_256_is_stable(self):
+        self.assertEqual(
+            etl._hmac_sha_2_256('secret', 'value'),
+            etl._hmac_sha_2_256('secret', 'value'))
+
     def test_is_identity_transform_when_privacy_false(self):
         self.assertEqual(
             1, etl._get_privacy_transform_fn(False, 'no_effect')(1))
         self.assertEqual(
             1, etl._get_privacy_transform_fn(False, 'other_value')(1))
 
-    def test_transform_is_stable_sha256_with_repeated_secret(self):
-        transform_fn = etl._get_privacy_transform_fn(True, 'secret')
-        first = transform_fn('value')
-        second = transform_fn('value')
-        # We really want explicit concat.
-        # pylint: disable-msg=g-explicit-string-concatenation
+    def test_is_hmac_sha_2_256_when_privacy_true(self):
         self.assertEqual(
-            hashlib.sha256('secret' + 'value').hexdigest(), first)
-        self.assertEqual(first, second)
+            etl._hmac_sha_2_256('secret', 'value'),
+            etl._get_privacy_transform_fn(True, 'secret')('value'))
 
 
 # TODO(johncox): re-enable these tests once we figure out how to make webtest
