@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-07-01 17:32-0700\n"
+"POT-Creation-Date: 2013-07-31 19:28-0700\n"
 "PO-Revision-Date: 2013-06-27 12:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: cs <LL@li.org>\n"
@@ -18,6 +18,59 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.6\n"
+
+#. Error message that is shown to a student when they are using a browser that
+#. does not have JavaScript enabled.
+#: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:11
+msgid " JavaScript should be enabled to grade this question. "
+msgstr ""
+
+#. Alt text for image representing student progress.
+#. Text shown after an assignment whose review has been completed.
+#. Shown in the student profile page, next to an assessment title. States
+#. whether the assessment has been completed.
+#: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:19
+#: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:20
+#: experimental/coursebuilder/views/course.html:49
+#: experimental/coursebuilder/views/course.html:50
+#: experimental/coursebuilder/views/course.html:77
+#: experimental/coursebuilder/views/course.html:78
+#: experimental/coursebuilder/views/course.html:119
+#: experimental/coursebuilder/views/course.html:120
+#: experimental/coursebuilder/views/lesson_navbar.html:15
+#: experimental/coursebuilder/views/lesson_navbar.html:16
+#: experimental/coursebuilder/views/lesson_navbar.html:62
+#: experimental/coursebuilder/views/lesson_navbar.html:63
+#: experimental/coursebuilder/views/review_dashboard.html:49
+#: experimental/coursebuilder/views/student_data_table.html:40
+msgid "Completed"
+msgstr "Dokončeno"
+
+#. Alt text for image representing student progress.
+#: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:24
+#: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:25
+#: experimental/coursebuilder/views/course.html:131
+#: experimental/coursebuilder/views/course.html:132
+#: experimental/coursebuilder/views/lesson_navbar.html:27
+#: experimental/coursebuilder/views/lesson_navbar.html:28
+#: experimental/coursebuilder/views/lesson_navbar.html:74
+#: experimental/coursebuilder/views/lesson_navbar.html:75
+msgid "Not yet started"
+msgstr "Zatím nezahájeno"
+
+#. Text on the button for checking a student's answer.
+#. Text on the button for checking an answer.
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:22
+#: experimental/coursebuilder/modules/assessment_tags/templates/question_group.html:20
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:29
+#: experimental/coursebuilder/views/base.html:24
+msgid " Check Answer "
+msgstr " Zkontrolovat odpověď "
+
+#. Text on the button for requesting a hint to a question.
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:20
+msgid " Hint "
+msgstr ""
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
@@ -117,6 +170,96 @@ msgstr "Nové jméno"
 msgid "Change Name"
 msgstr "Změnit jméno"
 
+#. Displayed in search results; denotes a lesson link.
+#. Navigation breadcrumb.
+#: experimental/coursebuilder/modules/search/resources.py:328
+#: experimental/coursebuilder/views/activity.html:34
+#: experimental/coursebuilder/views/unit.html:38
+msgid "Lesson"
+msgstr "Lekce"
+
+#. Displayed in search results; denotes an announcement link.
+#: experimental/coursebuilder/modules/search/resources.py:665
+msgid "Announcement"
+msgstr ""
+
+#. Title of the webpage.
+#: experimental/coursebuilder/modules/search/search.html:5
+msgid "Search"
+msgstr ""
+
+#. Message displayed on search results page when error occurs.
+#: experimental/coursebuilder/modules/search/search.html:12
+msgid "Search is currently unavailable."
+msgstr ""
+
+#. Status message above search results.
+#: experimental/coursebuilder/modules/search/search.html:18
+#, python-format
+msgid "Results for \"%(query)s\""
+msgstr ""
+
+#. The amount of time the search took, displayed above search results.
+#: experimental/coursebuilder/modules/search/search.html:21
+#, python-format
+msgid "Search took %(num_seconds)s seconds."
+msgstr ""
+
+#. Link to the previous page.
+#: experimental/coursebuilder/modules/search/search.html:32
+msgid "Previous"
+msgstr ""
+
+#. Indicator for current page in search results.
+#: experimental/coursebuilder/modules/search/search.html:37
+#, python-format
+msgid "Page %(number)s of %(total)s"
+msgstr ""
+
+#. Link to the next page.
+#: experimental/coursebuilder/modules/search/search.html:43
+msgid "Next"
+msgstr ""
+
+#. The search returned no results.
+#: experimental/coursebuilder/modules/search/search.html:50
+#, python-format
+msgid "No results for \"%(query)s\""
+msgstr ""
+
+#. Message shown to the user telling them they have already submitted an item,
+#. and submitting a new item will overwrite their previous item.
+#: experimental/coursebuilder/modules/upload/templates/form.html:17
+msgid "You have already submitted; submit again to replace your previous entry."
+msgstr ""
+
+#. Warning shown to the user telling them that the file they select for upload
+#. should be at most 1MB in size
+#: experimental/coursebuilder/modules/upload/templates/form.html:22
+msgid "Maximum file size is 1MB."
+msgstr ""
+
+#. Shown when a user submits a file successfully.
+#: experimental/coursebuilder/modules/upload/templates/result.html:7
+msgid "Your file has been successfully uploaded."
+msgstr ""
+
+#. Shown to tell the user an error occurred during submission.
+#: experimental/coursebuilder/modules/upload/templates/result.html:10
+msgid "An error occurred."
+msgstr ""
+
+#. Text of the link to take the user back to the previous page.
+#: experimental/coursebuilder/modules/upload/templates/result.html:15
+msgid "Return to the previous page."
+msgstr ""
+
+#. Text of the link to take the user back to the previous page so they can try
+#. submitting again.
+#: experimental/coursebuilder/modules/upload/templates/result.html:18
+msgid "Go back and try again."
+msgstr ""
+
 #. Title of the webpage.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/activity.html:5
@@ -135,12 +278,6 @@ msgstr "Část"
 #: experimental/coursebuilder/views/unit.html:32
 msgid "Course"
 msgstr "Kurz"
-
-#. Navigation breadcrumb.
-#: experimental/coursebuilder/views/activity.html:34
-#: experimental/coursebuilder/views/unit.html:38
-msgid "Lesson"
-msgstr "Lekce"
 
 #. Navigation breadcrumb.
 #. Menu item.
@@ -296,11 +433,6 @@ msgstr " Zkontrolovat odpovědi "
 #: experimental/coursebuilder/views/base.html:44
 msgid " Submit Answers "
 msgstr " Odeslat odpovědi "
-
-#. Text on the button for checking an answer.
-#: experimental/coursebuilder/views/base.html:24
-msgid " Check Answer "
-msgstr " Zkontrolovat odpověď "
 
 #. Text on the button for showing the answer to a question.
 #: experimental/coursebuilder/views/base.html:32
@@ -460,25 +592,6 @@ msgid "Schedule"
 msgstr "Časový plán"
 
 #. Alt text for image representing student progress.
-#. Text shown after an assignment whose review has been completed.
-#. Shown in the student profile page, next to an assessment title. States
-#. whether the assessment has been completed.
-#: experimental/coursebuilder/views/course.html:49
-#: experimental/coursebuilder/views/course.html:50
-#: experimental/coursebuilder/views/course.html:77
-#: experimental/coursebuilder/views/course.html:78
-#: experimental/coursebuilder/views/course.html:119
-#: experimental/coursebuilder/views/course.html:120
-#: experimental/coursebuilder/views/lesson_navbar.html:15
-#: experimental/coursebuilder/views/lesson_navbar.html:16
-#: experimental/coursebuilder/views/lesson_navbar.html:62
-#: experimental/coursebuilder/views/lesson_navbar.html:63
-#: experimental/coursebuilder/views/review_dashboard.html:49
-#: experimental/coursebuilder/views/student_data_table.html:40
-msgid "Completed"
-msgstr "Dokončeno"
-
-#. Alt text for image representing student progress.
 #: experimental/coursebuilder/views/course.html:55
 #: experimental/coursebuilder/views/course.html:56
 #: experimental/coursebuilder/views/course.html:89
@@ -506,16 +619,6 @@ msgstr "Probíhá"
 #: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:30
 msgid "Review peer assignments"
 msgstr "Zkontrolovat úlohy spolužáků"
-
-#. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/course.html:131
-#: experimental/coursebuilder/views/course.html:132
-#: experimental/coursebuilder/views/lesson_navbar.html:27
-#: experimental/coursebuilder/views/lesson_navbar.html:28
-#: experimental/coursebuilder/views/lesson_navbar.html:74
-#: experimental/coursebuilder/views/lesson_navbar.html:75
-msgid "Not yet started"
-msgstr "Zatím nezahájeno"
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
