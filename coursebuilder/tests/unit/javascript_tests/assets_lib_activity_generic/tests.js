@@ -3,8 +3,12 @@ describe('V 1.4 Activities and Assessments', function() {
   var event_payloads, interactions;
   var auditDataDict, auditSource, auditIsAsync;
 
-  function checkAuditValues(expectedData, expectedSource, expectedAsync) {
-    expect(auditDataDict).toBe(JSON.stringify(expectedData));
+  function checkAuditValues(expectedData, expectedSource, expectedAsync,
+                            windowLocation) {
+    // This addition to the data dict mocks the corresponding action in gcbAudit
+    auditDataDict['location'] = windowLocation;
+
+    expect(auditDataDict).toEqual(expectedData);
     expect(auditSource).toBe(expectedSource);
     expect(auditIsAsync).toBe(expectedAsync);
   }
@@ -39,7 +43,7 @@ describe('V 1.4 Activities and Assessments', function() {
 
     // Mock the function used for callbacks by all event emitters
     window.gcbAudit = function (data_dict, source, is_async) {
-      auditDataDict = JSON.stringify(data_dict);
+      auditDataDict = data_dict;
       auditSource = source;
       auditIsAsync = is_async;
     };
@@ -55,7 +59,8 @@ describe('V 1.4 Activities and Assessments', function() {
     $('#submit_1').click();
 
     checkAuditValues(expectedEvent.event_data, expectedEvent.event_source,
-                     expectedEvent.event_async);
+                     expectedEvent.event_async,
+                     expectedEvent.event_data.location);
   });
 
   it('can generate events for multiple choice group activity', function() {
@@ -70,7 +75,8 @@ describe('V 1.4 Activities and Assessments', function() {
     $('#submit_3').click();
 
     checkAuditValues(expectedEvent.event_data, expectedEvent.event_source,
-                     expectedEvent.event_async);
+                     expectedEvent.event_async,
+                     expectedEvent.event_data.location);
   });
 
   it('can generate events for freetext activity', function() {
@@ -83,13 +89,13 @@ describe('V 1.4 Activities and Assessments', function() {
     $('#submit_1').click();
 
     checkAuditValues(expectedEvent.event_data, expectedEvent.event_source,
-                     expectedEvent.event_async);
+                     expectedEvent.event_async,
+                     expectedEvent.event_data.location);
   });
 
   it('can generate events for mixed assessment', function() {
     var assessment = interactions.mixed_assessment;
     var expectedEvent = event_payloads.mixed_assessment;
-
     window.renderAssessment(assessment, $('#assessmentContents'));
 
     // Enter correct answers for all four question and click submit
@@ -100,6 +106,7 @@ describe('V 1.4 Activities and Assessments', function() {
     $('#checkAnswersBtn').click();
 
     checkAuditValues(expectedEvent.event_data, expectedEvent.event_source,
-                     expectedEvent.event_async);
+                     expectedEvent.event_async,
+                     expectedEvent.event_data.location);
   });
 });
