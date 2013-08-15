@@ -5,7 +5,7 @@ api_version: 1
 threadsafe: false
 
 env_variables:
-  GCB_PRODUCT_VERSION: '1.4.1'
+  GCB_PRODUCT_VERSION: '1.6.0'
 
 inbound_services:
 - warmup
