@@ -20,7 +20,7 @@ ButterBar.prototype.hide = function() {
   }
 };
 ButterBar.prototype.setCloseButtonVisible = function(visible) {
-  var visibile = visible || true;
+  var visible = visible || true;
   if (visible) {
     this.close.style.display = null;
   } else {
