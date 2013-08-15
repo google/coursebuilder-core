@@ -351,6 +351,7 @@ class SearchDashboardHandler(object):
             if indexing_job.status_code in [jobs.STATUS_CODE_STARTED,
                                             jobs.STATUS_CODE_QUEUED]:
                 mc_template_value['status_message'] = 'Indexing in progress.'
+                mc_template_value['job_in_progress'] = True
             elif indexing_job.status_code == jobs.STATUS_CODE_COMPLETED:
                 mc_template_value['indexed'] = True
                 mc_template_value['last_updated'] = (
@@ -365,6 +366,7 @@ class SearchDashboardHandler(object):
             if clearing_job.status_code in [jobs.STATUS_CODE_STARTED,
                                             jobs.STATUS_CODE_QUEUED]:
                 mc_template_value['status_message'] = 'Clearing in progress.'
+                mc_template_value['job_in_progress'] = True
             elif clearing_job.status_code == jobs.STATUS_CODE_COMPLETED:
                 mc_template_value['status_message'] = (
                     'The index has been cleared.')
