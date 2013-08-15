@@ -1,4 +1,3 @@
-<script src="/modules/search/assets/searchDashboard.js"></script>
 <link rel="stylesheet" type="text/css"
     href="/modules/search/assets/search.css" />
 
@@ -32,19 +31,19 @@
   </div>
 
   {% if not job_in_progress %}
-    <form id="gcb-index-course">
+    <form id="gcb-index-course" action="dashboard?action=index_course" method="POST">
       <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
       <input type="hidden" name="incremental" value="true">
       <button class="gcb-button">Index Course</button>
     </form>
 
-    <form id="gcb-reindex-course">
+    <form id="gcb-reindex-course" action="dashboard?action=index_course" method="POST">
       <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
       <input type="hidden" name="incremental" value="false">
       <button class="gcb-button">Reindex Course</button>
     </form>
 
-    <form id="gcb-clear-index">
+    <form id="gcb-clear-index" action="dashboard?action=clear_index" method="POST">
       <input type="hidden" name="xsrf_token" value="{{clear_index_xsrf_token}}">
       <button class="gcb-button">Clear Index</button>
     </form>

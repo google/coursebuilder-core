@@ -23,7 +23,6 @@ import re
 from controllers import sites
 from models import courses
 from models import custom_modules
-from models import transforms
 from modules.announcements import announcements
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
@@ -114,26 +113,18 @@ class SearchTest(search_unit_test.SearchTestBase):
 
         response = self.post('dashboard?action=index_course',
                              {'xsrf_token': index_token})
-        self.assertEqual(response.status_int, 200)
-        json_response = transforms.loads(response.body)
-        self.assertEqual(202, json_response['status'])
-        self.assertIn('queued', json_response['message'])
+        self.assertEqual(response.status_int, 302)
 
         response = self.post('dashboard?action=clear_index',
                              {'xsrf_token': clear_token})
-        self.assertEqual(response.status_int, 200)
-        # The JSON response should indicated the operation was unsuccessful
-        # since only one indexing operation is allowed in the queue at a time.
-        json_response = transforms.loads(response.body)
-        self.assertEqual(409, json_response['status'])
-        self.assertIn('busy', json_response['message'])
+        self.assertEqual(response.status_int, 302)
 
         response = self.post('dashboard?action=index_course', {},
                              expect_errors=True)
-        assert response.status_int != 200
+        assert response.status_int == 403
         response = self.post('dashboard?action=clear_index', {},
                              expect_errors=True)
-        assert response.status_int != 200
+        assert response.status_int == 403
 
     def test_index_search_clear(self):
         email = 'admin@google.com'

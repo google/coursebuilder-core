@@ -394,22 +394,20 @@ class SearchDashboardHandler(object):
             incremental = self.request.get('incremental') == 'true'
             check_jobs_and_submit(IndexCourse(self.app_context, incremental),
                                   self.app_context)
-            transforms.send_json_response(
-                self, 202, 'Indexing operation queued.')
         except db.TransactionFailedError:
-            transforms.send_json_response(
-                self, 409, 'Index currently busy.')
+            # Double submission from multiple browsers, just pass
+            pass
+        self.redirect('/dashboard?action=search')
 
     def post_clear_index(self):
         """Submits a new indexing operation."""
         try:
             check_jobs_and_submit(ClearIndex(self.app_context),
                                   self.app_context)
-            transforms.send_json_response(
-                self, 202, 'Clearing operation queued.')
         except db.TransactionFailedError:
-            transforms.send_json_response(
-                self, 409, 'Index currently busy.')
+            # Double submission from multiple browsers, just pass
+            pass
+        self.redirect('/dashboard?action=search')
 
 
 class CronHandler(utils.BaseHandler):
