@@ -44,8 +44,9 @@ def render_question(
           generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
-      weight: float. The weight to be used when grading the question in a
-          scored lesson.
+      weight: number. The weight to be used when grading the question in a
+          scored lesson. This value is cast to a float and, if this cast
+          fails, defaults to 1.0.
       progress: None, 0 or 1. If None, no progress marker should be shown. If
           0, a 'not-started' progress marker should be shown. If 1, a
           'complete' progress marker should be shown.
@@ -53,9 +54,18 @@ def render_question(
     Returns:
       a Jinja markup string that represents the HTML for the question.
     """
-    question_dto = m_models.QuestionDAO.load(quid)
+    try:
+        question_dto = m_models.QuestionDAO.load(quid)
+    except Exception:  # pylint: disable-msg=broad-except
+        return '[Invalid question]'
+
     if not question_dto:
         return '[Question deleted]'
+
+    try:
+        weight = float(weight)
+    except ValueError:
+        weight = 1.0
 
     template_values = question_dto.dict
     template_values['embedded'] = embedded
@@ -88,6 +98,8 @@ def render_question(
             'rows', m_models.SaQuestionConstants.DEFAULT_HEIGHT_ROWS)
         template_values['columns'] = template_values.get(
             'columns', m_models.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
+    else:
+        return '[Unsupported question type]'
 
     # Display the weight as an integer if it is sufficiently close to an
     # integer. Otherwise, round it to 2 decimal places. This ensures that the
@@ -126,10 +138,6 @@ class QuestionTag(tags.BaseTag):
 
         quid = node.attrib.get('quid')
         weight = node.attrib.get('weight')
-        try:
-            weight = float(weight)
-        except TypeError:
-            weight = 1.0
 
         instanceid = node.attrib.get('instanceid')
 
@@ -213,8 +221,8 @@ class QuestionGroupTag(tags.BaseTag):
             quid = item['question']
             question_instanceid = '%s.%s.%s' % (group_instanceid, ind, quid)
             template_values['question_html_array'].append(render_question(
-                quid, question_instanceid, locale,
-                weight=float(item['weight']), embedded=True
+                quid, question_instanceid, locale, weight=item['weight'],
+                embedded=True
             ))
             js_data[question_instanceid] = item
         template_values['js_data'] = transforms.dumps(js_data)
