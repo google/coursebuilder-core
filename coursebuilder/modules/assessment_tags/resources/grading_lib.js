@@ -366,7 +366,6 @@ function gradeScoredLesson(questions, messages) {
   var answers = {'version': '1.5'};
   var individualScores = {};
   var containedTypes = {};
-  var gradedAnswers = {};
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     if (question instanceof QuestionGroup) {
@@ -376,9 +375,7 @@ function gradeScoredLesson(questions, messages) {
       individualScores[question.id] = grade.score;
       containedTypes[question.id] = question.type;
     }
-    answers[question.id] = question.getStudentAnswer();
-    gradedAnswers[question.id] = grade.answer;
-
+    answers[question.id] = grade.answer;
     score += grade.score * question.getWeight();
     totalWeight += question.getWeight();
     question.displayFeedback(grade.feedback);
@@ -389,11 +386,11 @@ function gradeScoredLesson(questions, messages) {
       .removeClass('qt-hidden');
 
   gcbLessonAudit({
+    'type': 'scored-lesson',
     'answers': answers,
     'individualScores': individualScores,
     'score': score,
-    'containedTypes': containedTypes,
-    'gradedAnswers': gradedAnswers
+    'containedTypes': containedTypes
   });
 }
 

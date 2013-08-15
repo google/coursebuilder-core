@@ -1,4 +1,5 @@
 describe('assessment tags', function() {
+  var LOGGING_LOCATION = 'http://localhost:8080/unit?unit=1&lesson=2';
   var MESSAGES = {
     correctAnswer: 'Yes, the answer is correct.',
     incorrectAnswer: 'No, the answer is incorrect.',
@@ -111,6 +112,7 @@ describe('assessment tags', function() {
             {score: '0', feedback: 'no'}]}};
         var mc = new McQuestion(el, questionData, MESSAGES, function(arg) {
           auditDict = arg;
+          auditDict.location = LOGGING_LOCATION;
         });
         mc.onCheckAnswer();
         expect(auditDict).toEqual(eventPayloads.multiple_choice_15.event_data);
@@ -301,6 +303,7 @@ describe('assessment tags', function() {
       var questionData = getQuestionData('case_insensitive', 'FaLaFeL');
       var sa = new SaQuestion(el, questionData, MESSAGES, function(arg) {
         auditDict = arg;
+        auditDict.location = LOGGING_LOCATION;
       });
       sa.onCheckAnswer();
       expect(auditDict).toEqual(eventPayloads.short_answer_15.event_data);
@@ -330,6 +333,7 @@ describe('assessment tags', function() {
       };
       var componentAudit = function(arg) {
         auditDict = arg;
+        auditDict.location = LOGGING_LOCATION;
       }
       qg = new QuestionGroup(el, questionData, MESSAGES, componentAudit);
     });
@@ -417,6 +421,57 @@ describe('assessment tags', function() {
       expectDisabled(false, false, false);
       qg.makeReadOnly();
       expectDisabled(true, true, true);
+    });
+  });
+  describe('scored lesson', function() {
+    var auditDict, questions;
+
+    beforeEach(function() {
+      // Mock the global function gcbLessonAudit
+      window.gcbLessonAudit = function(arg) {
+        auditDict = arg;
+        auditDict.location = LOGGING_LOCATION;
+      };
+
+      // Set up a multiple choice question
+      var mcQuestionData = {
+        'mc-0': {
+          choices: [
+            {score: '1', feedback: 'yes'},
+            {score: '0', feedback: 'no'}
+          ]
+        }
+      };
+      var mc = new McQuestion($('#mc-0'), mcQuestionData, MESSAGES);
+      // Select the first out of two possible choices
+      $('#mc-0-0').prop('checked', true);
+
+      // Set up a short answer question
+      var saQuestionData = {
+        'sa-0': {
+          hint: 'it\'s \'falafel\'',
+          graders: [
+            {
+              matcher: 'case_insensitive',
+              response: 'FaLaFeL',
+              score: '1.0',
+              feedback: 'good'
+            }
+          ]
+        }
+      };
+      var sa = new SaQuestion($('#sa-0'), saQuestionData, MESSAGES);
+      // Enter 'falafel' as the response
+      $('#sa-0 > .qt-response > input, .qt-response > textarea').val('falafel');
+
+      // Make a list of questions in the scored lesson
+      questions = [mc, sa];
+    });
+    it('sends event logging', function() {
+      var eventPayloads = JSON.parse(
+        readFixtures('tests/unit/common/event_payloads.json'));
+      gradeScoredLesson(questions, MESSAGES);
+      expect(auditDict).toEqual(eventPayloads.scored_lesson_15.event_data);
     });
   });
 });
