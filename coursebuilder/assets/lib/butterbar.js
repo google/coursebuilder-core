@@ -21,9 +21,9 @@ ButterBar.prototype.hide = function() {
 };
 ButterBar.prototype.setCloseButtonVisible = function(visible) {
   if (visible) {
-    this.close.style.display = null;
+    $(this.close).css('display', null);
   } else {
-    this.close.style.display = 'none';
+    $(this.close).css('display', 'none');
   }
 }
 ButterBar.getButterBar = function() {
