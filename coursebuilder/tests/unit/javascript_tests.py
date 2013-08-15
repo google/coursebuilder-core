@@ -10,6 +10,7 @@ import unittest
 class AllJavaScriptTests(unittest.TestCase):
 
     def test_all(self):
-        subprocess.call([
+        retcode = subprocess.call([
             'karma', 'start',
             'experimental/coursebuilder/tests/unit/karma.conf.js'])
+        self.assertEqual(retcode, 0)
