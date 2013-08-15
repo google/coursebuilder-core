@@ -88,6 +88,12 @@ class DashboardHandler(
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson',
         'edit_basic_course_settings', 'add_reviewer', 'delete_reviewer']
+    nav_mappings = [
+        ('', 'Outline'),
+        ('assets', 'Assets'),
+        ('settings', 'Settings'),
+        ('analytics', 'Analytics'),
+        ('edit_assignment', 'Peer Review')]
 
     local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
 
@@ -153,14 +159,8 @@ class DashboardHandler(
 
     def _get_top_nav(self):
         current_action = self.request.get('action')
-        nav_mappings = [
-            ('', 'Outline'),
-            ('assets', 'Assets'),
-            ('settings', 'Settings'),
-            ('analytics', 'Analytics'),
-            ('edit_assignment', 'Peer Review')]
         nav = safe_dom.NodeList()
-        for action, title in nav_mappings:
+        for action, title in self.nav_mappings:
 
             class_name = 'selected' if action == current_action else ''
             action_href = 'dashboard?action=%s' % action
