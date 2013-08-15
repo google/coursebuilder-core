@@ -4,10 +4,10 @@
 
 {% if module_enabled %}
   <div class="gcb-index-status">
-    {% if status == 'indexed' %}
+    {% if indexed %}
       <div>
         The index was last updated on {{ last_updated }}.
-        Indexing the course took {{ index_status['indexing_time_secs'] }}
+        Indexing the course took {{ index_info['indexing_time_secs'] }}
         seconds.
       </div>
       <table>
@@ -15,21 +15,19 @@
           <td>Document Type</td>
           <td>Number present</td>
         </tr></b>
-        {% for type in index_status['doc_types'] | sort %}
+        {% for type in index_info['doc_types'] | sort %}
           <tr>
             <td>{{ type }}</td>
-            <td>{{ index_status['doc_types'][type] }}</td>
+            <td>{{ index_info['doc_types'][type] }}</td>
           </tr>
         {% endfor %}
         <tr class="gcb-bold-row">
           <td>Total</td>
-          <td>{{ index_status['num_indexed_docs'] }}
+          <td>{{ index_info['num_indexed_docs'] }}
         </tr>
       </table>
-    {% elif status == 'clearing' %}
-      The index is cleared.
-    {% elif status == 'indexing_in_progress' %}
-      Indexing in progress.
+    {% elif status_message %}
+      {{ status_message }}
     {% endif %}
   </div>
 

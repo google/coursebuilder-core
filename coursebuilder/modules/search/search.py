@@ -328,21 +328,34 @@ class SearchDashboardHandler(object):
         mc_template_value['module_enabled'] = custom_module.enabled
         indexing_job = IndexCourse(self.app_context).load()
         clearing_job = ClearIndex(self.app_context).load()
-        if (indexing_job and
-            indexing_job.status_code == jobs.STATUS_CODE_COMPLETED):
-            if (clearing_job and
-                clearing_job.updated_on > indexing_job.updated_on):
-                mc_template_value['status'] = 'clearing'
-            else:
-                mc_template_value['status'] = 'indexed'
+        if indexing_job and (not clearing_job or
+                             indexing_job.updated_on > clearing_job.updated_on):
+            if indexing_job.status_code in [jobs.STATUS_CODE_STARTED,
+                                            jobs.STATUS_CODE_QUEUED]:
+                mc_template_value['status_message'] = 'Indexing in progress.'
+            elif indexing_job.status_code == jobs.STATUS_CODE_COMPLETED:
+                mc_template_value['indexed'] = True
                 mc_template_value['last_updated'] = (
                     indexing_job.updated_on.strftime(
                         utils.HUMAN_READABLE_DATETIME_FORMAT))
-                mc_template_value['index_status'] = transforms.loads(
+                mc_template_value['index_info'] = transforms.loads(
                     indexing_job.output)
-        elif (indexing_job and
-              indexing_job.status_code == jobs.STATUS_CODE_STARTED):
-            mc_template_value['status'] = 'indexing_in_progress'
+            elif indexing_job.status_code == jobs.STATUS_CODE_FAILED:
+                mc_template_value['status_message'] = (
+                    'Indexing job failed with error: %s' % indexing_job.output)
+        elif clearing_job:
+            if clearing_job.status_code in [jobs.STATUS_CODE_STARTED,
+                                            jobs.STATUS_CODE_QUEUED]:
+                mc_template_value['status_message'] = 'Clearing in progress.'
+            elif clearing_job.status_code == jobs.STATUS_CODE_COMPLETED:
+                mc_template_value['status_message'] = (
+                    'The index has been cleared.')
+            elif clearing_job.status_code == jobs.STATUS_CODE_FAILED:
+                mc_template_value['status_message'] = (
+                    'Clearing job failed with error: %s' % clearing_job.output)
+        else:
+            mc_template_value['status_message'] = (
+                'No indexing job has been run yet.')
 
         mc_template_value['index_course_xsrf_token'] = self.create_xsrf_token(
             'index_course')
