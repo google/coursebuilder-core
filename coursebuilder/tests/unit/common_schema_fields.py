@@ -206,6 +206,27 @@ class FieldRegistryTests(BaseFieldTests):
 """
         self.assert_schema_dict_value(expected, reg)
 
+    def test_select_data_values_retain_boolean_and_numeric_type_in_json(self):
+        reg = schema_fields.FieldRegistry(
+            'registry_name', 'registry_description')
+        reg.add_property(schema_fields.SchemaField(
+            'field_name', 'field_label', 'string',
+            select_data=[(True, 'A'), (12, 'B'), ('c', 'C')]))
+        expected = """
+[
+  [["title"],"registry_name"],
+  [["properties","field_name","_inputex"],{
+    "_type": "select",
+    "choices":[
+      {"value": true, "label": "A"},
+      {"value": 12,"label": "B"},
+      {"value": "c","label": "C"}],
+    "label":"field_label"
+  }]
+]
+"""
+        self.assert_schema_dict_value(expected, reg)
+
     def test_object_with_array_property(self):
         reg = schema_fields.FieldRegistry(
             'registry_name', 'registry_description')

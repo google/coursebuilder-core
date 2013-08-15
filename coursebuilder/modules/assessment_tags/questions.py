@@ -140,7 +140,9 @@ class QuestionTag(tags.BaseTag):
     def get_schema(self, unused_handler):
         """Get the schema for specifying the question."""
         questions = m_models.QuestionDAO.get_all()
-        question_list = [(q.id, q.description) for q in questions]
+        question_list = [(
+            unicode(q.id),  # q.id is a number but the schema requires a string
+            q.description) for q in questions]
 
         if not question_list:
             return self.unavailable_schema('No questions available')
@@ -217,7 +219,9 @@ class QuestionGroupTag(tags.BaseTag):
     def get_schema(self, unused_handler):
         """Get the schema for specifying the question group."""
         question_groups = m_models.QuestionGroupDAO.get_all()
-        question_group_list = [(q.id, q.description) for q in question_groups]
+        question_group_list = [(
+            unicode(q.id),  # q.id is a number but the schema requires a string
+            q.description) for q in question_groups]
 
         if not question_group_list:
             return self.unavailable_schema('No question groups available')
