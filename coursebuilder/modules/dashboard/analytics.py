@@ -301,6 +301,21 @@ class ComputeQuestionStats(jobs.DurableJob):
             return self._course
 
         def _append_data(self, summarized_question, dict_to_update):
+            # Validate the structure and content of summarized_question dict.
+            if set(summarized_question.keys()) != {'id', 'score', 'answers'}:
+                return
+            if not isinstance(summarized_question['score'], (int, float)):
+                return
+            if not isinstance(summarized_question['answers'], list):
+                return
+            if any(not isinstance(answer, int) for answer in (
+                    summarized_question['answers'])):
+                return
+            if max(summarized_question['answers']) >= len(
+                    dict_to_update['answer_counts']):
+                return
+
+            # Summarized_question contains correct keys.
             if summarized_question['id'] in dict_to_update:
                 q_dict = dict_to_update[summarized_question['id']]
                 q_dict['score'] += summarized_question['score']
