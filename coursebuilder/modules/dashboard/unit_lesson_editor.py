@@ -39,8 +39,6 @@ import yaml
 import filer
 import messages
 
-from google.appengine.ext import db
-
 
 DRAFT_TEXT = 'Private'
 PUBLISHED_TEXT = 'Public'
@@ -1208,7 +1206,6 @@ class ImportActivityRESTHandler(BaseRESTHandler):
         question_group = m_models.QuestionGroupDTO(None, question_group_dict)
         return m_models.QuestionGroupDAO.save(question_group)
 
-    @db.transactional(xg=True)
     def import_question(self, item):
         question_type = item['questionType']
         if question_type == 'multiple choice':
@@ -1252,25 +1249,26 @@ class ImportActivityRESTHandler(BaseRESTHandler):
 
     def import_multiple_choice_group(self, mc_choice_group):
         """Import a 'multiple choice group' as a question group."""
-        name = self._get_question_description()
-        if name in self.question_group_descriptions:
+        description = self._get_question_description()
+        if description in self.question_group_descriptions:
             raise CollisionError()
 
         question_group_dict = {
             'version': self.VERSION,
-            'name': name}
+            'description': description}
 
-        items = []
-        question_group_dict['items'] = items
+        question_list = []
         for index, question in enumerate(mc_choice_group['questionsList']):
             question_dict = self.import_multiple_choice_group_question(
                 question, index)
-            quid = self._insert_question(
-                question_dict, m_models.QuestionDTO.MULTIPLE_CHOICE)
-            items.append({
-                'question': str(quid),
-                'weight': 1.0
-            })
+            question = m_models.QuestionDTO(None, question_dict)
+            question.type = m_models.QuestionDTO.MULTIPLE_CHOICE
+            question_list.append(question)
+
+        quid_list = m_models.QuestionDAO.save_all(question_list)
+        question_group_dict['items'] = [{
+            'question': str(quid),
+            'weight': 1.0} for quid in quid_list]
 
         return question_group_dict
 

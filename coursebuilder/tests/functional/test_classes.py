@@ -3855,7 +3855,7 @@ var activity = [
         question_group = self.load_dto(models.QuestionGroupDAO, quid)
         self.assertEqual(question_group.dict['version'], '1.5')
         self.assertEqual(
-            question_group.dict['name'],
+            question_group.dict['description'],
             'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
         self.assertEqual(len(question_group.dict['items']), 2)
 
