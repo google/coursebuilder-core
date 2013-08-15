@@ -141,3 +141,7 @@ class DurableJobEntity(entities.BaseEntity):
     @classmethod
     def _fail_job(cls, name, output, execution_time_sec):
         return cls._update(name, STATUS_CODE_FAILED, output, execution_time_sec)
+
+    @property
+    def has_finished(self):
+        return self.status_code in [STATUS_CODE_COMPLETED, STATUS_CODE_FAILED]

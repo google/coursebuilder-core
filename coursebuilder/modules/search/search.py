@@ -22,6 +22,7 @@ import math
 import mimetypes
 import os
 import time
+import traceback
 
 import appengine_config
 from controllers import sites
@@ -196,10 +197,12 @@ class SearchHandler(utils.BaseHandler):
                         (query, offset - RESULTS_LIMIT))
                 self.template_value['page_number'] = offset / RESULTS_LIMIT + 1
                 self.template_value['total_pages'] = int(math.ceil(
-                    float(total_found)/RESULTS_LIMIT))
+                    float(total_found) / RESULTS_LIMIT))
         except Exception as e:  # pylint: disable-msg=broad-except
             self.template_value['search_error'] = True
-            logging.error('Error rendering the search page: %s', e)
+            logging.error(
+                'Error rendering the search page: %s. %s',
+                e, traceback.format_exc)
         finally:
             path = sites.abspath(self.app_context.get_home_folder(),
                                  GCB_SEARCH_FOLDER_NAME)
