@@ -9,7 +9,7 @@
             {# I18N: Shown to tell the user an error occurred during submission. #}
             {{ gettext('An error occurred.') }}
         {% endif %}
-        <a href='unit?unit={{ unit_id }}'>
+        <a href='javascript:window.history.back();'>
             {% if success %}
                 {# I18N: Text of the link to take the user back to the previous page. #}
                 {{ gettext('Return to the previous page.') }}

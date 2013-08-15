@@ -41,6 +41,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         super(TextFileUploadHandlerTestCase, self).setUp()
         self.contents = 'contents'
         self.email = 'user@example.com'
+        self.headers = {'referer': 'http://localhost/path?query=value#fragment'}
         self.unit_id = '1'
         self.user_id = '2'
         self.student = models.Student(
@@ -63,21 +64,22 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
     def test_bad_xsrf_token_returns_400(self):
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX,
-            {'form_xsrf_token': 'bad'}, expect_errors=True)
+            {'form_xsrf_token': 'bad'}, self.headers, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
     def test_creates_new_submission(self):
         self.configure_environ_for_current_user()
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
-        request = {
+        params = {
             'contents': self.contents,
             'form_xsrf_token': user_xsrf_token,
             'unit_id': self.unit_id,
         }
         self.assertIsNone(self.get_submission(self.student.key(), self.user_id))
 
-        response = self.testapp.post(upload._POST_ACTION_SUFFIX, request)
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers)
         self.assertEqual(200, response.status_int)
         submissions = student_work.Submission.all().fetch(2)
         self.assertEqual(1, len(submissions))
@@ -87,56 +89,61 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.configure_environ_for_current_user()
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
-        request = {
+        params = {
             'contents': '',
             'form_xsrf_token': user_xsrf_token,
             'unit_id': self.unit_id,
         }
 
         response = self.testapp.post(
-            upload._POST_ACTION_SUFFIX, request, expect_errors=True)
+            upload._POST_ACTION_SUFFIX, params, self.headers,
+            expect_errors=True)
         self.assertEqual(400, response.status_int)
 
     def test_missing_contents_returns_400(self):
         self.configure_environ_for_current_user()
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
-        request = {
+        params = {
             'form_xsrf_token': user_xsrf_token,
             'unit_id': self.unit_id,
         }
 
         response = self.testapp.post(
-            upload._POST_ACTION_SUFFIX, request, expect_errors=True)
+            upload._POST_ACTION_SUFFIX, params, self.headers,
+            expect_errors=True)
         self.assertEqual(400, response.status_int)
 
     def test_missing_student_returns_403(self):
         response = self.testapp.post(
             upload._POST_ACTION_SUFFIX,
-            {'form_xsrf_token': self.xsrf_token}, expect_errors=True)
+            {'form_xsrf_token': self.xsrf_token}, self.headers,
+            expect_errors=True)
         self.assertEqual(403, response.status_int)
 
     def test_missing_xsrf_token_returns_400(self):
         response = self.testapp.post(
-            upload._POST_ACTION_SUFFIX, {}, expect_errors=True)
+            upload._POST_ACTION_SUFFIX, {}, self.headers, expect_errors=True)
         self.assertEqual(400, response.status_int)
 
     def test_updates_existing_submission(self):
         self.configure_environ_for_current_user()
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
-        request = {
+        params = {
             'contents': 'old',
             'form_xsrf_token': user_xsrf_token,
             'unit_id': self.unit_id,
         }
 
         self.assertIsNone(self.get_submission(self.student.key(), self.user_id))
-        response = self.testapp.post(upload._POST_ACTION_SUFFIX, request)
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers)
         self.assertEqual(200, response.status_int)
 
-        request['contents'] = self.contents
-        response = self.testapp.post(upload._POST_ACTION_SUFFIX, request)
+        params['contents'] = self.contents
+        response = self.testapp.post(
+            upload._POST_ACTION_SUFFIX, params, self.headers)
         self.assertEqual(200, response.status_int)
         submissions = student_work.Submission.all().fetch(2)
         self.assertEqual(1, len(submissions))
@@ -146,7 +153,7 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.configure_environ_for_current_user()
         user_xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
-        request = {
+        params = {
             # Entity size = contents + other data, so 1MB here will overlfow.
             'contents': 'a' * 1024 * 1024,
             'form_xsrf_token': user_xsrf_token,
@@ -154,5 +161,6 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         }
 
         response = self.testapp.post(
-            upload._POST_ACTION_SUFFIX, request, expect_errors=True)
+            upload._POST_ACTION_SUFFIX, params, self.headers,
+            expect_errors=True)
         self.assertEqual(400, response.status_int)

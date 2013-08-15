@@ -387,10 +387,10 @@ class AssessmentHandler(BaseHandler):
         if not student:
             return
 
-        # Extract incoming args
-        unit_id = self.request.get('name')
+        # Extract incoming args, binding to self if needed.
+        self.unit_id = self.request.get('name')
         course = self.get_course()
-        unit = course.find_unit_by_id(unit_id)
+        unit = course.find_unit_by_id(self.unit_id)
         if not unit:
             self.error(404)
             return
@@ -411,7 +411,7 @@ class AssessmentHandler(BaseHandler):
             raise ValueError('Bad assessment model version: %s' % model_version)
 
         self.template_value['navbar'] = {'course': True}
-        self.template_value['unit_id'] = unit_id
+        self.template_value['unit_id'] = self.unit_id
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (
