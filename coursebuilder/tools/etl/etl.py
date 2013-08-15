@@ -102,12 +102,10 @@ import yaml
 
 # Placeholders for modules we'll import after setting up sys.path. This allows
 # us to avoid lint suppressions at every callsite.
-announcements = None
 appengine_config = None
 courses = None
 db = None
 etl_lib = None
-jobs = None
 metadata = None
 namespace_manager = None
 remote = None
@@ -544,19 +542,16 @@ def _get_course_from(app_context):
 
 
 def _import_entity_modules():
-    """Import modules that define persistent datastore entities."""
+    """Import all entity type classes.
 
-    # TODO(psimakov): Ideally, we would learn how to load entities from the
-    # datastore without importing their classes; then we wouldn't need any of
-    # these imports below
-
+    We need to import main.py to make sure all known entity types are imported
+    by the time the ETL code runs. If a transitive closure of main.py imports
+    does not import all required classes, import them here explicitly.
+    """
     # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
     # pylint: disable-msg=redefined-outer-name,unused-variable
-    global announcements
-    global jobs
     try:
-        from models import jobs
-        from modules.announcements import announcements
+        import main
     except ImportError, e:
         _die((
             'Unable to import required modules; see tools/etl/etl.py for '
