@@ -31,6 +31,7 @@ from controllers import sites
 from controllers import utils
 import jinja2
 from models import config
+from models import counters
 from models import courses
 from models import custom_modules
 from models import jobs
@@ -53,6 +54,16 @@ CAN_INDEX_ALL_COURSES_IN_CRON = config.ConfigProperty(
         'incrementally so that only new items or items which have not been '
         'recently indexed are indexed.'),
     default_value=False)
+SEARCH_QUERIES_MADE = counters.PerfCounter(
+    'gcb-search-queries-made',
+    'The number of student queries made to the search module.')
+SEARCH_RESULTS_RETURNED = counters.PerfCounter(
+    'gcb-search-results-returned',
+    'The number of search results returned across all student queries.')
+SEARCH_FAILURES = counters.PerfCounter(
+    'gcb-search-failures',
+    'The number of search failure messages returned across all student '
+    'queries.')
 
 INDEX_NAME = 'gcb_search_index'
 RESULTS_LIMIT = 10
@@ -235,6 +246,7 @@ class SearchHandler(utils.BaseHandler):
                 except (ValueError, TypeError):
                     offset = 0
                 self.template_value['query'] = query
+                SEARCH_QUERIES_MADE.inc()
                 response = fetch(self.get_course(), query, offset=offset)
                 self.template_value['time'] = '%.2f' % (time.time() - start)
                 self.template_value['search_results'] = response['results']
@@ -251,9 +263,14 @@ class SearchHandler(utils.BaseHandler):
                 self.template_value['page_number'] = offset / RESULTS_LIMIT + 1
                 self.template_value['total_pages'] = int(math.ceil(
                     float(total_found) / RESULTS_LIMIT))
+
+                if response['results']:
+                    SEARCH_RESULTS_RETURNED.inc(len(response['results']))
+
         # TODO(emichael): Remove this check when the unicode issue is fixed in
         # dev_appserver.
         except UnicodeEncodeError as e:
+            SEARCH_FAILURES.inc()
             if not appengine_config.PRODUCTION_MODE:
                 # This message will only be displayed to the course author in
                 # dev, so it does not need to be I18N'd
@@ -271,6 +288,7 @@ class SearchHandler(utils.BaseHandler):
                 logging.error('Error rendering the search page: %s. %s',
                               e, traceback.format_exc())
         except Exception as e:  # pylint: disable-msg=broad-except
+            SEARCH_FAILURES.inc()
             self.template_value['search_error'] = SEARCH_ERROR_TEXT
             logging.error('Error rendering the search page: %s. %s',
                           e, traceback.format_exc())
