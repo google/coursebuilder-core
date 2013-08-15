@@ -29,7 +29,6 @@ import robotparser
 import urllib
 import urlparse
 from xml.dom import minidom
-from xml.parsers.expat import ExpatError
 
 import appengine_config
 from common import jinja_utils
@@ -119,8 +118,8 @@ def get_parser_for_html(url, ignore_robots=False):
             parser.feed(result.content)
         else:
             raise ValueError
-    except (ValueError, urlfetch.Error) as e:
-        raise URLNotParseableException('Could not parse file at URL: %s, %s' %
+    except BaseException as e:
+        raise URLNotParseableException('Could not parse file at URL: %s\n%s' %
                                        (url, e))
 
     return parser
@@ -146,7 +145,7 @@ def get_minidom_from_xml(url, ignore_robots=False):
         if isinstance(result.content, unicode):
             result.content = result.content.encode('utf-8')
         xmldoc = minidom.parseString(result.content)
-    except ExpatError as e:
+    except BaseException as e:
         raise URLNotParseableException(
             'Error parsing XML document at URL: %s. %s' % (url, e))
 
@@ -156,14 +155,14 @@ def get_minidom_from_xml(url, ignore_robots=False):
 def _url_allows_robots(url):
     """Checks robots.txt for user agent * at URL."""
     url = url.encode('utf-8')
-    parts = urlparse.urlparse(url)
-    base = urlparse.urlunsplit((
-        parts.scheme, parts.netloc, '', None, None))
-    rp = robotparser.RobotFileParser(url=urlparse.urljoin(
-        base, '/robots.txt'))
     try:
+        parts = urlparse.urlparse(url)
+        base = urlparse.urlunsplit((
+            parts.scheme, parts.netloc, '', None, None))
+        rp = robotparser.RobotFileParser(url=urlparse.urljoin(
+            base, '/robots.txt'))
         rp.read()
-    except IOError as e:
+    except BaseException as e:
         logging.info('Could not retreive robots.txt for URL: %s', url)
         raise URLNotParseableException(e)
     else:
@@ -284,7 +283,13 @@ class LessonResource(Resource):
             if (lesson.now_available and unit.now_available and
                 not cls._indexed_within_num_days(timestamps, doc_id,
                                                  cls.FRESHNESS_THRESHOLD_DAYS)):
-                yield LessonResource(lesson)
+                try:
+                    yield LessonResource(lesson)
+                except HTMLParser.HTMLParseError as e:
+                    logging.info(
+                        'Error parsing objectives for Lesson %s.%s: %s',
+                        lesson.unit_id, lesson.lesson_id, e)
+                    continue
 
     @classmethod
     def _get_doc_id(cls, unit_id, lesson_id):
@@ -511,8 +516,9 @@ class YouTubeFragmentResource(Resource):
         """Get all of the transcript fragment docs for a specific video."""
         try:
             (transcript, title, thumbnail_url) = cls._get_video_data(video_id)
-        except URLNotParseableException as e:
-            logging.info(e)
+        except BaseException as e:
+            logging.info('Could not parse YouTube video with id %s.\n%s',
+                         video_id, e)
             return []
 
         # Aggregate the fragments into YOUTUBE_CAPTION_SIZE_SECS time chunks
@@ -641,7 +647,12 @@ class AnnouncementResource(Resource):
                 doc_id = cls._get_doc_id(entity.key())
                 if not(entity.is_draft or cls._indexed_within_num_days(
                         timestamps, doc_id, cls.FRESHNESS_THRESHOLD_DAYS)):
-                    yield AnnouncementResource(entity)
+                    try:
+                        yield AnnouncementResource(entity)
+                    except HTMLParser.HTMLParseError as e:
+                        logging.info('Error parsing Announcement %s: %s',
+                                     entity.title, e)
+                        continue
 
     def __init__(self, announcement):
         super(AnnouncementResource, self).__init__()
