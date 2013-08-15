@@ -17,9 +17,17 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import jinja2
+from models import config
+from models import models
 from webapp2_extras import i18n
 import safe_dom
 import tags
+
+
+CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
+    'gcb_can_use_jinja2_template_cache', bool, safe_dom.Text(
+        'Whether jinja2 can cache bytecode of compiled templates in memcache.'),
+    default_value=True)
 
 
 def finalize(x):
@@ -64,9 +72,13 @@ def get_gcb_tags_filter(handler):
 def create_jinja_environment(loader, locale=None):
     """Create proper jinja environment."""
 
+    cache = jinja2.MemcachedBytecodeCache(
+        models.MemcacheManager, timeout=models.DEFAULT_CACHE_TTL_SECS,
+        prefix='jinja2:bytecode:%s:/' % models.MemcacheManager.get_namespace())
+
     jinja_environment = jinja2.Environment(
-        autoescape=True, finalize=finalize,
-        extensions=['jinja2.ext.i18n'], loader=loader)
+        autoescape=True, finalize=finalize, extensions=['jinja2.ext.i18n'],
+        bytecode_cache=cache, loader=loader)
 
     jinja_environment.filters['js_string'] = js_string
 

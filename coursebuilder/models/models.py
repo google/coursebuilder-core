@@ -65,14 +65,18 @@ class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
 
     @classmethod
-    def _get_namespace(cls, namespace):
+    def get_namespace(cls):
         """Look up namespace from namespace_manager or use default."""
-        if namespace is not None:
-            return namespace
         namespace = namespace_manager.get_namespace()
         if namespace:
             return namespace
         return appengine_config.DEFAULT_NAMESPACE_NAME
+
+    @classmethod
+    def _get_namespace(cls, namespace):
+        if namespace is not None:
+            return namespace
+        return cls.get_namespace()
 
     @classmethod
     def get(cls, key, namespace=None):
