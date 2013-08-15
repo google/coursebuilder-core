@@ -170,11 +170,16 @@ class UnitLessonCompletionTracker(object):
 
     def get_valid_block_ids(self, unit_id, lesson_id):
         """Returns a list of block ids representing interactive activities."""
-        valid_blocks = self.get_valid_blocks(unit_id, lesson_id)
-        return [block[1] for block in valid_blocks]
+        valid_blocks_data = self._get_valid_blocks_data(unit_id, lesson_id)
+        return [block[0] for block in valid_blocks_data]
 
     def get_valid_blocks(self, unit_id, lesson_id):
-        """Returns a list of (block, b_id) representing trackable activities."""
+        """Returns a list of blocks representing interactive activities."""
+        valid_blocks_data = self._get_valid_blocks_data(unit_id, lesson_id)
+        return [block[1] for block in valid_blocks_data]
+
+    def _get_valid_blocks_data(self, unit_id, lesson_id):
+        """Returns a list of (b_id, block) representing trackable activities."""
         valid_blocks = []
 
         # Check if activity exists before calling get_activity_as_python.
@@ -186,7 +191,7 @@ class UnitLessonCompletionTracker(object):
             for block_id in range(len(activity['activity'])):
                 block = activity['activity'][block_id]
                 if isinstance(block, dict):
-                    valid_blocks.append((block, block_id))
+                    valid_blocks.append((block_id, block))
         return valid_blocks
 
     def get_id_to_questions_dict(self):
@@ -215,13 +220,13 @@ class UnitLessonCompletionTracker(object):
                 lesson_id = lesson.lesson_id
                 # Add mapping dicts for questions in old-style activities.
                 if lesson.activity:
-                    blocks = self.get_valid_blocks(unit_id, lesson_id)
-                    for block, block_id in blocks:
+                    blocks = self._get_valid_blocks_data(unit_id, lesson_id)
+                    for block_index, (block_id, block) in enumerate(blocks):
                         if block['questionType'] == self.MULTIPLE_CHOICE:
                             # Old style question.
                             id_to_questions.update(
                                 self._create_old_style_question_dict(
-                                    block, block_id, unit, lesson))
+                                    block, block_id, block_index, unit, lesson))
 
                         elif (block['questionType'] ==
                               self.MULTIPLE_CHOICE_GROUP):
@@ -229,7 +234,8 @@ class UnitLessonCompletionTracker(object):
                             for ind, q in enumerate(block['questionsList']):
                                 id_to_questions.update(
                                     self._create_old_style_question_dict(
-                                        q, block_id, unit, lesson, index=ind))
+                                        q, block_id, block_index, unit,
+                                        lesson, index=ind))
 
                 # Add mapping dicts for CBv1.5 style questions.
                 if lesson.objectives:
@@ -379,18 +385,18 @@ class UnitLessonCompletionTracker(object):
         else:
             return {}
 
-    def _create_old_style_question_dict(self, block, block_id, unit, lesson,
-                                        index=None):
+    def _create_old_style_question_dict(self, block, block_id, block_index,
+                                        unit, lesson, index=None):
         if index is not None:
             # Question is in a multiple choice group.
             b_id = 'u.%s.l.%s.b.%s.i.%s' % (
                 unit.unit_id, lesson.lesson_id, block_id, index)
             label = 'Unit %s Lesson %s Activity, Item %s Part %s' % (
-                unit.index, lesson.index, block_id + 1, index + 1)
+                unit.index, lesson.index, block_index + 1, index + 1)
         else:
             b_id = 'u.%s.l.%s.b.%s' % (unit.unit_id, lesson.lesson_id, block_id)
             label = 'Unit %s Lesson %s Activity, Item %s' % (
-                unit.index, lesson.index, block_id + 1)
+                unit.index, lesson.index, block_index + 1)
         return {
             b_id: {
                 'answer_counts': [0] * len(block['choices']),

@@ -300,14 +300,13 @@ class ComputeQuestionStats(jobs.DurableJob):
         def _get_course(self):
             return self._course
 
-        def _append_data(self, question, id_to_questions_dict):
-            if question['id'] in id_to_questions_dict:
-                q_dict = self.id_to_questions[question['id']]
-                if question['score']:
-                    q_dict['score'] += question['score']
-                    q_dict['num_attempts'] += 1
-                for choice_index in question['answers']:
-                    q_dict['answers'][choice_index] += 1
+        def _append_data(self, summarized_question, dict_to_update):
+            if summarized_question['id'] in dict_to_update:
+                q_dict = dict_to_update[summarized_question['id']]
+                q_dict['score'] += summarized_question['score']
+                q_dict['num_attempts'] += 1
+                for choice_index in summarized_question['answers']:
+                    q_dict['answer_counts'][choice_index] += 1
 
         def _get_unit_and_lesson_id_from_url(self, url):
             url_components = urlparse.urlparse(url)
@@ -530,8 +529,8 @@ class ComputeQuestionStats(jobs.DurableJob):
             else:
                 dict_to_update = self.id_to_questions_dict
 
-            for question in question_list:
-                self._append_data(question, dict_to_update)
+            for summarized_question in question_list:
+                self._append_data(summarized_question, dict_to_update)
 
     def __init__(self, app_context):
         super(ComputeQuestionStats, self).__init__(app_context)

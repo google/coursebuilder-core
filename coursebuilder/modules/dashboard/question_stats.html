@@ -46,7 +46,8 @@
         return 'No attempts recorded';
       } else {
         var roundedScore = Math.round(score / attempts * 100.0) / 100;
-        return roundedScore + ' (' + attempts + ' attempts)';
+        var attemptsSuffix = (attempts == 1) ? ' attempt' : ' attempts';
+        return roundedScore + ' (' + attempts + attemptsSuffix + ')';
       }
     }
 
