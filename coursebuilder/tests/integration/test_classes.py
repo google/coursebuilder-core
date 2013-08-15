@@ -14,7 +14,9 @@
 
 """Functional tests for Course Builder."""
 
-__author__ = 'John Orr (jorr@google.com)'
+__author__ = [
+    'John Orr (jorr@google.com)'
+]
 
 import os.path
 import random
@@ -270,3 +272,56 @@ class AdminTests(BaseIntegrationTest):
                 instanceid_regex, instanceid_regex
             )
         )
+
+
+class QuestionsTest(BaseIntegrationTest):
+
+    def test_add_question_and_solve_it(self):
+        name = self.create_new_course()[0]
+        self.load_dashboard(
+            name
+        ).click_assets(
+        ).click_add_multiple_choice(
+        ).set_question(
+            'What is your favorite color?'
+        ).set_description(
+            'Multiple choice question'
+        ).set_answer(
+            0, 'Red'
+        ).set_answer(
+            1, 'Blue'
+        ).set_answer(
+            2, 'Yellow'
+        ).set_answer(
+            3, 'Pink'
+        ).click_save(
+        ).click_close(
+        ).verify_question_exists(
+            'Multiple choice question'
+        ).click_outline(
+        ).verify_not_publicly_available(
+        ).click_add_unit(
+        ).set_title(
+            'Test Unit 1'
+        ).set_status(
+            'Public'
+        ).click_save(
+        ).click_close(
+        ).verify_course_outline_contains_unit(
+            'Unit 1 - Test Unit 1'
+        ).click_add_lesson(
+        ).set_lesson_title(
+            'Question lesson'
+        ).click_rich_text(
+        ).click_rte_add_custom_tag(
+        ).select_rte_custom_tag_type(
+            'gcb: Question'
+        ).set_rte_lightbox_field(
+            'input[name=weight]', 2
+        ).click_rte_save(
+        ).click_save(
+        ).click_close(
+        ).click_on_course_outline_components(
+            'Question lesson'
+        ).submit_answer_for_mc_question_and_verify(
+            'What is your favorite color?', 'Red')

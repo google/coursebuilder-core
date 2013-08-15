@@ -14,7 +14,9 @@
 
 """Page objects used in functional tests for Course Builder."""
 
-__author__ = 'John Orr (jorr@google.com)'
+__author__ = [
+    'John Orr (jorr@google.com)'
+]
 
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.common import by
@@ -247,6 +249,35 @@ class DashboardPage(PageObject):
         self.find_element_by_link_text(unit_title)
         return self
 
+    def click_on_course_outline_components(self, title):
+        self.find_element_by_link_text(title).click()
+        return LessonPage(self._tester)
+
+
+class LessonPage(RootPage):
+    """Page object for viewing course content."""
+
+    def submit_answer_for_mc_question_and_verify(self, question_text, answer):
+        questions = self._tester.driver.find_elements_by_css_selector(
+            '.qt-mc-question.qt-standalone')
+        for question in questions:
+            if (question.find_element_by_css_selector('.qt-question').text ==
+                question_text):
+                choices = question.find_elements_by_css_selector(
+                    '.qt-choices > *')
+                for choice in choices:
+                    if choice.text == answer:
+                        choice.find_element_by_css_selector(
+                            'input[type="radio"]').click()
+                        question.find_element_by_css_selector(
+                            '.qt-check-answer').click()
+                        if (question.find_element_by_css_selector(
+                                '.qt-feedback').text ==
+                            'Yes, the answer is correct.'):
+                            return self
+                        else:
+                            raise Exception('Incorrect answer submitted')
+
 
 class AssetsPage(PageObject):
     """Page object for the dashboard's assets tab."""
@@ -268,6 +299,41 @@ class AssetsPage(PageObject):
             name).parent.find_element_by_link_text('[Edit]').click()
         return ImageEditorPage(self._tester)
 
+    def click_add_short_answer(self):
+        self.find_element_by_link_text('Add Short Answer').click()
+        return ShortAnswerEditorPage(self._tester)
+
+    def click_add_multiple_choice(self):
+        self.find_element_by_link_text('Add Multiple Choice').click()
+        return MultipleChoiceEditorPage(self._tester)
+
+    def click_add_question_group(self):
+        self.find_element_by_link_text('Add Question Group').click()
+        return QuestionEditorPage(self._tester)
+
+    def click_edit_short_answer(self, name):
+        raise NotImplementedError
+
+    def click_edit_mc_question(self):
+        raise NotImplementedError
+
+    def verify_question_exists(self, description):
+        """Verifies question description exists on list of question banks."""
+        lis = self._tester.driver.find_elements_by_css_selector(
+            '#gcb-main-content > ol > li')
+        for li in lis:
+            try:
+                self._tester.assertEquals(
+                    description + ' [Edit]', li.text)
+                return self
+            except AssertionError:
+                continue
+        raise AssertionError(description + ' not found')
+
+    def click_outline(self):
+        self.find_element_by_link_text('Outline').click()
+        return DashboardPage(self._tester)
+
 
 class AssetsEditorPage(DashboardEditor):
     """Page object for upload image page."""
@@ -285,6 +351,66 @@ class AssetsEditorPage(DashboardEditor):
             ec.title_contains('Assets'))
 
         return AssetsPage(self._tester)
+
+
+class QuestionEditorPage(EditorPageObject):
+    """Abstract superclass for page objects for add/edit questions pages."""
+
+    def set_question(self, question):
+        question_el = self.find_element_by_name('question')
+        question_el.clear()
+        question_el.send_keys(question)
+        return self
+
+    def set_description(self, description):
+        question_el = self.find_element_by_name('description')
+        question_el.clear()
+        question_el.send_keys(description)
+        return self
+
+    def click_close(self):
+        return self._close_and_return_to(AssetsPage)
+
+
+class MultipleChoiceEditorPage(QuestionEditorPage):
+    """Page object for editing multiple choice questions."""
+
+    def click_add_a_choice(self):
+        self.find_element_by_link_text('Add a choice').click()
+        return self
+
+    def set_answer(self, n, answer):
+        answer_el = self.find_element_by_id('gcbRteField-' + str(2 * n + 1))
+        answer_el.clear()
+        answer_el.send_keys(answer)
+        return self
+
+    def click_allow_only_one_selection(self):
+        raise NotImplementedError
+
+    def click_allow_multiple_selections(self):
+        raise NotImplementedError
+
+
+class ShortAnswerEditorPage(QuestionEditorPage):
+    """Page object for editing short answer questions."""
+
+    def click_add_an_answer(self):
+        self.find_element_by_link_text('Add an answer').click()
+        return self
+
+    def set_score(self, n, score):
+        score_el = self.find_element_by_name('graders[%d]score' %n)
+        score_el.clear()
+        score_el.send_key(score)
+
+    def set_response(self, n, response):
+        response_el = self.find_element_by_name('graders[%d]response' %n)
+        response_el.clear()
+        response_el.send_key(response)
+
+    def click_delete_this_answer(self, n):
+        raise NotImplementedError
 
 
 class ImageEditorPage(EditorPageObject):
@@ -384,6 +510,12 @@ class AddLesson(DashboardEditor):
     def click_rte_add_custom_tag(self):
         self.find_element_by_link_text(
             'Insert Google Course Builder component').click()
+        return self
+
+    def set_lesson_title(self, lesson_title):
+        title_el = self.find_element_by_name('title')
+        title_el.clear()
+        title_el.send_keys(lesson_title)
         return self
 
     def doubleclick_rte_element(self, elt_css_selector):
