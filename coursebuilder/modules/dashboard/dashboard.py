@@ -512,25 +512,41 @@ class DashboardHandler(
         edit_url_template=None, merge_local_files=False, sub_title=None):
         """Walks files in folders and renders their names in a section."""
 
+        # keep a list of files without merging
+        unmerged_files = {}
+        if merge_local_files:
+            unmerged_files = self.list_files(subfolder, merge_local_files=False)
+
         items = safe_dom.NodeList()
         count = 0
         for filename in self.list_files(
                 subfolder, merge_local_files=merge_local_files):
             if prefix and not filename.startswith(prefix):
                 continue
+
+            # show different captions depending if the override exists or not
+            has_override = filename in unmerged_files
+            link_caption = '[Override]'
+            if has_override:
+                link_caption = '[Edit]'
+
+            # make a <li> item
             li = safe_dom.Element('li')
             if links:
                 li.add_child(safe_dom.Element(
                     'a', href=urllib.quote(filename)).add_text(filename))
             else:
                 li.add_text(filename)
+
+            # add actions if available
             if (edit_url_template and
                 self.app_context.fs.impl.is_read_write()):
                 edit_url = edit_url_template % urllib.quote(filename)
                 li.add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_child(
-                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
+                    safe_dom.Element('a', href=edit_url).add_text(link_caption))
+
             count += 1
             items.append(li)
 
