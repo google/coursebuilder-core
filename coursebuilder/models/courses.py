@@ -620,7 +620,7 @@ class Unit13(object):
         self.href = None
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
-        self.weight = 0
+        self.weight = 1
 
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.html_content = None
