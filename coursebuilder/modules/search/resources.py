@@ -18,6 +18,7 @@ __author__ = 'Ellis Michael (emichael@google.com)'
 
 import collections
 import datetime
+import gettext
 import HTMLParser
 import logging
 import operator
@@ -323,9 +324,11 @@ class LessonResult(Result):
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
+        # I18N: Displayed in search results; denotes a lesson link.
+        lesson_string = gettext.gettext('Lesson')
         template_value = {
-            'result_title': '%s - Lesson %s.%s' % (self.title, self.unit_id,
-                                                   self.lesson_id),
+            'result_title': '%s - %s %s.%s' % (self.title, lesson_string,
+                                               self.unit_id, self.lesson_id),
             'result_url': self.url,
             'result_snippet': jinja2.Markup(self.snippet)
         }
@@ -639,8 +642,7 @@ class AnnouncementResource(Resource):
         return search.Document(
             doc_id=self._get_doc_id(self.key),
             fields=[
-                search.TextField(name='title',
-                                 value='%s - Announcement' % self.title),
+                search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
                 search.TextField(name='url',
                                  value='announcements#%s' % self.key),
@@ -659,8 +661,10 @@ class AnnouncementResult(Result):
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
+        # I18N: Displayed in search results; denotes an announcement link.
+        announcement_string = gettext.gettext('Announcement')
         template_value = {
-            'result_title': self.title,
+            'result_title': '%s - %s' % (self.title, announcement_string),
             'result_url': self.url,
             'result_snippet': jinja2.Markup(self.snippet)
         }
