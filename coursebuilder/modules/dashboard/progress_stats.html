@@ -73,4 +73,14 @@
 
 {{ update_message }}
 
+{% if stats_calculated %}
+  <p>
+    <strong>Important:</strong> In order for all student progress to be recorded
+    <strong>gcb_can_persist_activity_events</strong>,
+    <strong>gcb_can_persist_page_events</strong>, and
+    <strong>gcb_can_persist_tag_events</strong> should be enabled on the
+    Admin > Settings page.
+  </p>
+{% endif %}
+
 <br><br>
