@@ -22,6 +22,8 @@ import time
 import traceback
 import entities
 import transforms
+
+from google.appengine import runtime
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 from google.appengine.ext import deferred
@@ -64,7 +66,7 @@ class DurableJob(object):
                                       self._job_name, transforms.dumps(result),
                                       long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
-            except Exception as e:
+            except (Exception, runtime.DeadlineExceededError) as e:
                 logging.error(traceback.format_exc())
                 logging.error('Job failed: %s\n%s', self._job_name, e)
                 db.run_in_transaction(DurableJobEntity._fail_job,
