@@ -266,8 +266,10 @@ class LessonResource(Resource):
     @classmethod
     def generate_all(cls, course, timestamps):
         for lesson in course.get_lessons_for_all_units():
+            unit = course.find_unit_by_id(lesson.unit_id)
             doc_id = cls._get_doc_id(lesson.unit_id, lesson.lesson_id)
-            if not (cls._indexed_within_num_days(timestamps, doc_id,
+            if (lesson.now_available and unit.now_available and
+                not cls._indexed_within_num_days(timestamps, doc_id,
                                                  cls.FRESHNESS_THRESHOLD_DAYS)):
                 yield LessonResource(lesson)
 
@@ -446,6 +448,9 @@ class YouTubeFragmentResource(Resource):
         youtube_ct_regex = r"""<[ ]*gcb-youtube[^>]+videoid=['"]([^'"]+)['"]"""
 
         for lesson in course.get_lessons_for_all_units():
+            unit = course.find_unit_by_id(lesson.unit_id)
+            if not (lesson.now_available and unit.now_available):
+                continue
             lesson_url = 'unit?unit=%s&lesson=%s' % (
                 lesson.unit_id, lesson.lesson_id)
 
@@ -466,17 +471,18 @@ class YouTubeFragmentResource(Resource):
 
         if announcements.custom_module.enabled:
             for entity in announcements.AnnouncementEntity.get_announcements():
-                if not entity.is_draft:
-                    announcement_url = 'announcements#%s' % entity.key()
-                    match = re.search(youtube_ct_regex, entity.html)
-                    if match:
-                        for video_id in match.groups():
-                            if not cls._indexed_within_num_days(
-                                    timestamps, video_id,
-                                    cls.FRESHNESS_THRESHOLD_DAYS):
-                                for fragment in cls._get_fragments_for_video(
-                                        video_id, announcement_url):
-                                    yield fragment
+                if entity.is_draft:
+                    continue
+                announcement_url = 'announcements#%s' % entity.key()
+                match = re.search(youtube_ct_regex, entity.html)
+                if match:
+                    for video_id in match.groups():
+                        if not cls._indexed_within_num_days(
+                                timestamps, video_id,
+                                cls.FRESHNESS_THRESHOLD_DAYS):
+                            for fragment in cls._get_fragments_for_video(
+                                    video_id, announcement_url):
+                                yield fragment
 
     @classmethod
     def _indexed_within_num_days(cls, timestamps, video_id, num_days):

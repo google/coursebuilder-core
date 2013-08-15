@@ -195,8 +195,10 @@ class SearchTest(search_unit_test.SearchTestBase):
             course = courses.Course(None,
                                     app_context=sites.get_all_courses()[0])
             unit = course.add_unit()
+            unit.now_available = True
             lesson_a = course.add_lesson(unit)
             lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
+            lesson_a.now_available = True
             course.update_unit(unit)
             course.save()
 
@@ -218,11 +220,13 @@ class SearchTest(search_unit_test.SearchTestBase):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
         unit = course.add_unit()
+        unit.now_available = True
         lesson_a = course.add_lesson(unit)
         lesson_a.notes = search_unit_test.VALID_PAGE_URL
         objectives_link = 'http://objectiveslink.null/'
         lesson_a.objectives = '<a href="%s"></a><a href="%s"></a>' % (
             search_unit_test.LINKED_PAGE_URL, objectives_link)
+        lesson_a.now_available = True
         course.update_unit(unit)
         course.save()
 
@@ -251,10 +255,13 @@ class SearchTest(search_unit_test.SearchTestBase):
             course = courses.Course(None,
                                     app_context=sites.get_all_courses()[0])
             unit = course.add_unit()
+            unit.now_available = True
             lesson_a = course.add_lesson(unit)
             lesson_a.video = 'portal'
+            lesson_a.now_available = True
             lesson_b = course.add_lesson(unit)
             lesson_b.objectives = '<gcb-youtube videoid="glados">'
+            lesson_b.now_available = True
             course.update_unit(unit)
             course.save()
 
@@ -306,3 +313,36 @@ class SearchTest(search_unit_test.SearchTestBase):
         response = self.get('search?query=Welcome%20to%20the%20final%20class')
         self.assertNotIn('gcb-search-result', response.body)
         self.assertNotIn('announcements#', response.body)
+
+    def test_private_units_and_lessons(self):
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+
+        unit1 = course.add_unit()
+        lesson11 = course.add_lesson(unit1)
+        lesson11.notes = search_unit_test.VALID_PAGE_URL
+        lesson11.objectives = search_unit_test.VALID_PAGE
+        lesson11.video = 'portal'
+        unit2 = course.add_unit()
+        lesson21 = course.add_lesson(unit2)
+        lesson21.notes = search_unit_test.VALID_PAGE_URL
+        lesson21.objectives = search_unit_test.VALID_PAGE
+        lesson21.video = 'portal'
+
+        unit1.now_available = True
+        lesson11.now_available = False
+        course.update_unit(unit1)
+
+        unit2.now_available = False
+        lesson21.now_available = True
+        course.update_unit(unit2)
+
+        course.save()
+        self.index_test_course()
+
+        response = self.get('/test/search?query=cogito%20ergo%20sum')
+        self.assertNotIn('gcb-search-result', response.body)
+
+        response = self.get('/test/search?query=apple')
+        self.assertNotIn('gcb-search-result', response.body)
+        self.assertNotIn('v=portal', response.body)
