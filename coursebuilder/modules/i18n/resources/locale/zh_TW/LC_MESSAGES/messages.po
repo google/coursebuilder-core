@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
-"PO-Revision-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
+"PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_TW <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -61,7 +61,7 @@ msgstr "尚未開始"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
 msgid "1 point"
-msgstr ""
+msgstr "1 分"
 
 #. Displayed next to a question to indicate its point value. In this particular
 #. message, the number of points will be plural.
@@ -69,7 +69,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
 #, python-format
 msgid "%(points)s points"
-msgstr ""
+msgstr "%(points)s 分"
 
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
@@ -185,14 +185,14 @@ msgstr "變更姓名"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "課堂"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr "公告"
 
@@ -211,7 +211,7 @@ msgstr "符合「%(query)s」的搜尋結果"
 #: experimental/coursebuilder/modules/search/search.html:20
 #, python-format
 msgid "Search took %(num_seconds)s seconds."
-msgstr "搜尋花費 %(num_seconds)s 秒。"
+msgstr "搜尋使用時間：%(num_seconds)s 秒。"
 
 #. Link to the previous page.
 #: experimental/coursebuilder/modules/search/search.html:31
@@ -244,7 +244,7 @@ msgstr "目前無法提供搜尋結果。"
 #. and submitting a new item will overwrite their previous item.
 #: experimental/coursebuilder/modules/upload/templates/form.html:17
 msgid "You have already submitted; submit again to replace your previous entry."
-msgstr "您已完成提交，重新提交則會取代您先前提交的項目。"
+msgstr "您已完成提交，重新提交將會取代您先前提交的項目。"
 
 #. Warning shown to the user telling them that the file they select for upload
 #. should be at most 1MB in size

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
-"PO-Revision-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
+"PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ru <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -24,8 +24,8 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:11
 msgid " JavaScript should be enabled to grade this question. "
 msgstr ""
-" Чтобы система могла оценить этот вопрос, необходима поддержка JavaScript"
-" в вашем браузере. "
+" Для оценки этого вопроса нужно, чтобы ваш браузер поддерживал "
+"JavaScript. "
 
 #. Alt text for image representing student progress.
 #. Text shown after an assignment whose review has been completed.
@@ -64,7 +64,7 @@ msgstr "Не начато"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
 msgid "1 point"
-msgstr ""
+msgstr "Баллов: 1"
 
 #. Displayed next to a question to indicate its point value. In this particular
 #. message, the number of points will be plural.
@@ -72,7 +72,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
 #, python-format
 msgid "%(points)s points"
-msgstr ""
+msgstr "Баллов: %(points)s"
 
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
@@ -188,14 +188,14 @@ msgstr "Изменить имя"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "Урок"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr "Объявление"
 
@@ -208,7 +208,7 @@ msgstr "Поиск"
 #: experimental/coursebuilder/modules/search/search.html:17
 #, python-format
 msgid "Results for \"%(query)s\""
-msgstr "Результаты поиска по запросу %(query)s"
+msgstr "Результаты поиска по запросу \"%(query)s\""
 
 #. The amount of time the search took, displayed above search results.
 #: experimental/coursebuilder/modules/search/search.html:20
@@ -236,7 +236,7 @@ msgstr "Далее"
 #: experimental/coursebuilder/modules/search/search.html:49
 #, python-format
 msgid "No results for \"%(query)s\""
-msgstr "Ничего не найдено по запросу %(query)s."
+msgstr "По запросу \"%(query)s\" ничего не найдено."
 
 #. Message displayed on search results page when error occurs.
 #: experimental/coursebuilder/modules/search/search.py:75
@@ -255,7 +255,7 @@ msgstr ""
 #. should be at most 1MB in size
 #: experimental/coursebuilder/modules/upload/templates/form.html:22
 msgid "Maximum file size is 1MB."
-msgstr "Максимальный размер файла – 1 МБ."
+msgstr "Максимальный размер файла – 1 МБ."
 
 #. Shown when a user submits a file successfully.
 #: experimental/coursebuilder/modules/upload/templates/result.html:7

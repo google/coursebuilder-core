@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
-"PO-Revision-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
+"PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ja <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -61,7 +61,7 @@ msgstr "まだ開始していません"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
 msgid "1 point"
-msgstr ""
+msgstr "1 ポイント"
 
 #. Displayed next to a question to indicate its point value. In this particular
 #. message, the number of points will be plural.
@@ -69,7 +69,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
 #, python-format
 msgid "%(points)s points"
-msgstr ""
+msgstr "%(points)s ポイント"
 
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
@@ -185,14 +185,14 @@ msgstr "名前を変更"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "レッスン"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr "通知"
 
@@ -238,7 +238,7 @@ msgstr "「%(query)s」の検索結果はありません"
 #. Message displayed on search results page when error occurs.
 #: experimental/coursebuilder/modules/search/search.py:75
 msgid "Search is currently unavailable."
-msgstr "検索は現在ご利用になれません。"
+msgstr "検索は現在利用できません。"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.

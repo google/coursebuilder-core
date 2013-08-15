@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
 "PO-Revision-Date: 2012-12-12 15:10-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -185,14 +185,14 @@ msgstr ""
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr ""
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr ""
 

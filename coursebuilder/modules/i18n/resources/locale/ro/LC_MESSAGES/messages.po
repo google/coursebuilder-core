@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
-"PO-Revision-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
+"PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ro <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100 > 0 && n%100"
@@ -62,7 +62,7 @@ msgstr "Neîncepută"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
 msgid "1 point"
-msgstr ""
+msgstr "Un punct"
 
 #. Displayed next to a question to indicate its point value. In this particular
 #. message, the number of points will be plural.
@@ -70,7 +70,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
 #, python-format
 msgid "%(points)s points"
-msgstr ""
+msgstr "%(points)s (de) puncte"
 
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
@@ -186,21 +186,21 @@ msgstr "Schimbați numele"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "Lecție"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr "Anunț"
 
 #. Title of the webpage.
 #: experimental/coursebuilder/modules/search/search.html:5
 msgid "Search"
-msgstr "Căutare Google"
+msgstr "Căutare"
 
 #. Status message above search results.
 #: experimental/coursebuilder/modules/search/search.html:17

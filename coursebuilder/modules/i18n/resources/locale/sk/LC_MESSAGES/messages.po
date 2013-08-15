@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-08-06 18:01-0700\n"
-"PO-Revision-Date: 2013-08-06 18:01-0700\n"
+"POT-Creation-Date: 2013-08-14 10:19-0700\n"
+"PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sk <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -23,9 +23,7 @@ msgstr ""
 #. does not have JavaScript enabled.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:11
 msgid " JavaScript should be enabled to grade this question. "
-msgstr ""
-" Aby bolo možné túto otázku oznámkovať, je potrebné povoliť jazyk "
-"JavaScript. "
+msgstr " Na oznámkovanie tejto otázky je potrebné povoliť jazyk JavaScript. "
 
 #. Alt text for image representing student progress.
 #. Text shown after an assignment whose review has been completed.
@@ -64,7 +62,7 @@ msgstr "Ešte sa nezačalo"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
 msgid "1 point"
-msgstr ""
+msgstr "Počet bodov: 1"
 
 #. Displayed next to a question to indicate its point value. In this particular
 #. message, the number of points will be plural.
@@ -72,7 +70,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
 #, python-format
 msgid "%(points)s points"
-msgstr ""
+msgstr "Počet bodov: %(points)s"
 
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
@@ -188,14 +186,14 @@ msgstr "Zmeniť meno"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:346
+#: experimental/coursebuilder/modules/search/resources.py:341
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "Lekcia"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:694
+#: experimental/coursebuilder/modules/search/resources.py:691
 msgid "Announcement"
 msgstr "Oznámenie"
 
@@ -208,7 +206,7 @@ msgstr "Vyhľadávanie"
 #: experimental/coursebuilder/modules/search/search.html:17
 #, python-format
 msgid "Results for \"%(query)s\""
-msgstr "Výsledky pre dopyt „%(query)s\""
+msgstr "Výsledky pre dopyt %(query)s"
 
 #. The amount of time the search took, displayed above search results.
 #: experimental/coursebuilder/modules/search/search.html:20
