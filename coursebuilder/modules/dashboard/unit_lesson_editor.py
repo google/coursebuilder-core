@@ -816,8 +816,8 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
 
     SCHEMA_ANNOTATIONS_DICT = [
         (['title'], 'Course Outline'),
+        (['_inputex'], {'className': 'organizer'}),
         (['properties', 'outline', '_inputex'], {
-            'className': 'organizer',
             'sortable': 'true',
             'label': ''}),
         ([
