@@ -45,9 +45,18 @@ VALID_PAGE = """<html>
                     <a>Cogito ergo sum.</a>
                     <a href="//partial.null/"> Partial link </a>
                     <a href="ftp://absolute.null/"> Absolute link </a>
+                    <a href="http://link.null/"> Link </a>
                   </body>
                 </html>"""
 VALID_PAGE_ROBOTS = ('User-agent: *', 'Allow: /')
+
+LINKED_PAGE_URL = 'http://link.null/'
+LINKED_PAGE = """<a href="http://distance2link.null/">
+                   What hath God wrought?
+                 </a>"""
+
+SECOND_LINK_PAGE_URL = 'http://distance2link.null/'
+SECOND_LINK_PAGE = """Something went terribly wrong. ABORT"""
 
 UNICODE_PAGE_URL = 'http://unicode.null/'
 UNICODE_PAGE = """<html>
@@ -111,6 +120,18 @@ class SearchTestBase(actions.TestBase):
              (VALID_PAGE, 'text/html'),
 
              urlparse.urljoin(VALID_PAGE_URL, '/robots.txt'):
+             (VALID_PAGE_ROBOTS, 'text/html'),
+
+             LINKED_PAGE_URL + '$':
+             (LINKED_PAGE, 'text/html charset=utf-8'),
+
+             urlparse.urljoin(LINKED_PAGE_URL, '/robots.txt'):
+             (VALID_PAGE_ROBOTS, 'text/html'),
+
+             SECOND_LINK_PAGE_URL + '$':
+             (SECOND_LINK_PAGE, 'text/html charset=utf-8'),
+
+             urlparse.urljoin(SECOND_LINK_PAGE_URL, '/robots.txt'):
              (VALID_PAGE_ROBOTS, 'text/html'),
 
              UNICODE_PAGE_URL + '$':
@@ -213,7 +234,7 @@ class ParserTests(SearchTestBase):
         self.assertIn('http://valid.null/index.php?query=bibi%20quid', links)
         self.assertIn('http://partial.null/', links)
         self.assertIn('ftp://absolute.null/', links)
-        self.assertEqual(len(links), 3)
+        self.assertEqual(len(links), 4)
 
     def test_unopened_tag(self):
         self.parser = resources.ResourceHTMLParser('')

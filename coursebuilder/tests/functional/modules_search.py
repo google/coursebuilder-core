@@ -34,9 +34,6 @@ class SearchTest(search_unit_test.SearchTestBase):
     # Don't require documentation for self-describing test methods.
     # pylint: disable-msg=g-missing-docstring
 
-    # TODO(emichael): When external links are fully implemented, check that 2nd+
-    # degree page link aren't crawled
-
     @classmethod
     def enable_module(cls):
         custom_modules.Registry.registered_modules[
@@ -54,6 +51,15 @@ class SearchTest(search_unit_test.SearchTestBase):
         match = re.search(form_name + r'.+[\n\r].+value="([^"]+)"', body)
         assert match
         return match.group(1)
+
+    def index_test_course(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        response = self.get('/test/dashboard?action=search')
+        index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
+        response = self.post('/test/dashboard?action=index_course',
+                             {'xsrf_token': index_token})
+        self.execute_all_deferred_tasks()
 
     def setUp(self):   # Name set by parent. pylint: disable-msg=g-bad-name
         super(SearchTest, self).setUp()
@@ -178,7 +184,6 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertIn(exception_code, self.logged_error)
 
     def test_unicode_pages(self):
-
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
         unit = course.add_unit()
@@ -187,19 +192,40 @@ class SearchTest(search_unit_test.SearchTestBase):
         course.update_unit(unit)
         course.save()
 
-        email = 'admin@google.com'
-        actions.login(email, is_admin=True)
-        response = self.get('/test/dashboard?action=search')
-        index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
-        response = self.post('/test/dashboard?action=index_course',
-                             {'xsrf_token': index_token})
-        self.execute_all_deferred_tasks()
+        self.index_test_course()
 
         self.swap(logging, 'error', self.error_report)
         response = self.get('/test/search?query=paradox')
         self.assertEqual('', self.logged_error)
         self.assertNotIn('unavailable', response.body)
         self.assertIn('gcb-search-result', response.body)
+
+    def test_external_links(self):
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        unit = course.add_unit()
+        lesson_a = course.add_lesson(unit)
+        lesson_a.notes = search_unit_test.VALID_PAGE_URL
+        objectives_link = 'http://objectiveslink.null/'
+        lesson_a.objectives = '<a href="%s"></a><a href="%s"></a>' % (
+            search_unit_test.LINKED_PAGE_URL, objectives_link)
+        course.update_unit(unit)
+        course.save()
+
+        self.index_test_course()
+
+        response = self.get('/test/search?query=What%20hath%20God%20wrought')
+        self.assertIn('gcb-search-result', response.body)
+
+        response = self.get('/test/search?query=Cogito')
+        self.assertIn('gcb-search-result', response.body)
+        self.assertIn(search_unit_test.VALID_PAGE_URL, response.body)
+        self.assertIn(objectives_link, response.body)
+
+        # If this test fails, indexing will crawl the entire web
+        response = self.get('/test/search?query=ABORT')
+        self.assertNotIn('gcb-search-result', response.body)
+        self.assertNotIn(search_unit_test.SECOND_LINK_PAGE_URL, response.body)
 
     def test_youtube(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')
@@ -212,13 +238,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         course.update_unit(unit)
         course.save()
 
-        email = 'admin@google.com'
-        actions.login(email, is_admin=True)
-        response = self.get('/test/dashboard?action=search')
-        index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
-        response = self.post('/test/dashboard?action=index_course',
-                             {'xsrf_token': index_token})
-        self.execute_all_deferred_tasks()
+        self.index_test_course()
 
         response = self.get('/test/search?query=apple')
         self.assertIn('gcb-search-result', response.body)

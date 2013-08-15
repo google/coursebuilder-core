@@ -147,6 +147,7 @@ def get_minidom_from_xml(url, ignore_robots=False):
 
 def _url_allows_robots(url):
     """Checks robots.txt for user agent * at URL."""
+    url = url.encode('utf-8')
     parts = urlparse.urlparse(url)
     base = urlparse.urlunsplit((
         parts.scheme, parts.netloc, '', None, None))
@@ -235,18 +236,17 @@ class LessonResource(Resource):
         self.unit_id = lesson.unit_id
         self.lesson_id = lesson.lesson_id
         self.title = lesson.title
-        self.objectives = lesson.objectives
         if lesson.notes:
-            try:
-                parser = get_parser_for_html(urlparse.urljoin(PROTOCOL_PREFIX,
-                                                              lesson.notes))
-                self.content = parser.get_content()
-            except (URLNotParseableException, IOError):
-                self.content = ''
+            self.notes = urlparse.urljoin(PROTOCOL_PREFIX, lesson.notes)
+        else:
+            self.notes = ''
+        if lesson.objectives:
+            parser = ResourceHTMLParser(PROTOCOL_PREFIX)
+            parser.feed(lesson.objectives)
+            self.content = parser.get_content()
+            self.links = parser.get_links()
         else:
             self.content = ''
-        # TODO(emichael): set self.links and crawl external links
-        self.links = []
 
     def get_document(self):
         return search.Document(
@@ -255,7 +255,6 @@ class LessonResource(Resource):
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
-                search.HtmlField(name='objectives', value=self.objectives),
                 search.TextField(name='unit_id', value=unicode(self.unit_id)),
                 search.TextField(name='lesson_id',
                                  value=unicode(self.lesson_id)),
@@ -289,19 +288,23 @@ class LessonResult(Result):
 
 class ExternalLinkResource(Resource):
     """An external link from a course."""
-    TYPE_NAME = 'External Link'
+    TYPE_NAME = 'ExternalLink'
     RETURNED_FIELDS = ['title', 'url']
     SNIPPETED_FIELDS = ['content']
 
-    def __init__(self, url):
+    # TODO(emichael): Allow the user to turn off external links in the dashboard
+
+    def __init__(self, url, distance):
+        # distance is the distance from the course material in the link graph,
+        # where a lesson notes page has a distance of 0
         super(ExternalLinkResource, self).__init__()
 
         self.url = url
-
         parser = get_parser_for_html(url)
         self.content = parser.get_content()
         self.title = parser.get_title()
-        # Do NOT record the links, otherwise we crawl the web
+        self.distance = distance
+        self.links = parser.get_links()
 
     def get_document(self):
         return search.Document(
@@ -559,9 +562,16 @@ def get_snippeted_fields():
     return list(snippeted_fields)
 
 
+def _add_link_to_queue(link, new_distance, queue, current_link_set):
+    if new_distance <= 1 and link not in current_link_set:
+        queue.put(ExternalLinkResource(link, new_distance))
+        current_link_set.add(link)
+
+
 def get_all_documents(course):
     """Return a list of docs for a given course."""
     resource_queue = Queue.LifoQueue()
+    external_links = set()
 
     for (resource_type, unused_result_type) in RESOURCE_TYPES:
         for resource in resource_type.get_all(course):
@@ -573,12 +583,18 @@ def get_all_documents(course):
         item = resource_queue.get()
         docs.append(item.get_document())
 
+        # Lesson notes pages should be treated as degree 0 page links
+        if isinstance(item, LessonResource) and item.notes:
+            _add_link_to_queue(item.notes, 0, resource_queue, external_links)
+
+        if isinstance(item, ExternalLinkResource):
+            new_distance = item.distance + 1
+        else:
+            new_distance = 1
+
         for link in item.get_links():
-            try:
-                # TODO(emichael): Ensure the same link isn't crawled twice
-                resource_queue.put(ExternalLinkResource(link))
-            except URLNotParseableException:
-                pass
+            _add_link_to_queue(link, new_distance, resource_queue,
+                               external_links)
 
     return docs
 
