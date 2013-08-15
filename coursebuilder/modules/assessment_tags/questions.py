@@ -44,7 +44,7 @@ def render_question(
           generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
-      weight: int/float. The weight to be used when grading the question in a
+      weight: float. The weight to be used when grading the question in a
           scored lesson.
       progress: None, 0 or 1. If None, no progress marker should be shown. If
           0, a 'not-started' progress marker should be shown. If 1, a
@@ -89,6 +89,12 @@ def render_question(
         template_values['columns'] = template_values.get(
             'columns', m_models.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
 
+    # Display the weight as an integer if it is sufficiently close to an
+    # integer. Otherwise, round it to 2 decimal places. This ensures that the
+    # weights displayed to the student are exactly the same as the weights that
+    # are used for grading.
+    weight = (int(round(weight)) if abs(weight - round(weight)) < 1e-6
+              else round(weight, 2))
     template_values['displayed_weight'] = weight
 
     if not embedded:
@@ -121,9 +127,9 @@ class QuestionTag(tags.BaseTag):
         quid = node.attrib.get('quid')
         weight = node.attrib.get('weight')
         try:
-            float(weight)
+            weight = float(weight)
         except TypeError:
-            weight = 1
+            weight = 1.0
 
         instanceid = node.attrib.get('instanceid')
 
@@ -207,8 +213,8 @@ class QuestionGroupTag(tags.BaseTag):
             quid = item['question']
             question_instanceid = '%s.%s.%s' % (group_instanceid, ind, quid)
             template_values['question_html_array'].append(render_question(
-                quid, question_instanceid, locale, weight=item['weight'],
-                embedded=True
+                quid, question_instanceid, locale,
+                weight=float(item['weight']), embedded=True
             ))
             js_data[question_instanceid] = item
         template_values['js_data'] = transforms.dumps(js_data)
