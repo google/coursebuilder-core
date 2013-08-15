@@ -63,7 +63,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 0', response.body)
         assert_contains('total: 0', response.body)
 
-        assert_contains('Student Progress Analytics', response.body)
+        assert_contains('Student Progress Statistics', response.body)
         assert_contains(
             'No student progress has been recorded for this course.',
             response.body)
@@ -113,7 +113,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 2', response.body)
         assert_contains('total: 2', response.body)
 
-        assert_contains('Student Progress Analytics', response.body)
+        assert_contains('Student Progress Statistics', response.body)
         assert_does_not_contain(
             'No student progress has been recorded for this course.',
             response.body)
