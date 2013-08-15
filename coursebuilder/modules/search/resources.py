@@ -438,11 +438,11 @@ class YouTubeFragmentResource(Resource):
 
     @classmethod
     def generate_all(cls, course, timestamps):
-        # TODO(emichael): When announcements are implemented, grab the videos
-        # in custom tags there.
-
+        """Generate all YouTubeFragments for a course."""
         # TODO(emichael): Handle the existence of a single video in multiple
         # places in a course.
+
+        youtube_ct_regex = r"""<[ ]*gcb-youtube[^>]+videoid=['"]([^'"]+)['"]"""
 
         for lesson in course.get_lessons_for_all_units():
             lesson_url = 'unit?unit=%s&lesson=%s' % (
@@ -454,9 +454,7 @@ class YouTubeFragmentResource(Resource):
                         lesson.video, lesson_url):
                     yield fragment
 
-            match = re.search(
-                r"""<[ ]*gcb-youtube[^>]+videoid=['"]([^'"]+)['"]""",
-                lesson.objectives)
+            match = re.search(youtube_ct_regex, lesson.objectives)
             if match:
                 for video_id in match.groups():
                     if not cls._indexed_within_num_days(
@@ -464,6 +462,20 @@ class YouTubeFragmentResource(Resource):
                         for fragment in cls._get_fragments_for_video(
                                 video_id, lesson_url):
                             yield fragment
+
+        if announcements.custom_module.enabled:
+            for entity in announcements.AnnouncementEntity.get_announcements():
+                if not entity.is_draft:
+                    announcement_url = 'announcements#%s' % entity.key()
+                    match = re.search(youtube_ct_regex, entity.html)
+                    if match:
+                        for video_id in match.groups():
+                            if not cls._indexed_within_num_days(
+                                    timestamps, video_id,
+                                    cls.FRESHNESS_THRESHOLD_DAYS):
+                                for fragment in cls._get_fragments_for_video(
+                                        video_id, announcement_url):
+                                    yield fragment
 
     @classmethod
     def _indexed_within_num_days(cls, timestamps, video_id, num_days):

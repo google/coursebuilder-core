@@ -16,6 +16,7 @@
 
 __author__ = 'Ellis Michael (emichael@google.com)'
 
+import datetime
 import logging
 import re
 
@@ -23,9 +24,12 @@ from controllers import sites
 from models import courses
 from models import custom_modules
 from models import transforms
+from modules.announcements import announcements
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
 import actions
+
+from google.appengine.api import namespace_manager
 
 
 class SearchTest(search_unit_test.SearchTestBase):
@@ -230,30 +234,45 @@ class SearchTest(search_unit_test.SearchTestBase):
 
     def test_youtube(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')
-        course = courses.Course(None, app_context=sites.get_all_courses()[0])
-        unit = course.add_unit()
-        lesson_a = course.add_lesson(unit)
-        lesson_a.video = 'portal'
-        lesson_b = course.add_lesson(unit)
-        lesson_b.objectives = '<gcb-youtube videoid="glados">'
-        course.update_unit(unit)
-        course.save()
+        default_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace('ns_test')
 
-        self.index_test_course()
+            course = courses.Course(None,
+                                    app_context=sites.get_all_courses()[0])
+            unit = course.add_unit()
+            lesson_a = course.add_lesson(unit)
+            lesson_a.video = 'portal'
+            lesson_b = course.add_lesson(unit)
+            lesson_b.objectives = '<gcb-youtube videoid="glados">'
+            course.update_unit(unit)
+            course.save()
 
-        response = self.get('/test/search?query=apple')
-        self.assertIn('gcb-search-result', response.body)
-        self.assertIn('start=3.14', response.body)
-        self.assertIn('v=portal', response.body)
-        self.assertIn('v=glados', response.body)
-        self.assertIn('lemon', response.body)
-        self.assertIn('Medicus Quis', response.body)
-        self.assertIn('- YouTube', response.body)
-        self.assertIn('http://thumbnail.null', response.body)
+            entity = announcements.AnnouncementEntity()
+            entity.html = '<gcb-youtube videoid="aperature">'
+            entity.title = 'Sample Announcement'
+            entity.date = datetime.datetime.now().date()
+            entity.is_draft = False
+            entity.put()
 
-        # Test to make sure empty notes field doesn't cause a urlfetch
-        response = self.get('/test/search?query=cogito')
-        self.assertNotIn('gcb-search-result', response.body)
+            self.index_test_course()
+
+            response = self.get('/test/search?query=apple')
+            self.assertIn('gcb-search-result', response.body)
+            self.assertIn('start=3.14', response.body)
+            self.assertIn('v=portal', response.body)
+            self.assertIn('v=glados', response.body)
+            self.assertIn('v=aperature', response.body)
+            self.assertIn('lemon', response.body)
+            self.assertIn('Medicus Quis', response.body)
+            self.assertIn('- YouTube', response.body)
+            self.assertIn('http://thumbnail.null', response.body)
+
+            # Test to make sure empty notes field doesn't cause a urlfetch
+            response = self.get('/test/search?query=cogito')
+            self.assertNotIn('gcb-search-result', response.body)
+        finally:
+            namespace_manager.set_namespace(default_namespace)
 
     def test_announcements(self):
         email = 'admin@google.com'
