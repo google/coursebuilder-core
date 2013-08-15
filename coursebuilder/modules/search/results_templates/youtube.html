@@ -1,0 +1,18 @@
+<div class="gcb-search-result youtube">
+  <a class="gcb-search-result-title" href="{{ result_url }}">
+    {{ result_title }} - YouTube
+  </a>
+  <img src="{{ thumbnail_url }}" class="shown">
+  <iframe frameborder="0" class="hidden" allowfullscreen
+      src="//www.youtube.com/embed/{{ video_id }}?start={{ start_time }}">
+  </iframe>
+  <span class="gcb-search-youtube-info">
+    <a class="gcb-search-url"
+        href="//www.youtube.com/watch?v={{ video_id }}">
+      www.youtube.com/watch?v={{ video_id }}
+    </a>
+    <div class="gcb-search-result-snippet">
+      {{ result_snippet }}
+    </div>
+  </span>
+</div>

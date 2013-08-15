@@ -22,8 +22,12 @@ import HTMLParser
 import logging
 import os
 import Queue
+import re
 import robotparser
+import urllib
 import urlparse
+from xml.dom import minidom
+from xml.parsers.expat import ExpatError
 
 import appengine_config
 from common import jinja_utils
@@ -33,6 +37,14 @@ from google.appengine.api import search
 from google.appengine.api import urlfetch
 
 PROTOCOL_PREFIX = 'http://'
+
+YOUTUBE_DATA_URL = 'http://gdata.youtube.com/feeds/api/videos/'
+YOUTUBE_TIMED_TEXT_URL = 'http://youtube.com/api/timedtext'
+
+# The limit (in seconds) for the time that elapses before a new transcript
+# fragment should be started. A lower value results in more fine-grain indexing
+# and more docs in the index.
+YOUTUBE_CAPTION_SIZE_SECS = 30
 
 
 class URLNotParseableException(Exception):
@@ -86,23 +98,22 @@ class ResourceHTMLParser(HTMLParser.HTMLParser):
         return self._title
 
 
-def get_parser_for_html(url):
+def get_parser_for_html(url, ignore_robots=False):
     """Returns a ResourceHTMLParser with the parsed data."""
 
-    parts = urlparse.urlparse(url)
-    base = urlparse.urlunsplit((
-        parts.scheme, parts.netloc, '', None, None))
-    rp = robotparser.RobotFileParser(url=urlparse.urljoin(base, '/robots.txt'))
-    rp.read()
-    if not rp.can_fetch('*', url):
+    if not (ignore_robots or _url_allows_robots(url)):
         raise URLNotParseableException
 
     parser = ResourceHTMLParser(url)
     try:
         result = urlfetch.fetch(url)
         if (result.status_code in [200, 304] and
-            'text/html' in result.headers['Content-type']):
-            parser.feed(unicode(result.content))
+            any(content_type in result.headers['Content-type'] for
+                content_type in ['text/html', 'xml'])):
+            # TODO(emichael): Stop dropping non-ascii characters and fix the
+            # failing tests
+            parser.feed(
+                result.content.decode('utf-8').encode('ascii', 'ignore'))
         else:
             raise ValueError
     except ValueError:
@@ -111,8 +122,53 @@ def get_parser_for_html(url):
     return parser
 
 
+def get_minidom_from_xml(url, ignore_robots=False):
+    """Returns a minidom representation of an XML file at url."""
+
+    if not (ignore_robots or _url_allows_robots(url)):
+        raise URLNotParseableException
+
+    result = urlfetch.fetch(url)
+    if result.status_code not in [200, 304]:
+        raise URLNotParseableException('Could not parse file at URL: %s' % url)
+
+    try:
+        # TODO(emichael): Stop dropping non-ascii characters and fix the
+        # failing tests
+        xmldoc = minidom.parseString(result.content.decode('utf-8').encode(
+            'ascii', 'ignore'))
+    except ExpatError as e:
+        logging.error('Error parsing XML document: %s', e)
+        raise URLNotParseableException('Could not parse file at URL: %s' % url)
+
+    return xmldoc
+
+
+def _url_allows_robots(url):
+    """Checks robots.txt for user agent * at URL."""
+    parts = urlparse.urlparse(url)
+    base = urlparse.urlunsplit((
+        parts.scheme, parts.netloc, '', None, None))
+    rp = robotparser.RobotFileParser(url=urlparse.urljoin(
+        base, '/robots.txt'))
+    rp.read()
+    return rp.can_fetch('*', url)
+
+
 class Resource(object):
     """Abstract superclass for a resource."""
+
+    # Each subclass should define this constant
+    TYPE_NAME = 'Resource'
+
+    # Each subclass should use this constant to define the fields it needs
+    # returned with a search result.
+    RETURNED_FIELDS = []
+
+    # Each subclass should use this constant to define the fields it needs
+    # returned as snippets in the search result. In most cases, this should be
+    # one field.
+    SNIPPETED_FIELDS = []
 
     @classmethod
     def get_all(cls, course):  # pylint: disable-msg=unused-argument
@@ -144,10 +200,28 @@ class Result(object):
                           'modules', 'search', 'results_templates')])
         return jinja2.Markup(template.render(template_value))
 
+    @classmethod
+    def _get_returned_field(cls, result, field):
+        """Returns the value of a field in result, '' if none exists."""
+        try:
+            return result[field][0].value
+        except (KeyError, IndexError, AttributeError):
+            return ''
+
+    @classmethod
+    def _get_snippet(cls, result):
+        """Returns the value of the snippet in result, '' if none exists."""
+        try:
+            return result.expressions[0].value
+        except (AttributeError, IndexError):
+            return ''
+
 
 class LessonResource(Resource):
     """A lesson in a course."""
     TYPE_NAME = 'Lesson'
+    RETURNED_FIELDS = ['title', 'unit_id', 'lesson_id', 'url']
+    SNIPPETED_FIELDS = ['content']
 
     @classmethod
     def get_all(cls, course):
@@ -161,22 +235,32 @@ class LessonResource(Resource):
         self.lesson_id = lesson.lesson_id
         self.title = lesson.title
         self.objectives = lesson.objectives
-        try:
-            parser = get_parser_for_html(urlparse.urljoin(PROTOCOL_PREFIX,
-                                                          lesson.notes))
-            self.content = parser.get_content()
-        except (URLNotParseableException, IOError):
+        if lesson.notes:
+            try:
+                parser = get_parser_for_html(urlparse.urljoin(PROTOCOL_PREFIX,
+                                                              lesson.notes))
+                self.content = parser.get_content()
+            except (URLNotParseableException, IOError):
+                self.content = ''
+        else:
             self.content = ''
         # TODO(emichael): set self.links and crawl external links
         self.links = []
 
     def get_document(self):
         return search.Document(
-            doc_id=('unit?unit=%s&lesson=%s' % (self.unit_id, self.lesson_id)),
+            doc_id=('%s_%s_%s' % (self.TYPE_NAME,
+                                  self.unit_id, self.lesson_id)),
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
                 search.HtmlField(name='objectives', value=self.objectives),
+                search.TextField(name='unit_id', value=unicode(self.unit_id)),
+                search.TextField(name='lesson_id',
+                                 value=unicode(self.lesson_id)),
+                search.TextField(name='url', value=(
+                    'unit?unit_id=%s&lesson=%s' %
+                    (self.unit_id, self.lesson_id))),
                 search.TextField(name='type', value=self.TYPE_NAME),
                 search.DateField(name='date', value=datetime.now().date())])
 
@@ -186,20 +270,17 @@ class LessonResult(Result):
 
     def __init__(self, search_result):
         super(LessonResult, self).__init__()
-        self.link = search_result.doc_id
-        try:
-            self.title = search_result['title'][0].value
-        except (AttributeError, IndexError, KeyError):
-            self.title = ''
-        try:
-            self.snippet = search_result.expressions[0].value
-        except (AttributeError, IndexError):
-            self.snippet = ''
+        self.url = self._get_returned_field(search_result, 'url')
+        self.title = self._get_returned_field(search_result, 'title')
+        self.unit_id = self._get_returned_field(search_result, 'unit_id')
+        self.lesson_id = self._get_returned_field(search_result, 'lesson_id')
+        self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
         template_value = {
-            'result_title': self.title,
-            'result_link': self.link,
+            'result_title': '%s - Lesson %s.%s' % (self.title, self.unit_id,
+                                                   self.lesson_id),
+            'result_url': self.url,
             'result_snippet': jinja2.Markup(self.snippet)
         }
         return self._generate_html_from_template('basic.html', template_value)
@@ -207,7 +288,9 @@ class LessonResult(Result):
 
 class ExternalLinkResource(Resource):
     """An external link from a course."""
-    TYPE_NAME = 'Link'
+    TYPE_NAME = 'External Link'
+    RETURNED_FIELDS = ['title', 'url']
+    SNIPPETED_FIELDS = ['content']
 
     def __init__(self, url):
         super(ExternalLinkResource, self).__init__()
@@ -221,10 +304,11 @@ class ExternalLinkResource(Resource):
 
     def get_document(self):
         return search.Document(
-            doc_id=self.url,
+            doc_id=('%s_%s' % (self.TYPE_NAME, self.url)),
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
+                search.TextField(name='url', value=self.url),
                 search.TextField(name='type', value=self.TYPE_NAME),
                 search.DateField(name='date', value=datetime.now().date())])
 
@@ -235,30 +319,187 @@ class ExternalLinkResult(Result):
     def __init__(self, search_result):
         super(ExternalLinkResult, self).__init__()
 
-        self.link = search_result.doc_id
-        try:
-            self.title = search_result['title'][0].value
-        except (AttributeError, IndexError, KeyError):
-            self.title = ''
-        try:
-            self.snippet = search_result.expressions[0].value
-        except (AttributeError, IndexError):
-            self.snippet = ''
+        self.url = self._get_returned_field(search_result, 'url')
+        self.title = self._get_returned_field(search_result, 'title')
+        self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
         template_value = {
             'result_title': self.title,
-            'result_link': self.link,
+            'result_url': self.url,
             'result_snippet': jinja2.Markup(self.snippet)
         }
         return self._generate_html_from_template('basic.html', template_value)
 
 
+class YouTubeFragmentResource(Resource):
+    """An object for a YouTube transcript fragment in search results."""
+    TYPE_NAME = 'YouTube'
+    RETURNED_FIELDS = ['title', 'video_id', 'start', 'thumbnail_url']
+    SNIPPETED_FIELDS = ['content']
+
+    @classmethod
+    def get_all(cls, course):
+        """Get all of the transcript fragment docs for a course."""
+        # TODO(emichael): When announcements are implemented, grab the videos
+        # in custom tags there.
+        fragments = []
+        for lesson in course.get_lessons_for_all_units():
+            if lesson.video:
+                fragments += cls._get_fragments_for_video(
+                    lesson.video, lesson.lesson_id, lesson.unit_id)
+            match = re.search(
+                r"""<[ ]*gcb-youtube[^>]+videoid=['"]([^'"]+)['"]""",
+                lesson.objectives)
+            if match:
+                for video_id in match.groups():
+                    fragments += cls._get_fragments_for_video(
+                        video_id, lesson.lesson_id, lesson.unit_id)
+        return fragments
+
+    @classmethod
+    def _get_fragments_for_video(cls, video_id, lesson_id, unit_id):
+        """Get all of the transcript fragment docs for a specific video."""
+        try:
+            (transcript, title, thumbnail_url) = cls._get_video_data(video_id)
+        except URLNotParseableException:
+            return []
+
+        # Aggregate the fragments into YOUTUBE_CAPTION_SIZE_SECS time chunks
+        fragments = transcript.getElementsByTagName('text')
+        aggregated_fragments = []
+        # This parser is only used for unescaping HTML entities
+        parser = HTMLParser.HTMLParser()
+        while fragments:
+            current_start = float(fragments[0].attributes['start'].value)
+            current_text = []
+
+            while (fragments and
+                   float(fragments[0].attributes['start'].value) -
+                   current_start < YOUTUBE_CAPTION_SIZE_SECS):
+                current_text.append(parser.unescape(
+                    fragments.pop(0).firstChild.nodeValue))
+
+            aggregated_fragment = YouTubeFragmentResource(
+                video_id, lesson_id, unit_id, current_start,
+                '\n'.join(current_text), title, thumbnail_url)
+            aggregated_fragments.append(aggregated_fragment)
+
+        return aggregated_fragments
+
+    @classmethod
+    def _get_video_data(cls, video_id):
+        """Returns (track_minidom, title, thumbnail_url) for a video."""
+
+        try:
+            vid_info = get_minidom_from_xml(
+                urlparse.urljoin(YOUTUBE_DATA_URL, video_id),
+                ignore_robots=True)
+            title = vid_info.getElementsByTagName(
+                'title')[0].firstChild.nodeValue
+            thumbnail_url = vid_info.getElementsByTagName(
+                'media:thumbnail')[0].attributes['url'].value
+        except (URLNotParseableException, IOError, IndexError, AttributeError):
+            title = ''
+            thumbnail_url = ''
+
+        # TODO(emichael): Handle the existence of multiple tracks
+        url = urlparse.urljoin(YOUTUBE_TIMED_TEXT_URL,
+                               '?v=%s&type=list' % video_id)
+        tracklist = get_minidom_from_xml(url, ignore_robots=True)
+        tracks = tracklist.getElementsByTagName('track')
+        if not tracks:
+            raise URLNotParseableException
+        track_name = tracks[0].attributes['name'].value
+        track_lang = tracks[0].attributes['lang_code'].value
+        track_id = tracks[0].attributes['id'].value
+
+        url = urlparse.urljoin(YOUTUBE_TIMED_TEXT_URL, urllib.quote(
+            '?v=%s&lang=%s&name=%s&id=%s' %
+            (video_id, track_lang, track_name, track_id), '?/=&'))
+        transcript = get_minidom_from_xml(url, ignore_robots=True)
+
+        return (transcript, title, thumbnail_url)
+
+    def __init__(self, video_id, lesson_id, unit_id, start, text, video_title,
+                 thumbnail_url):
+        super(YouTubeFragmentResource, self).__init__()
+
+        self.unit_id = unit_id
+        self.lesson_id = lesson_id
+        self.video_id = video_id
+        self.start = start
+        self.text = text
+        self.video_title = video_title
+        self.thumbnail_url = thumbnail_url
+
+    def get_document(self):
+        return search.Document(
+            doc_id=('%s_%s_%s_%s_%s' % (self.TYPE_NAME,
+                                        self.unit_id, self.lesson_id,
+                                        self.video_id, self.start)),
+            fields=[
+                search.TextField(name='title', value=self.video_title),
+                search.TextField(name='video_id', value=self.video_id),
+                search.TextField(name='content', value=self.text),
+                search.NumberField(name='start', value=self.start),
+                search.TextField(name='thumbnail_url',
+                                 value=self.thumbnail_url),
+                search.TextField(name='url', value=(
+                    'unit?unit_id=%s&lesson=%s' %
+                    (self.unit_id, self.lesson_id))),
+                search.TextField(name='type', value=self.TYPE_NAME),
+                search.DateField(name='date', value=datetime.now().date())])
+
+
+class YouTubeFragmentResult(Result):
+    """An object for a lesson in search results."""
+
+    def __init__(self, search_result):
+        super(YouTubeFragmentResult, self).__init__()
+        self.doc_id = search_result.doc_id
+        self.title = self._get_returned_field(search_result, 'title')
+        self.video_id = self._get_returned_field(search_result, 'video_id')
+        self.start = self._get_returned_field(search_result, 'start')
+        self.thumbnail_url = self._get_returned_field(search_result,
+                                                      'thumbnail_url')
+        self.url = self._get_returned_field(search_result, 'url')
+        self.snippet = self._get_snippet(search_result)
+
+    def get_html(self):
+        template_value = {
+            'result_title': self.title,
+            'result_url': self.url,
+            'video_id': self.video_id,
+            'start_time': self.start,
+            'thumbnail_url': self.thumbnail_url,
+            'result_snippet': jinja2.Markup(self.snippet)
+        }
+        return self._generate_html_from_template('youtube.html', template_value)
+
+
 # Register new resource types here
 RESOURCE_TYPES = [
     (LessonResource, LessonResult),
-    (ExternalLinkResource, ExternalLinkResult)
+    (ExternalLinkResource, ExternalLinkResult),
+    (YouTubeFragmentResource, YouTubeFragmentResult)
 ]
+
+
+def get_returned_fields():
+    """Returns a list of fields that should be returned in a search result."""
+    returned_fields = set(['type'])
+    for (resource_type, unused_result_type) in RESOURCE_TYPES:
+        returned_fields |= set(resource_type.RETURNED_FIELDS)
+    return list(returned_fields)
+
+
+def get_snippeted_fields():
+    """Returns a list of fields that should be snippeted in a search result."""
+    snippeted_fields = set()
+    for (resource_type, unused_result_type) in RESOURCE_TYPES:
+        snippeted_fields |= set(resource_type.SNIPPETED_FIELDS)
+    return list(snippeted_fields)
 
 
 def get_all_documents(course):

@@ -38,4 +38,10 @@ $(function() {
   $('input.gcb-search-box').keypress(function(evt) {
     submitOnEnter(evt, 'input.gcb-search-box');
   });
+  $('.gcb-search-result.youtube img').click(function() {
+    if ($(this).hasClass('shown')) {
+      $(this).addClass('hidden').removeClass('shown');
+    }
+    $(this).siblings('iframe').addClass('shown').removeClass('hidden');
+  });
 });

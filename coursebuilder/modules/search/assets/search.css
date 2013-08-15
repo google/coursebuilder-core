@@ -63,12 +63,37 @@
 }
 
 .gcb-search-result {
-  padding-top: 10px;
+  padding-top: 20px;
 }
 
 .gcb-search-result-title {
   font-size: 16px;
   text-decoration: underline;
+  display: block;
+}
+
+.gcb-search-url,
+.gcb-search-url:visited {
+  color: #0A0;
+}
+
+.gcb-search-youtube-info {
+  width: 350px;
+  vertical-align: top;
+  display: inline-block;
+}
+
+.gcb-search-result.youtube iframe.shown {
+  display: inline-block;
+  width: 560px;
+  height: 315px;
+}
+
+.gcb-search-result.youtube img.shown {
+  display: inline-block;
+  width: 150px;
+  height: 100px;
+  cursor: pointer;
 }
 
 .gcb-search-navigation-bar {
@@ -96,4 +121,8 @@
 .gcb-search-next {
   position: absolute;
   right: 0;
+}
+
+.hidden {
+  display: none;
 }

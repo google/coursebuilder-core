@@ -87,7 +87,7 @@ def index_all_docs(course):
                 counter += 1
                 try:
                     doc_type = doc['type'][0].value
-                except (AttributeError, KeyError):
+                except (AttributeError, KeyError, IndexError):
                     doc_type = 'Unknown'
                 indexed_doc_types[doc_type] += 1
                 break
@@ -133,12 +133,15 @@ def fetch(course, query_string, offset=0, limit=RESULTS_LIMIT):
     index = get_index(course)
 
     try:
+        # TODO(emichael): Don't compute these for every query
+        returned_fields = resources.get_returned_fields()
+        snippeted_fields = resources.get_snippeted_fields()
         options = search.QueryOptions(
             limit=limit,
             offset=offset,
-            returned_fields=['title', 'type'],
+            returned_fields=returned_fields,
             number_found_accuracy=100,
-            snippeted_fields=['content'])
+            snippeted_fields=snippeted_fields)
         query = search.Query(query_string=query_string, options=options)
         results = index.search(query)
     except search.Error:
@@ -167,6 +170,7 @@ class SearchHandler(utils.BaseHandler):
 
         try:
             start = time.time()
+            # TODO(emichael): Don't use get because it can't handle utf-8
             query = self.request.get('query')
             offset = self.request.get('offset')
 

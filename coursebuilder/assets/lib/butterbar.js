@@ -20,7 +20,6 @@ ButterBar.prototype.hide = function() {
   }
 };
 ButterBar.prototype.setCloseButtonVisible = function(visible) {
-  var visible = visible || true;
   if (visible) {
     this.close.style.display = null;
   } else {
@@ -34,7 +33,7 @@ ButterBar.getButterBar = function() {
 };
 function cbShowMsg(text) {
   var butterBar = ButterBar.getButterBar();
-  butterBar.setCloseButtonVisible();
+  butterBar.setCloseButtonVisible(true);
   butterBar.showMessage(text);
 }
 function cbShowAlert(text) {
