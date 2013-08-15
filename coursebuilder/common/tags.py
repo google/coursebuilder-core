@@ -63,7 +63,7 @@ class BaseTag(object):
 
     def render(self, unused_node, unused_handler):
         """Receive a node and return a node."""
-        return cElementTree.XML('[Unimplemented custom tag]')
+        return cElementTree.XML('<div>[Unimplemented custom tag]</div>')
 
     def get_icon_url(self):
         """Return the URL for the icon to be displayed in the rich text editor.
