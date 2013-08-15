@@ -1673,6 +1673,9 @@ class Course(object):
     def get_units(self):
         return self._model.get_units()
 
+    def get_units_of_type(self, unit_type):
+        return [unit for unit in self.get_units() if unit_type == unit.type]
+
     def get_lessons(self, unit_id):
         return self._model.get_lessons(unit_id)
 

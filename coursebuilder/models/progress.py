@@ -20,8 +20,9 @@ import datetime
 import os
 
 from tools import verify
-from models import StudentPropertyEntity
 
+import courses
+from models import StudentPropertyEntity
 import transforms
 
 
@@ -70,7 +71,12 @@ class UnitLessonCompletionTracker(object):
         'assessment': 's',
         'component': 'c',
     }
-
+    COMPOSITE_ENTITIES = [
+        EVENT_CODE_MAPPING['unit'],
+        EVENT_CODE_MAPPING['lesson'],
+        EVENT_CODE_MAPPING['activity'],
+        EVENT_CODE_MAPPING['html']
+    ]
     # Names of component tags that are tracked for progress calculations.
     TRACKABLE_COMPONENTS = frozenset([
         'question',
@@ -90,7 +96,6 @@ class UnitLessonCompletionTracker(object):
         activity_text = course.app_context.fs.get(
             os.path.join(course.app_context.get_home(),
                          course.get_activity_filename(unit_id, lesson_id)))
-
         content, noverify_text = verify.convert_javascript_to_python(
             activity_text, root_name)
         activity = verify.evaluate_python_expression_from_text(
@@ -139,8 +144,15 @@ class UnitLessonCompletionTracker(object):
     def _get_assessment_key(self, assessment_id):
         return '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'], assessment_id)
 
+    def get_entity_type_from_key(self, progress_entity_key):
+        return progress_entity_key.split('.')[-2]
+
+    def determine_if_composite_entity(self, progress_entity_key):
+        return self.get_entity_type_from_key(
+            progress_entity_key) in self.COMPOSITE_ENTITIES
+
     def get_valid_component_ids(self, unit_id, lesson_id):
-        """Returns a list of dicts representing trackable components."""
+        """Returns a list of component ids representing trackable components."""
         components = self._get_course().get_components(unit_id, lesson_id)
         return [cpt['instanceid'] for cpt in components if (
             cpt['name'] in self.TRACKABLE_COMPONENTS and
@@ -150,13 +162,16 @@ class UnitLessonCompletionTracker(object):
         """Returns a list of block ids representing interactive activities."""
         valid_block_ids = []
 
-        # Get the activity corresponding to this unit/lesson combination.
-        activity = self.get_activity_as_python(unit_id, lesson_id)
-        for block_id in range(len(activity['activity'])):
-            block = activity['activity'][block_id]
-            if isinstance(block, dict):
-                valid_block_ids.append(block_id)
-
+        # Check if activity exists before calling get_activity_as_python.
+        unit = self._get_course().find_unit_by_id(unit_id)
+        lesson = self._get_course().find_lesson_by_id(unit, lesson_id)
+        if unit and lesson and lesson.activity:
+            # Get the activity corresponding to this unit/lesson combination.
+            activity = self.get_activity_as_python(unit_id, lesson_id)
+            for block_id in range(len(activity['activity'])):
+                block = activity['activity'][block_id]
+                if isinstance(block, dict):
+                    valid_block_ids.append(block_id)
         return valid_block_ids
 
     def _update_unit(self, progress, event_key):
@@ -542,3 +557,198 @@ class UnitLessonCompletionTracker(object):
 
         progress_dict[key] += value
         student_property.value = transforms.dumps(progress_dict)
+
+
+class ProgressStats(object):
+    """Defines the course structure definition for course progress tracking."""
+
+    def __init__(self, course):
+        self._course = course
+        self._tracker = UnitLessonCompletionTracker(course)
+
+    def compute_entity_dict(self, entity, parent_ids):
+        """Computes the course structure dictionary.
+
+        Args:
+            entity: str. Represents for which level of entity the dict is being
+                computed. Valid entity levels are defined as keys to the dict
+                defined below, COURSE_STRUCTURE_DICT.
+            parent_ids: list of ids necessary to get children of the current
+                entity.
+        Returns:
+            A nested dictionary representing the structure of the course.
+            Every other level of the dictionary consists of a key, the label of
+            the entity level defined by EVENT_CODE_MAPPING in
+            UnitLessonCompletionTracker, whose value is a dictionary
+            INSTANCES_DICT. The keys of INSTANCES_DICT are instance_ids of the
+            corresponding entities, and the values are the entity_dicts of the
+            instance's children, in addition to a field called 'label'. Label
+            represents the user-facing name of the entity rather than
+            its intrinsic id. If one of these values is empty, this means
+            that the corresponding entity has no children.
+
+            Ex:
+            A Course with the following outlined structure:
+                Pre Assessment
+                Unit 1
+                    Lesson 1
+                Unit 2
+
+            will have the following dictionary representation:
+                {
+                    's': {
+                        1: {
+                            'label': 'Pre Assessment'
+                        }
+                    },
+                    'u': {
+                        2: {
+                            'l': {
+                                3: {
+                                    'label': 1
+                                }
+                            },
+                            'label': 1
+                        },
+                        4: {
+                            'label': 2
+                        }
+                    }
+                    'label': 'UNTITLED COURSE'
+                }
+        """
+        entity_dict = {'label': self._get_label(entity, parent_ids)}
+        for child_entity, get_children_ids in self.COURSE_STRUCTURE_DICT[
+                entity]['children']:
+            child_entity_dict = {}
+            for child_id in get_children_ids(self, *parent_ids):
+                new_parent_ids = parent_ids + [child_id]
+                child_entity_dict[child_id] = self.compute_entity_dict(
+                    child_entity, new_parent_ids)
+            entity_dict[UnitLessonCompletionTracker.EVENT_CODE_MAPPING[
+                child_entity]] = child_entity_dict
+        return entity_dict
+
+    def _get_course(self):
+        return self._course
+
+    def _get_unit_ids_of_type_unit(self):
+        units = self._get_course().get_units_of_type(verify.UNIT_TYPE_UNIT)
+        return [unit.unit_id for unit in units]
+
+    def _get_assessment_ids(self):
+        assessments = self._get_course().get_assessment_list()
+        return [a.unit_id for a in assessments]
+
+    def _get_lesson_ids(self, unit_id):
+        lessons = self._get_course().get_lessons(unit_id)
+        return [lesson.lesson_id for lesson in lessons]
+
+    def _get_activity_ids(self, unit_id, lesson_id):
+        unit = self._get_course().find_unit_by_id(unit_id)
+        if self._get_course().find_lesson_by_id(unit, lesson_id).activity:
+            return [0]
+        return []
+
+    def _get_html_ids(self, unused_unit_id, unused_lesson_id):
+        return [0]
+
+    def _get_block_ids(self, unit_id, lesson_id, unused_activity_id):
+        return self._tracker.get_valid_block_ids(unit_id, lesson_id)
+
+    def _get_component_ids(self, unit_id, lesson_id, unused_html_id):
+        return self._tracker.get_valid_component_ids(unit_id, lesson_id)
+
+    def _get_label(self, entity, parent_ids):
+        return self.ENTITY_TO_HUMAN_READABLE_NAME_DICT[entity](
+            self, *parent_ids)
+
+    def _get_course_label(self):
+        # pylint: disable-msg=protected-access
+        return courses.Course.get_environ(self._get_course().app_context)[
+            'course']['title']
+
+    def _get_unit_label(self, unit_id):
+        unit = self._get_course().find_unit_by_id(unit_id)
+        return unit.index
+
+    def _get_assessment_label(self, unit_id):
+        assessment = self._get_course().find_unit_by_id(unit_id)
+        return assessment.title
+
+    def _get_lesson_label(self, unit_id, lesson_id):
+        unit = self._get_course().find_unit_by_id(unit_id)
+        lesson = self._get_course().find_lesson_by_id(unit, lesson_id)
+        return lesson.index
+
+    def _get_activity_label(self, unit_id, lesson_id, unused_activity_id):
+        """Labels activities by L(unit_id).(lesson_id). Ex: L1.2."""
+        unit_label = self._get_unit_label(unit_id)
+        lesson_label = self._get_lesson_label(unit_id, lesson_id)
+        return str('L%s.%s' % (unit_label, lesson_label))
+
+    def _get_html_label(self, unit_id, lesson_id, unused_html_id):
+        return self._get_activity_label(unit_id, lesson_id, unused_html_id)
+
+    def _get_block_label(self, unit_id, lesson_id, unused_activity_id,
+                         block_id):
+        unit_label = self._get_unit_label(unit_id)
+        lesson_label = self._get_lesson_label(unit_id, lesson_id)
+        return str('L%s.%s.%s' % (unit_label, lesson_label, block_id))
+
+    def _get_component_label(self, unit_id, lesson_id, unused_html_id,
+                             component_id):
+        return self._get_block_label(
+            unit_id, lesson_id, unused_html_id, component_id)
+
+    # Outlines the structure of the course. The key is the entity level, and
+    # its value is a dictionary with following keys and its values:
+    #   'children': list of tuples. Each tuple consists of string representation
+    #               of the child entity(ex: 'lesson') and a function to get the
+    #               children elements. If the entity does not have children, the
+    #               value will be an empty list.
+    #   'id': instance_id of the entity. If the entity is represented by a class
+    #         with an id attribute(ex: units), string representation of the
+    #         attribute is stored here. If the entity is defined by a dictionary
+    #         (ex: components), then the value is the string 'None'.
+    #
+    COURSE_STRUCTURE_DICT = {
+        'course': {
+            'children': [('unit', _get_unit_ids_of_type_unit),
+                         ('assessment', _get_assessment_ids)],
+        },
+        'unit': {
+            'children': [('lesson', _get_lesson_ids)],
+        },
+        'assessment': {
+            'children': [],
+        },
+        'lesson': {
+            'children': [('activity', _get_activity_ids),
+                         ('html', _get_html_ids)],
+        },
+        'activity': {
+            'children': [('block', _get_block_ids)],
+        },
+        'html': {
+            'children': [('component', _get_component_ids)],
+        },
+        'block': {
+            'children': [],
+        },
+        'component': {
+            'children': [],
+        }
+    }
+
+    ENTITY_TO_HUMAN_READABLE_NAME_DICT = {
+        'course': _get_course_label,
+        'unit': _get_unit_label,
+        'assessment': _get_assessment_label,
+        'lesson': _get_lesson_label,
+        'activity': _get_activity_label,
+        'html': _get_html_label,
+        'block': _get_block_label,
+        'component': _get_component_label
+    }
+

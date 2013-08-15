@@ -1,0 +1,67 @@
+{% if stats_calculated %}
+  {% if content %}
+    {% if progress %}
+      <script type="text/javascript" src="//www.google.com/jsapi"></script>
+      <script type="text/javascript">
+        google.load('visualization', '1', {packages: ['corechart']});
+        google.setOnLoadCallback(drawVisualization);
+        var content = JSON.parse("{{content | js_string}}");
+        var progress = JSON.parse("{{progress | js_string}}");
+        function drawVisualization() {
+          // Create and populate the data table.
+          var table = new google.visualization.DataTable();
+          table.addColumn('string', 'Students');
+          table.addColumn('number', 'Completed');
+          table.addColumn('number', 'In Progress');
+
+          var rows = [];
+          // TODO(juliaoh): Generalize this function to take in user queries.
+          for (var unit in content.u) {
+            if (!content.u.hasOwnProperty(unit)) {
+              continue;
+            }
+            var entity = "u." + unit;
+            var label = content['u'][unit]['label'].toString()
+            if (entity in progress) {
+              rows.push(
+                [label, progress[entity].completed, progress[entity].progress]);
+            } else {
+              rows.push([label, 0, 0]);
+            }
+          }
+          table.addRows(rows);
+
+          // Create and draw the visualization.
+          new google.visualization.ColumnChart(document.getElementById('visualization')).
+          draw(table,
+               {title: "Student Progress Statistics",
+                isStacked: true,
+                width: 600, height: 400,
+                vAxis: {title: "Students"},
+                hAxis: {title: "Units"},
+                colors: [ '7EF649', 'FFFF32'] 
+              }
+              );
+        }
+        </script>
+
+        <h3>Student Progress Analytics</h3>
+        <div id="visualization"></div>
+
+      {% else %}
+        <h3>Student Progress Analytics</h3>
+        <h4>No student progress has been recorded for this course.</h4>
+      {% endif %}
+   {% endif %}
+{% endif %}
+
+{% if errors %}
+  <h3>Student Progress Statistics -- Errors</h3>
+  <ul>
+    {% for error in errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{{ update_message }}

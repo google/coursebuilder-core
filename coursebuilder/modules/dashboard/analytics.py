@@ -22,10 +22,14 @@ from common import safe_dom
 from controllers.utils import ApplicationHandler
 from controllers.utils import HUMAN_READABLE_TIME_FORMAT
 import jinja2
+from models import courses
 from models import jobs
+from models import progress
 from models import transforms
 from models import utils
+
 from models.models import Student
+from models.models import StudentPropertyEntity
 
 
 class ComputeStudentStats(jobs.DurableJob):
@@ -156,3 +160,109 @@ class StudentEnrollmentAndScoresHandler(ApplicationHandler):
         return jinja2.utils.Markup(self.get_template(
             'basic_analytics.html', [os.path.dirname(__file__)]
         ).render(template_values, autoescape=True))
+
+
+class ComputeStudentProgressStats(jobs.DurableJob):
+    """A job that computes student progress statistics."""
+
+    class ProgressAggregator(object):
+        """Aggregates student progress statistics."""
+
+        def __init__(self, course):
+            self.progress_data = {}
+            self._tracker = progress.UnitLessonCompletionTracker(course)
+
+        def visit(self, student_property):
+            if student_property.value:
+                entity_scores = transforms.loads(student_property.value)
+                for entity in entity_scores:
+                    entity_score = self.progress_data.get(
+                        entity, {'progress': 0, 'completed': 0})
+                    if self._tracker.determine_if_composite_entity(entity):
+                        if (entity_scores[entity] ==
+                            self._tracker.IN_PROGRESS_STATE):
+                            entity_score['progress'] += 1
+                        elif (entity_scores[entity] ==
+                              self._tracker.COMPLETED_STATE):
+                            entity_score['completed'] += 1
+                    else:
+                        if entity_scores[entity] != 0:
+                            entity_score['completed'] += 1
+                    self.progress_data[entity] = entity_score
+
+    def __init__(self, app_context):
+        super(ComputeStudentProgressStats, self).__init__(app_context)
+        self._course = courses.Course(None, app_context)
+
+    def run(self):
+        """Computes student progress statistics."""
+        student_progress = self.ProgressAggregator(self._course)
+        mapper = utils.QueryMapper(
+            StudentPropertyEntity.all(), batch_size=500, report_every=1000)
+        mapper.run(student_progress.visit)
+        return student_progress.progress_data
+
+
+class StudentProgressStatsHandler(ApplicationHandler):
+    """Shows student progress analytics on the dashboard."""
+
+    name = 'student_progress_stats'
+    stats_computer = ComputeStudentProgressStats
+
+    def get_markup(self, job):
+        """Returns Jinja markup for student progress analytics."""
+
+        errors = []
+        stats_calculated = False
+        update_message = safe_dom.Text('')
+
+        course = courses.Course(self)
+        value = None
+        course_content = None
+
+        if not job:
+            update_message = safe_dom.Text(
+                'Student progress statistics have not been calculated yet.')
+        else:
+            if job.status_code == jobs.STATUS_CODE_COMPLETED:
+                value = transforms.loads(job.output)
+                stats_calculated = True
+                try:
+                    course_content = progress.ProgressStats(
+                        course).compute_entity_dict('course', [])
+                    update_message = safe_dom.Text("""
+                        Student progress statistics were last updated at
+                        %s in about %s second(s).""" % (
+                            job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
+                            job.execution_time_sec))
+                except IOError:
+                    update_message = safe_dom.Text("""
+                        This feature is supported by CB 1.3 and up.""")
+            elif job.status_code == jobs.STATUS_CODE_FAILED:
+                update_message = safe_dom.NodeList().append(
+                    safe_dom.Text("""
+                        There was an error updating student progress statistics.
+                        Here is the message:""")
+                ).append(
+                    safe_dom.Element('br')
+                ).append(
+                    safe_dom.Element('blockquote').add_child(
+                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
+            else:
+                update_message = safe_dom.Text("""
+                    Student progress statistics update started at %s and is
+                    running now. Please come back shortly.""" % (
+                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
+        if value:
+            value = transforms.dumps(value)
+        else:
+            value = None
+        return jinja2.utils.Markup(self.get_template(
+            'progress_stats.html', [os.path.dirname(__file__)]
+        ).render({
+            'errors': errors,
+            'progress': value,
+            'content': transforms.dumps(course_content),
+            'stats_calculated': stats_calculated,
+            'update_message': update_message,
+        }, autoescape=True))

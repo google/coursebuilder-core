@@ -761,7 +761,9 @@ class DashboardHandler(
 
 class DashboardRegistry(object):
     """Holds registered handlers that produce HTML code for the dashboard."""
-    analytics_handlers = [analytics.StudentEnrollmentAndScoresHandler]
+    analytics_handlers = [analytics.StudentEnrollmentAndScoresHandler,
+                          analytics.StudentProgressStatsHandler
+                         ]
 
     @classmethod
     def add_analytics_section(cls, handler):
