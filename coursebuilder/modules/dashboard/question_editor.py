@@ -219,7 +219,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'Choice',
             extra_schema_dict_values={'className': 'mc-choice'})
         choice_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'number', optional=True,
+            'score', 'Score', 'string', optional=True,
             extra_schema_dict_values={
                 'className': 'mc-choice-score', 'value': '0'}))
         choice_type.add_property(schema_fields.SchemaField(
@@ -311,7 +311,8 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             if not choice['text'].strip():
                 errors.append('Choice %s has no response text.' % (index + 1))
             try:
-                float(choice['score'])
+                # Coefrce the score attrib into a python float
+                choice['score'] = float(choice['score'])
             except ValueError:
                 errors.append(
                     'Choice %s must have a numeric score.' % (index + 1))
@@ -365,14 +366,14 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             description=messages.INCORRECT_ANSWER_FEEDBACK))
 
         sa_question.add_property(schema_fields.SchemaField(
-            'rows', 'Rows', 'integer', optional=True,
+            'rows', 'Rows', 'string', optional=True,
             extra_schema_dict_values={
                 'className': 'sa-rows',
                 'value': SaQuestionConstants.DEFAULT_HEIGHT_ROWS
             },
             description=messages.INPUT_FIELD_HEIGHT_DESCRIPTION))
         sa_question.add_property(schema_fields.SchemaField(
-            'columns', 'Columns', 'integer', optional=True,
+            'columns', 'Columns', 'string', optional=True,
             extra_schema_dict_values={
                 'className': 'sa-columns',
                 'value': SaQuestionConstants.DEFAULT_WIDTH_COLUMNS
@@ -459,6 +460,22 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
         self.validate_no_description_collision(
             question_dict['description'], key, errors)
+
+        try:
+            # Coerce the rows attrib into a python int
+            question_dict['rows'] = int(question_dict['rows'])
+            if question_dict['rows'] <= 0:
+                errors.append('Rows must be a positive whole number')
+        except ValueError:
+            errors.append('Rows must be a whole number')
+
+        try:
+            # Coerce the cols attrib into a python int
+            question_dict['columns'] = int(question_dict['columns'])
+            if question_dict['columns'] <= 0:
+                errors.append('Columns must be a positive whole number')
+        except ValueError:
+            errors.append('Columns must be a whole number')
 
         if not question_dict['graders']:
             errors.append('The question must have at least one answer.')
