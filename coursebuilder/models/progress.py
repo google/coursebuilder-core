@@ -17,6 +17,7 @@
 __author__ = 'Sean Lip (sll@google.com)'
 
 import datetime
+import logging
 import os
 
 from tools import verify
@@ -325,107 +326,147 @@ class UnitLessonCompletionTracker(object):
         }
 
     def _create_v15_lesson_question_dict(self, cpt, unit, lesson):
-        question = QuestionDAO.load(cpt['quid'])
-        if question.type == question.MULTIPLE_CHOICE:
-            q_id = 'u.%s.l.%s.c.%s' % (
-                unit.unit_id, lesson.lesson_id, cpt['instanceid'])
-            label = 'Unit %s Lesson %s, Question %s' % (
-                unit.index, lesson.index, question.description)
-            link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
-            num_choices = len(question.dict['choices'])
-            return self._create_v15_question_dict(
-                q_id, label, link, num_choices)
-        else:
+        try:
+            question = QuestionDAO.load(cpt['quid'])
+            if question.type == question.MULTIPLE_CHOICE:
+                q_id = 'u.%s.l.%s.c.%s' % (
+                    unit.unit_id, lesson.lesson_id, cpt['instanceid'])
+                label = 'Unit %s Lesson %s, Question %s' % (
+                    unit.index, lesson.index, question.description)
+                link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
+                num_choices = len(question.dict['choices'])
+                return self._create_v15_question_dict(
+                    q_id, label, link, num_choices)
+            else:
+                return {}
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, cpt)
             return {}
 
     def _create_v15_lesson_question_group_dict(self, cpt, unit, lesson):
-        question_group = QuestionGroupDAO.load(cpt['qgid'])
-        questions = {}
-        for ind, quid in enumerate(question_group.question_ids):
-            question = QuestionDAO.load(quid)
-            if question.type == question.MULTIPLE_CHOICE:
-                q_id = 'u.%s.l.%s.c.%s.i.%s' % (
-                    unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
-                label = 'Unit %s Lesson %s, Question Group %s Question %s' % (
-                    unit.index, lesson.index, question_group.description,
-                    question.description)
-                link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
-                num_choices = len(question.dict['choices'])
-                questions.update(self._create_v15_question_dict(
-                    q_id, label, link, num_choices))
-        return questions
+        try:
+            question_group = QuestionGroupDAO.load(cpt['qgid'])
+            questions = {}
+            for ind, quid in enumerate(question_group.question_ids):
+                question = QuestionDAO.load(quid)
+                if question.type == question.MULTIPLE_CHOICE:
+                    q_id = 'u.%s.l.%s.c.%s.i.%s' % (
+                        unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
+                    label = ('Unit %s Lesson %s, Question Group %s Question %s'
+                             % (unit.index, lesson.index,
+                                question_group.description,
+                                question.description))
+                    link = self._get_link_for_lesson(
+                        unit.unit_id, lesson.lesson_id)
+                    num_choices = len(question.dict['choices'])
+                    questions.update(self._create_v15_question_dict(
+                        q_id, label, link, num_choices))
+            return questions
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, cpt)
+            return {}
 
     def _create_v15_assessment_question_group_dict(self, cpt, assessment):
-        question_group = QuestionGroupDAO.load(cpt['qgid'])
-        questions = {}
-        for ind, quid in enumerate(question_group.question_ids):
-            question = QuestionDAO.load(quid)
-            if question.type == question.MULTIPLE_CHOICE:
-                q_id = 's.%s.c.%s.i.%s' % (
-                    assessment.unit_id, cpt['instanceid'], ind)
-                label = '%s, Question Group %s Question %s' % (
-                    assessment.title, question_group.description,
-                    question.description)
-                link = self._get_link_for_assessment(assessment.unit_id)
-                num_choices = len(question.dict['choices'])
-                questions.update(
-                    self._create_v15_question_dict(
-                        q_id, label, link, num_choices))
-        return questions
+        try:
+            question_group = QuestionGroupDAO.load(cpt['qgid'])
+            questions = {}
+            for ind, quid in enumerate(question_group.question_ids):
+                question = QuestionDAO.load(quid)
+                if question.type == question.MULTIPLE_CHOICE:
+                    q_id = 's.%s.c.%s.i.%s' % (
+                        assessment.unit_id, cpt['instanceid'], ind)
+                    label = '%s, Question Group %s Question %s' % (
+                        assessment.title, question_group.description,
+                        question.description)
+                    link = self._get_link_for_assessment(assessment.unit_id)
+                    num_choices = len(question.dict['choices'])
+                    questions.update(
+                        self._create_v15_question_dict(
+                            q_id, label, link, num_choices))
+            return questions
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, cpt)
+            return {}
 
     def _create_v15_assessment_question_dict(self, cpt, assessment):
-        question = QuestionDAO.load(cpt['quid'])
-        if question.type == question.MULTIPLE_CHOICE:
-            q_id = 's.%s.c.%s' % (assessment.unit_id, cpt['instanceid'])
-            label = '%s, Question %s' % (assessment.title, question.description)
-            link = self._get_link_for_assessment(assessment.unit_id)
-            num_choices = len(question.dict['choices'])
-            return self._create_v15_question_dict(
-                q_id, label, link, num_choices)
-        else:
+        try:
+            question = QuestionDAO.load(cpt['quid'])
+            if question.type == question.MULTIPLE_CHOICE:
+                q_id = 's.%s.c.%s' % (assessment.unit_id, cpt['instanceid'])
+                label = '%s, Question %s' % (
+                    assessment.title, question.description)
+                link = self._get_link_for_assessment(assessment.unit_id)
+                num_choices = len(question.dict['choices'])
+                return self._create_v15_question_dict(
+                    q_id, label, link, num_choices)
+            else:
+                return {}
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, cpt)
             return {}
 
     def _create_old_style_question_dict(self, block, block_id, block_index,
                                         unit, lesson, index=None):
-        if index is not None:
-            # Question is in a multiple choice group.
-            b_id = 'u.%s.l.%s.b.%s.i.%s' % (
-                unit.unit_id, lesson.lesson_id, block_id, index)
-            label = 'Unit %s Lesson %s Activity, Item %s Part %s' % (
-                unit.index, lesson.index, block_index + 1, index + 1)
-        else:
-            b_id = 'u.%s.l.%s.b.%s' % (unit.unit_id, lesson.lesson_id, block_id)
-            label = 'Unit %s Lesson %s Activity, Item %s' % (
-                unit.index, lesson.index, block_index + 1)
-        return {
-            b_id: {
-                'answer_counts': [0] * len(block['choices']),
-                'label': label,
-                'location': self._get_link_for_activity(
-                    unit.unit_id, lesson.lesson_id),
-                'score': 0,
-                'num_attempts': 0
+        try:
+            if index is not None:
+                # Question is in a multiple choice group.
+                b_id = 'u.%s.l.%s.b.%s.i.%s' % (
+                    unit.unit_id, lesson.lesson_id, block_id, index)
+                label = 'Unit %s Lesson %s Activity, Item %s Part %s' % (
+                    unit.index, lesson.index, block_index + 1, index + 1)
+            else:
+                b_id = 'u.%s.l.%s.b.%s' % (
+                    unit.unit_id, lesson.lesson_id, block_id)
+                label = 'Unit %s Lesson %s Activity, Item %s' % (
+                    unit.index, lesson.index, block_index + 1)
+            return {
+                b_id: {
+                    'answer_counts': [0] * len(block['choices']),
+                    'label': label,
+                    'location': self._get_link_for_activity(
+                        unit.unit_id, lesson.lesson_id),
+                    'score': 0,
+                    'num_attempts': 0
+                }
             }
-        }
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, block)
+            return {}
 
     def _create_old_style_assessment_dict(self, content, assessment):
-        questions = {}
-        for ind, question in enumerate(content['questionsList']):
-            if 'choices' in question:
-                questions.update(
-                    {
-                        's.%s.i.%s' % (assessment.unit_id, ind): {
-                            'answer_counts': [0] * len(question['choices']),
-                            'label': '%s, Question %s' % (
-                                assessment.title, ind + 1),
-                            'location': self._get_link_for_assessment(
-                                assessment.unit_id),
-                            'score': 0,
-                            'num_attempts': 0
+        try:
+            questions = {}
+            for ind, question in enumerate(content['questionsList']):
+                if 'choices' in question:
+                    questions.update(
+                        {
+                            's.%s.i.%s' % (assessment.unit_id, ind): {
+                                'answer_counts': [0] * len(question['choices']),
+                                'label': '%s, Question %s' % (
+                                    assessment.title, ind + 1),
+                                'location': self._get_link_for_assessment(
+                                    assessment.unit_id),
+                                'score': 0,
+                                'num_attempts': 0
+                            }
                         }
-                    }
-                )
-        return questions
+                    )
+            return questions
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error(
+                'Failed to process the question data. '
+                'Error: %s, data: %s', e, content)
+            return {}
 
     def _update_unit(self, progress, event_key):
         """Updates a unit's progress if all its lessons have been completed."""

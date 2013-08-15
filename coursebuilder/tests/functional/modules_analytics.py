@@ -359,7 +359,8 @@ class QuestionAnalyticsTest(actions.TestBase):
             'description': 'question_group',
             'items': [
                 {'question': str(mcq_new_id)},
-                {'question': str(frq_new_id)}
+                {'question': str(frq_new_id)},
+                {'question': str(mcq_new_id)}
             ],
             'version': '1.5',
             'introduction': ''
@@ -443,6 +444,14 @@ class QuestionAnalyticsTest(actions.TestBase):
                     'location': 'unit?unit=1&lesson=2',
                     'num_attempts': 0,
                     'score': 0
+                },
+                'u.1.l.2.c.QG.i.2': {
+                    'answer_counts': [0],
+                    'label': ('Unit 1 Lesson 1, Question Group question_group '
+                              'Question mcq_new'),
+                    'location': 'unit?unit=1&lesson=2',
+                    'num_attempts': 0,
+                    'score': 0
                 }
             }
         )
@@ -457,6 +466,14 @@ class QuestionAnalyticsTest(actions.TestBase):
                     'score': 0
                 },
                 's.4.c.QG2.i.0': {
+                    'answer_counts': [0],
+                    'label': ('New assessment, Question Group question_group '
+                              'Question mcq_new'),
+                    'location': 'assessment?name=4',
+                    'num_attempts': 0,
+                    'score': 0
+                },
+                's.4.c.QG2.i.2': {
                     'answer_counts': [0],
                     'label': ('New assessment, Question Group question_group '
                               'Question mcq_new'),
