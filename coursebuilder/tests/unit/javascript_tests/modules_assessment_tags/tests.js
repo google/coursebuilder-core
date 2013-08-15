@@ -355,7 +355,7 @@ describe('assessment tags', function() {
     it('computes the total points available', function() {
       expect(qg.getTotalPoints()).toBe(25);
     });
-    it('sends event logging', function() {
+    it('sends event logging on check answer', function() {
       var eventPayloads = JSON.parse(
           readFixtures('tests/unit/common/event_payloads.json'));
       $('#qg-0-mc-0-0').prop('checked', true);
@@ -363,6 +363,24 @@ describe('assessment tags', function() {
           .val('falafel');
       qg.onCheckAnswer();
       expect(auditDict).toEqual(eventPayloads.question_group_15.event_data);
+    });
+    it('sends event logging on grading scored lesson', function() {
+      var eventPayloads = JSON.parse(
+          readFixtures('tests/unit/common/event_payloads.json'));
+      $('#qg-0-mc-0-0').prop('checked', true);
+      $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+          .val('falafel');
+
+      // Mock the global function gcbLessonAudit
+      var lessonAuditDict;
+      window.gcbLessonAudit = function(arg) {
+        lessonAuditDict = arg;
+        lessonAuditDict.location = LOGGING_LOCATION;
+      };
+
+      gradeScoredLesson([qg], MESSAGES);
+      expect(lessonAuditDict)
+          .toEqual(eventPayloads.scored_lesson_15_qg.event_data);
     });
     it('serializes the student answer', function() {
       $('#qg-0-mc-0-0').prop('checked', true);

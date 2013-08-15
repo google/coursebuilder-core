@@ -380,9 +380,9 @@ function gradeScoredLesson(questions, messages) {
     totalWeight += question.getWeight();
     question.displayFeedback(grade.feedback);
   });
+  score = Math.round(100 * score)/100;
   $('div.qt-grade-report')
-      .text(messages.yourScoreIs + score.toFixed(2) +
-          '/' + totalWeight.toFixed(0))
+      .text(messages.yourScoreIs + score + '/' + totalWeight.toFixed(0))
       .removeClass('qt-hidden');
 
   gcbLessonAudit({
