@@ -1206,7 +1206,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 3
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -3020,9 +3020,11 @@ class LessonComponentsTest(DatastoreBackedCourseTest):
         cpt_list = self.course.get_components(
             self.unit.unit_id, self.lesson.lesson_id)
         assert cpt_list == [
-            {'instanceid': 'QN', 'name': 'question'},
-            {'instanceid': 'VD', 'name': 'gcb-youtube'},
-            {'instanceid': 'QG', 'name': 'question-group'}
+            {'instanceid': 'QN', 'quid': '123', 'weight': '1',
+             'cpt_name': 'question'},
+            {'instanceid': 'VD', 'cpt_name': 'gcb-youtube',
+             'videoid': 'Kdg2drcUjYI'},
+            {'instanceid': 'QG', 'qgid': '456', 'cpt_name': 'question-group'}
         ]
 
         valid_cpt_ids = self.tracker.get_valid_component_ids(

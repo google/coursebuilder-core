@@ -762,7 +762,8 @@ class DashboardHandler(
 class DashboardRegistry(object):
     """Holds registered handlers that produce HTML code for the dashboard."""
     analytics_handlers = [analytics.StudentEnrollmentAndScoresHandler,
-                          analytics.StudentProgressStatsHandler
+                          analytics.StudentProgressStatsHandler,
+                          analytics.QuestionStatsHandler
                          ]
 
     @classmethod

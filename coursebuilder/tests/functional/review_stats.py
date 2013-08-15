@@ -62,7 +62,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 3
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)

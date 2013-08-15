@@ -29,6 +29,7 @@ from controllers import utils
 import main
 from models import config
 from models import custom_modules
+from models import transforms
 from tests import suite
 from google.appengine.api import namespace_manager
 
@@ -449,6 +450,52 @@ def view_activity(browser):
                     response.body)
     check_personalization(browser, response)
     return response
+
+
+def get_activity(browser, unit_id, lesson_id, args):
+    """Retrieve the activity page for a given unit and lesson id."""
+
+    response = browser.get('activity?unit=%s&lesson=%s' % (unit_id, lesson_id))
+    assert_equals(response.status_int, 200)
+    assert_contains(
+        '<script src="assets/js/activity-%s.%s.js"></script>' %
+        (unit_id, lesson_id), response.body)
+    assert_contains('assets/lib/activity-generic-1.3.js', response.body)
+
+    js_response = browser.get('assets/lib/activity-generic-1.3.js')
+    assert_equals(js_response.status_int, 200)
+
+    # Extract XSRF token from the page.
+    match = re.search(r'eventXsrfToken = [\']([^\']+)', response.body)
+    assert match
+    xsrf_token = match.group(1)
+    args['xsrf_token'] = xsrf_token
+
+    return response, args
+
+
+def attempt_activity(browser, unit_id, lesson_id, index, answer, correct):
+    """Attempts an activity in a given unit and lesson."""
+    response, args = get_activity(browser, unit_id, lesson_id, {})
+
+    # Prepare activity submission event.
+    args['source'] = 'attempt-activity'
+    args['payload'] = {
+        'index': index,
+        'type': 'activity-choice',
+        'value': answer,
+        'correct': correct
+    }
+    args['payload']['location'] = (
+        'http://localhost:8080/activity?unit=%s&lesson=%s' %
+        (unit_id, lesson_id))
+    args['payload'] = transforms.dumps(args['payload'])
+
+    # Submit the request to the backend.
+    response = browser.post('rest/events?%s' % urllib.urlencode(
+        {'request': transforms.dumps(args)}), {})
+    assert_equals(response.status_int, 200)
+    assert not response.body
 
 
 def view_announcements(browser):

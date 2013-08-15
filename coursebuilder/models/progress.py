@@ -22,6 +22,8 @@ import os
 from tools import verify
 
 import courses
+from models import QuestionDAO
+from models import QuestionGroupDAO
 from models import StudentPropertyEntity
 import transforms
 
@@ -61,6 +63,11 @@ class UnitLessonCompletionTracker(object):
     NOT_STARTED_STATE = 0
     IN_PROGRESS_STATE = 1
     COMPLETED_STATE = 2
+
+    MULTIPLE_CHOICE = 'multiple choice'
+    MULTIPLE_CHOICE_GROUP = 'multiple choice group'
+    QUESTION_GROUP = 'question_group'
+    QUESTION = 'question'
 
     EVENT_CODE_MAPPING = {
         'unit': 'u',
@@ -153,14 +160,22 @@ class UnitLessonCompletionTracker(object):
 
     def get_valid_component_ids(self, unit_id, lesson_id):
         """Returns a list of component ids representing trackable components."""
-        components = self._get_course().get_components(unit_id, lesson_id)
-        return [cpt['instanceid'] for cpt in components if (
-            cpt['name'] in self.TRACKABLE_COMPONENTS and
-            cpt['instanceid'] is not None)]
+        question_component_ids = [cpt['instanceid'] for cpt in (
+            self._get_course().get_question_components(
+                unit_id, lesson_id)) if cpt['instanceid']]
+        question_group_component_ids = [cpt['instanceid'] for cpt in (
+            self._get_course().get_question_group_components(
+                unit_id, lesson_id)) if cpt['instanceid']]
+        return question_component_ids + question_group_component_ids
 
     def get_valid_block_ids(self, unit_id, lesson_id):
         """Returns a list of block ids representing interactive activities."""
-        valid_block_ids = []
+        valid_blocks = self.get_valid_blocks(unit_id, lesson_id)
+        return [block[1] for block in valid_blocks]
+
+    def get_valid_blocks(self, unit_id, lesson_id):
+        """Returns a list of (block, b_id) representing trackable activities."""
+        valid_blocks = []
 
         # Check if activity exists before calling get_activity_as_python.
         unit = self._get_course().find_unit_by_id(unit_id)
@@ -171,8 +186,229 @@ class UnitLessonCompletionTracker(object):
             for block_id in range(len(activity['activity'])):
                 block = activity['activity'][block_id]
                 if isinstance(block, dict):
-                    valid_block_ids.append(block_id)
-        return valid_block_ids
+                    valid_blocks.append((block, block_id))
+        return valid_blocks
+
+    def get_id_to_questions_dict(self):
+        """Returns a dict that maps each question to a list of its answers.
+
+        Returns:
+            A dict that represents the questions in lessons. The keys of this
+            dict are question ids, and the corresponding values are dicts, each
+            containing the following five key-value pairs:
+            - answers: a list of 0's with length corresponding to number of
+                choices a question has.
+            - location: str. href value of the location of the question in the
+                course.
+            - num_attempts: int. Number of attempts for this question. This is
+                used as the denominator when calculating the average score for a
+                question. This value may differ from the sum of the elements in
+                'answers' because of event entities that record an answer but
+                not a score.
+            - score: int. Aggregated value of the scores.
+            - label: str. Human readable identifier for this question.
+        """
+        id_to_questions = {}
+        for unit in self._get_course().get_units_of_type(verify.UNIT_TYPE_UNIT):
+            unit_id = unit.unit_id
+            for lesson in self._get_course().get_lessons(unit_id):
+                lesson_id = lesson.lesson_id
+                # Add mapping dicts for questions in old-style activities.
+                if lesson.activity:
+                    blocks = self.get_valid_blocks(unit_id, lesson_id)
+                    for block, block_id in blocks:
+                        if block['questionType'] == self.MULTIPLE_CHOICE:
+                            # Old style question.
+                            id_to_questions.update(
+                                self._create_old_style_question_dict(
+                                    block, block_id, unit, lesson))
+
+                        elif (block['questionType'] ==
+                              self.MULTIPLE_CHOICE_GROUP):
+                            # Old style multiple choice group.
+                            for ind, q in enumerate(block['questionsList']):
+                                id_to_questions.update(
+                                    self._create_old_style_question_dict(
+                                        q, block_id, unit, lesson, index=ind))
+
+                # Add mapping dicts for CBv1.5 style questions.
+                if lesson.objectives:
+                    for cpt in self._get_course().get_question_components(
+                            unit_id, lesson_id):
+                        # CB v1.5 style questions.
+                        id_to_questions.update(
+                            self._create_v15_lesson_question_dict(
+                                cpt, unit, lesson))
+
+                    for cpt in self._get_course().get_question_group_components(
+                            unit_id, lesson_id):
+                        # CB v1.5 style question groups.
+                        id_to_questions.update(
+                            self._create_v15_lesson_question_group_dict(
+                                cpt, unit, lesson))
+
+        return id_to_questions
+
+    def get_id_to_assessments_dict(self):
+        """Returns a dict that maps each question to a list of its answers.
+
+        Returns:
+            A dict that represents the questions in assessments. The keys of
+            this dict are question ids, and the corresponding values are dicts,
+            each containing the following five key-value pairs:
+            - answers: a list of 0's with length corresponding to number of
+                choices a question has.
+            - location: str. href value of the location of the question in the
+                course.
+            - num_attempts: int. Number of attempts for this question. This is
+                used as the denominator when calculating the average score for a
+                question. This value may differ from the sum of the elements in
+                'answers' because of event entities that record an answer but
+                not a score.
+            - score: int. Aggregated value of the scores.
+            - label: str. Human readable identifier for this question.
+        """
+        id_to_assessments = {}
+        for assessment in self._get_course().get_assessment_list():
+            if not self._get_course().needs_human_grader(assessment):
+                assessment_components = self._get_course(
+                    ).get_assessment_components(assessment.unit_id)
+                # CB v1.5 style assessments.
+                for cpt in assessment_components:
+                    if cpt['questionType'] == self.QUESTION_GROUP:
+                        id_to_assessments.update(
+                            self._create_v15_assessment_question_group_dict(
+                                cpt, assessment))
+                    elif cpt['questionType'] == self.QUESTION:
+                        id_to_assessments.update(
+                            self._create_v15_assessment_question_dict(
+                                cpt, assessment))
+
+                # Old style javascript assessments.
+                try:
+                    content = self._get_course().get_assessment_content(
+                        assessment)
+                    id_to_assessments.update(
+                        self._create_old_style_assessment_dict(
+                            content['assessment'], assessment))
+                except AttributeError:
+                    # Assessment file does not exist.
+                    continue
+
+        return id_to_assessments
+
+    def _get_link_for_assessment(self, assessment_id):
+        return 'assessment?name=%s' % (assessment_id)
+
+    def _get_link_for_activity(self, unit_id, lesson_id):
+        return 'activity?unit=%s&lesson=%s' % (unit_id, lesson_id)
+
+    def _get_link_for_lesson(self, unit_id, lesson_id):
+        return 'unit?unit=%s&lesson=%s' % (unit_id, lesson_id)
+
+    def _create_v15_question_dict(self, q_id, label, link, num_choices):
+        """Returns a dict that represents CB v1.5 style question."""
+        return {
+            q_id: {
+                'answer_counts': [0] * num_choices,
+                'label': label,
+                'location': link,
+                'score': 0,
+                'num_attempts': 0
+            }
+        }
+
+    def _create_v15_lesson_question_dict(self, cpt, unit, lesson):
+        question = QuestionDAO.load(cpt['quid'])
+        q_id = 'u.%s.l.%s.c.%s' % (
+            unit.unit_id, lesson.lesson_id, cpt['instanceid'])
+        label = 'Unit %s Lesson %s, Question %s' % (
+            unit.index, lesson.index, question.description)
+        link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
+        num_choices = len(question.dict['choices'])
+        return self._create_v15_question_dict(q_id, label, link, num_choices)
+
+    def _create_v15_lesson_question_group_dict(self, cpt, unit, lesson):
+        question_group = QuestionGroupDAO.load(cpt['qgid'])
+        questions = {}
+        for ind, quid in enumerate(question_group.question_ids):
+            question = QuestionDAO.load(quid)
+            q_id = 'u.%s.l.%s.c.%s.i.%s' % (
+                unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
+            label = 'Unit %s Lesson %s, Question Group %s Question %s' % (
+                unit.index, lesson.index, question_group.description,
+                question.description)
+            link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
+            num_choices = len(question.dict['choices'])
+            questions.update(self._create_v15_question_dict(
+                q_id, label, link, num_choices))
+        return questions
+
+    def _create_v15_assessment_question_group_dict(self, cpt, assessment):
+        question_group = QuestionGroupDAO.load(cpt['qgid'])
+        questions = {}
+        for ind, quid in enumerate(question_group.question_ids):
+            question = QuestionDAO.load(quid)
+            q_id = 's.%s.c.%s.i.%s' % (
+                assessment.title, cpt['instanceid'], ind)
+            label = '%s, Question Group %s Question %s' % (
+                assessment.title, question_group.description,
+                question.description)
+            link = self._get_link_for_assessment(assessment.unit_id)
+            num_choices = len(question.dict['choices'])
+            questions.update(
+                self._create_v15_question_dict(q_id, label, link, num_choices))
+        return questions
+
+    def _create_v15_assessment_question_dict(self, cpt, assessment):
+        question = QuestionDAO.load(cpt['quid'])
+        q_id = 's.%s.c.%s' % (assessment.unit_id, cpt['instanceid'])
+        label = '%s, Question %s' % (assessment.title, question.description)
+        link = self._get_link_for_assessment(assessment.unit_id)
+        num_choices = len(question.dict['choices'])
+        return self._create_v15_question_dict(q_id, label, link, num_choices)
+
+    def _create_old_style_question_dict(self, block, block_id, unit, lesson,
+                                        index=None):
+        if index is not None:
+            # Question is in a multiple choice group.
+            b_id = 'u.%s.l.%s.b.%s.i.%s' % (
+                unit.unit_id, lesson.lesson_id, block_id, index)
+            label = 'Unit %s Lesson %s Activity, Item %s Part %s' % (
+                unit.index, lesson.index, block_id + 1, index + 1)
+        else:
+            b_id = 'u.%s.l.%s.b.%s' % (unit.unit_id, lesson.lesson_id, block_id)
+            label = 'Unit %s Lesson %s Activity, Item %s' % (
+                unit.index, lesson.index, block_id + 1)
+        return {
+            b_id: {
+                'answer_counts': [0] * len(block['choices']),
+                'label': label,
+                'location': self._get_link_for_activity(
+                    unit.unit_id, lesson.lesson_id),
+                'score': 0,
+                'num_attempts': 0
+            }
+        }
+
+    def _create_old_style_assessment_dict(self, content, assessment):
+        questions = {}
+        for ind, question in enumerate(content['questionsList']):
+            if 'choices' in question:
+                questions.update(
+                    {
+                        's.%s.i.%s' % (assessment.title, ind): {
+                            'answer_counts': [0] * len(question['choices']),
+                            'label': '%s, Question %s' % (
+                                assessment.title, ind + 1),
+                            'location': self._get_link_for_assessment(
+                                assessment.unit_id),
+                            'score': 0,
+                            'num_attempts': 0
+                        }
+                    }
+                )
+        return questions
 
     def _update_unit(self, progress, event_key):
         """Updates a unit's progress if all its lessons have been completed."""
@@ -751,4 +987,3 @@ class ProgressStats(object):
         'block': _get_block_label,
         'component': _get_component_label
     }
-

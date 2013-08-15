@@ -1880,7 +1880,7 @@ class Course(object):
             A list of dicts. Each dict represents one component and has two
             keys:
             - instanceid: the instance id of the component
-            - name: the name of the component tag (e.g. gcb-googlegroup)
+            - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
         """
         unit = self.find_unit_by_id(unit_id)
         lesson = self.find_lesson_by_id(unit, lesson_id)
@@ -1888,6 +1888,42 @@ class Course(object):
             return []
 
         return common.tags.get_components_from_html(lesson.objectives)
+
+    def get_assessment_components(self, unit_id):
+        """Returns a list of dicts representing components in an assessment.
+
+        Args:
+            unit_id: the id of the assessment unit
+
+        Returns:
+            A list of dicts. Each dict represents one component and has two
+            keys:
+            - instanceid: the instance id of the component
+            - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
+        """
+        unit = self.find_unit_by_id(unit_id)
+        if not getattr(unit, 'html_content', None):
+            return []
+
+        return common.tags.get_components_from_html(unit.html_content)
+
+    def get_question_components(self, unit_id, lesson_id):
+        """Returns a list of dicts representing the questions in a lesson."""
+        components = self.get_components(unit_id, lesson_id)
+        question_components = []
+        for component in components:
+            if component.get('cpt_name') == 'question':
+                question_components.append(component)
+        return question_components
+
+    def get_question_group_components(self, unit_id, lesson_id):
+        """Returns a list of dicts representing the q_groups in a lesson."""
+        components = self.get_components(unit_id, lesson_id)
+        question_group_components = []
+        for component in components:
+            if component.get('cpt_name') == 'question-group':
+                question_group_components.append(component)
+        return question_group_components
 
     def needs_human_grader(self, unit):
         return unit.workflow.get_grader() == HUMAN_GRADER

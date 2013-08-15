@@ -17,11 +17,19 @@
 
 __author__ = 'Julia Oh(juliaoh@google.com)'
 
+import os
+import appengine_config
+
 from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from models import transforms
+
 from models.progress import ProgressStats
+from modules.dashboard import analytics
+
+
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
@@ -51,7 +59,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 3
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -71,6 +79,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
     def test_student_progress_stats_analytics_displays_on_dashboard(self):
         """Test analytics page on course dashboard."""
+
         self.enable_progress_tracking()
 
         student1 = 'student1@google.com'
@@ -101,7 +110,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 3
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -284,3 +293,41 @@ class ProgressAnalyticsTest(actions.TestBase):
                 },
                 "label": 'UNTITLED COURSE'
             })
+
+
+class QuestionAnalyticsTest(actions.TestBase):
+    """Tests the question analytics page from Course Author dashboard."""
+
+    def _enable_activity_tracking(self):
+        config.Registry.test_overrides[
+            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+
+    def test_get_summarized_question_list_from_event(self):
+        """Tests the transform functions per event type."""
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+
+        question_aggregator = (
+            analytics.ComputeQuestionStats.MultipleChoiceQuestionAggregator(
+                course))
+
+        event_payloads = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'tests/unit/common/event_payloads.json')).read()
+
+        event_payload_dict = transforms.loads(event_payloads)
+        for event_info in event_payload_dict.values():
+            # pylint: disable-msg=protected-access
+            questions = question_aggregator._process_event(
+                event_info['event_source'], event_info['event_data'])
+            assert_equals(questions, event_info['transformed_dict_list'])
+
+    def test_compute_question_stats_on_empty_course_returns_empty_dicts(self):
+
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        app_context = sites.get_all_courses()[0]
+
+        question_stats_computer = analytics.ComputeQuestionStats(app_context)
+        id_to_questions, id_to_assessments = question_stats_computer.run()
+        assert_equals({}, id_to_questions)
+        assert_equals({}, id_to_assessments)

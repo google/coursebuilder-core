@@ -310,14 +310,17 @@ def get_components_from_html(html):
         A list of dicts. Each dict represents one component and has two
         keys:
         - instanceid: the instance id of the component
-        - name: the name of the component tag (e.g. gcb-googlegroup)
+        - cpt_name: the name of the component tag (e.g. gcb-googlegroup)
     """
     parser = html5lib.HTMLParser(
         tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
         namespaceHTMLElements=False)
     content = parser.parseFragment('<div>%s</div>' % html)[0]
 
-    return [{
-        'instanceid': component.attrib.get('instanceid'),
-        'name': component.tag,
-    } for component in content.findall('.//*[@instanceid]')]
+    components = []
+    for component in content.findall('.//*[@instanceid]'):
+        component_dict = {'cpt_name': component.tag}
+        component_dict.update(component.attrib)
+        components.append(component_dict)
+    return components
+
