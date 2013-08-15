@@ -1,6 +1,12 @@
 {% if stats_calculated %}
   {% if content %}
     {% if progress %}
+      <style type="text/css">
+        .chart-container {
+          margin: 0 0 20px 0;
+        }
+      </style>
+
       <script type="text/javascript" src="//www.google.com/jsapi"></script>
       <script src="assets/lib/jquery-1.7.2.min.js"></script>
       <script type="text/javascript">
@@ -47,11 +53,11 @@
         </script>
 
         <h3>Student Progress Statistics</h3>
-        <div id="visualization"></div>
+        <div id="visualization" class="chart-container"></div>
 
       {% else %}
         <h3>Student Progress Statistics</h3>
-        <h4>No student progress has been recorded for this course.</h4>
+        <p>No student progress has been recorded for this course.</p>
       {% endif %}
    {% endif %}
 {% endif %}

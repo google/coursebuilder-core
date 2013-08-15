@@ -16,6 +16,7 @@
 
 __author__ = 'Sean Lip (sll@google.com)'
 
+import logging
 import os
 import urlparse
 
@@ -100,8 +101,7 @@ class StudentEnrollmentAndScoresHandler(ApplicationHandler):
     # The key used in the statistics dict that generates the dashboard page.
     # Must be unique.
     name = 'enrollment_and_scores'
-    # The class that generates the data to be displayed. It should have a
-    # get_stats() method.
+    # The class that generates the data to be displayed.
     stats_computer = ComputeStudentStats
 
     def get_markup(self, job):
@@ -503,10 +503,10 @@ class ComputeQuestionStats(jobs.DurableJob):
                             data))
                 return question_list
 
-            except (IndexError, KeyError):
-                # Catch any lookup errors due to missing keys in the event
-                # data. That event is then simply not processed.
-                pass
+            except Exception as e:  # pylint: disable-msg=broad-except
+                logging.error(
+                    'Failed to process question analytics event: '
+                    'source %s, data %s, error %s', source, data, e)
 
         def visit(self, event_entity):
             """Records question data from given event_entity."""
@@ -548,7 +548,7 @@ class ComputeQuestionStats(jobs.DurableJob):
 
 
 class QuestionStatsHandler(ApplicationHandler):
-    """Shows student progress analytics on the dashboard."""
+    """Shows statistics on the dashboard for students' answers to questions."""
 
     name = 'question_answers_stats'
     stats_computer = ComputeQuestionStats
@@ -565,14 +565,15 @@ class QuestionStatsHandler(ApplicationHandler):
 
         if not job:
             update_message = safe_dom.Text(
-                'Question statistics have not been calculated yet.')
+                'Multiple-choice question statistics have not been calculated '
+                'yet.')
         else:
             if job.status_code == jobs.STATUS_CODE_COMPLETED:
                 accumulated_question_answers, accumulated_assessment_answers = (
                     transforms.loads(job.output))
                 stats_calculated = True
                 update_message = safe_dom.Text("""
-                    Question statistics were last updated at
+                    Multiple-choice question statistics were last updated at
                     %s in about %s second(s).""" % (
                         job.updated_on.strftime(
                             HUMAN_READABLE_TIME_FORMAT),
@@ -580,8 +581,8 @@ class QuestionStatsHandler(ApplicationHandler):
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 update_message = safe_dom.NodeList().append(
                     safe_dom.Text("""
-                        There was an error updating question statistics.
-                        Here is the message:""")
+                        There was an error updating multiple-choice question
+                        statistics. Here is the message:""")
                 ).append(
                     safe_dom.Element('br')
                 ).append(
@@ -589,8 +590,8 @@ class QuestionStatsHandler(ApplicationHandler):
                         safe_dom.Element('pre').add_text('\n%s' % job.output)))
             else:
                 update_message = safe_dom.Text("""
-                    Question statistics update started at %s and is
-                    running now. Please come back shortly.""" % (
+                    Multiple-choice question statistics update started at %s
+                    and is running now. Please come back shortly.""" % (
                         job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
 
         return jinja2.utils.Markup(self.get_template(

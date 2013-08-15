@@ -86,12 +86,11 @@ class PeerReviewStatsHandler(ApplicationHandler):
     # The key used in the statistics dict that generates the dashboard page.
     # Must be unique.
     name = 'peer_review_stats'
-    # The class that generates the data to be displayed. It should have a
-    # get_stats() method.
+    # The class that generates the data to be displayed.
     stats_computer = ComputeReviewStats
 
     def get_markup(self, job):
-        """Returns Jinja markup for peer review analytics."""
+        """Returns Jinja markup for peer review statistics."""
 
         errors = []
         stats_calculated = False

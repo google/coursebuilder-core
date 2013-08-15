@@ -1,4 +1,5 @@
 {% if stats_calculated %}
+  <h3>Peer Review Statistics</h3>
   {% if serialized_units %}
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
@@ -41,12 +42,12 @@
       }
     </script>
 
-    <h3>Peer Review Analytics</h3>
     {% for unit in serialized_units %}
       <h4>{{ unit['title'] }}</h4>
       <div id="chart_{{loop.index0}}"></div>
     {% endfor %}
-
+  {% else %}
+    <p>No submissions to peer-reviewed assignments have been recorded for this course.</p>
   {% endif %}
 {% endif %}
 

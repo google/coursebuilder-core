@@ -74,7 +74,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 2', response.body)
         assert_contains('total: 2', response.body)
 
-        assert_contains('Peer Review Analytics', response.body)
+        assert_contains('Peer Review Statistics', response.body)
         assert_contains('Sample peer review assignment', response.body)
         # JSON code for the completion statistics.
         assert_contains('"[{\\"stats\\": [2]', response.body)
@@ -104,7 +104,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         self.execute_all_deferred_tasks()
 
         response = self.get('dashboard?action=analytics')
-        assert_contains('Peer Review Analytics', response.body)
+        assert_contains('Peer Review Statistics', response.body)
         # JSON code for the completion statistics.
         assert_contains('"[{\\"stats\\": [1, 1]', response.body)
         actions.logout()
