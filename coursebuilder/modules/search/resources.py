@@ -32,6 +32,7 @@ from xml.parsers.expat import ExpatError
 import appengine_config
 from common import jinja_utils
 import jinja2
+from modules.announcements import announcements
 
 from google.appengine.api import search
 from google.appengine.api import urlfetch
@@ -478,11 +479,67 @@ class YouTubeFragmentResult(Result):
         return self._generate_html_from_template('youtube.html', template_value)
 
 
+class AnnouncementResource(Resource):
+    """An announcement in a course."""
+    TYPE_NAME = 'Announcement'
+    RETURNED_FIELDS = ['title', 'url']
+    SNIPPETED_FIELDS = ['content']
+
+    @classmethod
+    def get_all(cls, course):
+        resources = []
+        if announcements.custom_module.enabled:
+            for entity in announcements.AnnouncementEntity.get_announcements():
+                if not entity.is_draft:
+                    resources.append(AnnouncementResource(entity))
+        return resources
+
+    def __init__(self, announcement):
+        super(AnnouncementResource, self).__init__()
+
+        self.title = announcement.title
+        self.key = announcement.key()
+        parser = ResourceHTMLParser(PROTOCOL_PREFIX)
+        parser.feed(announcement.html)
+        self.content = parser.get_content()
+
+    def get_document(self):
+        return search.Document(
+            doc_id=('%s_%s' % (self.TYPE_NAME, self.key)),
+            fields=[
+                search.TextField(name='title',
+                                 value='%s - Announcement' % self.title),
+                search.TextField(name='content', value=self.content),
+                search.TextField(name='url',
+                                 value='announcements#%s' % self.key),
+                search.TextField(name='type', value=self.TYPE_NAME),
+                search.DateField(name='date', value=datetime.now().date())])
+
+
+class AnnouncementResult(Result):
+    """An object for an announcement in search results."""
+
+    def __init__(self, search_result):
+        super(AnnouncementResult, self).__init__()
+        self.url = self._get_returned_field(search_result, 'url')
+        self.title = self._get_returned_field(search_result, 'title')
+        self.snippet = self._get_snippet(search_result)
+
+    def get_html(self):
+        template_value = {
+            'result_title': self.title,
+            'result_url': self.url,
+            'result_snippet': jinja2.Markup(self.snippet)
+        }
+        return self._generate_html_from_template('basic.html', template_value)
+
+
 # Register new resource types here
 RESOURCE_TYPES = [
     (LessonResource, LessonResult),
     (ExternalLinkResource, ExternalLinkResult),
-    (YouTubeFragmentResource, YouTubeFragmentResult)
+    (YouTubeFragmentResource, YouTubeFragmentResult),
+    (AnnouncementResource, AnnouncementResult)
 ]
 
 

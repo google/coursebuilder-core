@@ -233,3 +233,26 @@ class SearchTest(search_unit_test.SearchTestBase):
         # Test to make sure empty notes field doesn't cause a urlfetch
         response = self.get('/test/search?query=cogito')
         self.assertNotIn('gcb-search-result', response.body)
+
+    def test_announcements(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        self.get('announcements')
+
+        response = self.get('dashboard?action=search')
+        index_token = self.get_xsrf_token(response.body, 'gcb-index-course')
+        response = self.post('dashboard?action=index_course',
+                             {'xsrf_token': index_token})
+        self.execute_all_deferred_tasks()
+
+        # This matches an announcement in the Power Searching course
+        response = self.get(
+            'search?query=Certificates%20qualifying%20participants')
+        self.assertIn('gcb-search-result', response.body)
+        self.assertIn('announcements#', response.body)
+
+        # The draft announcement in Power Searching should not be indexed
+        response = self.get('search?query=Welcome%20to%20the%20final%20class')
+        self.assertNotIn('gcb-search-result', response.body)
+        self.assertNotIn('announcements#', response.body)
