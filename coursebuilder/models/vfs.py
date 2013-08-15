@@ -153,13 +153,8 @@ class LocalReadOnlyFileSystem(object):
         for dir_name in dir_names:
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
-        jinja_environment = jinja2.Environment(
-            autoescape=True, finalize=jinja_utils.finalize,
-            extensions=['jinja2.ext.i18n'],
+        return jinja_utils.create_jinja_environment(
             loader=jinja2.FileSystemLoader(physical_dir_names))
-        jinja_environment.filters['js_string'] = jinja_utils.js_string
-
-        return jinja_environment
 
     def is_read_write(self):
         return False
@@ -507,15 +502,9 @@ class DatastoreBackedFileSystem(object):
         return sorted(list(result))
 
     def get_jinja_environ(self, dir_names):
-
-        jinja_environment = jinja2.Environment(
-            autoescape=True, finalize=jinja_utils.finalize,
-            extensions=['jinja2.ext.i18n'],
+        return jinja_utils.create_jinja_environment(
             loader=VirtualFileSystemTemplateLoader(
                 self, self._logical_home_folder, dir_names))
-        jinja_environment.filters['js_string'] = jinja_utils.js_string
-
-        return jinja_environment
 
     def is_read_write(self):
         return True
