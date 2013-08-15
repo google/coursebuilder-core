@@ -291,7 +291,8 @@ def create_course_registry():
             'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value}))
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
-        description='URL for the preview video shown on the course homepage.'))
+        description='URL for the preview video shown on the course homepage '
+        '(e.g. http://www.youtube.com/embed/Kdg2drcUjYI ).'))
     homepage_opts.add_property(SchemaField(
         'course:main_image:url', 'Course Image', 'string', optional=True,
         description='URL for the preview image shown on the course homepage. '
