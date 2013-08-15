@@ -1,7 +1,7 @@
 /**
  * Define the methods of the GCB rich text editor here.
  */
-function getGcbRteDefs(env, Dom, Editor) {
+function getGcbRteDefs(env, Dom, Editor, Resize) {
   return {
     setOptions: function(options) {
       GcbRteField.superclass.setOptions.call(this, options);
@@ -56,13 +56,45 @@ function getGcbRteDefs(env, Dom, Editor) {
       this.divEl.appendChild(toggle);
     },
 
+    _addResize: function() {
+      var that = this;
+      var editor = this.editor;
+      var currentValue;
+      this.resize = new Resize(this.editor.get('element_cont').get('element'),
+          {
+            handles: ['br'],
+            minHeight: 300,
+            minWidth: 400,
+            proxy: true,
+            setSize: false
+          }
+      );
+      this.resize.on('startResize', function() {
+        currentValue = that.getValue();
+        editor.hide();
+        editor.set('disabled', true);
+      });
+      this.resize.on('resize', function(args) {
+        that.setValue(currentValue);
+        var h = args.height;
+        var th = (editor.toolbar.get('element').clientHeight + 2);
+        editor.set('width', args.width + 'px');
+        editor.set('height', (h - th) + 'px');
+        editor.set('disabled', false);
+        editor.show();
+      });
+    },
+
+    _removeResize: function() {
+      if (this.resize) {
+        this.resize.destroy();
+      }
+    },
+
     showNewRte: function() {
       var that = this;
       var options = this.options;
       var _def = {
-        // YUI will set the style.width attribute on the container, so provide
-        // a broken value so this can be overriden by CSS class.
-        width: 'broken',
         autoHeight: true,
         focusAtStart: true,
       };
@@ -94,6 +126,10 @@ function getGcbRteDefs(env, Dom, Editor) {
         return html;
       };
       editor._fixNodes = function() {};
+
+      editor.on('editorContentLoaded', function() {
+        that._addResize();
+      });
 
       // Set up a button to add custom tags
       if (options.supportCustomTags) {
@@ -151,6 +187,8 @@ function getGcbRteDefs(env, Dom, Editor) {
         this.getValue = this._cbGetValue;
       }
 
+      this._addResize();
+
       Dom.setStyle(rteDiv, 'position', 'static');
       Dom.setStyle(rteDiv, 'top', '0');
       Dom.setStyle(rteDiv, 'left', '0');
@@ -176,6 +214,8 @@ function getGcbRteDefs(env, Dom, Editor) {
       this.getValue = function() {
         return textArea.value;
       };
+
+      this._removeResize();
 
       Dom.setStyle(rteDiv, 'position', 'absolute');
       Dom.setStyle(rteDiv, 'top', '-9999px');

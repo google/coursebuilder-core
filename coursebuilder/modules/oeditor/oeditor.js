@@ -174,12 +174,12 @@ function onPageLoad(env) {
    */
   YUI.add("gcb-rte",
     function(Y) {
-      Y.extend(GcbRteField, Y.inputEx.Field,
-          getGcbRteDefs(env, Y.DOM, Y.YUI2.widget.SimpleEditor));
+      Y.extend(GcbRteField, Y.inputEx.Field, getGcbRteDefs(
+          env, Y.DOM, Y.YUI2.widget.SimpleEditor, Y.YUI2.util.Resize));
       Y.inputEx.registerType("html", GcbRteField, []);
     },
     '3.1.0',
-    {requires: ['inputex-field', 'yui2-editor']}
+    {requires: ['inputex-field', 'yui2-editor', 'yui2-resize']}
   );
 
   YUI(getYuiConfig(env.bundle_lib_files)).use(
