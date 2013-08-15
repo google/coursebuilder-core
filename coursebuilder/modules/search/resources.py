@@ -319,9 +319,6 @@ class LessonResource(Resource):
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
-                search.TextField(name='unit_id', value=unicode(self.unit_id)),
-                search.TextField(name='lesson_id',
-                                 value=unicode(self.lesson_id)),
                 search.TextField(name='url', value=(
                     'unit?unit=%s&lesson=%s' %
                     (self.unit_id, self.lesson_id))),
@@ -337,16 +334,13 @@ class LessonResult(Result):
         super(LessonResult, self).__init__()
         self.url = self._get_returned_field(search_result, 'url')
         self.title = self._get_returned_field(search_result, 'title')
-        self.unit_id = self._get_returned_field(search_result, 'unit_id')
-        self.lesson_id = self._get_returned_field(search_result, 'lesson_id')
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
         # I18N: Displayed in search results; denotes a lesson link.
         lesson_string = gettext.gettext('Lesson')
         template_value = {
-            'result_title': '%s - %s %s.%s' % (self.title, lesson_string,
-                                               self.unit_id, self.lesson_id),
+            'result_title': '%s - %s' % (self.title, lesson_string),
             'result_url': self.url,
             'result_snippet': jinja2.Markup(self.snippet)
         }
