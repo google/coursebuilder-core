@@ -600,10 +600,9 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
         upload.file.seek(0)
         if len(content) > MAX_ASSET_UPLOAD_SIZE_K * 1024:
-            transforms.send_json_response(
+            transforms.send_json_file_upload_response(
                 self, 403,
-                'Max allowed file upload size is %dK' % MAX_ASSET_UPLOAD_SIZE_K,
-                None)
+                'Max allowed file upload size is %dK' % MAX_ASSET_UPLOAD_SIZE_K)
             return
 
         fs.put(path, upload.file)
