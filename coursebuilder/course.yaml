@@ -75,6 +75,9 @@ course:
   # available locales.
   locale: 'en_US'
 
+  # Whether the course is open to the students.
+  now_available: true
+
   # Whether the course material can be accessed without requiring users to log
   # in or register.
   browsable: true
