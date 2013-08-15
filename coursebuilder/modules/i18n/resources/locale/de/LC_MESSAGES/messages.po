@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-06-27 12:43-0700\n"
+"POT-Creation-Date: 2013-07-01 17:32-0700\n"
 "PO-Revision-Date: 2013-06-27 12:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
@@ -406,19 +406,26 @@ msgstr " Die Antwort ist teilweise richtig. "
 msgid " Your score is: "
 msgstr " Sie haben folgende Bewertung erhalten: "
 
+#. Text shown in parentheses next to the student's email address at the
+#. top-right of all course pages, if the student is logged in but not
+#. registered for the course he/she is currently browsing.
+#: experimental/coursebuilder/views/base.html:170
+msgid "Not registered"
+msgstr ""
+
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:171
+#: experimental/coursebuilder/views/base.html:175
 msgid "Logout"
 msgstr "Abmelden"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:177
+#: experimental/coursebuilder/views/base.html:181
 msgid "Login"
 msgstr "Anmelden"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:214
+#: experimental/coursebuilder/views/base.html:218
 msgid "Privacy & Terms"
 msgstr "Datenschutzerklärung und Nutzungsbedingungen"
 
