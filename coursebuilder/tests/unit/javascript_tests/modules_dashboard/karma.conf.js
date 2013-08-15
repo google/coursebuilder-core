@@ -1,18 +1,10 @@
-// Karma configuration
-// Generated on Mon Mar 25 2013 18:28:05 GMT-0700 (PDT)
-
-
-// base path, that will be used to resolve files and exclude
-basePath = '../../';
+basePath = '../../../..';
 
 var YUI_BASE = process.env.YUI_BASE;
-var KARMA_LIB = process.env.KARMA_LIB;
 
-// list of files / patterns to load in the browser
 files = [
   JASMINE,
   JASMINE_ADAPTER,
-  'assets/lib/jquery-1.7.2.min.js',
   YUI_BASE + '/yui/yui.js',
   YUI_BASE + '/yui-base/yui-base.js',
   YUI_BASE + '/node-core/node-core.js',
@@ -50,69 +42,17 @@ files = [
   YUI_BASE + '/event-delegate/event-delegate.js',
   YUI_BASE + '/node-event-delegate/node-event-delegate.js',
   YUI_BASE + '/dom-style/dom-style.js',
-  KARMA_LIB + '/jasmine-jquery-1.5.2.js',
 
-  // Load the test files
-  'tests/unit/*.js',
-  {pattern: 'tests/unit/*.html', watched: true, included: false, served: true},
+  // Test files
+  'tests/unit/javascript_tests/modules_dashboard/*.js',
 
   // Files to test
-  'assets/lib/butterbar.js',
-  'modules/assessment_tags/resources/grading_lib.js',
   'modules/dashboard/mc_question_editor_lib.js',
-  'modules/oeditor/oeditor.js',
-  'modules/oeditor/popup.js',
-  'modules/oeditor/rte.js'
 ];
 
-
-// list of files to exclude
 exclude = [
-  'tests/unit/karma.conf.js'
+  '**/karma.conf.js'
 ];
 
-
-// test results reporter to use
-// possible values: 'dots', 'progress', 'junit'
-reporters = ['progress'];
-
-
-// web server port
-port = 9876;
-
-
-// cli runner port
-runnerPort = 9100;
-
-
-// enable / disable colors in the output (reporters and logs)
-colors = true;
-
-
-// level of logging
-// possible values: LOG_DISABLE || LOG_ERROR || LOG_WARN || LOG_INFO || LOG_DEBUG
-logLevel = LOG_INFO;
-
-
-// enable / disable watching file and executing tests whenever any file changes
-autoWatch = true;
-
-
-// Start these browsers, currently available:
-// - Chrome
-// - ChromeCanary
-// - Firefox
-// - Opera
-// - Safari (only Mac)
-// - PhantomJS
-// - IE (only Windows)
 browsers = ['PhantomJS'];
-
-
-// If browser does not capture in given timeout [ms], kill it
-captureTimeout = 60000;
-
-
-// Continuous Integration mode
-// if true, it capture browsers, run tests and exit
 singleRun = true;

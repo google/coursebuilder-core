@@ -14,7 +14,8 @@ describe('assessment tags', function() {
   }
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/modules_assessment_tags.html');
+    loadFixtures(
+        'tests/unit/javascript_tests/modules_assessment_tags/fixture.html');
   });
   describe('base question methods', function() {
     var bq;

@@ -3,7 +3,8 @@ describe('ButterBar', function() {
 
   beforeEach(function() {
     jasmine.getFixtures().fixturesPath = 'base/';
-    loadFixtures('tests/unit/assets_lib_butterbar.html');
+    loadFixtures(
+        'tests/unit/javascript_tests/assets_lib_butterbar/fixture.html');
     popup = $('#gcb-butterbar-top').get(0);
     message = $('#gcb-butterbar-message').get(0);
     close = $('#gcb-butterbar-close').get(0);
