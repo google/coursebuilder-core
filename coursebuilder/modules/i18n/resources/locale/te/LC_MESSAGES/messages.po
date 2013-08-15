@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-07-31 19:28-0700\n"
-"PO-Revision-Date: 2013-06-27 12:43-0700\n"
+"POT-Creation-Date: 2013-08-06 18:01-0700\n"
+"PO-Revision-Date: 2013-08-06 18:01-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: te <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -22,7 +22,7 @@ msgstr ""
 #. does not have JavaScript enabled.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:11
 msgid " JavaScript should be enabled to grade this question. "
-msgstr ""
+msgstr " ఈ ప్రశ్నకు గ్రేడ్ ఇవ్వడానికి జావాస్క్రిప్ట్ ప్రారంభించబడి ఉండాలి. "
 
 #. Alt text for image representing student progress.
 #. Text shown after an assignment whose review has been completed.
@@ -57,19 +57,33 @@ msgstr "పూర్తయింది"
 msgid "Not yet started"
 msgstr "ఇంకా ప్రారంభించలేదు"
 
+#. Displayed next to a question. Indicates that the question is worth 1 point.
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
+msgid "1 point"
+msgstr ""
+
+#. Displayed next to a question to indicate its point value. In this particular
+#. message, the number of points will be plural.
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:13
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
+#, python-format
+msgid "%(points)s points"
+msgstr ""
+
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
-#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:22
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:34
 #: experimental/coursebuilder/modules/assessment_tags/templates/question_group.html:20
-#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:29
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:41
 #: experimental/coursebuilder/views/base.html:24
 msgid " Check Answer "
 msgstr " సమాధానాన్ని తనిఖీ చేయండి "
 
 #. Text on the button for requesting a hint to a question.
-#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:20
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:32
 msgid " Hint "
-msgstr ""
+msgstr " సూచన "
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
@@ -78,13 +92,13 @@ msgstr "కోర్సులను విశ్లేషించండి"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:48
+#: experimental/coursebuilder/views/base_course.html:62
 msgid "My Courses"
 msgstr "నా కోర్సులు"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
-#: experimental/coursebuilder/views/base_course.html:53
+#: experimental/coursebuilder/views/base_course.html:67
 msgid "Profile"
 msgstr "ప్రొఫైల్"
 
@@ -145,9 +159,9 @@ msgstr "నమోదు చేసుకున్న కోర్సులు"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:60
+#: experimental/coursebuilder/views/base_course.html:74
 msgid "Progress"
-msgstr "ప్రోగ్రెస్"
+msgstr "పురోగతి"
 
 #. Text on the student profile page which on clicking will take you to unenroll
 #. course page.
@@ -171,93 +185,95 @@ msgstr "పేరును మార్చు"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:328
+#: experimental/coursebuilder/modules/search/resources.py:346
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "పాఠం"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:665
+#: experimental/coursebuilder/modules/search/resources.py:694
 msgid "Announcement"
-msgstr ""
+msgstr "ప్రకటన"
 
 #. Title of the webpage.
 #: experimental/coursebuilder/modules/search/search.html:5
 msgid "Search"
-msgstr ""
-
-#. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.html:12
-msgid "Search is currently unavailable."
-msgstr ""
+msgstr "శోధన"
 
 #. Status message above search results.
-#: experimental/coursebuilder/modules/search/search.html:18
+#: experimental/coursebuilder/modules/search/search.html:17
 #, python-format
 msgid "Results for \"%(query)s\""
-msgstr ""
+msgstr "\"%(query)s\" కోసం ఫలితాలు"
 
 #. The amount of time the search took, displayed above search results.
-#: experimental/coursebuilder/modules/search/search.html:21
+#: experimental/coursebuilder/modules/search/search.html:20
 #, python-format
 msgid "Search took %(num_seconds)s seconds."
-msgstr ""
+msgstr "శోధించడానికి %(num_seconds)s సెకన్లు పట్టింది."
 
 #. Link to the previous page.
-#: experimental/coursebuilder/modules/search/search.html:32
+#: experimental/coursebuilder/modules/search/search.html:31
 msgid "Previous"
-msgstr ""
+msgstr "మునుపటి"
 
 #. Indicator for current page in search results.
-#: experimental/coursebuilder/modules/search/search.html:37
+#: experimental/coursebuilder/modules/search/search.html:36
 #, python-format
 msgid "Page %(number)s of %(total)s"
-msgstr ""
+msgstr "%(total)sలో %(number)sవ పేజీ"
 
 #. Link to the next page.
-#: experimental/coursebuilder/modules/search/search.html:43
+#: experimental/coursebuilder/modules/search/search.html:42
 msgid "Next"
-msgstr ""
+msgstr "తదుపరి"
 
 #. The search returned no results.
-#: experimental/coursebuilder/modules/search/search.html:50
+#: experimental/coursebuilder/modules/search/search.html:49
 #, python-format
 msgid "No results for \"%(query)s\""
-msgstr ""
+msgstr "\"%(query)s\" కోసం ఫలితాలు లేవు"
+
+#. Message displayed on search results page when error occurs.
+#: experimental/coursebuilder/modules/search/search.py:75
+msgid "Search is currently unavailable."
+msgstr "శోధన ప్రస్తుతం అందుబాటులో లేదు."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
 #: experimental/coursebuilder/modules/upload/templates/form.html:17
 msgid "You have already submitted; submit again to replace your previous entry."
 msgstr ""
+"మీరు ఇప్పటికే సమర్పించారు; మీ మునుపటి నమోదును భర్తీ చేయడానికి మళ్లీ "
+"సమర్పించండి."
 
 #. Warning shown to the user telling them that the file they select for upload
 #. should be at most 1MB in size
 #: experimental/coursebuilder/modules/upload/templates/form.html:22
 msgid "Maximum file size is 1MB."
-msgstr ""
+msgstr "గరిష్ట ఫైల్ పరిమాణం 1MB."
 
 #. Shown when a user submits a file successfully.
 #: experimental/coursebuilder/modules/upload/templates/result.html:7
 msgid "Your file has been successfully uploaded."
-msgstr ""
+msgstr "మీ ఫైల్ విజయవంతంగా అప్‌లోడ్ చేయబడింది."
 
 #. Shown to tell the user an error occurred during submission.
 #: experimental/coursebuilder/modules/upload/templates/result.html:10
 msgid "An error occurred."
-msgstr ""
+msgstr "లోపం సంభవించింది."
 
 #. Text of the link to take the user back to the previous page.
 #: experimental/coursebuilder/modules/upload/templates/result.html:15
 msgid "Return to the previous page."
-msgstr ""
+msgstr "మునుపటి పేజీకి తిరిగి వెళ్లండి."
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:18
 msgid "Go back and try again."
-msgstr ""
+msgstr "వెనుకకు వెళ్లి, మళ్లీ ప్రయత్నించండి."
 
 #. Title of the webpage.
 #. Navigation breadcrumb.
@@ -273,7 +289,7 @@ msgstr "యూనిట్"
 #. Navbar tab.
 #: experimental/coursebuilder/views/activity.html:25
 #: experimental/coursebuilder/views/base_course.html:7
-#: experimental/coursebuilder/views/base_course.html:37
+#: experimental/coursebuilder/views/base_course.html:39
 #: experimental/coursebuilder/views/unit.html:32
 msgid "Course"
 msgstr "కోర్సు"
@@ -291,7 +307,6 @@ msgstr "కార్యాచరణ"
 #. A row in the course schedule.
 #: experimental/coursebuilder/views/activity.html:41
 #: experimental/coursebuilder/views/course.html:142
-#: experimental/coursebuilder/views/course.html:173
 #: experimental/coursebuilder/views/preview.html:34
 #: experimental/coursebuilder/views/unit.html:44
 #, python-format
@@ -338,7 +353,7 @@ msgstr "ముగింపు"
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/announcements.html:5
-#: experimental/coursebuilder/views/base_course.html:33
+#: experimental/coursebuilder/views/base_course.html:35
 msgid "Announcements"
 msgstr "ప్రకటనలు"
 
@@ -540,7 +555,7 @@ msgstr " ఇది మీ స్కోర్: "
 #. registered for the course he/she is currently browsing.
 #: experimental/coursebuilder/views/base.html:170
 msgid "Not registered"
-msgstr ""
+msgstr "నమోదు చేసుకోలేదు"
 
 #. Navbar text.
 #: experimental/coursebuilder/views/base.html:175
@@ -560,13 +575,13 @@ msgstr "గోప్యత & నిబంధనలు"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base_course.html:42
+#: experimental/coursebuilder/views/base_course.html:44
 #: experimental/coursebuilder/views/forum.html:5
 msgid "Forum"
 msgstr "ఫోరమ్"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:65
+#: experimental/coursebuilder/views/base_course.html:79
 msgid "Registration"
 msgstr "నమోదు"
 
@@ -894,12 +909,12 @@ msgstr "మొత్తం కోర్సు స్కోర్"
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/views/student_profile.html:5
 msgid "Course Progress"
-msgstr "కోర్సు ప్రోగ్రెస్"
+msgstr "కోర్సు పురోగతి"
 
 #. Title of the student progress page.
 #: experimental/coursebuilder/views/student_profile.html:17
 msgid "Student Progress"
-msgstr "విద్యార్థి ప్రోగ్రెస్"
+msgstr "విద్యార్థి పురోగతి"
 
 #. Shown on the student profile page.
 #: experimental/coursebuilder/views/student_profile.html:46

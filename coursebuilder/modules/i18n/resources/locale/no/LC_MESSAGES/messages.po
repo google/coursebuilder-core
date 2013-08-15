@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2013-07-31 19:28-0700\n"
-"PO-Revision-Date: 2013-06-27 12:43-0700\n"
+"POT-Creation-Date: 2013-08-06 18:01-0700\n"
+"PO-Revision-Date: 2013-08-06 18:01-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: no <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -22,7 +22,7 @@ msgstr ""
 #. does not have JavaScript enabled.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:11
 msgid " JavaScript should be enabled to grade this question. "
-msgstr ""
+msgstr " JavaScript må være aktivert for å rangere dette spørsmålet. "
 
 #. Alt text for image representing student progress.
 #. Text shown after an assignment whose review has been completed.
@@ -57,19 +57,33 @@ msgstr "Fullført"
 msgid "Not yet started"
 msgstr "Ikke startet ennå"
 
+#. Displayed next to a question. Indicates that the question is worth 1 point.
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:10
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:10
+msgid "1 point"
+msgstr ""
+
+#. Displayed next to a question to indicate its point value. In this particular
+#. message, the number of points will be plural.
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:13
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:13
+#, python-format
+msgid "%(points)s points"
+msgstr ""
+
 #. Text on the button for checking a student's answer.
 #. Text on the button for checking an answer.
-#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:22
+#: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:34
 #: experimental/coursebuilder/modules/assessment_tags/templates/question_group.html:20
-#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:29
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:41
 #: experimental/coursebuilder/views/base.html:24
 msgid " Check Answer "
 msgstr " Sjekk svaret "
 
 #. Text on the button for requesting a hint to a question.
-#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:20
+#: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:32
 msgid " Hint "
-msgstr ""
+msgstr " Hint "
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
@@ -78,13 +92,13 @@ msgstr "Utforsk kurs"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:48
+#: experimental/coursebuilder/views/base_course.html:62
 msgid "My Courses"
 msgstr "Mine kurs"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
-#: experimental/coursebuilder/views/base_course.html:53
+#: experimental/coursebuilder/views/base_course.html:67
 msgid "Profile"
 msgstr "Profil"
 
@@ -145,7 +159,7 @@ msgstr "Kurs du er påmeldt"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:60
+#: experimental/coursebuilder/views/base_course.html:74
 msgid "Progress"
 msgstr "Fremdrift"
 
@@ -171,93 +185,95 @@ msgstr "Endre navn"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:328
+#: experimental/coursebuilder/modules/search/resources.py:346
 #: experimental/coursebuilder/views/activity.html:34
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Lesson"
 msgstr "Leksjon"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:665
+#: experimental/coursebuilder/modules/search/resources.py:694
 msgid "Announcement"
-msgstr ""
+msgstr "Kunngjøring"
 
 #. Title of the webpage.
 #: experimental/coursebuilder/modules/search/search.html:5
 msgid "Search"
-msgstr ""
-
-#. Message displayed on search results page when error occurs.
-#: experimental/coursebuilder/modules/search/search.html:12
-msgid "Search is currently unavailable."
-msgstr ""
+msgstr "Søk"
 
 #. Status message above search results.
-#: experimental/coursebuilder/modules/search/search.html:18
+#: experimental/coursebuilder/modules/search/search.html:17
 #, python-format
 msgid "Results for \"%(query)s\""
-msgstr ""
+msgstr "Resultater for «%(query)s»"
 
 #. The amount of time the search took, displayed above search results.
-#: experimental/coursebuilder/modules/search/search.html:21
+#: experimental/coursebuilder/modules/search/search.html:20
 #, python-format
 msgid "Search took %(num_seconds)s seconds."
-msgstr ""
+msgstr "Søket tok %(num_seconds)s sekunder."
 
 #. Link to the previous page.
-#: experimental/coursebuilder/modules/search/search.html:32
+#: experimental/coursebuilder/modules/search/search.html:31
 msgid "Previous"
-msgstr ""
+msgstr "Forrige"
 
 #. Indicator for current page in search results.
-#: experimental/coursebuilder/modules/search/search.html:37
+#: experimental/coursebuilder/modules/search/search.html:36
 #, python-format
 msgid "Page %(number)s of %(total)s"
-msgstr ""
+msgstr "Side %(number)s av %(total)s"
 
 #. Link to the next page.
-#: experimental/coursebuilder/modules/search/search.html:43
+#: experimental/coursebuilder/modules/search/search.html:42
 msgid "Next"
-msgstr ""
+msgstr "Neste"
 
 #. The search returned no results.
-#: experimental/coursebuilder/modules/search/search.html:50
+#: experimental/coursebuilder/modules/search/search.html:49
 #, python-format
 msgid "No results for \"%(query)s\""
-msgstr ""
+msgstr "Ingen resultater for «%(query)s»"
+
+#. Message displayed on search results page when error occurs.
+#: experimental/coursebuilder/modules/search/search.py:75
+msgid "Search is currently unavailable."
+msgstr "Søk er for øyeblikket utilgjengelig."
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
 #: experimental/coursebuilder/modules/upload/templates/form.html:17
 msgid "You have already submitted; submit again to replace your previous entry."
 msgstr ""
+"Du har allerede sendt inn – send inn på nytt for å erstatte det forrige "
+"bidraget ditt."
 
 #. Warning shown to the user telling them that the file they select for upload
 #. should be at most 1MB in size
 #: experimental/coursebuilder/modules/upload/templates/form.html:22
 msgid "Maximum file size is 1MB."
-msgstr ""
+msgstr "Maksimal filstørrelse er 1 MB."
 
 #. Shown when a user submits a file successfully.
 #: experimental/coursebuilder/modules/upload/templates/result.html:7
 msgid "Your file has been successfully uploaded."
-msgstr ""
+msgstr "Filen din er lastet opp."
 
 #. Shown to tell the user an error occurred during submission.
 #: experimental/coursebuilder/modules/upload/templates/result.html:10
 msgid "An error occurred."
-msgstr ""
+msgstr "Det oppsto en feil."
 
 #. Text of the link to take the user back to the previous page.
 #: experimental/coursebuilder/modules/upload/templates/result.html:15
 msgid "Return to the previous page."
-msgstr ""
+msgstr "Gå tilbake til forrige side."
 
 #. Text of the link to take the user back to the previous page so they can try
 #. submitting again.
 #: experimental/coursebuilder/modules/upload/templates/result.html:18
 msgid "Go back and try again."
-msgstr ""
+msgstr "Gå tilbake og prøv på nytt."
 
 #. Title of the webpage.
 #. Navigation breadcrumb.
@@ -273,7 +289,7 @@ msgstr "Kursdel"
 #. Navbar tab.
 #: experimental/coursebuilder/views/activity.html:25
 #: experimental/coursebuilder/views/base_course.html:7
-#: experimental/coursebuilder/views/base_course.html:37
+#: experimental/coursebuilder/views/base_course.html:39
 #: experimental/coursebuilder/views/unit.html:32
 msgid "Course"
 msgstr "Kurs"
@@ -291,7 +307,6 @@ msgstr "Aktivitet"
 #. A row in the course schedule.
 #: experimental/coursebuilder/views/activity.html:41
 #: experimental/coursebuilder/views/course.html:142
-#: experimental/coursebuilder/views/course.html:173
 #: experimental/coursebuilder/views/preview.html:34
 #: experimental/coursebuilder/views/unit.html:44
 #, python-format
@@ -338,7 +353,7 @@ msgstr "Slutt"
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/announcements.html:5
-#: experimental/coursebuilder/views/base_course.html:33
+#: experimental/coursebuilder/views/base_course.html:35
 msgid "Announcements"
 msgstr "Kunngjøringer"
 
@@ -539,7 +554,7 @@ msgstr " Poengsummen din er: "
 #. registered for the course he/she is currently browsing.
 #: experimental/coursebuilder/views/base.html:170
 msgid "Not registered"
-msgstr ""
+msgstr "Ikke registrert"
 
 #. Navbar text.
 #: experimental/coursebuilder/views/base.html:175
@@ -559,13 +574,13 @@ msgstr "Personvern og vilkår"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base_course.html:42
+#: experimental/coursebuilder/views/base_course.html:44
 #: experimental/coursebuilder/views/forum.html:5
 msgid "Forum"
 msgstr "Forum"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:65
+#: experimental/coursebuilder/views/base_course.html:79
 msgid "Registration"
 msgstr "Registrering"
 
@@ -575,7 +590,7 @@ msgid ""
 "Thank you for registering for the course. Click the Announcements tab for"
 " important information."
 msgstr ""
-"Takk for at du meldte deg på kurset. Klikk på Kunngjøringer -fanen for "
+"Takk for at du meldte deg på kurset. Klikk på Kunngjøringer-fanen for "
 "viktig informasjon."
 
 #. This is shown to the student in a popup if registrations for the course are
@@ -954,5 +969,5 @@ msgstr "Nei"
 #. to grade his/her answers.
 #: experimental/coursebuilder/views/unit.html:97
 msgid "Grade Questions"
-msgstr "Rangér spørsmål"
+msgstr "Bedøm spørsmål"
 
