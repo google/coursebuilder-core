@@ -45,6 +45,7 @@ VALID_PAGE = """<html>
                     <a>Cogito ergo sum.</a>
                     <a href="//partial.null/"> Partial link </a>
                     <a href="ftp://absolute.null/"> Absolute link </a>
+                    <a href="http://pdf.null/"> PDF </a>
                     <a href="http://link.null/"> Link </a>
                   </body>
                 </html>"""
@@ -70,6 +71,8 @@ UNICODE_PAGE = """<html>
                        y∈ y ⇔ ~(y∈ y)
                      </body>
                    </html>"""
+
+PDF_URL = 'http://pdf.null/'
 
 XML_DOC_URL = 'http://xml.null/'
 XML_DOC = """<document attribute="foo">
@@ -123,16 +126,19 @@ class SearchTestBase(actions.TestBase):
              (VALID_PAGE_ROBOTS, 'text/html'),
 
              LINKED_PAGE_URL + '$':
-             (LINKED_PAGE, 'text/html charset=utf-8'),
+             (LINKED_PAGE, 'text/html'),
 
              urlparse.urljoin(LINKED_PAGE_URL, '/robots.txt'):
              (VALID_PAGE_ROBOTS, 'text/html'),
 
              SECOND_LINK_PAGE_URL + '$':
-             (SECOND_LINK_PAGE, 'text/html charset=utf-8'),
+             (SECOND_LINK_PAGE, 'text/html'),
 
              urlparse.urljoin(SECOND_LINK_PAGE_URL, '/robots.txt'):
              (VALID_PAGE_ROBOTS, 'text/html'),
+
+             PDF_URL:
+             (VALID_PAGE, 'application/pdf'),
 
              UNICODE_PAGE_URL + '$':
              (UNICODE_PAGE, 'text/html charset=utf-8'),
@@ -234,7 +240,7 @@ class ParserTests(SearchTestBase):
         self.assertIn('http://valid.null/index.php?query=bibi%20quid', links)
         self.assertIn('http://partial.null/', links)
         self.assertIn('ftp://absolute.null/', links)
-        self.assertEqual(len(links), 4)
+        self.assertEqual(len(links), 5)
 
     def test_unopened_tag(self):
         self.parser = resources.ResourceHTMLParser('')

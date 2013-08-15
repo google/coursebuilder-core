@@ -173,9 +173,14 @@ class Resource(object):
     SNIPPETED_FIELDS = []
 
     @classmethod
-    def get_all(cls, course):  # pylint: disable-msg=unused-argument
-        """Return a list of objects of type cls in the course."""
-        return []
+    def generate_all(cls, course):  # pylint: disable-msg=unused-argument
+        """A generator returning objects of type cls in the course."""
+
+        # For the superclass, return a generator which immediately halts. All
+        # implementations in subclasses must also be generators for memory-
+        # management reasons.
+        return
+        yield  # pylint: disable-msg=unreachable
 
     def get_document(self):
         """Return a search.Document to be indexed."""
@@ -226,9 +231,9 @@ class LessonResource(Resource):
     SNIPPETED_FIELDS = ['content']
 
     @classmethod
-    def get_all(cls, course):
-        return [LessonResource(lesson) for lesson in
-                course.get_lessons_for_all_units()]
+    def generate_all(cls, course):
+        for lesson in course.get_lessons_for_all_units():
+            yield LessonResource(lesson)
 
     def __init__(self, lesson):
         super(LessonResource, self).__init__()
@@ -294,7 +299,7 @@ class ExternalLinkResource(Resource):
 
     # TODO(emichael): Allow the user to turn off external links in the dashboard
 
-    def __init__(self, url, distance):
+    def __init__(self, url):
         # distance is the distance from the course material in the link graph,
         # where a lesson notes page has a distance of 0
         super(ExternalLinkResource, self).__init__()
@@ -303,7 +308,6 @@ class ExternalLinkResource(Resource):
         parser = get_parser_for_html(url)
         self.content = parser.get_content()
         self.title = parser.get_title()
-        self.distance = distance
         self.links = parser.get_links()
 
     def get_document(self):
@@ -343,23 +347,23 @@ class YouTubeFragmentResource(Resource):
     SNIPPETED_FIELDS = ['content']
 
     @classmethod
-    def get_all(cls, course):
-        """Get all of the transcript fragment docs for a course."""
+    def generate_all(cls, course):
         # TODO(emichael): When announcements are implemented, grab the videos
         # in custom tags there.
-        fragments = []
         for lesson in course.get_lessons_for_all_units():
             if lesson.video:
-                fragments += cls._get_fragments_for_video(
-                    lesson.video, lesson.lesson_id, lesson.unit_id)
+                for fragment in cls._get_fragments_for_video(
+                        lesson.video, lesson.lesson_id, lesson.unit_id):
+                    yield fragment
+
             match = re.search(
                 r"""<[ ]*gcb-youtube[^>]+videoid=['"]([^'"]+)['"]""",
                 lesson.objectives)
             if match:
                 for video_id in match.groups():
-                    fragments += cls._get_fragments_for_video(
-                        video_id, lesson.lesson_id, lesson.unit_id)
-        return fragments
+                    for fragment in cls._get_fragments_for_video(
+                            video_id, lesson.lesson_id, lesson.unit_id):
+                        yield fragment
 
     @classmethod
     def _get_fragments_for_video(cls, video_id, lesson_id, unit_id):
@@ -489,13 +493,11 @@ class AnnouncementResource(Resource):
     SNIPPETED_FIELDS = ['content']
 
     @classmethod
-    def get_all(cls, course):
-        resources = []
+    def generate_all(cls, course):
         if announcements.custom_module.enabled:
             for entity in announcements.AnnouncementEntity.get_announcements():
                 if not entity.is_draft:
-                    resources.append(AnnouncementResource(entity))
-        return resources
+                    yield AnnouncementResource(entity)
 
     def __init__(self, announcement):
         super(AnnouncementResource, self).__init__()
@@ -549,7 +551,7 @@ RESOURCE_TYPES = [
 def get_returned_fields():
     """Returns a list of fields that should be returned in a search result."""
     returned_fields = set(['type'])
-    for (resource_type, unused_result_type) in RESOURCE_TYPES:
+    for resource_type, unused_result_type in RESOURCE_TYPES:
         returned_fields |= set(resource_type.RETURNED_FIELDS)
     return list(returned_fields)
 
@@ -557,46 +559,46 @@ def get_returned_fields():
 def get_snippeted_fields():
     """Returns a list of fields that should be snippeted in a search result."""
     snippeted_fields = set()
-    for (resource_type, unused_result_type) in RESOURCE_TYPES:
+    for resource_type, unused_result_type in RESOURCE_TYPES:
         snippeted_fields |= set(resource_type.SNIPPETED_FIELDS)
     return list(snippeted_fields)
 
 
-def _add_link_to_queue(link, new_distance, queue, current_link_set):
-    if new_distance <= 1 and link not in current_link_set:
-        queue.put(ExternalLinkResource(link, new_distance))
-        current_link_set.add(link)
+def generate_all_documents(course):
+    """A generator for all docs for a given course."""
+    link_dist = {}
 
+    for resource_type, unused_result_type in RESOURCE_TYPES:
+        for resource in resource_type.generate_all(course):
 
-def get_all_documents(course):
-    """Return a list of docs for a given course."""
-    resource_queue = Queue.LifoQueue()
-    external_links = set()
+            if isinstance(resource, LessonResource) and resource.notes:
+                link_dist[resource.notes] = 0
+            for link in resource.get_links():
+                link_dist[link] = 1
 
-    for (resource_type, unused_result_type) in RESOURCE_TYPES:
-        for resource in resource_type.get_all(course):
-            resource_queue.put(resource)
+            yield resource.get_document()
 
-    # Build docs and get linked pages
-    docs = []
-    while not resource_queue.empty():
-        item = resource_queue.get()
-        docs.append(item.get_document())
+    link_queue = Queue.LifoQueue()
+    for link, dist in link_dist.items():
+        link_queue.put(link)
 
-        # Lesson notes pages should be treated as degree 0 page links
-        if isinstance(item, LessonResource) and item.notes:
-            _add_link_to_queue(item.notes, 0, resource_queue, external_links)
+    while not link_queue.empty():
+        link = link_queue.get()
+        dist = link_dist[link]
 
-        if isinstance(item, ExternalLinkResource):
-            new_distance = item.distance + 1
-        else:
-            new_distance = 1
+        if dist <= 1:
+            try:
+                resource = ExternalLinkResource(link)
+            except URLNotParseableException:
+                continue
 
-        for link in item.get_links():
-            _add_link_to_queue(link, new_distance, resource_queue,
-                               external_links)
+            else:
+                for new_link in resource.get_links():
+                    if new_link not in link_dist:
+                        link_dist[new_link] = dist + 1
+                        link_queue.put(new_link)
 
-    return docs
+                yield resource.get_document()
 
 
 def process_results(results):

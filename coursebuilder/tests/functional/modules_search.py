@@ -221,6 +221,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertIn('gcb-search-result', response.body)
         self.assertIn(search_unit_test.VALID_PAGE_URL, response.body)
         self.assertIn(objectives_link, response.body)
+        self.assertNotIn(search_unit_test.PDF_URL, response.body)
 
         # If this test fails, indexing will crawl the entire web
         response = self.get('/test/search?query=ABORT')

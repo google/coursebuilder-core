@@ -68,7 +68,7 @@ def index_all_docs(course):
     index = get_index(course)
     counter = 0
     indexed_doc_types = collections.Counter()
-    for doc in resources.get_all_documents(course):
+    for doc in resources.generate_all_documents(course):
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
