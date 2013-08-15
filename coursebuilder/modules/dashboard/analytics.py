@@ -311,17 +311,18 @@ class ComputeQuestionStats(jobs.DurableJob):
             if any(not isinstance(answer, int) for answer in (
                     summarized_question['answers'])):
                 return
+            if summarized_question['id'] not in dict_to_update:
+                return
             if max(summarized_question['answers']) >= len(
-                    dict_to_update['answer_counts']):
+                    dict_to_update[summarized_question['id']]['answer_counts']):
                 return
 
-            # Summarized_question contains correct keys.
-            if summarized_question['id'] in dict_to_update:
-                q_dict = dict_to_update[summarized_question['id']]
-                q_dict['score'] += summarized_question['score']
-                q_dict['num_attempts'] += 1
-                for choice_index in summarized_question['answers']:
-                    q_dict['answer_counts'][choice_index] += 1
+            # Add the summarized_question to the aggregating dict.
+            q_dict = dict_to_update[summarized_question['id']]
+            q_dict['score'] += summarized_question['score']
+            q_dict['num_attempts'] += 1
+            for choice_index in summarized_question['answers']:
+                q_dict['answer_counts'][choice_index] += 1
 
         def _get_unit_and_lesson_id_from_url(self, url):
             url_components = urlparse.urlparse(url)
@@ -366,8 +367,11 @@ class ComputeQuestionStats(jobs.DurableJob):
                         'id': '%s.c.%s.i.%s' % (id_prefix, instanceid, index),
                         'score': data['individualScores'][instanceid][index],
                         'answers': data['answers'][instanceid][index]
-                    } for index in mc_indices]
-                elif type_info == self.MC_QUESTION:
+                    } for index in mc_indices if (
+                        data['answers'][instanceid][index])]
+
+                elif (type_info == self.MC_QUESTION and
+                      data['answers'][instanceid]):
                     # This is an individual multiple-choice question.
                     questions_list += [{
                         'id': '%s.c.%s' % (id_prefix, instanceid),
@@ -392,7 +396,8 @@ class ComputeQuestionStats(jobs.DurableJob):
             if unit_id is None or lesson_id is None:
                 return []
 
-            if event_data['type'] == self.ACTIVITY_CHOICE:
+            if (event_data['type'] == self.ACTIVITY_CHOICE and
+                event_data['value'] is not None):
                 return [{
                     'id': 'u.%s.l.%s.b.%s' % (
                         unit_id, lesson_id, event_data['index']),
@@ -400,14 +405,14 @@ class ComputeQuestionStats(jobs.DurableJob):
                     'answers': [event_data['value']]
                 }]
             elif event_data['type'] == self.ACTIVITY_GROUP:
-                block_index = event_data['index']
+                block_id = event_data['index']
 
                 return [{
                     'id': 'u.%s.l.%s.b.%s.i.%s' % (
-                        unit_id, lesson_id, block_index, answer['index']),
+                        unit_id, lesson_id, block_id, answer['index']),
                     'score': 1.0 if answer['correct'] else 0.0,
                     'answers': answer['value']
-                } for answer in event_data['values']]
+                } for answer in event_data['values'] if answer['value']]
             else:
                 return []
 
@@ -435,8 +440,9 @@ class ComputeQuestionStats(jobs.DurableJob):
                         unit_id, lesson_id, event_data['instanceid'], index),
                     'score': event_data['individualScores'][index],
                     'answers': event_data['answer'][index]
-                } for index in mc_indices]
-            elif event_data['type'] == self.MC_QUESTION:
+                } for index in mc_indices if event_data['answer'][index]]
+            elif (event_data['type'] == self.MC_QUESTION and
+                  event_data['answer']):
                 # This is a single multiple-choice question.
                 return [{
                     'id': 'u.%s.l.%s.c.%s' % (
@@ -488,7 +494,7 @@ class ComputeQuestionStats(jobs.DurableJob):
                     'id': 's.%s.i.%s' % (assessment_id, index),
                     'score': 1.0 if values[index]['correct'] else 0.0,
                     'answers': [values[index]['value']]
-                } for index in mc_indices]
+                } for index in mc_indices if values[index]['value'] is not None]
             elif isinstance(values, dict):
                 # This is a v1.5 assessment.
                 return self._summarize_multiple_questions(
