@@ -254,15 +254,15 @@ function QuestionGroup(el, questionData, messages, componentAudit) {
 BaseQuestion.bindSubclass(QuestionGroup);
 QuestionGroup.prototype.init = function() {
   var that = this;
-  this.el.find('div.qt-mc-question.qt-embedded')
+  this.el.find('div.qt-mc-question.qt-embedded, div.qt-sa-question.qt-embedded')
       .each(function(index, element) {
-        that.questions.push(new McQuestion(
-          $(element), that.questionData, [], null));
-      });
-  this.el.find('div.qt-sa-question.qt-embedded')
-      .each(function(index, element) {
-        that.questions.push(new SaQuestion(
-          $(element), that.questionData, [], null).bindHintButton());
+        var elt = $(element);
+        if (elt.hasClass('qt-mc-question')) {
+          that.questions.push(new McQuestion(elt, that.questionData, [], null));
+        } else {
+          that.questions.push(new SaQuestion(elt, that.questionData, [], null)
+              .bindHintButton());
+        }
       });
 };
 QuestionGroup.prototype.getWeight = function() {
