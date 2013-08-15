@@ -16,6 +16,9 @@ class AllJavaScriptTests(unittest.TestCase):
             'javascript_tests', test_folder, 'karma.conf.js')
         self.assertEqual(0, subprocess.call(['karma', 'start', karma_conf]))
 
+    def test_activity_generic(self):
+        self.karma_test('assets_lib_activity_generic')
+
     def test_butterbar(self):
         self.karma_test('assets_lib_butterbar')
 
