@@ -274,6 +274,9 @@ def create_course_registry():
         'reg_form:can_register', 'Enable Registrations', 'boolean',
         description='Checking this box allows new students to register for '
         'the course.'))
+    reg_opts.add_property(SchemaField(
+        'reg_form:additional_registration_fields', 'Additional Fields', 'html',
+        description='Additional registration text or questions.'))
 
     # Course homepage settings.
     homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
