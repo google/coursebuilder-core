@@ -35,13 +35,44 @@
 
   <form id="gcb-index-course">
     <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
+    <input type="hidden" name="incremental" value="true">
     <button class="gcb-button">Index Course</button>
+  </form>
+
+  <form id="gcb-reindex-course">
+    <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
+    <input type="hidden" name="incremental" value="false">
+    <button class="gcb-button">Reindex Course</button>
   </form>
 
   <form id="gcb-clear-index">
     <input type="hidden" name="xsrf_token" value="{{clear_index_xsrf_token}}">
     <button class="gcb-button">Clear Index</button>
   </form>
+
+  <ul>
+    <li>
+      <strong>Index Course</strong> triggers an incremental indexing job in
+      which course documents are added to the search index if they have not been
+      recently indexed.
+    </li>
+    <li>
+      <strong>Reindex Course</strong> triggers a full indexing job in which
+      course documents are added to the search index regardless of whether or
+      not they were recently indexed.
+    </li>
+    Neither <strong>Reindex Course</strong> nor <strong>Index Course</strong>
+    removes course documents from the index, even if items have been removed
+    from the course.
+    <li>
+      <strong>Clear Index</strong> removes all documents from the index.
+    </li>
+  </ul>
+  <p>
+    To view more details about this course's search index, view the
+    <strong>Full Text Search</strong> tab of the App Engine dashboard with the
+    namespace of the current course.
+  </p>
 
 {% else %}
   <div class="gcb-index-status">

@@ -60,7 +60,7 @@ def get_index(course):
                         namespace=course.app_context.get_namespace_name())
 
 
-def index_all_docs(course, incremental=True):
+def index_all_docs(course, incremental):
     """Index all of the docs for a given models.Course object.
 
     Args:
@@ -304,7 +304,9 @@ class SearchDashboardHandler(object):
                 mc_template_value['status'] = 'clearing'
             else:
                 mc_template_value['status'] = 'indexed'
-                mc_template_value['last_updated'] = indexing_job.updated_on
+                mc_template_value['last_updated'] = (
+                    indexing_job.updated_on.strftime(
+                        utils.HUMAN_READABLE_DATETIME_FORMAT))
                 mc_template_value['index_status'] = transforms.loads(
                     indexing_job.output)
         elif (indexing_job and
@@ -325,7 +327,8 @@ class SearchDashboardHandler(object):
     def post_index_course(self):
         """Submits a new indexing operation."""
         try:
-            check_jobs_and_submit(IndexCourse(self.app_context),
+            incremental = self.request.get('incremental') == 'true'
+            check_jobs_and_submit(IndexCourse(self.app_context, incremental),
                                   self.app_context)
             transforms.send_json_response(
                 self, 202, 'Indexing operation queued.')
@@ -362,12 +365,18 @@ def check_jobs_and_submit(job, app_context):
 class IndexCourse(jobs.DurableJob):
     """A job that indexes the course."""
 
+    def __init__(self, app_context, incremental=True):
+        super(IndexCourse, self).__init__(app_context)
+        self.incremental = incremental
+
     def run(self):
         """Index the course."""
-        app_context = sites.get_app_context_for_namespace(
-            namespace_manager.get_namespace())
+        namespace = namespace_manager.get_namespace()
+        logging.info('Running indexing job for namespace %s. Incremental: %s',
+                     namespace_manager.get_namespace(), self.incremental)
+        app_context = sites.get_app_context_for_namespace(namespace)
         course = courses.Course(None, app_context=app_context)
-        return index_all_docs(course)
+        return index_all_docs(course, self.incremental)
 
 
 class ClearIndex(jobs.DurableJob):
@@ -375,8 +384,9 @@ class ClearIndex(jobs.DurableJob):
 
     def run(self):
         """Clear the index."""
-        app_context = sites.get_app_context_for_namespace(
-            namespace_manager.get_namespace())
+        namespace = namespace_manager.get_namespace()
+        logging.info('Running clearing job for namespace %s.', namespace)
+        app_context = sites.get_app_context_for_namespace(namespace)
         course = courses.Course(None, app_context=app_context)
         return clear_index(course)
 

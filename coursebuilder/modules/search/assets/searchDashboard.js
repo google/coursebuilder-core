@@ -24,9 +24,10 @@
 
 
 function indexDocs(event) {
-  var token = $('#gcb-index-course > input[name=xsrf_token]').attr('value');
+  var token = $(this).siblings('input[name=xsrf_token]').attr('value');
+  var incr = $(this).siblings('input[name=incremental]').attr('value');
   $.post('dashboard?action=index_course',
-         { xsrf_token: token },
+         { xsrf_token: token, incremental: incr },
          function(data) {
            var response = JSON.parse(data.replace(")]}'\n", ''));
            cbShowMsg(response.message);
@@ -46,6 +47,7 @@ function clearIndex(event) {
 }
 
 $(function() {
-  $('form#gcb-index-course > button').click(indexDocs);
+  $('form#gcb-index-course > button, form#gcb-reindex-course > button').click(
+    indexDocs);
   $('form#gcb-clear-index > button').click(clearIndex);
 });
