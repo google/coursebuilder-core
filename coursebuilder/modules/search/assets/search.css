@@ -22,34 +22,12 @@
 
 /* Search bar styles */
 .gcb-search-form {
-  /* Backup color for browser compatibility. */
-  background: rgb(68, 68, 68);
-  background: rgba(0,0,0,.2);
-  border-radius: 10px;
   margin-top: -5px;
-}
-
-.gcb-search-form input {
-  font: bold 15px 'lucida sans', 'trebuchet MS', 'Tahoma';
 }
 
 .gcb-search-box {
   padding-left: 5px;
-  border: 0px;
   width: 175px;
-  background: transparent;
-  border-radius: 3px 0 0 3px;
-  color: #EEE;
-}
-
-.gcb-search-box:focus {
-  border: 0px;
-  outline: 0px;
-}
-
-.gcb-search-button {
-  border-radius: 10px;
-  margin: 0px;
 }
 
 /* Search page styles */
