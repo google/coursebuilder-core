@@ -20,6 +20,8 @@ import base64
 import datetime
 import json
 
+from xml.etree import ElementTree
+
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
@@ -397,3 +399,53 @@ class JsonFile(object):
             template = template[1:]
             self._first = False
         self._file.write(template % dumps(python_object))
+
+
+def convert_dict_to_xml(element, python_object):
+    if isinstance(python_object, dict):
+        for key, value in dict.items(python_object):
+            dict_element = ElementTree.Element(key)
+            element.append(dict_element)
+            convert_dict_to_xml(dict_element, value)
+    elif isinstance(python_object, list):
+        list_element = ElementTree.Element('list')
+        element.append(list_element)
+        for item in python_object:
+            item_element = ElementTree.Element('item')
+            list_element.append(item_element)
+            convert_dict_to_xml(item_element, item)
+    else:
+        try:
+            loaded_python_object = loads(python_object)
+            convert_dict_to_xml(element, loaded_python_object)
+        except:  # pylint: disable-msg=bare-except
+            element.text = unicode(python_object)
+            return
+
+
+def convert_json_rows_file_to_xml(json_fn, xml_fn):
+    """To XML converter for JSON files created by JsonFile writer.
+
+    Usage:
+
+        convert_json_rows_file_to_xml('Student.json', 'Student.xml')
+
+    Args:
+        json_fn: filename of the JSON file (readable with JsonFile) to import.
+        xml_fn: filename of the target XML file to export.
+
+    The dict and list objects are unwrapped; all other types are converted to
+    Unicode strings.
+    """
+
+    json_file = JsonFile(json_fn)
+    json_file.open('r')
+    xml_file = open(xml_fn, 'w')
+    xml_file.write('<rows>')
+    for line in json_file:
+        root = ElementTree.Element('row')
+        convert_dict_to_xml(root, line)
+        xml_file.write(ElementTree.tostring(root, encoding='utf-8'))
+        xml_file.write('\n')
+    xml_file.write('</rows>')
+    xml_file.close()
