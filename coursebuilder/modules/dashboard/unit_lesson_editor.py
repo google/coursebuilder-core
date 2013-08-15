@@ -863,7 +863,7 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
                     'id': lesson.lesson_id})
             unit_title = unit.title
             if verify.UNIT_TYPE_UNIT == unit.type:
-                unit_title = 'Unit %s - %s' % (unit.index, unit.title)
+                unit_title = 'Unit: %s' % unit.title
             outline_data.append({
                 'title': unit_title,
                 'id': unit.unit_id,
