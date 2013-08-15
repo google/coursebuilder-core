@@ -17,9 +17,10 @@
 __author__ = 'Ellis Michael (emichael@google.com)'
 
 import collections
-from datetime import datetime
+import datetime
 import HTMLParser
 import logging
+import operator
 import os
 import Queue
 import re
@@ -172,15 +173,47 @@ class Resource(object):
     # one field.
     SNIPPETED_FIELDS = []
 
+    # Each subclass should use this constant to define how many days should
+    # elapse before a resource should be re-indexed. This value should be
+    # nonnegative.
+    FRESHNESS_THRESHOLD_DAYS = 0
+
     @classmethod
-    def generate_all(cls, course):  # pylint: disable-msg=unused-argument
-        """A generator returning objects of type cls in the course."""
+    def generate_all(
+        cls, course, timestamps):  # pylint: disable-msg=unused-argument
+        """A generator returning objects of type cls in the course.
+
+        This generator should yield resources based on the last indexed time in
+        timestamps.
+
+        Args:
+            course: models.courses.course. the course to index.
+            timestamps: dict from doc_ids to last indexed datetimes.
+        Yields:
+            A sequence of Resource objects.
+        """
 
         # For the superclass, return a generator which immediately halts. All
         # implementations in subclasses must also be generators for memory-
         # management reasons.
         return
         yield  # pylint: disable-msg=unreachable
+
+    @classmethod
+    def _get_doc_id(cls, *unused_vargs):
+        """Subclasses should implement this with identifying fields as args."""
+        raise NotImplementedError
+
+    @classmethod
+    def _indexed_within_num_days(cls, timestamps, doc_id, num_days):
+        """Determines whether doc_id was indexed in the last num_days days."""
+        try:
+            timestamp = timestamps[doc_id]
+        except (KeyError, TypeError):
+            return False
+        else:
+            delta = datetime.datetime.utcnow() - timestamp
+            return delta <= datetime.timedelta(num_days)
 
     def get_document(self):
         """Return a search.Document to be indexed."""
@@ -229,11 +262,19 @@ class LessonResource(Resource):
     TYPE_NAME = 'Lesson'
     RETURNED_FIELDS = ['title', 'unit_id', 'lesson_id', 'url']
     SNIPPETED_FIELDS = ['content']
+    FRESHNESS_THRESHOLD_DAYS = 3
 
     @classmethod
-    def generate_all(cls, course):
+    def generate_all(cls, course, timestamps):
         for lesson in course.get_lessons_for_all_units():
-            yield LessonResource(lesson)
+            doc_id = cls._get_doc_id(lesson.unit_id, lesson.lesson_id)
+            if not (cls._indexed_within_num_days(timestamps, doc_id,
+                                                 cls.FRESHNESS_THRESHOLD_DAYS)):
+                yield LessonResource(lesson)
+
+    @classmethod
+    def _get_doc_id(cls, unit_id, lesson_id):
+        return '%s_%s_%s' % (cls.TYPE_NAME, unit_id, lesson_id)
 
     def __init__(self, lesson):
         super(LessonResource, self).__init__()
@@ -255,8 +296,7 @@ class LessonResource(Resource):
 
     def get_document(self):
         return search.Document(
-            doc_id=('%s_%s_%s' % (self.TYPE_NAME,
-                                  self.unit_id, self.lesson_id)),
+            doc_id=self._get_doc_id(self.unit_id, self.lesson_id),
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
@@ -267,7 +307,8 @@ class LessonResource(Resource):
                     'unit?unit=%s&lesson=%s' %
                     (self.unit_id, self.lesson_id))),
                 search.TextField(name='type', value=self.TYPE_NAME),
-                search.DateField(name='date', value=datetime.now().date())])
+                search.DateField(name='date',
+                                 value=datetime.datetime.utcnow())])
 
 
 class LessonResult(Result):
@@ -296,8 +337,51 @@ class ExternalLinkResource(Resource):
     TYPE_NAME = 'ExternalLink'
     RETURNED_FIELDS = ['title', 'url']
     SNIPPETED_FIELDS = ['content']
+    FRESHNESS_THRESHOLD_DAYS = 15
 
     # TODO(emichael): Allow the user to turn off external links in the dashboard
+
+    @classmethod
+    def generate_all_from_dist_dict(cls, link_dist, timestamps):
+        """Generate all external links from a map from URL to distance.
+
+        Args:
+            link_dist: dict. a map from URL to distance in the link graph from
+                the course.
+            timestamps: dict from doc_ids to last indexed datetimes. An empty
+                dict indicates that all documents should be generated.
+        Yields:
+            A sequence of ExternalLinkResource.
+        """
+
+        url_queue = Queue.LifoQueue()
+        for url, dist in sorted(link_dist.iteritems(),
+                                key=operator.itemgetter(1)):
+            url_queue.put(url)
+
+        while not url_queue.empty():
+            url = url_queue.get()
+            doc_id = cls._get_doc_id(url)
+
+            if (cls._indexed_within_num_days(timestamps, doc_id,
+                                             cls.FRESHNESS_THRESHOLD_DAYS)):
+                continue
+
+            dist = link_dist[url]
+            if dist > 1:
+                break
+
+            try:
+                resource = ExternalLinkResource(url)
+            except URLNotParseableException:
+                logging.info('Could not parse link with URL %s', url)
+            else:
+                if dist < 1:
+                    for new_link in resource.get_links():
+                        if new_link not in link_dist:
+                            link_dist[new_link] = dist + 1
+                            url_queue.put(new_link)
+                yield resource
 
     def __init__(self, url):
         # distance is the distance from the course material in the link graph,
@@ -310,15 +394,20 @@ class ExternalLinkResource(Resource):
         self.title = parser.get_title()
         self.links = parser.get_links()
 
+    @classmethod
+    def _get_doc_id(cls, url):
+        return '%s_%s' % (cls.TYPE_NAME, url)
+
     def get_document(self):
         return search.Document(
-            doc_id=('%s_%s' % (self.TYPE_NAME, self.url)),
+            doc_id=self._get_doc_id(self.url),
             fields=[
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
                 search.TextField(name='url', value=self.url),
                 search.TextField(name='type', value=self.TYPE_NAME),
-                search.DateField(name='date', value=datetime.now().date())])
+                search.DateField(name='date',
+                                 value=datetime.datetime.utcnow())])
 
 
 class ExternalLinkResult(Result):
@@ -345,15 +434,24 @@ class YouTubeFragmentResource(Resource):
     TYPE_NAME = 'YouTubeFragment'
     RETURNED_FIELDS = ['title', 'video_id', 'start', 'thumbnail_url']
     SNIPPETED_FIELDS = ['content']
+    FRESHNESS_THRESHOLD_DAYS = 30
 
     @classmethod
-    def generate_all(cls, course):
+    def generate_all(cls, course, timestamps):
         # TODO(emichael): When announcements are implemented, grab the videos
         # in custom tags there.
+
+        # TODO(emichael): Handle the existence of a single video in multiple
+        # places in a course.
+
         for lesson in course.get_lessons_for_all_units():
-            if lesson.video:
+            lesson_url = 'unit?unit=%s&lesson=%s' % (
+                lesson.unit_id, lesson.lesson_id)
+
+            if lesson.video and not cls._indexed_within_num_days(
+                    timestamps, lesson.video, cls.FRESHNESS_THRESHOLD_DAYS):
                 for fragment in cls._get_fragments_for_video(
-                        lesson.video, lesson.lesson_id, lesson.unit_id):
+                        lesson.video, lesson_url):
                     yield fragment
 
             match = re.search(
@@ -361,12 +459,23 @@ class YouTubeFragmentResource(Resource):
                 lesson.objectives)
             if match:
                 for video_id in match.groups():
-                    for fragment in cls._get_fragments_for_video(
-                            video_id, lesson.lesson_id, lesson.unit_id):
-                        yield fragment
+                    if not cls._indexed_within_num_days(
+                            timestamps, video_id, cls.FRESHNESS_THRESHOLD_DAYS):
+                        for fragment in cls._get_fragments_for_video(
+                                video_id, lesson_url):
+                            yield fragment
 
     @classmethod
-    def _get_fragments_for_video(cls, video_id, lesson_id, unit_id):
+    def _indexed_within_num_days(cls, timestamps, video_id, num_days):
+        for doc_id in timestamps:
+            if doc_id.startswith(cls._get_doc_id(video_id, '')):
+                return super(
+                    YouTubeFragmentResource, cls)._indexed_within_num_days(
+                        timestamps, doc_id, num_days)
+        return False
+
+    @classmethod
+    def _get_fragments_for_video(cls, video_id, url_in_course):
         """Get all of the transcript fragment docs for a specific video."""
         try:
             (transcript, title, thumbnail_url) = cls._get_video_data(video_id)
@@ -389,7 +498,7 @@ class YouTubeFragmentResource(Resource):
                     fragments.pop(0).firstChild.nodeValue))
 
             aggregated_fragment = YouTubeFragmentResource(
-                video_id, lesson_id, unit_id, current_start,
+                video_id, url_in_course, current_start,
                 '\n'.join(current_text), title, thumbnail_url)
             aggregated_fragments.append(aggregated_fragment)
 
@@ -429,12 +538,14 @@ class YouTubeFragmentResource(Resource):
 
         return (transcript, title, thumbnail_url)
 
-    def __init__(self, video_id, lesson_id, unit_id, start, text, video_title,
-                 thumbnail_url):
+    @classmethod
+    def _get_doc_id(cls, video_id, start_time):
+        return '%s_%s_%s' % (cls.TYPE_NAME, video_id, start_time)
+
+    def __init__(self, video_id, url, start, text, video_title, thumbnail_url):
         super(YouTubeFragmentResource, self).__init__()
 
-        self.unit_id = unit_id
-        self.lesson_id = lesson_id
+        self.url = url
         self.video_id = video_id
         self.start = start
         self.text = text
@@ -443,9 +554,7 @@ class YouTubeFragmentResource(Resource):
 
     def get_document(self):
         return search.Document(
-            doc_id=('%s_%s_%s_%s_%s' % (self.TYPE_NAME,
-                                        self.unit_id, self.lesson_id,
-                                        self.video_id, self.start)),
+            doc_id=self._get_doc_id(self.video_id, self.start),
             fields=[
                 search.TextField(name='title', value=self.video_title),
                 search.TextField(name='video_id', value=self.video_id),
@@ -453,11 +562,10 @@ class YouTubeFragmentResource(Resource):
                 search.NumberField(name='start', value=self.start),
                 search.TextField(name='thumbnail_url',
                                  value=self.thumbnail_url),
-                search.TextField(name='url', value=(
-                    'unit?unit=%s&lesson=%s' %
-                    (self.unit_id, self.lesson_id))),
+                search.TextField(name='url', value=self.url),
                 search.TextField(name='type', value=self.TYPE_NAME),
-                search.DateField(name='date', value=datetime.now().date())])
+                search.DateField(name='date',
+                                 value=datetime.datetime.utcnow())])
 
 
 class YouTubeFragmentResult(Result):
@@ -491,12 +599,15 @@ class AnnouncementResource(Resource):
     TYPE_NAME = 'Announcement'
     RETURNED_FIELDS = ['title', 'url']
     SNIPPETED_FIELDS = ['content']
+    FRESHNESS_THRESHOLD_DAYS = 1
 
     @classmethod
-    def generate_all(cls, course):
+    def generate_all(cls, course, timestamps):
         if announcements.custom_module.enabled:
             for entity in announcements.AnnouncementEntity.get_announcements():
-                if not entity.is_draft:
+                doc_id = cls._get_doc_id(entity.key())
+                if not(entity.is_draft or cls._indexed_within_num_days(
+                        timestamps, doc_id, cls.FRESHNESS_THRESHOLD_DAYS)):
                     yield AnnouncementResource(entity)
 
     def __init__(self, announcement):
@@ -508,9 +619,13 @@ class AnnouncementResource(Resource):
         parser.feed(announcement.html)
         self.content = parser.get_content()
 
+    @classmethod
+    def _get_doc_id(cls, key):
+        return '%s_%s' % (cls.TYPE_NAME, key)
+
     def get_document(self):
         return search.Document(
-            doc_id=('%s_%s' % (self.TYPE_NAME, self.key)),
+            doc_id=self._get_doc_id(self.key),
             fields=[
                 search.TextField(name='title',
                                  value='%s - Announcement' % self.title),
@@ -518,7 +633,8 @@ class AnnouncementResource(Resource):
                 search.TextField(name='url',
                                  value='announcements#%s' % self.key),
                 search.TextField(name='type', value=self.TYPE_NAME),
-                search.DateField(name='date', value=datetime.now().date())])
+                search.DateField(name='date',
+                                 value=datetime.datetime.utcnow())])
 
 
 class AnnouncementResult(Result):
@@ -564,12 +680,23 @@ def get_snippeted_fields():
     return list(snippeted_fields)
 
 
-def generate_all_documents(course):
-    """A generator for all docs for a given course."""
+def generate_all_documents(course, timestamps):
+    """A generator for all docs for a given course.
+
+    Args:
+        course: models.courses.Course. the course to be indexed.
+        timestamps: dict from doc_ids to last indexed datetimes. An empty dict
+            indicates that all documents should be generated.
+    Yields:
+        A sequence of search.Document. If a document is within the freshness
+        threshold, no document will be generated. This function does not modify
+        timestamps.
+    """
+
     link_dist = {}
 
     for resource_type, unused_result_type in RESOURCE_TYPES:
-        for resource in resource_type.generate_all(course):
+        for resource in resource_type.generate_all(course, timestamps):
 
             if isinstance(resource, LessonResource) and resource.notes:
                 link_dist[resource.notes] = 0
@@ -578,27 +705,9 @@ def generate_all_documents(course):
 
             yield resource.get_document()
 
-    link_queue = Queue.LifoQueue()
-    for link, dist in link_dist.items():
-        link_queue.put(link)
-
-    while not link_queue.empty():
-        link = link_queue.get()
-        dist = link_dist[link]
-
-        if dist <= 1:
-            try:
-                resource = ExternalLinkResource(link)
-            except URLNotParseableException:
-                continue
-
-            else:
-                for new_link in resource.get_links():
-                    if new_link not in link_dist:
-                        link_dist[new_link] = dist + 1
-                        link_queue.put(new_link)
-
-                yield resource.get_document()
+    for resource in ExternalLinkResource.generate_all_from_dist_dict(
+            link_dist, timestamps):
+        yield resource.get_document()
 
 
 def process_results(results):

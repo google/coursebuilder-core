@@ -60,11 +60,13 @@ def get_index(course):
                         namespace=course.app_context.get_namespace_name())
 
 
-def index_all_docs(course):
+def index_all_docs(course, incremental=True):
     """Index all of the docs for a given models.Course object.
 
     Args:
         course: models.courses.Course. the course to index.
+        incremental: boolean. whether or not to index only new or out-of-date
+            items.
     Returns:
         A dict with three keys.
         'num_indexed_docs' maps to an int, the number of documents added to the
@@ -82,13 +84,16 @@ def index_all_docs(course):
 
     start_time = time.time()
     index = get_index(course)
-    counter = 0
-    indexed_doc_types = collections.Counter()
-    for doc in resources.generate_all_documents(course):
+    timestamps, doc_types = (_get_index_metadata(index) if incremental
+                             else ({}, {}))
+    for doc in resources.generate_all_documents(course, timestamps):
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
                 index.put(doc)
+                timestamps[doc.doc_id] = doc['date'][0].value
+                doc_types[doc.doc_id] = doc['type'][0].value
+                break
             except search.Error, e:
                 if e.results[0].code == search.OperationResult.TRANSIENT_ERROR:
                     retry_count += 1
@@ -99,16 +104,12 @@ def index_all_docs(course):
                 else:
                     logging.error('Failed to index doc_id: %s', doc.doc_id)
                     break
-            else:
-                counter += 1
-                try:
-                    doc_type = doc['type'][0].value
-                except (AttributeError, KeyError, IndexError):
-                    doc_type = 'Unknown'
-                indexed_doc_types[doc_type] += 1
-                break
+
     total_time = '%.2f' % (time.time() - start_time)
-    return {'num_indexed_docs': counter,
+    indexed_doc_types = collections.Counter()
+    for type_name in doc_types.values():
+        indexed_doc_types[type_name] += 1
+    return {'num_indexed_docs': len(timestamps),
             'doc_types': indexed_doc_types,
             'indexing_time_secs': total_time}
 
@@ -127,6 +128,27 @@ def clear_index(course):
         doc_ids = [document.doc_id
                    for document in index.get_range(ids_only=True)]
     return {'deleted_docs': total_docs}
+
+
+def _get_index_metadata(index):
+    """Returns dict from doc_id to timestamp and one from doc_id to doc_type."""
+
+    current_docs = None
+    timestamps = []
+    doc_types = []
+    cursor = search.Cursor()
+    while not current_docs or current_docs.results:
+        options = search.QueryOptions(
+            limit=1000,
+            cursor=cursor,
+            returned_fields=['date', 'type'])
+        query = search.Query(query_string='', options=options)
+        current_docs = index.search(query)
+        cursor = current_docs.cursor
+        for doc in current_docs:
+            timestamps.append((doc.doc_id, doc['date'][0].value))
+            doc_types.append((doc.doc_id, doc['type'][0].value))
+    return dict(timestamps), dict(doc_types)
 
 
 def fetch(course, query_string, offset=0, limit=RESULTS_LIMIT):
