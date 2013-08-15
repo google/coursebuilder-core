@@ -104,3 +104,18 @@
 .hidden {
   display: none;
 }
+
+/* Search admin page */
+.gcb-index-status {
+  margin-top: 10px;
+  margin-bottom:10px;
+  padding: 10px;
+}
+
+.gcb-index-status div {
+  margin-bottom: 10px;
+}
+
+.gcb-bold-row {
+  font-weight: bold;
+}

@@ -1,6 +1,38 @@
 <script src="/modules/search/assets/searchDashboard.js"></script>
+<link rel="stylesheet" type="text/css"
+    href="/modules/search/assets/search.css" />
 
 {% if module_enabled %}
+  <div class="gcb-index-status">
+    {% if status == 'indexed' %}
+      <div>
+        The index was last updated on {{ last_updated }}.
+        Indexing the course took {{ index_status['indexing_time_secs'] }}
+        seconds.
+      </div>
+      <table>
+        <tr class="gcb-bold-row">
+          <td>Document Type</td>
+          <td>Number present</td>
+        </tr></b>
+        {% for type in index_status['doc_types'] | sort %}
+          <tr>
+            <td>{{ type }}</td>
+            <td>{{ index_status['doc_types'][type] }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="gcb-bold-row">
+          <td>Total</td>
+          <td>{{ index_status['num_indexed_docs'] }}
+        </tr>
+      </table>
+    {% elif status == 'clearing' %}
+      The index is cleared.
+    {% elif status == 'indexing_in_progress' %}
+      Indexing in progress.
+    {% endif %}
+  </div>
+
   <form id="gcb-index-course">
     <input type="hidden" name="xsrf_token" value="{{index_course_xsrf_token}}">
     <button class="gcb-button">Index Course</button>
@@ -11,18 +43,8 @@
     <button class="gcb-button">Clear Index</button>
   </form>
 
-  <div id="gcb-index-status">
-    {% if status == 'indexed' %}
-        The index was last updated on {{ last_updated }}.
-        {{ num_indexed_docs }} documents were added.
-    {% elif status == 'clearing' %}
-      The index is cleared.
-    {% elif status == 'indexing_in_progress' %}
-      Indexing in progress.
-    {% endif %}
-  </div>
 {% else %}
-  <div id="gcb-index-status">
+  <div class="gcb-index-status">
     The search module is currently disabled.
   </div>
 {% endif %}

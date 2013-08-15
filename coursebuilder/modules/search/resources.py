@@ -342,7 +342,7 @@ class ExternalLinkResult(Result):
 
 class YouTubeFragmentResource(Resource):
     """An object for a YouTube transcript fragment in search results."""
-    TYPE_NAME = 'YouTube'
+    TYPE_NAME = 'YouTubeFragment'
     RETURNED_FIELDS = ['title', 'video_id', 'start', 'thumbnail_url']
     SNIPPETED_FIELDS = ['content']
 

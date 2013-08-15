@@ -61,11 +61,26 @@ def get_index(course):
 
 
 def index_all_docs(course):
-    """Index all of the docs for a given models.Course object."""
+    """Index all of the docs for a given models.Course object.
+
+    Args:
+        course: models.courses.Course. the course to index.
+    Returns:
+        A dict with three keys.
+        'num_indexed_docs' maps to an int, the number of documents added to the
+            index.
+        'doc_type' maps to a counter with resource types as keys mapping to the
+            number of that resource added to the index.
+        'indexing_time_secs' maps to a float representing the number of seconds
+            the indexing job took.
+    Raises:
+        ModuleDisabledException: The search module is currently disabled.
+    """
 
     if not custom_module.enabled:
         raise ModuleDisabledException('The search module is disabled.')
 
+    start_time = time.time()
     index = get_index(course)
     counter = 0
     indexed_doc_types = collections.Counter()
@@ -92,7 +107,10 @@ def index_all_docs(course):
                     doc_type = 'Unknown'
                 indexed_doc_types[doc_type] += 1
                 break
-    return {'num_indexed_docs': counter, 'doc_types': indexed_doc_types}
+    total_time = '%.2f' % (time.time() - start_time)
+    return {'num_indexed_docs': counter,
+            'doc_types': indexed_doc_types,
+            'indexing_time_secs': total_time}
 
 
 def clear_index(course):
@@ -259,18 +277,14 @@ class SearchDashboardHandler(object):
         clearing_job = ClearIndex(self.app_context).load()
         if (indexing_job and
             indexing_job.status_code == jobs.STATUS_CODE_COMPLETED):
-
             if (clearing_job and
                 clearing_job.updated_on > indexing_job.updated_on):
                 mc_template_value['status'] = 'clearing'
-
             else:
                 mc_template_value['status'] = 'indexed'
                 mc_template_value['last_updated'] = indexing_job.updated_on
-                output = transforms.loads(indexing_job.output)
-                mc_template_value['num_indexed_docs'] = output[
-                    'num_indexed_docs']
-
+                mc_template_value['index_status'] = transforms.loads(
+                    indexing_job.output)
         elif (indexing_job and
               indexing_job.status_code == jobs.STATUS_CODE_STARTED):
             mc_template_value['status'] = 'indexing_in_progress'
