@@ -97,6 +97,10 @@ class TextFileUploadTag(tags.BaseTag):
     def vendor(cls):
         return 'gcb'
 
+    def _get_action(self, slug):
+        action = slug + _POST_ACTION_SUFFIX
+        return action.replace('//', '/')
+
     def get_icon_url(self):
         return os.path.join(_RESOURCES_PATH, 'script_add.png')
 
@@ -129,8 +133,8 @@ class TextFileUploadTag(tags.BaseTag):
                 db.get(student_work.Submission.get_key(
                     handler.unit_id, student.get_key())))
 
-        handler.template_value['action'] = (
-            handler.app_context.get_slug() + _POST_ACTION_SUFFIX)
+        handler.template_value['action'] = self._get_action(
+            handler.app_context.get_slug())
         handler.template_value['already_submitted'] = already_submitted
         handler.template_value['display_length'] = node.attrib.get(
             'display_length')
