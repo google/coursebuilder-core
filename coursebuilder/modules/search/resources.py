@@ -264,7 +264,7 @@ class LessonResource(Resource):
                 search.TextField(name='lesson_id',
                                  value=unicode(self.lesson_id)),
                 search.TextField(name='url', value=(
-                    'unit?unit_id=%s&lesson=%s' %
+                    'unit?unit=%s&lesson=%s' %
                     (self.unit_id, self.lesson_id))),
                 search.TextField(name='type', value=self.TYPE_NAME),
                 search.DateField(name='date', value=datetime.now().date())])
@@ -454,7 +454,7 @@ class YouTubeFragmentResource(Resource):
                 search.TextField(name='thumbnail_url',
                                  value=self.thumbnail_url),
                 search.TextField(name='url', value=(
-                    'unit?unit_id=%s&lesson=%s' %
+                    'unit?unit=%s&lesson=%s' %
                     (self.unit_id, self.lesson_id))),
                 search.TextField(name='type', value=self.TYPE_NAME),
                 search.DateField(name='date', value=datetime.now().date())])
