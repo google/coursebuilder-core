@@ -959,13 +959,14 @@ class ManagerTest(actions.TestBase):
 
     def test_get_reviews_by_keys(self):
         review_key = student_work.Review(
-            contents='contents', reviewer_key=self.reviewer_key,
-            unit_id=self.unit_id
+            contents='contents', reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, unit_id=self.unit_id
         ).put()
         missing_review_key = db.Key.from_path(
             student_work.Review.kind(),
             student_work.Review.key_name(
-                str(int(self.unit_id) + 1), self.reviewer_key))
+                str(int(self.unit_id) + 1), self.reviewee_key,
+                self.reviewer_key))
         model_objects = db.get([review_key, missing_review_key])
         domain_objects = review_module.Manager.get_reviews_by_keys(
             [review_key, missing_review_key])
@@ -1098,7 +1099,8 @@ class ManagerTest(actions.TestBase):
             peer.ReviewSummary.kind(),
             peer.ReviewSummary.key_name(self.submission_key))
         review_key = student_work.Review(
-            contents='contents', reviewer_key=self.reviewer_key,
+            contents='contents', reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key,
             unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_HUMAN,
@@ -1160,8 +1162,8 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         review_key = student_work.Review(
-            contents='old_contents', reviewer_key=self.reviewer_key,
-            unit_id=self.unit_id).put()
+            contents='old_contents', reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1240,8 +1242,8 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         review_key = student_work.Review(
-            contents='old_contents', reviewer_key=self.reviewer_key,
-            unit_id=self.unit_id).put()
+            contents='old_contents', reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1268,8 +1270,8 @@ class ManagerTest(actions.TestBase):
             submission_key=self.submission_key, unit_id=self.unit_id
         ).put()
         review_key = student_work.Review(
-            contents='old_contents', reviewer_key=self.reviewer_key,
-            unit_id=self.unit_id).put()
+            contents='old_contents', reviewee_key=self.reviewee_key,
+            reviewer_key=self.reviewer_key, unit_id=self.unit_id).put()
         step_key = peer.ReviewStep(
             assigner_kind=domain.ASSIGNER_KIND_HUMAN,
             review_key=review_key, review_summary_key=summary_key,
@@ -1289,3 +1291,68 @@ class ManagerTest(actions.TestBase):
         self.assertEqual(0, summary.expired_count)
         self.assertEqual(domain.REVIEW_STATE_COMPLETED, step.state)
         self.assertEqual('new_contents', updated_review.contents)
+
+    def test_write_review_with_two_students_creates_different_reviews(self):
+        reviewee1 = models.Student(key_name='reviewee1@example.com')
+        reviewee1_key = reviewee1.put()
+        reviewee2 = models.Student(key_name='reviewee2@example.com')
+        reviewee2_key = reviewee2.put()
+
+        submission1_key = db.Key.from_path(
+            student_work.Submission.kind(),
+            student_work.Submission.key_name(
+                reviewee_key=reviewee1_key, unit_id=self.unit_id))
+        submission2_key = db.Key.from_path(
+            student_work.Submission.kind(),
+            student_work.Submission.key_name(
+                reviewee_key=reviewee2_key, unit_id=self.unit_id))
+
+        summary1_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=reviewee1_key,
+            submission_key=submission1_key, unit_id=self.unit_id
+        ).put()
+        step1_key = peer.ReviewStep(
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
+            review_summary_key=summary1_key, reviewee_key=reviewee1_key,
+            reviewer_key=self.reviewer_key, submission_key=submission1_key,
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        self.assertIsNone(db.get(step1_key).review_key)
+        updated_step1_key = review_module.Manager.write_review(
+            step1_key, 'contents1', mark_completed=False)
+
+        self.assertEqual(step1_key, updated_step1_key)
+
+        summary2_key = peer.ReviewSummary(
+            assigned_count=1, reviewee_key=reviewee2_key,
+            submission_key=submission2_key, unit_id=self.unit_id
+        ).put()
+        step2_key = peer.ReviewStep(
+            assigner_kind=domain.ASSIGNER_KIND_HUMAN,
+            review_summary_key=summary2_key, reviewee_key=reviewee2_key,
+            reviewer_key=self.reviewer_key, submission_key=submission2_key,
+            state=domain.REVIEW_STATE_ASSIGNED, unit_id=self.unit_id
+        ).put()
+        self.assertIsNone(db.get(step2_key).review_key)
+        updated_step2_key = review_module.Manager.write_review(
+            step2_key, 'contents2', mark_completed=False)
+
+        self.assertEqual(step2_key, updated_step2_key)
+
+        step1, summary1 = db.get([updated_step1_key, summary1_key])
+        updated_review = db.get(step1.review_key)
+
+        self.assertEqual(1, summary1.assigned_count)
+        self.assertEqual(0, summary1.completed_count)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step1.state)
+        self.assertEqual(step1.review_key, updated_review.key())
+        self.assertEqual('contents1', updated_review.contents)
+
+        step2, summary2 = db.get([updated_step2_key, summary2_key])
+        updated_review = db.get(step2.review_key)
+
+        self.assertEqual(1, summary2.assigned_count)
+        self.assertEqual(0, summary2.completed_count)
+        self.assertEqual(domain.REVIEW_STATE_ASSIGNED, step2.state)
+        self.assertEqual(step2.review_key, updated_review.key())
+        self.assertEqual('contents2', updated_review.contents)

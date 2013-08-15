@@ -1001,11 +1001,12 @@ class Manager(object):
                 should_increment_updated_existing_review = True
         else:
             review_to_update = student_work.Review(
-                contents=review_payload, reviewer_key=step.reviewer_key,
-                unit_id=step.unit_id)
+                contents=review_payload, reviewee_key=step.reviewee_key,
+                reviewer_key=step.reviewer_key, unit_id=step.unit_id)
             step.review_key = db.Key.from_path(
                 student_work.Review.kind(),
-                student_work.Review.key_name(step.unit_id, step.reviewer_key))
+                student_work.Review.key_name(
+                    step.unit_id, step.reviewee_key, step.reviewer_key))
             should_increment_created_new_review = True
 
         if not review_to_update:

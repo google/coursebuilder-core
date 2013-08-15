@@ -21,6 +21,7 @@ __author__ = [
 from models import entities
 from models import models
 from models import student_work
+from models import transforms
 from tests.functional import actions
 from google.appengine.ext import db
 
@@ -48,6 +49,34 @@ class KeyPropertyTest(actions.TestBase):
         super(KeyPropertyTest, self).setUp()
         self.referenced_model_key = ReferencedModel().put()
 
+    def test_bidirectional_transforms_succeed(self):
+        """Tests that transforms entity<->dict<->json round trips correctly."""
+        referenced_model_key = ReferencedModel().put()
+        entity = UnvalidatedReference(referenced_model_key=referenced_model_key)
+        entity.put()
+
+        transformed = transforms.entity_to_dict(entity)
+        self.assertEqual(referenced_model_key, entity.referenced_model_key)
+        self.assertEqual(
+            referenced_model_key, transformed['referenced_model_key'])
+
+        new_key = ReferencedModel().put()
+        transformed['referenced_model_key'] = new_key
+        restored = transforms.dict_to_entity(entity, transformed)
+        self.assertEqual(new_key, restored.referenced_model_key)
+
+        json = transforms.dict_to_json(transformed, None)
+        self.assertEqual(str(new_key), json['referenced_model_key'])
+
+        from_json = transforms.json_to_dict(
+            json, {'properties': {'referenced_model_key': {'type': 'string'}}})
+        self.assertEqual({'referenced_model_key': str(new_key)}, from_json)
+
+    def test_type_not_validated_if_kind_not_passed(self):
+        model_key = db.Model().put()
+        unvalidated = UnvalidatedReference(referenced_model_key=model_key)
+        self.assertEqual(model_key, unvalidated.referenced_model_key)
+
     def test_validation_and_datastore_round_trip_of_keys_succeeds(self):
         """Tests happy path for both validation and (de)serialization."""
         model_with_reference = ValidatedReference(
@@ -65,11 +94,6 @@ class KeyPropertyTest(actions.TestBase):
             model_with_reference_from_datastore.referenced_model_key,
             db.Key))
 
-    def test_type_not_validated_if_kind_not_passed(self):
-        model_key = db.Model().put()
-        unvalidated = UnvalidatedReference(referenced_model_key=model_key)
-        self.assertEqual(model_key, unvalidated.referenced_model_key)
-
     def test_validation_fails(self):
         model_key = db.Model().put()
         self.assertRaises(
@@ -84,17 +108,22 @@ class ReviewTest(actions.ExportTestBase):
 
     def setUp(self):
         super(ReviewTest, self).setUp()
+        self.reviewee_email = 'reviewee@exmaple.com'
         self.reviewer_email = 'reviewer@example.com'
         self.unit_id = 'unit_id'
+        self.reviewee = models.Student(key_name=self.reviewee_email)
+        self.reviewee_key = self.reviewee.put()
         self.reviewer = models.Student(key_name=self.reviewer_email)
         self.reviewer_key = self.reviewer.put()
         self.review = student_work.Review(
-            reviewer_key=self.reviewer_key, unit_id=self.unit_id)
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id)
         self.review_key = self.review.put()
 
     def test_constructor_sets_key_name(self):
         self.assertEqual(
-            student_work.Review.key_name(self.unit_id, self.reviewer_key),
+            student_work.Review.key_name(
+                self.unit_id, self.reviewee_key, self.reviewer_key),
             self.review_key.name())
 
     def test_for_export_transforms_correctly(self):
@@ -104,13 +133,16 @@ class ReviewTest(actions.ExportTestBase):
             'transformed_' + self.reviewer_key.name(),
             exported.reviewer_key.name())
 
-    def test_safe_key_makes_reviewer_key_name_safe(self):
+    def test_safe_key_makes_key_names_safe(self):
         safe_review_key = student_work.Review.safe_key(
             self.review_key, self.transform)
         # Treat as module-protected. pylint: disable-msg=protected-access
-        safe_unit_id, safe_reviewer_key_str = (
+        _, safe_unit_id, safe_reviewee_key_str, safe_reviewer_key_str = (
             student_work.Review._split_key(safe_review_key.name()))
+        safe_reviewee_key = db.Key(encoded=safe_reviewee_key_str)
         safe_reviewer_key = db.Key(encoded=safe_reviewer_key_str)
+        self.assertEqual(
+            'transformed_' + self.reviewee_email, safe_reviewee_key.name())
         self.assertEqual(
             'transformed_' + self.reviewer_email, safe_reviewer_key.name())
         self.assertEqual(self.unit_id, safe_unit_id)
@@ -144,7 +176,7 @@ class SubmissionTest(actions.ExportTestBase):
         safe_submission_key = student_work.Submission.safe_key(
             self.submission_key, self.transform)
         # Treat as module-protected. pylint: disable-msg=protected-access
-        safe_unit_id, safe_reviewee_key_name = (
+        _, safe_unit_id, safe_reviewee_key_name = (
             student_work.Submission._split_key(safe_submission_key.name()))
         self.assertEqual(
             'transformed_' + self.reviewee_email, safe_reviewee_key_name)

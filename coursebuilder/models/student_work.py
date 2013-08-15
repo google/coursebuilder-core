@@ -94,23 +94,7 @@ class BaseEntity(entities.BaseEntity):
     @classmethod
     def _split_key(cls, key_name):
         """Takes a key_name and returns its components."""
-        _, unit_id, student_key = key_name.strip('()').split(':')
-        return unit_id, student_key
-
-    # Suppress spurious num args error.
-    # pylint: disable-msg=too-many-function-args
-    @classmethod
-    def safe_key(cls, db_key, transform_fn):
-        unit_id, student_key_str = cls._split_key(db_key.name())
-        student_key = cls._get_student_key(student_key_str)
-        safe_student_key = models.Student.safe_key(student_key, transform_fn)
-        return db.Key.from_path(
-            cls.kind(), cls.key_name(unit_id, safe_student_key))
-
-    @classmethod
-    def _get_student_key(cls, value):
-        """Given a value string, return a db.Key for a models.Student."""
-        raise NotImplementedError
+        return key_name.strip('()').split(':')
 
 
 class Review(BaseEntity):
@@ -119,6 +103,8 @@ class Review(BaseEntity):
     # Contents of the student's review. Max size is 1MB.
     contents = db.TextProperty()
 
+    # Key of the student whose work is being reviewed.
+    reviewee_key = KeyProperty(kind=models.Student.kind())
     # Key of the Student who wrote this review.
     reviewer_key = KeyProperty(kind=models.Student.kind())
     # Identifier of the unit this review is a part of.
@@ -128,19 +114,17 @@ class Review(BaseEntity):
         """Constructs a new Review."""
         assert not kwargs.get('key_name'), (
             'Setting key_name manually is not supported')
+        reviewee_key = kwargs.get('reviewee_key')
         reviewer_key = kwargs.get('reviewer_key')
         unit_id = kwargs.get('unit_id')
+        assert reviewee_key, 'Missing required property: reviewee_key'
         assert reviewer_key, 'Missing required property: reviewer_key'
         assert unit_id, 'Missing required_property: unit_id'
-        kwargs['key_name'] = self.key_name(unit_id, reviewer_key)
+        kwargs['key_name'] = self.key_name(unit_id, reviewee_key, reviewer_key)
         super(Review, self).__init__(*args, **kwargs)
 
     @classmethod
-    def _get_student_key(cls, value):
-        return db.Key(encoded=value)
-
-    @classmethod
-    def key_name(cls, unit_id, reviewer_key):
+    def key_name(cls, unit_id, reviewee_key, reviewer_key):
         """Creates a key_name string for datastore operations.
 
         In order to work with the review subsystem, entities must have a key
@@ -148,16 +132,32 @@ class Review(BaseEntity):
 
         Args:
             unit_id: string. The id of the unit this review belongs to.
+            reviewee_key: db.Key of models.models.Student. The student whose
+                work is being reviewed.
             reviewer_key: db.Key of models.models.Student. The author of this
                 the review.
 
         Returns:
             String.
         """
-        return '(review:%s:%s)' % (unit_id, reviewer_key)
+        return '(review:%s:%s:%s)' % (unit_id, reviewee_key, reviewer_key)
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        _, unit_id, reviewee_key_str, reviewer_key_str = cls._split_key(
+            db_key.name())
+        reviewee_key = db.Key(encoded=reviewee_key_str)
+        reviewer_key = db.Key(encoded=reviewer_key_str)
+        safe_reviewee_key = models.Student.safe_key(reviewee_key, transform_fn)
+        safe_reviewer_key = models.Student.safe_key(reviewer_key, transform_fn)
+        return db.Key.from_path(
+            cls.kind(),
+            cls.key_name(unit_id, safe_reviewee_key, safe_reviewer_key))
 
     def for_export(self, transform_fn):
         model = super(Review, self).for_export(transform_fn)
+        model.reviewee_key = models.Student.safe_key(
+            model.reviewee_key, transform_fn)
         model.reviewer_key = models.Student.safe_key(
             model.reviewer_key, transform_fn)
         return model
@@ -211,6 +211,14 @@ class Submission(BaseEntity):
         """Returns a db.Key for a submission."""
         return db.Key.from_path(
             cls.kind(), cls.key_name(unit_id, reviewee_key))
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        _, unit_id, student_key_str = cls._split_key(db_key.name())
+        student_key = db.Key.from_path(models.Student.kind(), student_key_str)
+        safe_student_key = models.Student.safe_key(student_key, transform_fn)
+        return db.Key.from_path(
+            cls.kind(), cls.key_name(unit_id, safe_student_key))
 
     @classmethod
     def write(cls, unit_id, reviewee_key, contents):

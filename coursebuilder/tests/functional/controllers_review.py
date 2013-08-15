@@ -491,6 +491,105 @@ class PeerReviewControllerTest(actions.TestBase):
         assert_equals(response.status_int, 200)
         assert_contains('R2for1', response.body)
 
+    def test_independence_of_draft_reviews(self):
+        """Test that draft reviews do not interfere with each other."""
+
+        email1 = 'student1@google.com'
+        name1 = 'Student 1'
+        submission1 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S1-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'is-S1', 'correct': True},
+        ])
+        payload1 = {
+            'answers': submission1, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email2 = 'student2@google.com'
+        name2 = 'Student 2'
+        submission2 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S2-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload2 = {
+            'answers': submission2, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        email3 = 'student3@google.com'
+        name3 = 'Student 3'
+        submission3 = transforms.dumps([
+            {'index': 0, 'type': 'regex', 'value': 'S3-1', 'correct': True},
+            {'index': 1, 'type': 'choices', 'value': 3, 'correct': False},
+            {'index': 2, 'type': 'regex', 'value': 'not-S1', 'correct': True},
+        ])
+        payload3 = {
+            'answers': submission3, 'assessment_type': LEGACY_REVIEW_UNIT_ID}
+
+        # Student 1 submits the assignment.
+        actions.login(email1)
+        actions.register(self, name1)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload1)
+        actions.logout()
+
+        # Student 2 logs in and submits the assignment.
+        actions.login(email2)
+        actions.register(self, name2)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload2)
+        actions.logout()
+
+        # Student 3 logs in and submits the assignment.
+        actions.login(email3)
+        actions.register(self, name3)
+        response = actions.submit_assessment(
+            self, LEGACY_REVIEW_UNIT_ID, payload3)
+        actions.logout()
+
+        # Student 1 logs in and requests two assignments to review.
+        actions.login(email1)
+        response = self.get('/reviewdashboard?unit=%s' % LEGACY_REVIEW_UNIT_ID)
+
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('Assignment to review', response.body)
+        assert_contains('not-S1', response.body)
+
+        review_step_key_1_for_someone = get_review_step_key(response)
+
+        response = actions.request_new_review(self, LEGACY_REVIEW_UNIT_ID)
+        assert_equals(response.status_int, 200)
+        assert_contains('Assignment to review', response.body)
+        assert_contains('not-S1', response.body)
+
+        review_step_key_1_for_someone_else = get_review_step_key(response)
+
+        self.assertNotEqual(
+            review_step_key_1_for_someone, review_step_key_1_for_someone_else)
+
+        # Student 1 submits two draft reviews.
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone,
+            get_review_payload('R1forFirst', is_draft=True))
+        assert_contains('Your review has been saved.', response.body)
+
+        response = actions.submit_review(
+            self, LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else,
+            get_review_payload('R1forSecond', is_draft=True))
+        assert_contains('Your review has been saved.', response.body)
+
+        # The two draft reviews should still be different when subsequently
+        # accessed.
+        response = self.get('review?unit=%s&key=%s' % (
+            LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone))
+        assert_contains('R1forFirst', response.body)
+
+        response = self.get('review?unit=%s&key=%s' % (
+            LEGACY_REVIEW_UNIT_ID, review_step_key_1_for_someone_else))
+        assert_contains('R1forSecond', response.body)
+
+        # Student 1 logs out.
+        actions.logout()
+
 
 class PeerReviewDashboardTest(actions.TestBase):
     """Test peer review from the Admin perspective."""
