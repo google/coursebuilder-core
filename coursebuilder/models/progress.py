@@ -275,11 +275,11 @@ class UnitLessonCompletionTracker(object):
                     ).get_assessment_components(assessment.unit_id)
                 # CB v1.5 style assessments.
                 for cpt in assessment_components:
-                    if cpt['questionType'] == self.QUESTION_GROUP:
+                    if cpt['cpt_name'] == self.QUESTION_GROUP:
                         id_to_assessments.update(
                             self._create_v15_assessment_question_group_dict(
                                 cpt, assessment))
-                    elif cpt['questionType'] == self.QUESTION:
+                    elif cpt['cpt_name'] == self.QUESTION:
                         id_to_assessments.update(
                             self._create_v15_assessment_question_dict(
                                 cpt, assessment))
@@ -320,28 +320,33 @@ class UnitLessonCompletionTracker(object):
 
     def _create_v15_lesson_question_dict(self, cpt, unit, lesson):
         question = QuestionDAO.load(cpt['quid'])
-        q_id = 'u.%s.l.%s.c.%s' % (
-            unit.unit_id, lesson.lesson_id, cpt['instanceid'])
-        label = 'Unit %s Lesson %s, Question %s' % (
-            unit.index, lesson.index, question.description)
-        link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
-        num_choices = len(question.dict['choices'])
-        return self._create_v15_question_dict(q_id, label, link, num_choices)
+        if question.type == question.MULTIPLE_CHOICE:
+            q_id = 'u.%s.l.%s.c.%s' % (
+                unit.unit_id, lesson.lesson_id, cpt['instanceid'])
+            label = 'Unit %s Lesson %s, Question %s' % (
+                unit.index, lesson.index, question.description)
+            link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
+            num_choices = len(question.dict['choices'])
+            return self._create_v15_question_dict(
+                q_id, label, link, num_choices)
+        else:
+            return {}
 
     def _create_v15_lesson_question_group_dict(self, cpt, unit, lesson):
         question_group = QuestionGroupDAO.load(cpt['qgid'])
         questions = {}
         for ind, quid in enumerate(question_group.question_ids):
             question = QuestionDAO.load(quid)
-            q_id = 'u.%s.l.%s.c.%s.i.%s' % (
-                unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
-            label = 'Unit %s Lesson %s, Question Group %s Question %s' % (
-                unit.index, lesson.index, question_group.description,
-                question.description)
-            link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
-            num_choices = len(question.dict['choices'])
-            questions.update(self._create_v15_question_dict(
-                q_id, label, link, num_choices))
+            if question.type == question.MULTIPLE_CHOICE:
+                q_id = 'u.%s.l.%s.c.%s.i.%s' % (
+                    unit.unit_id, lesson.lesson_id, cpt['instanceid'], ind)
+                label = 'Unit %s Lesson %s, Question Group %s Question %s' % (
+                    unit.index, lesson.index, question_group.description,
+                    question.description)
+                link = self._get_link_for_lesson(unit.unit_id, lesson.lesson_id)
+                num_choices = len(question.dict['choices'])
+                questions.update(self._create_v15_question_dict(
+                    q_id, label, link, num_choices))
         return questions
 
     def _create_v15_assessment_question_group_dict(self, cpt, assessment):
@@ -349,24 +354,30 @@ class UnitLessonCompletionTracker(object):
         questions = {}
         for ind, quid in enumerate(question_group.question_ids):
             question = QuestionDAO.load(quid)
-            q_id = 's.%s.c.%s.i.%s' % (
-                assessment.title, cpt['instanceid'], ind)
-            label = '%s, Question Group %s Question %s' % (
-                assessment.title, question_group.description,
-                question.description)
-            link = self._get_link_for_assessment(assessment.unit_id)
-            num_choices = len(question.dict['choices'])
-            questions.update(
-                self._create_v15_question_dict(q_id, label, link, num_choices))
+            if question.type == question.MULTIPLE_CHOICE:
+                q_id = 's.%s.c.%s.i.%s' % (
+                    assessment.title, cpt['instanceid'], ind)
+                label = '%s, Question Group %s Question %s' % (
+                    assessment.title, question_group.description,
+                    question.description)
+                link = self._get_link_for_assessment(assessment.unit_id)
+                num_choices = len(question.dict['choices'])
+                questions.update(
+                    self._create_v15_question_dict(
+                        q_id, label, link, num_choices))
         return questions
 
     def _create_v15_assessment_question_dict(self, cpt, assessment):
         question = QuestionDAO.load(cpt['quid'])
-        q_id = 's.%s.c.%s' % (assessment.unit_id, cpt['instanceid'])
-        label = '%s, Question %s' % (assessment.title, question.description)
-        link = self._get_link_for_assessment(assessment.unit_id)
-        num_choices = len(question.dict['choices'])
-        return self._create_v15_question_dict(q_id, label, link, num_choices)
+        if question.type == question.MULTIPLE_CHOICE:
+            q_id = 's.%s.c.%s' % (assessment.unit_id, cpt['instanceid'])
+            label = '%s, Question %s' % (assessment.title, question.description)
+            link = self._get_link_for_assessment(assessment.unit_id)
+            num_choices = len(question.dict['choices'])
+            return self._create_v15_question_dict(
+                q_id, label, link, num_choices)
+        else:
+            return {}
 
     def _create_old_style_question_dict(self, block, block_id, unit, lesson,
                                         index=None):
