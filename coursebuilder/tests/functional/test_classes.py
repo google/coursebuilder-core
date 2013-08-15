@@ -3290,12 +3290,12 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         old_namespace = namespace_manager.get_namespace()
         try:
             namespace_manager.set_namespace(context.get_namespace_name())
-            first_student = models.Student(name='first_student')
-            second_student = models.Student(name='second_student')
+            first_student = models.Student(key_name='first_student')
+            second_student = models.Student(key_name='second_student')
             first_entity = models.StudentPropertyEntity(
-                name='first_student_property_entity')
+                key_name='first_student-property_entity')
             second_entity = models.StudentPropertyEntity(
-                name='second_student_property_entity')
+                key_name='second_student-property_entity')
             db.put([first_student, second_student, first_entity, second_entity])
         finally:
             namespace_manager.set_namespace(old_namespace)
@@ -3317,17 +3317,17 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         # Ensure .json files are deserializable into Python objects.
         students = sorted(
             transforms.loads(archive.get(student_entity.path))['rows'],
-            key=lambda d: d['name'])
+            key=lambda d: d['key.name'])
         entities = sorted(
             transforms.loads(archive.get(entity_entity.path))['rows'],
-            key=lambda d: d['name'])
+            key=lambda d: d['key.name'])
         # Spot check their contents.
         self.assertEqual(
-            [model.name for model in [first_student, second_student]],
-            [student['name'] for student in students])
+            [model.key().name() for model in [first_student, second_student]],
+            [student['key.name'] for student in students])
         self.assertEqual(
-            [model.name for model in [first_entity, second_entity]],
-            [entity['name'] for entity in entities])
+            [model.key().name() for model in [first_entity, second_entity]],
+            [entity['key.name'] for entity in entities])
 
     def test_download_datastore_with_privacy_maintains_references(self):
         """Test download of datastore data and archive creation."""

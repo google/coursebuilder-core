@@ -153,3 +153,30 @@ class StudentTestCase(actions.ExportTestBase):
         self.assertEqual(
             'transformed_name',
             models.Student.safe_key(key, self.transform).name())
+
+
+class StudentAnswersEntityTestCase(actions.ExportTestBase):
+
+    def test_safe_key_transforms_name(self):
+        student_key = models.Student(key_name='name').put()
+        answers = models.StudentAnswersEntity(key_name=student_key.name())
+        answers_key = answers.put()
+        self.assertEqual(
+            'transformed_name',
+            models.StudentAnswersEntity.safe_key(
+                answers_key, self.transform).name())
+
+
+class StudentPropertyEntityTestCase(actions.ExportTestBase):
+
+    def test_safe_key_transforms_user_id_component(self):
+        user_id = 'user_id'
+        student = models.Student(key_name='email@example.com', user_id=user_id)
+        student.put()
+        property_name = 'property-name'
+        student_property_key = models.StudentPropertyEntity.create(
+            student, property_name).put()
+        self.assertEqual(
+            'transformed_%s-%s' % (user_id, property_name),
+            models.StudentPropertyEntity.safe_key(
+                student_property_key, self.transform).name())

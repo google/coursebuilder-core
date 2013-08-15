@@ -596,6 +596,10 @@ class StudentAnswersEntity(BaseEntity):
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)
 
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
 
 class StudentPropertyEntity(BaseEntity):
     """A property of a student, keyed by the string STUDENT_ID-PROPERTY_NAME."""
@@ -620,6 +624,12 @@ class StudentPropertyEntity(BaseEntity):
         return StudentPropertyEntity(
             key_name=cls.create_key(student.user_id, property_name),
             name=property_name)
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        user_id, name = db_key.name().split('-', 1)
+        return db.Key.from_path(
+            cls.kind(), '%s-%s' % (transform_fn(user_id), name))
 
     def put(self):
         """Do the normal put() and also add the object to memcache."""
