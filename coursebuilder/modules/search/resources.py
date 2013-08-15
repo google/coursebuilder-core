@@ -555,7 +555,10 @@ class YouTubeFragmentResource(Resource):
                 'title')[0].firstChild.nodeValue
             thumbnail_url = vid_info.getElementsByTagName(
                 'media:thumbnail')[0].attributes['url'].value
-        except (URLNotParseableException, IOError, IndexError, AttributeError):
+        except (URLNotParseableException, IOError,
+                IndexError, AttributeError) as e:
+            logging.error('Could not parse video info for video id %s.\n%s',
+                          video_id, e)
             title = ''
             thumbnail_url = ''
 
