@@ -60,17 +60,17 @@
         var rowKey = rowKeys[rowIndex];
         var answerInfo = answerDict[rowKey];
 
+        table.setCell(rowIndex, 0, answerInfo['label']);
         table.setCell(
-          rowIndex, 0,
-          '<a href="' + answerInfo['location'] + '">' +
-              answerInfo['label'] + '</a>');
+          rowIndex, 1,
+          '<a href="' + answerInfo['location'] +'">view</a>');
 
         var scoreLabel = getScoreLabel(
             answerInfo['score'], answerInfo['num_attempts']);
-        table.setCell(rowIndex, 1, scoreLabel);
+        table.setCell(rowIndex, 2, scoreLabel);
 
         for (var i = 0; i < answerInfo['answer_counts'].length; i++) {
-          table.setCell(rowIndex, i + 2, answerInfo['answer_counts'][i]);
+          table.setCell(rowIndex, i + 3, answerInfo['answer_counts'][i]);
         }
       }
     }
@@ -79,6 +79,7 @@
       // Create and populate the data table.
       var table = new google.visualization.DataTable();
       table.addColumn('string', 'Question Identifier');
+      table.addColumn('string', 'Link')
       table.addColumn('string', 'Average Score');
 
       var maxDataColumns = getMaxAnswerCount(sourceDict);
@@ -93,7 +94,11 @@
       new google.visualization.Table(
         document.getElementById(divId)
       ).draw(
-        table, {allowHtml: true, title: 'Answer distribution per question'}
+        table, {
+          allowHtml: true,
+          sortColumn: 0,  // Force sort on Question Identifier.
+          title: 'Answer distribution per question'
+        }
       );
     }
 
