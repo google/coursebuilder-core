@@ -42,6 +42,8 @@ CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
     default_value=True)
 
 
+DUPLICATE_INSTANCE_ID_MESSAGE = (
+    'Error processing custom HTML tag: duplicate tag id')
 INVALID_HTML_TAG_MESSAGE = 'Invalid HTML tag'
 
 
@@ -234,11 +236,32 @@ def html_to_safe_dom(html_string, handler):
     if not html_string:
         return node_list
 
-    def _process_html_tree(elt):
+    def _generate_error_message_node_list(elt, error_message):
+        """Generates a node_list representing an error message."""
+        logging.error(
+            '[%s, %s]: %s.', elt.tag, dict(**elt.attrib), error_message)
+
         node_list = safe_dom.NodeList()
+        node_list.append(safe_dom.Element(
+            'span', className='gcb-error-tag'
+        ).add_text(error_message))
 
-        tail = elt.tail
+        if elt.tail:
+            node_list.append(safe_dom.Text(elt.tail))
+        return node_list
 
+    def _process_html_tree(elt, used_instance_ids):
+        # Return immediately with an error message if a duplicate instanceid is
+        # detected.
+        if 'instanceid' in elt.attrib:
+            if elt.attrib['instanceid'] in used_instance_ids:
+                return _generate_error_message_node_list(
+                    elt, DUPLICATE_INSTANCE_ID_MESSAGE)
+
+            used_instance_ids.add(elt.attrib['instanceid'])
+
+        # Otherwise, attempt to parse this tag and all its child tags.
+        original_elt = elt
         try:
             if elt.tag in tag_bindings:
                 elt = tag_bindings[elt.tag]().render(elt, handler)
@@ -252,24 +275,26 @@ def html_to_safe_dom(html_string, handler):
             if elt.text:
                 out_elt.add_text(elt.text)
             for child in elt:
-                out_elt.add_children(_process_html_tree(child))
-        except Exception as e:  # pylint: disable-msg=broad-except
-            logging.error('Invalid HTML tag: %s. %s', elt, e)
-            out_elt = safe_dom.Element('span')
-            out_elt.add_attribute(className='gcb-error-tag')
-            out_elt.add_text(INVALID_HTML_TAG_MESSAGE)
+                out_elt.add_children(
+                    _process_html_tree(child, used_instance_ids))
 
-        node_list.append(out_elt)
-        if tail:
-            node_list.append(safe_dom.Text(tail))
-        return node_list
+            node_list = safe_dom.NodeList()
+            node_list.append(out_elt)
+            if original_elt.tail:
+                node_list.append(safe_dom.Text(original_elt.tail))
+            return node_list
+
+        except Exception as e:  # pylint: disable-msg=broad-except
+            return _generate_error_message_node_list(
+                original_elt, '%s: %s' % (INVALID_HTML_TAG_MESSAGE, e))
 
     root = html_string_to_element_tree(html_string)
     if root.text:
         node_list.append(safe_dom.Text(root.text))
 
+    used_instance_ids = set([])
     for elt in root:
-        node_list.append(_process_html_tree(elt))
+        node_list.append(_process_html_tree(elt, used_instance_ids))
 
     return node_list
 
