@@ -48,6 +48,9 @@
   opacity: 0;
   left: -1000%;
 }
+.gcb-butterbar-dashboard {
+  margin-top: 5px;
+}
 .gcb-butterbar.shown {
   opacity: 1;
   visibility: visible;

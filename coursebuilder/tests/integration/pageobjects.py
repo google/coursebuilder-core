@@ -204,7 +204,7 @@ class DashboardPage(PageObject):
     def verify_read_only_course(self):
         self._tester.assertEquals(
             'Read-only course.',
-            self.find_element_by_id('gcb-alerts-bar').text)
+            self.find_element_by_id('gcb-butterbar-message').text)
         return self
 
     def verify_selected_tab(self, tab_text):
@@ -214,7 +214,7 @@ class DashboardPage(PageObject):
     def verify_not_publicly_available(self):
         self._tester.assertEquals(
             'The course is not publicly available.',
-            self.find_element_by_id('gcb-alerts-bar').text)
+            self.find_element_by_id('gcb-butterbar-message').text)
         return self
 
     def click_import(self):

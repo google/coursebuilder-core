@@ -9,6 +9,18 @@
 
     <!-- import jQuery -->
     <script src="assets/lib/jquery-1.7.2.min.js"></script>
+    <script src="assets/lib/butterbar.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="assets/css/butterbar.css"
+        media="screen" />
+
+    {% if alerts %}
+      <script>
+        $(function() {
+          cbShowAlert("{{ alerts | js_string }}");
+        });
+      </script>
+    {% endif %}
 
     <style>
         body, h3 {
@@ -91,14 +103,6 @@
           font-size: 80%;
           color: #666;
         }
-        div#gcb-alerts-bar {
-          background-color: #ffffB7;
-          border: solid #cccca0 1px;
-          display: inline-block;
-          padding: 0.4em;
-          border-radius: 5px;
-          margin-top: 4px;
-        }
         div#gcb-nav-bar a {
           padding-left: 8px;
           padding-right: 8px;
@@ -152,11 +156,14 @@
     {{ top_nav }}
   </div>
   <div id='gcb-main-area'>
-    {% if alerts %}
-      <div id="gcb-alerts-bar">
-        {{ alerts }}
+    <!-- ButterBar -->
+    <div class="gcb-butterbar-container">
+      <div id="gcb-butterbar-top" class="gcb-butterbar gcb-butterbar-dashboard">
+        <p id="gcb-butterbar-message"></p>
+        <a id="gcb-butterbar-close">X</a>
       </div>
-    {% endif %}
+    </div>
+
     {% if page_description %}
       <p class="page-description">
         {{ page_description }}

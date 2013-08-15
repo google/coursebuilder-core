@@ -1,74 +1,8 @@
-<style>
-  div#oeditor-container {
-    position: relative;
-  }
-  div.status-popup {
-    width:400px;   /* adjust */
-    left:50%;
-    margin-left: -200px;  /* half of the width */
-    background-color: #ffffB7;
-    border: solid #cccca0 1px;
-    border-radius: 5px;
-    text-align: center;
-    padding: 2px;
-    z-index: 999;
-  }
-  .status-popup.fixed {
-    position: fixed;
-    top: 10px;
-  }
-  .status-popup.absolute {
-    position: absolute;
-    top: -45px;
-  }
-  div.status-controlbar {
-    float: right;
-  }
-  div.status-controlbar button {
-    font-weight: bold;
-    text-decoration: none;
-    padding: 0 0.2em;
-  }
-  div.status-message {
-    padding: 0.2em;
-  }
-
-  .border-box {
-    border: 1px solid black;
-    margin: auto;
-    padding: 10px 10px 0 10px;
-    width: 90%;
-  }
-  .right-button {
-    float: right;
-    margin-right: 5%;
-  }
-  .translucent {
-    opacity: 0.5;
-  }
-
-</style>
-
 {% if error_msg %}
-  <div id='oeditor-container'>
-    <div class='status-popup absolute' id='formStatusPopup'>
-      <div class='status-controlbar'>
-        <button id='close-status-popup-button' onclick='javascript:cbHideMsg()'>X</button>
-      </div>
-      <div class='status-message' id='formStatusMessage'>
-        Error {{ error_msg }}
-      </div>
-    </div>
-    <div style='width: 100%;' align='center' class='yui3-skin-sam yui-skin-sam'>
-      <div class='form' id='formContainer'></div>
-    </div>
-  </div>
-
   <script>
-    function cbHideMsg() {
-      elem = document.getElementById("formStatusPopup");
-      elem.style.display = "none";
-    }
+    $(function() {
+      cbShowMsg("Error {{ error_msg | js_string }}");
+    });
   </script>
 {% endif %}
 

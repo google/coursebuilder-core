@@ -6,22 +6,42 @@ function ButterBar(popup, message, close) {
 ButterBar.prototype.showMessage = function(text) {
   this.message.textContent = text;  // FF, Chrome
   this.message.innerText = text;    // IE
-  this.popup.className = "gcb-butterbar shown";
+  if (! $(this.popup).hasClass("shown")) {
+    $(this.popup).addClass("shown");
+  }
   if (this.close != null) {
     this.close.onclick = cbHideMsg;
   }
   window.onscroll = ButterBar.keepInView;
 };
 ButterBar.prototype.hide = function() {
-  this.popup.className = "gcb-butterbar";
+  if ($(this.popup).hasClass("shown")) {
+    $(this.popup).removeClass("shown");
+  }
 };
+ButterBar.prototype.setCloseButtonVisible = function(visible) {
+  var visibile = visible || true;
+  if (visible) {
+    this.close.style.display = null;
+  } else {
+    this.close.style.display = 'none';
+  }
+}
 ButterBar.getButterBar = function() {
   return new ButterBar(document.getElementById("gcb-butterbar-top"),
     document.getElementById("gcb-butterbar-message"),
     document.getElementById("gcb-butterbar-close"));
 };
 function cbShowMsg(text) {
-  ButterBar.getButterBar().showMessage(text);
+  var butterBar = ButterBar.getButterBar();
+  butterBar.setCloseButtonVisible();
+  butterBar.showMessage(text);
+}
+function cbShowAlert(text) {
+  // An alert should not be closed; hide the close button
+  var butterBar = ButterBar.getButterBar();
+  butterBar.setCloseButtonVisible(false);
+  butterBar.showMessage(text);
 }
 function cbHideMsg() {
   ButterBar.getButterBar().hide();
