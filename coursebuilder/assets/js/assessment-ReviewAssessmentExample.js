@@ -35,7 +35,7 @@ var assessment = {
     {questionHTML: 'List the Power Search concepts you used.',
      multiLine: true,
      correctAnswerRegex: /.*/i
-    },
+    }
   ],
 
   // The assessmentName key is deprecated in v1.3 of Course Builder, and no
