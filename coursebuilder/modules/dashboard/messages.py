@@ -95,6 +95,18 @@ Import the contents of another course into this course. Both courses must be on
 the same Google App Engine instance.
 """, None)
 
+INCORRECT_ANSWER_FEEDBACK = """
+Shown when the student response does not match any of the possible answers.
+"""
+
+INPUT_FIELD_HEIGHT_DESCRIPTION = """
+Height of the input field, measured in rows.
+"""
+
+INPUT_FIELD_WIDTH_DESCRIPTION = """
+Width of the input field, measured in columns.
+"""
+
 LESSON_ACTIVITY_DESCRIPTION = assemble_sanitized_message("""
 Create an activity by entering the correct syntax above.
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
@@ -140,10 +152,6 @@ PAGES_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
 
 QUESTION_DESCRIPTION = 'Shown when selecting questions for quizzes, etc.'
-
-INCORRECT_ANSWER_FEEDBACK = """
-Shown when the student response does not match any of the possible answers.
-"""
 
 REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
 Review form questions and answers (JavaScript format).

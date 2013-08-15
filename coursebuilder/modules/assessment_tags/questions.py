@@ -82,6 +82,13 @@ def render_question(
         js_data['hint'] = template_values.get('hint')
         js_data['defaultFeedback'] = template_values.get('defaultFeedback')
 
+        # The following two lines are included for backwards compatibility with
+        # v1.5 questions that do not have the row and column properties set.
+        template_values['rows'] = template_values.get(
+            'rows', m_models.SaQuestionConstants.DEFAULT_HEIGHT_ROWS)
+        template_values['columns'] = template_values.get(
+            'columns', m_models.SaQuestionConstants.DEFAULT_WIDTH_COLUMNS)
+
     if not embedded:
         js_data['weight'] = weight
     template_values['js_data'] = transforms.dumps(js_data)

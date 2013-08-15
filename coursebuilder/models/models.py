@@ -768,6 +768,11 @@ class QuestionDAO(BaseJsonDao):
         return sorted(matches)
 
 
+class SaQuestionConstants(object):
+    DEFAULT_WIDTH_COLUMNS = 100
+    DEFAULT_HEIGHT_ROWS = 1
+
+
 class QuestionGroupEntity(BaseEntity):
     """An object representing a question group in the datastore."""
     data = db.TextProperty(indexed=False)

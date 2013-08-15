@@ -185,7 +185,8 @@ SaQuestion.prototype.onShowHint = function() {
       .removeClass('qt-hidden');
 };
 SaQuestion.prototype.grade = function() {
-  var response = this.el.find('div.qt-response > input').val();
+  var response = this.el.find(
+      'div.qt-response > input, div.qt-response > textarea').val();
   for (var i = 0; i < this.data.graders.length; i++) {
     var grader = this.data.graders[i];
     if (SaQuestion.MATCHERS[grader.matcher].matches(
@@ -199,15 +200,18 @@ SaQuestion.prototype.grade = function() {
   return {answer: response, score: 0.0, feedback: this.data.defaultFeedback};
 };
 SaQuestion.prototype.getStudentAnswer = function() {
-  return {'response': this.el.find('div.qt-response > input').val()};
+  return {'response': this.el.find(
+      'div.qt-response > input, div.qt-response > textarea').val()};
 };
 SaQuestion.prototype.setStudentAnswer = function(state) {
   if (state && state.response != undefined) {
-    this.el.find('div.qt-response > input').val(state.response);
+    this.el.find('div.qt-response > input, div.qt-response > textarea')
+        .val(state.response);
   }
 };
 SaQuestion.prototype.makeReadOnly = function() {
-  this.el.find('div.qt-response > input').attr('disabled', true);
+  this.el.find('div.qt-response > input, div.qt-response > textarea')
+      .attr('disabled', true);
 };
 
 /**

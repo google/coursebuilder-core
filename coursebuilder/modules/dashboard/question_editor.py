@@ -27,6 +27,7 @@ from controllers.utils import XsrfTokenManager
 from models import transforms
 from models.models import QuestionDAO
 from models.models import QuestionDTO
+from models.models import SaQuestionConstants
 from modules.oeditor import oeditor
 import messages
 from unit_lesson_editor import CourseOutlineRights
@@ -325,7 +326,7 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
 
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-list',
-        'inputex-hidden']
+        'inputex-hidden', 'inputex-integer']
     EXTRA_JS_FILES = []
 
     TYPE = QuestionDTO.SHORT_ANSWER
@@ -362,6 +363,21 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             'defaultFeedback', 'Feedback', 'html', optional=True,
             extra_schema_dict_values={'className': 'sa-feedback'},
             description=messages.INCORRECT_ANSWER_FEEDBACK))
+
+        sa_question.add_property(schema_fields.SchemaField(
+            'rows', 'Rows', 'integer', optional=True,
+            extra_schema_dict_values={
+                'className': 'sa-rows',
+                'value': SaQuestionConstants.DEFAULT_HEIGHT_ROWS
+            },
+            description=messages.INPUT_FIELD_HEIGHT_DESCRIPTION))
+        sa_question.add_property(schema_fields.SchemaField(
+            'columns', 'Columns', 'integer', optional=True,
+            extra_schema_dict_values={
+                'className': 'sa-columns',
+                'value': SaQuestionConstants.DEFAULT_WIDTH_COLUMNS
+            },
+            description=messages.INPUT_FIELD_WIDTH_DESCRIPTION))
 
         grader_type = schema_fields.FieldRegistry(
             'Answer',

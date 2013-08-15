@@ -6,7 +6,11 @@
     <div class="qt-question">{{ question | safe }}</div>
 
     <div class="qt-response">
-      <input type="text"/>
+      {% if rows == 1 %}
+        <input type="text"/>
+      {% else %}
+        <textarea rows="{{rows}}" cols="{{columns}}"></textarea>
+      {% endif %}
     </div>
 
     {% if hint %}

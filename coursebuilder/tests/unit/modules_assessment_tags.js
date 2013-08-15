@@ -1,4 +1,4 @@
-describe('assessment tags', function() {
+textareadescribe('assessment tags', function() {
   var MESSAGES = {
     correctAnswer: 'Yes, the answer is correct.',
     incorrectAnswer: 'No, the answer is incorrect.',
@@ -171,7 +171,7 @@ describe('assessment tags', function() {
     beforeEach(function() {
       el = $('#sa-0');
       // Enter 'falafel' as the response
-      el.find('> .qt-response > input').val('falafel');
+      el.find('> .qt-response > input, .qt-response > textarea').val('falafel');
     });
     function getQuestionData(matcher, response) {
       return {'sa-0': {
@@ -224,15 +224,16 @@ describe('assessment tags', function() {
     });
     describe('numeric grading', function() {
       it('matches numerically equivalent answers', function() {
-        el.find('> .qt-response > input').val('3');
+        el.find('> .qt-response > input, .qt-response > textarea').val('3');
         testMatcherWithResponse('numeric', '3.00', 1);
       });
       it('rejects non-numeric answers', function() {
-        el.find('> .qt-response > input').val('falafel');
+        el.find('> .qt-response > input, .qt-response > textarea')
+            .val('falafel');
         testMatcherWithResponse('numeric', '3.00', 0);
       });
       it('rejects unequal numeric answers', function() {
-        el.find('> .qt-response > input').val('3.01');
+        el.find('> .qt-response > input, .qt-response > textarea').val('3.01');
         testMatcherWithResponse('numeric', '3.00', 0);
       });
     });
@@ -253,24 +254,31 @@ describe('assessment tags', function() {
       });
       it('restores a valid answer', function() {
         sa.setStudentAnswer({'response': 'foo bar'});
-        expect(el.find('> .qt-response > input').val()).toEqual('foo bar');
+        expect(el.find('> .qt-response > input, .qt-response > textarea')
+            .val()).toEqual('foo bar');
       });
       it('does nothing with a null, undefined, or invalid answer', function() {
         sa.setStudentAnswer(null);
-        expect(el.find('> .qt-response > input').val()).toEqual('falafel');
+        expect(el.find('> .qt-response > input, .qt-response > textarea')
+            .val()).toEqual('falafel');
         sa.setStudentAnswer(undefined);
-        expect(el.find('> .qt-response > input').val()).toEqual('falafel');
+        expect(el.find('> .qt-response > input, .qt-response > textarea')
+            .val()).toEqual('falafel');
         sa.setStudentAnswer({'wrong': 'format'});
-        expect(el.find('> .qt-response > input').val()).toEqual('falafel');
+        expect(el.find('> .qt-response > input, .qt-response > textarea')
+            .val()).toEqual('falafel');
         sa.setStudentAnswer(['wrong', 'format']);
-        expect(el.find('> .qt-response > input').val()).toEqual('falafel');
+        expect(el.find('> .qt-response > input, .qt-response > textarea')
+            .val()).toEqual('falafel');
       });
     });
     it('can be made read-only', function() {
       var sa = getQuestion('case insensitive', 'Falafel');
-      expect(el.find('> .qt-response > input').prop('disabled')).toBe(false);
+      expect(el.find('> .qt-response > input, .qt-response > textarea')
+          .prop('disabled')).toBe(false);
       sa.makeReadOnly();
-      expect(el.find('> .qt-response > input').prop('disabled')).toBe(true);
+      expect(el.find('> .qt-response > input, .qt-response > textarea')
+          .prop('disabled')).toBe(true);
     });
   });
   describe('question group', function() {
@@ -299,13 +307,15 @@ describe('assessment tags', function() {
     });
     it('computes a weighted grade', function() {
       $('#qg-0-mc-0-0').prop('checked', false);
-      $('#qg-0-sa-0 > .qt-response > input').val('falafel');
+      $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+          .val('falafel');
       var grade = qg.grade();
       expect(grade.score).toBeCloseTo(0.6, 10);
     });
     it('gets the feedback from all the questions', function() {
       $('#qg-0-mc-0-0').prop('checked', true);
-      $('#qg-0-sa-0 > .qt-response > input').val('falafel');
+      $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+          .val('falafel');
       var grade = qg.grade();
       expect(getOuterHTML(grade.feedback[0])).toBe('<ul><li>yes</li></ul>');
       expect(getOuterHTML(grade.feedback[1])).toBe('<div>good</div>');
@@ -315,7 +325,8 @@ describe('assessment tags', function() {
     });
     it('serializes the student answer', function() {
       $('#qg-0-mc-0-0').prop('checked', true);
-      $('#qg-0-sa-0 > .qt-response > input').val('falafel');
+      $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+          .val('falafel');
       expect(qg.getStudentAnswer()).toEqual({
         'qg-0-mc-0' : [ true, false ],
         'qg-0-sa-0' : { 'response' : 'falafel' }
@@ -325,12 +336,14 @@ describe('assessment tags', function() {
       beforeEach(function() {
         $('#qg-0-mc-0-0').prop('checked', true);
         $('#qg-0-mc-0-1').prop('checked', false);
-        $('#qg-0-sa-0 > .qt-response > input').val('falafel')
+        $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+            .val('falafel')
       });
       function expectValue(mc1, mc2, text) {
         expect($('#qg-0-mc-0-0').prop('checked')).toBe(mc1);
         expect($('#qg-0-mc-0-1').prop('checked')).toBe(mc2);
-        expect($('#qg-0-sa-0 > .qt-response > input').val()).toBe(text);
+        expect($('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+            .val()).toBe(text);
       }
       it('restores a valid answer', function() {
         qg.setStudentAnswer({
@@ -361,8 +374,8 @@ describe('assessment tags', function() {
       function expectDisabled(mc1, mc2, text) {
         expect($('#qg-0-mc-0-0').prop('disabled')).toBe(mc1);
         expect($('#qg-0-mc-0-1').prop('disabled')).toBe(mc2);
-        expect($('#qg-0-sa-0 > .qt-response > input').prop('disabled'))
-            .toBe(text);
+        expect($('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
+               .prop('disabled')).toBe(text);
       }
       expectDisabled(false, false, false);
       qg.makeReadOnly();
