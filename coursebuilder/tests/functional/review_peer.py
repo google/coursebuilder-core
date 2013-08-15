@@ -25,48 +25,114 @@ from modules.review import peer
 from tests.functional import actions
 from google.appengine.ext import db
 
+# No docstrings on tests. pylint: disable-msg=g-missing-docstring
+# Use mixedCase names from parent. pylint: disable-msg=g-bad-name
 
-class ReviewStepTest(actions.TestBase):
+
+class ReviewStepTest(actions.ExportTestBase):
+
+    def setUp(self):
+        super(ReviewStepTest, self).setUp()
+        self.reviewee_email = 'reviewee@example.com'
+        self.reviewee_key = models.Student(key_name=self.reviewee_email).put()
+        self.reviewer_email = 'reviewer@example.com'
+        self.reviewer_key = models.Student(key_name=self.reviewer_email).put()
+        self.unit_id = 'unit_id'
+        self.submission_key = student_work.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
+        self.review_key = student_work.Review(
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            unit_id=self.unit_id).put()
+        self.review_summary_key = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id).put()
+        self.step = peer.ReviewStep(
+            assigner_kind=domain.ASSIGNER_KIND_AUTO, review_key=self.review_key,
+            review_summary_key=self.review_summary_key,
+            reviewee_key=self.reviewee_key, reviewer_key=self.reviewer_key,
+            state=domain.REVIEW_STATE_ASSIGNED,
+            submission_key=self.submission_key, unit_id=self.unit_id)
+        self.step_key = self.step.put()
 
     def test_constructor_sets_key_name(self):
         """Tests construction of key_name, put of entity with key_name set."""
-        unit_id = 'unit_id'
-        reviewee_key = models.Student(key_name='reviewee@example.com').put()
-        reviewer_key = models.Student(key_name='reviewer@example.com').put()
-        submission_key = student_work.Submission(
-            reviewee_key=reviewee_key, unit_id=unit_id).put()
-        step_key = peer.ReviewStep(
-            assigner_kind=domain.ASSIGNER_KIND_AUTO,
-            reviewee_key=reviewee_key, reviewer_key=reviewer_key,
-            state=domain.REVIEW_STATE_ASSIGNED,
-            submission_key=submission_key, unit_id=unit_id).put()
         self.assertEqual(
-            peer.ReviewStep.key_name(submission_key, reviewer_key),
-            step_key.name())
+            peer.ReviewStep.key_name(self.submission_key, self.reviewer_key),
+            self.step_key.name())
+
+    def test_for_export_transforms_correctly(self):
+        exported = self.step.for_export(self.transform)
+
+        self.assert_blacklisted_properties_removed(self.step, exported)
+        self.assertEqual(
+            student_work.Review.safe_key(self.review_key, self.transform),
+            exported.review_key)
+        self.assertEqual(
+            peer.ReviewSummary.safe_key(
+                self.review_summary_key, self.transform),
+            exported.review_summary_key)
+        self.assertEqual(
+            models.Student.safe_key(self.reviewee_key, self.transform),
+            exported.reviewee_key)
+        self.assertEqual(
+            models.Student.safe_key(self.reviewer_key, self.transform),
+            exported.reviewer_key)
+        self.assertEqual(
+            student_work.Submission.safe_key(
+                self.submission_key, self.transform),
+            exported.submission_key)
+
+    def test_safe_key_transforms_or_retains_sensitive_data(self):
+        original_key = peer.ReviewStep.safe_key(self.step_key, lambda x: x)
+        transformed_key = peer.ReviewStep.safe_key(
+            self.step_key, self.transform)
+
+        get_reviewee_key_name = (
+            lambda x: x.split('%s:' % self.unit_id)[-1].split(')')[0])
+        get_reviewer_key_name = lambda x: x.rsplit(':')[-1].strip(')')
+
+        self.assertEqual(
+            self.reviewee_email, get_reviewee_key_name(original_key.name()))
+        self.assertEqual(
+            self.reviewer_email, get_reviewer_key_name(original_key.name()))
+
+        self.assertEqual(
+            'transformed_' + self.reviewee_email,
+            get_reviewee_key_name(transformed_key.name()))
+        self.assertEqual(
+            'transformed_' + self.reviewer_email,
+            get_reviewer_key_name(transformed_key.name()))
 
 
-class ReviewSummaryTest(actions.TestBase):
-    """Tests for ReviewSummary."""
+class ReviewSummaryTest(actions.ExportTestBase):
+
+    def setUp(self):
+        super(ReviewSummaryTest, self).setUp()
+        self.unit_id = 'unit_id'
+        self.reviewee_email = 'reviewee@example.com'
+        self.reviewee_key = models.Student(
+            key_name='reviewee@example.com').put()
+        self.submission_key = student_work.Submission(
+            reviewee_key=self.reviewee_key, unit_id=self.unit_id).put()
+        self.summary = peer.ReviewSummary(
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
+        self.summary_key = self.summary.put()
 
     def test_constructor_sets_key_name(self):
-        unit_id = 'unit_id'
-        reviewee_key = models.Student(key_name='reviewee@example.com').put()
-        submission_key = student_work.Submission(
-            reviewee_key=reviewee_key, unit_id=unit_id).put()
         summary_key = peer.ReviewSummary(
-            reviewee_key=reviewee_key, submission_key=submission_key,
-            unit_id=unit_id).put()
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id).put()
         self.assertEqual(
-            peer.ReviewSummary.key_name(submission_key), summary_key.name())
+            peer.ReviewSummary.key_name(self.submission_key),
+            summary_key.name())
 
     def test_decrement_count(self):
         """Tests decrement_count."""
         summary = peer.ReviewSummary(
             assigned_count=1, completed_count=1, expired_count=1,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            submission_key=db.Key.from_path(
-                student_work.Submission.kind(), 'submission'), unit_id='1')
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
 
         self.assertEqual(1, summary.assigned_count)
         summary.decrement_count(domain.REVIEW_STATE_ASSIGNED)
@@ -82,10 +148,8 @@ class ReviewSummaryTest(actions.TestBase):
     def test_increment_count(self):
         """Tests increment_count."""
         summary = peer.ReviewSummary(
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            submission_key=db.Key.from_path(
-                student_work.Submission.kind(), 'submission'), unit_id='1')
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
 
         self.assertRaises(ValueError, summary.increment_count, 'bad_state')
         self.assertEqual(0, summary.assigned_count)
@@ -100,10 +164,8 @@ class ReviewSummaryTest(actions.TestBase):
 
         check_overflow = peer.ReviewSummary(
             assigned_count=domain.MAX_UNREMOVED_REVIEW_STEPS - 1,
-            reviewee_key=db.Key.from_path(
-                models.Student.kind(), 'reviewee@example.com'),
-            submission_key=db.Key.from_path(
-                student_work.Submission.kind(), 'submission'), unit_id='1')
+            reviewee_key=self.reviewee_key, submission_key=self.submission_key,
+            unit_id=self.unit_id)
         # Increment to the limit succeeds...
         check_overflow.increment_count(domain.REVIEW_STATE_ASSIGNED)
 
@@ -111,3 +173,29 @@ class ReviewSummaryTest(actions.TestBase):
         self.assertRaises(
             db.BadValueError,
             check_overflow.increment_count, domain.REVIEW_STATE_ASSIGNED)
+
+    def test_for_export_transforms_correctly(self):
+        exported = self.summary.for_export(self.transform)
+
+        self.assert_blacklisted_properties_removed(self.summary, exported)
+        self.assertEqual(
+            models.Student.safe_key(self.reviewee_key, self.transform),
+            exported.reviewee_key)
+        self.assertEqual(
+            student_work.Submission.safe_key(
+                self.submission_key, self.transform),
+            exported.submission_key)
+
+    def test_safe_key_transforms_or_retains_sensitive_data(self):
+        original_key = peer.ReviewSummary.safe_key(
+            self.summary_key, lambda x: x)
+        transformed_key = peer.ReviewSummary.safe_key(
+            self.summary_key, self.transform)
+
+        get_reviewee_key_name = lambda x: x.rsplit(':', 1)[-1].strip(')')
+
+        self.assertEqual(
+            self.reviewee_email, get_reviewee_key_name(original_key.name()))
+        self.assertEqual(
+            'transformed_' + self.reviewee_email,
+            get_reviewee_key_name(transformed_key.name()))

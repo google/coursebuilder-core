@@ -94,7 +94,8 @@ class BaseEntity(entities.BaseEntity):
     @classmethod
     def _split_key(cls, key_name):
         """Takes a key_name and returns its components."""
-        return key_name.strip('()').split(':')
+        # '(a:b:(c:d:(e:f:g)):h)' -> ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].
+        return key_name.replace('(', '').replace(')', '').split(':')
 
 
 class Review(BaseEntity):

@@ -78,6 +78,17 @@ class ReviewSummary(student_work.BaseEntity):
         """Creates a key_name string for datastore operations."""
         return '(review_summary:%s)' % submission_key.id_or_name()
 
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        _, _, unit_id, unsafe_reviewee_key_name = cls._split_key(db_key.name())
+        unsafe_reviewee_key = db.Key.from_path(
+            models.Student.kind(), unsafe_reviewee_key_name)
+        unsafe_submission_key = student_work.Submission.get_key(
+            unit_id, unsafe_reviewee_key)
+        safe_submission_key = student_work.Submission.safe_key(
+            unsafe_submission_key, transform_fn)
+        return db.Key.from_path(cls.kind(), cls.key_name(safe_submission_key))
+
     def _check_count(self):
         count_sum = (
             self.assigned_count + self.completed_count + self.expired_count)
@@ -129,6 +140,14 @@ class ReviewSummary(student_work.BaseEntity):
             self.completed_count += 1
         elif state == domain.REVIEW_STATE_EXPIRED:
             self.expired_count += 1
+
+    def for_export(self, transform_fn):
+        model = super(ReviewSummary, self).for_export(transform_fn)
+        model.reviewee_key = models.Student.safe_key(
+            model.reviewee_key, transform_fn)
+        model.submission_key = student_work.Submission.safe_key(
+            model.submission_key, transform_fn)
+        return model
 
 
 class ReviewStep(student_work.BaseEntity):
@@ -189,3 +208,43 @@ class ReviewStep(student_work.BaseEntity):
         """Creates a key_name string for datastore operations."""
         return '(review_step:%s:%s)' % (
             submission_key.id_or_name(), reviewer_key.id_or_name())
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        """Constructs a version of the entitiy's key that is safe for export."""
+        cls._split_key(db_key.name())
+        name = db_key.name().strip('()')
+        unsafe_submission_key_name, unsafe_reviewer_id_or_name = name.split(
+            ':', 1)[1].rsplit(':', 1)
+        unsafe_reviewer_key = db.Key.from_path(
+            models.Student.kind(), unsafe_reviewer_id_or_name)
+        safe_reviewer_key = models.Student.safe_key(
+            unsafe_reviewer_key, transform_fn)
+
+        # Treating as module-protected. pylint: disable-msg=protected-access
+        _, unit_id, unsafe_reviewee_key_name = (
+            student_work.Submission._split_key(unsafe_submission_key_name))
+        unsafe_reviewee_key = db.Key.from_path(
+            models.Student.kind(), unsafe_reviewee_key_name)
+        unsafe_submission_key = student_work.Submission.get_key(
+            unit_id, unsafe_reviewee_key)
+        safe_submission_key = student_work.Submission.safe_key(
+            unsafe_submission_key, transform_fn)
+
+        return db.Key.from_path(
+            cls.kind(), cls.key_name(safe_submission_key, safe_reviewer_key))
+
+    def for_export(self, transform_fn):
+        """Creates a version of the entity that is safe for export."""
+        model = super(ReviewStep, self).for_export(transform_fn)
+        model.review_key = student_work.Review.safe_key(
+            model.review_key, transform_fn)
+        model.review_summary_key = ReviewSummary.safe_key(
+            model.review_summary_key, transform_fn)
+        model.reviewee_key = models.Student.safe_key(
+            model.reviewee_key, transform_fn)
+        model.reviewer_key = models.Student.safe_key(
+            model.reviewer_key, transform_fn)
+        model.submission_key = student_work.Submission.safe_key(
+            model.submission_key, transform_fn)
+        return model
