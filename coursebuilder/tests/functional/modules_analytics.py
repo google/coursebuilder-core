@@ -161,7 +161,8 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # pylint: disable-msg=protected-access
         assert_equals(
-            progress_stats._get_unit_label(unit1.unit_id), unit1.index)
+            progress_stats._get_unit_label(unit1.unit_id),
+            'Unit %s' % unit1.index)
         assessment1 = course.add_assessment()
         assert_equals(
             progress_stats._get_assessment_label(assessment1.unit_id),
@@ -211,7 +212,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_equals(
             progress_stats.compute_entity_dict('course', []),
             {'label': 'UNTITLED COURSE', 'u': {unit1.unit_id: {
-                'label': unit1.index, 'l': {}}}, 's': {
+                'label': 'Unit %s' % unit1.index, 'l': {}}}, 's': {
                     assessment1.unit_id: {'label': assessment1.title}}})
         lesson11 = course.add_lesson(unit1)
         assert_equals(
@@ -236,7 +237,7 @@ class ProgressAnalyticsTest(actions.TestBase):
                                 "label": lesson11.index
                             }
                         },
-                        "label": unit1.index
+                        "label": "Unit %s" % unit1.index
                     }
                 },
                 'label': 'UNTITLED COURSE'
@@ -278,7 +279,7 @@ class ProgressAnalyticsTest(actions.TestBase):
                                 "label": lesson11.index
                             }
                         },
-                        "label": unit1.index
+                        "label": "Unit %s" % unit1.index
                     }
                 },
                 "label": 'UNTITLED COURSE'

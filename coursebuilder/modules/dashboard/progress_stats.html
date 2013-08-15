@@ -36,11 +36,11 @@
           // Create and draw the visualization.
           new google.visualization.ColumnChart(document.getElementById('visualization')).
           draw(table,
-               {title: "Student Progress for Units",
+               {title: "Student Progress for Units & Assessments",
                 isStacked: true,
                 width: 800, height: 400,
                 vAxis: {title: "Students"},
-                hAxis: {title: "Units"},
+                hAxis: {title: "Units & Assessments"},
                 colors: [ '7EF649', 'FFFF32']
               }
               );
@@ -67,3 +67,5 @@
 {% endif %}
 
 {{ update_message }}
+
+<br><br>

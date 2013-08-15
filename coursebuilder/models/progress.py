@@ -670,7 +670,7 @@ class ProgressStats(object):
 
     def _get_unit_label(self, unit_id):
         unit = self._get_course().find_unit_by_id(unit_id)
-        return unit.index
+        return 'Unit %s' % unit.index
 
     def _get_assessment_label(self, unit_id):
         assessment = self._get_course().find_unit_by_id(unit_id)
@@ -682,19 +682,19 @@ class ProgressStats(object):
         return lesson.index
 
     def _get_activity_label(self, unit_id, lesson_id, unused_activity_id):
-        """Labels activities by L(unit_id).(lesson_id). Ex: L1.2."""
-        unit_label = self._get_unit_label(unit_id)
-        lesson_label = self._get_lesson_label(unit_id, lesson_id)
-        return str('L%s.%s' % (unit_label, lesson_label))
+        return str('L%s.%s' % (
+            self._get_course().find_unit_by_id(unit_id).index,
+            self._get_lesson_label(unit_id, lesson_id)))
 
     def _get_html_label(self, unit_id, lesson_id, unused_html_id):
         return self._get_activity_label(unit_id, lesson_id, unused_html_id)
 
     def _get_block_label(self, unit_id, lesson_id, unused_activity_id,
                          block_id):
-        unit_label = self._get_unit_label(unit_id)
-        lesson_label = self._get_lesson_label(unit_id, lesson_id)
-        return str('L%s.%s.%s' % (unit_label, lesson_label, block_id))
+        return str('L%s.%s.%s' % (
+            self._get_course().find_unit_by_id(unit_id).index,
+            self._get_lesson_label(unit_id, lesson_id),
+            block_id))
 
     def _get_component_label(self, unit_id, lesson_id, unused_html_id,
                              component_id):

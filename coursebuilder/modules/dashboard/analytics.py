@@ -217,8 +217,8 @@ class StudentProgressStatsHandler(ApplicationHandler):
         update_message = safe_dom.Text('')
 
         course = courses.Course(self)
-        # pylint: disable-msg=g-line-too-long
-        entity_codes = progress.UnitLessonCompletionTracker.EVENT_CODE_MAPPING.values()
+        entity_codes = (
+            progress.UnitLessonCompletionTracker.EVENT_CODE_MAPPING.values())
         value = None
         course_content = None
 
@@ -232,15 +232,12 @@ class StudentProgressStatsHandler(ApplicationHandler):
                 try:
                     course_content = progress.ProgressStats(
                         course).compute_entity_dict('course', [])
-                    update_message = safe_dom.NodeList().append(
-                        safe_dom.Text("""
-                            Student progress statistics were last updated at
-                            %s in about %s second(s).""" % (
-                                job.updated_on.strftime(
-                                    HUMAN_READABLE_TIME_FORMAT),
-                                job.execution_time_sec))
-                    ).append(
-                        safe_dom.Element('br'))
+                    update_message = safe_dom.Text("""
+                        Student progress statistics were last updated at
+                        %s in about %s second(s).""" % (
+                            job.updated_on.strftime(
+                                HUMAN_READABLE_TIME_FORMAT),
+                            job.execution_time_sec))
                 except IOError:
                     update_message = safe_dom.Text("""
                         This feature is supported by CB 1.3 and up.""")
