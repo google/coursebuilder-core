@@ -16,5 +16,11 @@ code we used to create Power Searching and to document our use of that
 code in conjunction with Google products to create the entire
 experience.
 
-For more information, see the documentation at 
+Course Builder uses an icon (found at
+coursebuilder/modules/upload/resources/script_add.png) from the Silk icon set
+version 1.3 by Mark James, licensed under a Creative Commons Attribution 2.5
+license. For more information on Silk, see
+http://www.famfamfam.com/lab/icons/silk/.
+
+For more information on Course Builder, see the documentation at
 https://code.google.com/p/course-builder/wiki/CourseBuilderChecklist.

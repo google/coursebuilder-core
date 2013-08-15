@@ -1,0 +1,22 @@
+{% extends 'base_course.html' %}
+
+{% block main_content %}
+    <p class='gcb-top-content'>
+        {% if success %}
+            {# I18N: Shown when a user submits a file successfully. #}
+            {{ gettext('Your file has been successfully uploaded.') }}
+        {% else %}
+            {# I18N: Shown to tell the user an error occurred during submission. #}
+            {{ gettext('An error occurred.') }}
+        {% endif %}
+        <a href='unit?unit={{ unit_id }}'>
+            {% if success %}
+                {# I18N: Text of the link to take the user back to the previous page. #}
+                {{ gettext('Return to the previous page.') }}
+            {% else %}
+                {# I18N: Text of the link to take the user back to the previous page so they can try submitting again. #}
+                {{ gettext('Go back and try again.') }}
+            {% endif %}
+        </a>
+    </p>
+{% endblock %}

@@ -1,0 +1,29 @@
+<div class='user-upload-form'>
+    <form action={{ action }} enctype='multipart/form-data' method='POST'>
+        <input
+            name='form_xsrf_token'
+            type='hidden'
+            value='{{ form_xsrf_token }}'/>
+        <input type='hidden' name='unit_id' value='{{ unit_id }}'/>
+        <input
+            {% if transient_student %}disabled='disabled'{% endif %}
+            name='contents'
+            size='{{ display_length }}'
+            type='file'/>
+        <p>
+            {% if already_submitted %}
+                <span class='user-upload-form-warning'>
+                    {# I18N: Message shown to the user telling them they have already submitted an item, and submitting a new item will overwrite their previous item. #}
+                    {{ gettext('You have already submitted; submit again to replace your previous entry.') }}
+                </span>
+            {% endif %}
+            <span class='user-upload-form-warning'>
+                {# I18N: Warning shown to the user telling them that the file they select for upload should be at most 1MB in size #}
+                {{ gettext('Maximum file size is 1MB.') }}
+            </span>
+        </p>
+        <input
+            type='submit'
+            {% if transient_student %}disabled='disabled'{% endif %}/>
+    </form>
+</div>
