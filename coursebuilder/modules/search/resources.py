@@ -113,10 +113,9 @@ def get_parser_for_html(url, ignore_robots=False):
         if (result.status_code in [200, 304] and
             any(content_type in result.headers['Content-type'] for
                 content_type in ['text/html', 'xml'])):
-            # TODO(emichael): Stop dropping non-ascii characters and fix the
-            # failing tests
-            parser.feed(
-                result.content.decode('utf-8').encode('ascii', 'ignore'))
+            if not isinstance(result.content, unicode):
+                result.content = result.content.decode('utf-8')
+            parser.feed(result.content)
         else:
             raise ValueError
     except ValueError:
@@ -136,10 +135,9 @@ def get_minidom_from_xml(url, ignore_robots=False):
         raise URLNotParseableException('Could not parse file at URL: %s' % url)
 
     try:
-        # TODO(emichael): Stop dropping non-ascii characters and fix the
-        # failing tests
-        xmldoc = minidom.parseString(result.content.decode('utf-8').encode(
-            'ascii', 'ignore'))
+        if isinstance(result.content, unicode):
+            result.content = result.content.encode('utf-8')
+        xmldoc = minidom.parseString(result.content)
     except ExpatError as e:
         logging.error('Error parsing XML document: %s', e)
         raise URLNotParseableException('Could not parse file at URL: %s' % url)

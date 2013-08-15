@@ -17,6 +17,7 @@
 __author__ = 'Ellis Michael (emichael@google.com)'
 
 import collections
+import gettext
 import logging
 import math
 import mimetypes
@@ -58,6 +59,9 @@ RESULTS_LIMIT = 10
 GCB_SEARCH_FOLDER_NAME = os.path.normpath('/modules/search/')
 
 MAX_RETRIES = 5
+
+# I18N: Message displayed on search results page when error occurs.
+SEARCH_ERROR_TEXT = gettext.gettext('Search is currently unavailable.')
 
 
 class ModuleDisabledException(Exception):
@@ -247,11 +251,29 @@ class SearchHandler(utils.BaseHandler):
                 self.template_value['page_number'] = offset / RESULTS_LIMIT + 1
                 self.template_value['total_pages'] = int(math.ceil(
                     float(total_found) / RESULTS_LIMIT))
+        # TODO(emichael): Remove this check when the unicode issue is fixed in
+        # dev_appserver.
+        except UnicodeEncodeError as e:
+            if not appengine_config.PRODUCTION_MODE:
+                # This message will only be displayed to the course author in
+                # dev, so it does not need to be I18N'd
+                self.template_value['search_error'] = (
+                    'There is a known issue in App Engine\'s SDK '
+                    '(code.google.com/p/googleappengine/issues/detail?id=9335) '
+                    'which causes an error when generating search snippets '
+                    'which contain non-ASCII characters. This error does not '
+                    'occur in the production environment, so you can safely '
+                    'run your course with unicode characters on appspot.com.')
+                logging.error('[Unicode/Dev server issue] Error rendering the '
+                              'search page: %s.', e)
+            else:
+                self.template_value['search_error'] = SEARCH_ERROR_TEXT
+                logging.error('Error rendering the search page: %s. %s',
+                              e, traceback.format_exc())
         except Exception as e:  # pylint: disable-msg=broad-except
-            self.template_value['search_error'] = True
-            logging.error(
-                'Error rendering the search page: %s. %s',
-                e, traceback.format_exc)
+            self.template_value['search_error'] = SEARCH_ERROR_TEXT
+            logging.error('Error rendering the search page: %s. %s',
+                          e, traceback.format_exc())
         finally:
             path = sites.abspath(self.app_context.get_home_folder(),
                                  GCB_SEARCH_FOLDER_NAME)

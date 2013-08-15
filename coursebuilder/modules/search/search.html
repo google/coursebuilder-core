@@ -8,8 +8,7 @@
 {% block main_content %}
   {% if search_error %}
     <div class="gcb-search-info">
-      {# I18N: Message displayed on search results page when error occurs. #}
-      {{ gettext('Search is currently unavailable.') }}
+      {{ search_error }}
     </div>
   {% elif search_results %}
     <div class="gcb-search-info">
