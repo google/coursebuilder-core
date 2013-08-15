@@ -1,10 +1,13 @@
 describe('ButterBar', function() {
-  var popup, message, butterBar;
+  var popup, message, close, butterBar;
 
   beforeEach(function() {
-    popup = {}; // mock
-    message = {}; // mock
-    butterBar = new ButterBar(popup, message);
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures('tests/unit/assets_lib_butterbar.html');
+    popup = $('#gcb-butterbar-top').get(0);
+    message = $('#gcb-butterbar-message').get(0);
+    close = $('#gcb-butterbar-close').get(0);
+    butterBar = new ButterBar(popup, message, close);
   });
 
   it('can display text', function() {

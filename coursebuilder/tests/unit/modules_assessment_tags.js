@@ -1,4 +1,4 @@
-textareadescribe('assessment tags', function() {
+describe('assessment tags', function() {
   var MESSAGES = {
     correctAnswer: 'Yes, the answer is correct.',
     incorrectAnswer: 'No, the answer is incorrect.',
