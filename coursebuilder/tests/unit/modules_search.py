@@ -205,6 +205,9 @@ class SearchTestBase(actions.TestBase):
             """Monkey patch for robot parser."""
 
             def read(self):
+                parts = urlparse.urlsplit(self.url)
+                if not (parts.netloc and parts.scheme):
+                    raise IOError
                 response = urlfetch.fetch(self.url)
                 self.parse(response.content)
 
@@ -261,6 +264,14 @@ class ParserTests(SearchTestBase):
             self.parser = resources.get_parser_for_html(BANNED_PAGE_URL)
             content = self.parser.get_content()
             self.assertNotIn('accessed', content)
+
+    def test_bad_urls(self):
+        for url in ['http://', 'invalid.null', '//invalid.null', '//',
+                    'invalid', '?test=1', 'invalid?test=1']:
+            with self.assertRaises(resources.URLNotParseableException):
+                self.parser = resources.get_parser_for_html(url)
+                content = self.parser.get_content()
+                self.assertNotIn('impsum', content)
 
     def test_unicode_page(self):
         self.parser = resources.get_parser_for_html(UNICODE_PAGE_URL)

@@ -105,7 +105,8 @@ def get_parser_for_html(url, ignore_robots=False):
     """Returns a ResourceHTMLParser with the parsed data."""
 
     if not (ignore_robots or _url_allows_robots(url)):
-        raise URLNotParseableException
+        raise URLNotParseableException('robots.txt disallows access to URL: %s'
+                                       % url)
 
     parser = ResourceHTMLParser(url)
     try:
@@ -118,8 +119,9 @@ def get_parser_for_html(url, ignore_robots=False):
             parser.feed(result.content)
         else:
             raise ValueError
-    except ValueError:
-        raise URLNotParseableException('Could not parse file at URL: %s' % url)
+    except (ValueError, urlfetch.Error) as e:
+        raise URLNotParseableException('Could not parse file at URL: %s, %s' %
+                                       (url, e))
 
     return parser
 
@@ -128,19 +130,25 @@ def get_minidom_from_xml(url, ignore_robots=False):
     """Returns a minidom representation of an XML file at url."""
 
     if not (ignore_robots or _url_allows_robots(url)):
-        raise URLNotParseableException
+        raise URLNotParseableException('robots.txt disallows access to URL: %s'
+                                       % url)
 
-    result = urlfetch.fetch(url)
+    try:
+        result = urlfetch.fetch(url)
+    except urlfetch.Error as e:
+        raise URLNotParseableException('Could not parse file at URL: %s. %s' %
+                                       (url, e))
     if result.status_code not in [200, 304]:
-        raise URLNotParseableException('Could not parse file at URL: %s' % url)
+        raise URLNotParseableException('Bad status code (%s) for URL: %s' %
+                                       (result.status_code, url))
 
     try:
         if isinstance(result.content, unicode):
             result.content = result.content.encode('utf-8')
         xmldoc = minidom.parseString(result.content)
     except ExpatError as e:
-        logging.error('Error parsing XML document: %s', e)
-        raise URLNotParseableException('Could not parse file at URL: %s' % url)
+        raise URLNotParseableException(
+            'Error parsing XML document at URL: %s. %s' % (url, e))
 
     return xmldoc
 
@@ -153,8 +161,13 @@ def _url_allows_robots(url):
         parts.scheme, parts.netloc, '', None, None))
     rp = robotparser.RobotFileParser(url=urlparse.urljoin(
         base, '/robots.txt'))
-    rp.read()
-    return rp.can_fetch('*', url)
+    try:
+        rp.read()
+    except IOError as e:
+        logging.info('Could not retreive robots.txt for URL: %s', url)
+        raise URLNotParseableException(e)
+    else:
+        return rp.can_fetch('*', url)
 
 
 class Resource(object):
@@ -376,8 +389,8 @@ class ExternalLinkResource(Resource):
 
             try:
                 resource = ExternalLinkResource(url)
-            except URLNotParseableException:
-                logging.info('Could not parse link with URL %s', url)
+            except URLNotParseableException as e:
+                logging.info(e)
             else:
                 if dist < 1:
                     for new_link in resource.get_links():
@@ -498,7 +511,8 @@ class YouTubeFragmentResource(Resource):
         """Get all of the transcript fragment docs for a specific video."""
         try:
             (transcript, title, thumbnail_url) = cls._get_video_data(video_id)
-        except URLNotParseableException:
+        except URLNotParseableException as e:
+            logging.info(e)
             return []
 
         # Aggregate the fragments into YOUTUBE_CAPTION_SIZE_SECS time chunks
@@ -545,7 +559,7 @@ class YouTubeFragmentResource(Resource):
         tracklist = get_minidom_from_xml(url, ignore_robots=True)
         tracks = tracklist.getElementsByTagName('track')
         if not tracks:
-            raise URLNotParseableException
+            raise URLNotParseableException('No tracks for video %s' % video_id)
         track_name = tracks[0].attributes['name'].value
         track_lang = tracks[0].attributes['lang_code'].value
         track_id = tracks[0].attributes['id'].value
