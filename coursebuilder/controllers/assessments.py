@@ -68,7 +68,7 @@ class AnswerHandler(BaseHandler):
 
         Args:
             email: the student's email address.
-            assessment_type: the type of the assessment (as stated in unit.csv).
+            assessment_type: the title of the assessment.
             new_answers: the latest set of answers supplied by the student.
             score: the numerical assessment score.
 

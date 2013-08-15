@@ -14,6 +14,12 @@
   limitations under the License.
 */
 
+QUESTION_TYPES = {
+  MC_QUESTION: 'McQuestion',
+  SA_QUESTION: 'SaQuestion',
+  QUESTION_GROUP: 'QuestionGroup'
+}
+
 /**
  * Base class for rendering questions.
  */
@@ -48,11 +54,17 @@ BaseQuestion.prototype.onCheckAnswer = function() {
           .append(grade.feedback));
 
   if (this.componentAudit) {
-    this.componentAudit({
+    var auditDict = {
       'instanceid': this.id,
       'answer': grade.answer,
-      'score': grade.score
-    });
+      'score': grade.score,
+      'type': this.type
+    }
+    if (this instanceof QuestionGroup) {
+      auditDict['individualScores'] = grade.individualScores;
+      auditDict['containedTypes'] = this.containedTypes;
+    }
+    this.componentAudit(auditDict);
   }
 };
 BaseQuestion.prototype.displayFeedback = function(feedback) {
@@ -71,6 +83,7 @@ BaseQuestion.prototype.getWeight = function() {
  */
 function McQuestion(el, questionData, messages, componentAudit) {
   BaseQuestion.call(this, el, questionData, messages, componentAudit);
+  this.type = QUESTION_TYPES.MC_QUESTION;
 }
 BaseQuestion.bindSubclass(McQuestion);
 McQuestion.prototype.bind = function() {
@@ -99,10 +112,12 @@ McQuestion.prototype.grade = function() {
       }
     }
   });
+  score = Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100;
   return {
     answer: answer,
-    score: Math.round(Math.min(Math.max(score, 0), 1) * 100) / 100,
-    feedback: feedback
+    score: score,
+    feedback: feedback,
+    type: this.type
   };
 };
 McQuestion.prototype.getStudentAnswer = function() {
@@ -130,6 +145,7 @@ McQuestion.prototype.makeReadOnly = function() {
  */
 function SaQuestion(el, questionData, messages, componentAudit) {
   BaseQuestion.call(this, el, questionData, messages, componentAudit);
+  this.type = QUESTION_TYPES.SA_QUESTION;
 }
 BaseQuestion.bindSubclass(SaQuestion);
 SaQuestion.MATCHERS = {
@@ -191,13 +207,20 @@ SaQuestion.prototype.grade = function() {
     var grader = this.data.graders[i];
     if (SaQuestion.MATCHERS[grader.matcher].matches(
         grader.response, response)) {
+      var score = Math.min(Math.max(parseFloat(grader.score), 0), 1);
       return {
-        score: Math.min(Math.max(parseFloat(grader.score), 0), 1),
-        feedback: $('<div/>').html(grader.feedback)
+        score: score,
+        feedback: $('<div/>').html(grader.feedback),
+        type: this.type
       };
     }
   }
-  return {answer: response, score: 0.0, feedback: this.data.defaultFeedback};
+  return {
+    answer: response,
+    score: 0.0,
+    feedback: this.data.defaultFeedback,
+    type: this.type
+  };
 };
 SaQuestion.prototype.getStudentAnswer = function() {
   return {'response': this.el.find(
@@ -222,6 +245,7 @@ SaQuestion.prototype.makeReadOnly = function() {
  */
 function QuestionGroup(el, questionData, messages, componentAudit) {
   BaseQuestion.call(this, el, questionData, messages, componentAudit);
+  this.type = QUESTION_TYPES.QUESTION_GROUP;
   this.questionData = questionData;
   this.questions = [];
   this.init();
@@ -282,7 +306,9 @@ QuestionGroup.prototype.onCheckAnswer = function() {
   this.componentAudit({
     'instanceid': this.id,
     'answer': grade.answer,
-    'score': grade.score
+    'score': grade.score,
+    'individualScores': grade.individualScores,
+    'containedTypes': grade.containedTypes
   });
 };
 QuestionGroup.prototype.grade = function() {
@@ -291,15 +317,25 @@ QuestionGroup.prototype.grade = function() {
   var answer = [];
   var score = 0.0;
   var feedback = [];
+  var individualScores = [];
+  var containedTypes = [];
   $.each(this.questions, function(index, question) {
     var grade = question.grade();
     answer.push(grade.answer);
+    containedTypes.push(question.type);
+    individualScores.push(grade.score);
     score += that.data[question.id].weight * grade.score;
     feedback.push(grade.feedback);
   });
 
   var totalWeight = this.getWeight();
-  return {answer: answer, score: score / totalWeight, feedback: feedback};
+  return {
+    answer: answer,
+    score: score / totalWeight,
+    feedback: feedback,
+    individualScores: individualScores,
+    containedTypes: containedTypes
+  };
 };
 
 QuestionGroup.prototype.getStudentAnswer = function() {
@@ -326,11 +362,23 @@ function gradeScoredLesson(questions, messages) {
   var score = 0.0;
   var totalWeight = 0.0;
   var answers = {'version': '1.5'};
+  var individualScores = {};
+  var containedTypes = {};
+  var gradedAnswers = {};
   $.each(questions, function(idx, question) {
     var grade = question.grade();
+    if (question instanceof QuestionGroup) {
+      individualScores[question.id] = grade.individualScores;
+      containedTypes[question.id] = grade.containedTypes;
+    } else {
+      individualScores[question.id] = grade.score;
+      containedTypes[question.id] = question.type;
+    }
+    answers[question.id] = question.getStudentAnswer();
+    gradedAnswers[question.id] = grade.answer;
+
     score += grade.score * question.getWeight();
     totalWeight += question.getWeight();
-    answers[question.id] = question.getStudentAnswer();
     question.displayFeedback(grade.feedback);
   });
   $('div.qt-grade-report')
@@ -340,7 +388,10 @@ function gradeScoredLesson(questions, messages) {
 
   gcbLessonAudit({
     'answers': answers,
-    'score': score
+    'individualScores': individualScores,
+    'score': score,
+    'containedTypes': containedTypes,
+    'gradedAnswers': gradedAnswers
   });
 }
 
@@ -348,12 +399,23 @@ function gradeAssessment(questions, unitId, xsrfToken) {
   var score = 0.0;
   // The following prevents division-by-zero errors.
   var totalWeight = 1e-12;
-  var answers = {'version': '1.5'};
+  var answers = {
+    'version': '1.5', 'individualScores': {},
+    'containedTypes': {}, 'gradedAnswers': {}
+  };
   $.each(questions, function(idx, question) {
     var grade = question.grade();
     score += grade.score * question.getWeight();
     totalWeight += question.getWeight();
     answers[question.id] = question.getStudentAnswer();
+    answers.gradedAnswers[question.id] = grade.answer;
+    if (question instanceof QuestionGroup) {
+      answers.individualScores[question.id] = grade.individualScores;
+      answers.containedTypes[question.id] = grade.containedTypes;
+    } else {
+      answers.individualScores[question.id] = grade.score;
+      answers.containedTypes[question.id] = question.type;
+    }
   });
 
   var percentScore = (score / totalWeight * 100.0).toFixed(2);
