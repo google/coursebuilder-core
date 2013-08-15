@@ -440,6 +440,41 @@ describe('assessment tags', function() {
       qg.makeReadOnly();
       expectDisabled(true, true, true);
     });
+    it('loads the questions in the order they appear on the page', function () {
+      var el = $('#qg-1');
+      var questionData0 = {choices: [
+        {score: '1', feedback: 'yes'},
+        {score: '0', feedback: 'no'}]};
+      var questionData1 = {
+        hint: 'it\s \'falafel\'',
+        graders: [{
+          matcher: 'case_insensitive',
+          response: 'falafel',
+          score: '1.0',
+          feedback: 'good'
+        }]
+      };
+      var questionData2 = {choices: [
+        {score: '1', feedback: 'yes'},
+        {score: '0', feedback: 'no'}]};
+      var questionData = {
+        'qg-1': {
+          'qg-1-mc-0': {'weight': '10'},
+          'qg-1-sa-0': {'weight': '15'},
+          'qg-1-mc-1': {'weight': '20'},
+        },
+        'qg-1-mc-0': questionData0,
+        'qg-1-sa-0': questionData1,
+        'qg-1-mc-1': questionData2
+      };
+      var qg = new QuestionGroup(el, questionData, MESSAGES);
+      expect(qg.questions[0] instanceof McQuestion).toBe(true);
+      expect(qg.questions[1] instanceof SaQuestion).toBe(true);
+      expect(qg.questions[2] instanceof McQuestion).toBe(true);
+      expect(qg.questions[0].data).toBe(questionData0);
+      expect(qg.questions[1].data).toBe(questionData1);
+      expect(qg.questions[2].data).toBe(questionData2);
+    });
   });
 
   function initTwoQuestions() {
