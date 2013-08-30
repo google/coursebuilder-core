@@ -140,10 +140,14 @@ vfs = None
 
 # String. Prefix for files stored in an archive.
 _ARCHIVE_PATH_PREFIX = 'files'
+# String. Prefix for models stored in an archive.
+_ARCHIVE_PATH_PREFIX_MODELS = 'models'
 # String. End of the path to course.json in an archive.
 _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 # String. End of the path to course.yaml in an archive.
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
+# Datastore entities that hold parts of course content. Delay-loaded.
+_COURSE_CONTENT_ENTITIES = []
 # String. Message the user must type to confirm datastore deletion.
 _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
 # Function that takes one arg and returns it.
@@ -282,14 +286,14 @@ class _Archive(object):
         self._zipfile = None
 
     @classmethod
-    def get_external_path(cls, internal_path):
+    def get_external_path(cls, internal_path, prefix=_ARCHIVE_PATH_PREFIX):
         """Gets external path string from results of cls.get_internal_path."""
-        prefix = _ARCHIVE_PATH_PREFIX + os.sep
-        assert internal_path.startswith(prefix)
-        return internal_path.split(prefix)[1]
+        _prefix = prefix + os.sep
+        assert internal_path.startswith(_prefix)
+        return internal_path.split(_prefix)[1]
 
     @classmethod
-    def get_internal_path(cls, external_path):
+    def get_internal_path(cls, external_path, prefix=_ARCHIVE_PATH_PREFIX):
         """Get path string used in the archive from an external path string.
 
         Generates the path used within an archive for an asset. All assets
@@ -301,13 +305,14 @@ class _Archive(object):
         Args:
             external_path: string. Path to generate an internal archive path
                 from.
+            prefix: string. Prefix to base the path on.
 
         Returns:
             String. Internal archive path.
         """
-        assert not external_path.startswith(_ARCHIVE_PATH_PREFIX)
+        assert not external_path.startswith(prefix)
         return os.path.join(
-            _ARCHIVE_PATH_PREFIX, _remove_bundle_root(external_path))
+            prefix, _remove_bundle_root(external_path))
 
     def add(self, filename, contents):
         """Adds contents to the archive.
@@ -443,6 +448,7 @@ class _ReadWrapper(object):
 
 
 def _confirm_delete_datastore_or_die(kind_names, namespace, title):
+    """Asks user to confirm action."""
     context = {
         'confirmation_message': _DELETE_DATASTORE_CONFIRMATION_INPUT,
         'kinds': ', '.join(kind_names),
@@ -461,16 +467,18 @@ def _confirm_delete_datastore_or_die(kind_names, namespace, title):
 
 
 def _delete(course_url_prefix, delete_type, batch_size):
+    """Deletes desired object."""
     context = _get_context_or_die(course_url_prefix)
-    if delete_type == _TYPE_COURSE:
-        _delete_course()
-    elif delete_type == _TYPE_DATASTORE:
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(context.get_namespace_name())
+
+    old_namespace = namespace_manager.get_namespace()
+    try:
+        namespace_manager.set_namespace(context.get_namespace_name())
+        if delete_type == _TYPE_COURSE:
+            _delete_course()
+        elif delete_type == _TYPE_DATASTORE:
             _delete_datastore(context, batch_size)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+    finally:
+        namespace_manager.set_namespace(old_namespace)
 
 
 def _delete_course():
@@ -479,6 +487,7 @@ def _delete_course():
 
 
 def _delete_datastore(context, batch_size):
+    """Deletes datastore content."""
     kind_names = _get_datastore_kinds()
     _confirm_delete_datastore_or_die(
         kind_names, context.get_namespace_name(), context.get_title())
@@ -515,20 +524,23 @@ def _download(
     archive_path = os.path.abspath(archive_path)
     context = _get_context_or_die(course_url_prefix)
     course = _get_course_from(context)
-    if download_type == _TYPE_COURSE:
-        _download_course(context, course, archive_path, course_url_prefix)
-    elif download_type == _TYPE_DATASTORE:
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(context.get_namespace_name())
+    old_namespace = namespace_manager.get_namespace()
+    try:
+        namespace_manager.set_namespace(context.get_namespace_name())
+        if download_type == _TYPE_COURSE:
+            _download_course(
+                context, course, archive_path, course_url_prefix, batch_size)
+        elif download_type == _TYPE_DATASTORE:
             _download_datastore(
                 context, course, archive_path, datastore_types, batch_size,
                 privacy_transform_fn)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+    finally:
+        namespace_manager.set_namespace(old_namespace)
 
 
-def _download_course(context, course, archive_path, course_url_prefix):
+def _download_course(
+    context, course, archive_path, course_url_prefix, batch_size):
+    """Downloads course content."""
     if course.version < courses.COURSE_MODEL_VERSION_1_3:
         _die(
             'Cannot export course made with Course Builder version < %s' % (
@@ -536,14 +548,17 @@ def _download_course(context, course, archive_path, course_url_prefix):
     archive = _Archive(archive_path)
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
+
     _LOG.info('Processing course with URL prefix ' + course_url_prefix)
     datastore_files = set(_list_all(context))
     all_files = set(_filter_filesystem_files(_list_all(
         context, include_inherited=True)))
     filesystem_files = all_files - datastore_files
+
     _LOG.info('Adding files from datastore')
     for external_path in datastore_files:
         internal_path = _Archive.get_internal_path(external_path)
+        _LOG.info('Adding ' + internal_path)
         stream = _get_stream(context, external_path)
         is_draft = False
         if stream.metadata and hasattr(stream.metadata, 'is_draft'):
@@ -551,18 +566,28 @@ def _download_course(context, course, archive_path, course_url_prefix):
         entity = _ManifestEntity(internal_path, is_draft)
         archive.add(internal_path, stream.read())
         manifest.add(entity)
+
     _LOG.info('Adding files from filesystem')
     for external_path in filesystem_files:
         with open(external_path) as f:
             internal_path = _Archive.get_internal_path(external_path)
+            _LOG.info('Adding ' + internal_path)
             archive.add(internal_path, f.read())
             manifest.add(_ManifestEntity(internal_path, False))
+
+    _LOG.info('Adding dependencies from datastore')
+    for found_type in _COURSE_CONTENT_ENTITIES:
+        _download_type(
+            archive, manifest, found_type.__name__, batch_size,
+            _IDENTITY_TRANSFORM)
+
     _finalize_download(archive, manifest)
 
 
 def _download_datastore(
     context, course, archive_path, datastore_types, batch_size,
     privacy_transform_fn):
+    """Downloads datastore content."""
     available_types = set(_get_datastore_kinds())
     if not datastore_types:
         datastore_types = available_types
@@ -578,27 +603,37 @@ def _download_datastore(
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
     for found_type in found_types:
-        json_path = os.path.join(
-            os.path.dirname(archive_path), '%s.json' % found_type)
-        _LOG.info(
-            'Adding entities of type %s to temporary file %s',
-            found_type, json_path)
-        json_file = transforms.JsonFile(json_path)
-        json_file.open('w')
-        model_map_fn = functools.partial(
-            _write_model_to_json_file, json_file, privacy_transform_fn)
-        _process_models(
-            db.class_for_kind(found_type), batch_size,
-            model_map_fn=model_map_fn)
-        json_file.close()
-        internal_path = _Archive.get_internal_path(
-            os.path.basename(json_file.name))
-        _LOG.info('Adding %s to archive', internal_path)
-        archive.add_local_file(json_file.name, internal_path)
-        manifest.add(_ManifestEntity(internal_path, False))
-        _LOG.info('Removing temporary file ' + json_file.name)
-        os.remove(json_file.name)
+        _download_type(
+            archive, manifest, found_type, batch_size, privacy_transform_fn)
     _finalize_download(archive, manifest)
+
+
+def _download_type(
+    archive, manifest, model_class, batch_size, privacy_transform_fn):
+    """Downloads a set of files and adds them to the archive."""
+    json_path = os.path.join(
+        os.path.dirname(archive.path), '%s.json' % model_class)
+
+    _LOG.info(
+        'Adding entities of type %s to temporary file %s',
+        model_class, json_path)
+    json_file = transforms.JsonFile(json_path)
+    json_file.open('w')
+    model_map_fn = functools.partial(
+        _write_model_to_json_file, json_file, privacy_transform_fn)
+    _process_models(
+        db.class_for_kind(model_class), batch_size,
+        model_map_fn=model_map_fn)
+    json_file.close()
+    internal_path = _Archive.get_internal_path(
+        os.path.basename(json_file.name), prefix=_ARCHIVE_PATH_PREFIX_MODELS)
+
+    _LOG.info('Adding %s to archive', internal_path)
+    archive.add_local_file(json_file.name, internal_path)
+    manifest.add(_ManifestEntity(internal_path, False))
+
+    _LOG.info('Removing temporary file ' + json_file.name)
+    os.remove(json_file.name)
 
 
 def _filter_filesystem_files(files):
@@ -709,10 +744,12 @@ def _import_modules_into_global_scope():
     global metadata
     global config
     global courses
+    global models
     global transforms
     global vfs
     global etl_lib
     global remote
+    global _COURSE_CONTENT_ENTITIES
     try:
         import appengine_config
         from google.appengine.api import memcache
@@ -721,10 +758,14 @@ def _import_modules_into_global_scope():
         from google.appengine.ext.db import metadata
         from models import config
         from models import courses
+        from models import models
         from models import transforms
         from models import vfs
         from tools.etl import etl_lib
         from tools.etl import remote
+
+        _COURSE_CONTENT_ENTITIES = [
+            models.QuestionEntity, models.QuestionGroupEntity]
     except ImportError, e:
         _die((
             'Unable to import required modules; see tools/etl/etl.py for '
@@ -770,11 +811,6 @@ def _retry(message=None, times=_RETRIES):
 
         return wrapped
     return decorator
-
-
-@_retry(message='Clearing course cache failed; retrying')
-def _clear_course_cache(context):
-    courses.CachedCourse13.delete(context)  # Force update in UI.
 
 
 @_retry(message='Checking if the specified course is empty failed; retrying')
@@ -863,6 +899,7 @@ def _get_entity_dict(model, privacy_transform_fn):
 
     entity_dict = transforms.entity_to_dict(model, force_utf_8_encoding=True)
     entity_dict['key.name'] = unicode(key.name())
+    entity_dict['key.id'] = key.id()
 
     return entity_dict
 
@@ -871,8 +908,10 @@ def _get_entity_dict(model, privacy_transform_fn):
 def _put(context, content, path, is_draft, force_overwrite):
     path = os.path.join(appengine_config.BUNDLE_ROOT, path)
     if force_overwrite and context.fs.impl.isfile(path):
-        _LOG.info('File %s found on target system; forcing overwrite', path)
+        _LOG.info('Overriding file %s', _remove_bundle_root(path))
         context.fs.impl.delete(path)
+    else:
+        _LOG.info('Uploading file %s', _remove_bundle_root(path))
     context.fs.impl.non_transactional_put(
         os.path.join(appengine_config.BUNDLE_ROOT, path), content,
         is_draft=is_draft)
@@ -884,6 +923,7 @@ def _raw_input(message):
 
 
 def _run_custom(parsed_args):
+    """Runs desired command."""
     try:
         module_name, job_class_name = parsed_args.type.rsplit('.', 1)
         module = __import__(module_name, globals(), locals(), [job_class_name])
@@ -903,18 +943,33 @@ def _upload(upload_type, archive_path, course_url_prefix, force_overwrite):
         'Processing course with URL prefix %s from archive path %s',
         course_url_prefix, archive_path)
     context = _get_context_or_die(course_url_prefix)
-    if upload_type == _TYPE_COURSE:
-        _upload_course(
-            context, archive_path, course_url_prefix, force_overwrite)
-    elif upload_type == _TYPE_DATASTORE:
-        _upload_datastore()
+    old_namespace = namespace_manager.get_namespace()
+    try:
+        namespace_manager.set_namespace(context.get_namespace_name())
+        if upload_type == _TYPE_COURSE:
+            _upload_course(
+                context, archive_path, course_url_prefix, force_overwrite)
+        elif upload_type == _TYPE_DATASTORE:
+            _upload_datastore()
+    finally:
+        namespace_manager.set_namespace(old_namespace)
+
+
+def _can_upload_entity_to_course(entity):
+    """Checks if a file can be uploaded to course."""
+    head, tail = os.path.split(entity.path)
+    if head == _ARCHIVE_PATH_PREFIX_MODELS and tail == _COURSE_YAML_PATH_SUFFIX:
+        return True
+    return head != _ARCHIVE_PATH_PREFIX_MODELS
 
 
 def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
+    """Uploads course data."""
     if not _context_is_for_empty_course(context) and not force_overwrite:
         _die(
             'Cannot upload to non-empty course with course_url_prefix %s' % (
                 course_url_prefix))
+
     archive = _Archive(archive_path)
     try:
         archive.open('r')
@@ -922,6 +977,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         _die('Cannot open archive_path ' + archive_path)
     course_json = archive.get(
         _Archive.get_internal_path(_COURSE_JSON_PATH_SUFFIX))
+
     if course_json:
         try:
             courses.PersistentCourse13().deserialize(course_json)
@@ -929,6 +985,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
             _die((
                 'Cannot upload archive at %s containing malformed '
                 'course.json') % archive_path)
+
     course_yaml = archive.get(
         _Archive.get_internal_path(_COURSE_YAML_PATH_SUFFIX))
     if course_yaml:
@@ -938,16 +995,51 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
             _die((
                 'Cannot upload archive at %s containing malformed '
                 'course.yaml') % archive_path)
-    _LOG.info('Validation passed; beginning upload')
+
+    _LOG.info('Uploading files')
     count = 0
     for entity in archive.manifest.entities:
+        if not _can_upload_entity_to_course(entity):
+            _LOG.info('Skipping file ' + entity.path)
+            continue
         external_path = _Archive.get_external_path(entity.path)
         _put(
             context, _ReadWrapper(archive.get(entity.path)), external_path,
             entity.is_draft, force_overwrite)
         count += 1
-        _LOG.info('Uploaded ' + external_path)
-    _clear_course_cache(context)
+
+    _LOG.info('Uploading entities')
+    for entity_class in _COURSE_CONTENT_ENTITIES:
+        json_path = _Archive.get_internal_path(
+            '%s.json' % entity_class.__name__,
+            prefix=_ARCHIVE_PATH_PREFIX_MODELS)
+        json_text = archive.get(json_path)
+        if not json_text:
+            _LOG.info(
+                'Unable to find data file %s for entity %s; skipping',
+                json_path, entity_class.__name__)
+            continue
+        _LOG.info('Uploading entity ' + entity_class.__name__)
+        json_object = transforms.loads(json_text)
+        for row in json_object['rows']:
+            _id = row['key.id']
+
+            if entity_class.get_by_id(_id):
+                if not force_overwrite:
+                    _die('Object of class %s with id %s already exists.' %(
+                        entity_class.__name__, _id))
+                _LOG.info('Replacing existing object with id %s', _id)
+            else:
+                _LOG.info('Adding new object with id %s', _id)
+
+            new_key = db.Key.from_path(entity_class.__name__, _id)
+            new_instance = entity_class(key=new_key)
+            new_instance.data = row['data']
+            new_instance.put()
+
+    _LOG.info('Flushing all caches')
+    memcache.flush_all()
+
     _LOG.info(
         'Done; %s entit%s uploaded', count, 'y' if count == 1 else 'ies')
 

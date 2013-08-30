@@ -66,6 +66,11 @@ from google.appengine.ext import db
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
 
+# Datastore entities that hold parts of course content. Delay-loaded.
+COURSE_CONTENT_ENTITY_FILES = [
+    'QuestionEntity.json', 'QuestionGroupEntity.json']
+
+
 # There is an expectation in our tests of automatic import of data/*.csv files,
 # which is achieved below by selecting an alternative factory method.
 courses.Course.create_new_default_course = (
@@ -3153,6 +3158,15 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         etl.main(args, environment_class=FakeEnvironment)
         sites.reset_courses()
 
+    def create_archive_with_question(self, data):
+        self.upload_all_sample_course_files([])
+        self.import_sample_course()
+        question = self._add_question_entity(sites.get_all_courses()[1], data)
+        args = etl.PARSER.parse_args(['download'] + self.common_course_args)
+        etl.main(args, environment_class=FakeEnvironment)
+        sites.reset_courses()
+        return question
+
     def create_empty_course(self, raw):
         sites.setup_courses(raw)
         context = etl_lib.get_context(self.url_prefix)
@@ -3234,23 +3248,49 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertRaises(
             SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
 
+    def _add_question_entity(self, app_context, data):
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(app_context.get_namespace_name())
+            question = models.QuestionEntity()
+            question.data = data
+            question.put()
+            return question
+        finally:
+            namespace_manager.set_namespace(old_namespace)
+
     def test_download_course_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
         self.upload_all_sample_course_files([])
         self.import_sample_course()
+        question = self._add_question_entity(
+            sites.get_all_courses()[0], 'test question')
         etl.main(self.download_course_args, environment_class=FakeEnvironment)
+
         # Don't use Archive and Manifest here because we want to test the raw
         # structure of the emitted zipfile.
         zip_archive = zipfile.ZipFile(self.archive_path)
+
+        # check manifest
         manifest = transforms.loads(
             zip_archive.open(etl._MANIFEST_FILENAME).read())
         self.assertGreaterEqual(
             courses.COURSE_MODEL_VERSION_1_3, manifest['version'])
         self.assertEqual(
             'course:%s::ns_test' % self.url_prefix, manifest['raw'])
+
+        # check content
         for entity in manifest['entities']:
             self.assertTrue(entity.has_key('is_draft'))
             self.assertTrue(zip_archive.open(entity['path']))
+
+        # check question
+        question_json = transforms.loads(
+            zip_archive.open('models/QuestionEntity.json').read())
+        self.assertEqual(
+            question.key().id(), question_json['rows'][0]['key.id'])
+        self.assertEqual(
+            'test question', question_json['rows'][0]['data'])
 
     def test_download_course_errors_if_archive_path_exists_on_disk(self):
         self.upload_all_sample_course_files([])
@@ -3550,30 +3590,53 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 
     def test_upload_course_succeeds(self):
         """Tests upload of archive contents."""
-
-        self.create_archive()
+        question = self.create_archive_with_question('test question')
         self.create_empty_course(self.raw)
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         self.assertNotEqual(self.new_course_title, context.get_title())
+
         etl.main(self.upload_course_args, environment_class=FakeEnvironment)
+
+        # check archive content
         archive = etl._Archive(self.archive_path)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
         self.assertEqual(
-            len(archive.manifest.entities), len(filesystem_contents))
+            len(archive.manifest.entities),
+            len(filesystem_contents) + len(COURSE_CONTENT_ENTITY_FILES))
+
+        # check course structure
         self.assertEqual(self.new_course_title, context.get_title())
         units = etl._get_course_from(context).get_units()
         spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
         self.assertEqual('Interpreting results', spot_check_single_unit.title)
         for unit in units:
             self.assertTrue(unit.title)
+
+        # check entities
         for entity in archive.manifest.entities:
+            _, tail = os.path.split(entity.path)
+            if tail in COURSE_CONTENT_ENTITY_FILES:
+                continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,
                 etl._Archive.get_external_path(entity.path))
             stream = context.fs.impl.get(full_path)
             self.assertEqual(entity.is_draft, stream.metadata.is_draft)
+
+        # check uploaded question matches original
+        old_namespace = namespace_manager.get_namespace()
+        try:
+            namespace_manager.set_namespace(
+                sites.get_all_courses()[0].get_namespace_name())
+
+            uploaded_question = models.QuestionEntity().get(question.key())
+            self.assertTrue(uploaded_question)
+            self.assertEqual('test question', uploaded_question.data)
+            self.assertEqual(uploaded_question.key().id(), question.key().id())
+        finally:
+            namespace_manager.set_namespace(old_namespace)
 
     def test_upload_course_with_force_overwrite_succeeds(self):
         """Tests upload into non-empty course with --force_overwrite."""
@@ -3590,7 +3653,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
         self.assertEqual(
-            len(archive.manifest.entities), len(filesystem_contents))
+            len(archive.manifest.entities),
+            len(filesystem_contents) + len(COURSE_CONTENT_ENTITY_FILES))
         self.assertEqual(self.new_course_title, context.get_title())
         units = etl._get_course_from(context).get_units()
         spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
@@ -3598,6 +3662,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         for unit in units:
             self.assertTrue(unit.title)
         for entity in archive.manifest.entities:
+            _, tail = os.path.split(entity.path)
+            if tail in COURSE_CONTENT_ENTITY_FILES:
+                continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,
                 etl._Archive.get_external_path(entity.path))
