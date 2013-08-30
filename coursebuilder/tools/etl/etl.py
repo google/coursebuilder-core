@@ -146,8 +146,6 @@ _ARCHIVE_PATH_PREFIX_MODELS = 'models'
 _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 # String. End of the path to course.yaml in an archive.
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
-# Datastore entities that hold parts of course content. Delay-loaded.
-_COURSE_CONTENT_ENTITIES = []
 # String. Message the user must type to confirm datastore deletion.
 _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
 # Function that takes one arg and returns it.
@@ -576,7 +574,7 @@ def _download_course(
             manifest.add(_ManifestEntity(internal_path, False))
 
     _LOG.info('Adding dependencies from datastore')
-    for found_type in _COURSE_CONTENT_ENTITIES:
+    for found_type in courses.COURSE_CONTENT_ENTITIES:
         _download_type(
             archive, manifest, found_type.__name__, batch_size,
             _IDENTITY_TRANSFORM)
@@ -749,7 +747,6 @@ def _import_modules_into_global_scope():
     global vfs
     global etl_lib
     global remote
-    global _COURSE_CONTENT_ENTITIES
     try:
         import appengine_config
         from google.appengine.api import memcache
@@ -763,9 +760,6 @@ def _import_modules_into_global_scope():
         from models import vfs
         from tools.etl import etl_lib
         from tools.etl import remote
-
-        _COURSE_CONTENT_ENTITIES = [
-            models.QuestionEntity, models.QuestionGroupEntity]
     except ImportError, e:
         _die((
             'Unable to import required modules; see tools/etl/etl.py for '
@@ -1009,7 +1003,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         count += 1
 
     _LOG.info('Uploading entities')
-    for entity_class in _COURSE_CONTENT_ENTITIES:
+    for entity_class in courses.COURSE_CONTENT_ENTITIES:
         json_path = _Archive.get_internal_path(
             '%s.json' % entity_class.__name__,
             prefix=_ARCHIVE_PATH_PREFIX_MODELS)

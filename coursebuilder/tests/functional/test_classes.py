@@ -77,6 +77,35 @@ courses.Course.create_new_default_course = (
     courses.Course.custom_new_default_course_for_test)
 
 
+def _add_data_entity(app_context, entity_type, data):
+    """Insert new entity into a given namespace."""
+    old_namespace = namespace_manager.get_namespace()
+    try:
+        namespace_manager.set_namespace(app_context.get_namespace_name())
+
+        new_object = entity_type()
+        new_object.data = data
+        new_object.put()
+        return new_object
+    finally:
+        namespace_manager.set_namespace(old_namespace)
+
+
+def _assert_identical_data_entity_exists(app_context, test_object):
+    """Checks a specific entity exists in a given namespace."""
+    old_namespace = namespace_manager.get_namespace()
+    try:
+        namespace_manager.set_namespace(app_context.get_namespace_name())
+
+        entity_class = test_object.__class__
+        existing_object = entity_class().get(test_object.key())
+        assert existing_object
+        assert existing_object.data == test_object.data
+        assert existing_object.key().id() == test_object.key().id()
+    finally:
+        namespace_manager.set_namespace(old_namespace)
+
+
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
@@ -205,6 +234,14 @@ class InfrastructureTest(actions.TestBase):
         assert len(
             src_course_out.get_units()) == len(dst_course_out_a.get_units())
 
+        # add dependent entities so we can check they make it through the import
+        dependents = []
+        for dependent_entity_class in courses.COURSE_CONTENT_ENTITIES:
+            dependents.append(_add_data_entity(
+                dst_course_out_a.app_context,
+                dependent_entity_class, 'Test ' % dependent_entity_class))
+        assert dependents
+
         # Import 1.3 course into 1.3.
         errors = []
         src_course_out_a, dst_course_out_b = dst_course_b.import_from(
@@ -212,6 +249,9 @@ class InfrastructureTest(actions.TestBase):
         if errors:
             raise Exception(errors)
         assert src_course_out_a.get_units() == dst_course_out_b.get_units()
+        for dependent in dependents:
+            _assert_identical_data_entity_exists(
+                dst_course_out_b.app_context, dependent)
 
         # Test delete.
         units_to_delete = dst_course_a.get_units()
@@ -3161,7 +3201,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
     def create_archive_with_question(self, data):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        question = self._add_question_entity(sites.get_all_courses()[1], data)
+        question = _add_data_entity(
+            sites.get_all_courses()[1], models.QuestionEntity, data)
         args = etl.PARSER.parse_args(['download'] + self.common_course_args)
         etl.main(args, environment_class=FakeEnvironment)
         sites.reset_courses()
@@ -3248,23 +3289,12 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertRaises(
             SystemExit, etl.main, bad_args, environment_class=FakeEnvironment)
 
-    def _add_question_entity(self, app_context, data):
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(app_context.get_namespace_name())
-            question = models.QuestionEntity()
-            question.data = data
-            question.put()
-            return question
-        finally:
-            namespace_manager.set_namespace(old_namespace)
-
     def test_download_course_creates_valid_archive(self):
         """Tests download of course data and archive creation."""
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        question = self._add_question_entity(
-            sites.get_all_courses()[0], 'test question')
+        question = _add_data_entity(
+            sites.get_all_courses()[0], models.QuestionEntity, 'test question')
         etl.main(self.download_course_args, environment_class=FakeEnvironment)
 
         # Don't use Archive and Manifest here because we want to test the raw
@@ -3626,17 +3656,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             self.assertEqual(entity.is_draft, stream.metadata.is_draft)
 
         # check uploaded question matches original
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(
-                sites.get_all_courses()[0].get_namespace_name())
-
-            uploaded_question = models.QuestionEntity().get(question.key())
-            self.assertTrue(uploaded_question)
-            self.assertEqual('test question', uploaded_question.data)
-            self.assertEqual(uploaded_question.key().id(), question.key().id())
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+        _assert_identical_data_entity_exists(
+            sites.get_all_courses()[0], question)
 
     def test_upload_course_with_force_overwrite_succeeds(self):
         """Tests upload into non-empty course with --force_overwrite."""

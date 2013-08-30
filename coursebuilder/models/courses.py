@@ -35,11 +35,19 @@ from models import MemcacheManager
 import progress
 import review
 import transforms
+import utils
 import vfs
 
+from google.appengine.api import namespace_manager
+from google.appengine.ext import db
 
 COURSE_MODEL_VERSION_1_2 = '1.2'
 COURSE_MODEL_VERSION_1_3 = '1.3'
+
+DEFAULT_FETCH_LIMIT = 100
+
+COURSE_CONTENT_ENTITIES = [
+    models.QuestionEntity, models.QuestionGroupEntity]
 
 # 1.4 assessments are JavaScript files
 ASSESSMENT_MODEL_VERSION_1_4 = '1.4'
@@ -1414,30 +1422,72 @@ class CourseModel13(object):
                                 None, dst_lesson.lesson_id))
                         self.app_context.fs.put(dst_filename, astream)
 
+        def _copy_entities_between_namespaces(entity_types, from_ns, to_ns):
+            """Copies entities between different namespaces."""
+
+            def _mapper_func(entity, unused_ns):
+                _add_entity_instance_to_a_namespace(
+                    to_ns, entity.__class__, entity.key().id(), entity.data)
+
+            old_namespace = namespace_manager.get_namespace()
+            try:
+                namespace_manager.set_namespace(from_ns)
+                for _entity_class in entity_types:
+                    mapper = utils.QueryMapper(
+                        _entity_class.all(), batch_size=DEFAULT_FETCH_LIMIT,
+                        report_every=0)
+                    mapper.run(_mapper_func, from_ns)
+            finally:
+                namespace_manager.set_namespace(old_namespace)
+
+        def _add_entity_instance_to_a_namespace(ns, entity_class, _id, data):
+            """Add new entity to the datastore of and a given namespace."""
+            old_namespace = namespace_manager.get_namespace()
+            try:
+                namespace_manager.set_namespace(ns)
+
+                new_key = db.Key.from_path(entity_class.__name__, _id)
+                new_instance = entity_class(key=new_key)
+                new_instance.data = data
+                new_instance.put()
+            finally:
+                namespace_manager.set_namespace(old_namespace)
+
+        # check editable
         if not is_editable_fs(self._app_context):
             errors.append(
                 'Target course %s must be '
                 'on read-write media.' % self.app_context.raw)
             return None, None
 
+        # check empty
         if self.get_units():
             errors.append(
-                'Target course %s must be '
-                'empty.' % self.app_context.raw)
+                'Target course %s must be empty.' % self.app_context.raw)
             return None, None
 
-        # Iterate over course structure and assets and import each item.
+        # iterate over course structure and assets and import each item
         for unit in src_course.get_units():
+            # import unit
             new_unit = self.add_unit(unit.type, unit.title)
-            # TODO(johncox): Create a full flow for importing a
-            # Course13 into a Course13
-            if src_course.version == self.VERSION:
+            if src_course.version == CourseModel13.VERSION:
                 copy_unit13_into_unit13(unit, new_unit)
-            else:
+            elif src_course.version == CourseModel12.VERSION:
                 copy_unit12_into_unit13(unit, new_unit)
+            else:
+                raise Exception(
+                    'Unsupported course version: %s', src_course.version)
+
+            # import contained lessons
             for lesson in src_course.get_lessons(unit.unit_id):
                 new_lesson = self.add_lesson(new_unit, lesson.title)
                 copy_lesson12_into_lesson13(unit, lesson, new_unit, new_lesson)
+
+        # import course dependencies from the datastore
+        _copy_entities_between_namespaces(
+            COURSE_CONTENT_ENTITIES,
+            src_course.app_context.get_namespace_name(),
+            self.app_context.get_namespace_name())
 
         return src_course, self
 
