@@ -251,6 +251,7 @@ def html_to_safe_dom(html_string, handler):
         return node_list
 
     def _process_html_tree(elt, used_instance_ids):
+        """Recursively parses an HTML tree into a safe_dom.NodeList()."""
         # Return immediately with an error message if a duplicate instanceid is
         # detected.
         if 'instanceid' in elt.attrib:
