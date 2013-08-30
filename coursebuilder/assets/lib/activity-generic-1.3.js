@@ -864,6 +864,7 @@ $(document).ready(function() {
 $(window).unload(function() {
   // send an event to the server
   try {
+    // duration is in milliseconds
     gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'visit-page');
   } catch (e){}
 });

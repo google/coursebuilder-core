@@ -31,14 +31,6 @@ import mrs
 from tools.etl import etl_lib
 
 
-# String. Event source value for YouTube videos in EventEntity.json.
-_YOUTUBE_MILESTONE_SOURCE = 'tag-youtube-milestone'
-# Int. Value of GCB_VIDEO_TRACKING_CHUNK_SEC in youtube_video.js.
-_BUCKET_SIZE_SECONDS = 30
-# Int. 3hrs limit on the playhead_position.
-_POS_LIMIT = 60 * 60 * 3
-
-
 class MapReduceJob(etl_lib.Job):
     """Parent classes for custom jobs that run a mapreduce.
 
@@ -131,14 +123,19 @@ class JsonWriter(mrs.fileformats.Writer):
 
 
 class Histogram(object):
-    """Histogram that bins values into _BUCKET_SIZE_SECONDS sized intervals."""
+    """Histogram that bins values into _bucket_size sized intervals."""
 
-    def __init__(self):
+    # Int. Number of consecutive zeros in list of integer values to determine
+    # the cutoff point.
+    _NUM_ZEROS = 3
+
+    def __init__(self, bucket_size):
         # Map of 0-indexed bin #int -> count int
         self._values = {}
+        self._bucket_size = bucket_size
 
     def add(self, value):
-        """Adds value into self._values and updates self._max_key."""
+        """Adds value into self._values."""
         bin_number = self._get_bin_number(value)
         self._increment_bin(bin_number)
 
@@ -146,7 +143,7 @@ class Histogram(object):
         """Returns appropriate bin number for given value."""
         if value < 0:
             raise ValueError('Cannot calculate index for negative value')
-        return max(0, (value - 1) // _BUCKET_SIZE_SECONDS)
+        return max(0, (value - 1) // self._bucket_size)
 
     def _increment_bin(self, n):
         self._values[n] = self._values.get(n, 0) + 1
@@ -155,88 +152,52 @@ class Histogram(object):
         """Returns self._values converted into a list, sorted by its keys."""
         try:
             max_key = max(self._values.iterkeys())
-            return [self._values.get(n, 0) for n in xrange(1, max_key+1)]
+            return [self._values.get(n, 0) for n in xrange(0, max_key+1)]
         except ValueError:
             return []
 
+    def to_noise_filtered_list(self):
+        """Converts self._values to a list with junk data removed.
 
-class YoutubeHistogramGenerator(MapReduceBase):
-    """Generates time histogram of user video engagement.
+        Returns:
+            self.to_list(), with junk data removed
 
-    Input file: EventEntity JSON file.
-    Each event has a 'source' that defines a place in a code where the event
-    was recorded. Each event has a 'user_id' to represent an actor who
-    triggered the event. The event 'data' is a JSON object and its format and
-    content depends on the type of the event. For YouTube video events, 'data'
-    is a dictionary with 'video_id', 'instance_id', 'event_id', 'position',
-    'data', 'location'.
-    """
+        "Junk data" refers to noise in EventEntity data caused by API
+        misbehaviors and certain user behavior. Two known issues are:
+        1. Youtube video data from event source 'tag-youtube-video' and
+           'tag-youtube-milestone' represent user engagement at certain playhead
+           positions. Youtube API continues to emit these values even when the
+           video has stopped playing, causing a trail of meaningless values in
+           the histogram.
+        2. Data from event source 'visit-page' logs duration of a page visit.
+           If a user keeps the browser open and goes idle, the duration value
+           recorded is skewed since the user wasn't engaged. These values tend
+           to be significantly larger than more reliable duration values.
 
-    def map(self, unused_key, value):
-        """Filters out YouTube video data from EventEntity JSON file.
+        This method filters the long trail of insignificant data by counting
+        number of consecutive zeros set in self._NUM_ZEROS and disregarding
+        any data after the zeros.
 
-        Args:
-            unused_key: int. line number of each EventEntity in file.
-            value: str. instance of EventEntity extracted from file.
+        Example:
+            self.to_list() returns [1, 2, 3, 4, 5, 0, 0, 0, 0, 1]
+            _NUM_ZEROS = 3
 
-        Yields:
-            A tuple of (video_identifier, time_position) to be passed into
-            reduce function.
-            Video_identifier is a tuple of YouTube video_id and instance_id,
-            and time_position is the video playhead count.
+            output = [1, 2, 3, 4, 5]
         """
-        json = self.json_parse(value)
-        if json and json['source'] == _YOUTUBE_MILESTONE_SOURCE:
-            data = transforms.loads(json['data'])
-            video_identifier = (data['video_id'], data['instance_id'])
-            playhead_position = data['position']
-            if (playhead_position <= _POS_LIMIT and
-                # Youtube API may return NaN if value couldn't be computed.
-                playhead_position != float('nan')):
-                yield video_identifier, playhead_position
-
-    def reduce(self, key, values):
-        """Creates a histogram from time_position values.
-
-        The value of _BUCKET_SIZE_SECONDS comes from the constant
-        GCB_VIDEO_TRACKING_CHUNK_SEC in youtube_video.js. This value indicates
-        the interval of the milestone events. If GCB_VIDEO_TRACKING_CHUNK_SEC
-        changes, _BUCKET_SIZE_SECONDS will have to be updated accordingly.
-
-        Args:
-            key: tuple. video_id, video instance id.
-            values: a generator over video playhead positions.
-
-        Yields:
-            A dictionary with video_id, instance_id, and histogram.
-            The time histogram is a list in which each index represents
-            sequential milestone events and the corresponding item at each
-            index represents the number of users watching the video.
-
-        An example output looks like:
-        {'video_id': 123456, 'instance_id': 0, 'histogram': [10, 8, 7, 5, 2, 1]}
-        """
-        histogram = Histogram()
-        for value in values:
-            histogram.add(value)
-        yield {
-            'video_id': key[0],
-            'instance_id': key[1],
-            'histogram': histogram.to_list()
-        }
-
-
-class YoutubeHistogram(MapReduceJob):
-    """MapReduce Job that generates a histogram for user video engagement.
-
-    Usage: run the following command from the app root folder.
-
-    python tools/etl/etl.py run tools.etl.mapreduce.YoutubeHistogram \
-        /coursename appid server.appspot.com \
-        --job_args='path_to_EventEntity.json path_to_output_directory'
-    """
-
-    MAPREDUCE_CLASS = YoutubeHistogramGenerator
+        zero_counts = 0
+        cutoff_index = 0
+        values = self.to_list()
+        for index, value in enumerate(values):
+            if value == 0:
+                zero_counts += 1
+                if zero_counts == 1:
+                    cutoff_index = index
+                if zero_counts == self._NUM_ZEROS:
+                    return values[:cutoff_index]
+            else:
+                cutoff_index = 0
+                zero_counts = 0
+        return values
 
 
 class XmlWriter(mrs.fileformats.Writer):
@@ -303,9 +264,9 @@ class XmlGenerator(MapReduceBase):
 
         Args:
             unused_key: str. The arbitrary string 'key' set to accumulate all
-                        values under one key.
+                values under one key.
             values: list of tuples. Each tuple contains line number and JSON
-                    literal converted to XML string.
+                literal converted to XML string.
 
         Yields:
             A list of XML strings sorted by the line number.
@@ -374,7 +335,7 @@ class CsvWriter(mrs.fileformats.Writer):
         writer.writerows(json_list)
 
 
-class CSVGenerator(MapReduceBase):
+class CsvGenerator(MapReduceBase):
     """Generates a CSV file from a JSON formatted input file."""
 
     @classmethod
@@ -413,7 +374,7 @@ class CSVGenerator(MapReduceBase):
         """
         json = self.json_parse(value)
         if json:
-            json = CSVGenerator._flatten_json(json)
+            json = CsvGenerator._flatten_json(json)
             yield 'key', json
 
     def reduce(self, unused_key, values):
@@ -431,10 +392,17 @@ class CSVGenerator(MapReduceBase):
         master_list = []
         values = [value for value in values]
         for value in values:
-            for k, _ in value.iteritems():
-                if k not in master_list:
-                    master_list.append(k)
-        yield sorted(master_list), values
+            for key in value:
+                if key not in master_list:
+                    master_list.append(key)
+        try:
+            # Convert integer keys from unicode to ints to be sorted correctly.
+            # pylint: disable-msg=unnecessary-lambda
+            master_list = sorted(master_list, key=lambda item: int(item))
+        except ValueError:
+            # String keys cannot be converted into integers..
+            master_list = sorted(master_list)
+        yield master_list, values
 
     def make_reduce_data(self, job, interm_data):
         """Set the output data format to CSV."""
@@ -454,7 +422,7 @@ class JsonToCsv(MapReduceJob):
         --job_args='path_to_an_Entity_file path_to_output_directory'
     """
 
-    MAPREDUCE_CLASS = CSVGenerator
+    MAPREDUCE_CLASS = CsvGenerator
 
 
 mrs.fileformats.writer_map['csv'] = CsvWriter
