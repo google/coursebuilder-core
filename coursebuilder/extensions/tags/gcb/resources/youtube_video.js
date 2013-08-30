@@ -57,6 +57,7 @@ if (typeof(window['gcb_tag_youtube_videos']) == "undefined"){
       height: '400',
       width: '650',
       videoId: video_id,
+      playerVars: { rel: '0' },
       events: {
         'onReady': function (){
           setInterval(function(){
