@@ -22,6 +22,7 @@ import os.path
 import random
 import time
 from selenium import webdriver
+from selenium.webdriver.chrome import options
 from tests import suite
 import pageobjects
 
@@ -34,7 +35,9 @@ class BaseIntegrationTest(suite.TestBase):
     LOGIN = 'test@example.com'
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
-        self.driver = webdriver.Chrome()
+        chrome_options = options.Options()
+        chrome_options.add_argument('--disable-extensions')
+        self.driver = webdriver.Chrome(chrome_options=chrome_options)
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         time.sleep(1)  # avoid broken sockets on the server
