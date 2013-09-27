@@ -24,6 +24,7 @@ import os
 import sys
 
 from xml.etree import ElementTree
+
 from models import transforms
 
 import mrs
@@ -56,28 +57,6 @@ class MapReduceJob(etl_lib.Job):
         if not os.path.exists(self.args.output):
             sys.exit('Output directory %s not found' % self.args.output)
         mrs.main(self.MAPREDUCE_CLASS, args=self._parsed_etl_args.job_args)
-
-
-class MapReduceBase(mrs.MapReduce):
-    """Common functionalities of MR jobs combined into one class."""
-
-    def json_parse(self, value):
-        """Parses JSON file into Python."""
-        if value.strip()[-1] == ',':
-            value = value.strip()[:-1]
-        try:
-            return transforms.loads(value)
-        # Skip unparseable rows like the first and last
-        # pylint: disable=bare-except
-        except:
-            return None
-
-    def make_reduce_data(self, job, interm_data):
-        """Change the outout format to JSON."""
-        outdir = self.output_dir()
-        output_data = job.reduce_data(
-            interm_data, self.reduce, outdir=outdir, format=JsonWriter)
-        return output_data
 
 
 class JsonWriter(mrs.fileformats.Writer):
@@ -120,6 +99,42 @@ class JsonWriter(mrs.fileformats.Writer):
     def writepair(self, kvpair, **unused_kwds):
         unused_key, value = kvpair
         self._write_json(self.fileobj.write, value)
+
+
+class TextWriter(mrs.fileformats.TextWriter):
+    """A simplified plain text writer."""
+
+    ext = 'txt'  # Use the expected extension rather than mrs' mtxt default.
+
+    def writepair(self, pair, **unused_kwargs):
+        _, value = pair
+        # Write the value exactly rather than always prefixing it with the key.
+        self.fileobj.write(unicode(value).encode('utf-8') + os.linesep)
+
+
+class MapReduceBase(mrs.MapReduce):
+    """Common functionalities of MR jobs combined into one class."""
+
+    # Subclass of mrs.fileformats.Writer. The writer used to format output.
+    WRITER_CLASS = JsonWriter
+
+    def json_parse(self, value):
+        """Parses JSON file into Python."""
+        if value.strip()[-1] == ',':
+            value = value.strip()[:-1]
+        try:
+            return transforms.loads(value)
+        # Skip unparseable rows like the first and last
+        # pylint: disable=bare-except
+        except:
+            return None
+
+    def make_reduce_data(self, job, interm_data):
+        """Change the outout format to JSON."""
+        outdir = self.output_dir()
+        output_data = job.reduce_data(
+            interm_data, self.reduce, outdir=outdir, format=self.WRITER_CLASS)
+        return output_data
 
 
 class Histogram(object):
@@ -242,6 +257,8 @@ class XmlWriter(mrs.fileformats.Writer):
 class XmlGenerator(MapReduceBase):
     """Generates a XML file from a JSON formatted input file."""
 
+    WRITER_CLASS = XmlWriter
+
     def map(self, key, value):
         """Converts JSON object to xml.
 
@@ -274,13 +291,6 @@ class XmlGenerator(MapReduceBase):
 
         sorted_values = sorted(values, key=lambda x: x[0])
         yield [value[1] for value in sorted_values]
-
-    def make_reduce_data(self, job, interm_data):
-        """Change the outout format to XML."""
-        outdir = self.output_dir()
-        output_data = job.reduce_data(
-            interm_data, self.reduce, outdir=outdir, format=XmlWriter)
-        return output_data
 
 
 class JsonToXml(MapReduceJob):
@@ -337,6 +347,8 @@ class CsvWriter(mrs.fileformats.Writer):
 
 class CsvGenerator(MapReduceBase):
     """Generates a CSV file from a JSON formatted input file."""
+
+    WRITER_CLASS = CsvWriter
 
     @classmethod
     def _flatten_json(cls, json, prefix=''):
@@ -404,13 +416,6 @@ class CsvGenerator(MapReduceBase):
             master_list = sorted(master_list)
         yield master_list, values
 
-    def make_reduce_data(self, job, interm_data):
-        """Set the output data format to CSV."""
-        outdir = self.output_dir()
-        output_data = job.reduce_data(
-            interm_data, self.reduce, outdir=outdir, format=CsvWriter)
-        return output_data
-
 
 class JsonToCsv(MapReduceJob):
     """MapReduce Job that converts JSON formatted Entity files to CSV format.
@@ -427,4 +432,5 @@ class JsonToCsv(MapReduceJob):
 
 mrs.fileformats.writer_map['csv'] = CsvWriter
 mrs.fileformats.writer_map['json'] = JsonWriter
+mrs.fileformats.writer_map['txt'] = TextWriter
 mrs.fileformats.writer_map['xml'] = XmlWriter

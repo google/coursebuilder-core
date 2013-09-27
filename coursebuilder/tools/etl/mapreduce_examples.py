@@ -372,6 +372,55 @@ class StudentPageDurationHistogram(mapreduce.MapReduceJob):
     MAPREDUCE_CLASS = StudentDurationAccumulationPipeline
 
 
+class WordCount(mapreduce.MapReduceBase):
+    """Counts word frequency in input.
+
+    Output is plain text of the format:
+
+    word1: count1
+    word2: count2
+    ...
+    wordn: countn
+    """
+
+    # Since JSON is our usual interchange format, mapreduce.JsonWriter is our
+    # default output writer. For this canonical example, however, we'll override
+    # this and emit plain text instead.
+    WRITER_CLASS = mapreduce.TextWriter
+
+    def map(self, unused_key, value):
+        # value is one line of the input file. We break it into tokens and
+        # convert each token to lowercase in order to treat 'To' and 'to' as
+        # equivalent.
+        tokens = [x.lower() for x in value.split()]
+        for token in tokens:
+            # Both map and reduce yield rather than return. map yields a
+            # (key, value) 2-tuple. In this case, key is the token and value is
+            # always 1, indicating that we've seen the token once per
+            # occurrence.
+            yield token, 1
+
+    def reduce(self, key, values):
+        # key will be a token and values will be a list of 1s -- one for each
+        # time map saw the token. Like map, reduce yields rather than returning.
+        # In this case we yield a plain string containing the token and the sum
+        # of its 1s for the WRITER_CLASS to output.
+        yield '%s: %s' % (key, sum(values))
+
+
+class WordCountJob(mapreduce.MapReduceJob):
+    """MapReduce Job that illustrates simple word count of input.
+
+    Usage:
+    python etl.py run \
+        tools.etl.mapreduce_examples.WordCount \
+        /coursename appid server.appspot.com \
+        --job_args='path/to/input.file path/to/output/directory'
+    """
+
+    MAPREDUCE_CLASS = WordCount
+
+
 class YoutubeHistogramGenerator(mapreduce.MapReduceBase):
     """Generates time histogram of user video engagement.
 
