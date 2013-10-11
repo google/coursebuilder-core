@@ -22,7 +22,6 @@ from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
-from models import courses
 from xml.etree import cElementTree
 
 
@@ -36,6 +35,12 @@ def _escape_url(url, force_https=True):
     return urlparse.urlunsplit((scheme, netloc, path, query, unused_fragment))
 
 
+def _replace_url_query(url, new_query):
+    """Replaces the query part of a URL with a new one."""
+    scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+    return urlparse.urlunsplit((scheme, netloc, path, new_query, fragment))
+
+
 class GoogleDoc(tags.BaseTag):
     """Custom tag for a Google Doc."""
 
@@ -46,7 +51,7 @@ class GoogleDoc(tags.BaseTag):
     def render(self, node, unused_handler):
         height = node.attrib.get('height') or '300'
         link = node.attrib.get('link')
-        url = _escape_url('%s?embedded=true' % link)
+        url = _escape_url(_replace_url_query(link, 'embedded=true'))
         iframe = cElementTree.XML("""
 <iframe class="google-doc" title="Google Doc" type="text/html" frameborder="0">
 </iframe>""")
@@ -62,8 +67,8 @@ class GoogleDoc(tags.BaseTag):
         reg.add_property(
             # To get this value, users do File > Publish to the web..., click
             # 'Start publishing', and then copy and paste the Document link.
-            # Changes to the publication status of a document or to its contents
-            # do not appear instantly.
+            # Changes to the publication status of a document or to its
+            # contents do not appear instantly.
             schema_fields.SchemaField(
                 'link', 'Document Link', 'string',
                 optional=True,
