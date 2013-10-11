@@ -17,6 +17,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import datetime
 import unittest
 from models import transforms
 
@@ -95,6 +96,58 @@ class JsonToDictTests(unittest.TestCase):
             self.fail('Expected ValueException')
         except ValueError as e:
             self.assertEqual(str(e), 'could not convert string to float: cat')
+
+    def test_convert_date(self):
+        schema = wrap_properties({'field': {'type': 'date'}})
+        source = {'field': '2005/03/01'}
+        result = transforms.json_to_dict(source, schema)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result['field'], datetime.date(2005, 3, 1))
+
+    def test_reject_bad_dates(self):
+        schema = wrap_properties({'field': {'type': 'date'}})
+        source = {'field': '2005/02/31'}
+        try:
+            transforms.json_to_dict(source, schema)
+            self.fail('Expected ValueException')
+        except ValueError as e:
+            self.assertEqual(str(e), 'day is out of range for month')
+
+        schema = wrap_properties({'field': {'type': 'date'}})
+        source = {'field': 'cat'}
+        try:
+            transforms.json_to_dict(source, schema)
+            self.fail('Expected ValueException')
+        except ValueError as e:
+            self.assertEqual(
+                str(e), 'time data \'cat\' does not match format \'%Y/%m/%d\'')
+
+    def test_convert_datetime(self):
+        schema = wrap_properties({'field': {'type': 'datetime'}})
+        source = {'field': '2005/03/01 20:30'}
+        result = transforms.json_to_dict(source, schema)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(
+            result['field'], datetime.datetime(2005, 3, 1, 20, 30, 0))
+
+    def test_reject_bad_datetimes(self):
+        schema = wrap_properties({'field': {'type': 'datetime'}})
+        source = {'field': '2005/02/31 20:30'}
+        try:
+            transforms.json_to_dict(source, schema)
+            self.fail('Expected ValueException')
+        except ValueError as e:
+            self.assertEqual(str(e), 'day is out of range for month')
+
+        schema = wrap_properties({'field': {'type': 'datetime'}})
+        source = {'field': 'cat'}
+        try:
+            transforms.json_to_dict(source, schema)
+            self.fail('Expected ValueException')
+        except ValueError as e:
+            self.assertEqual(
+                str(e),
+                'time data \'cat\' does not match format \'%Y/%m/%d %H:%M\'')
 
 
 class StringValueConversionTests(unittest.TestCase):

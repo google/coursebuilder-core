@@ -28,8 +28,9 @@ from google.appengine.ext import db
 
 
 JSON_DATE_FORMAT = '%Y/%m/%d'
-JSON_TYPES = ['string', 'date', 'text', 'html', 'boolean', 'integer', 'number',
-              'array', 'object']
+JSON_DATETIME_FORMAT = '%Y/%m/%d %H:%M'
+JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html', 'boolean',
+              'integer', 'number', 'array', 'object']
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
 # sync with modules/oeditor/oeditor.html.
 _JSON_XSSI_PREFIX = ")]}'\n"
@@ -49,13 +50,16 @@ def dict_to_json(source_dict, unused_schema):
             output[key] = value
         elif isinstance(value, datastore_types.Key):
             output[key] = str(value)
+        elif isinstance(value, datetime.datetime):
+            output[key] = value.strftime(JSON_DATETIME_FORMAT)
         elif isinstance(value, datetime.date):
             output[key] = value.strftime(JSON_DATE_FORMAT)
         elif isinstance(value, db.GeoPt):
             output[key] = {'lat': value.lat, 'lon': value.lon}
         else:
             raise ValueError(
-                'Failed to encode key \'%s\' with value \'%s\'.' % (key, value))
+                'Failed to encode key \'%s\' with value \'%s\'.' %
+                (key, value))
     return output
 
 
@@ -134,6 +138,9 @@ def json_to_dict(source_dict, schema):
             raise ValueError('Unsupported JSON type: %s' % attr_type)
         if attr_type == 'object':
             output[key] = json_to_dict(source_dict[key], attr)
+        elif attr_type == 'datetime':
+            output[key] = datetime.datetime.strptime(
+                source_dict[key], JSON_DATETIME_FORMAT)
         elif attr_type == 'date':
             output[key] = datetime.datetime.strptime(
                 source_dict[key], JSON_DATE_FORMAT).date()
