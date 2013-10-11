@@ -64,8 +64,20 @@ global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
 sites.ApplicationRequestHandler.bind(namespaced_routes)
 app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 
+# enable Appstats handlers if requested
+appstats_routes = []
+if appengine_config.gcb_appstats_enabled():
+    # pylint: disable-msg=g-import-not-at-top
+    import google.appengine.ext.appstats.ui as appstats_ui
+    # pylint: enable-msg=g-import-not-at-top
+
+    # add all Appstats URL's to /admin/stats basepath
+    for path, handler in appstats_ui.URLMAP:
+        assert '.*' == path[:2]
+        appstats_routes.append(('/admin/stats/%s' % path[3:], handler))
+
 # tag extension resource routes
-extensions_tag_resource_routes = [(
+extensions_routes = [(
     '/extensions/tags/.*/resources/.*', tags.ResourcesHandler)]
 
 # i18n configuration for jinja2
@@ -74,6 +86,6 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 
 # init application
 app = webapp2.WSGIApplication(
-    global_routes + extensions_tag_resource_routes + app_routes,
+    global_routes + extensions_routes + appstats_routes + app_routes,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=debug)

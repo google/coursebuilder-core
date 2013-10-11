@@ -23,7 +23,7 @@ import os
 import sys
 import time
 import urllib
-from appengine_config import PRODUCTION_MODE
+import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
@@ -150,7 +150,12 @@ class AdminHandler(
             elt.add_text(title)
             nav.append(elt).append(safe_dom.Text(' '))
 
-        if PRODUCTION_MODE:
+        if appengine_config.gcb_appstats_enabled():
+            nav.append(safe_dom.Element(
+                'a', target='_blank', href='/admin/stats/'
+            ).add_text('Appstats')).append(safe_dom.Text(' '))
+
+        if appengine_config.PRODUCTION_MODE:
             app_id = app.get_application_id()
             nav.append(safe_dom.Element(
                 'a', target='_blank',

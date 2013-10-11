@@ -872,6 +872,25 @@ class InfrastructureTest(actions.TestBase):
 class AdminAspectTest(actions.TestBase):
     """Test site from the Admin perspective."""
 
+    def test_appstats(self):
+        """Checks that appstats is available when enabled."""
+        email = 'test_appstats@google.com'
+
+        # check appstats is disabled by default
+        actions.login(email, is_admin=True)
+        response = self.testapp.get('/admin')
+        assert_equals(response.status_int, 200)
+        assert_does_not_contain('>Appstats</a>', response.body)
+        assert_does_not_contain('/admin/stats/', response.body)
+
+        # enable and check appstats is now enabled
+        os.environ['GCB_APPSTATS_ENABLED'] = 'True'
+        response = self.testapp.get('/admin')
+        assert_equals(response.status_int, 200)
+        assert_contains('>Appstats</a>', response.body)
+        assert_contains('/admin/stats/', response.body)
+        del os.environ['GCB_APPSTATS_ENABLED']
+
     def test_courses_page_for_multiple_courses(self):
         """Tests /admin page showing multiple courses."""
         # Setup courses.

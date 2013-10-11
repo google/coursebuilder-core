@@ -16,6 +16,7 @@
 
 __author__ = 'psimakov@google.com (Pavel Simakov)'
 
+import logging
 import os
 import sys
 
@@ -91,6 +92,21 @@ def gcb_init_third_party():
         if not os.path.exists(lib.file_path):
             raise Exception('Library does not exist: %s' % lib.file_path)
         sys.path.insert(0, lib.full_path)
+
+
+def gcb_appstats_enabled():
+    return 'True' == os.environ.get('GCB_APPSTATS_ENABLED')
+
+
+def webapp_add_wsgi_middleware(app):
+    """Enable AppStats if requested."""
+    if gcb_appstats_enabled():
+        logging.info('Enabling AppStats.')
+        # pylint: disable-msg=g-import-not-at-top
+        from google.appengine.ext.appstats import recording
+        # pylint: enable-msg=g-import-not-at-top
+        app = recording.appstats_wsgi_middleware(app)
+    return app
 
 
 gcb_init_third_party()

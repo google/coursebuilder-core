@@ -6,6 +6,7 @@ threadsafe: false
 
 env_variables:
   GCB_PRODUCT_VERSION: '1.5.1'
+  GCB_APPSTATS_ENABLED: false
 
 inbound_services:
 - warmup
