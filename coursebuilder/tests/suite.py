@@ -108,7 +108,7 @@ class TestBase(unittest.TestCase):
         self._unswap_all()
         super(TestBase, self).tearDown()
 
-    def swap(self, source, symbol, new):
+    def swap(self, source, symbol, new):  # pylint: disable-msg=invalid-name
         """Swaps out source.symbol for a new value.
 
         Allows swapping of members and methods:
