@@ -477,7 +477,7 @@ class DashboardHandler(
 
         self.render_page(template_values)
 
-    def list_files(self, subfolder, merge_local_files=False):
+    def list_files(self, subfolder, merge_local_files=False, all_paths=None):
         """Makes a list of files in a subfolder.
 
         Args:
@@ -487,21 +487,32 @@ class DashboardHandler(
                 read-only local filesystem. If a file is found on both, its
                 datastore filesystem version will trump its local filesystem
                 version.
+            all_paths: list. A list of all file paths in the underlying file
+                system.
 
         Returns:
             List of relative, normalized file path strings.
         """
         home = sites.abspath(self.app_context.get_home_folder(), '/')
-        all_paths = set(self.app_context.fs.list(
-            sites.abspath(self.app_context.get_home_folder(), subfolder)))
+        _paths = None
+        if all_paths is not None:
+            _paths = []
+            for _path in all_paths:
+                if _path.startswith(sites.abspath(
+                        self.app_context.get_home_folder(), subfolder)):
+                    _paths.append(_path)
+            _paths = set(_paths)
+        else:
+            _paths = set(self.app_context.fs.list(
+                sites.abspath(self.app_context.get_home_folder(), subfolder)))
 
         if merge_local_files:
-            all_paths = all_paths.union(set([
+            _paths = _paths.union(set([
                 os.path.join(appengine_config.BUNDLE_ROOT, path) for path in
                 self.local_fs.list(subfolder[1:])]))
 
         result = []
-        for abs_filename in all_paths:
+        for abs_filename in _paths:
             filename = os.path.relpath(abs_filename, home)
             result.append(vfs.AbstractFileSystem.normpath(filename))
         return sorted(result)
@@ -509,18 +520,21 @@ class DashboardHandler(
     def list_and_format_file_list(
         self, title, subfolder,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
-        edit_url_template=None, merge_local_files=False, sub_title=None):
+        edit_url_template=None, merge_local_files=False, sub_title=None,
+        all_paths=None):
         """Walks files in folders and renders their names in a section."""
 
         # keep a list of files without merging
         unmerged_files = {}
         if merge_local_files:
-            unmerged_files = self.list_files(subfolder, merge_local_files=False)
+            unmerged_files = self.list_files(
+                subfolder, merge_local_files=False, all_paths=all_paths)
 
         items = safe_dom.NodeList()
         count = 0
         for filename in self.list_files(
-                subfolder, merge_local_files=merge_local_files):
+                subfolder, merge_local_files=merge_local_files,
+                all_paths=all_paths):
             if prefix and not filename.startswith(prefix):
                 continue
 
@@ -669,6 +683,9 @@ class DashboardHandler(
     def get_assets(self):
         """Renders course assets view."""
 
+        all_paths = self.app_context.fs.list(
+            sites.abspath(self.app_context.get_home_folder(), '/'))
+
         def inherits_from(folder):
             return '< inherited from %s >' % folder
 
@@ -681,34 +698,35 @@ class DashboardHandler(
         ).append(
             self.list_and_format_file_list(
                 'Assessments', '/assets/js/', links=True,
-                prefix='assets/js/assessment-')
+                prefix='assets/js/assessment-', all_paths=all_paths)
         ).append(
             self.list_and_format_file_list(
                 'Activities', '/assets/js/', links=True,
-                prefix='assets/js/activity-')
+                prefix='assets/js/activity-', all_paths=all_paths)
         ).append(
             self.list_and_format_file_list(
                 'Images & Documents', '/assets/img/', links=True, upload=True,
                 edit_url_template='dashboard?action=delete_asset&uri=%s',
-                caption_if_empty=inherits_from('/assets/img/'))
+                caption_if_empty=inherits_from('/assets/img/'),
+                all_paths=all_paths)
         ).append(
             self.list_and_format_file_list(
                 'Cascading Style Sheets', '/assets/css/', links=True,
                 upload=True, edit_url_template=text_asset_url_template,
                 caption_if_empty=inherits_from('/assets/css/'),
-                merge_local_files=True)
+                merge_local_files=True, all_paths=all_paths)
         ).append(
             self.list_and_format_file_list(
                 'JavaScript Libraries', '/assets/lib/', links=True,
                 upload=True, edit_url_template=text_asset_url_template,
                 caption_if_empty=inherits_from('/assets/lib/'),
-                merge_local_files=True)
+                merge_local_files=True, all_paths=all_paths)
         ).append(
             self.list_and_format_file_list(
                 'View Templates', '/views/', upload=True,
                 edit_url_template=text_asset_url_template,
                 caption_if_empty=inherits_from('/views/'),
-                merge_local_files=True)
+                merge_local_files=True, all_paths=all_paths)
         )
 
         template_values = {}
