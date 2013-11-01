@@ -176,3 +176,26 @@ class StringValueConversionTests(unittest.TestCase):
         assert transforms.string_to_value('foo', str) == 'foo'
         assert transforms.string_to_value(None, str) == str('')
 
+
+class JsonParsingTests(unittest.TestCase):
+
+    def test_json_trailing_comma_in_dict_fails(self):
+        json_text = '{"foo": "bar",}'
+        try:
+            transforms.loads(json_text)
+            raise Exception('Expected to fail')
+        except ValueError:
+            pass
+
+    def test_json_trailing_comma_in_array_fails(self):
+        json_text = '{"foo": ["bar",]}'
+        try:
+            transforms.loads(json_text)
+            raise Exception('Expected to fail')
+        except ValueError:
+            pass
+
+    def test_non_strict_mode_parses_json(self):
+        json_text = '{"foo": "bar", "baz": ["bum",],}'
+        _json = transforms.loads(json_text, strict=False)
+        assert _json.get('foo') == 'bar'

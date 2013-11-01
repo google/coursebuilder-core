@@ -19,9 +19,8 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import base64
 import datetime
 import json
-
 from xml.etree import ElementTree
-
+import yaml
 import entities
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
@@ -90,7 +89,7 @@ def dumps(*args, **kwargs):
     return json.dumps(*args, **kwargs)
 
 
-def loads(s, prefix=_JSON_XSSI_PREFIX, **kwargs):
+def loads(s, prefix=_JSON_XSSI_PREFIX, strict=True, **kwargs):
     """Wrapper around json.loads that handles XSSI-protected responses.
 
     To prevent XSSI we insert a prefix before our JSON responses during server-
@@ -101,6 +100,9 @@ def loads(s, prefix=_JSON_XSSI_PREFIX, **kwargs):
     Args:
         s: str or unicode. JSON contents to convert.
         prefix: string. The XSSI prefix we remove before conversion.
+        strict: boolean. If True use JSON parser, if False - YAML. YAML parser
+            allows parsing of malformed JSON text, which has trailing commas and
+            can't be parsed by the normal JSON parser.
         **kwargs: keyword arguments delegated to json.loads.
 
     Returns:
@@ -108,7 +110,10 @@ def loads(s, prefix=_JSON_XSSI_PREFIX, **kwargs):
     """
     if s.startswith(prefix):
         s = s.lstrip(prefix)
-    return json.loads(s, **kwargs)
+    if strict:
+        return json.loads(s, **kwargs)
+    else:
+        return yaml.safe_load(s, **kwargs)
 
 
 def json_to_dict(source_dict, schema):

@@ -351,18 +351,29 @@ class CsvGenerator(MapReduceBase):
     WRITER_CLASS = CsvWriter
 
     @classmethod
-    def _flatten_json(cls, json, prefix=''):
-        """Flattens given JSON object and encodes all the values in utf-8."""
-        for k, v in json.items():
-            try:
-                if type(transforms.loads(v)) == dict:
-                    flattened = cls._flatten_json(
-                        transforms.loads(json.pop(k)), prefix=prefix + k + '_')
-                    json.update(flattened)
-            # pylint: disable=bare-except
-            except:
-                json[prefix + k] = unicode(json.pop(k)).encode('utf-8')
-        return json
+    def _flatten_json(cls, _dict, prefix=''):
+        """Flattens dict and contained JSON; encodes all values in utf-8."""
+        for key in _dict.keys():
+            value = _dict.pop(key)
+
+            _nested = None
+            if type(value) == dict:
+                _nested = value
+            else:
+                try:
+                    _dict_from_value = transforms.loads(value, strict=False)
+                    if _dict_from_value and type(_dict_from_value) == dict:
+                        _nested = _dict_from_value
+                except:  # pylint: disable=bare-except
+                    pass
+
+            if _nested:
+                flattened = cls._flatten_json(
+                    _nested, prefix=prefix + key + '_')
+                _dict.update(flattened)
+            else:
+                _dict[prefix + key] = unicode(value).encode('utf-8')
+        return _dict
 
     def map(self, unused_key, value):
         """Loads JSON object and flattens it.
@@ -422,7 +433,7 @@ class JsonToCsv(MapReduceJob):
 
     Usage: run the following command from the app root folder.
 
-    python tools/etl/etl.py run tools.etl.mapreduce.JsonToCSV
+    python tools/etl/etl.py run tools.etl.mapreduce.JsonToCsv
         /coursename appid server.appspot.com \
         --job_args='path_to_an_Entity_file path_to_output_directory'
     """

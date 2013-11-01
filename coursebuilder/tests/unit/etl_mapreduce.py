@@ -89,3 +89,16 @@ class FlattenJsonTests(unittest.TestCase):
                 {'a_aa': '11', 'a_bb': '22', 'b': '2', 'a_cc_aaa': '111'}))
         self.assertEquals(result_json, flattened_json)
 
+    def test_malformed_json_flattens_correctly(self):
+        json_text = """
+{"rows": [
+  {"foo": "bar", "good_json": "{'bee': 'bum',}", "bad_json": "{''"}
+],}
+        """
+        _dict = transforms.loads(json_text, strict=False)
+        _flat = mapreduce.CsvGenerator._flatten_json(_dict.get('rows')[0])
+
+        assert 3 == len(_flat.items())
+        assert 'bar' == _flat.get('foo')
+        assert 'bum' == _flat.get('good_json_bee')
+        assert '{\'\'' == _flat.get('bad_json')
