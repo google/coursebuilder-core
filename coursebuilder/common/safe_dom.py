@@ -35,6 +35,11 @@ class NodeList(object):
         self.list.append(node)
         return self
 
+    def insert(self, index, node):
+        assert node is not None, 'Cannot add an empty value to the node list'
+        self.list.insert(index, node)
+        return self
+
     @property
     def sanitized(self):
         sanitized_list = []
@@ -50,7 +55,7 @@ class Text(Node):
     """Holds untrusted text which will be sanitized when accessed."""
 
     def __init__(self, unsafe_string):
-        self._value = unsafe_string
+        self._value = unicode(unsafe_string)
 
     @property
     def sanitized(self):
@@ -60,7 +65,7 @@ class Text(Node):
 class Element(Node):
     """Embodies an HTML element which will be sanitized when accessed."""
 
-    _ALLOWED_NAME_PATTERN = re.compile('^[a-zA-Z][a-zA-Z0-9]*$')
+    _ALLOWED_NAME_PATTERN = re.compile(r'^[a-zA-Z][\-a-zA-Z0-9]*$')
 
     _VOID_ELEMENTS = frozenset([
         'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'keygen',

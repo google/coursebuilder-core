@@ -37,6 +37,13 @@ class NodeListTests(unittest.TestCase):
         ).append(MockNode('c'))
         self.assertEqual('abc', node_list.__str__())
 
+    def test_insert_node_list(self):
+        """NodeList should support inserting Nodes."""
+        node_list = safe_dom.NodeList()
+        node_list.append(MockNode('a')).append(MockNode('c'))
+        node_list.insert(1, MockNode('b'))
+        self.assertEqual('abc', node_list.__str__())
+
 
 class TextTests(unittest.TestCase):
     """Unit tests for common.safe_dom.Text."""
@@ -64,7 +71,7 @@ class ElementTests(unittest.TestCase):
 
     def test_reject_bad_tag_names(self):
         """Element should reject bad tag names."""
-        bad_names = ['2a', 'a b', '@', 'a-b']
+        bad_names = ['2a', 'a b', '@', '-q']
         for name in bad_names:
             try:
                 safe_dom.Element(name)
@@ -74,7 +81,7 @@ class ElementTests(unittest.TestCase):
 
     def test_reject_bad_attribute_names(self):
         """Element should reject bad attribute names."""
-        bad_names = ['2a', 'a b', '@', 'a-b']
+        bad_names = ['2a', 'a b', '@', '-q']
         for name in bad_names:
             try:
                 safe_dom.Element('p', **{name: 'good value'})

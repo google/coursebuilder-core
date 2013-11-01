@@ -96,13 +96,7 @@ class DashboardHandler(
         ('analytics', 'Analytics'),
         ('search', 'Search'),
         ('edit_assignment', 'Peer Review')]
-
-    local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
-
-    @classmethod
-    def get_child_routes(cls):
-        """Add child handlers for REST."""
-        return [
+    child_routes = [
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
@@ -119,8 +113,19 @@ class DashboardHandler(
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
-            (ExportAssessmentRESTHandler.URI, ExportAssessmentRESTHandler)
-        ]
+            (ExportAssessmentRESTHandler.URI, ExportAssessmentRESTHandler)]
+
+    # Other modules which manage editable assets can add functions here to
+    # list their assets on the Assets tab. The function will receive an instance
+    # of DashboardHandler as an argument.
+    contrib_asset_listers = []
+
+    local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
+
+    @classmethod
+    def get_child_routes(cls):
+        """Add child handlers for REST."""
+        return cls.child_routes
 
     def can_view(self):
         """Checks if current user has viewing rights."""
@@ -691,7 +696,11 @@ class DashboardHandler(
 
         text_asset_url_template = 'dashboard?action=manage_text_asset&uri=%s'
 
-        items = safe_dom.NodeList().append(
+        items = safe_dom.NodeList()
+        for asset_lister in self.contrib_asset_listers:
+            items.append(asset_lister(self))
+
+        items.append(
             self.list_questions()
         ).append(
             self.list_question_groups()

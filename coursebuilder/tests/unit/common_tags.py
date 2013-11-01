@@ -44,11 +44,26 @@ class CustomTagTests(unittest.TestCase):
                     root.append(child)
                 return elt
 
+        class CounterTag(tags.EnvironmentAwareTag):
+            """A tag which counts its occurences in the page."""
+
+            def render(self, unused_node, unused_handler, env=None):
+                env['count'] = env.get('count', 0) + 1
+                elt = cElementTree.Element('Count')
+                elt.text = env['count']
+                return elt
+
+            def rollup_header_footer(self, env):
+                return (
+                    cElementTree.XML('<div>%s</div>' % env.get('count', 0)),
+                    cElementTree.XML('<div>foot</div>'))
+
         def new_get_tag_bindings():
             return {
                 'simple': SimpleTag,
                 'complex': ComplexTag,
-                'reroot': ReRootTag}
+                'reroot': ReRootTag,
+                'count': CounterTag}
 
         self.old_get_tag_bindings = tags.get_tag_bindings
         tags.get_tag_bindings = new_get_tag_bindings
@@ -118,3 +133,12 @@ class CustomTagTests(unittest.TestCase):
         safe_dom = tags.html_to_safe_dom(html, self.mock_handler)
         self.assertEquals(html, str(safe_dom))
 
+    def test_environment_aware_tags(self):
+        html = '<div><count></count><simple></simple><count></count></div>'
+        safe_dom = tags.html_to_safe_dom(html, self.mock_handler)
+        self.assertEqual(
+            (
+                '<div>2</div><div><Count>1</Count><SimpleTag></SimpleTag>'
+                '<Count>2</Count></div><div>foot</div>'
+            ),
+            str(safe_dom))

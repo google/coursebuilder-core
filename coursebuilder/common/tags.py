@@ -63,8 +63,17 @@ class BaseTag(object):
         """Lists the inputEx modules required by the editor."""
         return []
 
-    def render(self, unused_node, unused_handler):
-        """Receive a node and return a node."""
+    def render(self, node, handler):  # pylint: disable=W0613
+        """Receive a node and return a node.
+
+        Args:
+            node: cElementTree.Element. The DOM node for the tag which should be
+                rendered.
+            handler: controllers.utils.BaseHandler. The server runtime.
+
+        Returns:
+            A cElementTree.Element holding the rendered DOM.
+        """
         return cElementTree.XML('<div>[Unimplemented custom tag]</div>')
 
     def get_icon_url(self):
@@ -127,18 +136,58 @@ SPB+uxAAAAAElFTkSuQmCC
         return reg
 
 
+class EnvironmentAwareTag(BaseTag):
+    """A tag which shares an environment with other tags of the same type."""
+
+    def render(self, node, handler, env=None):  # pylint: disable=W0613
+        """Receive a node and return a node.
+
+        Args:
+            node: cElementTree.Element. The DOM node for the tag which should be
+                rendered.
+            handler: controllers.utils.BaseHandler. The server runtime.
+            env: dict. A dict of values shared shared between instances of this
+                tag on the same page. Values stored in this dict will be
+                available to subsequent calls to render() on the same page, and
+                to the call to rollup_header_footer() made at the end of the
+                page. Use this to store things like JS library refs which can be
+                de-dup'd and put in the header or footer.
+
+        Returns:
+            A cElementTree.Element holding the rendered DOM.
+        """
+        return super(EnvironmentAwareTag, self).render(node, handler)
+
+    def rollup_header_footer(self, env):
+        """Roll up header and footer from data stored in the tag environment.
+
+        This method is called once at the end of page processing. It receives
+        the env dict object, which has been passed to all rendering methods for
+        this tag on the page, and which accumulates data store by the renderers.
+
+        Args:
+            env: dict. Data set by previous calls to render, containing, e.g.,
+                URLs of CSS or JS resources.
+
+        Returns:
+            A pair of cElementTree.Element's (header, footer).
+        """
+        pass
+
+
 class ResourcesHandler(webapp2.RequestHandler):
     """Content handler for resources associated with custom tags."""
 
+    def rebase_path(self, path):
+        """Override this method to rebase the path to a different root."""
+        return path
+
     def get(self):
         """Respond to HTTP GET methods."""
-        path = self.request.path
+        path = self.rebase_path(self.request.path)
         if path.startswith('/'):
             path = path[1:]
         path = os.path.normpath(path)
-
-        if os.path.basename(os.path.dirname(path)) != 'resources':
-            self.error(404)
 
         resource_file = os.path.join(appengine_config.BUNDLE_ROOT, path)
 
@@ -236,6 +285,12 @@ def html_to_safe_dom(html_string, handler):
     if not html_string:
         return node_list
 
+    # Set of all instance id's used in this dom tree, used to detect duplication
+    used_instance_ids = set([])
+    # A dictionary of environments, one for each tag type which appears in the
+    # page
+    tag_environments = {}
+
     def _generate_error_message_node_list(elt, error_message):
         """Generates a node_list representing an error message."""
         logging.error(
@@ -250,7 +305,7 @@ def html_to_safe_dom(html_string, handler):
             node_list.append(safe_dom.Text(elt.tail))
         return node_list
 
-    def _process_html_tree(elt, used_instance_ids):
+    def _process_html_tree(elt):
         """Recursively parses an HTML tree into a safe_dom.NodeList()."""
         # Return immediately with an error message if a duplicate instanceid is
         # detected.
@@ -265,7 +320,20 @@ def html_to_safe_dom(html_string, handler):
         original_elt = elt
         try:
             if elt.tag in tag_bindings:
-                elt = tag_bindings[elt.tag]().render(elt, handler)
+                tag = tag_bindings[elt.tag]()
+                if isinstance(tag, EnvironmentAwareTag):
+                    # Get or initialize a environment dict for this type of tag.
+                    # Each tag type gets a separate environment shared by all
+                    # instances of that tag.
+                    env = tag_environments.get(elt.tag)
+                    if env is None:
+                        env = {}
+                        tag_environments[elt.tag] = env
+                    # Render the tag
+                    elt = tag.render(elt, handler, env=env)
+                else:
+                    # Render the tag
+                    elt = tag.render(elt, handler)
 
             if elt.tag.lower() == 'script':
                 out_elt = safe_dom.ScriptElement()
@@ -277,7 +345,7 @@ def html_to_safe_dom(html_string, handler):
                 out_elt.add_text(elt.text)
             for child in elt:
                 out_elt.add_children(
-                    _process_html_tree(child, used_instance_ids))
+                    _process_html_tree(child))
 
             node_list = safe_dom.NodeList()
             node_list.append(out_elt)
@@ -293,9 +361,15 @@ def html_to_safe_dom(html_string, handler):
     if root.text:
         node_list.append(safe_dom.Text(root.text))
 
-    used_instance_ids = set([])
-    for elt in root:
-        node_list.append(_process_html_tree(elt, used_instance_ids))
+    for child_elt in root:
+        node_list.append(_process_html_tree(child_elt))
+
+    # After the page is processed, rollup any global header/footer data which
+    # the environment-aware tags have accumulated in their env's
+    for tag_name, env in tag_environments.items():
+        header, footer = tag_bindings[tag_name]().rollup_header_footer(env)
+        node_list.insert(0, _process_html_tree(header))
+        node_list.append(_process_html_tree(footer))
 
     return node_list
 
