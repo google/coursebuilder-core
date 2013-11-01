@@ -136,38 +136,51 @@ SPB+uxAAAAAElFTkSuQmCC
         return reg
 
 
-class EnvironmentAwareTag(BaseTag):
-    """A tag which shares an environment with other tags of the same type."""
+class ContextAwareTag(BaseTag):
+    """A tag which shares a context with other tags of the same type."""
 
-    def render(self, node, handler, env=None):  # pylint: disable=W0613
+    class Context(object):
+        """Carries the environment and other data used by the tag."""
+
+        def __init__(self, handler, env):
+            """Initialize the context.
+
+            Args:
+                handler: controllers.utils.BaseHandler. The server runtime.
+                env: dict. A dict of values shared shared between instances of
+                    the tag on the same page. Values stored in this dict will be
+                    available to subsequent calls to render() on the same page,
+                    and to the call to rollup_header_footer() made at the end of
+                    the page. Use this to store things like JS library refs
+                    which can be de-dup'd and put in the header or footer.
+            """
+            self.handler = handler
+            self.env = env
+
+    def render(self, node, context):  # pylint: disable=W0613
         """Receive a node and return a node.
 
         Args:
             node: cElementTree.Element. The DOM node for the tag which should be
                 rendered.
-            handler: controllers.utils.BaseHandler. The server runtime.
-            env: dict. A dict of values shared shared between instances of this
-                tag on the same page. Values stored in this dict will be
-                available to subsequent calls to render() on the same page, and
-                to the call to rollup_header_footer() made at the end of the
-                page. Use this to store things like JS library refs which can be
-                de-dup'd and put in the header or footer.
+            context: Context. The context shared between instances of the tag.
 
         Returns:
             A cElementTree.Element holding the rendered DOM.
         """
-        return super(EnvironmentAwareTag, self).render(node, handler)
+        return super(ContextAwareTag, self).render(node, context.handler)
 
-    def rollup_header_footer(self, env):
+    def rollup_header_footer(self, context):
         """Roll up header and footer from data stored in the tag environment.
 
         This method is called once at the end of page processing. It receives
-        the env dict object, which has been passed to all rendering methods for
-        this tag on the page, and which accumulates data store by the renderers.
+        the context object, which has been passed to all rendering methods for
+        this tag on the page, and which accumulates data stored by the
+        renderers.
 
         Args:
-            env: dict. Data set by previous calls to render, containing, e.g.,
-                URLs of CSS or JS resources.
+            context: Context. Holds data set in an environment dict by previous
+                calls to render, containing, e.g., URLs of CSS or JS resources.
 
         Returns:
             A pair of cElementTree.Element's (header, footer).
@@ -289,7 +302,7 @@ def html_to_safe_dom(html_string, handler):
     used_instance_ids = set([])
     # A dictionary of environments, one for each tag type which appears in the
     # page
-    tag_environments = {}
+    tag_contexts = {}
 
     def _generate_error_message_node_list(elt, error_message):
         """Generates a node_list representing an error message."""
@@ -321,16 +334,16 @@ def html_to_safe_dom(html_string, handler):
         try:
             if elt.tag in tag_bindings:
                 tag = tag_bindings[elt.tag]()
-                if isinstance(tag, EnvironmentAwareTag):
+                if isinstance(tag, ContextAwareTag):
                     # Get or initialize a environment dict for this type of tag.
                     # Each tag type gets a separate environment shared by all
                     # instances of that tag.
-                    env = tag_environments.get(elt.tag)
-                    if env is None:
-                        env = {}
-                        tag_environments[elt.tag] = env
+                    context = tag_contexts.get(elt.tag)
+                    if context is None:
+                        context = ContextAwareTag.Context(handler, {})
+                        tag_contexts[elt.tag] = context
                     # Render the tag
-                    elt = tag.render(elt, handler, env=env)
+                    elt = tag.render(elt, context)
                 else:
                     # Render the tag
                     elt = tag.render(elt, handler)
@@ -366,8 +379,8 @@ def html_to_safe_dom(html_string, handler):
 
     # After the page is processed, rollup any global header/footer data which
     # the environment-aware tags have accumulated in their env's
-    for tag_name, env in tag_environments.items():
-        header, footer = tag_bindings[tag_name]().rollup_header_footer(env)
+    for tag_name, context in tag_contexts.items():
+        header, footer = tag_bindings[tag_name]().rollup_header_footer(context)
         node_list.insert(0, _process_html_tree(header))
         node_list.append(_process_html_tree(footer))
 
