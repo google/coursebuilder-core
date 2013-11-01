@@ -18,6 +18,7 @@ __author__ = [
     'John Orr (jorr@google.com)'
 ]
 
+from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.common import by
 from selenium.webdriver.support import expected_conditions as ec
@@ -291,7 +292,11 @@ class AssetsPage(PageObject):
         return self
 
     def verify_no_image_file_by_name(self, name):
-        self.find_element_by_link_text(name)  # throw exception if not found
+        try:
+            self.find_element_by_link_text(name)  # throw exception if not found
+            raise AssertionError('Found file %s which should be absent' % name)
+        except exceptions.NoSuchElementException:
+            pass
         return self
 
     def click_edit_image(self, name):
@@ -400,12 +405,12 @@ class ShortAnswerEditorPage(QuestionEditorPage):
         return self
 
     def set_score(self, n, score):
-        score_el = self.find_element_by_name('graders[%d]score' %n)
+        score_el = self.find_element_by_name('graders[%d]score' % n)
         score_el.clear()
         score_el.send_key(score)
 
     def set_response(self, n, response):
-        response_el = self.find_element_by_name('graders[%d]response' %n)
+        response_el = self.find_element_by_name('graders[%d]response' % n)
         response_el.clear()
         response_el.send_key(response)
 
