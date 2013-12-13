@@ -1427,7 +1427,8 @@ class CourseModel13(object):
 
             def _mapper_func(entity, unused_ns):
                 _add_entity_instance_to_a_namespace(
-                    to_ns, entity.__class__, entity.key().id(), entity.data)
+                    to_ns, entity.__class__, entity.key().id_or_name(),
+                    entity.data)
 
             old_namespace = namespace_manager.get_namespace()
             try:
@@ -1440,13 +1441,14 @@ class CourseModel13(object):
             finally:
                 namespace_manager.set_namespace(old_namespace)
 
-        def _add_entity_instance_to_a_namespace(ns, entity_class, _id, data):
+        def _add_entity_instance_to_a_namespace(
+                ns, entity_class, _id_or_name, data):
             """Add new entity to the datastore of and a given namespace."""
             old_namespace = namespace_manager.get_namespace()
             try:
                 namespace_manager.set_namespace(ns)
 
-                new_key = db.Key.from_path(entity_class.__name__, _id)
+                new_key = db.Key.from_path(entity_class.__name__, _id_or_name)
                 new_instance = entity_class(key=new_key)
                 new_instance.data = data
                 new_instance.put()
