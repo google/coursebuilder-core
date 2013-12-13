@@ -302,7 +302,7 @@ def send_json_file_upload_response(handler, status_code, message):
 
     # The correct MIME type for JSON is application/json but there are issues
     # with our AJAX file uploader in MSIE which require text/plain instead.
-    if 'MSIE' in handler.request.headers.get('user-agent'):
+    if 'MSIE' in handler.request.headers.get('user-agent', ''):
         content_type = 'text/plain; charset=utf-8'
     else:
         content_type = 'application/javascript; charset=utf-8'
