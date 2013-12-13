@@ -211,7 +211,7 @@ class DashboardHandler(
         """Formats standard title."""
         title = self.app_context.get_environ()['course']['title']
         return safe_dom.NodeList().append(
-            safe_dom.Text('Course Builder ')
+            safe_dom.A('/admin').add_text('Course Builder ')
         ).append(
             safe_dom.Entity('&gt;')
         ).append(
@@ -219,7 +219,8 @@ class DashboardHandler(
         ).append(
             safe_dom.Entity('&gt;')
         ).append(
-            safe_dom.Text(' Dashboard ')
+            safe_dom.A(self.canonicalize_url('/dashboard')).
+                add_text(' Dashboard ')
         ).append(
             safe_dom.Entity('&gt;')
         ).append(

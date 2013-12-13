@@ -138,6 +138,22 @@ class Element(Node):
         return buff
 
 
+class A(Element):
+    """Embodies an 'a' tag.  Just a conveniece wrapper on Element."""
+
+    def __init__(self, href, **attr):
+        """Initialize an 'a' tag to a given target.
+
+        Args:
+            href: The value to put in the 'href' tag of the 'a' element.
+            **attr: the names and value of the attributes. Names must match
+                _ALLOWED_NAME_PATTERN and values will be quote-escaped.
+        """
+
+        super(A, self).__init__('a', **attr)
+        self.add_attribute(href=href)
+
+
 class ScriptElement(Element):
     """Represents an HTML <script> element."""
 

@@ -1226,7 +1226,10 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Admin has access.
         actions.login(email, is_admin=True)
         response = self.get('dashboard')
-        assert_contains('Google &gt; Dashboard &gt; Outline', response.body)
+        assert_contains(
+            'Google &gt;<a href="%s"> Dashboard </a>&gt; Outline' %
+                self.canonicalize('dashboard'),
+            response.body)
 
         # Tests outline view.
         response = self.get('dashboard')
@@ -1241,7 +1244,10 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Test assets view.
         response = self.get('dashboard?action=assets')
-        assert_contains('Google &gt; Dashboard &gt; Assets', response.body)
+        assert_contains(
+            'Google &gt;<a href="%s"> Dashboard </a>&gt; Assets' %
+                self.canonicalize('dashboard'),
+            response.body)
         assert_contains('assets/css/main.css', response.body)
         assert_contains('assets/img/Image1.5.png', response.body)
         assert_contains('assets/js/activity-3.2.js', response.body)
@@ -1249,7 +1255,9 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Test settings view.
         response = self.get('dashboard?action=settings')
         assert_contains(
-            'Google &gt; Dashboard &gt; Settings', response.body)
+            'Google &gt;<a href="%s"> Dashboard </a>&gt; Settings' %
+                self.canonicalize('dashboard'),
+            response.body)
         assert_contains('course.yaml', response.body)
         assert_contains(
             'title: &#39;Power Searching with Google&#39;', response.body)
@@ -1264,7 +1272,9 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Tests student statistics view.
         response = self.get('dashboard?action=analytics')
         assert_contains(
-            'Google &gt; Dashboard &gt; Analytics', response.body)
+            'Google &gt;<a href="%s"> Dashboard </a>&gt; Analytics' %
+                self.canonicalize('dashboard'),
+            response.body)
         assert_contains('have not been calculated yet', response.body)
 
         compute_form = response.forms['gcb-compute-student-stats']
