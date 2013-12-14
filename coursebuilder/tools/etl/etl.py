@@ -1016,18 +1016,18 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         _LOG.info('Uploading entity ' + entity_class.__name__)
         json_object = transforms.loads(json_text)
         for row in json_object['rows']:
-            _id = row['key.id']
+            _id_or_name = row['key.id'] or row['key.name']
+            _key = db.Key.from_path(entity_class.__name__, _id_or_name)
 
-            if entity_class.get_by_id(_id):
+            if db.get(_key):
                 if not force_overwrite:
-                    _die('Object of class %s with id %s already exists.' %(
-                        entity_class.__name__, _id))
-                _LOG.info('Replacing existing object with id %s', _id)
+                    _die('Object of class %s with key %s already exists.' % (
+                        entity_class.__name__, _id_or_name))
+                _LOG.info('Replacing existing object with key %s', _id_or_name)
             else:
-                _LOG.info('Adding new object with id %s', _id)
+                _LOG.info('Adding new object with key %s', _id_or_name)
 
-            new_key = db.Key.from_path(entity_class.__name__, _id)
-            new_instance = entity_class(key=new_key)
+            new_instance = entity_class(key=_key)
             new_instance.data = row['data']
             new_instance.put()
 
