@@ -830,8 +830,14 @@ function checkText(id, regex) {
   return regex.test(textValue);
 }
 
-// this code runs when the document fully loads:
+// this code runs when the document fully loads
 $(document).ready(function() {
+
+  // send 'enter-page' event to the server
+  try {
+    gcbPageEventAudit({}, 'enter-page');
+  } catch (e){}
+
   // hook click events of specific links
   $('#lessonNotesLink').click(function(evt) {
       gcbPageEventAudit({'href': evt.target.href}, 'click-link');
@@ -860,9 +866,9 @@ $(document).ready(function() {
   $(document).keypress(stopRKey);
 });
 
-// this code runs when the document unloads:
+// this code runs when the document unloads
 $(window).unload(function() {
-  // send an event to the server
+  // send 'visit-page' event to the server
   try {
     // duration is in milliseconds
     gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'visit-page');

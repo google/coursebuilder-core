@@ -350,7 +350,7 @@ class JsonFile(object):
     _MODE_WRITE = 'w'
     _MODES = frozenset([_MODE_READ, _MODE_WRITE])
     _PREFIX = '{"rows": ['
-    _SUFFIX = ']}'
+    _SUFFIX = ']}\n'  # make sure output is new-line terminated
 
     def __init__(self, path):
         self._first = True
