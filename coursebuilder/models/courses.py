@@ -626,6 +626,9 @@ class Unit13(object):
         self.release_date = ''
         self.now_available = False
 
+        # custom properties
+        self.properties = {}
+
         # Units of 'U' types have 1-based index. An index is automatically
         # computed.
         self._index = None
@@ -673,6 +676,9 @@ class Lesson13(object):
         self.has_activity = False
         self.activity_title = ''
         self.activity_listed = True
+
+        # custom properties
+        self.properties = {}
 
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
