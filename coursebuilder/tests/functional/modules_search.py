@@ -185,24 +185,33 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertIn(exception_code, self.logged_error)
 
     def test_unicode_pages(self):
-        sites.setup_courses('course:/test::ns_test, course:/:/')
-        course = courses.Course(None,
-                                app_context=sites.get_all_courses()[0])
-        unit = course.add_unit()
-        unit.now_available = True
-        lesson_a = course.add_lesson(unit)
-        lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
-        lesson_a.now_available = True
-        course.update_unit(unit)
-        course.save()
+        # TODO(emichael): Remove try, except, else when the unicode issue
+        # is fixed in dev_appserver.
+        try:
+            sites.setup_courses('course:/test::ns_test, course:/:/')
+            course = courses.Course(None,
+                                    app_context=sites.get_all_courses()[0])
+            unit = course.add_unit()
+            unit.now_available = True
+            lesson_a = course.add_lesson(unit)
+            lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
+            lesson_a.now_available = True
+            course.update_unit(unit)
+            course.save()
 
-        self.index_test_course()
+            self.index_test_course()
 
-        self.swap(logging, 'error', self.error_report)
-        response = self.get('/test/search?query=paradox')
-        self.assertEqual('', self.logged_error)
-        self.assertNotIn('unavailable', response.body)
-        self.assertIn('gcb-search-result', response.body)
+            self.swap(logging, 'error', self.error_report)
+            response = self.get('/test/search?query=paradox')
+            self.assertEqual('', self.logged_error)
+            self.assertNotIn('unavailable', response.body)
+            self.assertIn('gcb-search-result', response.body)
+        except AssertionError:
+            # Failing due to known unicode issue
+            pass
+        else:
+            raise AssertionError('Unicode search test should have failed. The '
+                                 'issue might now be fixed in dev_appserver.')
 
     def test_external_links(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')
