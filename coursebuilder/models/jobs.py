@@ -21,6 +21,7 @@ from datetime import datetime
 import logging
 import time
 import traceback
+import urllib
 
 import entities
 from mapreduce import base_handler
@@ -157,21 +158,24 @@ class StoreMapReduceResults(base_handler.PipelineBase):
 class MapReduceJob(DurableJobBase):
 
     # The 'output' field in the DurableJobEntity representing a MapReduceJob
-    # is a map with the follwing keys:
-
+    # is a map with the following keys:
+    #
+    # _OUTPUT_KEY_ROOT_PIPELINE_ID
     # Holds a string representing the ID of the MapReduceJobPipeline
     # as known to the mapreduce/lib/pipeline internals.  This is used
     # to generate URLs pointing at the pipeline support UI for detailed
     # inspection of pipeline action.
-    _OUTPUT_KEY_ROOT_PIPELINE_ID = 'root_pipeline_id'
-
+    #
+    # _OUTPUT_KEY_RESULTS
     # Holds a list of individual results.  The result items will be of
     # whatever type is 'yield'-ed from the 'reduce' method (see below).
-    _OUTPUT_KEY_RESULTS = 'results'
-
+    #
+    # _OUTPUT_KEY_ERROR
     # Stringified error message in the event that something has gone wrong
     # with the job.  Present and relevant only if job status is
     # STATUS_CODE_FAILED.
+    _OUTPUT_KEY_ROOT_PIPELINE_ID = 'root_pipeline_id'
+    _OUTPUT_KEY_RESULTS = 'results'
     _OUTPUT_KEY_ERROR = 'error'
 
     @staticmethod
@@ -183,12 +187,21 @@ class MapReduceJob(DurableJobBase):
             })
 
     @staticmethod
-    def get_status_url(job):
+    def get_status_url(job, namespace, xsrf_token):
         if not job.output:
             return None
         content = transforms.loads(job.output)
         pipeline_id = content[MapReduceJob._OUTPUT_KEY_ROOT_PIPELINE_ID]
-        return '/mapreduce/ui/pipeline/status?root=%s' % pipeline_id
+        return ('/mapreduce/ui/pipeline/status?' +
+                urllib.urlencode({'root': pipeline_id,
+                                  'namespace': namespace,
+                                  'xsrf_token': xsrf_token}))
+
+    @staticmethod
+    def has_status_url(job):
+        if not job.output:
+            return False
+        return MapReduceJob._OUTPUT_KEY_ROOT_PIPELINE_ID in job.output
 
     @staticmethod
     def get_results(job):
