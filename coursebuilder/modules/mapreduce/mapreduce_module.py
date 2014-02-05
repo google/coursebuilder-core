@@ -20,6 +20,8 @@ from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
 
 from common import safe_dom
+from common.utils import Namespace
+from controllers import utils
 from models import custom_modules
 from models.config import ConfigProperty
 from modules import dashboard
@@ -29,6 +31,7 @@ from google.appengine.api import users
 # Module registration
 custom_module = None
 MODULE_NAME = 'Map/Reduce'
+XSRF_ACTION_NAME = 'view-mapreduce-ui'
 
 GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS = ConfigProperty(
     'gcb_enable_mapreduce_detail_access', bool,
@@ -40,7 +43,7 @@ sub-jobs.  This is a benefit if you have launched a huge job that is
 consuming too many resources, but a hazard for naive users.""")
     ).append(
         safe_dom.Element('p').add_child(
-        safe_dom.A('/mapreduce/ui/status', target='_blank').add_text("""
+        safe_dom.A('/mapreduce/ui/pipeline/list', target='_blank').add_text("""
 See an example page (with this control enabled)"""))
     ), False, multiline=False, validator=None)
 
@@ -59,12 +62,29 @@ def authorization_wrapper(self, *args, **kwargs):
 
 
 def ui_access_wrapper(self, *args, **kwargs):
-    if (not GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value or
-        not users.is_current_user_admin()):
+    if ((users.is_current_user_admin() or
+         utils.XsrfTokenManager.is_xsrf_token_valid(
+             self.request.get('xsrf_token'), XSRF_ACTION_NAME)) and
+        GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value):
+        with Namespace(self.request.get('namespace')):
+            self.real_dispatch(*args, **kwargs)
+
+        # Most places in the pipeline UI are good about passing the
+        # URL's search string along to RPC calls back to Ajax RPCs,
+        # which automatically picks up our extra namespace and xsrf
+        # tokens.  However, this one does not, and so we patch it
+        # here, rather than trying to keep up-to-date with the library.
+        # If-and-when the library gets fixed up to explicitly use
+        # 'rpc/tree' + window.location.search
+        # then our 'rpc/tree?' pattern will stop matching, and this
+        # will then be obsolete, but will not break unexpectedly.
+        if self.request.path.endswith('/status.js'):
+            self.response.body = self.response.body.replace(
+                'rpc/tree?',
+                'rpc/tree\' + window.location.search + \'&')
+    else:
         self.response.out.write('Forbidden')
         self.response.set_status(403)
-    else:
-        self.real_dispatch(*args, **kwargs)
 
 
 def register_module():
@@ -88,6 +108,12 @@ def register_module():
         else:
             if '_callback' in path:
                 path = path.replace('.*', '/mapreduce/worker', 1)
+            elif '/list_configs' in path:
+                # This needs mapreduce.yaml, which we don't distribute.  Not
+                # having this prevents part of the mapreduce UI front page
+                # from loading, but we don't care, because we don't want
+                # people using the M/R front page to relaunch jobs anyhow.
+                continue
             else:
                 path = path.replace('.*', '/mapreduce/ui', 1)
 

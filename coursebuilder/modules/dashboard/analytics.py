@@ -23,20 +23,25 @@ import urlparse
 import jinja2
 
 from common import safe_dom
-from controllers.utils import ApplicationHandler
-from controllers.utils import HUMAN_READABLE_TIME_FORMAT
+from controllers import utils
 from models import courses
 from models import jobs
 from models import progress
 from models import transforms
-from models import utils
+from models import utils as models_utils
 from models.models import EventEntity
 from models.models import Student
 from models.models import StudentPropertyEntity
 from modules.mapreduce import mapreduce_module
 
 
-class AnalyticsHandler(ApplicationHandler):
+class AnalyticsHandler(utils.ApplicationHandler):
+    """Base class providing common implementations to fill Jinja templates.
+
+    This class knows the various statuses that an analysis job can be in
+    and generates appropriate HTML output for display on the analytics
+    sub-page of the dashboard.
+    """
 
     @property
     def description(self):
@@ -79,7 +84,8 @@ class AnalyticsHandler(ApplicationHandler):
                 default_message = (
                     '%s statistics were last updated at %s in about %s sec.' % (
                         self.description.capitalize(),
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
+                        job.updated_on.strftime(
+                            utils.HUMAN_READABLE_TIME_FORMAT),
                         job.execution_time_sec))
                 # This message can be overridden by _fill_completed_values()
                 # as necessary and approprate.
@@ -103,12 +109,64 @@ class AnalyticsHandler(ApplicationHandler):
                 message = (
                     '%s statistics update started at %s and is running now.' % (
                         self.description.capitalize(),
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
+                        job.updated_on.strftime(
+                            utils.HUMAN_READABLE_TIME_FORMAT)))
                 template_values['update_message'] = safe_dom.Text(message)
                 self._fill_pending_values(job, template_values)
         return jinja2.utils.Markup(self.get_template(
             self.html_template_name, [os.path.dirname(__file__)]
         ).render(template_values, autoescape=True))
+
+
+class MapReduceHandler(AnalyticsHandler):
+    """Base class to fill Jinja templates specifically for map/reduce analytics.
+
+    Encapsulates knowledge of when and how to generate a link to map/reduce
+    job status interface.
+    """
+
+    def _pipeline_link_appropriate(self, job):
+        # Don't give access to the pipeline details UI unless someone
+        # has actively intended to provide access.  The UI allows you to
+        # kill jobs, and we don't want naive users stumbling around in
+        # there without adult supervision.
+        if not mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value:
+            return False
+
+        # Status URL may not be available immediately after job is launched;
+        # pipeline setup is done w/ 'yield', and happens a bit later.
+        if not jobs.MapReduceJob.has_status_url(job):
+            return False
+
+        return True
+
+    def _add_pipeline_link(self, job, template_values, message):
+        status_url = jobs.MapReduceJob.get_status_url(
+            # app_context is forcibly injected into instances from
+            # modules.dashboard.get_analytics()
+            # pylint: disable=undefined-variable
+            job, self.app_context.get_namespace_name(),
+            utils.XsrfTokenManager.create_xsrf_token(
+                mapreduce_module.XSRF_ACTION_NAME))
+        update_message = safe_dom.NodeList()
+        update_message.append(template_values['update_message'])
+        update_message.append(safe_dom.Text('    '))
+        update_message.append(safe_dom.A(status_url, target='_blank')
+                              .add_text(message))
+        template_values['update_message'] = update_message
+
+    def _fill_completed_values(self, job, template_values):
+        if self._pipeline_link_appropriate(job):
+            self._add_pipeline_link(job, template_values,
+                                    'View completed job run details')
+
+    def _fill_pending_values(self, job, template_values):
+        if self._pipeline_link_appropriate(job):
+            self._add_pipeline_link(job, template_values,
+                                    'Check status of job')
+
+    def _get_error_message(self, job):
+        return jobs.MapReduceJob.get_error_message(job)
 
 
 class ComputeStudentStats(jobs.DurableJob):
@@ -153,7 +211,7 @@ class ComputeStudentStats(jobs.DurableJob):
         """Computes student statistics."""
         enrollment = self.EnrollmentAggregator()
         scores = self.ScoresAggregator()
-        mapper = utils.QueryMapper(
+        mapper = models_utils.QueryMapper(
             Student.all(), batch_size=500, report_every=1000)
 
         def map_fn(student):
@@ -235,7 +293,7 @@ class ComputeStudentProgressStats(jobs.DurableJob):
     def run(self):
         """Computes student progress statistics."""
         student_progress = self.ProgressAggregator(self._course)
-        mapper = utils.QueryMapper(
+        mapper = models_utils.QueryMapper(
             StudentPropertyEntity.all(), batch_size=500, report_every=1000)
         mapper.run(student_progress.visit)
         return student_progress.progress_data
@@ -555,7 +613,7 @@ class ComputeQuestionStats(jobs.DurableJob):
     def run(self):
         """Computes submitted question answers statistics."""
         question_stats = self.MultipleChoiceQuestionAggregator(self._course)
-        mapper = utils.QueryMapper(
+        mapper = models_utils.QueryMapper(
             EventEntity.all(), batch_size=500, report_every=1000)
         mapper.run(question_stats.visit)
         return (question_stats.id_to_questions_dict,
@@ -598,7 +656,7 @@ class ComputeQuestionScores(jobs.MapReduceJob):
       yield (question_id, sum(scores)/len(scores))
 
 
-class QuestionScoreHandler(AnalyticsHandler):
+class QuestionScoreHandler(MapReduceHandler):
     """Display class."""
 
     name = 'question_scores'
@@ -606,37 +664,10 @@ class QuestionScoreHandler(AnalyticsHandler):
     _description = 'question difficulty'
     _html_template_name = 'map_reduce.html'
 
-    def _append_to_update_message(self, job, template_values, message):
-        # Don't give access to the pipeline details UI unless someone
-        # has actively intended to provide access.  The UI allows you to
-        # kill jobs, and we don't want naive users stumbling around in
-        # there without adult supervision.
-        if not mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value:
-          return
-
-        # Status URL may not be available immediately after job is launched;
-        # pipeline setup is done w/ 'yield', and happens a bit later.
-        status_url = jobs.MapReduceJob.get_status_url(job)
-        if not status_url:
-            return
-
-        update_message = safe_dom.NodeList()
-        update_message.append(template_values['update_message'])
-        update_message.append(safe_dom.Text('    '))
-        update_message.append(safe_dom.A(status_url, target='_blank')
-                              .add_text(message))
-        template_values['update_message'] = update_message
-
     def _fill_completed_values(self, job, template_values):
+        super(QuestionScoreHandler, self)._fill_completed_values(
+            job, template_values)
+
         # Proof-of-concept; don't have to be pretty; just dump values
         # calculated by m/r job into a string.
         template_values['stats'] = jobs.MapReduceJob.get_results(job)
-        self._append_to_update_message(job, template_values,
-                                       'View completed job run details')
-
-    def _fill_pending_values(self, job, template_values):
-        self._append_to_update_message(job, template_values,
-                                       'Check status of job')
-
-    def _get_error_message(self, job):
-        return jobs.MapReduceJob.get_error_message(job)
