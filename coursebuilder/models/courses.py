@@ -302,7 +302,7 @@ def create_course_registry():
     homepage_opts.add_property(SchemaField(
         'course:main_video:url', 'Course Video', 'url', optional=True,
         description='URL for the preview video shown on the course homepage '
-        '(e.g. http://www.youtube.com/embed/Kdg2drcUjYI ).'))
+        '(e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).'))
     homepage_opts.add_property(SchemaField(
         'course:main_image:url', 'Course Image', 'string', optional=True,
         description='URL for the preview image shown on the course homepage. '
