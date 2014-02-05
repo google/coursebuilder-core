@@ -285,7 +285,7 @@ function mainYuiFunction(Y) {
 
   var editorControls = isFramed() ?
       new FramedEditorControls(Y, window.parent.frameProxy, cb_global) :
-      new TopLevelEditorControls(Y);
+      new TopLevelEditorControls(Y, cb_global);
 
   // choose buttons to show
   var saveButton = editorControls.getSaveButton(Y);
@@ -330,17 +330,18 @@ function isFramed() {
   return window.parent != window;
 }
 
-function TopLevelEditorControls(Y) {
+function TopLevelEditorControls(Y, env) {
   this._Y = Y;
+  this._env = env;
 }
 TopLevelEditorControls.prototype = {
   getSaveButton: function() {
-    if (! cb_global.save_url || ! cb_global.save_method) {
+    if (! this._env.save_url || ! this._env.save_method) {
       return null;
     }
     return {
       type: 'submit-link',
-      value: cb_global.save_button_caption,
+      value: this._env.save_button_caption,
       className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
       onClick: {
         fn: this._onSaveClick,
@@ -350,29 +351,35 @@ TopLevelEditorControls.prototype = {
   },
 
   _onSaveClick: function() {
+    // Allow custom code to register a pre-save handler. If it returns 'false'
+    // it will block further action.
+    if (this._env.onSaveClick && this._env.onSaveClick() === false) {
+      return;
+    }
+
     cbShowMsg("Saving...");
-    disableAllControlButtons(cb_global.form);
+    disableAllControlButtons(this._env.form);
 
     // record current state
-    this.lastSavedFormValue = cb_global.form.getValue();
+    this.lastSavedFormValue = this._env.form.getValue();
 
     // format request
-    var requestSave = cb_global.save_args;
+    var requestSave = this._env.save_args;
     requestSave.payload = JSON.stringify(this.lastSavedFormValue);
 
     // append xsrf_token if provided
-    if (cb_global.xsrf_token) {
-        requestSave.xsrf_token = cb_global.xsrf_token;
+    if (this._env.xsrf_token) {
+        requestSave.xsrf_token = this._env.xsrf_token;
     }
 
     // format request
     var requestData = {"request": JSON.stringify(requestSave)};
 
     // async post data to the server
-    var url = cb_global.save_url;
+    var url = this._env.save_url;
 
     var yioConfig;
-    if (cb_global.save_method == 'upload') {
+    if (this._env.save_method == 'upload') {
       yioConfig = {
         method: 'POST',
         data: requestData,
@@ -428,7 +435,7 @@ TopLevelEditorControls.prototype = {
   },
 
   _onSaveComplete: function(status, message, payload) {
-    enableAllControlButtons(cb_global.form)
+    enableAllControlButtons(this._env.form)
     if (! status) {
       cbShowMsg("Server did not respond. Please reload the page to try again.");
       return;
@@ -441,56 +448,69 @@ TopLevelEditorControls.prototype = {
     }
 
     // save lastSavedFormValue
-    cb_global.lastSavedFormValue = this.lastSavedFormValue;
+    this._env.lastSavedFormValue = this.lastSavedFormValue;
 
     // If the REST handler returns a key value for an artifact
     // which previously had no key, update the form's key so as to
     // correctly reference the asset in future calls.
     if (payload) {
       var payload = JSON.parse(payload);
-      if (payload.key && !cb_global.save_args.key) {
-        cb_global.save_args.key = payload.key;
+      if (payload.key && !this._env.save_args.key) {
+        this._env.save_args.key = payload.key;
       }
     }
 
     // update UI
     cbShowMsg(message);
-    if (cb_global.auto_return) {
+    if (this._env.auto_return) {
+      var exit_url = this._env.exit_url;
       setTimeout(function() {
-        window.location = cb_global.exit_url;
+        window.location = exit_url;
       }, 750);
     } else {
       setTimeout(function() {
         cbHideMsg();
       }, 5000);
     }
+
+    // Allow custom code to register a post-save handler.
+    this._env.onSaveComplete && this._env.onSaveComplete(json);
   },
 
   getCloseButton: function() {
     return {
-      type: 'link', value: cb_global.exit_button_caption,
+      type: 'link', value: this._env.exit_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
-      onClick: this._onCloseClick
+      onClick: {
+        fn: this._onCloseClick,
+        scope: this
+      }
     };
   },
 
   _onCloseClick: function(e) {
-    disableAllControlButtons(cb_global.form);
-    if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
+    // Allow custom code to register a pre-close handler. If it returns 'false'
+    // it will block further action.
+    if (this._env.onCloseClick && this._env.onCloseClick() === false) {
+      return;
+    }
+
+    disableAllControlButtons(this._env.form);
+    if (deepEquals(this._env.lastSavedFormValue, this._env.form.getValue()) ||
         confirm("Abandon all changes?")) {
-      window.location = cb_global.exit_url;
+      window.location = this._env.exit_url;
     } else {
-      enableAllControlButtons(cb_global.form);
+      enableAllControlButtons(this._env.form);
     }
   },
 
   getDeleteButton: function() {
-    if (cb_global.delete_url == '') {
+    if (this._env.delete_url == '') {
       return null;
     }
     return {
       type: 'link',
-      value: cb_global.delete_button_caption,
+      value: this._env.delete_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
       onClick: {
         fn: this._onDeleteClick,
@@ -500,11 +520,17 @@ TopLevelEditorControls.prototype = {
   },
 
   _onDeleteClick: function(e) {
-    disableAllControlButtons(cb_global.form);
-    if (confirm(cb_global.delete_message)) {
-      if (cb_global.delete_method == 'delete') {
+    // Allow custom code to register a pre-delete handler. If it returns 'false'
+    // it will block further action.
+    if (this._env.onDeleteClick && this._env.onDeleteClick() === false) {
+      return;
+    }
+
+    disableAllControlButtons(this._env.form);
+    if (confirm(this._env.delete_message)) {
+      if (this._env.delete_method == 'delete') {
         // async delete
-        this._Y.io(cb_global.delete_url, {
+        this._Y.io(this._env.delete_url, {
           method: 'DELETE',
           data: '',
           timeout : ajaxRpcTimeoutMillis,
@@ -517,35 +543,41 @@ TopLevelEditorControls.prototype = {
       } else {
         // form delete
         var form = document.createElement('form');
-        form.method = cb_global.delete_method;
-        form.action = cb_global.delete_url;
+        form.method = this._env.delete_method;
+        form.action = this._env.delete_url;
         document.body.appendChild(form);
         form.submit();
       }
     } else {
-      enableAllControlButtons(cb_global.form);
+      enableAllControlButtons(this._env.form);
     }
   },
 
   _onDeleteSuccess: function(id, o, args) {
-    enableAllControlButtons(cb_global.form);
+    enableAllControlButtons(this._env.form);
     var json = parseJson(o.responseText);
     if (json.status != 200) {
       cbShowMsg(formatServerErrorMessage(json.status, json.message));
       return;
     } else {
-      window.location = cb_global.exit_url;
+      window.location = this._env.exit_url;
     }
+
+    // Allow custom code to register a post-delete handler.
+    this._env.onDeleteSuccess && this._env.onDeleteSuccess(json);
   },
 
   _onDeleteFailure: function (x,o) {
-    enableAllControlButtons(cb_global.form);
+    enableAllControlButtons(this._env.form);
     cbShowMsg("Server did not respond. Please reload the page to try again.");
+
+    // Allow custom code to register a post-delete handler.
+    this._env.onDeleteFailure && this._env.onDeleteFailure();
   },
 
   populateForm: function() {
     // async request data for the object being edited
-    this._Y.io(cb_global.get_url, {
+    this._Y.io(this._env.get_url, {
       method: 'GET',
       timeout : ajaxRpcTimeoutMillis,
       on: {
@@ -558,6 +590,13 @@ TopLevelEditorControls.prototype = {
 
   _onPopulateFormSuccess: function(id, o, args) {
     var json = parseJson(o.responseText);
+
+    // Allow custom code to register a post-populate handler. If it returns
+    // 'false' it will block further action.
+    if (this._env.onPopulateFormSuccess &&
+        this._env.onPopulateFormSuccess(json) === false) {
+      return;
+    }
 
     // check status code
     if (json.status != 200) {
@@ -573,20 +612,20 @@ TopLevelEditorControls.prototype = {
 
     // push payload into form
     var payload = parseJson(json.payload);
-    cb_global.form.setValue(payload);
+    this._env.form.setValue(payload);
 
     // record xsrf token if provided
     if (json.xsrf_token) {
-      cb_global.xsrf_token = json.xsrf_token;
+      this._env.xsrf_token = json.xsrf_token;
     } else {
-      cb_global.xsrf_token = null;
+      this._env.xsrf_token = null;
     }
 
     // TODO(jorr): Encapsulate cb_global.original and
-    // cb_global.lastSavedFormValue in TopLavelEditorControls rather than
+    // cb_global.lastSavedFormValue in TopLevelEditorControls rather than
     // global scope
-    cb_global.original = payload;
-    cb_global.lastSavedFormValue = payload;
+    this._env.original = payload;
+    this._env.lastSavedFormValue = payload;
 
     // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
     // but it does not work for rich edit control as it has delayed loading
@@ -601,10 +640,16 @@ TopLevelEditorControls.prototype = {
     } else {
       cbHideMsg();
     }
-    cb_global.onFormLoad(this._Y);
+    this._env.onFormLoad(this._Y);
   },
 
   _onPopulateFormFailure: function (x,o) {
+    // Allow custom code to register a post-populate handler. If it returns
+    // 'false' it will block further action.
+    if (this._env.onPopulateFormFailure &&
+        this._env.onPopulateFormFailure(json) === false) {
+      return;
+    }
     cbShowMsg("Server did not respond. Please reload the page to try again.");
   }
 };
