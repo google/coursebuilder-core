@@ -23,12 +23,12 @@ from common import jinja_utils
 from controllers import sites
 from controllers.utils import PageInitializerService
 from controllers.utils import XsrfTokenManager
+import course_explorer
 from models import courses as Courses
 from models import transforms
 from models.models import StudentProfileDAO
 from models.roles import Roles
 import webapp2
-import course_explorer
 
 from google.appengine.api import users
 

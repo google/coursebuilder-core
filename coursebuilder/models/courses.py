@@ -27,9 +27,6 @@ import appengine_config
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 import common.tags
-from tools import verify
-import yaml
-
 import models
 from models import MemcacheManager
 import progress
@@ -37,6 +34,8 @@ import review
 import transforms
 import utils
 import vfs
+import yaml
+from tools import verify
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db

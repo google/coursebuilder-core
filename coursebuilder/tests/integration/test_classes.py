@@ -21,10 +21,10 @@ __author__ = [
 import os.path
 import random
 import time
+import pageobjects
 from selenium import webdriver
 from selenium.webdriver.chrome import options
 from tests import suite
-import pageobjects
 
 
 class BaseIntegrationTest(suite.TestBase):
@@ -34,12 +34,12 @@ class BaseIntegrationTest(suite.TestBase):
 
     LOGIN = 'test@example.com'
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
         self.driver = webdriver.Chrome(chrome_options=chrome_options)
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         time.sleep(1)  # avoid broken sockets on the server
         self.driver.quit()
 
@@ -61,7 +61,7 @@ class BaseIntegrationTest(suite.TestBase):
     def get_uid(self):
         """Generate a unique id string."""
         uid = ''
-        for i in range(10):  # pylint: disable-msg=unused-variable
+        for i in range(10):  # pylint: disable=unused-variable
             j = random.randint(0, 61)
             if j < 26:
                 uid += chr(65 + j)  # ascii capital letters

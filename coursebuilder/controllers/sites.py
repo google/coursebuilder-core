@@ -125,10 +125,10 @@ from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
+import utils
 import webapp2
 from webapp2_extras import i18n
 
-import utils
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import users

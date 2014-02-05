@@ -18,9 +18,8 @@ __author__ = [
     'sll@google.com (Sean Lip)',
 ]
 
-from modules.review import domain
-
 import entities
+from modules.review import domain
 import student_work
 import transforms
 

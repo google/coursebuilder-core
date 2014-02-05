@@ -31,6 +31,7 @@ from models import config
 from models import custom_modules
 from models import transforms
 from tests import suite
+
 from google.appengine.api import namespace_manager
 
 
@@ -84,7 +85,6 @@ class TestBase(suite.AppEngineTestBase):
         self.assert_default_namespace()
         self.namespace = ''
         self.base = '/'
-
         # Reload all properties now to flush the values modified in other tests.
         config.Registry.get_overrides(True)
 

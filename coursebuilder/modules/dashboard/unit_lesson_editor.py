@@ -20,6 +20,7 @@ import cgi
 import logging
 import random
 import urllib
+
 from common import safe_dom
 from common import tags
 from common.schema_fields import FieldRegistry
@@ -28,16 +29,17 @@ from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
+import filer
+import messages
 from models import courses
 from models import models as m_models
 from models import review
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
-from tools import verify
 import yaml
-import filer
-import messages
+
+from tools import verify
 
 
 DRAFT_TEXT = 'Private'

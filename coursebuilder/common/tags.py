@@ -29,9 +29,8 @@ from common import schema_fields
 from extensions import tags
 import html5lib
 from models import config
-import webapp2
-
 import safe_dom
+import webapp2
 
 
 CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(
@@ -412,4 +411,3 @@ def get_components_from_html(html):
         component_dict.update(component.attrib)
         components.append(component_dict)
     return components
-

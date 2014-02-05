@@ -18,13 +18,14 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
 import os
+
 from common import jinja_utils
-import jinja2
 from entities import BaseEntity
+import jinja2
 from models import MemcacheManager
+
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-
 
 # We want to use memcache for both objects that exist and do not exist in the
 # datastore. If object exists we cache its instance, if object does not exist

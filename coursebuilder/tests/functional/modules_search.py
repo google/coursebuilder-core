@@ -20,13 +20,13 @@ import datetime
 import logging
 import re
 
+import actions
 from controllers import sites
 from models import courses
 from models import custom_modules
 from modules.announcements import announcements
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
-import actions
 
 from google.appengine.api import namespace_manager
 
@@ -35,7 +35,7 @@ class SearchTest(search_unit_test.SearchTestBase):
     """Tests the search module."""
 
     # Don't require documentation for self-describing test methods.
-    # pylint: disable-msg=g-missing-docstring
+    # pylint: disable=g-missing-docstring
 
     @classmethod
     def enable_module(cls):
@@ -64,7 +64,7 @@ class SearchTest(search_unit_test.SearchTestBase):
                              {'xsrf_token': index_token})
         self.execute_all_deferred_tasks()
 
-    def setUp(self):   # Name set by parent. pylint: disable-msg=g-bad-name
+    def setUp(self):   # Name set by parent. pylint: disable=g-bad-name
         super(SearchTest, self).setUp()
         self.enable_module()
 
@@ -185,33 +185,24 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertIn(exception_code, self.logged_error)
 
     def test_unicode_pages(self):
-        # TODO(emichael): Remove try, except, else when the unicode issue
-        # is fixed in dev_appserver.
-        try:
-            sites.setup_courses('course:/test::ns_test, course:/:/')
-            course = courses.Course(None,
-                                    app_context=sites.get_all_courses()[0])
-            unit = course.add_unit()
-            unit.now_available = True
-            lesson_a = course.add_lesson(unit)
-            lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
-            lesson_a.now_available = True
-            course.update_unit(unit)
-            course.save()
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None,
+                                app_context=sites.get_all_courses()[0])
+        unit = course.add_unit()
+        unit.now_available = True
+        lesson_a = course.add_lesson(unit)
+        lesson_a.notes = search_unit_test.UNICODE_PAGE_URL
+        lesson_a.now_available = True
+        course.update_unit(unit)
+        course.save()
 
-            self.index_test_course()
+        self.index_test_course()
 
-            self.swap(logging, 'error', self.error_report)
-            response = self.get('/test/search?query=paradox')
-            self.assertEqual('', self.logged_error)
-            self.assertNotIn('unavailable', response.body)
-            self.assertIn('gcb-search-result', response.body)
-        except AssertionError:
-            # Failing due to known unicode issue
-            pass
-        else:
-            raise AssertionError('Unicode search test should have failed. The '
-                                 'issue might now be fixed in dev_appserver.')
+        self.swap(logging, 'error', self.error_report)
+        response = self.get('/test/search?query=paradox')
+        self.assertEqual('', self.logged_error)
+        self.assertNotIn('unavailable', response.body)
+        self.assertIn('gcb-search-result', response.body)
 
     def test_external_links(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')

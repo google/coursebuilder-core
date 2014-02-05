@@ -20,13 +20,12 @@ import datetime
 import logging
 import os
 
-from tools import verify
-
 import courses
 from models import QuestionDAO
 from models import QuestionGroupDAO
 from models import StudentPropertyEntity
 import transforms
+from tools import verify
 
 
 class UnitLessonCompletionTracker(object):

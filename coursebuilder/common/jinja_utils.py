@@ -19,9 +19,9 @@ __author__ = 'John Orr (jorr@google.com)'
 import jinja2
 from models import config
 from models import models
-from webapp2_extras import i18n
 import safe_dom
 import tags
+from webapp2_extras import i18n
 
 
 CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(

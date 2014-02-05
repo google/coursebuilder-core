@@ -27,9 +27,9 @@ from models import transforms
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
-from tools import verify
 from utils import BaseHandler
 from utils import HUMAN_READABLE_DATETIME_FORMAT
+from tools import verify
 
 from google.appengine.ext import db
 

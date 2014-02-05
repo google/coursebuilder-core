@@ -36,9 +36,8 @@ from models import courses
 from models import custom_modules
 from models import jobs
 from models import transforms
-import webapp2
-
 import resources
+import webapp2
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import search

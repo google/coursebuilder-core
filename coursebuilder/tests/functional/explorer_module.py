@@ -16,6 +16,11 @@
 
 __author__ = 'rahulsingal@google.com (Rahul Singal)'
 
+
+import actions
+from actions import assert_contains
+from actions import assert_does_not_contain
+from actions import assert_equals
 from controllers import sites
 from models import config
 from models import models
@@ -24,23 +29,18 @@ from models.models import PersonalProfile
 from modules.course_explorer import course_explorer
 from modules.course_explorer import student
 
-import actions
-from actions import assert_contains
-from actions import assert_does_not_contain
-from actions import assert_equals
-
 
 class BaseExplorerTest(actions.TestBase):
     """Base class for testing explorer pages."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(BaseExplorerTest, self).setUp()
         config.Registry.test_overrides[
             models.CAN_SHARE_STUDENT_PROFILE.name] = True
         config.Registry.test_overrides[
             course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         config.Registry.test_overrides = {}
         super(BaseExplorerTest, self).tearDown()
 
@@ -231,7 +231,7 @@ class GlobalProfileTest(BaseExplorerTest):
         # Change name with overlong name should fail for str.
         response = self.get('/explorer/profile')
         assert_equals(response.status_int, 200)
-        # Constant is module-protected. pylint: disable-msg=protected-access
+        # Constant is module-protected. pylint: disable=protected-access
         new_name = 'a' * (student._STRING_PROPERTY_MAX_BYTES + 1)
         response.form.set('name', new_name)
         response = response.form.submit(expect_errors=True)

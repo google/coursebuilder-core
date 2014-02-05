@@ -23,6 +23,7 @@ import urllib
 from controllers.lessons import create_readonly_assessment_params
 from controllers.utils import ApplicationHandler
 import jinja2
+import messages
 from models import courses
 from models import models
 from models import review
@@ -30,8 +31,6 @@ from models import roles
 from models import student_work
 from models import transforms
 from modules.review import domain
-
-import messages
 
 
 class AssignmentsRights(object):

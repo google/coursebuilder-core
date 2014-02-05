@@ -17,12 +17,12 @@
 
 __author__ = 'Sean Lip'
 
-from controllers import sites
-from models import transforms
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
+from controllers import sites
+from models import transforms
 
 
 # The unit id for the peer review assignment in the default course.

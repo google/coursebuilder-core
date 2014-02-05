@@ -20,16 +20,17 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import copy
 import urllib
+
 from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
+import messages
 from models import transforms
 from models.models import QuestionDAO
 from models.models import QuestionDTO
 from models.models import SaQuestionConstants
 from modules.oeditor import oeditor
-import messages
 from unit_lesson_editor import CourseOutlineRights
 
 

@@ -23,12 +23,14 @@ import os
 import sys
 import time
 import urllib
+
 import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
 from controllers import sites
 from controllers.utils import ReflectiveRequestHandler
+import messages
 from models import config
 from models import counters
 from models import custom_modules
@@ -37,10 +39,9 @@ from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
 import webapp2
-import messages
+
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
-
 
 DIRECT_CODE_EXECUTION_UI_ENABLED = False
 
