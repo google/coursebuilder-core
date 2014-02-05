@@ -562,7 +562,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         assert is_editable_fs(self.app_context)
 
         if not FilesRights.can_add(self):
-            transforms.send_json_file_upload_response(
+            transforms.send_file_upload_response(
                 self, 401, 'Access denied.')
             return
 
@@ -576,7 +576,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         upload = self.request.POST['file']
 
         if not isinstance(upload, cgi.FieldStorage):
-            transforms.send_json_file_upload_response(
+            transforms.send_file_upload_response(
                 self, 403, 'No file specified.')
             return
 
@@ -589,26 +589,26 @@ class AssetItemRESTHandler(BaseRESTHandler):
         path = fs.physical_to_logical(physical_path)
 
         if fs.isfile(path):
-            transforms.send_json_file_upload_response(
+            transforms.send_file_upload_response(
                 self, 403, 'Cannot overwrite existing file.')
             return
 
         content = upload.file.read()
 
         if not self._can_write_payload_to_base(content, base):
-            transforms.send_json_file_upload_response(
+            transforms.send_file_upload_response(
                 self, 403, 'Cannot write binary data to %s.' % base)
             return
 
         upload.file.seek(0)
         if len(content) > MAX_ASSET_UPLOAD_SIZE_K * 1024:
-            transforms.send_json_file_upload_response(
+            transforms.send_file_upload_response(
                 self, 403,
                 'Max allowed file upload size is %dK' % MAX_ASSET_UPLOAD_SIZE_K)
             return
 
         fs.put(path, upload.file)
-        transforms.send_json_file_upload_response(self, 200, 'Saved.')
+        transforms.send_file_upload_response(self, 200, 'Saved.')
 
 
 class AssetUriRESTHandler(BaseRESTHandler):

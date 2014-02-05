@@ -371,42 +371,72 @@ TopLevelEditorControls.prototype = {
     // async post data to the server
     var url = cb_global.save_url;
 
-    var yioConfig = {
-      method: 'PUT',
-      data: requestData,
-      timeout: ajaxRpcTimeoutMillis,
-      on: {
-        complete: this._onSaveComplete
-      },
-      context: this
-    };
-
+    var yioConfig;
     if (cb_global.save_method == 'upload') {
-      yioConfig.method = 'POST';
-      yioConfig.form = {
-        id: 'cb-oeditor-form',
-        upload: true
+      yioConfig = {
+        method: 'POST',
+        data: requestData,
+        timeout: ajaxRpcTimeoutMillis,
+        form: {
+          id: 'cb-oeditor-form',
+          upload: true
+        },
+        on: {
+          complete: this._onXmlSaveComplete
+        },
+        context: this
+      };
+    } else {
+      yioConfig = {
+        method: 'PUT',
+        data: requestData,
+        timeout: ajaxRpcTimeoutMillis,
+        on: {
+          complete: this._onJsonSaveComplete
+        },
+        context: this
       };
     }
 
-    this._Y.io(url, yioConfig); // 'this' will be the scope set in the onClick
+    this._Y.io(url, yioConfig);
     return false;
   },
 
-  _onSaveComplete: function(transactionId, response, args) {
-    enableAllControlButtons(cb_global.form)
+  _onXmlSaveComplete: function(transactionId, response, args) {
+    function extract(nodeName) {
+      try {
+        return response.responseXML.getElementsByTagName(nodeName)[0].textContent;
+      } catch(e) {
+        return null;
+      }
+    }
 
-    var json;
-    if (response && response.responseText) {
-      json = parseJson(response.responseText);
-    } else {
+    var status = extract('status');
+    var message = extract('message');
+    var payload = extract('payload');
+
+    this._onSaveComplete(status, message, payload);
+  },
+
+  _onJsonSaveComplete: function(transactionId, response, args) {
+    try {
+      var json = parseJson(response.responseText);
+      this._onSaveComplete(json.status, json.message, json.payload);
+    } catch(e) {
+      this._onSaveComplete(null, null, null);
+    }
+  },
+
+  _onSaveComplete: function(status, message, payload) {
+    enableAllControlButtons(cb_global.form)
+    if (! status) {
       cbShowMsg("Server did not respond. Please reload the page to try again.");
       return;
     }
 
-    if (json.status != 200) {
+    if (status != 200) {
       cbShowMsg(formatServerErrorMessage(
-          json.status, json.message));
+          status, message));
       return;
     }
 
@@ -416,15 +446,15 @@ TopLevelEditorControls.prototype = {
     // If the REST handler returns a key value for an artifact
     // which previously had no key, update the form's key so as to
     // correctly reference the asset in future calls.
-    if (json.payload) {
-      var payload = JSON.parse(json.payload);
+    if (payload) {
+      var payload = JSON.parse(payload);
       if (payload.key && !cb_global.save_args.key) {
         cb_global.save_args.key = payload.key;
       }
     }
 
     // update UI
-    cbShowMsg(json.message);
+    cbShowMsg(message);
     if (cb_global.auto_return) {
       setTimeout(function() {
         window.location = cb_global.exit_url;

@@ -289,31 +289,36 @@ def send_json_response(
     handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
 
 
-def send_json_file_upload_response(handler, status_code, message):
-    """Formats and sends out a JSON REST response envelope and body.
-
-    NOTE: This method has lowered protections against XSSI (compared to
-    send_json_response) and so it MUST NOT be used with dynamic data. Use ONLY
-    constant data originating entirely on the server as arguments.
+def send_file_upload_response(
+        handler, status_code, message, payload_dict=None):
+    """Formats and sends out a response to a file upload request.
 
     Args:
         handler: the request handler.
-        status_code: the HTTP status code for the response.
-        message: the text of the message - must not be dynamic data.
+        status_code: int. The HTTP status code for the response.
+        message: str. The text of the message.
+        payload_dict: dict. A optional dict of extra data.
     """
 
-    # The correct MIME type for JSON is application/json but there are issues
-    # with our AJAX file uploader in MSIE which require text/plain instead.
-    if 'MSIE' in handler.request.headers.get('user-agent', ''):
-        content_type = 'text/plain; charset=utf-8'
-    else:
-        content_type = 'application/javascript; charset=utf-8'
-    handler.response.headers['Content-Type'] = content_type
+    handler.response.headers['Content-Type'] = 'text/xml'
     handler.response.headers['X-Content-Type-Options'] = 'nosniff'
-    response = {}
-    response['status'] = status_code
-    response['message'] = message
-    handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
+
+    response_elt = ElementTree.Element('response')
+
+    status_elt = ElementTree.Element('status')
+    status_elt.text = str(status_code)
+    response_elt.append(status_elt)
+
+    message_elt = ElementTree.Element('message')
+    message_elt.text = message
+    response_elt.append(message_elt)
+
+    if payload_dict:
+        payload_elt = ElementTree.Element('payload')
+        payload_elt.text = dumps(payload_dict)
+        response_elt.append(payload_elt)
+
+    handler.response.write(ElementTree.tostring(response_elt, encoding='utf-8'))
 
 
 class JsonFile(object):
