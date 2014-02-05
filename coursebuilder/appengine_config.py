@@ -68,6 +68,7 @@ THIRD_PARTY_LIBS = [
     _Library(
         'google-api-python-client-1.1.zip',
         relative_path='google-api-python-client-1.1'),
+    _Library('mapreduce-r645.zip'),
     # .zip repackaged from .tar.gz download.
     _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
     # .zip repackaged from .tar.gz download.
@@ -109,4 +110,16 @@ def webapp_add_wsgi_middleware(app):
     return app
 
 
+def gcb_patch_import_map_reduce():
+    # Work around non-presence of env vars set by production AppEngine
+    # runtime, but not test version.  Only import mapreduce_module after
+    # loading third-party libs; the module depends on the mapreduce libary
+    # proper having been loaded.
+    if 'CURRENT_VERSION_ID' not in os.environ:
+        os.environ['CURRENT_VERSION_ID'] = '7.368834058928280579'
+    if 'CURRENT_MODULE_ID' not in os.environ:
+        os.environ['CURRENT_MODULE_ID'] = 'default'
+
+
 gcb_init_third_party()
+gcb_patch_import_map_reduce()

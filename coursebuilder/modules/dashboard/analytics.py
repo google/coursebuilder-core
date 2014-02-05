@@ -33,6 +33,7 @@ from models import utils
 from models.models import EventEntity
 from models.models import Student
 from models.models import StudentPropertyEntity
+from modules.mapreduce import mapreduce_module
 
 
 class AnalyticsHandler(ApplicationHandler):
@@ -45,15 +46,24 @@ class AnalyticsHandler(ApplicationHandler):
     def html_template_name(self):
         return self._html_template_name
 
-    def _fill_template_values(self, job, template_values):
+    def _fill_completed_values(self, job, template_values):
         raise NotImplementedError(
             'Classes derived from AnalyticsHandler are expected to implement '
-            '_fill_template_values().  This function should put elements into '
+            '_fill_completed_values().  This function should put elements into '
             '"template_values" that are to be displayed on the results page '
             'fragment.  In addition to whatever class-specific messages '
             'they like, implementations may also wish to overwrite the '
             'value of "update_message" which is shown as an overall status '
             'message.')
+
+    def _fill_pending_values(self, job, template_values):
+      """Override to fill in template values when job has not yet completed."""
+      pass
+
+    def _get_error_message(self, job):
+        """Only called when job has status_code of STATUS_CODE_FAILED."""
+
+        return job.output
 
     def get_markup(self, job):
         template_values = {}
@@ -71,30 +81,31 @@ class AnalyticsHandler(ApplicationHandler):
                         self.description.capitalize(),
                         job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
                         job.execution_time_sec))
-                # This message can be overridden by _fill_template_values()
+                # This message can be overridden by _fill_completed_values()
                 # as necessary and approprate.
                 template_values['update_message'] = safe_dom.Text(
                     default_message)
 
-                self._fill_template_values(job, template_values)
+                self._fill_completed_values(job, template_values)
             elif job.status_code == jobs.STATUS_CODE_FAILED:
                 message = (
                     'There was an error updating %s statistics.  Error msg:' %
                            self.description)
-                template_values['update_message'] = safe_dom.Text(
-                    message
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
+                update_message = safe_dom.NodeList()
+                update_message.append(safe_dom.Text(message))
+                update_message.append(safe_dom.Element('br'))
+                update_message.append(
                     safe_dom.Element('blockquote').add_child(
                         safe_dom.Element('pre').add_text(
-                            '\n%s' % job.output)))
+                            '\n%s' % self._get_error_message(job))))
+                template_values['update_message'] = update_message
             else:
                 message = (
                     '%s statistics update started at %s and is running now.' % (
                         self.description.capitalize(),
                         job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
                 template_values['update_message'] = safe_dom.Text(message)
+                self._fill_pending_values(job, template_values)
         return jinja2.utils.Markup(self.get_template(
             self.html_template_name, [os.path.dirname(__file__)]
         ).render(template_values, autoescape=True))
@@ -171,7 +182,7 @@ class StudentEnrollmentAndScoresHandler(AnalyticsHandler):
     _description = 'enrollment/assessment'
     _html_template_name = 'basic_analytics.html'
 
-    def _fill_template_values(self, job, template_values):
+    def _fill_completed_values(self, job, template_values):
         stats = transforms.loads(job.output)
 
         template_values['enrolled'] = stats['enrollment']['enrolled']
@@ -238,7 +249,7 @@ class StudentProgressStatsHandler(AnalyticsHandler):
     _description = 'student progress'
     _html_template_name = 'progress_stats.html'
 
-    def _fill_template_values(self, job, template_values):
+    def _fill_completed_values(self, job, template_values):
         course = courses.Course(self)
         template_values['entity_codes'] = transforms.dumps(
             progress.UnitLessonCompletionTracker.EVENT_CODE_MAPPING.values())
@@ -505,7 +516,7 @@ class ComputeQuestionStats(jobs.DurableJob):
                     question_list = (
                         self._get_questions_from_submit_and_attempt_assessment(
                             data))
-            except Exception as e:  # pylint: disable-msg=broad-except
+            except Exception as e:  # pylint: disable=broad-except
                 logging.error(
                     'Failed to process question analytics event: '
                     'source %s, data %s, error %s', source, data, e)
@@ -519,7 +530,7 @@ class ComputeQuestionStats(jobs.DurableJob):
 
             try:
                 data = transforms.loads(event_entity.data)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 return
 
             # A list of dicts. Each dict represents a question instance and has
@@ -559,7 +570,7 @@ class QuestionStatsHandler(AnalyticsHandler):
     _description = 'multiple-choice question'
     _html_template_name = 'question_stats.html'
 
-    def _fill_template_values(self, job, template_values):
+    def _fill_completed_values(self, job, template_values):
         accumulated_question_answers, accumulated_assessment_answers = (
             transforms.loads(job.output))
 
@@ -567,3 +578,65 @@ class QuestionStatsHandler(AnalyticsHandler):
             accumulated_question_answers)
         template_values['accumulated_assessment_answers'] = transforms.dumps(
             accumulated_assessment_answers)
+
+
+class ComputeQuestionScores(jobs.MapReduceJob):
+
+    def entity_type_name(self):
+      return 'models.models.Student'
+
+    @staticmethod
+    def map(student):
+      if student.scores:
+        scores = transforms.loads(student.scores)
+        for key, value in scores.items():
+          yield key, value
+
+    @staticmethod
+    def reduce(question_id, scores):
+      scores = [float(score) for score in scores]
+      yield (question_id, sum(scores)/len(scores))
+
+
+class QuestionScoreHandler(AnalyticsHandler):
+    """Display class."""
+
+    name = 'question_scores'
+    stats_computer = ComputeQuestionScores
+    _description = 'question difficulty'
+    _html_template_name = 'map_reduce.html'
+
+    def _append_to_update_message(self, job, template_values, message):
+        # Don't give access to the pipeline details UI unless someone
+        # has actively intended to provide access.  The UI allows you to
+        # kill jobs, and we don't want naive users stumbling around in
+        # there without adult supervision.
+        if not mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value:
+          return
+
+        # Status URL may not be available immediately after job is launched;
+        # pipeline setup is done w/ 'yield', and happens a bit later.
+        status_url = jobs.MapReduceJob.get_status_url(job)
+        if not status_url:
+            return
+
+        update_message = safe_dom.NodeList()
+        update_message.append(template_values['update_message'])
+        update_message.append(safe_dom.Text('    '))
+        update_message.append(safe_dom.A(status_url, target='_blank')
+                              .add_text(message))
+        template_values['update_message'] = update_message
+
+    def _fill_completed_values(self, job, template_values):
+        # Proof-of-concept; don't have to be pretty; just dump values
+        # calculated by m/r job into a string.
+        template_values['stats'] = jobs.MapReduceJob.get_results(job)
+        self._append_to_update_message(job, template_values,
+                                       'View completed job run details')
+
+    def _fill_pending_values(self, job, template_values):
+        self._append_to_update_message(job, template_values,
+                                       'Check status of job')
+
+    def _get_error_message(self, job):
+        return jobs.MapReduceJob.get_error_message(job)

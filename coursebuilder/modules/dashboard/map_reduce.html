@@ -1,0 +1,28 @@
+{% if stats_calculated %}
+
+  <!-- TODO(mgainer): Make pretty later.  For now, proof-of-concept.  -->
+  <h3>Question Score -- Results</h3>
+  {% if not stats %}
+    <p>No answers to questions have been recorded for this course.</p>
+  {% else %}
+    <ul>
+      {% for stat in stats %}
+      <li>{{ stat }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endif %}
+
+{% if errors %}
+  <h3>Question Score -- Errors</h3>
+  <ul>
+    {% for error in errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{{ update_message }}
+
+<br><br>

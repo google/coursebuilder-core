@@ -20,14 +20,18 @@ from datetime import datetime
 import logging
 import time
 import traceback
+
 import entities
+from mapreduce import base_handler
+from mapreduce import input_readers
+from mapreduce import mapreduce_pipeline
 import transforms
 
+from common.utils import Namespace
+
 from google.appengine import runtime
-from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 from google.appengine.ext import deferred
-
 
 # A job can be in one of these states.
 STATUS_CODE_QUEUED = 0
@@ -35,29 +39,48 @@ STATUS_CODE_STARTED = 1
 STATUS_CODE_COMPLETED = 2
 STATUS_CODE_FAILED = 3
 
+# The methods in DurableJobEntity are module-level protected
+# pylint: disable=protected-access
 
-class DurableJob(object):
+
+class DurableJobBase(object):
     """A class that represents a deferred durable job at runtime."""
-
-    # The methods in DurableJobEntity are module-level protected
-    # pylint: disable-msg=protected-access
 
     def __init__(self, app_context):
         self._namespace = app_context.get_namespace_name()
         self._job_name = 'job-%s-%s' % (
             self.__class__.__name__, self._namespace)
 
+    def submit(self):
+        with Namespace(self._namespace):
+            db.run_in_transaction(self.non_transactional_submit)
+
+    def non_transactional_submit(self):
+        with Namespace(self._namespace):
+            DurableJobEntity._create_job(self._job_name)
+
+    def load(self):
+        """Loads the last known state of this job from the datastore."""
+        with Namespace(self._namespace):
+            return DurableJobEntity._get_by_name(self._job_name)
+
+    def is_active(self):
+        job = self.load()
+        return job and not job.has_finished
+
+
+class DurableJob(DurableJobBase):
+
     def run(self):
         """Override this method to provide actual business logic."""
 
     def main(self):
         """Main method of the deferred task."""
-        logging.info('Job started: %s', self._job_name)
 
-        time_started = time.time()
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(self._namespace)
+        with Namespace(self._namespace):
+            logging.info('Job started: %s', self._job_name)
+
+            time_started = time.time()
             try:
                 db.run_in_transaction(DurableJobEntity._start_job,
                                       self._job_name)
@@ -73,37 +96,178 @@ class DurableJob(object):
                                       self._job_name, traceback.format_exc(),
                                       long(time.time() - time_started))
                 raise deferred.PermanentTaskFailure(e)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
-
-    def submit(self):
-        """Submits this job for deferred execution."""
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(self._namespace)
-            db.run_in_transaction(DurableJobEntity._create_job, self._job_name)
-            deferred.defer(self.main)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
 
     def non_transactional_submit(self):
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(self._namespace)
-            DurableJobEntity._create_job(self._job_name)
+        super(DurableJob, self).non_transactional_submit()
+        with Namespace(self._namespace):
             deferred.defer(self.main)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
 
-    def load(self):
-        """Loads the last known state of this job from the datastore."""
-        old_namespace = namespace_manager.get_namespace()
+
+class MapReduceJobPipeline(base_handler.PipelineBase):
+    def run(self, job_name, kwargs, namespace):
+        time_started = time.time()
+
+        with Namespace(namespace):
+            db.run_in_transaction(DurableJobEntity._start_job, job_name,
+                                  MapReduceJob.build_output(
+                                      self.root_pipeline_id, []))
+        output = yield mapreduce_pipeline.MapreducePipeline(**kwargs)
+        yield StoreMapReduceResults(job_name, time_started, namespace, output)
+
+    def finalized(self):
+        pass  # Suppress default Pipeline behavior of sending email.
+
+
+class StoreMapReduceResults(base_handler.PipelineBase):
+    def run(self, job_name, time_started, namespace, output):
+        results = []
+
+        # TODO(mgainer): Notice errors earlier in pipeline, and mark job
+        # as failed in that case as well.
         try:
-            namespace_manager.set_namespace(self._namespace)
-            entity = DurableJobEntity._get_by_name(self._job_name)
-            return entity
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+            iterator = input_readers.RecordsReader(output, 0)
+            for item in iterator:
+                results.append(item)
+            time_completed = time.time()
+            with Namespace(namespace):
+                db.run_in_transaction(DurableJobEntity._complete_job, job_name,
+                                      MapReduceJob.build_output(
+                                          self.root_pipeline_id, results),
+                                      long(time_completed - time_started))
+        # Don't know what exceptions are currently, or will be in future,
+        # thrown from Map/Reduce or Pipeline libraries; these are under
+        # active development.
+        #
+        # pylint: disable=broad-except
+        except Exception, ex:
+            time_completed = time.time()
+            with Namespace(namespace):
+                db.run_in_transaction(DurableJobEntity._fail_job, job_name,
+                                      MapReduceJob.build_output(
+                                          self.root_pipeline_id,
+                                          results,
+                                          str(ex)),
+                                      long(time_completed - time_started))
+
+
+class MapReduceJob(DurableJobBase):
+
+    # The 'output' field in the DurableJobEntity representing a MapReduceJob
+    # is a map with the follwing keys:
+
+    # Holds a string representing the ID of the MapReduceJobPipeline
+    # as known to the mapreduce/lib/pipeline internals.  This is used
+    # to generate URLs pointing at the pipeline support UI for detailed
+    # inspection of pipeline action.
+    _OUTPUT_KEY_ROOT_PIPELINE_ID = 'root_pipeline_id'
+
+    # Holds a list of individual results.  The result items will be of
+    # whatever type is 'yield'-ed from the 'reduce' method (see below).
+    _OUTPUT_KEY_RESULTS = 'results'
+
+    # Stringified error message in the event that something has gone wrong
+    # with the job.  Present and relevant only if job status is
+    # STATUS_CODE_FAILED.
+    _OUTPUT_KEY_ERROR = 'error'
+
+    @staticmethod
+    def build_output(root_pipeline_id, results_list, error=None):
+        return transforms.dumps({
+            MapReduceJob._OUTPUT_KEY_ROOT_PIPELINE_ID: root_pipeline_id,
+            MapReduceJob._OUTPUT_KEY_RESULTS: results_list,
+            MapReduceJob._OUTPUT_KEY_ERROR: error,
+            })
+
+    @staticmethod
+    def get_status_url(job):
+        if not job.output:
+            return None
+        content = transforms.loads(job.output)
+        pipeline_id = content[MapReduceJob._OUTPUT_KEY_ROOT_PIPELINE_ID]
+        return '/mapreduce/ui/pipeline/status?root=%s' % pipeline_id
+
+    @staticmethod
+    def get_results(job):
+        if not job.output:
+            return None
+        content = transforms.loads(job.output)
+        return content[MapReduceJob._OUTPUT_KEY_RESULTS]
+
+    @staticmethod
+    def get_error_message(job):
+        if not job.output:
+            return None
+        content = transforms.loads(job.output)
+        return content[MapReduceJob._OUTPUT_KEY_ERROR]
+
+    def entity_type_name(self):
+        """Gives the fully-qualified name of the DB/NDB type to map over."""
+        raise NotImplementedError('Classes derived from MapReduceJob must '
+                                  'implement entity_type_name()')
+
+    @staticmethod
+    def map(item):
+        """Implements the map function.  Must be declared @staticmethod.
+
+        Args:
+          item: The parameter passed to this function is a single element of the
+          type given by entity_type_name().  This function may <em>yield</em> as
+          many times as appropriate (including zero) to return key/value
+          2-tuples.  E.g., for calculating student scores from a packed block of
+          course events, this function would take as input the packed block.  It
+          would iterate over the events, 'yield'-ing for those events that
+          respresent items counting towards the grade.  E.g., yield
+          (event.student, event.data['score'])
+        """
+        raise NotImplementedError('Classes derived from MapReduceJob must '
+                                  'implement map as a @staticmethod.')
+
+    @staticmethod
+    def reduce(key, values):
+        """Implements the reduce function.  Must be declared @staticmethod.
+
+        This function should <em>yield</em> whatever it likes; the recommended
+        thing to do is emit entities.  All emitted outputs from all
+        reducers will be collected in an array and set into the output
+        value for the job, so don't pick anything humongous.  If you
+        need humongous, instead persist out your humongous stuff and return
+        a reference (and deal with doing the dereference to load content
+        in the FooHandler class in analytics.py)
+
+        Args:
+          key: A key value as emitted from the map() function, above.
+          values: A list of all values from all mappers that were tagged with
+          the given key.  This code can assume that it is the only process
+          handling values for this key.  AFAICT, it can also assume that
+          it will be called exactly once for each key with all of the output,
+          but this may not be a safe assumption; needs to be verified.
+
+        """
+        raise NotImplementedError('Classes derived from MapReduceJob must '
+                                  'implement map as a @staticmethod.')
+
+    def non_transactional_submit(self):
+        if self.is_active():
+            return
+        super(MapReduceJob, self).non_transactional_submit()
+        kwargs = {
+            'job_name': self._job_name,
+            'mapper_spec': '%s.%s.map' % (
+                self.__class__.__module__, self.__class__.__name__),
+            'reducer_spec': '%s.%s.reduce' % (
+                self.__class__.__module__, self.__class__.__name__),
+            'input_reader_spec':
+                'mapreduce.input_readers.DatastoreInputReader',
+            'output_writer_spec':
+                'mapreduce.output_writers.BlobstoreRecordsOutputWriter',
+            'mapper_params': {
+                'entity_kind': self.entity_type_name(),
+                'namespace': self._namespace,
+            },
+        }
+        mr_pipeline = MapReduceJobPipeline(self._job_name, kwargs,
+                                           self._namespace)
+        mr_pipeline.start(base_path='/mapreduce/worker/pipeline')
 
 
 class DurableJobEntity(entities.BaseEntity):
@@ -148,8 +312,8 @@ class DurableJobEntity(entities.BaseEntity):
         job.put()
 
     @classmethod
-    def _start_job(cls, name):
-        return cls._update(name, STATUS_CODE_STARTED, None, 0)
+    def _start_job(cls, name, output=None):
+        return cls._update(name, STATUS_CODE_STARTED, output, 0)
 
     @classmethod
     def _complete_job(cls, name, output, execution_time_sec):

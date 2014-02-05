@@ -37,7 +37,6 @@ Good luck!
 __author__ = 'Sean Lip'
 
 import argparse
-import base64
 import os
 import shutil
 import signal
@@ -46,13 +45,14 @@ import sys
 import time
 import unittest
 
+import task_queue
+
 import webtest
 
 import appengine_config
 
 from google.appengine.api.search import simple_search_stub
 from google.appengine.datastore import datastore_stub_util
-from google.appengine.ext import deferred
 from google.appengine.ext import testbed
 
 _PARSER = argparse.ArgumentParser()
@@ -78,6 +78,8 @@ def empty_environ():
     os.environ['SERVER_PORT'] = '8080'
     os.environ['USER_EMAIL'] = ''
     os.environ['USER_ID'] = ''
+    os.environ['DEFAULT_VERSION_HOSTNAME'] = (
+        os.environ['HTTP_HOST'] + ':' + os.environ['SERVER_PORT'])
 
 
 def iterate_tests(test_suite_or_case):
@@ -107,7 +109,7 @@ class TestBase(unittest.TestCase):
         self._unswap_all()
         super(TestBase, self).tearDown()
 
-    def swap(self, source, symbol, new):  # pylint: disable-msg=invalid-name
+    def swap(self, source, symbol, new):  # pylint: disable=invalid-name
         """Swaps out source.symbol for a new value.
 
         Allows swapping of members and methods:
@@ -132,7 +134,7 @@ class TestBase(unittest.TestCase):
             self._originals[source][symbol] = getattr(source, symbol)
         setattr(source, symbol, new)
 
-    # Allow protected method names. pylint: disable-msg=g-bad-name
+    # Allow protected method names. pylint: disable=g-bad-name
     def _unswap_all(self):
         for source, symbol_to_value in self._originals.iteritems():
             for symbol, value in symbol_to_value.iteritems():
@@ -169,11 +171,11 @@ class FunctionalTestBase(TestBase):
 class AppEngineTestBase(FunctionalTestBase):
     """Base class for tests that require App Engine services."""
 
-    def getApp(self):  # pylint: disable-msg=g-bad-name
+    def getApp(self):  # pylint: disable=g-bad-namer
         """Returns the main application to be tested."""
         raise Exception('Not implemented.')
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(AppEngineTestBase, self).setUp()
         empty_environ()
 
@@ -195,18 +197,29 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.init_taskqueue_stub()
         self.taskq = self.testbed.get_stub(testbed.TASKQUEUE_SERVICE_NAME)
         self.testbed.init_urlfetch_stub()
+        self.testbed.init_files_stub()
+        self.testbed.init_blobstore_stub()
         # TODO(emichael): Fix this when an official stub is created
         self.testbed._register_stub(
             'search', simple_search_stub.SearchServiceStub())
+        self.task_dispatcher = task_queue.TaskQueueHandlerDispatcher(
+            self.testapp, self.taskq)
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         self.testbed.deactivate()
         super(AppEngineTestBase, self).tearDown()
 
     def execute_all_deferred_tasks(self, queue_name='default'):
         """Executes all pending deferred tasks."""
-        for task in self.taskq.GetTasks(queue_name):
-            deferred.run(base64.b64decode(task['body']))
+
+        # Outer loop here because some tasks (esp. map/reduce) will enqueue
+        # more tasks as part of their operation.
+        while True:
+            tasks = self.taskq.GetTasks(queue_name)
+            if not tasks:
+                break
+            for task in tasks:
+                self.task_dispatcher.dispatch_task(task)
 
 
 def create_test_suite(parsed_args):
@@ -263,7 +276,6 @@ def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
     parsed_args = _PARSER.parse_args()
-
     test_suite = create_test_suite(parsed_args)
 
     all_tags = set()
@@ -287,7 +299,7 @@ def main():
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
 
-    import tests.functional.actions as actions  # pylint: disable-msg=g-import-not-at-top
+    import tests.functional.actions as actions  # pylint: disable=g-import-not-at-top
 
     count = len(actions.UNIQUE_URLS_FOUND.keys())
     result.stream.writeln('INFO: Unique URLs found: %s' % count)

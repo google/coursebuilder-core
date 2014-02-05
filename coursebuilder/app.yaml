@@ -32,6 +32,10 @@ handlers:
   script: main.app
   login: admin
   secure: always
+- url: /mapreduce/worker/.*
+  script: main.app
+  login: admin
+  secure: always
 - url: /.*
   script: main.app
   secure: always
