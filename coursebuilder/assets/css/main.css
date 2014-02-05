@@ -15,36 +15,36 @@
   limitations under the License.
 
 */
+
 /*
   Core CSS stylesheet. This file is self-contained and has no external dependencies.
 
   @author: psimakov@google.com (Pavel Simakov)
 */
+
 /* Wide-ranging styles. */
+
 html {
   background: #fff;
   color: #444;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.54;
-  padding: 0px;
+  padding: 0 15px;
 }
 
-html,input,textarea {
+html, input, textarea {
   font-family: arial,sans-serif;
 }
 
-body,table,fieldset {
-  font-family: "open sans",arial,sans-serif;
-  font-weight: 300;
+body, table, fieldset {
   margin: 0;
 }
 
-h1,h2,h3,h4,blockquote,q,.gcb-nav ul {
+h1, h2, h3, h4, blockquote, q, .gcb-nav ul {
   font-family: "open sans",arial,sans-serif;
-  font-weight: 400;
 }
 
-ul,ol {
+ul, ol {
   margin: 10px 10px 10px 30px;
   padding: 0;
 }
@@ -58,24 +58,25 @@ a:visited {
   color: #7847b2;
 }
 
-a:focus,a:hover,a:active {
+a:focus, a:hover, a:active {
   text-decoration: underline;
 }
 
-form label,form p,form input,form textarea,form select {
+form label, form p, form input, form textarea, form select {
   margin: 0 0 5px;
 }
 
-th,td {
+th, td {
   border: 1px solid #ebebeb;
   padding: 4px 12px;
   vertical-align: top;
 }
 
 /* GCB-specific styles. */
+
 #gcb-nav-y {
   float: left;
-  margin: 31px 0 120px;
+  margin: 0 0 120px;
   width: 14.1104296%;
 }
 
@@ -90,9 +91,9 @@ th,td {
   list-style: none;
 }
 
-#gcb-nav-y li a,#gcb-nav-y li.active li a {
+#gcb-nav-y li a, #gcb-nav-y li.active li a {
+  font-weight: normal;
   color: #15C;
-  font-weight: 300;
 }
 
 #gcb-nav-y li {
@@ -101,12 +102,12 @@ th,td {
   padding: 7px 0;
 }
 
-#gcb-nav-y li,#gcb-nav-y li.active a,#gcb-nav-y li.active li,#gcb-nav-y li.active li.active a {
-  font-weight: 700;
+#gcb-nav-y li, #gcb-nav-y li.active a, #gcb-nav-y li.active li, #gcb-nav-y li.active li.active a {
+  font-weight: bold;
 }
 
 #gcb-nav-y li li {
-  margin: 0;
+  margin: 0 0 0 0;
 }
 
 #gcb-nav-y + .gcb-article {
@@ -119,7 +120,7 @@ th,td {
 }
 
 #gcb-main {
-/* This rule intentionally left blank. */
+  /* This rule intentionally left blank. */
 }
 
 .gcb-aux {
@@ -127,23 +128,21 @@ th,td {
   max-width: 978px;
 }
 
-#gcb-header,#gcb-footer {
+#gcb-header, #gcb-footer {
   margin: 0 -15px;
 }
 
 #gcb-header {
-/*background: #f5f5f5;
+  background: #f5f5f5;
   background-image: -moz-linear-gradient(top,#fafafa,#f5f5f5);
   background-image: -webkit-linear-gradient(top,#fafafa,#f5f5f5);
   background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0,#fafafa),color-stop(1,#f5f5f5));
   filter: "progid:DXImageTransform.Microsoft.gradient(startColorStr=#fafafa,EndColorStr=#f5f5f5)";
-  background-image: linear-gradient(top,#fafafa,#f5f5f5);*/
-  background: #fff;
-  border-bottom: 0 solid #ebebeb;
+  background-image: linear-gradient(top,#fafafa,#f5f5f5);
+  border-bottom: 1px solid #ebebeb;
   color: #91959c;
   height: 45px;
   padding: 17px 15px 5px;
-  margin-bottom: 20px;
 }
 
 #gcb-header img {
@@ -151,7 +150,6 @@ th,td {
   position: relative;
   top: -1px;
   vertical-align: middle;
-  width: 100px;
 }
 
 #gcb-header a {
@@ -160,20 +158,20 @@ th,td {
 }
 
 #gcb-footer {
-  background: #f5f5f5;
-  bottom: 0;
-  clear: both;
-  color: #666;
-  margin: 0 -15px;
   position: fixed;
   width: 100%;
+  bottom: 0;
+  margin: 0 -15px;
+  background: #f5f5f5;
+  clear: both;
+  color: #666;
 }
 
 #gcb-footer-local {
   background: #f9f9f9;
   border-top: 1px solid #f5f5f5;
-  padding-bottom: 0;
   padding-top: 0;
+  padding-bottom: 0;
 }
 
 #gcb-footer-global {
@@ -189,11 +187,11 @@ th,td {
 
 #gcb-footer-global li {
   display: inline;
-  font-weight: 700;
+  font-weight: bold;
 }
 
 #gcb-footer-global li a {
-  font-weight: 400;
+  font-weight: normal;
 }
 
 #gcb-footer-global li + li::before {
@@ -202,12 +200,12 @@ th,td {
 }
 
 .gcb-aside {
-  border: 0 solid #ebebeb;
-/*-moz-border-radius: 10px;
-  -webkit-border-radius: 10px;
-  border-radius: 10px;*/
+  border: 1px solid;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  border-radius: 4px;
   margin: 10px 0;
-  padding: 0;
+  padding: 10px;
   position: relative;
   top: -1px;
 }
@@ -221,6 +219,7 @@ th,td {
 }
 
 .gcb-aside {
+  background: #f9f9f9;
   border-color: #f2f2f2;
 }
 
@@ -233,9 +232,9 @@ th,td {
 
 .gcb-breadcrumb {
   font-size: 11px;
-  overflow: hidden;
   margin: 0 0 20px;
   min-height: 28px;
+  overflow: hidden;
 }
 
 .gcb-breadcrumb li {
@@ -256,8 +255,8 @@ th,td {
 }
 
 .gcb-button-box {
-  overflow: hidden;
   text-align: center;
+  overflow: hidden;
 }
 
 .gcb-nav ul {
@@ -266,8 +265,8 @@ th,td {
 
 .gcb-button {
   background-color: #666;
-  background-image: 0;
-  background-image: 0;
+  background-image: -moz-linear-gradient(top,#777,#555);
+  background-image: -webkit-linear-gradient(top,#777,#555);
   background-image: linear-gradient(top,#777,#555);
   background-position: left bottom;
   background-repeat: repeat-x;
@@ -278,7 +277,7 @@ th,td {
   -moz-box-shadow: 0 1px 1px rgba(0,0,0,.2);
   -webkit-box-shadow: 0 1px 1px rgba(0,0,0,.2);
   box-shadow: 0 1px 1px rgba(0,0,0,.2);
-  color: #FFF;
+  color: white;
   display: inline-block;
   font-family: "open sans",arial,sans-serif;
   font-size: 13px;
@@ -292,21 +291,21 @@ th,td {
   transition: all .218s ease-in;
 }
 
-.gcb-button[disabled],.gcb-button[disabled]:hover {
+.gcb-button[disabled], .gcb-button[disabled]:hover {
   background: none;
-  background-image: 0;
-  background-image: 0;
+  background-image: -moz-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
+  background-image: -webkit-linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
   background-image: linear-gradient(top,rgba(226,226,226,.14),rgba(34,34,34,.14));
   border-color: #f3f3f3;
   color: #b8b8b8;
 }
 
 .gcb-button-large {
-  font-size: 150%;
+  width: 200px;
   height: 48px;
   line-height: 48px;
+  font-size: 150%;
   margin: 12px;
-  width: 200px;
 }
 
 a.gcb-button {
@@ -325,11 +324,11 @@ button.gcb-button::-moz-focus-inner {
   padding: 0;
 }
 
-.gcb-button:hover,.gcb-button:focus {
-  background-image: 0;
-  background-image: 0;
-  background-image: linear-gradient(top,#444,#111);
+.gcb-button:hover, .gcb-button:focus {
   border-color: #404040;
+  background-image: -moz-linear-gradient(top,#444,#111);
+  background-image: -webkit-linear-gradient(top,#444,#111);
+  background-image: linear-gradient(top,#444,#111);
 }
 
 .gcb-button:focus {
@@ -342,22 +341,21 @@ button.gcb-button::-moz-focus-inner {
   box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
 }
 
-a.gcb-button-action,button.gcb-button-action {
+a.gcb-button-action, button.gcb-button-action {
   float: right;
   margin-left: 8px;
 }
 
 #gcb-nav-x {
   background-color: #4D5B76;
-  background-image: linear-gradient(top,#6c7a950,#4c484545px,#aeadae46px,#f7f7f747px,#fff48px);
-  background-image: 0;
-  background-image: 0;
-  background-image: 0;
-  display: none;
-  height: 60px;
+  background-image: linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
+  background-image: -moz-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
+  background-image: -ms-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
+  background-image: -webkit-linear-gradient(top,#6c7a95 0,#4d5b76 45px,#e5e5e5 46px,#f7f7f7 47px,#fff 48px);
   margin: 0 -15px;
-  overflow-y: hidden;
   padding: 0 15px;
+  height: 60px;
+  overflow-y: hidden;
 }
 
 #gcb-nav-x ul {
@@ -371,7 +369,7 @@ a.gcb-button-action,button.gcb-button-action {
   height: 50px;
 }
 
-#gcb-nav-x li,#gcb-nav-x li a {
+#gcb-nav-x li, #gcb-nav-x li a {
   color: #fff;
 }
 
@@ -385,7 +383,7 @@ a.gcb-button-action,button.gcb-button-action {
 }
 
 #gcb-nav-x li.active a {
-  font-weight: 700;
+  font-weight: bold;
 }
 
 #gcb-nav-x li {
@@ -407,109 +405,104 @@ a.gcb-button-action,button.gcb-button-action {
 }
 
 .gcb-col-1 {
+  width: 5.35714285714%;
   float: left;
   margin: 0 1.4880952381% 20px;
-  width: 5.35714285714%;
 }
 
 .gcb-col-2 {
+  width: 16.4285714286%;
   float: left;
   margin: 0 1.4880952381% 20px;
-  width: 16.4285714286%;
 }
 
 .gcb-col-3 {
   float: left;
-  margin: 0 1.78571428571% 20px;
   width: 26.4285714286%;
+  margin: 0 1.78571428571% 20px;
 }
 
 .gcb-col-4 {
   float: left;
-  margin: 0 1.4880952381% 20px;
   width: 36.4285714286%;
+  margin: 0 1.4880952381% 20px;
 }
 
 .gcb-col-5 {
   float: left;
-  margin: 0 1.4880952381% 20px;
   width: 46.4285714286%;
+  margin: 0 1.4880952381% 20px;
 }
 
 .gcb-col-6 {
   float: left;
-  margin: 0 1.4880952381% 20px;
   width: 56.0238095238%;
+  margin: 0 1.4880952381% 20px;
 }
 
 .gcb-col-7 {
   float: left;
-  margin: 0 1.78571428571% 20px;
   width: 66.4285714286%;
+  margin: 0 1.78571428571% 20px;
 }
 
 .gcb-col-8 {
   float: left;
+  width: 76.4285714286%
   margin: 0 1.4880952381% 20px;
-  width: 76.4285714286%;
 }
 
 .gcb-col-9 {
   float: left;
-  margin: 0 1.4880952381% 20px;
   width: 72.0238095238%;
+  margin: 0 1.4880952381% 20px;
 }
 
 .gcb-col-11 {
-  background: url(/g_assets/homepage_02.jpg) top center no-repeat;
   float: left;
-  height: 568px;
-  margin: 0 0 20px;
-  width: 100%;
+  width: 88.6904761905%;
+  margin: 0 1.4880952381% 20px;
 }
 
 /*
   Core style modifications.
 */
+
 /* Styles for next and previous navigation buttons at the bottom of lesson pages. */
-.gcb-next-button a,.gcb-prev-button a {
-  color: #444;
+.gcb-next-button a, .gcb-prev-button a {
   float: left;
   height: 24px;
   line-height: 24px;
   position: relative;
+  color: #444;
   text-decoration: none;
 }
-
 .gcb-next-button a {
   padding: 10px 10px 10px 20px;
 }
-
 .gcb-prev-button a {
   padding: 10px 20px 10px 10px;
 }
 
-.gcb-next-button a:after,.gcb-prev-button a:after {
-  border-width: 22px;
-  border-style: solid;
+.gcb-next-button a:after, .gcb-prev-button a:after {
   content: "";
-  height: 0;
-  position: absolute;
   top: 0;
-  width: 0;
+  border-width: 22px 22px 22px 22px;
+  border-style: solid;
+  position: absolute;
+  width: 0px;
+  height: 0px;
 }
-
 .gcb-next-button a:after {
   border-color: transparent transparent transparent #f0f0f0;
   right: -44px;
 }
-
 .gcb-prev-button a:after {
   border-color: transparent #f0f0f0 transparent transparent;
   left: -44px;
 }
 
-.gcb-next-button,.gcb-prev-button {
+.gcb-next-button, .gcb-prev-button {
   background-color: #f0f0f0;
   background-position: left bottom;
   background-repeat: repeat-x;
@@ -524,19 +517,17 @@ a.gcb-button-action,button.gcb-button-action {
   -webkit-transition: all .218s ease-in;
   transition: all .218s ease-in;
 }
-
 .gcb-next-button {
-  -moz-border-radius: 10px 0 0 10px;
-  -webkit-border-radius: 10px 0 0 10px;
-  border-radius: 10px 0 0 10px;
+  -moz-border-radius: 10px 0px 0px 10px;
+  -webkit-border-radius: 10px 0px 0px 10px;
+  border-radius: 10px 0px 0px 10px;
   float: right;
   margin: 5px 40px 5px 0;
 }
-
 .gcb-prev-button {
-  -moz-border-radius: 0 10px 10px 0;
-  -webkit-border-radius: 0 10px 10px 0;
-  border-radius: 0 10px 10px 0;
+  -moz-border-radius: 0px 10px 10px 0px;
+  -webkit-border-radius: 0px 10px 10px 0px;
+  border-radius: 0px 10px 10px 0px;
   float: left;
   margin: 5px 0 5px 40px;
 }
@@ -547,7 +538,7 @@ a.gcb-button-action,button.gcb-button-action {
   border-width: 0 0 0 1px;
   float: left;
   font-family: "open sans", arial, sans-serif;
-  font-size: 24px;
+  font-size: 27px;
   font-weight: 300;
   line-height: 1.52;
   margin: 0;
@@ -562,7 +553,7 @@ a.gcb-button-action,button.gcb-button-action {
   font-size: 27px;
   font-weight: 300;
   line-height: 1.52;
-  margin: -5px 0 0;
+  margin: 0;
   padding: 0 12px 0 0;
   text-shadow: 0 1px 1px #fff;
   white-space: nowrap;
@@ -570,22 +561,19 @@ a.gcb-button-action,button.gcb-button-action {
 
 /* Styles for course summary headers. */
 .gcb-product-headers-large {
-  color: #fefefe;
+  color: #dd4b39;
   font-family: "open sans",arial,sans-serif;
-  font-size: 38px;
-  font-weight: 300;
-  margin: 50px 0 10px;
-  text-align: left;
+  font-size: 25px;
+  font-weight: normal;
+  margin: 10px 7px;
 }
-
-.gcb-product-headers,.gcb-bio-headers {
+.gcb-product-headers, .gcb-bio-headers {
   font-family: "open sans",arial,sans-serif;
   font-size: 16px;
-  font-weight: 300;
+  font-weight: normal;
   margin: .4em 0 0;
   margin: 10px 7px;
 }
-
 .gcb-bio-headers {
   float: right;
 }
@@ -593,7 +581,7 @@ a.gcb-button-action,button.gcb-button-action {
 /* Style for the course schedule header. */
 .gcb-schedule-headers {
   font-size: 20px;
-  font-weight: 400;
+  font-weight: normal;
   margin: 10px 7px;
 }
 
@@ -602,15 +590,15 @@ a.gcb-button-action,button.gcb-button-action {
   confirmation pages).
 */
 .gcb-top-content {
+  margin: 0px 20px;
   font-size: 16px;
   font-weight: 200;
   line-height: 20px;
-  margin: 0 20px;
 }
 
 /* Styles for elements on a unit/lesson page. */
 .gcb-unit-header {
-  border-bottom: 0 dotted #e0e0e0;
+  border-bottom:2px dotted #e0e0e0;
   font-size: 30px;
   letter-spacing: -1px;
   line-height: 1;
@@ -620,7 +608,7 @@ a.gcb-button-action,button.gcb-button-action {
 
 .gcb-lesson-title {
   font-size: 23px;
-  margin: 0;
+  margin: 0px;
   text-align: left;
 }
 
@@ -629,25 +617,19 @@ a.gcb-button-action,button.gcb-button-action {
   text-align: left;
 }
 
-.gcb-lesson-content h2 {
-  font-size: 1.2em;
-  margin-bottom: -12px;
-}
-
 .gcb-video-container {
-  height: 0;
-  overflow: hidden;
   position: relative;
   padding-bottom: 56.25%;
   padding-top: 30px;
+  height: 0;
+  overflow: hidden;
 }
-
-.gcb-video-container iframe,.gcb-video-container object,.gcb-video-container embed {
-  left: 0;
-  height: 100%;
+.gcb-video-container iframe, .gcb-video-container object, .gcb-video-container embed {
   position: absolute;
   top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
 }
 
 /* Styles for the student data table on the student profile page. */
@@ -666,23 +648,19 @@ table.gcb-student-data-table {
   margin: 2px 7px 0 0;
   opacity: 0.7;
 }
-
 .gcb-progress-empty {
   display: inline-block;
   height: 14px;
   margin: 2px 7px 0 0;
   width: 15px;
 }
-
 .gcb-progress-icon-holder {
   float: left;
   width: 20px;
 }
-
 .gcb-lesson-title-with-progress {
   margin-left: 20px;
 }
-
 .gcb-activity-title-with-progress {
   margin-left: 35px;
 }
@@ -690,28 +668,17 @@ table.gcb-student-data-table {
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */
 .gcb-grayed {
   color: gray;
-  font-weight: 400;
+  font-weight: normal;
 }
-
 .gcb-grayed-active {
-  font-weight: 700;
+  font-weight: bold;
 }
 
 /* A box that surrounds read-only assessments. */
 .gcb-border-box {
-  border: 0 solid #000;
+  border: 1px solid black;
   margin: 20px;
   padding: 10px;
-}
-
-.gcb-assessment-body {
-  border: 1px solid #AEADAE;
-  border-radius: 10px;
-  width: 700px;
-}
-
-.qt-question {
-  font-weight: 400;
 }
 
 /* Styles for floating elements to the left. */
@@ -722,7 +689,6 @@ table.gcb-student-data-table {
 /* Styles for floating elements to the right. */
 .gcb-pull-right {
   float: right;
-  margin-top: 8px;
 }
 
 /* Styles for aligning elements to the left. */
@@ -737,7 +703,7 @@ table.gcb-student-data-table {
 /* Registration page form. */
 .gcb-reg-form-label {
   display: block;
-  font-weight: 700;
+  font-weight: bold;
   padding: 0;
 }
 
@@ -773,68 +739,6 @@ a.gcb-explorer-course-title {
   background-color: #ccc;
   border-radius: 3px;
   color: red;
-  font-weight: 700;
-  padding: 0 5px;
-}
-
-#main_video {
-  box-shadow: 1px 1px 10px #666;
-  width: 99%;
-}
-
-.home_summary {
-  color: #cbcbcb;
-  font-size: 1.4em;
-  margin: 40px 0 30px;
-  width: 300px;
-}
-
-.glass_button {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: #47b7e6;
-  border: none;
-  -moz-border-radius: 4px;
-  -webkit-border-radius: 4px;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  display: inline-block;
-  font-size: 18px;
-  margin-top: 10px;
-  padding: 15px 30px;
-  text-decoration: none;
-  -moz-transition: background-color .1s linear;
-  -o-transition: background-color .1s linear;
-  -webkit-transition: background-color .1s linear;
-  transition: background-color .1s linear;
-}
-
-.glass_button:hover,.glass_button:focus {
-  background-color: #0089fa;
-  color: #fefefe;
-  outline: none;
-  text-decoration: none;
-}
-
-.glass_button:visited {
-  color: #fff;
-}
-
-#hero-image {
-  margin-left: 80px;
-}
-
-.gcb-aside form fieldset {
-  border: 0;
-}
-
-#confidential_notice {
-  background: #47b7e6;
   font-weight: bold;
-  text-align: center;
-  height: 24px;
-  text-transform: uppercase;
-  color: #ffffff;
-  text-shadow: 1px 1px 1px #444;
+  padding: 0 5px;
 }
