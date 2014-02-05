@@ -44,8 +44,15 @@ class BaseIntegrationTest(suite.TestBase):
         self.driver.quit()
 
     def load_root_page(self):
-        return pageobjects.RootPage(self).load(
+        ret = pageobjects.RootPage(self).load(
             suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+        tries = 10
+        while tries and 'This webpage is not avail' in self.driver.page_source:
+            tries -= 1
+            time.sleep(1)
+            ret = pageobjects.RootPage(self).load(
+                suite.TestBase.INTEGRATION_SERVER_BASE_URL)
+        return ret
 
     def load_dashboard(self, name):
         return pageobjects.DashboardPage(self).load(
