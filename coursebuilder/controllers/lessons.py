@@ -395,6 +395,13 @@ class AssessmentHandler(BaseHandler):
             self.error(404)
             return
 
+        # If the assessment is not currently available, and the user is not an
+        # admin, redirect to the main page.
+        if (not unit.now_available and
+            not Roles.is_course_admin(self.app_context)):
+            self.redirect('/')
+            return
+
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
         self.template_value['model_version'] = model_version
