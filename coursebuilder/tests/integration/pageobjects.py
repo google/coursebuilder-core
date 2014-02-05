@@ -21,6 +21,7 @@ __author__ = [
 from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.common import by
+from selenium.webdriver.common import keys
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
@@ -493,7 +494,16 @@ class AddLesson(DashboardEditor):
         return self
 
     def send_rte_text(self, text):
-        self.find_element_by_id('gcbRteField-0_editor').send_keys(text)
+        # Work around Selenium bug: If focus is in another window
+        # and in a text area, send_keys won't work.  Steal focus
+        # immediately before sending keys.
+        # https://code.google.com/p/selenium/issues/detail?id=2977
+        self._tester.driver.execute_script('window.focus();')
+        textarea = self.find_element_by_id('gcbRteField-0_editor')
+        textarea.click()
+        textarea.send_keys(keys.Keys.HOME)
+
+        textarea.send_keys(text)
         return self
 
     def select_rte_custom_tag_type(self, option_text):
