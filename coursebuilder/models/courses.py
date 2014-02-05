@@ -1967,23 +1967,22 @@ class Course(object):
 
         return common.tags.get_components_from_html(unit.html_content)
 
+    def get_components_with_name(self, unit_id, lesson_id, component_name):
+        """Returns a list of dicts representing this component in a lesson."""
+        components = self.get_components(unit_id, lesson_id)
+        return [
+            component for component in components
+            if component.get('cpt_name') == component_name
+        ]
+
     def get_question_components(self, unit_id, lesson_id):
         """Returns a list of dicts representing the questions in a lesson."""
-        components = self.get_components(unit_id, lesson_id)
-        question_components = []
-        for component in components:
-            if component.get('cpt_name') == 'question':
-                question_components.append(component)
-        return question_components
+        return self.get_components_with_name(unit_id, lesson_id, 'question')
 
     def get_question_group_components(self, unit_id, lesson_id):
         """Returns a list of dicts representing the q_groups in a lesson."""
-        components = self.get_components(unit_id, lesson_id)
-        question_group_components = []
-        for component in components:
-            if component.get('cpt_name') == 'question-group':
-                question_group_components.append(component)
-        return question_group_components
+        return self.get_components_with_name(
+            unit_id, lesson_id, 'question-group')
 
     def needs_human_grader(self, unit):
         return unit.workflow.get_grader() == HUMAN_GRADER

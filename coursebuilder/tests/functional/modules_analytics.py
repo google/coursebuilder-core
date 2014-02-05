@@ -201,9 +201,9 @@ class ProgressAnalyticsTest(actions.TestBase):
             <question-group qgid="456" instanceid=2></question-group>
             yet_more_random_text
         """
-        assert_equals(
-            progress_stats._get_component_ids(
-                unit1.unit_id, lesson12.lesson_id, 0), [u'1', u'2'])
+        cpt_ids = progress_stats._get_component_ids(
+            unit1.unit_id, lesson12.lesson_id, 0)
+        self.assertEqual(set([u'1', u'2']), set(cpt_ids))
 
     def test_compute_entity_dict_constructs_dict_correctly(self):
         sites.setup_courses('course:/test::ns_test, course:/:/')

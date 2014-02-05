@@ -55,6 +55,10 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
 
+TAGS_THAT_TRIGGER_BLOCK_COMPLETION = ['attempt-activity']
+TAGS_THAT_TRIGGER_COMPONENT_COMPLETION = ['tag-assessment']
+TAGS_THAT_TRIGGER_HTML_COMPLETION = ['attempt-lesson']
+
 
 def get_first_lesson(handler, unit_id):
     """Returns the first lesson in the unit."""
@@ -914,13 +918,13 @@ class EventsRESTHandler(BaseRESTHandler):
 
         source_url = payload['location']
 
-        if source == 'attempt-activity':
+        if source in TAGS_THAT_TRIGGER_BLOCK_COMPLETION:
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(
                 self, source_url)
             if unit_id is not None and lesson_id is not None:
                 self.get_course().get_progress_tracker().put_block_completed(
                     student, unit_id, lesson_id, payload['index'])
-        elif source == 'tag-assessment':
+        elif source in TAGS_THAT_TRIGGER_COMPONENT_COMPLETION:
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(
                 self, source_url)
             cpt_id = payload['instanceid']
@@ -929,7 +933,7 @@ class EventsRESTHandler(BaseRESTHandler):
                 self.get_course().get_progress_tracker(
                     ).put_component_completed(
                         student, unit_id, lesson_id, cpt_id)
-        elif source == 'attempt-lesson':
+        elif source in TAGS_THAT_TRIGGER_HTML_COMPLETION:
             # Records progress for scored lessons.
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(
                 self, source_url)

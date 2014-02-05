@@ -3136,7 +3136,7 @@ class LessonComponentsTest(DatastoreBackedCourseTest):
 
         valid_cpt_ids = self.tracker.get_valid_component_ids(
             self.unit.unit_id, self.lesson.lesson_id)
-        assert valid_cpt_ids == ['QN', 'QG']
+        self.assertEqual(set(['QN', 'QG']), set(valid_cpt_ids))
 
     def test_component_progress(self):
         """Test that progress tracking for components is done correctly."""

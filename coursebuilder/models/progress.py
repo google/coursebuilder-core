@@ -29,6 +29,13 @@ from models import StudentPropertyEntity
 from tools import verify
 
 
+# Names of component tags that are tracked for progress calculations.
+TRACKABLE_COMPONENTS = [
+    'question',
+    'question-group',
+]
+
+
 class UnitLessonCompletionTracker(object):
     """Tracks student completion for a unit/lesson-based linear course."""
 
@@ -85,11 +92,6 @@ class UnitLessonCompletionTracker(object):
         EVENT_CODE_MAPPING['activity'],
         EVENT_CODE_MAPPING['html']
     ]
-    # Names of component tags that are tracked for progress calculations.
-    TRACKABLE_COMPONENTS = frozenset([
-        'question',
-        'question-group',
-    ])
 
     def __init__(self, course):
         self._course = course
@@ -160,14 +162,14 @@ class UnitLessonCompletionTracker(object):
             progress_entity_key) in self.COMPOSITE_ENTITIES
 
     def get_valid_component_ids(self, unit_id, lesson_id):
-        """Returns a list of component ids representing trackable components."""
-        question_component_ids = [cpt['instanceid'] for cpt in (
-            self._get_course().get_question_components(
-                unit_id, lesson_id)) if cpt['instanceid']]
-        question_group_component_ids = [cpt['instanceid'] for cpt in (
-            self._get_course().get_question_group_components(
-                unit_id, lesson_id)) if cpt['instanceid']]
-        return question_component_ids + question_group_component_ids
+        """Returns a list of cpt ids representing trackable components."""
+        components = []
+        for cpt_name in TRACKABLE_COMPONENTS:
+            all_cpts = self._get_course().get_components_with_name(
+                unit_id, lesson_id, cpt_name)
+            components += [
+                cpt['instanceid'] for cpt in all_cpts if cpt['instanceid']]
+        return components
 
     def get_valid_block_ids(self, unit_id, lesson_id):
         """Returns a list of block ids representing interactive activities."""
