@@ -293,6 +293,11 @@ class AssetsPage(PageObject):
         return self
 
     def verify_no_image_file_by_name(self, name):
+        wait.WebDriverWait(
+            self._tester.driver, 5.0, 1.0).until(
+                ec.visibility_of_element_located(
+                    (by.By.XPATH,
+                     '//h3[starts-with(.,\'Images & Documents\')]')))
         try:
             self.find_element_by_link_text(name)  # throw exception if not found
             raise AssertionError('Found file %s which should be absent' % name)
