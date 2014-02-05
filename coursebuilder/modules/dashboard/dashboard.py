@@ -207,25 +207,28 @@ class DashboardHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
-    def format_title(self, text):
+    def format_title(self, text, as_link=False):
         """Formats standard title."""
         title = self.app_context.get_environ()['course']['title']
-        return safe_dom.NodeList().append(
-            safe_dom.A('/admin').add_text('Course Builder ')
-        ).append(
-            safe_dom.Entity('&gt;')
-        ).append(
-            safe_dom.Text(' %s ' % title)
-        ).append(
-            safe_dom.Entity('&gt;')
-        ).append(
-            safe_dom.A(self.canonicalize_url('/dashboard')).
-                add_text(' Dashboard ')
-        ).append(
-            safe_dom.Entity('&gt;')
-        ).append(
-            safe_dom.Text(' %s' % text)
-        )
+        ret = safe_dom.NodeList()
+        cb_text = 'Course Builder '
+        if as_link:
+            ret.append(safe_dom.A('/admin').add_text(cb_text))
+        else:
+            ret.append(safe_dom.Text(cb_text))
+        ret.append(safe_dom.Entity('&gt;'))
+        ret.append(safe_dom.Text(' %s ' % title))
+        ret.append(safe_dom.Entity('&gt;'))
+        dashboard_text = ' Dashboard '
+        if as_link:
+            ret.append(
+                safe_dom.A(self.canonicalize_url('/dashboard')).
+                add_text(dashboard_text))
+        else:
+            ret.append(safe_dom.Text(dashboard_text))
+        ret.append(safe_dom.Entity('&gt;'))
+        ret.append(safe_dom.Text(' %s' % text))
+        return ret
 
     def _get_edit_link(self, url):
         return safe_dom.NodeList().append(
@@ -388,10 +391,12 @@ class DashboardHandler(
                 'description': messages.DATA_FILES_DESCRIPTION,
                 'children': data_info}]
 
-        template_values = {}
-        template_values['page_title'] = self.format_title('Outline')
-        template_values['alerts'] = self._get_alerts()
-        template_values['sections'] = sections
+        template_values = {
+            'page_title': self.format_title('Outline'),
+            'page_title_linked': self.format_title('Outline', as_link=True),
+            'alerts': self._get_alerts(),
+            'sections': sections,
+            }
         self.render_page(template_values)
 
     def get_action_url(self, action, key=None, extra_args=None):
@@ -462,9 +467,11 @@ class DashboardHandler(
             course_template_info.append('< empty file >')
 
         # Prepare template values.
-        template_values = {}
-        template_values['page_title'] = self.format_title('Settings')
-        template_values['page_description'] = messages.SETTINGS_DESCRIPTION
+        template_values = {
+            'page_title': self.format_title('Settings'),
+            'page_title_linked': self.format_title('Settings', as_link=True),
+            'page_description': messages.SETTINGS_DESCRIPTION,
+        }
         template_values['sections'] = [
             {
                 'title': 'About the Course',
@@ -739,16 +746,20 @@ class DashboardHandler(
                 merge_local_files=True, all_paths=all_paths)
         )
 
-        template_values = {}
-        template_values['page_title'] = self.format_title('Assets')
-        template_values['page_description'] = messages.ASSETS_DESCRIPTION
-        template_values['main_content'] = items
+        template_values = {
+            'page_title': self.format_title('Assets'),
+            'page_title_linked': self.format_title('Assets', as_link=True),
+            'page_description': messages.ASSETS_DESCRIPTION,
+            'main_content': items,
+        }
         self.render_page(template_values)
 
     def get_analytics(self):
         """Renders course analytics view."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Analytics')
+        template_values = {
+            'page_title': self.format_title('Analytics'),
+            'page_title_linked': self.format_title('Analytics', as_link=True),
+        }
 
         all_jobs_have_finished = True
         stats_html = ''

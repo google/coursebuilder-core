@@ -339,8 +339,10 @@ class SearchDashboardHandler(object):
 
     def get_search(self):
         """Renders course indexing view."""
-        template_values = {}
-        template_values['page_title'] = self.format_title('Search')
+        template_values = {
+            'page_title': self.format_title('Search'),
+            'page_title_linked': self.format_title('Search', as_link=True),
+            }
 
         mc_template_value = {}
         mc_template_value['module_enabled'] = custom_module.enabled

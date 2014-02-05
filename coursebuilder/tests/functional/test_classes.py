@@ -1226,6 +1226,11 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Admin has access.
         actions.login(email, is_admin=True)
         response = self.get('dashboard')
+        # Verify title does not have link text
+        assert_contains(
+            '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
+            response.body)
+        # Verify body does have linked breadcrumb trail.
         assert_contains(
             'Google &gt;<a href="%s"> Dashboard </a>&gt; Outline' %
                 self.canonicalize('dashboard'),
@@ -1244,6 +1249,11 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Test assets view.
         response = self.get('dashboard?action=assets')
+        # Verify title does not have link text
+        assert_contains(
+            '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
+            response.body)
+        # Verify body does have linked breadcrumb trail.
         assert_contains(
             'Google &gt;<a href="%s"> Dashboard </a>&gt; Assets' %
                 self.canonicalize('dashboard'),
@@ -1254,6 +1264,11 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Test settings view.
         response = self.get('dashboard?action=settings')
+        # Verify title does not have link text
+        assert_contains(
+            '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
+            response.body)
+        # Verify body does have linked breadcrumb trail.
         assert_contains(
             'Google &gt;<a href="%s"> Dashboard </a>&gt; Settings' %
                 self.canonicalize('dashboard'),
@@ -1271,6 +1286,11 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         # Tests student statistics view.
         response = self.get('dashboard?action=analytics')
+        # Verify title does not have link text
+        assert_contains(
+            '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
+            response.body)
+        # Verify body does have linked breadcrumb trail.
         assert_contains(
             'Google &gt;<a href="%s"> Dashboard </a>&gt; Analytics' %
                 self.canonicalize('dashboard'),
@@ -2796,26 +2816,35 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Unit page.
         response = self.get('unit?unit=9')
-        assert_contains(  # A unit title.
+        # A unit title.
+        assert_contains(
             unit_2_title, response.body)
-        assert_contains(  # First child lesson without link.
+        # First child lesson without link.
+        assert_contains(
             lesson_2_1_title, response.body)
-        assert_contains(  # Second child lesson with link.
+        # Second child lesson with link.
+        assert_contains(
             lesson_2_2_title, response.body)
-        assert_contains_all_of(  # Breadcrumbs.
+        # Breadcrumbs.
+        assert_contains_all_of(
             ['Unit 2</a></li>', 'Lesson 1</li>'], response.body)
 
         # Unit page.
         response = self.get('activity?unit=9&lesson=10')
-        assert_contains(  # A unit title.
+        # A unit title.
+        assert_contains(
             unit_2_title, response.body)
-        assert_contains(  # An activity title.
+        # An activity title.
+        assert_contains(
             'Lesson 2.1 Activity', response.body)
-        assert_contains(  # First child lesson without link.
+        # First child lesson without link.
+        assert_contains(
             lesson_2_1_title, response.body)
-        assert_contains(  # Second child lesson with link.
+        # Second child lesson with link.
+        assert_contains(
             lesson_2_2_title, response.body)
-        assert_contains_all_of(  # Breadcrumbs.
+        # Breadcrumbs.
+        assert_contains_all_of(
             ['Unit 2</a></li>', 'Lesson 1</a></li>'], response.body)
 
         # Clean up.
