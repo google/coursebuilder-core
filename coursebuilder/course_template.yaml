@@ -27,15 +27,15 @@
 
 institution:
   # Name of your institution
-  name: 'Add Your Institution Here'
+  name: 'Glass'
 
   # URL of your institution's webpage
-  url: 'LINK_TO_YOUR_INSTITUTION_HERE'
+  url: 'https://glass.google.com'
 
   # Link and alt text for the logo of the course or your institution
   logo:
-    url: 'assets/img/your_logo_here.png'
-    alt_text: YOUR_LOGO_HERE
+    url: '/g_assets/glass2.png'
+    alt_text: Google Glass
 
 
 ####################
@@ -51,32 +51,21 @@ base:
   #
   # for details.
   before_head_tag_ends: '<!-- base.before_head_tag_ends -->'
-  after_body_tag_begins: '<!-- base.after_body_tag_begins -->'
+  after_body_tag_begins: '<div id="confidential_notice">Confidential: do not share</div>'
   after_navbar_begins: '<!-- base.after_navbar_begins -->'
-  before_navbar_ends: '<!-- base.before_navbar_ends -->
-    <!-- Here we enable the search module. -->
-    <script src="/modules/search/assets/search.js"></script>
-    <link rel="stylesheet" type="text/css"
-        href="/modules/search/assets/search.css" />
-    <li class="gcb-pull-right">
-      <form class="gcb-search-form" action="search" method="get">
-        <input class="gcb-search-box" name="query" type="text" >
-        <input value="Search"
-            class="gcb-button gcb-search-button" type="submit">
-      </form>
-    </li>'
+  before_navbar_ends: '<!-- base.before_navbar_ends -->'
   after_top_content_ends: '<!-- base.after_top_content_ends -->'
   after_main_content_ends: '<!-- base.after_main_content_ends -->'
   before_body_tag_ends: '<!-- base.before_body_tag_ends -->'
 
   # Whether to show a G+ button on the header of all pages.
-  show_gplus_button: True
+  show_gplus_button: False
 
   # Header phrase for the main navigation bar
-  nav_header: 'Search Education'
+  nav_header: 'Preferred Provider'
 
   # Link to your privacy policy and terms of service
-  privacy_terms_url: 'PRIVACY_POLICY_AND_TERMS_OF_SERVICE'
+  privacy_terms_url: 'http://www.google.com/policies/'
 
   # Locale for internationalization of explorer pages. See
   # modules/i18n/resources/locale for available locales.
