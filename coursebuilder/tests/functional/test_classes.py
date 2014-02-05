@@ -37,10 +37,10 @@ from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
 import appengine_config
+from common.utils import Namespace
 from controllers import lessons
 from controllers import sites
 from controllers import utils
-from controllers.utils import Namespace
 from controllers.utils import XsrfTokenManager
 from controllers_review import PeerReviewControllerTest
 from controllers_review import PeerReviewDashboardTest
