@@ -33,3 +33,9 @@ indexes:
   - name: completed_count
   - name: assigned_count
   - name: create_date
+
+- kind: _AE_Pipeline_Record
+  properties:
+  - name: is_root_pipeline
+  - name: start_time
+    direction: desc
