@@ -180,6 +180,7 @@ class SearchTestBase(actions.TestBase):
             """Monkey patch for URL fetching."""
 
             class Response(object):
+
                 def __init__(self, code, content_type, content):
                     self.status_code = code
                     self.headers = {}

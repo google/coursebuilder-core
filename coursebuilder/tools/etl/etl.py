@@ -701,6 +701,7 @@ def _get_course_from(app_context):
     """Gets a courses.Course from the given sites.ApplicationContext."""
 
     class _Adapter(object):
+
         def __init__(self, app_context):
             self.app_context = app_context
 

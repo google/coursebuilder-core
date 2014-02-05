@@ -25,24 +25,24 @@ import os
 import time
 import traceback
 
+import jinja2
+import resources
+import webapp2
+
 import appengine_config
 from common import safe_dom
 from controllers import sites
 from controllers import utils
-import jinja2
 from models import config
 from models import counters
 from models import courses
 from models import custom_modules
 from models import jobs
 from models import transforms
-import resources
-import webapp2
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import search
 from google.appengine.ext import db
-
 
 MODULE_NAME = 'Full Text Search'
 

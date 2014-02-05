@@ -30,9 +30,10 @@ import urllib
 import urlparse
 from xml.dom import minidom
 
+import jinja2
+
 import appengine_config
 from common import jinja_utils
-import jinja2
 from modules.announcements import announcements
 
 from google.appengine.api import search

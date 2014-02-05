@@ -46,15 +46,14 @@ import sys
 import time
 import unittest
 
-# The following import is needed in order to add third-party libraries.
-import appengine_config  # pylint: disable-msg=unused-import
 import webtest
+
+import appengine_config
 
 from google.appengine.api.search import simple_search_stub
 from google.appengine.datastore import datastore_stub_util
 from google.appengine.ext import deferred
 from google.appengine.ext import testbed
-
 
 _PARSER = argparse.ArgumentParser()
 _PARSER.add_argument(

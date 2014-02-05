@@ -20,6 +20,15 @@ import datetime
 import urllib
 import urlparse
 
+from utils import BaseHandler
+from utils import BaseRESTHandler
+from utils import CAN_PERSIST_ACTIVITY_EVENTS
+from utils import CAN_PERSIST_PAGE_EVENTS
+from utils import CAN_PERSIST_TAG_EVENTS
+from utils import HUMAN_READABLE_DATETIME_FORMAT
+from utils import TRANSIENT_STUDENT
+from utils import XsrfTokenManager
+
 from models import courses
 from models import models
 from models import student_work
@@ -31,16 +40,6 @@ from models.review import ReviewUtils
 from models.roles import Roles
 from models.student_work import StudentWorkUtils
 from modules.review import domain
-
-from utils import BaseHandler
-from utils import BaseRESTHandler
-from utils import CAN_PERSIST_ACTIVITY_EVENTS
-from utils import CAN_PERSIST_PAGE_EVENTS
-from utils import CAN_PERSIST_TAG_EVENTS
-from utils import HUMAN_READABLE_DATETIME_FORMAT
-from utils import TRANSIENT_STUDENT
-from utils import XsrfTokenManager
-
 from tools import verify
 
 from google.appengine.ext import db

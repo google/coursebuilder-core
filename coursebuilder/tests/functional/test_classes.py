@@ -36,14 +36,17 @@ from actions import assert_contains
 from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
+from controllers_review import PeerReviewControllerTest
+from controllers_review import PeerReviewDashboardTest
+from review_stats import PeerReviewAnalyticsTest
+from webtest.app import AppError
+
 import appengine_config
 from common.utils import Namespace
 from controllers import lessons
 from controllers import sites
 from controllers import utils
 from controllers.utils import XsrfTokenManager
-from controllers_review import PeerReviewControllerTest
-from controllers_review import PeerReviewDashboardTest
 from models import config
 from models import courses
 from models import jobs
@@ -54,9 +57,6 @@ from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 import modules.oeditor.oeditor
-from review_stats import PeerReviewAnalyticsTest
-from webtest.app import AppError
-
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
@@ -65,7 +65,6 @@ from tools.etl import remote
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
@@ -1304,7 +1303,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 5
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -1998,6 +1997,7 @@ class ActivityTest(actions.TestBase):
         """Test student activity progress in detail, using the sample course."""
 
         class FakeHandler(object):
+
             def __init__(self, app_context):
                 self.app_context = app_context
 

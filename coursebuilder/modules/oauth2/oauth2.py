@@ -73,11 +73,11 @@ import os
 import traceback
 
 from apiclient import discovery
+from oauth2client import appengine
+import webapp2
+
 from common import safe_dom
 from models import custom_modules
-from oauth2client import appengine
-
-import webapp2
 
 # In real life we'd check in a blank file and set up the code to error with a
 # message pointing people to https://code.google.com/apis/console.

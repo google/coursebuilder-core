@@ -144,6 +144,7 @@ OUTPUT_DEBUG_LOG = False
 
 
 class Term(object):
+
     def __init__(self, term_type, value=None):
         self.term_type = term_type
         self.value = value

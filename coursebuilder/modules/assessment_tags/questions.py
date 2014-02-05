@@ -16,17 +16,16 @@
 
 __author__ = 'sll@google.com (Sean Lip)'
 
-
 import os
+
+import jinja2
 
 from common import jinja_utils
 from common import schema_fields
 from common import tags
-import jinja2
 from models import custom_modules
 from models import models as m_models
 from models import transforms
-
 
 RESOURCES_PATH = '/modules/assessment_tags/resources'
 

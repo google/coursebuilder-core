@@ -19,9 +19,10 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import os
 
-from common import jinja_utils
 from entities import BaseEntity
 import jinja2
+
+from common import jinja_utils
 from models import MemcacheManager
 
 from google.appengine.api import namespace_manager

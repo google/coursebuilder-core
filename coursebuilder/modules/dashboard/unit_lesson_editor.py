@@ -21,6 +21,10 @@ import logging
 import random
 import urllib
 
+import filer
+import messages
+import yaml
+
 from common import safe_dom
 from common import tags
 from common.schema_fields import FieldRegistry
@@ -29,16 +33,12 @@ from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
-import filer
-import messages
 from models import courses
 from models import models as m_models
 from models import review
 from models import roles
 from models import transforms
 from modules.oeditor import oeditor
-import yaml
-
 from tools import verify
 
 

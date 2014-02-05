@@ -7,6 +7,7 @@ from common import safe_dom
 
 
 class MockNode(safe_dom.Node):
+
     def __init__(self, value):
         self._value = value
 

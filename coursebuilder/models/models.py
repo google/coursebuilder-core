@@ -17,17 +17,19 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import logging
-import appengine_config
+
 from config import ConfigProperty
 import counters
 from counters import PerfCounter
 from entities import BaseEntity
 import transforms
+
+import appengine_config
+
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
 from google.appengine.ext import db
-
 
 # We want to use memcache for both objects that exist and do not exist in the
 # datastore. If object exists we cache its instance, if object does not exist

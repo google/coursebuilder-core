@@ -24,13 +24,14 @@ import os
 import pkgutil
 from xml.etree import cElementTree
 
+import html5lib
+import safe_dom
+import webapp2
+
 import appengine_config
 from common import schema_fields
 from extensions import tags
-import html5lib
 from models import config
-import safe_dom
-import webapp2
 
 
 CAN_USE_DYNAMIC_TAGS = config.ConfigProperty(

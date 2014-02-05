@@ -16,14 +16,14 @@
 
 __author__ = 'Sean Lip (sll@google.com)'
 
-
 import os
 import urllib
 
-from controllers.lessons import create_readonly_assessment_params
-from controllers.utils import ApplicationHandler
 import jinja2
 import messages
+
+from controllers.lessons import create_readonly_assessment_params
+from controllers.utils import ApplicationHandler
 from models import courses
 from models import models
 from models import review

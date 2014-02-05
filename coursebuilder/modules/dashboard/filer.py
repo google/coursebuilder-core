@@ -16,23 +16,25 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-
 import base64
 import cgi
 import os
 import urllib
+
+import messages
+import yaml
+
 import appengine_config
 from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
-import messages
 from models import courses
 from models import roles
 from models import transforms
 from models import vfs
 from modules.oeditor import oeditor
-import yaml
+
 from google.appengine.api import users
 
 # Set of string. The relative, normalized path bases we allow uploading of

@@ -19,9 +19,10 @@ __author__ = [
 ]
 
 import entities
-from modules.review import domain
 import student_work
 import transforms
+
+from modules.review import domain
 
 # Indicates that a human-graded assessment is peer-graded.
 PEER_MATCHER = 'peer'

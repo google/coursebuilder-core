@@ -16,13 +16,13 @@
 
 __author__ = 'Sean Lip (sll@google.com)'
 
-
 import os
+
+import jinja2
 
 from common import safe_dom
 from controllers.utils import ApplicationHandler
 from controllers.utils import HUMAN_READABLE_TIME_FORMAT
-import jinja2
 from models import courses
 from models import jobs
 from models import transforms

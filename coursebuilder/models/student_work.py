@@ -20,8 +20,9 @@ __author__ = [
 ]
 
 import entities
-import models
 import transforms
+
+import models
 
 from google.appengine.ext import db
 

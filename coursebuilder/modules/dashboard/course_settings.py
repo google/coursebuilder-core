@@ -16,16 +16,17 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
+import messages
+import yaml
+
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
-import messages
 from models import courses
 from models import roles
 from models import transforms
 from models import vfs
 from modules.oeditor import oeditor
-import yaml
 
 from google.appengine.api import users
 

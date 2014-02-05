@@ -20,16 +20,16 @@ import logging
 import os
 import urlparse
 
+import jinja2
+
 from common import safe_dom
 from controllers.utils import ApplicationHandler
 from controllers.utils import HUMAN_READABLE_TIME_FORMAT
-import jinja2
 from models import courses
 from models import jobs
 from models import progress
 from models import transforms
 from models import utils
-
 from models.models import EventEntity
 from models.models import Student
 from models.models import StudentPropertyEntity

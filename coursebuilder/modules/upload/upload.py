@@ -21,14 +21,16 @@ __author__ = [
 import logging
 import os
 
+import jinja2
+
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
-import jinja2
 from models import custom_modules
 from models import models
 from models import student_work
+
 from google.appengine.ext import db
 
 # String. Url fragment after the namespace we POST user payloads to.

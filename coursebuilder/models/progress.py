@@ -21,10 +21,11 @@ import logging
 import os
 
 import courses
+import transforms
+
 from models import QuestionDAO
 from models import QuestionGroupDAO
 from models import StudentPropertyEntity
-import transforms
 from tools import verify
 
 

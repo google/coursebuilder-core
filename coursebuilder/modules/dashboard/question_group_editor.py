@@ -16,6 +16,8 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import question_editor
+from unit_lesson_editor import CourseOutlineRights
 
 from common import schema_fields
 from controllers.utils import BaseRESTHandler
@@ -24,8 +26,6 @@ from models import transforms
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from models.models import QuestionGroupDTO
-import question_editor
-from unit_lesson_editor import CourseOutlineRights
 
 
 class QuestionGroupManagerAndEditor(question_editor.BaseDatastoreAssetEditor):
@@ -214,4 +214,3 @@ class QuestionGroupRESTHandler(BaseRESTHandler):
             return
         QuestionGroupDAO.delete(question_group)
         transforms.send_json_response(self, 200, 'Deleted.')
-

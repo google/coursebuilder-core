@@ -27,15 +27,18 @@ class CustomTagTests(unittest.TestCase):
     def setUp(self):
 
         class SimpleTag(tags.BaseTag):
+
             def render(self, unused_arg, unused_handler):
                 return cElementTree.Element('SimpleTag')
 
         class ComplexTag(tags.BaseTag):
+
             def render(self, unused_arg, unused_handler):
                 return cElementTree.XML(
                     '<Complex><Child>Text</Child></Complex>')
 
         class ReRootTag(tags.BaseTag):
+
             def render(self, node, unused_handler):
                 elt = cElementTree.Element('Re')
                 root = cElementTree.Element('Root')

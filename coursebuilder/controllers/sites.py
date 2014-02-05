@@ -113,6 +113,10 @@ import threading
 import urlparse
 import zipfile
 
+import utils
+import webapp2
+from webapp2_extras import i18n
+
 import appengine_config
 from common import safe_dom
 from models import transforms
@@ -125,10 +129,6 @@ from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
-import utils
-import webapp2
-from webapp2_extras import i18n
-
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
@@ -622,7 +622,9 @@ class CssComboZipHandler(zipserve.ZipHandler):
 
 
 def make_css_combo_zip_handler(zipfilename, static_file_handler):
+
     class CustomCssComboZipHandler(CssComboZipHandler):
+
         def get(self):
             self.serve_from_zip_file(zipfilename, static_file_handler)
 
@@ -1301,22 +1303,27 @@ def test_url_to_handler_mapping_for_course_type():
 
     # setup helper classes
     class FakeHandler0(object):
+
         def __init__(self):
             self.app_context = None
 
     class FakeHandler1(object):
+
         def __init__(self):
             self.app_context = None
 
     class FakeHandler2(zipserve.ZipHandler):
+
         def __init__(self):
             self.app_context = None
 
     class FakeHandler3(zipserve.ZipHandler):
+
         def __init__(self):
             self.app_context = None
 
     class FakeHandler4(zipserve.ZipHandler):
+
         def __init__(self):
             self.app_context = None
 

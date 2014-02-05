@@ -18,15 +18,17 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
 import urllib
+
+import jinja2
+import webapp2
+
 import appengine_config
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
-import jinja2
 from models import custom_modules
 from models import transforms
-import webapp2
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [

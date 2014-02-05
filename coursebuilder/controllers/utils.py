@@ -22,6 +22,8 @@ import os
 import time
 import urlparse
 
+import webapp2
+
 import appengine_config
 from common import jinja_utils
 from models import models
@@ -33,7 +35,6 @@ from models.models import Student
 from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
-import webapp2
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import users

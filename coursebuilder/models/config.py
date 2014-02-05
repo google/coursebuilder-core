@@ -27,9 +27,12 @@ import logging
 import os
 import threading
 import time
-import appengine_config
+
 import entities
 import transforms
+
+import appengine_config
+
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 

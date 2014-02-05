@@ -48,6 +48,7 @@ def assert_fails(function):
 
 
 class EtlRetryTest(suite.TestBase):
+
     def setUp(self):
         super(EtlRetryTest, self).setUp()
         self.ceiling = 2
@@ -78,6 +79,7 @@ class EtlRetryTest(suite.TestBase):
 
 
 class ReviewModuleDomainTests(suite.TestBase):
+
     def test_review_step_predicates(self):
         step = domain.ReviewStep()
 

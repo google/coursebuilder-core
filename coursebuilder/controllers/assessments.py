@@ -19,6 +19,9 @@ __author__ = 'pgbovine@google.com (Philip Guo)'
 import datetime
 import logging
 
+from utils import BaseHandler
+from utils import HUMAN_READABLE_DATETIME_FORMAT
+
 from models import courses
 from models import models
 from models import review
@@ -27,8 +30,6 @@ from models import transforms
 from models import utils
 from models.models import Student
 from models.models import StudentAnswersEntity
-from utils import BaseHandler
-from utils import HUMAN_READABLE_DATETIME_FORMAT
 from tools import verify
 
 from google.appengine.ext import db

@@ -20,9 +20,9 @@ __author__ = [
 
 import sys
 
-from models import transforms
-
 import mapreduce
+
+from models import transforms
 
 # Int. Longest GeoMOOC video is ~8 minutes.
 _POS_LIMIT_SECONDS = 60 * 8

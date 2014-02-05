@@ -23,18 +23,19 @@ import os
 import pickle
 import sys
 
-import appengine_config
-from common.schema_fields import FieldRegistry
-from common.schema_fields import SchemaField
-import common.tags
-import models
-from models import MemcacheManager
 import progress
 import review
 import transforms
 import utils
 import vfs
 import yaml
+
+import appengine_config
+from common.schema_fields import FieldRegistry
+from common.schema_fields import SchemaField
+import common.tags
+import models
+from models import MemcacheManager
 from tools import verify
 
 from google.appengine.api import namespace_manager

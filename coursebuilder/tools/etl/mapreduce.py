@@ -22,13 +22,11 @@ __author__ = [
 import csv
 import os
 import sys
-
 from xml.etree import ElementTree
-
-from models import transforms
 
 import mrs
 
+from models import transforms
 from tools.etl import etl_lib
 
 

@@ -16,25 +16,26 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-
 import cgi
 import copy
 import urllib
+
+import messages
+from unit_lesson_editor import CourseOutlineRights
 
 from common import schema_fields
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
-import messages
 from models import transforms
 from models.models import QuestionDAO
 from models.models import QuestionDTO
 from models.models import SaQuestionConstants
 from modules.oeditor import oeditor
-from unit_lesson_editor import CourseOutlineRights
 
 
 class BaseDatastoreAssetEditor(ApplicationHandler):
+
     def get_form(self, rest_handler, key=''):
         """Build the Jinja template for adding a question."""
         rest_url = self.canonicalize_url(rest_handler.URI)

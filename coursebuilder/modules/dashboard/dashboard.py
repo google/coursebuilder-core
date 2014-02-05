@@ -20,12 +20,6 @@ import datetime
 import os
 import urllib
 
-import appengine_config
-from common import jinja_utils
-from common import safe_dom
-from controllers import sites
-from controllers.utils import ApplicationHandler
-from controllers.utils import ReflectiveRequestHandler
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -37,15 +31,6 @@ from filer import TextAssetRESTHandler
 import jinja2
 import jinja2.exceptions
 import messages
-from models import config
-from models import courses
-from models import custom_modules
-from models import roles
-from models import vfs
-from models.models import QuestionDAO
-from models.models import QuestionGroupDAO
-from modules.dashboard import analytics
-from modules.search.search import SearchDashboardHandler
 from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
 from question_editor import QuestionManagerAndEditor
@@ -63,6 +48,21 @@ from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
 
+import appengine_config
+from common import jinja_utils
+from common import safe_dom
+from controllers import sites
+from controllers.utils import ApplicationHandler
+from controllers.utils import ReflectiveRequestHandler
+from models import config
+from models import courses
+from models import custom_modules
+from models import roles
+from models import vfs
+from models.models import QuestionDAO
+from models.models import QuestionGroupDAO
+from modules.dashboard import analytics
+from modules.search.search import SearchDashboardHandler
 from tools import verify
 
 from google.appengine.api import users

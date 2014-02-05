@@ -170,6 +170,7 @@ class ScriptElement(Element):
         """Add the script body."""
 
         class Script(Node):
+
             def __init__(self, script):
                 self._script = script
 

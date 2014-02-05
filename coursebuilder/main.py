@@ -18,6 +18,8 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import os
 
+import webapp2
+
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable-msg=unused-import
 
@@ -36,7 +38,6 @@ import modules.oeditor.oeditor
 import modules.review.review
 import modules.search.search
 import modules.upload.upload
-import webapp2
 
 # use this flag to control debug only features
 debug = not appengine_config.PRODUCTION_MODE

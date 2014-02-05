@@ -19,10 +19,10 @@ __author__ = 'Sean Lip (sll@google.com)'
 
 import unittest
 
-from models.courses import LEGACY_HUMAN_GRADER_WORKFLOW
-from models.courses import Workflow
 import yaml
 
+from models.courses import LEGACY_HUMAN_GRADER_WORKFLOW
+from models.courses import Workflow
 
 DATE_FORMAT_ERROR = (
     'dates should be formatted as YYYY-MM-DD hh:mm (e.g. 1997-07-16 19:20) and '
