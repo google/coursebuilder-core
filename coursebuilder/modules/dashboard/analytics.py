@@ -595,7 +595,12 @@ class ComputeQuestionScores(jobs.MapReduceJob):
     @staticmethod
     def reduce(question_id, scores):
       scores = [float(score) for score in scores]
-      yield (question_id, sum(scores)/len(scores))
+      scores.sort()
+      yield question_id, {
+          'num_answers': len(scores),
+          'average': sum(scores)/len(scores),
+          'median': scores[len(scores)/2],
+      }
 
 
 class QuestionScoreHandler(AnalyticsHandler):
@@ -628,9 +633,7 @@ class QuestionScoreHandler(AnalyticsHandler):
         template_values['update_message'] = update_message
 
     def _fill_completed_values(self, job, template_values):
-        # Proof-of-concept; don't have to be pretty; just dump values
-        # calculated by m/r job into a string.
-        template_values['stats'] = jobs.MapReduceJob.get_results(job)
+        template_values['stats'] = sorted(jobs.MapReduceJob.get_results(job))
         self._append_to_update_message(job, template_values,
                                        'View completed job run details')
 

@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import ast
 from datetime import datetime
 import logging
 import time
@@ -127,7 +128,10 @@ class StoreMapReduceResults(base_handler.PipelineBase):
         try:
             iterator = input_readers.RecordsReader(output, 0)
             for item in iterator:
-                results.append(item)
+                # Map/reduce puts reducer output into blobstore files as a
+                # string obtained via "str(result)".  Use AST as a safe
+                # alternative to eval() to get the Python object back.
+                results.append(ast.literal_eval(item))
             time_completed = time.time()
             with Namespace(namespace):
                 db.run_in_transaction(DurableJobEntity._complete_job, job_name,

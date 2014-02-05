@@ -7,12 +7,24 @@
     <p>No answers to questions have been recorded for this course.</p>
   {% else %}
     <ul>
+      <table>
+        <tr>
+          <th>Question ID</th>
+          <th>Number of Responses</th>
+          <th>Average Score</th>
+          <th>Median Score</th>
+        </tr>
       {% for stat in stats %}
-      <li>{{ stat }}</li>
+        <tr>
+          <td>{{ stat[0] }}</td>
+          <td align="right">{{ stat[1].num_answers }}</td>
+          <td align="right">{{ stat[1].average }}</td>
+          <td align="right">{{ stat[1].median }}</td>
+        </tr>
       {% endfor %}
+      </table>
     </ul>
   {% endif %}
-
 {% endif %}
 
 {% if errors %}
