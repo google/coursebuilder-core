@@ -110,16 +110,4 @@ def webapp_add_wsgi_middleware(app):
     return app
 
 
-def gcb_patch_import_map_reduce():
-    # Work around non-presence of env vars set by production AppEngine
-    # runtime, but not test version.  Only import mapreduce_module after
-    # loading third-party libs; the module depends on the mapreduce libary
-    # proper having been loaded.
-    if 'CURRENT_VERSION_ID' not in os.environ:
-        os.environ['CURRENT_VERSION_ID'] = '7.368834058928280579'
-    if 'CURRENT_MODULE_ID' not in os.environ:
-        os.environ['CURRENT_MODULE_ID'] = 'default'
-
-
 gcb_init_third_party()
-gcb_patch_import_map_reduce()

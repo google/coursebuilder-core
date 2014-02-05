@@ -19,7 +19,6 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
 
-import appengine_config
 from common import safe_dom
 from models import custom_modules
 from models.config import ConfigProperty
@@ -46,7 +45,7 @@ See an example page (with this control enabled)"""))
     ), False, multiline=False, validator=None)
 
 
-def env_patch_wrapper(self, *args, **kwargs):
+def authorization_wrapper(self, *args, **kwargs):
     # developers.google.com/appengine/docs/python/taskqueue/overview-push
     # promises that this header cannot be set by external callers.  If this
     # is present, we can be certain that the request is internal and from
@@ -56,7 +55,6 @@ def env_patch_wrapper(self, *args, **kwargs):
         self.response.out.write('Forbidden')
         self.response.set_status(403)
         return
-    appengine_config.gcb_patch_import_map_reduce()
     self.real_dispatch(*args, **kwargs)
 
 
@@ -102,23 +100,13 @@ def register_module():
                 handler_class.dispatch = ui_access_wrapper
             global_handlers.append((path, handler_class))
 
-        # Map/reduce code depends on two environment variables being set.  In
-        # the 1.8.2 version of the AppEngine development environment, these
-        # are not set for the local-developer runtime startup, and this
-        # prevents map/reduce tests from working.  This has been fixed by the
-        # 1.8.9 release.  However, as of 2014-01-24, we are not willing to
-        # take on the additional risk/work of upleveling our AE compatibility
-        # version (and the implied requirement for upleveled versions of other
-        # things that this would entail (e.g., webtest-2.X, which requires
-        # BeautifulSoup and the Python3 -> Python2 compatibility library named
-        # "six".
-        #
-        # That being the case, we need this ugliness here.
+        # Wrap worker handlers with check that request really is coming
+        # from task queue.
         else:
             if (hasattr(handler_class, 'dispatch') and
                 not hasattr(handler_class, 'real_dispatch')):
                 handler_class.real_dispatch = handler_class.dispatch
-                handler_class.dispatch = env_patch_wrapper
+                handler_class.dispatch = authorization_wrapper
             global_handlers.append((path, handler_class))
 
     # Tell map/reduce internals that this is now the base path to use.
