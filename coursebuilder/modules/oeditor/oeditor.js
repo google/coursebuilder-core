@@ -335,95 +335,104 @@ function TopLevelEditorControls(Y) {
 }
 TopLevelEditorControls.prototype = {
   getSaveButton: function() {
-    var that = this;
-    if (cb_global.save_url && cb_global.save_method) {
-      return {type: 'submit-link', value: cb_global.save_button_caption,
-        className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
-        onClick: function() {
-        cbShowMsg("Saving...");
-        disableAllControlButtons(cb_global.form);
-
-        // record current state
-        var lastSavedFormValue = cb_global.form.getValue();
-
-        // format request
-        var requestSave = cb_global.save_args;
-        requestSave.payload = JSON.stringify(lastSavedFormValue);
-
-        // append xsrf_token if provided
-        if (cb_global.xsrf_token) {
-            requestSave.xsrf_token = cb_global.xsrf_token;
-        }
-
-        // format request
-        var requestData = {"request": JSON.stringify(requestSave)};
-
-        // async post data to the server
-        var url = cb_global.save_url;
-
-          yioConfig = {
-            method: 'PUT',
-            data: requestData,
-            timeout : ajaxRpcTimeoutMillis,
-            on: {
-                complete: function(transactionId, response, args) {
-                  enableAllControlButtons(cb_global.form)
-
-                  var json;
-                  if (response && response.responseText) {
-                    json = parseJson(response.responseText);
-                  } else {
-                    cbShowMsg("Server did not respond. Please reload the page to try again.");
-                    return;
-                  }
-
-                  if (json.status != 200) {
-                    cbShowMsg(formatServerErrorMessage(
-                        json.status, json.message));
-                    return;
-                  }
-
-                  // save lastSavedFormValue
-                  cb_global.lastSavedFormValue = lastSavedFormValue;
-
-                  // If the REST handler returns a key value for an artifact
-                  // which previously had no key, update the form's key so as to
-                  // correctly reference the asset in future calls.
-                  if (json.payload) {
-                    var payload = JSON.parse(json.payload);
-                    if (payload.key && !cb_global.save_args.key) {
-                      cb_global.save_args.key = payload.key;
-                    }
-                  }
-
-                  // update UI
-                  cbShowMsg(json.message);
-                  if (cb_global.auto_return) {
-                    setTimeout(function() {
-                      window.location = cb_global.exit_url;
-                    }, 750);
-                  } else {
-                    setTimeout(function() {
-                      cbHideMsg();
-                    }, 5000);
-                  }
-                }
-            }
-          };
-
-          if (cb_global.save_method == 'upload') {
-            yioConfig.method = 'POST';
-            yioConfig.form = {
-              id: 'cb-oeditor-form',
-              upload: true
-            };
-          }
-
-          that._Y.io(url, yioConfig);
-          return false;
-        }};
-    } else {
+    if (! cb_global.save_url || ! cb_global.save_method) {
       return null;
+    }
+    return {
+      type: 'submit-link',
+      value: cb_global.save_button_caption,
+      className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
+      onClick: {
+        fn: this._onSaveClick,
+        scope: this
+      }
+    };
+  },
+
+  _onSaveClick: function() {
+    cbShowMsg("Saving...");
+    disableAllControlButtons(cb_global.form);
+
+    // record current state
+    this.lastSavedFormValue = cb_global.form.getValue();
+
+    // format request
+    var requestSave = cb_global.save_args;
+    requestSave.payload = JSON.stringify(this.lastSavedFormValue);
+
+    // append xsrf_token if provided
+    if (cb_global.xsrf_token) {
+        requestSave.xsrf_token = cb_global.xsrf_token;
+    }
+
+    // format request
+    var requestData = {"request": JSON.stringify(requestSave)};
+
+    // async post data to the server
+    var url = cb_global.save_url;
+
+    var yioConfig = {
+      method: 'PUT',
+      data: requestData,
+      timeout: ajaxRpcTimeoutMillis,
+      on: {
+        complete: this._onSaveComplete
+      },
+      context: this
+    };
+
+    if (cb_global.save_method == 'upload') {
+      yioConfig.method = 'POST';
+      yioConfig.form = {
+        id: 'cb-oeditor-form',
+        upload: true
+      };
+    }
+
+    this._Y.io(url, yioConfig); // 'this' will be the scope set in the onClick
+    return false;
+  },
+
+  _onSaveComplete: function(transactionId, response, args) {
+    enableAllControlButtons(cb_global.form)
+
+    var json;
+    if (response && response.responseText) {
+      json = parseJson(response.responseText);
+    } else {
+      cbShowMsg("Server did not respond. Please reload the page to try again.");
+      return;
+    }
+
+    if (json.status != 200) {
+      cbShowMsg(formatServerErrorMessage(
+          json.status, json.message));
+      return;
+    }
+
+    // save lastSavedFormValue
+    cb_global.lastSavedFormValue = this.lastSavedFormValue;
+
+    // If the REST handler returns a key value for an artifact
+    // which previously had no key, update the form's key so as to
+    // correctly reference the asset in future calls.
+    if (json.payload) {
+      var payload = JSON.parse(json.payload);
+      if (payload.key && !cb_global.save_args.key) {
+        cb_global.save_args.key = payload.key;
+      }
+    }
+
+    // update UI
+    cbShowMsg(json.message);
+    if (cb_global.auto_return) {
+      setTimeout(function() {
+        window.location = cb_global.exit_url;
+      }, 750);
+    } else {
+      setTimeout(function() {
+        cbHideMsg();
+      }, 5000);
     }
   },
 
@@ -431,124 +440,141 @@ TopLevelEditorControls.prototype = {
     return {
       type: 'link', value: cb_global.exit_button_caption,
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
-      onClick: function(e) {
-        disableAllControlButtons(cb_global.form);
-        if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
-            confirm("Abandon all changes?")) {
-          window.location = cb_global.exit_url;
-        } else {
-          enableAllControlButtons(cb_global.form);
-        }
-      }
+      onClick: this._onCloseClick
     };
   },
 
-  getDeleteButton: function() {
-    var that = this;
-    if (cb_global.delete_url != '') {
-      return {type: 'link', value: cb_global.delete_button_caption,
-        className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
-        onClick:function(e) {
-            disableAllControlButtons(cb_global.form);
-            if (confirm(cb_global.delete_message)) {
-              if (cb_global.delete_method == 'delete') {
-                // async delete
-                that._Y.io(cb_global.delete_url, {
-                  method: 'DELETE',
-                  data: '',
-                  timeout : ajaxRpcTimeoutMillis,
-                  on: {
-                    success: function(id, o, args) {
-                      enableAllControlButtons(cb_global.form);
-                      var json = parseJson(o.responseText);
-                      if (json.status != 200) {
-                        cbShowMsg(formatServerErrorMessage(json.status, json.message));
-                        return;
-                      } else {
-                        window.location = cb_global.exit_url;
-                      }
-                    },
-                    failure : function (x,o) {
-                      enableAllControlButtons(cb_global.form);
-                      cbShowMsg("Server did not respond. Please reload the page to try again.");
-                    }
-                  }
-                });
-              } else {
-                // form delete
-                var form = document.createElement('form');
-                form.method = cb_global.delete_method;
-                form.action = cb_global.delete_url;
-                document.body.appendChild(form);
-                form.submit();
-              }
-            } else {
-              enableAllControlButtons(cb_global.form);
-            }
-          }};
+  _onCloseClick: function(e) {
+    disableAllControlButtons(cb_global.form);
+    if (deepEquals(cb_global.lastSavedFormValue, cb_global.form.getValue()) ||
+        confirm("Abandon all changes?")) {
+      window.location = cb_global.exit_url;
     } else {
+      enableAllControlButtons(cb_global.form);
+    }
+  },
+
+  getDeleteButton: function() {
+    if (cb_global.delete_url == '') {
       return null;
     }
+    return {
+      type: 'link',
+      value: cb_global.delete_button_caption,
+      className: 'inputEx-Button inputEx-Button-Link gcb-pull-right',
+      onClick: {
+        fn: this._onDeleteClick,
+        scope: this
+      }
+    }
+  },
+
+  _onDeleteClick: function(e) {
+    disableAllControlButtons(cb_global.form);
+    if (confirm(cb_global.delete_message)) {
+      if (cb_global.delete_method == 'delete') {
+        // async delete
+        this._Y.io(cb_global.delete_url, {
+          method: 'DELETE',
+          data: '',
+          timeout : ajaxRpcTimeoutMillis,
+          on: {
+            success: this._onDeleteSuccess,
+            failure: this._onDeleteFailure
+          },
+          context: this
+        });
+      } else {
+        // form delete
+        var form = document.createElement('form');
+        form.method = cb_global.delete_method;
+        form.action = cb_global.delete_url;
+        document.body.appendChild(form);
+        form.submit();
+      }
+    } else {
+      enableAllControlButtons(cb_global.form);
+    }
+  },
+
+  _onDeleteSuccess: function(id, o, args) {
+    enableAllControlButtons(cb_global.form);
+    var json = parseJson(o.responseText);
+    if (json.status != 200) {
+      cbShowMsg(formatServerErrorMessage(json.status, json.message));
+      return;
+    } else {
+      window.location = cb_global.exit_url;
+    }
+  },
+
+  _onDeleteFailure: function (x,o) {
+    enableAllControlButtons(cb_global.form);
+    cbShowMsg("Server did not respond. Please reload the page to try again.");
   },
 
   populateForm: function() {
     // async request data for the object being edited
-    var that = this;
     this._Y.io(cb_global.get_url, {
       method: 'GET',
       timeout : ajaxRpcTimeoutMillis,
       on: {
-        success: function(id, o, args) {
-          var json = parseJson(o.responseText);
-
-          // check status code
-          if (json.status != 200) {
-            cbShowMsg(formatServerErrorMessage(json.status, json.message));
-            return;
-          }
-
-          // check payload
-          if (!json.payload) {
-            cbShowMsg("Server error; server sent no payload.");
-            return
-          }
-
-          // push payload into form
-          var payload = parseJson(json.payload);
-          cb_global.form.setValue(payload);
-
-          // record xsrf token if provided
-          if (json.xsrf_token) {
-            cb_global.xsrf_token = json.xsrf_token;
-          } else {
-            cb_global.xsrf_token = null;
-          }
-
-          // TODO(jorr): Encapsulate cb_global.original and
-          // cb_global.lastSavedFormValue in TopLavelEditorControls rather than
-          // global scope
-          cb_global.original = payload;
-          cb_global.lastSavedFormValue = payload;
-
-          // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
-          // but it does not work for rich edit control as it has delayed loading
-          // and may not be ready when this line above is executed
-
-          // update ui state
-          document.getElementById("formContainer").style.display = "block";
-
-          if (json.message) {
-            cbShowMsg(json.message);
-            setTimeout(function(){ cbHideMsg(); }, 5000);
-          } else {
-            cbHideMsg();
-          }
-          cb_global.onFormLoad(that._Y);
-        },
-        failure : function (x,o) {
-            cbShowMsg("Server did not respond. Please reload the page to try again.");
-        }
-      }
+        success: this._onPopulateFormSuccess,
+        failure : this._onPopulateFormFailure
+      },
+      context: this
     });
+  },
+
+  _onPopulateFormSuccess: function(id, o, args) {
+    var json = parseJson(o.responseText);
+
+    // check status code
+    if (json.status != 200) {
+      cbShowMsg(formatServerErrorMessage(json.status, json.message));
+      return;
+    }
+
+    // check payload
+    if (!json.payload) {
+      cbShowMsg("Server error; server sent no payload.");
+      return
+    }
+
+    // push payload into form
+    var payload = parseJson(json.payload);
+    cb_global.form.setValue(payload);
+
+    // record xsrf token if provided
+    if (json.xsrf_token) {
+      cb_global.xsrf_token = json.xsrf_token;
+    } else {
+      cb_global.xsrf_token = null;
+    }
+
+    // TODO(jorr): Encapsulate cb_global.original and
+    // cb_global.lastSavedFormValue in TopLavelEditorControls rather than
+    // global scope
+    cb_global.original = payload;
+    cb_global.lastSavedFormValue = payload;
+
+    // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
+    // but it does not work for rich edit control as it has delayed loading
+    // and may not be ready when this line above is executed
+
+    // update ui state
+    document.getElementById("formContainer").style.display = "block";
+
+    if (json.message) {
+      cbShowMsg(json.message);
+      setTimeout(function(){ cbHideMsg(); }, 5000);
+    } else {
+      cbHideMsg();
+    }
+    cb_global.onFormLoad(this._Y);
+  },
+
+  _onPopulateFormFailure: function (x,o) {
+    cbShowMsg("Server did not respond. Please reload the page to try again.");
   }
 };
