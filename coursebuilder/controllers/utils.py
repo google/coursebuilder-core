@@ -690,5 +690,42 @@ class XsrfTokenManager(object):
                 return True
 
             return False
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             return False
+
+
+class Namespace(object):
+    """Save current namespace and reset it.
+
+    This is inteded to be used in a 'with' statement.  The verbose code:
+      old_namespace = namespace_manager.get_namespace()
+      try:
+          namespace_manager.set_namespace(self._namespace)
+          app_specific_stuff()
+      finally:
+          namespace_manager.set_namespace(old_namespace)
+
+    can be replaced with the much more terse:
+      with Namespace(self._namespace):
+          app_specific_stuff()
+
+    This style can be used in classes that need to be pickled; the
+    @in_namespace function annotation (see below) is arguably visually
+    cleaner, but can't be used with pickling.
+
+    The other use-case for this style of acquire/release guard is when
+    only portions of a function need to be done within a namespaced
+    context.
+    """
+
+    def __init__(self, new_namespace):
+        self.new_namespace = new_namespace
+
+    def __enter__(self):
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.new_namespace)
+        return self
+
+    def __exit__(self, *unused_exception_info):
+        namespace_manager.set_namespace(self.old_namespace)
+        return False  # Don't suppress exceptions

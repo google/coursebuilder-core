@@ -30,11 +30,20 @@ import sys
 import time
 import urllib
 import zipfile
+
+import actions
+from actions import assert_contains
+from actions import assert_contains_all_of
+from actions import assert_does_not_contain
+from actions import assert_equals
 import appengine_config
 from controllers import lessons
 from controllers import sites
 from controllers import utils
+from controllers.utils import Namespace
 from controllers.utils import XsrfTokenManager
+from controllers_review import PeerReviewControllerTest
+from controllers_review import PeerReviewDashboardTest
 from models import config
 from models import courses
 from models import jobs
@@ -45,19 +54,14 @@ from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 import modules.oeditor.oeditor
+from review_stats import PeerReviewAnalyticsTest
+from webtest.app import AppError
+
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
 from tools.etl import remote
-from webtest.app import AppError
-import actions
-from actions import assert_contains
-from actions import assert_contains_all_of
-from actions import assert_does_not_contain
-from actions import assert_equals
-from controllers_review import PeerReviewControllerTest
-from controllers_review import PeerReviewDashboardTest
-from review_stats import PeerReviewAnalyticsTest
+
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
@@ -192,7 +196,7 @@ class InfrastructureTest(actions.TestBase):
         action = 'test-action'
         time_in_the_past = long(
             time.time() - utils.XsrfTokenManager.XSRF_TOKEN_AGE_SECS)
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         old_token = utils.XsrfTokenManager._create_token(
             action, time_in_the_past)
         assert not utils.XsrfTokenManager.is_xsrf_token_valid(old_token, action)
@@ -1300,7 +1304,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         compute_form = response.forms['gcb-compute-student-stats']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 4
+        assert len(self.taskq.GetTasks('default')) == 5
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -1848,12 +1852,12 @@ class StudentAspectTest(actions.TestBase):
 class StudentUnifiedProfileTest(StudentAspectTest):
     """Tests student actions having unified profile enabled."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(StudentUnifiedProfileTest, self).setUp()
         config.Registry.test_overrides[
             models.CAN_SHARE_STUDENT_PROFILE] = True
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         config.Registry.test_overrides = {}
         super(StudentUnifiedProfileTest, self).tearDown()
 
@@ -2224,7 +2228,7 @@ class AssessmentTest(actions.TestBase):
                     student.user_id).data)
             assert pre_answers == answers['Pre']
 
-            # pylint: disable-msg=g-explicit-bool-comparison
+            # pylint: disable=g-explicit-bool-comparison
             assert [] == answers['Mid']
             assert [] == answers['Fin']
             # pylint: enable-msg=g-explicit-bool-comparison
@@ -2407,7 +2411,7 @@ class MultipleCoursesTestBase(actions.TestBase):
         clone_canonical_course_data(self.bundle_root, course.home)
         self.modify_canonical_course_data(course)
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         """Configure the test."""
 
         super(MultipleCoursesTestBase, self).setUp()
@@ -2440,7 +2444,7 @@ class MultipleCoursesTestBase(actions.TestBase):
             'course:/courses/b:/data-b:nsb',
             'course:/courses/ru:/data-ru:nsru'))
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         """Clean up."""
         sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
@@ -2611,14 +2615,14 @@ class I18NTest(MultipleCoursesTestBase):
 class CourseUrlRewritingTestBase(actions.TestBase):
     """Prepare course for using rewrite rules and '/courses/pswg' base URL."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(CourseUrlRewritingTestBase, self).setUp()
 
         self.base = '/courses/pswg'
         self.namespace = 'gcb-courses-pswg-tests-ns'
         sites.setup_courses('course:%s:/:%s' % (self.base, self.namespace))
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         sites.reset_courses()
         super(CourseUrlRewritingTestBase, self).tearDown()
 
@@ -2646,7 +2650,7 @@ class CourseUrlRewritingTestBase(actions.TestBase):
 class VirtualFileSystemTestBase(actions.TestBase):
     """Prepares a course running on a virtual local file system."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         """Configure the test."""
 
         super(VirtualFileSystemTestBase, self).setUp()
@@ -2667,7 +2671,7 @@ class VirtualFileSystemTestBase(actions.TestBase):
 
         # Modify app_context filesystem to map /data-v to /data-vfs.
         def after_create(unused_cls, instance):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             instance._fs = vfs.AbstractFileSystem(
                 vfs.LocalReadOnlyFileSystem(
                     os.path.join(GeneratedCourse.data_home, 'data-vfs'),
@@ -2675,7 +2679,7 @@ class VirtualFileSystemTestBase(actions.TestBase):
 
         sites.ApplicationContext.after_create = after_create
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         """Clean up."""
         sites.reset_courses()
         appengine_config.BUNDLE_ROOT = self.bundle_root
@@ -2685,7 +2689,7 @@ class VirtualFileSystemTestBase(actions.TestBase):
 class DatastoreBackedCourseTest(actions.TestBase):
     """Prepares an empty course running on datastore-backed file system."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         """Configure the test."""
         super(DatastoreBackedCourseTest, self).setUp()
 
@@ -2697,7 +2701,7 @@ class DatastoreBackedCourseTest(actions.TestBase):
         assert len(all_courses) == 1
         self.app_context = all_courses[0]
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         """Clean up."""
         sites.reset_courses()
         super(DatastoreBackedCourseTest, self).tearDown()
@@ -3090,7 +3094,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):
     """Run all existing tests using datastore-backed file system."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(DatastoreBackedSampleCourseTest, self).setUp()
         self.init_course_data(self.upload_all_sample_course_files)
 
@@ -3208,7 +3212,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
     """Tests tools/etl/etl.py's main()."""
 
     # Allow access to protected members under test.
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     def setUp(self):
         """Configures EtlMainTestCase."""
         super(EtlMainTestCase, self).setUp()
@@ -3762,7 +3766,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
 class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
     """Tests privacy transforms."""
 
-    # Testing protected functions. pylint: disable-msg=protected-access
+    # Testing protected functions. pylint: disable=protected-access
     def test_hmac_sha_2_256_is_stable(self):
         self.assertEqual(
             etl._hmac_sha_2_256('secret', 'value'),
@@ -3785,13 +3789,13 @@ class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
 class EtlRemoteEnvironmentTestCase(actions.TestBase):
     """Tests tools/etl/remote.py."""
 
-    # Method name determined by superclass. pylint: disable-msg=g-bad-name
+    # Method name determined by superclass. pylint: disable=g-bad-name
     def setUp(self):
         super(EtlRemoteEnvironmentTestCase, self).setUp()
         self.test_environ = copy.deepcopy(os.environ)
 
     # Allow access to protected members under test.
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     def disabled_test_can_establish_environment_in_dev_mode(self):
         # Stub the call that requires user input so the test runs unattended.
         self.swap(__builtin__, 'raw_input', lambda _: 'username')
@@ -3817,11 +3821,11 @@ class VirtualFileSystemTest(VirtualFileSystemTestBase):
 class MemcacheTestBase(actions.TestBase):
     """Executes all tests with memcache enabled."""
 
-    def setUp(self):  # pylint: disable-msg=g-bad-name
+    def setUp(self):  # pylint: disable=g-bad-name
         super(MemcacheTestBase, self).setUp()
         config.Registry.test_overrides = {models.CAN_USE_MEMCACHE.name: True}
 
-    def tearDown(self):  # pylint: disable-msg=g-bad-name
+    def tearDown(self):  # pylint: disable=g-bad-name
         config.Registry.test_overrides = {}
         super(MemcacheTestBase, self).tearDown()
 
@@ -3833,10 +3837,10 @@ class MemcacheTest(MemcacheTestBase):
 class TransformsJsonFileTestCase(actions.TestBase):
     """Tests for models/transforms.py's JsonFile."""
 
-    # Method name determined by superclass. pylint: disable-msg=g-bad-name
+    # Method name determined by superclass. pylint: disable=g-bad-name
     def setUp(self):
         super(TransformsJsonFileTestCase, self).setUp()
-        # Treat as module-protected. pylint: disable-msg=protected-access
+        # Treat as module-protected. pylint: disable=protected-access
         self.path = os.path.join(self.test_tempdir, 'file.json')
         self.reader = transforms.JsonFile(self.path)
         self.writer = transforms.JsonFile(self.path)
@@ -4104,6 +4108,28 @@ var activity = [
             self.URI, params={'request': transforms.dumps(request)})
         response_dict = transforms.loads(response.body)
         self.assertEqual(response_dict['status'], 403)
+
+
+class NamespaceTest(actions.TestBase):
+
+    def test_namespace_context_manager(self):
+        pre_test_namespace = namespace_manager.get_namespace()
+        with Namespace('xyzzy'):
+            self.assertEqual(namespace_manager.get_namespace(), 'xyzzy')
+            with Namespace('plugh'):
+                self.assertEqual(namespace_manager.get_namespace(), 'plugh')
+            self.assertEqual(namespace_manager.get_namespace(), 'xyzzy')
+        self.assertEqual(namespace_manager.get_namespace(), pre_test_namespace)
+
+    def test_namespace_context_manager_handles_exception(self):
+        pre_test_namespace = namespace_manager.get_namespace()
+        try:
+            with Namespace('xyzzy'):
+                self.assertEqual(namespace_manager.get_namespace(), 'xyzzy')
+                raise RuntimeError('No way, Jose')
+        except RuntimeError:
+            pass
+        self.assertEqual(namespace_manager.get_namespace(), pre_test_namespace)
 
 
 ALL_COURSE_TESTS = (
