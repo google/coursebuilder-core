@@ -736,7 +736,8 @@ class PersistentCourse13(object):
                     'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW,
                     'html_content': '',
                     'html_check_answers': False,
-                    'html_review_form': ''}
+                    'html_review_form': '',
+                    'properties': {}}
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
@@ -747,7 +748,8 @@ class PersistentCourse13(object):
                 lesson = Lesson13()
                 defaults = {
                     'activity_listed': True,
-                    'scored': False}
+                    'scored': False,
+                    'properties': {}}
                 transforms.dict_to_instance(
                     lesson_dict, lesson, defaults=defaults)
                 self.lessons.append(lesson)
