@@ -26,39 +26,40 @@ import appengine_config  # pylint: disable-msg=unused-import
 from common import tags
 from controllers import sites
 from models import custom_modules
-import modules.activity_tag.activity_tag
-import modules.admin.admin
-import modules.announcements.announcements
-import modules.assessment_tags.questions
-import modules.course_explorer.course_explorer
-import modules.courses.courses
-import modules.dashboard.dashboard
-import modules.mapreduce.mapreduce_module
-import modules.oauth2.oauth2
-import modules.oeditor.oeditor
-import modules.review.review
-import modules.search.search
-import modules.upload.upload
+from modules.activity_tag import activity_tag
+from modules.admin import admin
+from modules.announcements import announcements
+from modules.assessment_tags import questions
+from modules.course_explorer import course_explorer
+from modules.courses import courses
+from modules.dashboard import dashboard
+from modules.mapreduce import mapreduce_module
+from modules.oauth2 import oauth2
+from modules.oeditor import oeditor
+from modules.review import review
+from modules.search import search
+from modules.upload import upload
 
 # use this flag to control debug only features
 debug = not appengine_config.PRODUCTION_MODE
 
+
 # init and enable most known modules
-modules.activity_tag.activity_tag.register_module().enable()
-modules.admin.admin.register_module().enable()
-modules.announcements.announcements.register_module().enable()
-modules.assessment_tags.questions.register_module().enable()
-modules.course_explorer.course_explorer.register_module().enable()
-modules.courses.courses.register_module().enable()
-modules.dashboard.dashboard.register_module().enable()
-modules.mapreduce.mapreduce_module.register_module().enable()
-modules.oeditor.oeditor.register_module().enable()
-modules.review.review.register_module().enable()
-modules.search.search.register_module().enable()
-modules.upload.upload.register_module().enable()
+activity_tag.register_module().enable()
+admin.register_module().enable()
+announcements.register_module().enable()
+questions.register_module().enable()
+course_explorer.register_module().enable()
+courses.register_module().enable()
+dashboard.register_module().enable()
+mapreduce_module.register_module().enable()
+oeditor.register_module().enable()
+review.register_module().enable()
+search.register_module().enable()
+upload.register_module().enable()
 
 # register modules that are not enabled by default.
-modules.oauth2.oauth2.register_module()
+oauth2.register_module()
 
 # compute all possible routes
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
