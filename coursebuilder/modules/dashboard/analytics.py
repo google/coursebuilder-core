@@ -35,6 +35,71 @@ from models.models import Student
 from models.models import StudentPropertyEntity
 
 
+class AnalyticsHandler(ApplicationHandler):
+
+    @property
+    def description(self):
+        return self._description
+
+    @property
+    def html_template_name(self):
+        return self._html_template_name
+
+    def _fill_template_values(self, job, template_values):
+        raise NotImplementedError(
+            'Classes derived from AnalyticsHandler are expected to implement '
+            '_fill_template_values().  This function should put elements into '
+            '"template_values" that are to be displayed on the results page '
+            'fragment.  In addition to whatever class-specific messages '
+            'they like, implementations may also wish to overwrite the '
+            'value of "update_message" which is shown as an overall status '
+            'message.')
+
+    def get_markup(self, job):
+        template_values = {}
+        template_values['stats_calculated'] = False
+        if not job:
+            message = (
+                '%s statistics have not been calculated yet.' %
+                self.description.capitalize())
+            template_values['update_message'] = safe_dom.Text(message)
+        else:
+            if job.status_code == jobs.STATUS_CODE_COMPLETED:
+                template_values['stats_calculated'] = True
+                default_message = (
+                    '%s statistics were last updated at %s in about %s sec.' % (
+                        self.description.capitalize(),
+                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
+                        job.execution_time_sec))
+                # This message can be overridden by _fill_template_values()
+                # as necessary and approprate.
+                template_values['update_message'] = safe_dom.Text(
+                    default_message)
+
+                self._fill_template_values(job, template_values)
+            elif job.status_code == jobs.STATUS_CODE_FAILED:
+                message = (
+                    'There was an error updating %s statistics.  Error msg:' %
+                           self.description)
+                template_values['update_message'] = safe_dom.Text(
+                    message
+                ).append(
+                    safe_dom.Element('br')
+                ).append(
+                    safe_dom.Element('blockquote').add_child(
+                        safe_dom.Element('pre').add_text(
+                            '\n%s' % job.output)))
+            else:
+                message = (
+                    '%s statistics update started at %s and is running now.' % (
+                        self.description.capitalize(),
+                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
+                template_values['update_message'] = safe_dom.Text(message)
+        return jinja2.utils.Markup(self.get_template(
+            self.html_template_name, [os.path.dirname(__file__)]
+        ).render(template_values, autoescape=True))
+
+
 class ComputeStudentStats(jobs.DurableJob):
     """A job that computes student statistics."""
 
@@ -95,7 +160,7 @@ class ComputeStudentStats(jobs.DurableJob):
         return data
 
 
-class StudentEnrollmentAndScoresHandler(ApplicationHandler):
+class StudentEnrollmentAndScoresHandler(AnalyticsHandler):
     """Shows student enrollment analytics on the dashboard."""
 
     # The key used in the statistics dict that generates the dashboard page.
@@ -103,65 +168,25 @@ class StudentEnrollmentAndScoresHandler(ApplicationHandler):
     name = 'enrollment_and_scores'
     # The class that generates the data to be displayed.
     stats_computer = ComputeStudentStats
+    _description = 'enrollment/assessment'
+    _html_template_name = 'basic_analytics.html'
 
-    def get_markup(self, job):
-        """Returns Jinja markup for peer review analytics."""
-        template_values = {}
-        errors = []
-        stats_calculated = False
-        update_message = safe_dom.Text('')
+    def _fill_template_values(self, job, template_values):
+        stats = transforms.loads(job.output)
 
-        if not job:
-            update_message = safe_dom.Text(
-                'Enrollment/assessment statistics have not been calculated '
-                'yet.')
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                stats = transforms.loads(job.output)
-                stats_calculated = True
+        template_values['enrolled'] = stats['enrollment']['enrolled']
+        template_values['unenrolled'] = (
+            stats['enrollment']['unenrolled'])
 
-                template_values['enrolled'] = stats['enrollment']['enrolled']
-                template_values['unenrolled'] = (
-                    stats['enrollment']['unenrolled'])
-
-                scores = []
-                total_records = 0
-                for key, value in stats['scores'].items():
-                    total_records += value[0]
-                    avg = round(value[1] / value[0], 1) if value[0] else 0
-                    scores.append({'key': key, 'completed': value[0],
-                                   'avg': avg})
-                template_values['scores'] = scores
-                template_values['total_records'] = total_records
-
-                update_message = safe_dom.Text("""
-                    Enrollment and assessment statistics were last updated at
-                    %s in about %s second(s).""" % (
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
-                        job.execution_time_sec))
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = safe_dom.NodeList().append(
-                    safe_dom.Text("""
-                        There was an error updating enrollment/assessment
-                        statistics. Here is the message:""")
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
-            else:
-                update_message = safe_dom.Text(
-                    'Enrollment and assessment statistics update started at %s'
-                    ' and is running now. Please come back shortly.' %
-                    job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT))
-
-        template_values['stats_calculated'] = stats_calculated
-        template_values['errors'] = errors
-        template_values['update_message'] = update_message
-
-        return jinja2.utils.Markup(self.get_template(
-            'basic_analytics.html', [os.path.dirname(__file__)]
-        ).render(template_values, autoescape=True))
+        scores = []
+        total_records = 0
+        for key, value in stats['scores'].items():
+            total_records += value[0]
+            avg = round(value[1] / value[0], 1) if value[0] else 0
+            scores.append({'key': key, 'completed': value[0],
+                           'avg': avg})
+        template_values['scores'] = scores
+        template_values['total_records'] = total_records
 
 
 class ComputeStudentProgressStats(jobs.DurableJob):
@@ -205,73 +230,32 @@ class ComputeStudentProgressStats(jobs.DurableJob):
         return student_progress.progress_data
 
 
-class StudentProgressStatsHandler(ApplicationHandler):
+class StudentProgressStatsHandler(AnalyticsHandler):
     """Shows student progress analytics on the dashboard."""
 
     name = 'student_progress_stats'
     stats_computer = ComputeStudentProgressStats
+    _description = 'student progress'
+    _html_template_name = 'progress_stats.html'
 
-    def get_markup(self, job):
-        """Returns Jinja markup for student progress analytics."""
-
-        errors = []
-        stats_calculated = False
-        update_message = safe_dom.Text('')
-
+    def _fill_template_values(self, job, template_values):
         course = courses.Course(self)
-        entity_codes = (
+        template_values['entity_codes'] = transforms.dumps(
             progress.UnitLessonCompletionTracker.EVENT_CODE_MAPPING.values())
-        value = None
-        course_content = None
-
-        if not job:
-            update_message = safe_dom.Text(
-                'Student progress statistics have not been calculated yet.')
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                value = transforms.loads(job.output)
-                stats_calculated = True
-                try:
-                    course_content = progress.ProgressStats(
-                        course).compute_entity_dict('course', [])
-                    update_message = safe_dom.Text("""
-                        Student progress statistics were last updated at
-                        %s in about %s second(s).""" % (
-                            job.updated_on.strftime(
-                                HUMAN_READABLE_TIME_FORMAT),
-                            job.execution_time_sec))
-                except IOError:
-                    update_message = safe_dom.Text("""
-                        This feature is supported by CB 1.3 and up.""")
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = safe_dom.NodeList().append(
-                    safe_dom.Text("""
-                        There was an error updating student progress statistics.
-                        Here is the message:""")
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
-            else:
-                update_message = safe_dom.Text("""
-                    Student progress statistics update started at %s and is
-                    running now. Please come back shortly.""" % (
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
+        value = transforms.loads(job.output)
         if value:
             value = transforms.dumps(value)
         else:
             value = None
-        return jinja2.utils.Markup(self.get_template(
-            'progress_stats.html', [os.path.dirname(__file__)]
-        ).render({
-            'errors': errors,
-            'progress': value,
-            'content': transforms.dumps(course_content),
-            'entity_codes': transforms.dumps(entity_codes),
-            'stats_calculated': stats_calculated,
-            'update_message': update_message,
-        }, autoescape=True))
+        template_values['progress'] = value
+
+        try:
+            template_values['content'] = transforms.dumps(
+                progress.ProgressStats(course).compute_entity_dict(
+                    'course', []))
+        except IOError:
+            template_values['update_message'] = safe_dom.Text(
+                'This feature is supported by CB 1.3 and up.')
 
 
 class ComputeQuestionStats(jobs.DurableJob):
@@ -567,61 +551,19 @@ class ComputeQuestionStats(jobs.DurableJob):
                 question_stats.id_to_assessments_dict)
 
 
-class QuestionStatsHandler(ApplicationHandler):
+class QuestionStatsHandler(AnalyticsHandler):
     """Shows statistics on the dashboard for students' answers to questions."""
 
     name = 'question_answers_stats'
     stats_computer = ComputeQuestionStats
+    _description = 'multiple-choice question'
+    _html_template_name = 'question_stats.html'
 
-    def get_markup(self, job):
-        """Returns Jinja markup for question stats analytics."""
+    def _fill_template_values(self, job, template_values):
+        accumulated_question_answers, accumulated_assessment_answers = (
+            transforms.loads(job.output))
 
-        errors = []
-        stats_calculated = False
-        update_message = safe_dom.Text('')
-
-        accumulated_question_answers = None
-        accumulated_assessment_answers = None
-
-        if not job:
-            update_message = safe_dom.Text(
-                'Multiple-choice question statistics have not been calculated '
-                'yet.')
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                accumulated_question_answers, accumulated_assessment_answers = (
-                    transforms.loads(job.output))
-                stats_calculated = True
-                update_message = safe_dom.Text("""
-                    Multiple-choice question statistics were last updated at
-                    %s in about %s second(s).""" % (
-                        job.updated_on.strftime(
-                            HUMAN_READABLE_TIME_FORMAT),
-                        job.execution_time_sec))
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = safe_dom.NodeList().append(
-                    safe_dom.Text("""
-                        There was an error updating multiple-choice question
-                        statistics. Here is the message:""")
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
-            else:
-                update_message = safe_dom.Text("""
-                    Multiple-choice question statistics update started at %s
-                    and is running now. Please come back shortly.""" % (
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT)))
-
-        return jinja2.utils.Markup(self.get_template(
-            'question_stats.html', [os.path.dirname(__file__)]
-        ).render({
-            'errors': errors,
-            'accumulated_question_answers': transforms.dumps(
-                accumulated_question_answers),
-            'accumulated_assessment_answers': transforms.dumps(
-                accumulated_assessment_answers),
-            'stats_calculated': stats_calculated,
-            'update_message': update_message,
-        }, autoescape=True))
+        template_values['accumulated_question_answers'] = transforms.dumps(
+            accumulated_question_answers)
+        template_values['accumulated_assessment_answers'] = transforms.dumps(
+            accumulated_assessment_answers)
