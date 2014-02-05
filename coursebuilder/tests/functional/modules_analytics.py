@@ -18,24 +18,21 @@
 __author__ = 'Julia Oh(juliaoh@google.com)'
 
 import os
-import appengine_config
 
+import actions
+from actions import assert_contains
+from actions import assert_does_not_contain
+from actions import assert_equals
+import appengine_config
 from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
 from models import models
 from models import transforms
-
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
 from modules.dashboard import analytics
-
-
-import actions
-from actions import assert_contains
-from actions import assert_does_not_contain
-from actions import assert_equals
 
 
 class ProgressAnalyticsTest(actions.TestBase):
