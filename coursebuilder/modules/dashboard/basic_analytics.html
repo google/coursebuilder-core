@@ -1,12 +1,12 @@
+<h3>Enrollment Statistics</h3>
+
 {% if stats_calculated %}
-  <h3>Enrollment Statistics</h3>
   <ul>
     <li>previously enrolled: {{ unenrolled }}</li>
     <li>currently enrolled: {{ enrolled }}</li>
     <li>total: {{ unenrolled + enrolled }}</li>
   </ul>
 
-  <h3>Assessment Statistics</h3>
   <ul>
     {% for unit in scores %}
       <li>
@@ -20,7 +20,7 @@
 {% endif %}
 
 {% if errors %}
-  <h3>Enrollment and Assessment Statistics -- Errors</h3>
+  <b>Errors:</b>
   <ul>
     {% for error in errors %}
       <li>{{ error }}</li>

@@ -1,3 +1,5 @@
+<h3>Student Progress Statistics</h3>
+
 {% if stats_calculated %}
   {% if content %}
     {% if progress %}
@@ -52,18 +54,16 @@
         }
         </script>
 
-        <h3>Student Progress Statistics</h3>
         <div id="visualization" class="chart-container"></div>
 
       {% else %}
-        <h3>Student Progress Statistics</h3>
         <p>No student progress has been recorded for this course.</p>
       {% endif %}
    {% endif %}
 {% endif %}
 
 {% if errors %}
-  <h3>Student Progress Statistics -- Errors</h3>
+  <b>Errors:</b>
   <ul>
     {% for error in errors %}
       <li>{{ error }}</li>

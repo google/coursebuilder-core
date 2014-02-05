@@ -1,5 +1,6 @@
+<h3>Peer Review Statistics</h3>
+
 {% if stats_calculated %}
-  <h3>Peer Review Statistics</h3>
   {% if serialized_units %}
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
@@ -52,7 +53,7 @@
 {% endif %}
 
 {% if errors %}
-  <h3>Peer Review Statistics -- Errors</h3>
+  <b>Errors:</>
   <ul>
     {% for error in errors %}
       <li>{{ error }}</li>
