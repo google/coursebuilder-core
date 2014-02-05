@@ -102,7 +102,8 @@ class UnitLessonEditor(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title('Import Course')
-        template_values['page_title_linked'] = self.format_title('Import Course')
+        template_values['page_title_linked'] = self.format_title(
+            'Import Course')
 
         annotations = ImportCourseRESTHandler.SCHEMA_ANNOTATIONS_DICT()
         if not annotations:
