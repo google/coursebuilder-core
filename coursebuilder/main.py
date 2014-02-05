@@ -31,7 +31,6 @@ import modules.assessment_tags.questions
 import modules.course_explorer.course_explorer
 import modules.courses.courses
 import modules.dashboard.dashboard
-import modules.mapreduce.mapreduce_module
 import modules.oauth2.oauth2
 import modules.oeditor.oeditor
 import modules.review.review
@@ -50,7 +49,6 @@ modules.assessment_tags.questions.register_module().enable()
 modules.course_explorer.course_explorer.register_module().enable()
 modules.courses.courses.register_module().enable()
 modules.dashboard.dashboard.register_module().enable()
-modules.mapreduce.mapreduce_module.register_module().enable()
 modules.oeditor.oeditor.register_module().enable()
 modules.review.review.register_module().enable()
 modules.search.search.register_module().enable()
