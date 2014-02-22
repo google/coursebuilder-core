@@ -41,7 +41,7 @@ var eventXsrfToken = '';
 var assessmentXsrfToken = '';
 
 function gcbTagEventAudit(data_dict, name) {
-  gcbAudit(gcbCanPostTagEvents, data_dict, 'event-tag-' + name, true);
+  gcbAudit(gcbCanPostTagEvents, data_dict, 'tag-' + name, true);
 }
 
 function gcbPageEventAudit(data_dict, name) {
@@ -49,15 +49,15 @@ function gcbPageEventAudit(data_dict, name) {
 }
 
 function gcbActivityAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-activity', true);
+  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-activity', true);
 }
 
 function gcbLessonAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-lesson', true);
+  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-lesson', true);
 }
 
 function gcbAssessmentAudit(data_dict) {
-  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-assessment', true);
+  gcbAudit(gcbCanPostEvents, data_dict, 'attempt-assessment', true);
 }
 
 function gcbAudit(can_post, data_dict, source, is_async) {
@@ -79,6 +79,7 @@ function gcbAudit(can_post, data_dict, source, is_async) {
     });
   }
 
+  // ----------------------------------------------------------------------
   // Report to the Google Tag manager, if it's configured.  The 'dataLayer'
   // object is hooked to override the normal array's 'push()' with a handler.
   // This is the only place in CB that will emit 'event' as a name into the
@@ -86,9 +87,31 @@ function gcbAudit(can_post, data_dict, source, is_async) {
   // behaved set of tag rules to actually do anything.  Note that we get
   // here both on page load (from $(document).ready(), below), as well as
   // from the various on-page events.
-  var tmp = {}
-  $.extend(tmp, data_dict, {'event': 'gcb.' + source, 'is_async': is_async});
-  dataLayer.push(tmp);
+  if ('dataLayer' in window) {
+
+    // Translate event names to be a bit more regularized.  This permits
+    // simpler rules in the tag manager (e.g., "{{event}} startswith
+    // 'gcb.page-'" means it's a page-level event.  Being able to make this
+    // distinction is convenient for passing along facts to Google Analytics.
+    switch (source) {
+    case 'enter-page':
+    case 'exit-page':
+      source = 'page.' + source
+    default:
+      source = 'event.' + source
+      break;
+    }
+
+    // Always prefix our events so that clients can distinguish between our
+    // events (starting with 'gcb.'), Google Tag Manager events (start with
+    // 'gtm.'), and any events from their own content or other libraries they
+    // might be pulling in.
+    source = 'gcb.' + source
+
+    var tmp = {}
+    $.extend(tmp, data_dict, {'event': source, 'is_async': is_async});
+    dataLayer.push(tmp);
+  }
 }
 
 // Returns the value of a URL parameter, if it exists.
@@ -840,12 +863,12 @@ $(document).ready(function() {
 
   // send 'enter-page' event to the server
   try {
-    gcbPageEventAudit({}, 'page-enter');
+    gcbPageEventAudit({}, 'enter-page');
   } catch (e){}
 
   // hook click events of specific links
   $('#lessonNotesLink').click(function(evt) {
-      gcbPageEventAudit({'href': evt.target.href}, 'link-follow');
+      gcbPageEventAudit({'href': evt.target.href}, 'click-link');
       return true;
   });
 
@@ -876,6 +899,6 @@ $(window).unload(function() {
   // send 'visit-page' event to the server
   try {
     // duration is in milliseconds
-    gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'page-unload');
+    gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'exit-page');
   } catch (e){}
 });

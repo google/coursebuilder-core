@@ -1,9 +1,11 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  dataLayer.push({
-    'page_type': 'student_profile',
-  });
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'student_profile',
+    });
+  }
 {% endblock %}
 
 {% block subtitle %}

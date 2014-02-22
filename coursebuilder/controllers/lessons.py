@@ -55,9 +55,9 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
 
-TAGS_THAT_TRIGGER_BLOCK_COMPLETION = ['event-attempt-activity']
-TAGS_THAT_TRIGGER_COMPONENT_COMPLETION = ['event-tag-assessment']
-TAGS_THAT_TRIGGER_HTML_COMPLETION = ['event-attempt-lesson']
+TAGS_THAT_TRIGGER_BLOCK_COMPLETION = ['attempt-activity']
+TAGS_THAT_TRIGGER_COMPONENT_COMPLETION = ['tag-assessment']
+TAGS_THAT_TRIGGER_HTML_COMPLETION = ['attempt-lesson']
 
 
 def get_first_lesson(handler, unit_id):

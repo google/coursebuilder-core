@@ -1,13 +1,15 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  dataLayer.push({
-    'page_type': 'activity',
-    'unit_id': '{{ unit_id }}',
-    {% if lesson_id %}
-      'lesson_id': '{{ lesson_id }}',
-    {% endif %}
-  });
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'activity',
+      'unit_id': '{{ unit_id }}',
+      {% if lesson_id %}
+        'lesson_id': '{{ lesson_id }}',
+      {% endif %}
+    });
+  }
 {% endblock %}
 
 {% block subtitle %}

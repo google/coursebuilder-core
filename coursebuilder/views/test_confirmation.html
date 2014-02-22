@@ -1,10 +1,12 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  dataLayer.push({
-    'page_type': 'test_confirmation',
-    'unit_id': '{{ unit_id }}',
-  });
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'test_confirmation',
+      'unit_id': '{{ unit_id }}',
+    });
+  }
 {% endblock %}
 
 {% block top_content %}

@@ -1,9 +1,11 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  dataLayer.push({
-    'page_type': 'course',
-  });
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'course',
+    });
+  }
 {% endblock %}
 
 {% block top_content %}

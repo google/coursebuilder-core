@@ -1,9 +1,11 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  dataLayer.push({
-    'page_type': 'forum',
-  });
+  if ('gcbSetPageInfo' in window) {
+    gcbSetPageInfo({
+      'page_type': 'forum',
+    });
+  }
 {% endblock %}
 
 {% block subtitle %}

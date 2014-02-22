@@ -146,6 +146,10 @@
         'event': 'default',  // Explicit value meaning not-really-set.
         }];
 
+      function gcbSetPageInfo(dict) {
+        dataLayer.push(dict);
+      }
+
       // Invoke page-specific block so that any calls to gcbReportPageInfo()
       // are made before we hit the Tag Manager call, below.
       {% block gcb_page_info %}

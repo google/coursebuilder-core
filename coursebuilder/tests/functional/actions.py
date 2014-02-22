@@ -479,7 +479,7 @@ def attempt_activity(browser, unit_id, lesson_id, index, answer, correct):
     response, args = get_activity(browser, unit_id, lesson_id, {})
 
     # Prepare activity submission event.
-    args['source'] = 'event-attempt-activity'
+    args['source'] = 'attempt-activity'
     args['payload'] = {
         'index': index,
         'type': 'activity-choice',

@@ -333,11 +333,11 @@ class ComputeQuestionStats(jobs.DurableJob):
     class MultipleChoiceQuestionAggregator(object):
         """Class that aggregates submissions for multiple-choice questions."""
 
-        ATTEMPT_ACTIVITY = 'event-attempt-activity'
-        TAG_ASSESSMENT = 'event-tag-assessment'
-        ATTEMPT_LESSON = 'event-attempt-lesson'
-        SUBMIT_ASSESSMENT = 'event-submit-assessment'
-        ATTEMPT_ASSESSMENT = 'event-attempt-assessment'
+        ATTEMPT_ACTIVITY = 'attempt-activity'
+        TAG_ASSESSMENT = 'tag-assessment'
+        ATTEMPT_LESSON = 'attempt-lesson'
+        SUBMIT_ASSESSMENT = 'submit-assessment'
+        ATTEMPT_ASSESSMENT = 'attempt-assessment'
         MC_QUESTION = 'McQuestion'
         QUESTION_GROUP = 'QuestionGroup'
         ACTIVITY_CHOICE = 'activity-choice'
