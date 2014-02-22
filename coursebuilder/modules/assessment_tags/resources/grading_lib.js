@@ -57,7 +57,7 @@ BaseQuestion.prototype.onCheckAnswer = function() {
     var auditDict = {
       'instanceid': this.id,
       'answer': grade.answer,
-      'score': grade.score,
+      'score': Math.round(100 * grade.score) / 100,
       'type': this.type
     }
     if (this instanceof QuestionGroup) {
@@ -307,7 +307,7 @@ QuestionGroup.prototype.onCheckAnswer = function() {
   this.componentAudit({
     'instanceid': this.id,
     'answer': grade.answer,
-    'score': grade.score,
+    'score': Math.round(100 * grade.score) / 100,
     'individualScores': grade.individualScores,
     'containedTypes': grade.containedTypes,
     'type': this.type
@@ -333,7 +333,7 @@ QuestionGroup.prototype.grade = function() {
   var totalWeight = this.getWeight();
   return {
     answer: answer,
-    score: Math.round(100 * score / totalWeight) / 100,
+    score: score / totalWeight,
     feedback: feedback,
     individualScores: individualScores,
     containedTypes: containedTypes

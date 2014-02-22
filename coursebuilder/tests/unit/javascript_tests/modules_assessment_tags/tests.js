@@ -344,6 +344,45 @@ describe('assessment tags', function() {
       var grade = qg.grade();
       expect(grade.score).toBeCloseTo(0.6, 10);
     });
+    it('rounds fractional grades only when recorded', function() {
+      // Initialize the questions with weighting which gives a recurring
+      // decimal. Check that the score not not rounded internally (i.e., calls
+      // to grade() do not round) but is rounded when reporting to the event
+      // stream.
+      var el = $('#qg-0');
+      var questionData = {
+        'qg-0': {
+          'qg-0-mc-0': {'weight': '1'},
+          'qg-0-sa-0': {'weight': '5'},
+        },
+        'qg-0-mc-0': {choices: [
+          {score: '1', feedback: 'yes'},
+          {score: '0', feedback: 'no'}]},
+        'qg-0-sa-0': {
+          hint: 'it\s \'falafel\'',
+          graders: [{
+            matcher: 'case_insensitive',
+            response: 'falafel',
+            score: '1.0',
+            feedback: 'good'
+          }]
+        }
+      };
+      var componentAudit = function(arg) {
+        auditDict = arg;
+        auditDict.location = LOGGING_LOCATION;
+      }
+      qg = new QuestionGroup(el, questionData, MESSAGES, componentAudit);
+
+      $('#qg-0-mc-0-0').prop('checked', true);
+
+      // Expect unrounded score
+      expect(qg.grade().score).toBeCloseTo(1/6, 10);
+
+      // Expect rounded score
+      qg.onCheckAnswer();
+      expect(auditDict.score).toBe(0.17);
+    });
     it('gets the feedback from all the questions', function() {
       $('#qg-0-mc-0-0').prop('checked', true);
       $('#qg-0-sa-0 > .qt-response > input, .qt-response > textarea')
