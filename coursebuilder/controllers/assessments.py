@@ -98,7 +98,7 @@ class AnswerHandler(BaseHandler):
         # Also record the event, which is useful for tracking multiple
         # submissions and history.
         models.EventEntity.record(
-            'submit-assessment', self.get_user(), transforms.dumps({
+            'event-submit-assessment', self.get_user(), transforms.dumps({
                 'type': 'assessment-%s' % assessment_type,
                 'values': new_answers, 'location': 'AnswerHandler'}))
 

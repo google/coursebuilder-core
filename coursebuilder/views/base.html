@@ -143,16 +143,8 @@
       // dicts is made available to Tag Manager macros.
       dataLayer = [{
         'course_title': '{{ course_info.course.title }}',
-        'course_namespace': '{{ course_namespace }}'
+        'event': 'default',  // Explicit value meaning not-really-set.
         }];
-
-      // Function for various course pages to report on status at load
-      // time.  Used to report status to Tag manager and eventually
-      // Insights event capture and analysis platform as well.
-      function gcbReportPageInfo(dict) {
-        dataLayer.push(dict);
-        // TODO(mgainer) Send page-level info to Insights on page load
-      }
 
       // Invoke page-specific block so that any calls to gcbReportPageInfo()
       // are made before we hit the Tag Manager call, below.

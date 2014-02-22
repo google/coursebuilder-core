@@ -1,7 +1,7 @@
 {% extends 'base_course.html' %}
 
 {% block gcb_page_info %}
-  gcbReportPageInfo({
+  dataLayer.push({
     'page_type': 'course',
   });
 {% endblock %}

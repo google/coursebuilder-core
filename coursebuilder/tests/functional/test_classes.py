@@ -2033,7 +2033,7 @@ class ActivityTest(actions.TestBase):
                 lesson_id, response.body)
 
             # Prepare activity submission event.
-            args['source'] = 'attempt-activity'
+            args['source'] = 'event-attempt-activity'
             lesson_key = '%s.%s' % (unit_id, lesson_id)
             assert lesson_key in activity_submissions
             args['payload'] = activity_submissions[lesson_key]

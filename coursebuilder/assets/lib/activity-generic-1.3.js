@@ -41,49 +41,54 @@ var eventXsrfToken = '';
 var assessmentXsrfToken = '';
 
 function gcbTagEventAudit(data_dict, name) {
-  if (gcbCanPostTagEvents) {
-    gcbAudit(data_dict, 'tag-' + name, true);
-  }
+  gcbAudit(gcbCanPostTagEvents, data_dict, 'event-tag-' + name, true);
 }
 
 function gcbPageEventAudit(data_dict, name) {
-  if (gcbCanPostPageEvents) {
-    gcbAudit(data_dict, name, false);
-  }
+  gcbAudit(gcbCanPostPageEvents, data_dict, name, false);
 }
 
 function gcbActivityAudit(data_dict) {
-  if (gcbCanPostEvents) {
-    gcbAudit(data_dict, 'attempt-activity', true);
-  }
+  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-activity', true);
 }
 
 function gcbLessonAudit(data_dict) {
-  if (gcbCanPostEvents) {
-    gcbAudit(data_dict, 'attempt-lesson', true);
-  }
+  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-lesson', true);
 }
 
 function gcbAssessmentAudit(data_dict) {
-  if (gcbCanPostEvents) {
-    gcbAudit(data_dict, 'attempt-assessment', true);
-  }
+  gcbAudit(gcbCanPostEvents, data_dict, 'event-attempt-assessment', true);
 }
 
-function gcbAudit(data_dict, source, is_async) {
-  data_dict['location'] = '' + window.location;
-  var request = {
-      'source': source,
-      'payload': JSON.stringify(data_dict),
-      'xsrf_token': eventXsrfToken};
-  $.ajax({
-      url: 'rest/events',
-      type: 'POST',
-      async: is_async,
-      data: {'request': JSON.stringify(request)},
-      success: function(){},
-      error: function(){}
-  });
+function gcbAudit(can_post, data_dict, source, is_async) {
+  // There may be a course-specific config to save $$ by preventing us
+  // from emitting too much volume to AppEngine; respect that setting.
+  if (can_post) {
+    data_dict['location'] = '' + window.location;
+    var request = {
+        'source': source,
+        'payload': JSON.stringify(data_dict),
+        'xsrf_token': eventXsrfToken};
+    $.ajax({
+        url: 'rest/events',
+        type: 'POST',
+        async: is_async,
+        data: {'request': JSON.stringify(request)},
+        success: function(){},
+        error: function(){}
+    });
+  }
+
+  // Report to the Google Tag manager, if it's configured.  The 'dataLayer'
+  // object is hooked to override the normal array's 'push()' with a handler.
+  // This is the only place in CB that will emit 'event' as a name into the
+  // dataLayer.  Thus, this should be the only place that causes a well-
+  // behaved set of tag rules to actually do anything.  Note that we get
+  // here both on page load (from $(document).ready(), below), as well as
+  // from the various on-page events.
+  var tmp = {}
+  $.extend(tmp, data_dict, {'event': 'gcb.' + source, 'is_async': is_async});
+  dataLayer.push(tmp);
 }
 
 // Returns the value of a URL parameter, if it exists.
@@ -835,12 +840,12 @@ $(document).ready(function() {
 
   // send 'enter-page' event to the server
   try {
-    gcbPageEventAudit({}, 'enter-page');
+    gcbPageEventAudit({}, 'page-enter');
   } catch (e){}
 
   // hook click events of specific links
   $('#lessonNotesLink').click(function(evt) {
-      gcbPageEventAudit({'href': evt.target.href}, 'click-link');
+      gcbPageEventAudit({'href': evt.target.href}, 'link-follow');
       return true;
   });
 
@@ -871,6 +876,6 @@ $(window).unload(function() {
   // send 'visit-page' event to the server
   try {
     // duration is in milliseconds
-    gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'visit-page');
+    gcbPageEventAudit({'duration': (new Date() - gcbBeginningOfTime)}, 'page-unload');
   } catch (e){}
 });

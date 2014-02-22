@@ -36,13 +36,15 @@ describe('V 1.4 Activities and Assessments', function() {
     window.globallyUniqueTag = 0;
 
     // Clear the test data from the outer scope
+    auditCanPost = '';
     auditDataDict = '';
     auditSource = '';
     auditIsAsync = '';
     mockLocation = '';
 
     // Mock the function used for callbacks by all event emitters
-    window.gcbAudit = function (data_dict, source, is_async) {
+    window.gcbAudit = function (can_post, data_dict, source, is_async) {
+      auditCanPost = can_post;
       auditDataDict = data_dict;
       auditSource = source;
       auditIsAsync = is_async;
