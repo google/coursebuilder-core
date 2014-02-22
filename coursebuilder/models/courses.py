@@ -1290,8 +1290,9 @@ class CourseModel13(object):
         verifier = verify.Verifier()
         try:
             verifier.verify_assessment_instance(assessment, path)
-        except verify.SchemaException:
-            errors.append('Error validating %s\n' % root_name)
+        except verify.SchemaException as ex:
+            errors.append('Error validating %s\n%s' % (
+                root_name, ex.message or ''))
             return
 
         fs = self.app_context.fs
@@ -1340,8 +1341,9 @@ class CourseModel13(object):
         verifier = verify.Verifier()
         try:
             verifier.verify_activity_instance(activity, path)
-        except verify.SchemaException:
-            errors.append('Error validating %s\n' % root_name)
+        except verify.SchemaException as ex:
+            errors.append('Error validating %s\n%s' % (
+                root_name, ex.message or ''))
             return
 
         fs = self.app_context.fs

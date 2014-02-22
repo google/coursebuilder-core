@@ -206,7 +206,7 @@ class SchemaException(Exception):
         if path:
             prefix = 'Error at %s\n' % path
 
-        if types:
+        if types is not None:
             if value:
                 message = prefix + message % (
                     self.format_primitive_value_name(value),
