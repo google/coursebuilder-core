@@ -188,8 +188,15 @@ class GoogleGroup(tags.BaseTag):
         return 'Google Group'
 
     def render(self, node, handler):
+        # Note: in Firefox, this component requires a full hostname to work.
+        # If you are working in the development environment and are accessing
+        # this component at localhost, please replace 'localhost' with
+        # '127.0.0.1' instead.
+        _, netloc, _, _, _ = urlparse.urlsplit(handler.request.uri)
+
         parent_url_suffix = ''
-        if appengine_config.PRODUCTION_MODE:
+        if (appengine_config.PRODUCTION_MODE or
+            not netloc.startswith('localhost')):
             parent_url_suffix = (
                 '&parenturl=%s' % urllib.quote(handler.request.uri, safe=''))
 
