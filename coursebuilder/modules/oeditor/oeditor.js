@@ -474,7 +474,7 @@ TopLevelEditorControls.prototype = {
     }
 
     // Allow custom code to register a post-save handler.
-    this._env.onSaveComplete && this._env.onSaveComplete(json);
+    this._env.onSaveComplete && this._env.onSaveComplete(payload);
   },
 
   getCloseButton: function() {
@@ -591,13 +591,6 @@ TopLevelEditorControls.prototype = {
   _onPopulateFormSuccess: function(id, o, args) {
     var json = parseJson(o.responseText);
 
-    // Allow custom code to register a post-populate handler. If it returns
-    // 'false' it will block further action.
-    if (this._env.onPopulateFormSuccess &&
-        this._env.onPopulateFormSuccess(json) === false) {
-      return;
-    }
-
     // check status code
     if (json.status != 200) {
       cbShowMsg(formatServerErrorMessage(json.status, json.message));
@@ -644,12 +637,6 @@ TopLevelEditorControls.prototype = {
   },
 
   _onPopulateFormFailure: function (x,o) {
-    // Allow custom code to register a post-populate handler. If it returns
-    // 'false' it will block further action.
-    if (this._env.onPopulateFormFailure &&
-        this._env.onPopulateFormFailure(json) === false) {
-      return;
-    }
     cbShowMsg("Server did not respond. Please reload the page to try again.");
   }
 };
