@@ -175,6 +175,14 @@ class AdminHandler(
             href='https://code.google.com/p/course-builder/wiki/AdminPage'
         ).add_text('Help'))
 
+        nav.append(safe_dom.Element(
+            'a',
+            href=(
+                'https://groups.google.com/forum/'
+                '?fromgroups#!forum/course-builder-announce'),
+            target='_blank'
+        ).add_text('News'))
+
         return nav
 
     def render_page(self, template_values):

@@ -185,6 +185,14 @@ class DashboardHandler(
             target='_blank'
         ).add_text('Help'))
 
+        nav.append(safe_dom.Element(
+            'a',
+            href=(
+                'https://groups.google.com/forum/?fromgroups#!categories/'
+                'course-builder-forum/general-troubleshooting'),
+            target='_blank'
+        ).add_text('Support'))
+
         return nav
 
     def render_page(self, template_values):
