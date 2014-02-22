@@ -11,7 +11,7 @@
       {{ search_error }}
     </div>
   {% elif search_results %}
-    <div class="gcb-search-info">
+    <div class="gcb-search-info" role="heading">
       <!-- TODO(emichael): Put the queries in <strong> tags -->
       {# I18N: Status message above search results. #}
       {{ gettext('Results for "%(query)s"', query=query) }}
@@ -44,7 +44,7 @@
       {% endif %}
     </div>
   {% else %}
-    <div class="gcb-search-info">
+    <div class="gcb-search-info" role="heading">
       {# I18N: The search returned no results. #}
       {{ gettext('No results for "%(query)s"', query=query) }}
     </div>
