@@ -61,10 +61,13 @@ def render_question(
     if not question_dto:
         return '[Question deleted]'
 
-    try:
-        weight = float(weight)
-    except ValueError:
+    if weight is None:
         weight = 1.0
+    else:
+        try:
+            weight = float(weight)
+        except ValueError:
+            weight = 1.0
 
     template_values = question_dto.dict
     template_values['embedded'] = embedded
