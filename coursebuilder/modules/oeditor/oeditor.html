@@ -475,6 +475,10 @@
   div.assessment-editor-check-answers > input[type=checkbox] {
     width: auto;
   }
+
+  {% for file in extra_css_files %}
+    {% include file %}
+  {% endfor %}
 </style>
 
 <div id='oeditor-container'>

@@ -54,6 +54,7 @@ class ObjectEditor(object):
         delete_url=None, delete_message=None, delete_method='post',
         auto_return=False, read_only=False,
         required_modules=None,
+        extra_css_files=None,
         extra_js_files=None,
         delete_button_caption='Delete',
         save_button_caption='Save',
@@ -78,6 +79,7 @@ class ObjectEditor(object):
             auto_return: whether to return to the exit_url on successful save
             read_only: optional flag; if set, removes Save and Delete operations
             required_modules: list of inputex modules required for this editor
+            extra_css_files: list of extra CSS files to be included
             extra_js_files: list of extra JS files to be included
             delete_button_caption: string. A caption for the 'Delete' button
             save_button_caption: a caption for the 'Save' button
@@ -123,6 +125,7 @@ class ObjectEditor(object):
             'exit_button_caption': exit_button_caption,
             'exit_url': exit_url,
             'required_modules': COMMON_REQUIRED_MODULES + required_modules,
+            'extra_css_files': extra_css_files or [],
             'extra_js_files': extra_js_files or [],
             'schema_annotations': [
                 (item[0], transforms.dumps(item[1])) for item in annotations],
