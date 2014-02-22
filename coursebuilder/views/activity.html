@@ -117,7 +117,7 @@
 
           </div><!-- /gcb-aside -->
 
-          <div class="gcb-button-box">
+          <div class="gcb-button-box" {% if course_info.unit.hide_lesson_navigation_buttons %}style="display: none;"{% endif%}>
             <div class="gcb-prev-button">
               {% if back_button_url %}
                 {# I18N: Text on the navigation button at the end of a lesson page. #}

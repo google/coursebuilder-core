@@ -1767,6 +1767,43 @@ class StudentAspectTest(actions.TestBase):
         assert_does_not_contain('Next Page', response.body)
         assert_contains('End', response.body)
 
+    def test_show_hide_lesson_navigation(self):
+        """Test display of lesson navigation buttons."""
+        email = 'test_show_hide_of_lesson_navigation@example.com'
+        name = 'Test Show/Hide of Lesson Navigation'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        # The default behavior is to show the lesson navigation buttons.
+        response = self.get('unit?unit=2&lesson=3')
+        assert_contains(
+            '<div class="gcb-button-box" >', response.body)
+        assert_does_not_contain(
+            '<div class="gcb-button-box" style="display: none;">',
+            response.body)
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['unit']['hide_lesson_navigation_buttons'] = True
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        # The lesson navigation buttons should now be hidden.
+        response = self.get('unit?unit=2&lesson=3')
+        assert_contains(
+            '<div class="gcb-button-box" style="display: none;">',
+            response.body)
+        assert_does_not_contain(
+            '<div class="gcb-button-box" >', response.body)
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
     def test_attempt_activity_event(self):
         """Test activity attempt generates event."""
 

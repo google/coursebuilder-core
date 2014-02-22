@@ -288,6 +288,13 @@ def create_course_registry():
         'tracking services what users are doing on the site.  Obtain this '
         'ID by signing up at http://www.google.com/tagmanager'))
 
+    # Unit level settings.
+    unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
+    unit_opts.add_property(SchemaField(
+        'unit:hide_lesson_navigation_buttons', 'Hide Lesson Navigation Buttons',
+        'boolean', description='Whether to hide the \'Previous Page\' and '
+        ' \'Next Page\' buttons below lesson and activity pages'))
+
     # Course registration settings.
     reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
     reg_opts.add_property(SchemaField(

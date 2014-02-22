@@ -170,3 +170,7 @@ unit:
   before_leftnav_ends: '<!-- unit.before_leftnav_ends -->'
   after_content_begins: '<!-- unit.after_content_begins -->'
   before_content_ends: '<!-- unit.before_content_ends -->'
+
+  # Whether or not to hide the 'Previous Page' and 'Next Page' lesson
+  # navigation buttons at the bottom of lesson and activity pages.
+  hide_lesson_navigation_buttons: False
