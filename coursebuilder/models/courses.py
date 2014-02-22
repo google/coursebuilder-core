@@ -1400,7 +1400,11 @@ class CourseModel13(object):
             copy_unit12_into_unit13(src_unit, dst_unit)
 
             if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
+                dst_unit.properties = copy.deepcopy(src_unit.properties)
                 dst_unit.weight = src_unit.weight
+                dst_unit.html_content = src_unit.html_content
+                dst_unit.html_check_answers = src_unit.html_check_answers
+                dst_unit.html_review_form = src_unit.html_review_form
 
         def copy_lesson12_into_lesson13(
             src_unit, src_lesson, unused_dst_unit, dst_lesson):
@@ -1411,6 +1415,7 @@ class CourseModel13(object):
             dst_lesson.duration = src_lesson.duration
             dst_lesson.has_activity = src_lesson.activity
             dst_lesson.activity_title = src_lesson.activity_title
+            dst_lesson.activity_listed = src_lesson.activity_listed
 
             # Old model does not have this flag, but all lessons are available.
             dst_lesson.now_available = True
@@ -1431,6 +1436,15 @@ class CourseModel13(object):
                             self.get_activity_filename(
                                 None, dst_lesson.lesson_id))
                         self.app_context.fs.put(dst_filename, astream)
+
+        def copy_lesson13_into_lesson13(
+            src_unit, src_lesson, unused_dst_unit, dst_lesson):
+            copy_lesson12_into_lesson13(
+                src_unit, src_lesson, unused_dst_unit, dst_lesson)
+
+            dst_lesson.now_available = src_lesson.now_available
+            dst_lesson.scored = src_lesson.scored
+            dst_lesson.properties = src_lesson.properties
 
         def _copy_entities_between_namespaces(entity_types, from_ns, to_ns):
             """Copies entities between different namespaces."""
@@ -1493,7 +1507,15 @@ class CourseModel13(object):
             # import contained lessons
             for lesson in src_course.get_lessons(unit.unit_id):
                 new_lesson = self.add_lesson(new_unit, lesson.title)
-                copy_lesson12_into_lesson13(unit, lesson, new_unit, new_lesson)
+                if src_course.version == CourseModel13.VERSION:
+                    copy_lesson13_into_lesson13(
+                        unit, lesson, new_unit, new_lesson)
+                elif src_course.version == CourseModel12.VERSION:
+                    copy_lesson12_into_lesson13(
+                        unit, lesson, new_unit, new_lesson)
+                else:
+                    raise Exception(
+                        'Unsupported course version: %s', src_course.version)
 
         # import course dependencies from the datastore
         _copy_entities_between_namespaces(

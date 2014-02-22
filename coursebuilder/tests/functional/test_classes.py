@@ -271,6 +271,76 @@ class InfrastructureTest(actions.TestBase):
         # Clean up.
         sites.reset_courses()
 
+    def test_import_13_assessment(self):
+
+        # Setup courses.
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+
+        all_courses = sites.get_all_courses()
+        src_app_context = all_courses[0]
+        dst_app_context = all_courses[1]
+
+        src_course = courses.Course(None, app_context=src_app_context)
+        dst_course = courses.Course(None, app_context=dst_app_context)
+
+        # Add an assessment
+        src_assessment = src_course.add_assessment()
+        self.assertEqual('A', src_assessment.type)
+        src_assessment.title = 'Test Assessment'
+        src_assessment.release_date = '2015-01-01 12:15'
+        src_assessment.now_available = True
+        src_assessment.properties = {'key': 'value'}
+        src_assessment.weight = 3.14
+        src_assessment.html_content = 'content'
+        src_assessment.html_check_answers = 'check'
+        src_assessment.html_review_form = 'review'
+        src_assessment.workflow_yaml = 'a: 3'
+        src_course.save()
+
+        errors = []
+        dst_course.import_from(src_app_context, errors)
+        self.assertEqual(0, len(errors))
+
+        dst_assessment = dst_course.find_unit_by_id(src_assessment.unit_id)
+        self.assertEqual(src_assessment.__dict__, dst_assessment.__dict__)
+
+    def test_import_13_lesson(self):
+
+        # Setup courses.
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+
+        all_courses = sites.get_all_courses()
+        src_app_context = all_courses[0]
+        dst_app_context = all_courses[1]
+
+        src_course = courses.Course(None, app_context=src_app_context)
+        dst_course = courses.Course(None, app_context=dst_app_context)
+
+        # Add a unit
+        src_unit = src_course.add_unit()
+        src_lesson = src_course.add_lesson(src_unit)
+        src_lesson.title = 'Test Lesson'
+        src_lesson.scored = True
+        src_lesson.objectives = 'objectives'
+        src_lesson.video = 'video'
+        src_lesson.notes = 'notes'
+        src_lesson.duration = 'duration'
+        src_lesson.now_available = True
+        src_lesson.has_activity = True
+        src_lesson.activity_title = 'activity title'
+        src_lesson.activity_listed = False
+        src_lesson.properties = {'key': 'value'}
+        src_course.save()
+
+        errors = []
+        dst_course.import_from(src_app_context, errors)
+        self.assertEqual(0, len(errors))
+
+        dst_unit = dst_course.find_unit_by_id(src_unit.unit_id)
+        dst_lesson = dst_course.find_lesson_by_id(
+            dst_unit, src_lesson.lesson_id)
+        self.assertEqual(src_lesson.__dict__, dst_lesson.__dict__)
+
     def test_create_new_course(self):
         """Tests creating a new course."""
 
