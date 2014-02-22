@@ -436,6 +436,66 @@ class DatastoreBackedFileSystem(object):
 
         MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
 
+    def put_multi_async(self, filedata_list):
+        """Initiate an async put of the given files.
+
+        This method initiates an asynchronous put of a list of file data
+        (presented as pairs of the form (filename, data_source)). It is not
+        transactional, and does not block, and instead immediately returns a
+        callback function. When this function is called it will block until
+        the puts are confirmed to have completed. At this point it will also
+        clear stale information out of the memcache. For maximum efficiency it's
+        advisable to defer calling the callback until all other request handling
+        has completed, but in any event, it MUST be called before the request
+        handler can exit successfully.
+
+        Args:
+            filedata_list: list. A list of tuples. The first entry of each
+                tuple is the file name, the second is a filelike object holding
+                the file data.
+
+        Returns:
+            callable. Returns a wait-and-finalize function. This function must
+            be called at some point before the request handler exists, in order
+            to confirm that the puts have succeeded and to purge old values
+            from the memcache.
+        """
+        filename_list = []
+        data_list = []
+        metadata_list = []
+
+        for filename, stream in filedata_list:
+            filename = self._logical_to_physical(filename)
+            filename_list.append(filename)
+
+            metadata = FileMetadataEntity.get_by_key_name(filename)
+            if not metadata:
+                metadata = FileMetadataEntity(key_name=filename)
+            metadata_list.append(metadata)
+            metadata.updated_on = datetime.datetime.now()
+
+            # We operate with raw bytes. The consumer must deal with encoding.
+            raw_bytes = stream.read()
+
+            metadata.size = len(raw_bytes)
+
+            data = FileDataEntity(key_name=filename)
+            data_list.append(data)
+            data.data = raw_bytes
+
+        data_future = db.put_async(data_list)
+        metadata_future = db.put_async(metadata_list)
+
+        def wait_and_finalize():
+            data_future.check_success()
+            metadata_future.check_success()
+
+            MemcacheManager.delete_multi(
+                [self.make_key(filename) for filename in filename_list],
+                namespace=self._ns)
+
+        return wait_and_finalize
+
     @db.transactional(xg=True)
     def delete(self, filename):
         filename = self._logical_to_physical(filename)

@@ -113,6 +113,14 @@ class MemcacheManager(object):
             memcache.delete(key, namespace=cls._get_namespace(namespace))
 
     @classmethod
+    def delete_multi(cls, key_list, namespace=None):
+        """Deletes a list of items from memcache if memcache is enabled."""
+        if CAN_USE_MEMCACHE.value:
+            CACHE_DELETE.inc(increment=len(key_list))
+            memcache.delete_multi(
+                key_list, namespace=cls._get_namespace(namespace))
+
+    @classmethod
     def incr(cls, key, delta, namespace=None):
         """Incr an item in memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:

@@ -1,5 +1,5 @@
 //server communications timeout
-var ajaxRpcTimeoutMillis = 15 * 1000;
+var ajaxRpcTimeoutMillis = 45 * 1000;
 // XSSI prefix. Must be kept in sync with models/transforms.py.
 var xssiPrefix = ")]}'";
 
