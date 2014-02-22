@@ -35,8 +35,11 @@
               {{ gettext('New Name') }}
             </label></h2>
             <fieldset style="border: none;">
-              <p><input name="name" id="name" type="text" size="40">
-                <input type="hidden" name="email" value="{{ student.key().name() }}"></p>
+              <p>
+                {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
+                <input name="name" id="name" type="text" size="40" aria-label="{{ gettext('New Name') }}">
+                <input type="hidden" name="email" value="{{ student.key().name() }}">
+              </p>
             </fieldset>
 
             <p>

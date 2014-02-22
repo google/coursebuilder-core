@@ -30,9 +30,11 @@
                 {# I18N: A question in the registration form. #}
                 {{ gettext('What is your name?') }}
               </label>
+              {# I18N: A question in the registration form. #}
               <input
                 name="form01" id="form01" type="text"
-                value="{{ current_name|escape }}">
+                value="{{ current_name|escape }}"
+                aria-label="{{ gettext('What is your name?') }}">
             </li>
             {% if course_info.reg_form.additional_registration_fields %}
               {{course_info.reg_form.additional_registration_fields | safe}}
