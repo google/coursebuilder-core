@@ -142,6 +142,7 @@ class AnswerHandler(BaseHandler):
         self.template_value['assessment_name'] = unit.title
         self.template_value['is_last_assessment'] = (
             course.is_last_assessment(unit))
+        self.template_value['unit_id'] = unit.unit_id
 
         # Convert answers from JSON to dict.
         answers = self.request.get('answers')

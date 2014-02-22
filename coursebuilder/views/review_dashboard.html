@@ -1,5 +1,12 @@
 {% extends 'base_course.html' %}
 
+{% block gcb_page_info %}
+  gcbReportPageInfo({
+    'page_type': 'review_dashboard',
+    'unit_id': '{{ unit_id }}'
+  });
+{% endblock %}
+
 {% block subtitle %}
   {# I18N: Title of the webpage. #}
   - {{ gettext('Review Dashboard') }}

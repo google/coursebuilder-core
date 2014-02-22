@@ -1,5 +1,11 @@
 {% extends 'base_course.html' %}
 
+{% block gcb_page_info %}
+  gcbReportPageInfo({
+    'page_type': 'student_profile',
+  });
+{% endblock %}
+
 {% block subtitle %}
   {# I18N: Title of the course progress webpage. #}
   {{ gettext('Course Progress') }}
@@ -70,4 +76,3 @@
 </div>
 
 {% endblock %}
-

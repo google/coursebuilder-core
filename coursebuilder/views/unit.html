@@ -1,5 +1,15 @@
 {% extends 'base_course.html' %}
 
+{% block gcb_page_info %}
+  gcbReportPageInfo({
+    'page_type': 'unit',
+    'unit_id': '{{ unit_id }}',
+    {% if lesson_id %}
+      'lesson_id': '{{ lesson_id }}',
+    {% endif %}
+  });
+{% endblock %}
+
 {% block subtitle %}
   {# I18N: Title of the webpage. #}
   - {{ gettext('Unit') }} {{ unit.index }} - {{ unit.title }}

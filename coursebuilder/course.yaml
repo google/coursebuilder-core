@@ -82,6 +82,33 @@ course:
   # in or register.
   browsable: true
 
+  # Google Analytics tag: Fill this in with a value obtained by signing up
+  # at http://www.google.com/analytics.  Note that you may wish instead to
+  # use Google Tag Manager, which can forward event notifications to Google
+  # Analytics, as well as to any other user-activity-watcher you like.
+  # Change the value below to replace the '#' with the full text of your
+  # individual ID number, which will start with 'UA-'.  When set, pages will
+  # notify Google Analytics that they have loaded.  See views/base.html.
+  #
+  # If this tag is not present, boilerplate JavaScript to notify Google
+  # Analytics is not emitted.  Not having a value here is harmless.
+  google_analytics_id: ''
+
+  # Google Tag Manager ID: Fill this in with a value obtained by signing up
+  # at http://www.google.com/tagmanager.  When this ID is present, pages will
+  # notify the tag manager (see views/base.html).  This will load a script
+  # from Tag Manager which can then emit notifications to other user activity
+  # trackers.  This neatly decouples changes to the source code of your
+  # course and CourseBuilder deployment from whatever tracking analytics
+  # you wish to perform.  (Note that if you wish to track activities more
+  # granular than page loads, you will need to mark up your course
+  # to send notifications to the tag manager.)
+  #
+  # If this tag is not present, boilerplate JavaScript to notify Google
+  # Tag Manager is not emitted.  Not having a value here is harmless.
+  google_tag_manager_id: ''
+
+
 ########################
 # Course preview page
 ########################

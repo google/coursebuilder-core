@@ -392,7 +392,9 @@ class AssessmentHandler(BaseHandler):
             return
 
         # Extract incoming args, binding to self if needed.
-        self.unit_id = self.request.get('name')
+        assessment_name = self.request.get('name')
+        self.unit_id = assessment_name
+        self.template_value['assessment_name'] = assessment_name
         course = self.get_course()
         unit = course.find_unit_by_id(self.unit_id)
         if not unit:

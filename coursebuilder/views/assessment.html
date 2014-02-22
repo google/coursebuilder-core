@@ -1,5 +1,13 @@
 {% extends 'base_course.html' %}
 
+{% block gcb_page_info %}
+  gcbReportPageInfo({
+    'page_type': 'assessment',
+    'assessment_id': '{{ assessment_name }}',
+    'unit_id': '{{ unit_id }}',
+  });
+{% endblock %}
+
 {% block subtitle %}
   {# I18N: Title of the webpage. #}
   - {{ gettext('Assessment') }}

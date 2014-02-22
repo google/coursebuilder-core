@@ -1,5 +1,12 @@
 {% extends 'base_course.html' %}
 
+{% block gcb_page_info %}
+  gcbReportPageInfo({
+    'page_type': 'test_confirmation',
+    'unit_id': '{{ unit_id }}',
+  });
+{% endblock %}
+
 {% block top_content %}
 {% endblock %}
 

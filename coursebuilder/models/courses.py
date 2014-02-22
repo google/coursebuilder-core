@@ -275,6 +275,18 @@ def create_course_registry():
     course_opts.add_property(SchemaField(
         'course:browsable', 'Make Course Browsable', 'boolean',
         description='Allow non-registered users to view course content.'))
+    course_opts.add_property(SchemaField(
+        'course:google_analytics_id', 'ID for Google Analytics', 'string',
+        optional=True, description='This ID tells Google Analytics who is '
+        'calling, and allows it to string together routes that visitors '
+        'take through pages.  Obtain this ID by signing up at '
+        'http://www.google.com/analytics'))
+    course_opts.add_property(SchemaField(
+        'course:google_tag_manager_id', 'ID for Google Tag Manager', 'string',
+        optional=True, description='This ID tells Google Tag Manager who is '
+        'calling.  This allows the Tag Manager to notify other site use '
+        'tracking services what users are doing on the site.  Obtain this '
+        'ID by signing up at http://www.google.com/tagmanager'))
 
     # Course registration settings.
     reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
