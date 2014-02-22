@@ -60,7 +60,8 @@ base:
         href="/modules/search/assets/search.css" />
     <li class="gcb-pull-right">
       <form class="gcb-search-form" action="search" method="get">
-        <input class="gcb-search-box" name="query" type="text" >
+        <input class="gcb-search-box" name="query" type="text"
+               aria-label="Enter a search term">
         <input value="Search"
             class="gcb-button gcb-search-button" type="submit">
       </form>
