@@ -18,6 +18,8 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import urllib
 import urlparse
+
+import appengine_config
 from common import jinja_utils
 from common import schema_fields
 from common import tags
@@ -185,13 +187,21 @@ class GoogleGroup(tags.BaseTag):
     def name(cls):
         return 'Google Group'
 
-    def render(self, node, unused_handler):
+    def render(self, node, handler):
+        parent_url_suffix = ''
+        if appengine_config.PRODUCTION_MODE:
+            parent_url_suffix = (
+                '&parenturl=%s' % urllib.quote(handler.request.uri, safe=''))
+
         group_name = node.attrib.get('group')
         category_name = node.attrib.get('category')
         embedded_forum_url = (
-            'https://groups.google.com/forum/embed/?place=forum/?'
-            'fromgroups&hl=en#!categories/%s/%s') \
-            % (urllib.quote(group_name), urllib.quote(category_name))
+            'https://groups.google.com/forum/embed/?hl=en%s'
+            '#!categories/%s/%s' % (
+                parent_url_suffix,
+                urllib.quote(group_name),
+                urllib.quote(category_name)
+            ))
         iframe = cElementTree.XML("""
 <p>
   <iframe class="forum-embed" title="Google Group Embed"
