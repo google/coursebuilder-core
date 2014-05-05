@@ -16,6 +16,8 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import urllib
+
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
 
@@ -62,26 +64,58 @@ def authorization_wrapper(self, *args, **kwargs):
 
 
 def ui_access_wrapper(self, *args, **kwargs):
-    if ((users.is_current_user_admin() or
-         utils.XsrfTokenManager.is_xsrf_token_valid(
-             self.request.get('xsrf_token'), XSRF_ACTION_NAME)) and
-        GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value):
-        with Namespace(self.request.get('namespace')):
+    content_is_static = (
+        self.request.path.startswith('/mapreduce/ui/') and
+        (self.request.path.endswith('.css') or
+         self.request.path.endswith('.js')))
+    xsrf_token = self.request.get('xsrf_token')
+    user_is_course_admin = utils.XsrfTokenManager.is_xsrf_token_valid(
+        xsrf_token, XSRF_ACTION_NAME)
+    ui_enabled = GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value
+
+    if ui_enabled and (content_is_static or
+                       user_is_course_admin or
+                       users.is_current_user_admin()):
+        namespace = self.request.get('namespace')
+        with Namespace(namespace):
             self.real_dispatch(*args, **kwargs)
 
-        # Most places in the pipeline UI are good about passing the
+        # Some places in the pipeline UI are good about passing the
         # URL's search string along to RPC calls back to Ajax RPCs,
         # which automatically picks up our extra namespace and xsrf
-        # tokens.  However, this one does not, and so we patch it
+        # tokens.  However, some do not, and so we patch it
         # here, rather than trying to keep up-to-date with the library.
-        # If-and-when the library gets fixed up to explicitly use
-        # 'rpc/tree' + window.location.search
-        # then our 'rpc/tree?' pattern will stop matching, and this
-        # will then be obsolete, but will not break unexpectedly.
-        if self.request.path.endswith('/status.js'):
+        params = {}
+        if namespace:
+            params['namespace'] = namespace
+        if xsrf_token:
+            params['xsrf_token'] = xsrf_token
+        extra_url_params = urllib.urlencode(params)
+        if self.request.path == '/mapreduce/ui/pipeline/status.js':
             self.response.body = self.response.body.replace(
                 'rpc/tree?',
                 'rpc/tree\' + window.location.search + \'&')
+
+        elif self.request.path == '/mapreduce/ui/pipeline/rpc/tree':
+            self.response.body = self.response.body.replace(
+                '/mapreduce/worker/detail?',
+                '/mapreduce/ui/detail?' + extra_url_params + '&')
+
+        elif self.request.path == '/mapreduce/ui/detail':
+            self.response.body = self.response.body.replace(
+                'src="status.js"',
+                'src="status.js?%s"' % extra_url_params)
+
+        elif self.request.path == '/mapreduce/ui/status.js':
+            replacement = (
+                '\'namespace\': \'%s\', '
+                '\'xsrf_token\': \'%s\', '
+                '\'mapreduce_id\':' % (
+                    namespace if namespace else '',
+                    xsrf_token if xsrf_token else ''))
+            self.response.charset = 'utf8'
+            self.response.text = self.response.body.replace(
+                '\'mapreduce_id\':', replacement)
     else:
         self.response.out.write('Forbidden')
         self.response.set_status(403)
