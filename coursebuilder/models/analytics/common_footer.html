@@ -5,14 +5,16 @@
 {% if status_messages %}
   {% if any_generator_still_running %}
     <form id="gcb-cancel-analytic-{{ analytic }}"
-          action="dashboard?action=cancel_analytic" method="POST">
+          action="analytics?action=cancel_analytics" method="POST">
+      <input type="hidden" name="r" value="{{ r }}">
       <input type="hidden" name="xsrf_token" value="{{ xsrf_token_cancel }}">
       <input type="hidden" name="analytic" value="{{ analytic }}">
       <button class="gcb-button" type="submit">Cancel Jobs</button>
     </form>
   {% else %}
     <form id="gcb-run-analytic-{{ analytic }}"
-          action="dashboard?action=run_analytic" method="POST">
+          action="analytics?action=run_analytics" method="POST">
+      <input type="hidden" name="r" value="{{ r }}">
       <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
       <input type="hidden" name="analytic" value="{{ analytic }}">
       <button class="gcb-button" type="submit">

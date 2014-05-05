@@ -22,6 +22,13 @@ import sys
 import appengine_config
 
 
+def _generators_for_analytics(analytics):
+    ret = set()
+    for analytic in analytics:
+        ret.update(analytic.generator_classes)
+    return ret
+
+
 def _get_required_generators(source_class):
     """Allow client code to return list or single instance.  Convert to list."""
 

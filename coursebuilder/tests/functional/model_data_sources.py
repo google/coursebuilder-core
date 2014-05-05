@@ -20,7 +20,7 @@ import time
 
 from webtest import app
 
-from models import analytics
+from common import crypto
 from models import data_sources
 from models import entities
 from models import transforms
@@ -29,7 +29,7 @@ from models.data_sources import utils as data_sources_utils
 from google.appengine.ext import db
 
 
-# Analytic must be registered before we import actions; actions imports
+# Data source must be registered before we import actions; actions imports
 # 'main', which does all setup and registration in package scope.
 class Character(entities.BaseEntity):
     user_id = db.StringProperty(indexed=True)
@@ -61,8 +61,6 @@ class CharacterDataSource(data_sources.AbstractDbTableRestDataSource):
         return Character
 
 data_sources.Registry.register(CharacterDataSource)
-analytics.Registry.register('peanuts', 'Peanuts', 'model_data_sources.html',
-                            [CharacterDataSource])
 
 # pylint: disable-msg=g-import-not-at-top,g-bad-import-order
 from tests.functional import actions
@@ -257,8 +255,8 @@ class PaginatedTableTest(actions.TestBase):
     def test_pii_encoding(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        # Package private: pylint: disable-msg=protected-access
-        token = data_sources_utils._generate_data_source_token()
+        token = data_sources_utils.generate_data_source_token(
+            crypto.XsrfTokenManager)
 
         response = transforms.loads(self.get('/rest/data/character/items').body)
         for d in response['data']:
@@ -289,11 +287,11 @@ class PaginatedTableTest(actions.TestBase):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
 
-        # Package private: pylint: disable-msg=protected-access
-        token1 = data_sources_utils._generate_data_source_token()
+        token1 = data_sources_utils.generate_data_source_token(
+            crypto.XsrfTokenManager)
         time.sleep(1)  # Legit: XSRF token is time-based, so will change.
-        # Package private: pylint: disable-msg=protected-access
-        token2 = data_sources_utils._generate_data_source_token()
+        token2 = data_sources_utils.generate_data_source_token(
+            crypto.XsrfTokenManager)
         self.assertNotEqual(token1, token2)
 
         response1 = transforms.loads(self.get(

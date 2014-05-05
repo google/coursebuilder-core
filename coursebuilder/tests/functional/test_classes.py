@@ -1364,29 +1364,27 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_does_not_contain('create_or_edit_settings', response.body)
 
         # Tests student statistics view.
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics&tab=students')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
         # Verify body does have linked breadcrumb trail.
         assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Analytics' %
-                self.canonicalize('dashboard'),
-            response.body)
+            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
+            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-generate-analytics-data']
-        response = self.submit(compute_form)
-        assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 4
+        response = response.forms[
+            'gcb-generate-analytics-data'].submit().follow()
+        assert len(self.taskq.GetTasks('default')) == 2
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get(response.request.url)
         assert_contains('is running', response.body)
 
         self.execute_all_deferred_tasks()
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get(response.request.url)
         assert_contains('were last updated at', response.body)
         assert_contains('currently enrolled: 1', response.body)
         assert_contains('total: 1', response.body)
@@ -1403,13 +1401,13 @@ class CourseAuthorAspectTest(actions.TestBase):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-        response = self.get('dashboard?action=analytics')
-        compute_form = response.forms['gcb-generate-analytics-data']
-        response = self.submit(compute_form)
+        response = self.get(response.request.url)
+        response = response.forms[
+            'gcb-generate-analytics-data'].submit().follow()
 
         self.execute_all_deferred_tasks()
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get(response.request.url)
         assert_contains('currently enrolled: 6', response.body)
         assert_contains(
             'test-assessment: completed 5, average score 2.0', response.body)

@@ -48,7 +48,7 @@ def _generate_rest_handler(rest_data_source_class):
     return CurriedRestHandler
 
 
-def get_namespaced_rest_handlers():
+def get_namespaced_handlers():
     """Create URLs + handler classes customized to REST data source types.
 
     Other modules must register their analytics with this module before

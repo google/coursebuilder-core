@@ -25,6 +25,7 @@ import appengine_config  # pylint: disable-msg=unused-import
 
 from common import tags
 from controllers import sites
+from models import analytics
 from models import custom_modules
 from models import data_sources
 from modules.activity_tag import activity_tag
@@ -66,7 +67,8 @@ oauth2.register_module()
 
 # compute all possible routes
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
-namespaced_routes.extend(data_sources.get_namespaced_rest_handlers())
+namespaced_routes.extend(analytics.get_namespaced_handlers())
+namespaced_routes.extend(data_sources.get_namespaced_handlers())
 
 # routes available at '/%namespace%/' context paths
 sites.ApplicationRequestHandler.bind(namespaced_routes)

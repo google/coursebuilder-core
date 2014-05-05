@@ -51,24 +51,21 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics&tab=students')
         assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Analytics' %
-                self.canonicalize('dashboard'),
-            response.body)
+            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
+            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-generate-analytics-data']
-        response = self.submit(compute_form)
-        assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 4
+        response = response.forms[
+            'gcb-generate-analytics-data'].submit().follow()
+        assert len(self.taskq.GetTasks('default')) == 2
 
-        response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
 
         self.execute_all_deferred_tasks()
 
-        response = self.get('dashboard?action=analytics')
+        response = self.get(response.request.url)
         assert_contains('were last updated at', response.body)
         assert_contains('currently enrolled: 0', response.body)
         assert_contains('total: 0', response.body)
@@ -104,17 +101,15 @@ class ProgressAnalyticsTest(actions.TestBase):
         # Admin logs back in and checks if progress exists.
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics&tab=students')
         assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Analytics' %
-                self.canonicalize('dashboard'),
-            response.body)
+            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
+            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-generate-analytics-data']
-        response = self.submit(compute_form)
-        assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 4
+        response = response.forms[
+            'gcb-generate-analytics-data'].submit().follow()
+        assert len(self.taskq.GetTasks('default')) == 2
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -144,7 +139,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         # Submit all analytics.
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics&tab=peer_review')
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
 
@@ -179,7 +174,7 @@ class ProgressAnalyticsTest(actions.TestBase):
     def test_cancel_map_reduce(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=analytics')
+        response = self.get('dashboard?action=analytics&tab=peer_review')
         response = response.forms[
             'gcb-run-analytic-peer_review'].submit().follow()
 
@@ -201,7 +196,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         # the message.  This is verified in
         # model_jobs.JobOperationsTest.test_killed_job_can_still_complete
         self.execute_all_deferred_tasks()
-        response = self.get('dashboard?action=analytics')
+        response = self.get(response.request.url)
         assert_contains('Canceled by ' + email, response.body)
 
     def test_get_entity_id_wrapper_in_progress_works(self):

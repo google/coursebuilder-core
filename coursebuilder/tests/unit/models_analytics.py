@@ -17,6 +17,7 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import collections
 import datetime
 import unittest
 
@@ -138,6 +139,7 @@ class MockHandler(object):
     def __init__(self, app_context):
         self._templates = {}
         self._app_context = app_context
+        self.request = collections.namedtuple('X', ['url'])('/foo/bar/baz')
 
     def get_template(self, template_name, template_dirs):
         jinja_environment = jinja_utils.create_jinja_environment(
@@ -237,69 +239,43 @@ data_sources.Registry.register(ThreeGenSource)
 class AnalyticsTests(unittest.TestCase):
 
     def setUp(self):
+        analytics.by_name.clear()
         MockJobBase.clear_jobs()
-        analytics.Registry._for_testing_only_clear()
         self._mock_app_context = MockAppContext('testing')
         self._mock_handler = MockHandler(self._mock_app_context)
         self._mock_xsrf = MockXsrfCreator()
 
-    def _generate_analytics_page(self):
-        sections = analytics.generate_display_html(
-            self._mock_handler, self._mock_xsrf)
-        renderer = analytics._TemplateRenderer(self._mock_handler)
-        return renderer.render(
-            None,
-            'tests/unit/models_analytics_dashboard.html',
-            {'sections': sections})
+    def _generate_analytics_page(self, analytics_):
+        return analytics.generate_display_html(
+            self._mock_handler, self._mock_xsrf, analytics_)
+
+    def _run_generators_for_analytics(self, app_context, analytics_):
+        for gen_class in analytics.utils._generators_for_analytics(analytics_):
+            gen_class(app_context).submit()
+
+    def _cancel_generators_for_analytics(self, app_context, analytics_):
+        for gen_class in analytics.utils._generators_for_analytics(analytics_):
+            gen_class(app_context).cancel()
 
     def test_illegal_name(self):
         with self.assertRaisesRegexp(ValueError, 'name "A" must contain only'):
-            analytics.Registry.register('A', 'Foo', 'foo.html')
+            analytics.Visualization('A', 'Foo', 'foo.html')
         with self.assertRaisesRegexp(ValueError, 'name " " must contain only'):
-            analytics.Registry.register(' ', 'Foo', 'foo.html')
+            analytics.Visualization(' ', 'Foo', 'foo.html')
         with self.assertRaisesRegexp(ValueError, 'name "#" must contain only'):
-            analytics.Registry.register('#', 'Foo', 'foo.html')
+            analytics.Visualization('#', 'Foo', 'foo.html')
 
     def test_illegal_generator(self):
         with self.assertRaisesRegexp(
             ValueError,
             'All data source classes used in analytics must be registered'):
-            analytics.Registry.register('foo', 'foo', 'foo', [MockHandler])
-
-    def test_run_all_with_no_analytics_does_not_crash(self):
-        analytics.Registry.run_all_generators(self._mock_app_context)
-
-    def test_check_all_with_no_analytics_does_not_crash(self):
-        self.assertFalse(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
-
-    def test_run_generator_for_unknown_analytics_does_not_crash(self):
-        analytics.Registry.run_generators_for_analytic(
-            self._mock_app_context, 'foo')
-
-    def test_cancel_generator_for_unknown_analytics_does_not_crash(self):
-        analytics.Registry.cancel_generators_for_analytic(
-            self._mock_app_context, 'foo')
-
-    def test_run_generator_for_analytic_with_none_does_not_crash(self):
-        name = 'no_generator'
-        analytics.Registry.register(
-            name, name, 'models_analytics_section.html', [NoGenSource])
-        analytics.Registry.run_generators_for_analytic(
-            self._mock_app_context, name)
-
-    def test_cancel_generator_for_analytic_with_none_does_not_crash(self):
-        name = 'no_generator'
-        analytics.Registry.register(
-            name, name, 'models_analytics_section.html', [NoGenSource])
-        analytics.Registry.cancel_generators_for_analytic(
-            self._mock_app_context, name)
+            analytics.Visualization('foo', 'foo', 'foo', [MockHandler])
 
     def test_no_generator_display(self):
         name = 'no_generator'
-        analytics.Registry.register(
+        analytic = analytics.Visualization(
             name, name, 'models_analytics_section.html', [NoGenSource])
-        result = self._generate_analytics_page()
+        result = self._generate_analytics_page([analytic])
 
         # Statistic reports result to page
         self.assertIn('no_generator_no_gen_source: "no_gen_value"', result)
@@ -310,103 +286,70 @@ class AnalyticsTests(unittest.TestCase):
 
     def test_generator_run_cancel_state_display(self):
         name = 'foo'
-        analytics.Registry.register(
+        analytic = analytics.Visualization(
             name, name, 'models_analytics_section.html', [OneGenSource])
 
-        result = self._generate_analytics_page()
+        result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one have not been', result)
         self.assertIn('  Run Jobs', result)
         self.assertIn('action=run_analytic', result)
-        self.assertTrue(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
 
-        analytics.Registry.run_generators_for_analytic(
-            self._mock_app_context, name)
-        result = self._generate_analytics_page()
+        self._run_generators_for_analytics(self._mock_app_context, [analytic])
+        result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
         self.assertIn('Cancel Jobs', result)
         self.assertIn('action=cancel_analytic', result)
-        self.assertFalse(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
 
-        analytics.Registry.cancel_generators_for_analytic(
-            self._mock_app_context, name)
-        result = self._generate_analytics_page()
+        self._cancel_generators_for_analytics(self._mock_app_context,
+                                              [analytic])
+        result = self._generate_analytics_page([analytic])
         self.assertIn('There was an error updating gen one statistics', result)
         self.assertIn('<pre>Canceled</pre>', result)
         self.assertIn('Re-Run Jobs', result)
         self.assertIn('action=run_analytic', result)
-        self.assertTrue(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
 
-        analytics.Registry.run_generators_for_analytic(
-            self._mock_app_context, name)
-        result = self._generate_analytics_page()
+        self._run_generators_for_analytics(self._mock_app_context, [analytic])
+        result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
         self.assertIn('Cancel Jobs', result)
         self.assertIn('action=cancel_analytic', result)
-        self.assertFalse(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
 
         GenOne(self._mock_app_context).load().complete('run_state_display')
-        result = self._generate_analytics_page()
+        result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one were last updated at', result)
         self.assertIn('in about 0 sec', result)
         self.assertIn('Re-Run Jobs', result)
         self.assertIn('action=run_analytic', result)
         self.assertIn('foo_one_gen_source_gen_one: "run_state_display"', result)
-        self.assertTrue(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
-
-    def test_run_all_generators(self):
-        name = 'foo'
-        analytics.Registry.register(
-            name, name, 'models_analytics_section.html', [OneGenSource])
-
-        result = self._generate_analytics_page()
-        self.assertIn('Statistics for gen one have not been calculated yet',
-                      result)
-        self.assertIn('  Run Jobs', result)
-        self.assertIn('action=run_analytic', result)
-
-        analytics.Registry.run_all_generators(self._mock_app_context)
-        result = self._generate_analytics_page()
-        self.assertIn('Job for gen one statistics started at', result)
-        self.assertIn('Cancel Jobs', result)
-        self.assertIn('action=cancel_analytic', result)
 
     def test_multiple_analytics_multiple_generators_multiple_sources(self):
-        analytics.Registry.register(
+        analytics_ = []
+        analytics_.append(analytics.Visualization(
             'trivial', 'Trivial Statistics', 'models_analytics_section.html',
-            [NoGenSource])
-        analytics.Registry.register(
+            [NoGenSource]))
+        analytics_.append(analytics.Visualization(
             'simple', 'Simple Statistics', 'models_analytics_section.html',
-            [OneGenSource])
-        analytics.Registry.register(
+            [OneGenSource]))
+        analytics_.append(analytics.Visualization(
             'complex', 'Complex Statistics', 'models_analytics_section.html',
-            [NoGenSource, OneGenSource, TwoGenSource, ThreeGenSource])
+            [NoGenSource, OneGenSource, TwoGenSource, ThreeGenSource]))
 
-        analytics.Registry.run_all_generators(self._mock_app_context)
-        self.assertFalse(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
-
+        self._run_generators_for_analytics(self._mock_app_context, analytics_)
         # Verify that not-all generators are running, but that 'complex'
         # is still not reporting data, as the generator it's relying on
         # (GenThree) is still running.
         GenOne(self._mock_app_context).load().complete('gen_one_data')
         GenTwo(self._mock_app_context).load().complete('gen_two_data')
-        result = self._generate_analytics_page()
+        result = self._generate_analytics_page(analytics_)
         self.assertIn('simple_one_gen_source_gen_one: "gen_one_data"', result)
         self.assertIn('Statistics for gen one were last updated', result)
         self.assertIn('Statistics for gen two were last updated', result)
         self.assertIn('Job for gen three statistics started at', result)
-        self.assertTrue(analytics.Registry.any_generator_not_running(
-            self._mock_app_context))
         self.assertNotIn('complex_three_gen_source', result)
 
         # Finish last generator; should now have all data from all sources.
         GenThree(self._mock_app_context).load().complete('gen_three_data')
-        result = self._generate_analytics_page()
+        result = self._generate_analytics_page(analytics_)
         self.assertIn('trivial_no_gen_source: "no_gen_value"', result)
         self.assertIn('simple_one_gen_source_gen_one: "gen_one_data"', result)
         self.assertIn('complex_no_gen_source: "no_gen_value"', result)

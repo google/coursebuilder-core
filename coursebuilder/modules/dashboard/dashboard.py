@@ -28,8 +28,6 @@ from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from filer import TextAssetRESTHandler
-import jinja2
-import jinja2.exceptions
 import messages
 from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
@@ -49,6 +47,7 @@ from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
 
 import appengine_config
+from common import crypto
 from common import jinja_utils
 from common import safe_dom
 from controllers import sites
@@ -63,6 +62,7 @@ from models import roles
 from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
+from modules.dashboard import analytics_tabs
 from modules.data_source_providers import synchronous_providers
 from modules.search.search import SearchDashboardHandler
 from tools import verify
@@ -87,10 +87,10 @@ class DashboardHandler(
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
-        'generate_analytics_data', 'create_or_edit_settings', 'add_unit',
+        'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_basic_course_settings', 'add_reviewer',
-        'delete_reviewer', 'cancel_analytic', 'run_analytic']
+        'delete_reviewer']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -199,8 +199,9 @@ class DashboardHandler(
 
     def render_page(self, template_values):
         """Renders a page using provided template values."""
-
-        template_values['top_nav'] = self._get_top_nav()
+        if 'top_nav' not in template_values:
+            template_values['top_nav'] = []
+        template_values['top_nav'].insert(0, self._get_top_nav())
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -766,38 +767,26 @@ class DashboardHandler(
 
     def get_analytics(self):
         """Renders course analytics view."""
+        # Package private access to tabs: pylint: disable-msg=protected-access
+        tab_name = self.request.get('tab') or 'students'
+        tab = analytics_tabs.Registry._get_tab(tab_name)
+        title_text = 'Analytics > %s' % tab.title
+        top_nav = safe_dom.NodeList()
+        for item in analytics_tabs.Registry._get_registered_tabs():
+            top_nav.append(
+                safe_dom.A(
+                    'dashboard?action=analytics&tab=%s' % item.name,
+                    className=('selected' if tab_name == item.name else ''))
+                .add_text(item.title))
+
         template_values = {
-            'page_title': self.format_title('Analytics'),
-            'page_title_linked': self.format_title('Analytics', as_link=True),
-        }
-        template_values['main_content'] = jinja2.utils.Markup(
-            self.get_template(
-                'analytics.html', [os.path.dirname(__file__)]
-            ).render({
-                'stats_html': analytics.generate_display_html(
-                    self, utils.XsrfTokenManager),
-                'xsrf_token': self.create_xsrf_token('generate_analytics_data'),
-                'any_generator_not_running':
-                    analytics.Registry.any_generator_not_running(
-                        self.app_context),
-            }, autoescape=True)
-        )
+            'page_title': self.format_title(title_text),
+            'page_title_linked': self.format_title(title_text, as_link=True),
+            'top_nav': [top_nav],
+            'main_content': analytics.generate_display_html(
+                self, crypto.XsrfTokenManager, tab.analytics),
+            }
         self.render_page(template_values)
-
-    def post_generate_analytics_data(self):
-        """Submits a new student statistics calculation task."""
-        analytics.Registry.run_all_generators(self.app_context)
-        self.redirect('/dashboard?action=analytics')
-
-    def post_cancel_analytic(self):
-        analytics.Registry.cancel_generators_for_analytic(
-            self.app_context, self.request.get('analytic'))
-        self.redirect('/dashboard?action=analytics')
-
-    def post_run_analytic(self):
-        analytics.Registry.run_generators_for_analytic(
-            self.app_context, self.request.get('analytic'))
-        self.redirect('/dashboard?action=analytics')
 
 
 custom_module = None
@@ -806,24 +795,28 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    analytics.Registry.register(
+    multiple_choice_question = analytics.Visualization(
         'multiple_choice_question',
         'Multiple Choice Question',
         'multiple_choice_question.html',
         data_source_classes=[
             synchronous_providers.QuestionStatsSource])
-    analytics.Registry.register(
+    student_progress = analytics.Visualization(
         'student_progress',
         'Student Progress',
         'student_progress.html',
         data_source_classes=[
             synchronous_providers.StudentProgressStatsSource])
-    analytics.Registry.register(
+    enrollment_assessment = analytics.Visualization(
         'enrollment_assessment',
         'Enrollment/Assessment',
         'enrollment_assessment.html',
         data_source_classes=[
             synchronous_providers.StudentEnrollmentAndScoresSource])
+    analytics_tabs.Registry.register('students', 'Students',
+                                     [student_progress, enrollment_assessment])
+    analytics_tabs.Registry.register('questions', 'Questions',
+                                     [multiple_choice_question])
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

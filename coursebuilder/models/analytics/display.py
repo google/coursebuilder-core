@@ -20,31 +20,46 @@ from common import safe_dom
 from controllers import utils
 from models import data_sources
 from models import jobs
-from models.analytics import registry
 from models.analytics import utils as analytics_utils
 from modules.mapreduce import mapreduce_module
 
 
-def _generate_display_html(template_renderer, xsrf, app_context):
-    html_sections = []
+def _generate_display_html(template_renderer, xsrf, app_context, analytics):
+    # Package-protected: pylint: disable-msg=protected-access
 
     # First, load jobs for all generators required for an analytic.
     # Jobs may directly contain small results, just hold references to
     # larger results, or both.
+    any_generator_not_running = False
     data_source_jobs = {}
-    # Package-private access - safer to mark private and suppress lint.
-    # pylint: disable-msg=protected-access
-    for generator_class in registry._Registry._all_generator_classes():
-        data_source_jobs[generator_class] = (
-            generator_class(app_context).load())
+    for generator_class in analytics_utils._generators_for_analytics(analytics):
+        job = generator_class(app_context).load()
+        data_source_jobs[generator_class] = job
+        if not job or job.has_finished:
+            any_generator_not_running = True
 
     # Generate HTML section for each analytic.
-    # Package-private access - safer to mark private and suppress lint.
-    # pylint: disable-msg=protected-access
-    for analytic in registry._Registry._get_analytics():
-         html_sections.extend(_generate_analytic_section(
-             template_renderer, xsrf, app_context, analytic, data_source_jobs))
-    return html_sections
+    html_sections = []
+    for analytic in analytics:
+        html_sections.extend(_generate_analytic_section(
+            template_renderer, xsrf, app_context, analytic, data_source_jobs))
+
+    # Generate page content
+    token = data_sources.utils.generate_data_source_token(xsrf)
+    names_of_analytics_with_generators = []
+    for analytic in analytics:
+        if analytics_utils._generators_for_analytics([analytic]):
+            names_of_analytics_with_generators.append(analytic.name)
+    return template_renderer.render(
+        None, 'models/analytics/display.html',
+        {
+            'data_source_token': token,
+            'sections': html_sections,
+            'any_generator_not_running': any_generator_not_running,
+            'xsrf_token_run': xsrf.create_xsrf_token('run_analytics'),
+            'analytics': names_of_analytics_with_generators,
+            'r': template_renderer.get_current_url(),
+        })
 
 
 def _generate_analytic_section(template_renderer, xsrf, app_context,
@@ -103,8 +118,9 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
             'any_generator_still_running': any_generator_still_running,
             'all_generators_have_ever_run': all_generators_have_ever_run,
             'status_messages': generator_status_messages,
-            'xsrf_token_run': xsrf.create_xsrf_token('run_analytic'),
-            'xsrf_token_cancel': xsrf.create_xsrf_token('cancel_analytic'),
+            'xsrf_token_run': xsrf.create_xsrf_token('run_analytics'),
+            'xsrf_token_cancel': xsrf.create_xsrf_token('cancel_analytics'),
+            'r': template_renderer.get_current_url(),
         }))
     return html_sections
 

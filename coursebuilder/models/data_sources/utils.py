@@ -16,12 +16,9 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-from common import crypto
-
 DATA_SOURCE_ACCESS_XSRF_ACTION = 'data_source_access'
 
 
-def _generate_data_source_token():
+def generate_data_source_token(xsrf):
     """Generate an XSRF token used to access data source, and protect PII."""
-    return crypto.XsrfTokenManager.create_xsrf_token(
-        DATA_SOURCE_ACCESS_XSRF_ACTION)
+    return xsrf.create_xsrf_token(DATA_SOURCE_ACCESS_XSRF_ACTION)

@@ -64,11 +64,19 @@
           float: right;
           margin-right: 32px;
         }
-        div#gcb-nav-bar {
+        .gcb-nav-bar {
           margin: 0px;
           padding: 8px;
-          background-color: #009A5D;
           text-align: center;
+        }
+        .gcb-nav-bar-level-1 {
+          background-color: #009A5D;
+        }
+        .gcb-nav-bar-level-2 {
+          background-color: #40CA90;
+        }
+        .gcb-nav-bar-level-3 {
+          background-color: #80FFD0;
         }
         div#gcb-main-area {
           background-color: #FFFFFF;
@@ -103,7 +111,7 @@
           font-size: 80%;
           color: #666;
         }
-        div#gcb-nav-bar a {
+        .gcb-nav-bar a {
           padding-left: 8px;
           padding-right: 8px;
           font-family: "open sans",arial,sans-serif;
@@ -112,10 +120,10 @@
           font-weight: bold;
           text-decoration: none;
         }
-        div#gcb-nav-bar a:focus, div#gcb-nav-bar a:hover, div#gcb-nav-bar a:active {
+        .gcb-nav-bar a:focus, .gcb-nav-bar a:hover, .gcb-nav-bar a:active {
           text-decoration: underline;
         }
-        div#gcb-nav-bar a.selected {
+        .gcb-nav-bar a.selected {
           text-decoration: underline;
         }
         div#formContainer {
@@ -152,9 +160,11 @@
     {{ user_nav }}
   </div>
   <h2>{{ page_title_linked }}</h2>
-  <div id='gcb-nav-bar'>
-    {{ top_nav }}
-  </div>
+  {% for nav in top_nav %}
+    <div class='gcb-nav-bar gcb-nav-bar-level-{{ loop.index }}'>
+      {{ nav }}
+    </div>
+  {% endfor %}
   <div id='gcb-main-area'>
     <!-- ButterBar -->
     <div class="gcb-butterbar-container">
