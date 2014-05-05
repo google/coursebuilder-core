@@ -28,6 +28,7 @@ import pageobjects
 from selenium import webdriver
 from selenium.webdriver.chrome import options
 
+from models import models
 from tests import suite
 from tests.integration import fake_visualizations
 
@@ -289,6 +290,47 @@ class AdminTests(BaseIntegrationTest):
             'YouTube:<gcb-youtube videoid="321" %s></gcb-youtube>' % (
                 instanceid_regex, instanceid_regex
             )
+        )
+
+    def test_add_edit_delete_label(self):
+        name = self.create_new_course()[0]
+
+        self.load_dashboard(
+            name
+        ).click_assets(
+        ).click_add_label(
+        ).set_title(
+            'Liver'
+        ).set_description(
+            'Exercise and diet to support healthy hepatic function'
+        ).set_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK
+        ).click_save(
+        ).click_close(
+        ).verify_label_present(
+            'Liver'
+        ).click_edit_label(
+            'Liver'
+        ).verify_title(
+            'Liver'
+        ).verify_description(
+            'Exercise and diet to support healthy hepatic function'
+        ).verify_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK
+        ).set_title(
+            'Kidney'
+        ).click_save(
+        ).click_close(
+        ).verify_label_present(
+            'Kidney'
+        ).click_edit_label(
+            'Kidney'
+        ).click_delete(
+        ).confirm_delete(
+        ).verify_label_not_present(
+            'Kidney'
+        ).verify_label_not_present(
+            'Liver'
         )
 
 

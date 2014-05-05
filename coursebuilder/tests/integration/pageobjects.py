@@ -348,6 +348,26 @@ class AssetsPage(PageObject):
                 continue
         raise AssertionError(description + ' not found')
 
+    def click_add_label(self):
+        self.find_element_by_link_text('Add Label').click()
+        return LabelEditorPage(self._tester)
+
+    def verify_label_present(self, title):
+        self.find_element_by_id('label_' + title)  # Exception if not found.
+        return self
+
+    def verify_label_not_present(self, title):
+        try:
+            self.find_element_by_id('label_' + title)  # Exception if not found.
+            raise AssertionError('Unexpectedly found label %s' % title)
+        except exceptions.NoSuchElementException:
+            pass
+        return self
+
+    def click_edit_label(self, title):
+        self.find_element_by_id('label_' + title).click()
+        return LabelEditorPage(self._tester)
+
     def click_outline(self):
         self.find_element_by_link_text('Outline').click()
         return DashboardPage(self._tester)
@@ -429,6 +449,53 @@ class ShortAnswerEditorPage(QuestionEditorPage):
 
     def click_delete_this_answer(self, n):
         raise NotImplementedError
+
+
+class LabelEditorPage(EditorPageObject):
+
+    def set_title(self, text):
+        title_el = self.find_element_by_name('title')
+        title_el.clear()
+        title_el.send_keys(text)
+        return self
+
+    def verify_title(self, text):
+        title_el = self.find_element_by_name('title')
+        self._tester.assertEqual(text, title_el.get_attribute('value'))
+        return self
+
+    def set_description(self, description):
+        description_el = self.find_element_by_name('description')
+        description_el.clear()
+        description_el.send_keys(description)
+        return self
+
+    def verify_description(self, description):
+        description_el = self.find_element_by_name('description')
+        self._tester.assertEqual(description,
+                                 description_el.get_attribute('value'))
+        return self
+
+    def set_type(self, type_num):
+        type_el = self.find_element_by_id('_inputex_radioId%d' % type_num)
+        type_el.click()
+        return self
+
+    def verify_type(self, type_num):
+        type_el = self.find_element_by_id('_inputex_radioId%d' % type_num)
+        self._tester.assertEqual('true', type_el.get_attribute('checked'))
+        return self
+
+    def click_delete(self):
+        self.find_element_by_link_text('Delete').click()
+        return self
+
+    def confirm_delete(self):
+        self._tester.driver.switch_to_alert().accept()
+        return AssetsPage(self._tester)
+
+    def click_close(self):
+        return self._close_and_return_to(AssetsPage)
 
 
 class ImageEditorPage(EditorPageObject):

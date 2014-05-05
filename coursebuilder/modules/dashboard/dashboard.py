@@ -28,6 +28,8 @@ from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from filer import TextAssetRESTHandler
+from label_editor import LabelManagerAndEditor
+from label_editor import LabelRestHandler
 import messages
 from peer_review import AssignmentManager
 from question_editor import McQuestionRESTHandler
@@ -60,6 +62,7 @@ from models import courses
 from models import custom_modules
 from models import roles
 from models import vfs
+from models.models import LabelDAO
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from modules.dashboard import analytics_tabs
@@ -73,7 +76,8 @@ from google.appengine.api import users
 
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    QuestionManagerAndEditor, QuestionGroupManagerAndEditor, AssignmentManager,
+    QuestionManagerAndEditor, QuestionGroupManagerAndEditor,
+    LabelManagerAndEditor, AssignmentManager,
     ApplicationHandler, ReflectiveRequestHandler, SearchDashboardHandler):
     """Handles all pages and actions required for managing a course."""
 
@@ -84,7 +88,8 @@ class DashboardHandler(
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
-        'edit_question', 'add_question_group', 'edit_question_group']
+        'edit_question', 'add_question_group', 'edit_question_group',
+        'add_label', 'edit_label']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -108,6 +113,7 @@ class DashboardHandler(
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
             (ImportActivityRESTHandler.URI, ImportActivityRESTHandler),
             (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
+            (LabelRestHandler.URI, LabelRestHandler),
             (LessonRESTHandler.URI, LessonRESTHandler),
             (LinkRESTHandler.URI, LinkRESTHandler),
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
@@ -705,6 +711,42 @@ class DashboardHandler(
 
         return output
 
+    def list_labels(self):
+        """Prepare a list of labels for use on the Assets page."""
+        output = safe_dom.NodeList()
+        if not filer.is_editable_fs(self.app_context):
+            return output
+
+        output.append(
+            safe_dom.A('dashboard?action=add_label',
+                       className='gcb-button gcb-pull-right'
+                      ).add_text('Add Label')
+            ).append(
+                safe_dom.Element(
+                    'div', style='clear: both; padding-top: 2px;'
+                )
+            )
+        output.append(
+                safe_dom.Element('h3').add_text('Labels')
+        )
+        labels = LabelDAO.get_all()
+        if labels:
+            ol = safe_dom.Element('ol')
+            for label in labels:
+                li = safe_dom.Element('li')
+                li.add_text(
+                    label.title
+                ).add_child(
+                    safe_dom.Entity('&nbsp;')
+                ).add_child(
+                    safe_dom.A('dashboard?action=edit_label&key=%s' % label.id,
+                               id='label_%s' % label.title).add_text('[Edit]'))
+                ol.add_child(li)
+            output.append(ol)
+        else:
+            output.append(safe_dom.Element('blockquote').add_text('< none >'))
+        return output
+
     def get_assets(self):
         """Renders course assets view."""
 
@@ -724,6 +766,8 @@ class DashboardHandler(
             self.list_questions()
         ).append(
             self.list_question_groups()
+        ).append(
+            self.list_labels()
         ).append(
             self.list_and_format_file_list(
                 'Assessments', '/assets/js/', links=True,

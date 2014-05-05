@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import collections
 import logging
 
 from config import ConfigProperty
@@ -841,3 +842,97 @@ class QuestionGroupDTO(object):
 class QuestionGroupDAO(BaseJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
+
+
+class LabelEntity(BaseEntity):
+    """A class representing labels that can be applied to Student, Unit, etc."""
+    data = db.TextProperty(indexed=False)
+
+    MEMCACHE_KEY = 'labels'
+    _PROPERTY_EXPORT_BLACKLIST = []  # No PII in labels.
+
+    def put(self):
+        """Save the content to the datastore.
+
+        To support caching the list of all labels, we must invalidate
+        the cache on any change to any label.
+
+        Returns:
+          Value of entity as modified by put() (i.e., key setting)
+        """
+
+        result = super(LabelEntity, self).put()
+        MemcacheManager.delete(self.MEMCACHE_KEY)
+        return result
+
+    def delete(self):
+        """Remove a label from the datastore.
+
+        To support caching the list of all labels, we must invalidate
+        the cache on any change to any label.
+        """
+
+        super(LabelEntity, self).delete()
+        MemcacheManager.delete(self.MEMCACHE_KEY)
+
+
+class LabelDTO(object):
+
+    LABEL_TYPE_GENERAL = 0
+    LABEL_TYPE_COURSE_TRACK = 1
+    # ... etc.
+    # If you are extending CourseBuilder, please consider picking
+    # a number at 1,000 or over to avoid any potential conflicts
+    # with types added by the CourseBuilder team in future releases.
+
+    # Provide consistent naming and labeling for admin UI elements.
+    LabelLabel = collections.namedtuple('LabelLabel', ['name', 'title'])
+    LABEL_LABELS = {
+        LABEL_TYPE_GENERAL: LabelLabel('general', 'General'),
+        LABEL_TYPE_COURSE_TRACK: LabelLabel('course_track', 'Course Track'),
+        }
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict  # UI layer takes care of sanity-checks.
+
+    @property
+    def title(self):
+        return self.dict.get('title', '')
+
+    @property
+    def description(self):
+        return self.dict.get('description', '')
+
+    @property
+    def type(self):
+        return self.dict.get('type', self.LABEL_TYPE_GENERAL)
+
+
+class LabelDAO(BaseJsonDao):
+    DTO = LabelDTO
+    ENTITY = LabelEntity
+
+    @classmethod
+    def get_all(cls):
+        """Get all Label objects.
+
+        The vast majority of the time, labels are read-only and all read all
+        at once.  It is only very occasionally that labels are created or
+        modified.  That being the case, the caching strategy is to cache all
+        labels all at once in memcache in LabelDAO.
+
+        Returns:
+          all Label entities as LabelDTO instances
+        """
+
+        items = MemcacheManager.get(LabelEntity.MEMCACHE_KEY)
+        if items is None:
+            items = super(LabelDAO, cls).get_all()
+            MemcacheManager.set(LabelEntity.MEMCACHE_KEY, items)
+        return items
+
+    @classmethod
+    def get_all_of_type(cls, label_type, allow_cached=True):
+        return [label for label in cls.get_all(allow_cached)
+                if label.type == label_type]

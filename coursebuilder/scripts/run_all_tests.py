@@ -91,7 +91,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.VirtualFileSystemTest': 40,
     'tests.functional.test_classes.ImportActivityTests': 6,
     'tests.functional.whitelist.WhitelistTest': 12,
-    'tests.integration.test_classes': 14,
+    'tests.integration.test_classes': 15,
     'tests.unit.etl_mapreduce.HistogramTests': 5,
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,
