@@ -34,6 +34,10 @@ class CourseElementsDataSource(data_sources.AbstractRestDataSource):
         return data_sources.NullContextManager
 
     @classmethod
+    def get_default_chunk_size(cls):
+        return 0  # Meaning we don't support paginated access.
+
+    @classmethod
     def _build_query(cls, *args, **kwargs):
         return None
 
@@ -51,6 +55,10 @@ class AssessmentsDataSource(CourseElementsDataSource):
     @classmethod
     def get_name(cls):
         return 'assessments'
+
+    @classmethod
+    def get_title(cls):
+        return 'Assessments'
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
@@ -98,6 +106,10 @@ class UnitsDataSource(CourseElementsDataSource):
         return 'units'
 
     @classmethod
+    def get_title(cls):
+        return 'Units'
+
+    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
         reg = schema_fields.FieldRegistry(
             'Units',
@@ -132,6 +144,10 @@ class LessonsDataSource(CourseElementsDataSource):
     @classmethod
     def get_name(cls):
         return 'lessons'
+
+    @classmethod
+    def get_title(cls):
+        return 'Lessons'
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
@@ -198,6 +214,10 @@ class StudentAssessmentScoresDataSource(
         return 'assessment_scores'
 
     @classmethod
+    def get_title(cls):
+        return 'Assessment Scores'
+
+    @classmethod
     def get_context_class(cls):
         return data_sources.DbTableContext
 
@@ -248,6 +268,38 @@ class StudentAssessmentScoresDataSource(
                     # user_id is PII and must be encoded to obscure its value.
                     score['user_id'] = transform_fn(student.user_id)
                     student_scores.append(score)
+
+            # Provide a ranking by student, 0 ... #students, low to high.
+            scored_students = {}
+            for score in student_scores:
+                current_score = scored_students.get(score['user_id'], 0)
+                scored_students[score['user_id']] = current_score + (
+                    score['weight'] * score['score'])
+            ranked_students = {kv[0]: rank for rank, kv in
+                               enumerate(
+                                   sorted(scored_students.items(),
+                                          lambda i1, i2: cmp(i1[1], i2[1])))}
+
+            # Provide a ranking by assessment, 0 ... #assessments, low to high
+            scored_assessments = {}
+            for score in student_scores:
+                title = score['title']
+                if title not in scored_assessments:
+                    scored_assessments[title] = []
+                scored_assessments[title].append(
+                    score['weight'] * score['score'])
+            for title in scored_assessments:
+                avg = (sum(scored_assessments[title]) * 1.0 /
+                       len(scored_assessments[title]))
+                scored_assessments[title] = avg
+            ranked_assessments = {kv[0]: rank for rank, kv in
+                                  enumerate(
+                                      sorted(scored_assessments.items(),
+                                             lambda i1, i2: cmp(i1[1], i2[1])))}
+
+            for score in student_scores:
+                score['user_rank'] = ranked_students[score['user_id']]
+                score['assessment_rank'] = ranked_assessments[score['title']]
             return student_scores
 
 
@@ -260,6 +312,10 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
     @classmethod
     def get_name(cls):
         return 'students'
+
+    @classmethod
+    def get_title(cls):
+        return 'Students'
 
     @classmethod
     def _postprocess_rows(cls, app_context, source_context, schema,

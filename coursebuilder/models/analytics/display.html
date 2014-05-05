@@ -1,7 +1,3 @@
-<script>
-  gcb_data_source_token = '{{ data_source_token }}';
-</script>
-
 {% if any_generator_not_running %}
   <form id="gcb-generate-analytics-data"
         action="analytics?action=run_visualizations"
@@ -13,9 +9,75 @@
     {% endfor %}
     <button class="gcb-button" type="submit">Update All Statistics</button>
   </form>
+  <br>
+  <br>
 {% endif %}
-<br>
-<br>
+
+
+{% if rest_sources %}
+    <div id="gcb_rest_source_errors">
+    </div>
+  {% for rest_source in rest_sources|sort(attribute='title') %}
+    <p>
+    {{ rest_source.title }}
+    {% if rest_source.chunk_size > 0%}
+      <button
+         class="gcb_button"
+         id="gcb_rest_source_page_request_zero_{{ rest_source.name }}"
+         onclick="gcbRestSourcePageRequest('{{ rest_source.name }}', 0);">
+        |&lt;&lt;
+      </button>
+      <button
+         class="gcb_button"
+         id="gcb_rest_source_page_request_minusten_{{ rest_source.name }}"
+         onclick="gcbRestSourcePageChange('{{ rest_source.name }}', -10);">
+        &lt;&lt;
+      </button>
+      <button
+         class="gcb_button"
+         id="gcb_rest_source_page_request_minusone_{{ rest_source.name }}"
+         onclick="gcbRestSourcePageChange('{{ rest_source.name }}', -1);">
+        &lt;
+      </button>
+      Page:
+      <span id="gcb_rest_source_page_number_{{ rest_source.name }}">
+        0
+      </span>
+      <button
+         class="gcb_button"
+         id="gcb_rest_source_page_request_plusone_{{ rest_source.name }}"
+         onclick="gcbRestSourcePageChange('{{ rest_source.name }}', 1);">
+        &gt;
+      </button>
+      <button
+         class="gcb_button"
+         id="gcb_rest_source_page_request_plusten_{{ rest_source.name }}"
+         onclick="gcbRestSourcePageChange('{{ rest_source.name }}', 10);">
+        &gt;&gt;
+      </button>
+      <!-- TODO(mgainer): Additional controls for filtering and ordering
+           based on schema. -->
+      Items per page:
+      <input type="text"
+             size="6"
+             id="gcb_rest_source_chunk_size_{{ rest_source.name }}"
+             value="{{ rest_source.chunk_size }}">
+    {% else %}
+      <!-- Data sources that are guaranteed to only have one page
+           get bogus items for the page number display and page
+           size control to simplify code in rest_visualizations.html -->
+      <input type="hidden"
+             id="gcb_rest_source_chunk_size_{{ rest_source.name }}"
+             value="0">
+      <span id="gcb_rest_source_page_number_{{ rest_source.name }}"
+            style="display:none;"></span>
+    {% endif %}
+    </p>
+    <div id="gcb_log_rest_source_{{ rest_source.name }}"></div>
+  {% endfor %}
+  <br>
+{% endif %}
+
 
 {% for section in sections %}
   {{ section }}

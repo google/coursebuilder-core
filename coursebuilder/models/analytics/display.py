@@ -20,6 +20,7 @@ from common import safe_dom
 from controllers import utils
 from models import data_sources
 from models import jobs
+from models import transforms
 from models.analytics import utils as analytics_utils
 from modules.mapreduce import mapreduce_module
 
@@ -46,20 +47,29 @@ def _generate_display_html(template_renderer, xsrf, app_context,
         html_sections.extend(_generate_visualization_section(
             template_renderer, xsrf, app_context, v, data_source_jobs))
 
+    # Generate JS to pull contents of data-sources up to page and feed it
+    # to visualization functions.
+    html_sections.extend(_generate_data_source_script(template_renderer,
+                                                      visualizations, xsrf))
+
     # Generate page content
-    token = data_sources.utils.generate_data_source_token(xsrf)
     names_of_visualizations_with_generators = []
     for visualization in visualizations:
         if analytics_utils._generators_for_visualizations([visualization]):
             names_of_visualizations_with_generators.append(visualization.name)
+    rest_sources = [{
+        'name': rdsc.get_name(),
+        'title': rdsc.get_title(),
+        'chunk_size': rdsc.get_default_chunk_size(),
+        } for rdsc in analytics_utils._rest_data_source_classes(visualizations)]
     return template_renderer.render(
         None, 'models/analytics/display.html',
         {
-            'data_source_token': token,
             'sections': html_sections,
             'any_generator_not_running': any_generator_not_running,
             'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
             'visualizations': names_of_visualizations_with_generators,
+            'rest_sources': rest_sources,
             'r': template_renderer.get_current_url(),
         })
 
@@ -185,3 +195,44 @@ def _get_pipeline_link(xsrf, app_context, generator_class, job):
     ret.append(safe_dom.Text('    '))
     ret.append(safe_dom.A(status_url, target='_blank').add_text(link_text))
     return ret
+
+
+def _generate_data_source_script(template_renderer, visualizations, xsrf):
+
+    # Build list of {visualization name, [depended-upon data source names]}
+    display_visualizations = {}
+    for v in visualizations:
+        rest_sources = [rsc.get_name() for rsc in v.rest_data_source_classes]
+        if rest_sources:
+            display_visualizations[v.name] = {
+                'callback_name': v.name,
+                'restSources': rest_sources,
+                'restSourcesNotYetSeen': {
+                    rest_source: True for rest_source in rest_sources}}
+    if not display_visualizations:
+        return []
+
+    # Build list of {data source name, [dependent visualization names]}
+    display_rest_sources = {}
+    # pylint: disable-msg=protected-access
+    for rdsc in analytics_utils._rest_data_source_classes(visualizations):
+        v_names = []
+        for v in visualizations:
+            if rdsc in v.rest_data_source_classes:
+                v_names.append(v.name)
+        display_rest_sources[rdsc.get_name()] = {
+            'currentPage': -1,
+            'pages': [],
+            'crossfilterDimensions': [],
+            'sourceContext': None,
+            'visualizations': v_names}
+
+    env = {
+        'href': template_renderer.get_base_href(),
+        'visualizations': display_visualizations,
+        'restSources': display_rest_sources,
+        'dataSourceToken': data_sources.utils.generate_data_source_token(xsrf),
+        }
+    return [template_renderer.render(
+        None, 'models/analytics/rest_visualizations.html',
+        {'env': transforms.dumps(env)})]

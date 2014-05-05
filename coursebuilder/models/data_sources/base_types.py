@@ -133,6 +133,32 @@ class _AbstractRestDataSource(_DataSource):
             'unique within a CourseBuilder installation.')
 
     @classmethod
+    def get_title(cls):
+        raise NotImplementedError(
+            'Classes derived from _AbstractRestDataSource must provide a '
+            'title string for display on web pages.  This is used in the '
+            'context of controls to select a particular page.')
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        """Tell what the recommended number of items per page is.
+
+        This will vary based on the sizes of the items returned.  Note that
+        this is not an absolute maximum; the UI may request more than this
+        value (up to the absolute maximum imposed by App Engine overall
+        response size limits).
+
+        This value can be set to zero to indicate that the resource does not
+        support or require paging.  This is useful for, e.g., course-level
+        items (units, assessments) of which we expect to have never more than
+        tens to hundreds.
+
+        Returns:
+            Recommended maximum items per page of data source items
+        """
+        return cls.RECOMMENDED_MAX_DATA_ITEMS
+
+    @classmethod
     def get_context_class(cls):
         raise NotImplementedError(
             'Classes derived from _AbstractRestDataSource must provide a class '
@@ -225,7 +251,7 @@ class _AbstractContextManager(object):
     """
 
     @classmethod
-    def build_from_web_request(cls, params):
+    def build_from_web_request(cls, params, default_chunk_size):
         """Build a context instance given a set of URL parameters."""
         raise NotImplementedError(
             'Subclasses of _AbstractContextManager must implement a function '
@@ -262,7 +288,7 @@ class _AbstractContextManager(object):
             'that dict back into a context.')
 
     @classmethod
-    def build_blank_default(cls, params):
+    def build_blank_default(cls, params, default_chunk_size):
         """Build a default version of the context."""
         raise NotImplementedError(
             'When build_from_web_request() returns None, this function is used '
@@ -297,7 +323,7 @@ class _NullContextManager(_AbstractContextManager):
     """An _AbstractContextManager used when a real context is not required."""
 
     @classmethod
-    def build_from_web_request(cls, params):
+    def build_from_web_request(cls, params, default_chunk_size):
         return {'null_context': 'null_context'}
 
     @classmethod
@@ -309,7 +335,7 @@ class _NullContextManager(_AbstractContextManager):
         return context
 
     @classmethod
-    def build_blank_default(cls, params):
+    def build_blank_default(cls, params, default_chunk_size):
         return {'null_context': 'null_context'}
 
     @classmethod

@@ -29,6 +29,13 @@ def _generators_for_visualizations(visualizations):
     return ret
 
 
+def _rest_data_source_classes(visualizations):
+    ret = set()
+    for visualization in visualizations:
+        ret.update(visualization.rest_data_source_classes)
+    return ret
+
+
 def _get_required_generators(source_class):
     """Allow client code to return list or single instance.  Convert to list."""
 

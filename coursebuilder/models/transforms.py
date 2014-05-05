@@ -198,7 +198,7 @@ def json_to_dict(source_dict, schema):
         elif attr_type == 'number':
             output[key] = float(source_dict[key])
         elif attr_type == 'integer':
-            output[key] = int(source_dict[key])
+            output[key] = int(source_dict[key]) if source_dict[key] else 0
         elif attr_type == 'boolean':
             output[key] = convert_bool(source_dict[key], key)
         elif attr_type == 'array':

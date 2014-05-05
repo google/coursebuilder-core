@@ -80,6 +80,18 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                                          log)
                 rows = cls._fetch_page(source_context, query, page_number, log)
 
+                # While returning a page with _no_ items for the 'last' page
+                # is technically correct, it tends to have unfortunate
+                # consequences for dc/crossfilter/d3-based displays.
+                if not rows:
+                    page_number = sought_page_number - 1
+                    log.warning('Fewer pages available than requested.  '
+                                'Stopping at last page %d' % page_number)
+                    query = cls._build_query(source_context, schema,
+                                             page_number, log)
+                    rows = cls._fetch_page(source_context, query,
+                                           page_number, log)
+
             return cls._postprocess_rows(
                 app_context, source_context, schema, log, page_number, rows
                 ), page_number
@@ -210,17 +222,14 @@ class _DbTableContext(base_types._AbstractContextManager):
         ])
 
     @classmethod
-    def build_from_web_request(cls, params):
+    def build_from_web_request(cls, params, default_chunk_size):
         chunk_size = params.get('chunk_size')
         filters = params.get_all('filter')
         orderings = params.get_all('ordering')
         if not chunk_size and not filters and not orderings:
             return None
 
-        chunk_size = int(
-            chunk_size or
-            # Package-protected pylint: disable-msg=protected-access
-            base_types._AbstractRestDataSource.RECOMMENDED_MAX_DATA_ITEMS)
+        chunk_size = int(chunk_size or default_chunk_size)
         secret = cls._build_secret(params)
         return cls._TableContext1(1, chunk_size, filters, orderings, {}, secret)
 
@@ -234,12 +243,11 @@ class _DbTableContext(base_types._AbstractContextManager):
                 'Source context version %d is not supported.' % version)
 
     @classmethod
-    def build_blank_default(cls, params):
+    def build_blank_default(cls, params, default_chunk_size):
         secret = cls._build_secret(params)
         return cls._TableContext1(
             1,
-            # Package-protected pylint: disable-msg=protected-access
-            base_types._AbstractRestDataSource.RECOMMENDED_MAX_DATA_ITEMS,
+            default_chunk_size,
             [],  # no filters
             [],  # no orderings
             {},  # no cursors

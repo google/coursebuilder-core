@@ -94,14 +94,12 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
         context_class = data_source_class.get_context_class()
         page_number = int(self.request.get('page_number') or '0')
 
-        # TODO(mgainer): Verify that user is able to access data.  (Framework
-        # should already be doing this, but check, JIC)
-
         output = {}
         source_context = None
         schema = None
         with catch_and_log_.consume_exceptions('Building parameters'):
-            source_context = self._get_source_context(catch_and_log_)
+            source_context = self._get_source_context(
+                data_source_class.get_default_chunk_size(), catch_and_log_)
         with catch_and_log_.consume_exceptions('Getting data schema'):
             schema = data_source_class.get_schema(
                 self.app_context, catch_and_log_)
@@ -118,6 +116,7 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
                 output['params'] = context_class.get_public_params_for_display(
                     source_context)
         output['log'] = catch_and_log_.get()
+        output['source'] = data_source_class.get_name()
 
         self.response.headers['Content-Type'] = (
             'application/javascript; charset=utf-8')
@@ -134,7 +133,7 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
         return crypto.EncryptionManager.encrypt_to_urlsafe_ciphertext(
             plaintext_context)
 
-    def _get_source_context(self, catch_and_log_):
+    def _get_source_context(self, default_chunk_size, catch_and_log_):
         """Decide whether to use pre-built context or make a new one.
 
         Callers to this interface may provide source-specific parameters to
@@ -149,15 +148,18 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
         processing.
 
         Args:
+          default_chunk_size: Recommended maximum number of data items
+              in a page from the data_source.
           catch_and_log_: An object which is used to convert exceptions
-          into messages returned to our REST client, and can also be
-          used for informational annotations on progress.
+              into messages returned to our REST client, and can also be
+              used for informational annotations on progress.
         Returns:
           context object common to many functions involved in generating
           a data flow's JSON result.
         """
         context_class = self.get_data_source_class().get_context_class()
-        new_context = context_class.build_from_web_request(self.request)
+        new_context = context_class.build_from_web_request(self.request,
+                                                           default_chunk_size)
         existing_context = None
         with catch_and_log_.consume_exceptions('Problem decrypting context'):
             existing_context = self._get_existing_context(context_class)
@@ -171,9 +173,10 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
             ret = existing_context
         elif not new_context and not existing_context:
             catch_and_log_.info('Building new default context')
-            ret = context_class.build_blank_default(self.request)
+            ret = context_class.build_blank_default(self.request,
+                                                    default_chunk_size)
         elif not context_class.equivalent(new_context, existing_context):
-            catch_and_log_.warn(
+            catch_and_log_.info(
                 'Existing context and parameters mismatch; discarding '
                 'existing and creating new context.')
             ret = new_context

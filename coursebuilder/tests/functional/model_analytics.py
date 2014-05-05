@@ -52,6 +52,11 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
         actions.login(email, is_admin=True)
         self.get('dashboard?action=analytics&tab=questions')
 
+    def test_blank_assessments_tab_no_mr(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=assessments')
+
     def test_blank_peer_review_tab_no_mr(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
@@ -70,6 +75,13 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
         self.get('dashboard?action=analytics&tab=questions')
+
+    def test_blank_assessments_tab_with_mr(self):
+        config.Registry.test_overrides[
+            mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=assessments')
 
     def test_blank_peer_review_tab_with_mr(self):
         config.Registry.test_overrides[

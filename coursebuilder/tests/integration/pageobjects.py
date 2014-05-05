@@ -18,6 +18,8 @@ __author__ = [
     'John Orr (jorr@google.com)'
 ]
 
+import time
+
 from selenium.common import exceptions
 from selenium.webdriver.common import action_chains
 from selenium.webdriver.common import by
@@ -254,6 +256,11 @@ class DashboardPage(PageObject):
     def click_on_course_outline_components(self, title):
         self.find_element_by_link_text(title).click()
         return LessonPage(self._tester)
+
+    def click_analytics(self, name):
+        self.find_element_by_link_text('Analytics').click()
+        self.find_element_by_link_text(name).click()
+        return AnalyticsPage(self._tester)
 
 
 class LessonPage(RootPage):
@@ -677,3 +684,58 @@ class AddCourseEditorPage(EditorPageObject):
 
     def click_close(self):
         return self._close_and_return_to(AdminPage)
+
+
+class AnalyticsPage(PageObject):
+    """Page object for analytics sub-tab."""
+
+    def get_data_page_number(self, data_source):
+        # When there is a chart on the page, the chart-drawing animation
+        # takes ~1 sec to complete, which blocks the JS to unpack and paint
+        # the data page numbers.
+        max_wait = time.time() + 10
+        text = self.find_element_by_id('model_visualizations_dump').text
+        while not text and time.time() < max_wait:
+            time.sleep(0.1)
+            text = self.find_element_by_id('model_visualizations_dump').text
+
+        numbers = {}
+        for line in text.split('\n'):
+            name, value = line.split('=')
+            numbers[name] = int(value)
+        return numbers[data_source]
+
+    def get_displayed_page_number(self, data_source):
+        return self.find_element_by_id('gcb_rest_source_page_number_' +
+                                       data_source).text
+
+    def get_data_source_logs(self, data_source):
+        return self.find_element_by_id(
+            'gcb_log_rest_source_' + data_source).text
+
+    def get_page_level_logs(self):
+        return self.find_element_by_id('gcb_rest_source_errors').text
+
+    def click(self, data_source, button):
+        name = 'gcb_rest_source_page_request_' + button + '_' + data_source
+        self.find_element_by_id(name).click()
+
+    def buttons_present(self, data_source):
+        try:
+            self.find_element_by_id('gcb_rest_source_request_zero_' +
+                                    data_source)
+            return True
+        except exceptions.NoSuchElementException:
+            return False
+
+    def set_chunk_size(self, data_source, chunk_size):
+        field = self.find_element_by_id(
+            'gcb_rest_source_chunk_size_' + data_source)
+        field.clear()
+        field.send_keys(str(chunk_size))
+
+    def answers_pie_chart_present(self):
+        div = self.find_element_by_id('answers_pie_chart')
+        svgs = div.find_elements_by_tag_name('svg')
+        # pylint: disable-msg=g-explicit-length-test
+        return len(svgs) > 0

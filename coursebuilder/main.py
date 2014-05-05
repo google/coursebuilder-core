@@ -34,6 +34,7 @@ appengine_config.import_and_enable_modules()
 
 # compute all possible routes
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
+global_routes.extend(analytics.get_global_handlers())
 namespaced_routes.extend(analytics.get_namespaced_handlers())
 namespaced_routes.extend(data_sources.get_namespaced_handlers())
 

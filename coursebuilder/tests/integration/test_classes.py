@@ -21,16 +21,24 @@ __author__ = [
 import os.path
 import random
 import time
+import urllib
+import urllib2
+
 import pageobjects
 from selenium import webdriver
 from selenium.webdriver.chrome import options
+
 from tests import suite
+from tests.integration import fake_visualizations
 
 
 class BaseIntegrationTest(suite.TestBase):
     """Base class for all integration tests."""
 
-    TAGS = {suite.TestBase.REQUIRES_INTEGRATION_SERVER: True}
+    TAGS = {
+        suite.TestBase.REQUIRES_INTEGRATION_SERVER: True,
+        suite.TestBase.REQUIRES_TESTING_MODULES: set([fake_visualizations]),
+        }
 
     LOGIN = 'test@example.com'
 
@@ -335,3 +343,195 @@ class QuestionsTest(BaseIntegrationTest):
             'Question lesson'
         ).submit_answer_for_mc_question_and_verify(
             'What is your favorite color?', 'Red')
+
+
+class VisualizationsTest(BaseIntegrationTest):
+
+    def setUp(self):
+        super(VisualizationsTest, self).setUp()
+        self._name = self.create_new_course()[0]
+
+    def _have_page_number(self, page, data_source, page_number):
+        return (page.get_data_page_number(data_source) == page_number and
+                page.get_displayed_page_number(data_source) == str(page_number))
+
+    def _assert_have_page_number(self, page, data_source, page_number):
+        self.assertEquals(page_number, page.get_data_page_number(data_source))
+        self.assertEquals(str(page_number), page.get_displayed_page_number(
+            data_source))
+
+    def _wait_for_page_number(self, page, data_source, page_number):
+        max_time = time.time() + 10
+        while (time.time() < max_time and
+               not self._have_page_number(page, data_source, page_number)):
+            time.sleep(0.1)
+        self._assert_have_page_number(page, data_source, page_number)
+
+    def _force_response_common(self, data_source, action, page_number=0):
+        url = (suite.TestBase.INTEGRATION_SERVER_BASE_URL +
+               fake_visualizations.ForceResponseHandler.URL)
+        fp = urllib2.urlopen(url, urllib.urlencode({
+            fake_visualizations.ForceResponseHandler.PARAM_DATA_SOURCE:
+                data_source,
+            fake_visualizations.ForceResponseHandler.PARAM_ACTION:
+                action,
+            fake_visualizations.ForceResponseHandler.PARAM_PAGE_NUMBER:
+                page_number,
+            }))
+        fp.read()
+        fp.close()
+
+    def _force_response_exception(self, data_source):
+        self._force_response_common(
+            data_source,
+            fake_visualizations.ForceResponseHandler.ACTION_EXCEPTION)
+
+    def _force_response_log_critical(self, data_source):
+        self._force_response_common(
+            data_source,
+            fake_visualizations.ForceResponseHandler.ACTION_LOG_CRITICAL)
+
+    def _force_response_page_number(self, data_source, page_number):
+        self._force_response_common(
+            data_source,
+            fake_visualizations.ForceResponseHandler.ACTION_PAGE_NUMBER,
+            page_number)
+
+    def test_exams_simple(self):
+        page = self.load_dashboard(self._name).click_analytics('Exams')
+
+        # Seeing this zero proves we have really loaded data to page via REST.
+        self.assertEquals(0, page.get_data_page_number('exams'))
+
+        # Verify that page controls and page number are not displayed.
+        self.assertEquals('', page.get_displayed_page_number('exams'))
+        self.assertFalse(page.buttons_present('exams'))
+
+        self._force_response_log_critical('exams')
+        page = self.load_dashboard(self._name).click_analytics('Exams')
+        self.assertEquals('critical: Error for testing',
+                          page.get_data_source_logs('exams'))
+
+        self._force_response_exception('exams')
+        page = self.load_dashboard(self._name).click_analytics('Exams')
+        self.assertRegexpMatches(
+            page.get_data_source_logs('exams'),
+            'critical: Fetching results data: ValueError: Error for testing')
+
+    def test_pupils_page_navigation(self):
+        page = self.load_dashboard(self._name).click_analytics('Pupils')
+
+        # Initial load of page shoud use data page zero
+        self._assert_have_page_number(page, 'pupils', 0)
+
+        # Click forward to data page 1
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+
+        # Pretend that page 1 is the last with data; click forward.
+        self._force_response_page_number('pupils', 1)
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+        self.assertEquals('warning: Stopping at last page 1',
+                          page.get_data_source_logs('pupils'))
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 0)
+
+        page.click('pupils', 'plusten')
+        self._wait_for_page_number(page, 'pupils', 10)
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 11)
+        page.click('pupils', 'plusten')
+        self._wait_for_page_number(page, 'pupils', 21)
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 22)
+
+        self._force_response_page_number('pupils', 22)
+        page.click('pupils', 'plusten')
+        self._wait_for_page_number(page, 'pupils', 22)
+        self.assertEquals('warning: Stopping at last page 22',
+                          page.get_data_source_logs('pupils'))
+
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 21)
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 20)
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 19)
+        page.click('pupils', 'minusten')
+        self._wait_for_page_number(page, 'pupils', 9)
+        page.click('pupils', 'minusten')
+        self._wait_for_page_number(page, 'pupils', 0)
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 0)
+        page.click('pupils', 'minusten')
+        self._wait_for_page_number(page, 'pupils', 0)
+
+    def test_pupils_caching(self):
+        page = self.load_dashboard(self._name).click_analytics('Pupils')
+        self._assert_have_page_number(page, 'pupils', 0)
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 2)
+
+        # Pretend page one now has a problem on the server side;
+        # click back to page one.  We expect to _not_ see that
+        # exception, since we've cached page one.
+        self._force_response_log_critical('pupils')
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+        self.assertEquals('', page.get_page_level_logs())
+
+        # Now change the number of items in a data page; click back
+        # to page zero.  We _do_ expect to now see that exception,
+        # since we should drop our cached pages since the parameters
+        # to the page selection have changed.
+        page.set_chunk_size('pupils', 3)
+        page.click('pupils', 'minusone')
+        self._wait_for_page_number(page, 'pupils', 0)
+        self.assertEquals('critical: Error for testing',
+                          page.get_data_source_logs('pupils'))
+
+    def test_dimension_gc(self):
+        page = self.load_dashboard(self._name).click_analytics('Scoring')
+        self._wait_for_page_number(page, 'answers', 0)
+
+        # Scoring page has a pie chart.
+        self.assertTrue(page.answers_pie_chart_present())
+
+        # If we haven't been cleaning up crossfilter dimensions, when
+        # we hit 32, crossfilter will pitch a fit and the chart won't
+        # display.
+        for _ in range(32):
+            page.click('answers', 'minusone')
+        self.assertTrue(page.answers_pie_chart_present())
+
+    def test_data_sources_independent(self):
+        page = self.load_dashboard(self._name).click_analytics('Scoring')
+        self._wait_for_page_number(page, 'pupils', 0)
+        self._wait_for_page_number(page, 'answers', 0)
+
+        self._force_response_log_critical('answers')
+        self._force_response_exception('pupils')
+
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 0)
+        self._wait_for_page_number(page, 'answers', 0)
+        self.assertRegexpMatches(
+            page.get_data_source_logs('pupils'),
+            'critical: Fetching results data: ValueError: Error for testing')
+        self.assertEquals('', page.get_data_source_logs('answers'))
+
+        page.click('pupils', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+        self._wait_for_page_number(page, 'answers', 0)
+        self.assertEquals('', page.get_data_source_logs('pupils'))
+        self.assertEquals('', page.get_data_source_logs('answers'))
+
+        page.click('answers', 'plusone')
+        self._wait_for_page_number(page, 'pupils', 1)
+        self._wait_for_page_number(page, 'answers', 1)
+        self.assertEquals('', page.get_data_source_logs('pupils'))
+        self.assertEquals('critical: Error for testing',
+                          page.get_data_source_logs('answers'))

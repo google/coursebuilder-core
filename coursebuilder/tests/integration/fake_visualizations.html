@@ -1,0 +1,56 @@
+<!-- -*- mode: javascript; -*- -->
+
+<div id="model_visualizations_dump"></div>
+<div id="answers_pie_chart"></div>
+
+<script>
+// Integration tests want to know what data page we're on, so give
+// them some text with which they can tell.  Since these values are
+// supplied by the REST service, we can be sure we're on the page
+// we think we ought to be on.
+function dump_data(data) {
+  var dump_section = $('#model_visualizations_dump')[0]
+  while (dump_section.children.length > 0) {
+    dump_section.removeChild(dump_section.children[0]);
+  }
+  for (var member in data) {
+    var page = data[member].data[0].page_number
+    var p = document.createElement('p');
+    p.textContent = member + '=' + page + '\n';
+    dump_section.appendChild(p);
+  }
+}
+
+// Callbacks for the 'exams', 'pupils', and 'scoring' data sources.
+function exams(data) {
+  dump_data(data);
+}
+
+function pupils(data) {
+  dump_data(data);
+}
+
+function scoring(data) {
+  dump_data(data);
+
+  // We display an actual chart here despite having fixed-content data
+  // coming from the bogus REST service.  This is so that tests can
+  // determine when the chart fails to display.
+  var pie_div = $('#answers_pie_chart')[0]
+  while (pie_div.children.length > 0) {
+    pie_div.removeChild(pie_div.children[0])
+  }
+
+  var by_name = data.answers.crossfilter.dimension(
+      function(score) { return score.name; })
+  var score_by_name = by_name.group().reduceSum(
+      function(score) { return score.score; })
+  dc.pieChart('#answers_pie_chart')
+      .width(200)
+      .height(200)
+      .dimension(by_name)
+      .group(score_by_name);
+  dc.renderAll();
+}
+</script>
+<div style="clear: both"></div>

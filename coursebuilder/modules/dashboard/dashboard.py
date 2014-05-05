@@ -63,6 +63,7 @@ from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from modules.dashboard import analytics_tabs
+from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
 from modules.search.search import SearchDashboardHandler
 from tools import verify
@@ -813,10 +814,19 @@ def register_module():
         'enrollment_assessment.html',
         data_source_classes=[
             synchronous_providers.StudentEnrollmentAndScoresSource])
+    assessment_difficulty = analytics.Visualization(
+        'assessment_difficulty',
+        'Assessment Difficulty',
+        'assessment_difficulty.html',
+        data_source_classes=[
+            rest_providers.StudentAssessmentScoresDataSource])
+
     analytics_tabs.Registry.register('students', 'Students',
                                      [student_progress, enrollment_assessment])
     analytics_tabs.Registry.register('questions', 'Questions',
                                      [multiple_choice_question])
+    analytics_tabs.Registry.register('assessments', 'Assessments',
+                                     [assessment_difficulty])
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

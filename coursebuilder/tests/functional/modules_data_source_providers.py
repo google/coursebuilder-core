@@ -303,7 +303,7 @@ class StudentScoresTest(actions.TestBase):
             '/test/rest/data/assessment_scores/items').body)
         self.assertListEqual([], response['data'])
 
-    def _score_data(self, unit_id, title, weight, score):
+    def _score_data(self, unit_id, title, weight, score, assessment_rank):
         return {
             'id': unit_id,
             'title': title,
@@ -312,6 +312,8 @@ class StudentScoresTest(actions.TestBase):
             'user_id': 'None',
             'completed': False,
             'human_graded': False,
+            'user_rank': 0,
+            'assessment_rank': assessment_rank,
             }
 
     def test_one_student_one_score(self):
@@ -322,8 +324,9 @@ class StudentScoresTest(actions.TestBase):
             models.Student(user_id='123456', scores=scores).put()
         response = transforms.loads(self.get(
             '/test/rest/data/assessment_scores/items').body)
-        self.assertItemsEqual([self._score_data('1', 'New Assessment', 1, 20)],
-                              response['data'])
+        self.assertItemsEqual(
+            [self._score_data('1', 'New Assessment', 1, 20, 0)],
+            response['data'])
 
     def test_two_student_two_scores(self):
         s1_scores = '{"1": 20, "2": 30}'
@@ -340,8 +343,8 @@ class StudentScoresTest(actions.TestBase):
             models.Student(user_id='2', scores=s2_scores).put()
         response = transforms.loads(self.get(
             '/test/rest/data/assessment_scores/items').body)
-        self.assertItemsEqual([self._score_data('1', 'A1', 1, 20),
-                               self._score_data('1', 'A1', 1, 10),
-                               self._score_data('2', 'A2', 2, 30),
-                               self._score_data('2', 'A2', 2, 40)],
+        self.assertItemsEqual([self._score_data('1', 'A1', 1, 20, 0),
+                               self._score_data('1', 'A1', 1, 10, 0),
+                               self._score_data('2', 'A2', 2, 30, 1),
+                               self._score_data('2', 'A2', 2, 40, 1)],
                               response['data'])

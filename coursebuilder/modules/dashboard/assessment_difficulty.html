@@ -1,0 +1,151 @@
+<!-- -*- mode: javascript; -*- -->
+<div>
+<style scoped>
+    .graph_container {
+      float: left;
+      text-align: center;
+    }
+    h4 {
+      margin: 10px;
+    }
+    .graph_graph {
+      margin: 10px;
+    }
+
+</style>
+
+<!-- Titles and containers for graphs -->
+<div class="graph_container">
+<h4>Counts of Answers</h4>
+<div id='assessment_difficulty_score_counts_by_assessment'
+     class="graph_graph"></div>
+</div>
+
+<div class="graph_container">
+<h4>Total Scores From All Students</h4>
+<div id='assessment_difficulty_score_total_by_assessment'
+     class="graph_graph"></div>
+</div>
+
+<div class="graph_container">
+<h4>Scores By Student, Broken Out Per Assessment</h4>
+<div id='assessment_difficulty_ranked_students'
+     class="graph_graph"></div>
+</div>
+
+
+<script>
+
+/* Factory producing helper functions to break out scores by analytic title */
+function assessment_selection_function_factory(title){
+  return function(score){
+    if (score.title == title) {
+      return score.score * score.weight;
+    } else {
+      return 0;
+    }
+  };
+};
+
+/* Called by the display framework to update graphs.
+
+   This function is called once when the page is initially displayed, and
+   again each time the user selects a new page of data from any data source.
+
+   The data argument is a map containing the data specified by the
+   visualization registration.  Each entry in the map is given the name (as
+   determined by the get_name() method on _AbstractRestDataSource).  Each
+   named entry contains two items: 'data', which holds the raw rows for that
+   page, and 'crossfilter', which is a crossfilter initialized with 'data'.
+
+   If you use the provided crossfilter to generate your graphs, your graphs
+   will affect and be affected by user gestures to filter results on other
+   visualizations on the page.  This is probably what you want; a page that
+   is all about one topic (e.g. students) should not require the user to
+   perform the same filtering against multiple visualizations.  If you do
+   not want this behavior, you are free to create a crossfilter within
+   your own code.  NOTE, however, that you must then also be careful to
+   destroy all dimension objects you create using the Crossfilter objects.
+   (These are expensive, and creating more than 32 total is not supported).
+   Dimension objects created using the crossfilter(s) provided in the
+   'data' parameter have their dimensions automatically destroyed for you.
+*/
+function assessment_difficulty(data) {
+
+  var scores_by_assessment1 = data.assessment_scores.crossfilter.dimension(
+      function(score) {
+        return score.title;
+      });
+  var scores_by_assessment2 = data.assessment_scores.crossfilter.dimension(
+      function(score) {
+        return score.title;
+      });
+  var scores_by_student_rank = data.assessment_scores.crossfilter.dimension(
+      function(score) {
+        return score.user_rank;
+      });
+
+  // -------------------------------------------------------------------------
+  // Simple pie chart: List all assessments, with size of pie slice
+  // determined by number of scores for that assessment.
+  var score_counts_by_assessment = scores_by_assessment1.group().reduceCount();
+  dc.pieChart('#assessment_difficulty_score_counts_by_assessment')
+      .width(175)
+      .height(175)
+      .dimension(scores_by_assessment1)
+      .group(score_counts_by_assessment)
+      .legend(dc.legend());
+
+  // -------------------------------------------------------------------------
+  // Bar chart of assessment name vs. total score from all students on
+  // that assessment.
+  var score_value_by_assessment = scores_by_assessment2.group().reduceSum(
+      function(score) { return score.weight * score.score; });
+  dc.rowChart('#assessment_difficulty_score_total_by_assessment')
+      .width(400)
+      .height(200)
+      .dimension(scores_by_assessment2)
+      .group(score_value_by_assessment)
+      .legend(dc.legend());
+
+  // -------------------------------------------------------------------------
+  // Stacked line chart of ranked student versus total score.  X-axis is by
+  // student's rank.  (Rank is calculated for us in the function that supplies
+  // the REST data source).  Each position on the X-axis corresponds to one
+  // student, uniquely identified by that student's class rank.
+  var num_students = scores_by_student_rank.group().size();
+  var dc_chart = dc.lineChart('#assessment_difficulty_ranked_students')
+      .width(400)
+      .height(200)
+      .dimension(scores_by_student_rank)
+      .x(d3.scale.linear().domain([0, num_students - 0.999999]))
+      .xAxisLabel('Student Rank')
+      .yAxisLabel('Score per Assessment');
+
+  // Now, give the graph its data.  We're going to add one line to the
+  // graph for each assessment, and they'll stack up to amount to the
+  // total score for each student.  The way we do this is to consider
+  // each assessment.  We get that assessment's title, and then make a
+  // grouping off the main dimension that only returns values when the
+  // score is for that particular assessment (otherwise it returns 0.)
+  var first = true;
+  var all_assessments = score_counts_by_assessment.all();
+  for (var i = 0; i < all_assessments.length; i++) {
+    var title = all_assessments[i].key;
+    var grouping = scores_by_student_rank.group().reduceSum(
+        assessment_selection_function_factory(title));
+
+    // Dc is weird; on stacked charts, we have to identify the first
+    // item differently than the others.
+    if (first) {
+      dc_chart.group(grouping, title);
+      first = false;
+    } else {
+      dc_chart.stack(grouping, title);
+    }
+  }
+  dc.renderAll();
+}
+</script>
+<div style="clear: both"></div>
+</div>

@@ -1,0 +1,251 @@
+<!-- -*- mode: javascript; -*- -->
+
+<script
+   src="/static/crossfilter-1.3.7/crossfilter-1.3.7/crossfilter.min.js">
+</script>
+<script
+   src="/static/d3-3.4.3/d3.min.js">
+</script>
+<script
+   src="/static/dc.js-1.6.0/dc.js-1.6.0/dc.min.js">
+</script>
+<link
+   rel="stylesheet"
+   type="text/css"
+   href="/static/dc.js-1.6.0/dc.js-1.6.0/dc.css"
+   media="screen"/>
+<script>
+
+// Matches prefix in models/transforms.py.  Used to prevent malicious content
+// in data from actually achieving anything if injected.
+var JSON_XSSI_PREFIX = ")]}'\n"
+
+var ENV = JSON.parse("{{ env | js_string }}");
+
+function gcbGetAndClearLogSection(section) {
+  var logSection = $(section)[0];
+  while (logSection.children.length > 0) {
+    logSection.removeChild(logSection.children[0]);
+  }
+  return logSection;
+}
+
+/* Callback used when a page of data is received from a data source.
+
+   Responsible for accepting data, creating crossfilter, recovering resources
+   from previous visualization, and telling visualization to repaint.
+*/
+function gcbAcceptSource(error, stringifiedData) {
+
+  // Cope with severe errors in which we don't get nicely formatted
+  // error/warning messages within the encoded data itself.
+  var logSection = gcbGetAndClearLogSection('#gcb_rest_source_errors');
+  if (error) {
+    var p = document.createElement('p');
+    if (error.statusText.length == 0) {
+      p.textContent = 'severe: Connection refused.';
+    } else {
+      p.textContent = 'severe' + error.statusText + ': ' + error.response;
+    }
+    logSection.appendChild(p);
+  }
+  if (!stringifiedData) {
+    return;
+  }
+
+  // Skip first four characters, which are always set by the server to ')]}\n'
+  // to foil XSSI attacks.
+  dataStr = stringifiedData.response;
+  dataStrPrefix = dataStr.substr(0, JSON_XSSI_PREFIX.length);
+  if (dataStrPrefix == JSON_XSSI_PREFIX) {
+    dataStr = dataStr.substr(JSON_XSSI_PREFIX.length);
+  }
+  var data = JSON.parse(dataStr);
+
+  // Unpack and log any server-side errors.
+  gcbUpdateLogMessages(data.source, data.log);
+  if (!data.data) {
+    return;
+  }
+
+  // Update UI with current page number.
+  var pageNumElement = $('#gcb_rest_source_page_number_' + data.source)[0];
+  pageNumElement.textContent = data.page_number;
+
+  // Cache the page data and crossfilter derived from data.
+  var dataSource = ENV.restSources[data.source];
+  dataSource.currentPage = data.page_number;
+  dataSource.params = data.params;
+  dataSource.schema = data.schema;
+  dataSource.sourceContext = data.source_context;
+  xf = crossfilter(data.data);
+  gcbOverrideCrossfilterDimensionFunction(data.source, xf);
+  dataSource.pages[data.page_number] = {
+    'data': data.data,
+    'crossfilter': xf
+  };
+
+  // Tell visualizations.
+  gcbSourceDataSelectionChange(data.source);
+}
+
+/* Make a crossfilter's dimension() function save dimensions for later GC.
+
+   Per the crossfilter documentation, up to 8 dimensions are easy, 16
+   take more space, and 32 are the maximum supported.  It's simpler for
+   the framework to capture and save dimension objects so they can later
+   be dispose()'d.  (The alternative is pushing that responsibility into
+   each visualization, which is redundant and messy)
+*/
+function gcbOverrideCrossfilterDimensionFunction(dataSource, xf) {
+  xf.dimensionInternal = xf.dimension;
+  xf.dimension = function(func) {
+    var d = xf.dimensionInternal(func);
+    ENV.restSources[dataSource].crossfilterDimensions.push(d);
+    return d;
+  };
+}
+
+/* Notify all visualizations dependent on a data source that it has changed. */
+function gcbSourceDataSelectionChange(source) {
+  var dataSource = ENV.restSources[source];
+
+  // Recover resources from previous crossfilter dimensions created
+  // for other pages from this same data source.  (Crossfilter docs
+  // say that these are expensive, and numbers of these should be
+  // kept in the low double-digits)
+  for (var i = 0; i < dataSource.crossfilterDimensions.length; i++) {
+    dataSource.crossfilterDimensions[i].dispose();
+  }
+  dataSource.crossfilterDimensions.length = 0;
+
+  // Notify all visualizations which depend on this data source.
+  for (var i = 0; i < dataSource.visualizations.length; i++) {
+    var v = ENV.visualizations[dataSource.visualizations[i]];
+
+    // Have we had received at least one page from all of the various data
+    // sources on which this visualization depends?  On page load,
+    // visualizations that depend on more than one data source should not be
+    // notified until/unless all data sources they require have arrived.
+    var sourcesNotSeen = v.restSourcesNotYetSeen;
+    delete sourcesNotSeen[source];
+    if ($.isEmptyObject(sourcesNotSeen)) {
+
+      // Build up a map of data source name to tuples of
+      // {'data': raw data rows, 'crossfilter': crossfilter for raw data}
+      var argumentPages = {};
+      for (var j = 0; j < v.restSources.length; j++) {
+        var restSourceName = v.restSources[j];
+        argumentPages[restSourceName] = ENV.restSources[
+          restSourceName].pages[
+            ENV.restSources[restSourceName].currentPage];
+      }
+
+      // Call the visualization's callback with the current set of pages.
+      window[v.callback_name](argumentPages);
+    }
+  }
+}
+
+/* Collect user-specified parameters for a data source from the page. */
+function gcbRestSourceQueryParameters(source) {
+  var params = {
+    'chunk_size': $('#gcb_rest_source_chunk_size_' + source)[0].value
+    // TODO(mgainer): Add support for filtering, ordering.
+  };
+  return params;
+}
+
+function gcbRestSourceParametersDifferFromPrevRequest(source, params) {
+  var dataSource = ENV.restSources[source];
+  if (!dataSource.params) {
+    return false;
+  }
+  for (var param in params) {
+    if (params[param] != dataSource.params[param]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function gcbRestSourceParametersAsUrlParameters(params) {
+  ret = '';
+  for (var param in params) {
+    ret += '&' + encodeURIComponent(param);
+    ret += '=' + encodeURIComponent(params[param]);
+  }
+  return ret;
+}
+
+function gcbUpdateLogMessages(source, logs) {
+  var logSection = gcbGetAndClearLogSection('#gcb_log_rest_source_' + source);
+  for (var i = 0; i < logs.length; i++) {
+    var log = logs[i];
+    // Suppress the more-chatty messages from the UI.
+    if (log.level == 'info' || log.level == 'debug') {
+        continue;
+    }
+    var p = document.createElement('p');
+    p.textContent = log.level + ': ' + log.message;
+    logSection.appendChild(p);
+  }
+}
+
+function gcbRestSourcePageChange(source, delta) {
+  gcbRestSourcePageRequest(source,
+                           ENV.restSources[source].currentPage + delta);
+}
+
+function gcbRestSourcePageRequest(source, pageNumber) {
+
+  // Clear log messages; will be refilled when response arrives.
+  // Do this here so we get a visual blink, to emphasize that we're
+  // getting the same errors (if we are).
+  gcbUpdateLogMessages(source, []);
+
+  if (pageNumber < 0) {
+    pageNumber = 0;
+  }
+  // Don't bother suppressing max page; server will take care of this.
+  // Not checking also lets us auto-adjust if more data shows up.
+
+  var dataSource = ENV.restSources[source];
+
+  // If the request parameters have changed, dump the cache of returned
+  // page data.  Don't need to clean cached crossfilter dimensions; these
+  // are always cleared when next page's data arrives.
+  var params = gcbRestSourceQueryParameters(source);
+  if (gcbRestSourceParametersDifferFromPrevRequest(source, params)) {
+    dataSource.currentPage = -1;
+    dataSource.pages.length = 0;
+  }
+
+  if (pageNumber in dataSource.pages) {
+    // If we already have that data, just use it.
+    dataSource.currentPage = pageNumber;
+    var elem = $('#gcb_rest_source_page_number_' + source)[0];
+    elem.textContent = pageNumber;
+    gcbSourceDataSelectionChange(source);
+
+  } else {
+    // If we don't have the data, make an async request to the REST service.
+    gcbUpdateLogMessages(
+        source, {'level': 'Fetching page', 'message': pageNumber});
+    var url = (ENV.href + 'rest/data/' + source + '/items' +
+        '?data_source_token=' + encodeURIComponent(ENV.dataSourceToken) +
+        '&page_number=' + pageNumber +
+        gcbRestSourceParametersAsUrlParameters(params));
+    if (dataSource.sourceContext) {
+      url += '&source_context=' + dataSource.sourceContext;
+    }
+    d3.xhr(url, 'application/javascript', gcbAcceptSource);
+  }
+}
+
+// On page load, get page zero of each source.
+for (var restSource in ENV.restSources) {
+  gcbRestSourcePageRequest(restSource, 0);
+}
+
+</script>
