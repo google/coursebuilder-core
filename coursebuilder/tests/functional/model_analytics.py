@@ -34,6 +34,49 @@ from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
 from modules.data_source_providers import synchronous_providers
+from modules.mapreduce import mapreduce_module
+
+
+class AnalyticsTabsWithNoJobs(actions.TestBase):
+
+    def tearDown(self):
+        config.Registry.test_overrides.clear()
+
+    def test_blank_students_tab_no_mr(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=students')
+
+    def test_blank_questions_tab_no_mr(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=questions')
+
+    def test_blank_peer_review_tab_no_mr(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=peer_review')
+
+    def test_blank_students_tab_with_mr(self):
+        config.Registry.test_overrides[
+            mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=students')
+
+    def test_blank_questions_tab_with_mr(self):
+        config.Registry.test_overrides[
+            mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=questions')
+
+    def test_blank_peer_review_tab_with_mr(self):
+        config.Registry.test_overrides[
+            mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.name] = True
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        self.get('dashboard?action=analytics&tab=peer_review')
 
 
 class ProgressAnalyticsTest(actions.TestBase):

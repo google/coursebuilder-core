@@ -79,7 +79,7 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
         elif job.status_code != jobs.STATUS_CODE_COMPLETED:
             all_generators_completed_ok = False
             if not job.has_finished:
-              any_generator_still_running = True
+                any_generator_still_running = True
         generator_status_messages.append(
             _get_generator_status_message(generator_class, job).append(
                 _get_pipeline_link(xsrf, app_context, generator_class, job)))
@@ -169,7 +169,7 @@ def _get_pipeline_link(xsrf, app_context, generator_class, job):
 
         # Status URL may not be available immediately after job is launched;
         # pipeline setup is done w/ 'yield', and happens a bit later.
-        not jobs.MapReduceJob.has_status_url(job)):
+        not job or not jobs.MapReduceJob.has_status_url(job)):
         return ret
 
     if job.has_finished:
