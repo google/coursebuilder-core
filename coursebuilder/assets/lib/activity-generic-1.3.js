@@ -97,6 +97,7 @@ function gcbAudit(can_post, data_dict, source, is_async) {
     case 'enter-page':
     case 'exit-page':
       source = 'page.' + source
+      break;
     default:
       source = 'event.' + source
       break;
