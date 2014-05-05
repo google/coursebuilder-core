@@ -1,0 +1,13 @@
+# Add configuration for your application here to avoid
+# potential merge conflicts with new releases of the main
+# app.yaml file.  Modules registered here should support the
+# standard CourseBuilder module config.  (Specifically, the
+# imported Python module should provide a method
+# "register_module()", taking no parameters and returning a
+# models.custom_modules.Module instance.
+#
+env_variables:
+#  GCB_REGISTERED_MODULES_CUSTOM:
+#    modules.my_extension_module
+#    my_extension.modules.widgets
+#    my_extension.modules.blivets

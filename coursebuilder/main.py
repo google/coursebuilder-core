@@ -28,42 +28,9 @@ from controllers import sites
 from models import analytics
 from models import custom_modules
 from models import data_sources
-from modules.activity_tag import activity_tag
-from modules.admin import admin
-from modules.announcements import announcements
-from modules.assessment_tags import questions
-from modules.course_explorer import course_explorer
-from modules.courses import courses
-from modules.dashboard import dashboard
-from modules.data_source_providers import data_source_providers
-from modules.mapreduce import mapreduce_module
-from modules.oauth2 import oauth2
-from modules.oeditor import oeditor
-from modules.review import review
-from modules.search import search
-from modules.upload import upload
 
-# use this flag to control debug only features
-debug = not appengine_config.PRODUCTION_MODE
-
-
-# init and enable most known modules
-activity_tag.register_module().enable()
-admin.register_module().enable()
-announcements.register_module().enable()
-questions.register_module().enable()
-course_explorer.register_module().enable()
-courses.register_module().enable()
-data_source_providers.register_module().enable()
-dashboard.register_module().enable()
-mapreduce_module.register_module().enable()
-oeditor.register_module().enable()
-review.register_module().enable()
-search.register_module().enable()
-upload.register_module().enable()
-
-# register modules that are not enabled by default.
-oauth2.register_module()
+# Import, register, and enable configured modules.
+appengine_config.import_and_enable_modules()
 
 # compute all possible routes
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
@@ -98,4 +65,4 @@ webapp2_i18n_config = {'translations_path': os.path.join(
 app = webapp2.WSGIApplication(
     global_routes + extensions_routes + appstats_routes + app_routes,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
-    debug=debug)
+    debug=not appengine_config.PRODUCTION_MODE)

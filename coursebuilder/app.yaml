@@ -7,6 +7,24 @@ threadsafe: false
 env_variables:
   GCB_PRODUCT_VERSION: '1.6.0'
   GCB_APPSTATS_ENABLED: false
+  GCB_REGISTERED_MODULES:
+    modules.activity_tag.activity_tag
+    modules.admin.admin
+    modules.announcements.announcements
+    modules.assessment_tags.questions
+    modules.course_explorer.course_explorer
+    modules.courses.courses
+    modules.data_source_providers.data_source_providers
+    modules.dashboard.dashboard
+    modules.mapreduce.mapreduce_module
+    modules.oeditor.oeditor
+    modules.review.review
+    modules.search.search
+    modules.upload.upload
+    modules.oauth2.oauth2=disabled
+
+includes:
+- custom.yaml
 
 inbound_services:
 - warmup

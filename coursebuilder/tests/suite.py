@@ -50,6 +50,7 @@ import task_queue
 import webtest
 
 import appengine_config
+from tools.etl import etl
 
 from google.appengine.api.search import simple_search_stub
 from google.appengine.datastore import datastore_stub_util
@@ -97,7 +98,8 @@ def iterate_tests(test_suite_or_case):
 class TestBase(unittest.TestCase):
     """Base class for all Course Builder tests."""
 
-    REQUIRES_INTEGRATION_SERVER = 1
+    REQUIRES_INTEGRATION_SERVER = 'REQUIRES_INTEGRATION_SERVER'
+    REQUIRES_TESTING_MODULES = 'REQUIRES_TESTING_MODULES'
     INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
 
     def setUp(self):
@@ -245,14 +247,22 @@ def create_test_suite(parsed_args):
             os.path.dirname(__file__), pattern=parsed_args.pattern)
 
 
-def start_integration_server(integration_server_start_cmd):
+def start_integration_server(integration_server_start_cmd, modules):
+    if modules:
+        fp = open('experimental/coursebuilder/custom.yaml', 'w')
+        fp.writelines([
+            'env_variables:\n',
+            '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
+        fp.writelines(['    %s\n' % module.__name__ for module in modules])
+        fp.close()
+
     print 'Starting external server: %s' % integration_server_start_cmd
     server = subprocess.Popen(integration_server_start_cmd)
     time.sleep(3)  # Wait for server to start up
     return server
 
 
-def stop_integration_server(server):
+def stop_integration_server(server, modules):
     server.kill()  # dev_appserver.py itself.
 
     # The new dev appserver starts a _python_runtime.py process that isn't
@@ -262,6 +272,25 @@ def stop_integration_server(server):
         ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
     ).communicate()[0][:-1])
     os.kill(pid, signal.SIGKILL)
+
+    if modules:
+        fp = open('experimental/coursebuilder/custom.yaml', 'w')
+        fp.writelines([
+            '# Add configuration for your application here to avoid\n'
+            '# potential merge conflicts with new releases of the main\n'
+            '# app.yaml file.  Modules registered here should support the\n'
+            '# standard CourseBuilder module config.  (Specifically, the\n'
+            '# imported Python module should provide a method\n'
+            '# "register_module()", taking no parameters and returning a\n'
+            '# models.custom_modules.Module instance.\n'
+            '#\n'
+            'env_variables:\n'
+            '#  GCB_REGISTERED_MODULES_CUSTOM:\n'
+            '#    modules.my_extension_module\n'
+            '#    my_extension.modules.widgets\n'
+            '#    my_extension.modules.blivets\n'
+            ])
+        fp.close()
 
 
 def fix_sys_path():
@@ -278,23 +307,30 @@ def fix_sys_path():
 def main():
     """Starts in-process server and runs all test cases in this module."""
     fix_sys_path()
+    etl._set_env_vars_from_app_yaml()
     parsed_args = _PARSER.parse_args()
     test_suite = create_test_suite(parsed_args)
 
-    all_tags = set()
+    all_tags = {}
     for test in iterate_tests(test_suite):
         if hasattr(test, 'TAGS'):
-            all_tags.update(test.TAGS)
+            for tag in test.TAGS:
+                if isinstance(test.TAGS[tag], set) and tag in all_tags:
+                    all_tags[tag].update(test.TAGS[tag])
+                else:
+                    all_tags[tag] = test.TAGS[tag]
 
     server = None
     if TestBase.REQUIRES_INTEGRATION_SERVER in all_tags:
         server = start_integration_server(
-            parsed_args.integration_server_start_cmd)
+            parsed_args.integration_server_start_cmd,
+            all_tags.get(TestBase.REQUIRES_TESTING_MODULES, set()))
 
     result = unittest.TextTestRunner(verbosity=2).run(test_suite)
 
     if server:
-        stop_integration_server(server)
+        stop_integration_server(
+            server, all_tags.get(TestBase.REQUIRES_TESTING_MODULES, set()))
 
     if result.errors or result.failures:
         raise Exception(

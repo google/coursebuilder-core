@@ -30,7 +30,7 @@ from tests import suite
 class BaseIntegrationTest(suite.TestBase):
     """Base class for all integration tests."""
 
-    TAGS = [suite.TestBase.REQUIRES_INTEGRATION_SERVER]
+    TAGS = {suite.TestBase.REQUIRES_INTEGRATION_SERVER: True}
 
     LOGIN = 'test@example.com'
 

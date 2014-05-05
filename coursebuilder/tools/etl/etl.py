@@ -708,6 +708,22 @@ def _get_course_from(app_context):
     return courses.Course(_Adapter(app_context))
 
 
+def _set_env_vars_from_app_yaml():
+    """Read and set environment from app.yaml.
+
+    This is to set up the GCB_REGISTERED_MODULES and
+    GCB_REGISTERED_MODULES_CUSTOM vars so that main's call to
+    appengine_config.import_and_enable_modules() will work properly.
+    """
+
+    # pylint: disable-msg=g-import-not-at-top
+    from google.appengine.api import appinfo_includes
+    app_yaml = appinfo_includes.Parse(
+        open('experimental/coursebuilder/app.yaml'), open)
+    for name, value in app_yaml.env_variables.items():
+        os.environ[name] = value
+
+
 def _import_entity_modules():
     """Import all entity type classes.
 
@@ -715,6 +731,7 @@ def _import_entity_modules():
     by the time the ETL code runs. If a transitive closure of main.py imports
     does not import all required classes, import them here explicitly.
     """
+
     # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
     # pylint: disable-msg=redefined-outer-name,unused-variable
     try:
@@ -1090,6 +1107,7 @@ def main(parsed_args, environment_class=None):
     _validate_arguments(parsed_args)
     _LOG.setLevel(parsed_args.log_level.upper())
     _import_modules_into_global_scope()
+    _set_env_vars_from_app_yaml()
     _import_entity_modules()
 
     if not environment_class:

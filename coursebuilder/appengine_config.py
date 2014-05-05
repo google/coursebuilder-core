@@ -16,6 +16,7 @@
 
 __author__ = 'psimakov@google.com (Pavel Simakov)'
 
+import importlib
 import logging
 import os
 import sys
@@ -109,6 +110,31 @@ def webapp_add_wsgi_middleware(app):
         # pylint: enable-msg=g-import-not-at-top
         app = recording.appstats_wsgi_middleware(app)
     return app
+
+
+def _import_and_enable_modules(env_var):
+    # pylint: disable-msg=broad-except
+    for module_name in os.environ.get(env_var, '').split():
+        option = 'enabled'
+        if module_name.count('='):
+            module_name, option = module_name.split('=', 1)
+
+        try:
+            operation = 'importing'
+            module = importlib.import_module(module_name)
+            operation = 'registering'
+            custom_module = module.register_module()
+            if option is 'enabled':
+                operation = 'enabling'
+                custom_module.enable()
+        except Exception:
+            logging.exception('Problem %s module "%s"', operation, module_name)
+            continue
+
+
+def import_and_enable_modules():
+    _import_and_enable_modules('GCB_REGISTERED_MODULES')
+    _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
 
 
 gcb_init_third_party()
