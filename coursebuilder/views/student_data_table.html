@@ -59,4 +59,11 @@
       </td>
     </tr>
   {% endif %}
+
+  {% for header, value in extra_student_data.iteritems() %}
+    <tr>
+      <th align="left">{{ header }}</th>
+      <td>{{ value }}</td>
+    </tr>
+  {% endfor %}
 </table>

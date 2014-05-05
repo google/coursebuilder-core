@@ -538,6 +538,8 @@ class ForumHandler(BaseHandler):
 class StudentProfileHandler(BaseHandler):
     """Handles the click to 'Progress' link in the nav bar."""
 
+    EXTRA_STUDENT_DATA_PROVIDERS = []
+
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()
@@ -561,6 +563,13 @@ class StudentProfileHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('student-edit'))
         self.template_value['can_edit_name'] = (
             not models.CAN_SHARE_STUDENT_PROFILE.value)
+
+        # Append any extra data which is provided by modules
+        extra_student_data = {}
+        for data_provider in self.EXTRA_STUDENT_DATA_PROVIDERS:
+            extra_student_data.update(data_provider(student, course))
+        self.template_value['extra_student_data'] = extra_student_data
+
         self.render('student_profile.html')
 
 

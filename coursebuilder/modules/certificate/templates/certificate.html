@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700&amp;subset=latin" rel="stylesheet">
+  </head>
+  <body>
+  <style type="text/css" media="print">
+  .printbutton {
+     visibility: hidden;
+     display: none;
+  }
+  </style>
+  <div style="text-align:center;margin:0px 30px;">
+    <img src="/modules/certificate/resources/images/cert_top.png" />
+    <p style="font-size:40px;font-family:open sans,arial,sans-serif;margin:0px;color:rgb(102,102,102);">{{ student.name }}</p>
+    <img src="/modules/certificate/resources/images/cert_bottom.png" />
+  </div>
+  <p></p>
+  <div style="text-align:center;margin:0px 30px;">
+    <input type="button" onClick="window.print()" class="printbutton" value="Print Certificate"/>
+  </div>
+  </body>
+</html>
