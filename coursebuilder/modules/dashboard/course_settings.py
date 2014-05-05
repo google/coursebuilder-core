@@ -19,6 +19,8 @@ __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 import messages
 import yaml
 
+from common import schema_fields
+from common import tags
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -81,8 +83,8 @@ class CourseSettingsHandler(ApplicationHandler):
         rest_url = self.canonicalize_url('/rest/course/settings')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
-            CourseSettingsRESTHandler.REGISTORY.get_json_schema(),
-            CourseSettingsRESTHandler.REGISTORY.get_schema_dict(),
+            CourseSettingsRESTHandler.REGISTRY.get_json_schema(),
+            CourseSettingsRESTHandler.REGISTRY.get_schema_dict(),
             key, rest_url, exit_url,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
 
@@ -93,10 +95,106 @@ class CourseSettingsHandler(ApplicationHandler):
         self.render_page(template_values)
 
 
+def _create_course_registry():
+    """Create the registry for course properties."""
+
+    reg = schema_fields.FieldRegistry('Basic Course Settings',
+                                      description='Course Settings')
+
+    # Course level settings.
+    course_opts = reg.add_sub_registry('course', 'Course Config')
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:title', 'Course Name', 'string'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:admin_user_emails', 'Course Admin Emails', 'string',
+        description='A space-separated list of email addresses of course '
+        'administrators. Each email address must be placed between \'[\' '
+        'and \']\'.'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:forum_email', 'Forum Email', 'string', optional=True,
+        description='Email for the forum, e.g. '
+        '\'My-Course@googlegroups.com\'.'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:announcement_list_email', 'Announcement List Email', 'string',
+        optional=True, description='Email for the mailing list where students '
+        'can register to receive course announcements, e.g. '
+        '\'My-Course-Announce@googlegroups.com\''))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:locale', 'Locale', 'string'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:start_date', 'Course Start Date', 'string', optional=True))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:now_available', 'Make Course Available', 'boolean'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:browsable', 'Make Course Browsable', 'boolean',
+        description='Allow non-registered users to view course content.'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:display_unit_title_without_index',
+        'Display Unit Title Without Index', 'boolean',
+        description='Omit the unit number when displaying unit titles.'))
+
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:google_analytics_id', 'ID for Google Analytics', 'string',
+        optional=True, description='This ID tells Google Analytics who is '
+        'calling, and allows it to string together routes that visitors '
+        'take through pages.  Obtain this ID by signing up at '
+        'http://www.google.com/analytics'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:google_tag_manager_id', 'ID for Google Tag Manager', 'string',
+        optional=True, description='This ID tells Google Tag Manager who is '
+        'calling.  This allows the Tag Manager to notify other site use '
+        'tracking services what users are doing on the site.  Obtain this '
+        'ID by signing up at http://www.google.com/tagmanager'))
+
+    # Unit level settings.
+    unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
+    unit_opts.add_property(schema_fields.SchemaField(
+        'unit:hide_lesson_navigation_buttons', 'Hide Lesson Navigation Buttons',
+        'boolean', description='Whether to hide the \'Previous Page\' and '
+        ' \'Next Page\' buttons below lesson and activity pages'))
+
+    # Course registration settings.
+    reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
+    reg_opts.add_property(schema_fields.SchemaField(
+        'reg_form:can_register', 'Enable Registrations', 'boolean',
+        description='Checking this box allows new students to register for '
+        'the course.'))
+    reg_opts.add_property(schema_fields.SchemaField(
+        'reg_form:additional_registration_fields', 'Additional Fields', 'html',
+        description='Additional registration text or questions.'))
+
+    # Course homepage settings.
+    homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
+    homepage_opts.add_property(schema_fields.SchemaField(
+        'course:instructor_details', 'Instructor Details', 'html',
+        optional=True))
+    homepage_opts.add_property(schema_fields.SchemaField(
+        'course:blurb', 'Course Abstract', 'html', optional=True,
+        description='Text, shown on the course homepage, that explains what '
+        'the course is about.',
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags':
+            tags.EditorBlacklists.COURSE_SCOPE}))
+    homepage_opts.add_property(schema_fields.SchemaField(
+        'course:main_video:url', 'Course Video', 'url', optional=True,
+        description='URL for the preview video shown on the course homepage '
+        '(e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).'))
+    homepage_opts.add_property(schema_fields.SchemaField(
+        'course:main_image:url', 'Course Image', 'string', optional=True,
+        description='URL for the preview image shown on the course homepage. '
+        'This will only be shown if no course video is specified.'))
+    homepage_opts.add_property(schema_fields.SchemaField(
+        'course:main_image:alt_text', 'Alternate Text', 'string',
+        optional=True,
+        description='Alt text for the preview image on the course homepage.'))
+    return reg
+
+
 class CourseSettingsRESTHandler(BaseRESTHandler):
     """Provides REST API for a file."""
 
-    REGISTORY = courses.create_course_registry()
+    REGISTRY = _create_course_registry()
 
     REQUIRED_MODULES = [
         'inputex-date', 'inputex-string', 'inputex-textarea', 'inputex-url',
@@ -153,13 +251,13 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
 
         # Prepare data.
         entity = {}
-        CourseSettingsRESTHandler.REGISTORY.convert_entity_to_json_entity(
+        CourseSettingsRESTHandler.REGISTRY.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
 
         # Render JSON response.
         json_payload = transforms.dict_to_json(
             entity,
-            CourseSettingsRESTHandler.REGISTORY.get_json_schema_dict())
+            CourseSettingsRESTHandler.REGISTRY.get_json_schema_dict())
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
@@ -184,7 +282,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
 
         payload = request.get('payload')
         request_data = {}
-        CourseSettingsRESTHandler.REGISTORY.convert_json_to_entity(
+        CourseSettingsRESTHandler.REGISTRY.convert_json_to_entity(
             transforms.loads(payload), request_data)
 
         course_data = request_data['course']

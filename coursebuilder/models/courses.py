@@ -31,8 +31,6 @@ import vfs
 import yaml
 
 import appengine_config
-from common.schema_fields import FieldRegistry
-from common.schema_fields import SchemaField
 import common.tags
 import models
 from models import MemcacheManager
@@ -240,102 +238,6 @@ def index_units_and_lessons(course):
                 lesson._index = (  # pylint: disable-msg=protected-access
                     lesson_index)
                 lesson_index += 1
-
-
-def create_course_registry():
-    """Create the registry for course properties."""
-
-    reg = FieldRegistry('Basic Course Settings', description='Course Settings')
-
-    # Course level settings.
-    course_opts = reg.add_sub_registry('course', 'Course Config')
-    course_opts.add_property(
-        SchemaField('course:title', 'Course Name', 'string'))
-    course_opts.add_property(
-        SchemaField(
-            'course:admin_user_emails', 'Course Admin Emails', 'string',
-            description='A space-separated list of email addresses of course '
-            'administrators. Each email address must be placed between \'[\' '
-            'and \']\'.'))
-    course_opts.add_property(
-        SchemaField(
-            'course:forum_email', 'Forum Email', 'string', optional=True,
-            description='Email for the forum, e.g. '
-            '\'My-Course@googlegroups.com\'.'))
-    course_opts.add_property(SchemaField(
-        'course:announcement_list_email', 'Announcement List Email', 'string',
-        optional=True, description='Email for the mailing list where students '
-        'can register to receive course announcements, e.g. '
-        '\'My-Course-Announce@googlegroups.com\''))
-    course_opts.add_property(SchemaField('course:locale', 'Locale', 'string'))
-    course_opts.add_property(SchemaField(
-        'course:start_date', 'Course Start Date', 'string', optional=True))
-    course_opts.add_property(SchemaField(
-        'course:now_available', 'Make Course Available', 'boolean'))
-    course_opts.add_property(SchemaField(
-        'course:browsable', 'Make Course Browsable', 'boolean',
-        description='Allow non-registered users to view course content.'))
-    course_opts.add_property(SchemaField(
-        'course:display_unit_title_without_index',
-        'Display Unit Title Without Index', 'boolean',
-        description='Omit the unit number when displaying unit titles.'))
-
-    course_opts.add_property(SchemaField(
-        'course:google_analytics_id', 'ID for Google Analytics', 'string',
-        optional=True, description='This ID tells Google Analytics who is '
-        'calling, and allows it to string together routes that visitors '
-        'take through pages.  Obtain this ID by signing up at '
-        'http://www.google.com/analytics'))
-    course_opts.add_property(SchemaField(
-        'course:google_tag_manager_id', 'ID for Google Tag Manager', 'string',
-        optional=True, description='This ID tells Google Tag Manager who is '
-        'calling.  This allows the Tag Manager to notify other site use '
-        'tracking services what users are doing on the site.  Obtain this '
-        'ID by signing up at http://www.google.com/tagmanager'))
-
-    # Unit level settings.
-    unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
-    unit_opts.add_property(SchemaField(
-        'unit:hide_lesson_navigation_buttons', 'Hide Lesson Navigation Buttons',
-        'boolean', description='Whether to hide the \'Previous Page\' and '
-        ' \'Next Page\' buttons below lesson and activity pages'))
-
-    # Course registration settings.
-    reg_opts = reg.add_sub_registry('reg_form', 'Student Registration Options')
-    reg_opts.add_property(SchemaField(
-        'reg_form:can_register', 'Enable Registrations', 'boolean',
-        description='Checking this box allows new students to register for '
-        'the course.'))
-    reg_opts.add_property(SchemaField(
-        'reg_form:additional_registration_fields', 'Additional Fields', 'html',
-        description='Additional registration text or questions.'))
-
-    # Course homepage settings.
-    homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
-    homepage_opts.add_property(SchemaField(
-        'course:instructor_details', 'Instructor Details', 'html',
-        optional=True))
-    homepage_opts.add_property(SchemaField(
-        'course:blurb', 'Course Abstract', 'html', optional=True,
-        description='Text, shown on the course homepage, that explains what '
-        'the course is about.',
-        extra_schema_dict_values={
-            'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
-            'excludedCustomTags':
-            common.tags.EditorBlacklists.COURSE_SCOPE}))
-    homepage_opts.add_property(SchemaField(
-        'course:main_video:url', 'Course Video', 'url', optional=True,
-        description='URL for the preview video shown on the course homepage '
-        '(e.g. https://www.youtube.com/embed/Kdg2drcUjYI ).'))
-    homepage_opts.add_property(SchemaField(
-        'course:main_image:url', 'Course Image', 'string', optional=True,
-        description='URL for the preview image shown on the course homepage. '
-        'This will only be shown if no course video is specified.'))
-    homepage_opts.add_property(SchemaField(
-        'course:main_image:alt_text', 'Alternate Text', 'string',
-        optional=True,
-        description='Alt text for the preview image on the course homepage.'))
-    return reg
 
 
 class AbstractCachedObject(object):
