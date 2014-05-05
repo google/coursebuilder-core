@@ -249,7 +249,8 @@ def create_test_suite(parsed_args):
 
 def start_integration_server(integration_server_start_cmd, modules):
     if modules:
-        fp = open('experimental/coursebuilder/custom.yaml', 'w')
+        fp = open(
+            os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml'), 'w')
         fp.writelines([
             'env_variables:\n',
             '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
@@ -274,7 +275,8 @@ def stop_integration_server(server, modules):
     os.kill(pid, signal.SIGKILL)
 
     if modules:
-        fp = open('experimental/coursebuilder/custom.yaml', 'w')
+        fp = open(
+            os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml'), 'w')
         fp.writelines([
             '# Add configuration for your application here to avoid\n'
             '# potential merge conflicts with new releases of the main\n'
