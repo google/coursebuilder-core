@@ -354,7 +354,7 @@ class _Archive(object):
     def open(self, mode):
         """Opens archive in the mode given by mode string ('r', 'w', 'a')."""
         assert not self._zipfile
-        self._zipfile = zipfile.ZipFile(self._path, mode)
+        self._zipfile = zipfile.ZipFile(self._path, mode, allowZip64=True)
 
     @property
     def manifest(self):

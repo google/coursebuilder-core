@@ -3411,6 +3411,17 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             src_course_out.get_units()) == len(dst_course_out.get_units())
         dst_course_out.save()
 
+    def test_archive_size_can_exceed_2_gb(self):
+        # The maximum size for any file in the zipfile is 1 GB.
+        byte = '.'
+        gig = byte * (2 ** 30)
+        archive = etl._Archive(self.archive_path)
+        archive.open('w')
+        archive.add(os.path.join(self.test_tempdir, 'first'), gig)
+        archive.add(os.path.join(self.test_tempdir, 'second'), gig)
+        archive.add(os.path.join(self.test_tempdir, 'overflow'), byte)
+        archive.close()
+
     def test_delete_course_fails(self):
         args = etl.PARSER.parse_args(
             [etl._MODE_DELETE, etl._TYPE_COURSE] + self.common_args)
