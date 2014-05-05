@@ -80,6 +80,10 @@ th, td {
   width: 14.1104296%;
 }
 
+#gcb-nav-y.gcb-nav-full {
+  width: 100%;
+}
+
 #gcb-nav-y ul {
   list-style: none;
   margin: 0;
