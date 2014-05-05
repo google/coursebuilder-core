@@ -377,7 +377,8 @@ class UnitRESTHandler(CommonUnitRESTHandler):
             "key" : {"type": "string"},
             "type": {"type": "string"},
             "title": {"optional": true, "type": "string"},
-            "is_draft": {"type": "boolean"}
+            "is_draft": {"type": "boolean"},
+            "labels": {"optional": true, "type": "string"}
             }
     }
     """
@@ -391,6 +392,15 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         (['properties', 'type', '_inputex'], {
             'label': 'Type', '_type': 'uneditable'}),
         (['properties', 'title', '_inputex'], {'label': 'Title'}),
+        (['properties', 'labels', '_inputex'], {
+            'label': 'Labels',
+            'description':
+                'Add labels that apply to this unit.  These are '
+                'used to select units in various contexts.  (E.g., '
+                'setting a student\'s labels to select tracks through '
+                'a course.  Labels may be separated by any combination '
+                'of spaces, tabs, commas, or newlines.'
+            }),
         STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
@@ -402,11 +412,13 @@ class UnitRESTHandler(CommonUnitRESTHandler):
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
-            'is_draft': not unit.now_available}
+            'is_draft': not unit.now_available,
+            'labels': unit.labels or '' if hasattr(unit, 'labels') else ''}
 
     def apply_updates(self, unit, updated_unit_dict, unused_errors):
         unit.title = updated_unit_dict.get('title')
         unit.now_available = not updated_unit_dict.get('is_draft')
+        unit.labels = updated_unit_dict.get('labels')
 
 
 class LinkRESTHandler(CommonUnitRESTHandler):
@@ -424,7 +436,8 @@ class LinkRESTHandler(CommonUnitRESTHandler):
             "type": {"type": "string"},
             "title": {"optional": true, "type": "string"},
             "url": {"optional": true, "type": "string"},
-            "is_draft": {"type": "boolean"}
+            "is_draft": {"type": "boolean"},
+            "labels": {"optional": true, "type": "string"}
             }
     }
     """
@@ -441,6 +454,15 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         (['properties', 'url', '_inputex'], {
             'label': 'URL',
             'description': messages.LINK_EDITOR_URL_DESCRIPTION}),
+        (['properties', 'labels', '_inputex'], {
+            'label': 'Labels',
+            'description':
+                'Add labels that apply to this unit.  These are '
+                'used to select units in various contexts.  (E.g., '
+                'setting a student\'s labels to select tracks through '
+                'a course.  labels may be separated by any combination '
+                'of spaces, tabs, commas, or newlines.'
+            }),
         STATUS_ANNOTATION]
 
     REQUIRED_MODULES = [
@@ -453,12 +475,14 @@ class LinkRESTHandler(CommonUnitRESTHandler):
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
             'url': unit.href,
-            'is_draft': not unit.now_available}
+            'is_draft': not unit.now_available,
+            'labels': unit.labels or ''}
 
     def apply_updates(self, unit, updated_unit_dict, unused_errors):
         unit.title = updated_unit_dict.get('title')
         unit.href = updated_unit_dict.get('url')
         unit.now_available = not updated_unit_dict.get('is_draft')
+        unit.labels = updated_unit_dict.get('labels')
 
 
 class ImportCourseRESTHandler(CommonUnitRESTHandler):
@@ -590,6 +614,13 @@ def create_assessment_registry():
         SchemaField('title', 'Title', 'string', optional=True))
     course_opts.add_property(
         SchemaField('weight', 'Weight', 'string', optional=True))
+    course_opts.add_property(
+        SchemaField('labels', 'Labels', 'string', optional=True,
+                    description='Add labels that apply to this unit.  These '
+                    'are used to select units in various contexts.  (E.g., '
+                    'setting a student\'s labels to select tracks through '
+                    'a course.  Labels may be separated by any combination '
+                    'of spaces, tabs, commas, or newlines.'))
     course_opts.add_property(SchemaField(
         'content', 'Assessment Content', 'text', optional=True,
         description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
@@ -720,9 +751,13 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 'type': verify.UNIT_TYPE_NAMES[unit.type],
                 'title': unit.title,
                 'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
+                'labels': unit.labels or '',
                 'content': content,
-                'html_content': unit.html_content or '',
-                'html_check_answers': unit.html_check_answers,
+                'html_content': (unit.html_content or ''
+                                 if hasattr(unit, 'html_content') else ''),
+                'html_check_answers': (
+                    unit.html_check_answers
+                    if hasattr(unit, 'html_check_answers') else False),
                 'is_draft': not unit.now_available,
                 workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
                     submission_due_date),
@@ -736,7 +771,9 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 workflow_key(courses.REVIEW_WINDOW_MINS_KEY): (
                     workflow.get_review_window_mins()),
                 'review_form': review_form,
-                'html_review_form': unit.html_review_form or ''
+                'html_review_form': (
+                    unit.html_review_form or ''
+                    if hasattr(unit, 'html_review_form') else ''),
                 }
             }
 
@@ -754,6 +791,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
                 errors.append('The weight must be a non-negative integer.')
         except ValueError:
             errors.append('The weight must be an integer.')
+        unit.labels = entity_dict.get('labels')
 
         unit.now_available = not entity_dict.get('is_draft')
         course = courses.Course(self)

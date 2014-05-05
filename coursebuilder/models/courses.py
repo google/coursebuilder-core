@@ -574,6 +574,9 @@ class Unit13(object):
         # Only valid for the unit.type == verify.UNIT_TYPE_ASSESSMENT.
         self.workflow_yaml = DEFAULT_AUTO_GRADER_WORKFLOW
 
+        # Valid for all values of unit.type
+        self.labels = None
+
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
@@ -664,7 +667,8 @@ class PersistentCourse13(object):
                     'html_content': '',
                     'html_check_answers': False,
                     'html_review_form': '',
-                    'properties': {}}
+                    'properties': {},
+                    'labels': ''}
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
@@ -1090,6 +1094,7 @@ class CourseModel13(object):
         existing_unit.title = unit.title
         existing_unit.release_date = unit.release_date
         existing_unit.now_available = unit.now_available
+        existing_unit.labels = unit.labels
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href

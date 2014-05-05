@@ -367,12 +367,32 @@ class InfrastructureTest(actions.TestBase):
         assert not course.find_unit_by_id(999)
 
         # Update unit.
-        unit.title = 'Test Title'
+        unit.title = 'Unit Title'
+        unit.labels = 'foo, bar'
         course.update_unit(unit)
         course.save()
-        assert 'Test Title' == course.find_unit_by_id(unit.unit_id).title
+        assert 'Unit Title' == course.find_unit_by_id(unit.unit_id).title
+        assert 'foo, bar' == course.find_unit_by_id(unit.unit_id).labels
+
+        # Update link.
+        link.title = 'Link Title'
+        link.href = 'http://google.com'
+        link.labels = 'bar, baz'
+        course.update_unit(link)
+        course.save()
+        assert 'Link Title' == course.find_unit_by_id(link.unit_id).title
+        assert 'http://google.com' == course.find_unit_by_id(link.unit_id).href
+        assert 'bar, baz' == course.find_unit_by_id(link.unit_id).labels
 
         # Update assessment.
+        assessment.title = 'Asmt. Title'
+        assessment.labels = 'a, b, c'
+        course.update_unit(assessment)
+        course.save()
+        assert 'Asmt. Title' == course.find_unit_by_id(assessment.unit_id).title
+        assert 'a, b, c' == course.find_unit_by_id(assessment.unit_id).labels
+
+        # Update assessment from file.
         assessment_content = open(os.path.join(
             appengine_config.BUNDLE_ROOT,
             'assets/js/assessment-Pre.js'), 'rb').readlines()
