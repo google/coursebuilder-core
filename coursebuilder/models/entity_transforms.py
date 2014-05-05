@@ -74,7 +74,7 @@ def get_schema_for_entity(clazz):
     suppressed = clazz._get_export_blacklist()
     registry = schema_fields.FieldRegistry(clazz.__name__)
     for property_type in available_properties.values():
-        if property_type not in suppressed:
+        if property_type.name not in suppressed:
             registry.add_property(_get_schema_field(property_type))
     return registry
 
