@@ -1,0 +1,524 @@
+# Copyright 2014 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests exercising the analytics internals (not individual analytics)."""
+
+__author__ = 'Mike Gainer (mgainer@google.com)'
+
+import time
+
+from webtest import app
+
+from models import analytics
+from models import data_sources
+from models import entities
+from models import transforms
+from models.data_sources import utils as data_sources_utils
+
+from google.appengine.ext import db
+
+
+# Analytic must be registered before we import actions; actions imports
+# 'main', which does all setup and registration in package scope.
+class Character(entities.BaseEntity):
+    user_id = db.StringProperty(indexed=True)
+    goal = db.StringProperty(indexed=True)
+    name = db.StringProperty(indexed=False)
+    age = db.IntegerProperty(indexed=False)
+    rank = db.IntegerProperty(indexed=True)
+
+    _PROPERTY_EXPORT_BLACKLIST = [name]
+
+    def for_export(self, transform_fn):
+        model = super(Character, self).for_export(transform_fn)
+        model.user_id = transform_fn(self.user_id)
+        return model
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+
+class CharacterDataSource(data_sources.AbstractDbTableRestDataSource):
+
+    @classmethod
+    def get_name(cls):
+        return 'character'
+
+    @classmethod
+    def get_entity_class(cls):
+        return Character
+
+data_sources.Registry.register(CharacterDataSource)
+analytics.Registry.register('peanuts', 'Peanuts', 'model_data_sources.html',
+                            [CharacterDataSource])
+
+# pylint: disable-msg=g-import-not-at-top,g-bad-import-order
+from tests.functional import actions
+
+
+class PaginatedTableTest(actions.TestBase):
+    """Verify operation of paginated access to AppEngine DB tables."""
+
+    def setUp(self):
+        super(PaginatedTableTest, self).setUp()
+        self.characters = [
+            Character(user_id='001', goal='L', rank=4, age=8, name='Charlie'),
+            Character(user_id='002', goal='L', rank=6, age=6, name='Sally'),
+            Character(user_id='003', goal='L', rank=0, age=8, name='Lucy'),
+            Character(user_id='004', goal='G', rank=2, age=7, name='Linus'),
+            Character(user_id='005', goal='G', rank=8, age=8, name='Max'),
+            Character(user_id='006', goal='G', rank=1, age=8, name='Patty'),
+            Character(user_id='007', goal='R', rank=9, age=35, name='Othmar'),
+            Character(user_id='008', goal='R', rank=5, age=2, name='Snoopy'),
+            Character(user_id='009', goal='R', rank=7, age=8, name='Pigpen'),
+            Character(user_id='010', goal='R', rank=3, age=8, name='Violet'),
+        ]
+        for c in self.characters:
+            c.put()
+
+    def tearDown(self):
+        db.delete(Character.all(keys_only=True).run())
+        super(PaginatedTableTest, self).tearDownClass()
+
+    def test_simple_read(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get('/rest/data/character/items').body)
+        self.assertIn('data', response)
+        self._verify_data(self.characters, response['data'])
+
+        self.assertIn('schema', response)
+        self.assertIn('user_id', response['schema'])
+        self.assertIn('age', response['schema'])
+        self.assertIn('rank', response['schema'])
+        self.assertNotIn('name', response['schema'])  # blacklisted
+
+        self.assertIn('log', response)
+        self.assertIn('source_context', response)
+        self.assertIn('params', response)
+        self.assertEquals([], response['params']['filters'])
+        self.assertEquals([], response['params']['orderings'])
+
+    def test_admin_required(self):
+        with self.assertRaisesRegexp(app.AppError, 'Bad response: 403'):
+            self.get('/rest/data/character/items')
+
+    def test_filtered_read(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        # Single greater-equal filter
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank>=7').body)
+        self.assertEquals(3, len(response['data']))
+        for character in response['data']:
+            self.assertTrue(character['rank'] >= 7)
+
+        # Single less-than filter
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<7').body)
+        self.assertEquals(7, len(response['data']))
+        for character in response['data']:
+            self.assertTrue(character['rank'] < 7)
+
+        # Multiple filters finding some rows
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<5&filter=goal=L').body)
+        self.assertEquals(2, len(response['data']))
+        for character in response['data']:
+            self.assertTrue(character['rank'] < 5)
+            self.assertTrue(character['goal'] == 'L')
+
+    def test_ordered_read(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        # Single ordering by rank
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=rank').body)
+        self.assertEquals(10, len(response['data']))
+        prev_rank = -1
+        for character in response['data']:
+            self.assertTrue(character['rank'] > prev_rank)
+            prev_rank = character['rank']
+
+        # Single ordering by rank, descending
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=-rank').body)
+        self.assertEquals(10, len(response['data']))
+        prev_rank = 10
+        for character in response['data']:
+            self.assertTrue(character['rank'] < prev_rank)
+            prev_rank = character['rank']
+
+        # Order by goal then rank
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=goal&ordering=rank').body)
+        self.assertEquals(10, len(response['data']))
+        prev_goal = 'A'
+        prev_rank = -1
+        for character in response['data']:
+            self.assertTrue(character['goal'] >= prev_goal)
+            if character['goal'] != prev_goal:
+                prev_rank = -1
+                prev_goal = character['goal']
+            else:
+                self.assertTrue(character['rank'] > prev_rank)
+                prev_rank = character['rank']
+
+    def test_filtered_and_ordered(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<7&ordering=rank').body)
+        self.assertEquals(7, len(response['data']))
+        prev_rank = -1
+        for character in response['data']:
+            self.assertTrue(character['rank'] > prev_rank)
+            self.assertTrue(character['rank'] < 7)
+
+    def test_illegal_filters_and_orderings(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=foo').body)
+        self._assert_have_critical_error(
+            response,
+            'Filter specification "foo" is not of the form: <name><op><value>')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=foo=9').body)
+        self._assert_have_critical_error(
+            response,
+            'field "foo" which is not in the schema for type "Character"')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank=kitten').body)
+        self._assert_have_critical_error(
+            response,
+            'invalid literal for int() with base 10: \'kitten\'')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<<7').body)
+        self._assert_have_critical_error(
+            response,
+            '"rank<<7" uses an unsupported comparison operation "<<"')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=foo').body)
+        self._assert_have_critical_error(
+            response,
+            'Invalid property name \'foo\'')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=age').body)
+        self._assert_have_critical_error(
+            response,
+            'Property \'age\' is not indexed')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=age>5').body)
+        self._assert_have_critical_error(
+            response,
+            'Property \'age\' is not indexed')
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<7&ordering=goal').body)
+        self._assert_have_critical_error(
+            response,
+            'First ordering property must be the same as inequality filter')
+
+    def _assert_have_critical_error(self, response, expected_message):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        for log in response['log']:
+            if (log['level'] == 'critical' and
+                expected_message in log['message']):
+                return
+        self.fail('Expected a critical error containing "%s"' %
+                  expected_message)
+
+    def test_pii_encoding(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        # Package private: pylint: disable-msg=protected-access
+        token = data_sources_utils._generate_data_source_token()
+
+        response = transforms.loads(self.get('/rest/data/character/items').body)
+        for d in response['data']:
+            # Ensure that field marked as needing transformation is cleared
+            # when we don't pass in an XSRF token used for generating a secret
+            # for encrypting.
+            self.assertEquals('None', d['user_id'])
+            self.assertEquals(str(db.Key.from_path(Character.kind(), 'None')),
+                              d['key'])
+
+            # Ensure that field marked for blacklist is suppressed.
+            self.assertFalse('name' in d)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?data_source_token=' + token).body)
+
+        for d in response['data']:
+            # Ensure that field marked as needing transformation is cleared
+            # when we don't pass in an XSRF token used for generating a secret
+            # for encrypting.
+            self.assertIsNotNone(d['user_id'])
+            self.assertNotEquals('None', d['key'])
+
+            # Ensure that field marked for blacklist is still suppressed.
+            self.assertFalse('name' in d)
+
+    def test_pii_encoding_changes(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        # Package private: pylint: disable-msg=protected-access
+        token1 = data_sources_utils._generate_data_source_token()
+        time.sleep(1)  # Legit: XSRF token is time-based, so will change.
+        # Package private: pylint: disable-msg=protected-access
+        token2 = data_sources_utils._generate_data_source_token()
+        self.assertNotEqual(token1, token2)
+
+        response1 = transforms.loads(self.get(
+            '/rest/data/character/items?data_source_token=' + token1).body)
+        response2 = transforms.loads(self.get(
+            '/rest/data/character/items?data_source_token=' + token2).body)
+
+        for c1, c2 in zip(response1['data'], response2['data']):
+            self.assertNotEquals(c1['user_id'], c2['user_id'])
+            self.assertNotEquals(c1['key'], c2['key'])
+
+    def test_sequential_pagination(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=0').body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[:3], response['data'])
+        self._assert_have_only_logs(response, [
+            'Creating new context for given parameters',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 3',
+            'fetch page 0 saving end cursor',
+            ])
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=1'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[3:6], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context matches parameters; using existing context',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 3',
+            'fetch page 1 saving end cursor',
+            ])
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=2'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[6:9], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context matches parameters; using existing context',
+            'fetch page 2 start cursor present; end cursor missing',
+            'fetch page 2 using limit 3',
+            'fetch page 2 saving end cursor',
+            ])
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=3'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[9:], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context matches parameters; using existing context',
+            'fetch page 3 start cursor present; end cursor missing',
+            'fetch page 3 using limit 3',
+            'fetch page 3 is partial; not saving end cursor',
+            ])
+
+    def test_nonsequential_pagination(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=2').body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[6:9], response['data'])
+        self._assert_have_only_logs(response, [
+            'Creating new context for given parameters',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 3',
+            'fetch page 0 saving end cursor',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 3',
+            'fetch page 1 saving end cursor',
+            'fetch page 2 start cursor present; end cursor missing',
+            'fetch page 2 using limit 3',
+            'fetch page 2 saving end cursor',
+            ])
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=3&page_number=1'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data(self.characters[3:6], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context matches parameters; using existing context',
+            'fetch page 1 start cursor present; end cursor present',
+            ])
+
+    def test_pagination_filtering_and_ordering(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '&chunk_size=3&page_number=1').body)
+        source_context = response['source_context']
+        self._verify_data([self.characters[4], self.characters[6]],
+                          response['data'])
+        self._assert_have_only_logs(response, [
+            'Creating new context for given parameters',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 3',
+            'fetch page 0 saving end cursor',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 3',
+            'fetch page 1 is partial; not saving end cursor',
+            ])
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '&chunk_size=3&page_number=0'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data([self.characters[7], self.characters[1],
+                           self.characters[8]], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context matches parameters; using existing context',
+            'fetch page 0 start cursor missing; end cursor present',
+            ])
+
+    def test_parameters_can_be_omitted_if_using_source_context(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank>=5&ordering=rank'
+            '&chunk_size=3&page_number=1').body)
+        source_context = response['source_context']
+        self._verify_data([self.characters[4], self.characters[6]],
+                          response['data'])
+
+        # This should load identical items, without having to respecify
+        # filters, ordering, chunk_size.
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?page_number=1'
+            '&source_context=%s' % source_context).body)
+        self._verify_data([self.characters[4], self.characters[6]],
+                          response['data'])
+        self._assert_have_only_logs(response, [
+            'Continuing use of existing context',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 3',
+            'fetch page 1 is partial; not saving end cursor',
+            ])
+
+    def test_build_default_context(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get('/rest/data/character/items').body)
+        self._assert_have_only_logs(response, [
+            'Building new default context',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 10000',
+            'fetch page 0 is partial; not saving end cursor',
+            ])
+
+    def test_change_filtering_invalidates_context(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank>=5'
+            '&chunk_size=3&page_number=0').body)
+        source_context = response['source_context']
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?filter=rank<5'
+            '&chunk_size=3&page_number=0'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data([self.characters[2], self.characters[5],
+                           self.characters[3]], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context and parameters mismatch; '
+            'discarding existing and creating new context.',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 3',
+            'fetch page 0 saving end cursor',
+            ])
+
+    def test_change_ordering_invalidates_context(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=rank'
+            '&chunk_size=3&page_number=0').body)
+        source_context = response['source_context']
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?ordering=-rank'
+            '&chunk_size=3&page_number=0'
+            '&source_context=%s' % source_context).body)
+        source_context = response['source_context']
+        self._verify_data([self.characters[6], self.characters[4],
+                           self.characters[8]], response['data'])
+        self._assert_have_only_logs(response, [
+            'Existing context and parameters mismatch; '
+            'discarding existing and creating new context.',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 3',
+            'fetch page 0 saving end cursor',
+            ])
+
+    def _assert_have_only_logs(self, response, messages):
+        for message in messages:
+            found_index = -1
+            for index, log in enumerate(response['log']):
+                if message in log['message']:
+                    found_index = index
+                    break
+            if found_index < 0:
+                self.fail('Expected to find message "%s" in logs' % message)
+            else:
+                del response['log'][found_index]
+        if response['log']:
+            self.fail('Unexpected message "%s"' % response['log'][0])
+
+    def _verify_data(self, characters, data):
+        for c, d in zip(characters, data):
+            self.assertEquals(c.rank, d['rank'])
+            self.assertEquals(c.age, d['age'])

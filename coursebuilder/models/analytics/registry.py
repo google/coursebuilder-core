@@ -18,11 +18,11 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import re
 
-from modules.analytics import base_types
-from modules.analytics import utils
+from models import data_sources
+from models.analytics import utils as analytics_utils
 
 
-class Registry(object):
+class _Registry(object):
     """Collect and operate on analytics."""
 
     class _Analytic(object):
@@ -51,14 +51,18 @@ class Registry(object):
         def generator_classes(self):
             ret = set()
             for source_class in self.data_source_classes:
-                # Utils holds packagage-private functions common to analytics
-                # pylint: disable-msg=protected-access
-                ret.update(utils._get_required_generators(source_class))
+                # Package private: pylint: disable-msg=protected-access
+              ret.update(analytics_utils._get_required_generators(source_class))
             return ret
 
         @property
         def data_source_classes(self):
             return set(self._data_source_classes)
+
+        @property
+        def rest_data_source_classes(self):
+            return set([c for c in self._data_source_classes
+                        if issubclass(c, data_sources.AbstractRestDataSource)])
 
     _analytics = []  # As array for consistent ordering
 
@@ -90,7 +94,8 @@ class Registry(object):
 
             data_source_classes: An optional array of data source classes.
                 This should contain only classes inheriting from
-                SynchronousQuery.
+                data_sources.SynchronousQuery or
+                data_sources.AbstractRestDataSource
         Raises:
             ValueError: when any of
             - name is already registered as an analytic
@@ -101,23 +106,26 @@ class Registry(object):
         # Mustn't use static mutable [] as default argument; regularize here.
         data_source_classes = data_source_classes or []
 
-        # Sanity check
-        if name and not re.match('^[_0-9a-z]+$', name):
-            raise ValueError('name must contain only lowercase letters, '
-                             'numbers or underscore characters')
-        for data_source_class in data_source_classes:
-            if (not issubclass(data_source_class,
-                               base_types.SynchronousQuery)):
-                raise ValueError(
-                    'data_source_classes must contain only types '
-                    'derived from SynchronousQuery')
-
         # Register, if we may.
+        cls._sanity_check_inputs(name, data_source_classes)
+        cls._analytics.append(_Registry._Analytic(
+            name, title, html_template_name, data_source_classes))
+
+    @classmethod
+    def _sanity_check_inputs(cls, name, data_source_classes):
+        if name and not re.match('^[_0-9a-z]+$', name):
+            raise ValueError(
+                'name "%s" must contain only lowercase letters, ' % name +
+                'numbers or underscore characters')
         if cls._find_by_name(name):
             raise ValueError(
                 'Analytic %s is already registered' % name)
-        cls._analytics.append(Registry._Analytic(
-            name, title, html_template_name, data_source_classes))
+        for data_source_class in data_source_classes:
+            if not data_sources.Registry.is_registered(data_source_class):
+                raise ValueError(
+                    'All data source classes used in analytics must be '
+                    'registered in models.data_sources.Registry; '
+                    '"%s" is not registered.' % data_source_class.__name__)
 
     @classmethod
     def _run_generators(cls, app_context, generator_classes):
@@ -195,19 +203,26 @@ class Registry(object):
                 generator_class(app_context).cancel()
 
     @classmethod
+    def rest_data_source_classes(cls):
+        ret = set()
+        for analytic in cls._analytics:
+            ret.update(analytic.rest_data_source_classes)
+        return ret
+
+    @classmethod
+    def _all_generator_classes(cls):
+        ret = set()
+        for analytic in cls._analytics:
+            ret.update(analytic.generator_classes)
+        return ret
+
+    @classmethod
     def _for_testing_only_clear(cls):
         cls._analytics = []
 
     @classmethod
     def _get_analytics(cls):
         return cls._analytics
-
-    @classmethod
-    def _all_generator_classes(cls):
-        generator_classes = set()
-        for analytic in cls._analytics:
-            generator_classes.update(analytic.generator_classes)
-        return generator_classes
 
     @classmethod
     def _find_by_name(cls, name):

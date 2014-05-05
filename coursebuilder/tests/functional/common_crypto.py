@@ -46,7 +46,7 @@ class EncryptionManagerTests(actions.TestBase):
         message = 'Mary had a little lamb.  Her doctors were astounded'
         e1 = crypto.EncryptionManager.encrypt(message)
         self.assertIsNone(URLSAFE_B64_ALPHABET.match(e1))  # some illegal chars
-        e2 = crypto.EncryptionManager.encrypt_to_base64(message)
+        e2 = crypto.EncryptionManager.encrypt_to_urlsafe_ciphertext(message)
         self.assertIsNotNone(URLSAFE_B64_ALPHABET.match(e2))
         self.assertNotEquals(message, e2)
 
@@ -59,8 +59,8 @@ class EncryptionManagerTests(actions.TestBase):
 
     def test_encrypt_decrypt_urlsafe(self):
         message = 'Mary had a little lamb.  Her doctors were astounded'
-        e = crypto.EncryptionManager.encrypt_to_base64(message)
-        d = crypto.EncryptionManager.decrypt_from_base64(e)
+        e = crypto.EncryptionManager.encrypt_to_urlsafe_ciphertext(message)
+        d = crypto.EncryptionManager.decrypt_from_urlsafe_ciphertext(e)
         self.assertEquals(d, message)
         self.assertNotEquals(e, d)
 

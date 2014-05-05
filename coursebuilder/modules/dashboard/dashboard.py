@@ -55,6 +55,7 @@ from controllers import sites
 from controllers import utils
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
+from models import analytics
 from models import config
 from models import courses
 from models import custom_modules
@@ -62,7 +63,6 @@ from models import roles
 from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
-from modules.analytics import analytics
 from modules.dashboard import common_analytics
 from modules.search.search import SearchDashboardHandler
 from tools import verify

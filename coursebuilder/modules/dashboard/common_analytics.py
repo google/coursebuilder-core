@@ -20,7 +20,9 @@ import logging
 import urlparse
 
 from common import safe_dom
+from models import analytics
 from models import courses
+from models import data_sources
 from models import jobs
 from models import progress
 from models import transforms
@@ -28,7 +30,6 @@ from models import utils as models_utils
 from models.models import EventEntity
 from models.models import Student
 from models.models import StudentPropertyEntity
-from modules.analytics import analytics
 
 
 class StudentEnrollmentAndScoresGenerator(jobs.DurableJob):
@@ -95,7 +96,7 @@ class StudentEnrollmentAndScoresGenerator(jobs.DurableJob):
         return data
 
 
-class StudentEnrollmentAndScoresSource(analytics.SynchronousQuery):
+class StudentEnrollmentAndScoresSource(data_sources.SynchronousQuery):
     """Shows student enrollment analytics on the dashboard."""
 
     @staticmethod
@@ -164,7 +165,7 @@ class StudentProgressStatsGenerator(jobs.DurableJob):
         return student_progress.progress_data
 
 
-class StudentProgressStatsSource(analytics.SynchronousQuery):
+class StudentProgressStatsSource(data_sources.SynchronousQuery):
     """Shows student progress analytics on the dashboard."""
 
     @staticmethod
@@ -489,7 +490,7 @@ class QuestionStatsGenerator(jobs.DurableJob):
                 question_stats.id_to_assessments_dict)
 
 
-class QuestionStatsSource(analytics.SynchronousQuery):
+class QuestionStatsSource(data_sources.SynchronousQuery):
     """Shows statistics on the dashboard for students' answers to questions."""
 
     @staticmethod
@@ -508,6 +509,10 @@ class QuestionStatsSource(analytics.SynchronousQuery):
 
 
 def register_analytics():
+    data_sources.Registry.register(QuestionStatsSource)
+    data_sources.Registry.register(StudentEnrollmentAndScoresSource)
+    data_sources.Registry.register(StudentProgressStatsSource)
+
     analytics.Registry.register(
         'multiple_choice_question',
         'Multiple Choice Question',

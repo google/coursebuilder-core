@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-"""Unit tests for the anaytics internals in modules/analytics/*.py."""
+"""Unit tests for the anaytics internals in models/analytics/*.py."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
@@ -23,8 +23,10 @@ import unittest
 import jinja2
 
 from common import jinja_utils
+from models import analytics
+from models import data_sources
 from models import jobs
-from modules.analytics import analytics
+
 
 #-------------------------------------------------------------------------------
 # Mock objects to simulate models/jobs subsystem
@@ -172,14 +174,14 @@ class GenThree(MockJobBase):
         return 'gen three'
 
 
-class NoGenSource(analytics.SynchronousQuery):
+class NoGenSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def fill_values(app_context, template_values):
         template_values['no_gen_source'] = 'no_gen_value'
 
 
-class OneGenSource(analytics.SynchronousQuery):
+class OneGenSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
@@ -191,7 +193,7 @@ class OneGenSource(analytics.SynchronousQuery):
             gen_one_job.output)
 
 
-class TwoGenSource(analytics.SynchronousQuery):
+class TwoGenSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
@@ -205,7 +207,7 @@ class TwoGenSource(analytics.SynchronousQuery):
             gen_two_job.output)
 
 
-class ThreeGenSource(analytics.SynchronousQuery):
+class ThreeGenSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
@@ -220,6 +222,12 @@ class ThreeGenSource(analytics.SynchronousQuery):
             gen_two_job.output)
         template_values['three_gen_source_gen_three'] = (
             gen_three_job.output)
+
+
+data_sources.Registry.register(NoGenSource)
+data_sources.Registry.register(OneGenSource)
+data_sources.Registry.register(TwoGenSource)
+data_sources.Registry.register(ThreeGenSource)
 
 
 #-------------------------------------------------------------------------------
@@ -241,19 +249,21 @@ class AnalyticsTests(unittest.TestCase):
         renderer = analytics._TemplateRenderer(self._mock_handler)
         return renderer.render(
             None,
-            'tests/unit/modules_analytics_dashboard.html',
+            'tests/unit/models_analytics_dashboard.html',
             {'sections': sections})
 
     def test_illegal_name(self):
-        with self.assertRaisesRegexp(ValueError, 'name must contain'):
+        with self.assertRaisesRegexp(ValueError, 'name "A" must contain only'):
             analytics.Registry.register('A', 'Foo', 'foo.html')
-        with self.assertRaisesRegexp(ValueError, 'name must contain'):
+        with self.assertRaisesRegexp(ValueError, 'name " " must contain only'):
             analytics.Registry.register(' ', 'Foo', 'foo.html')
-        with self.assertRaisesRegexp(ValueError, 'name must contain'):
+        with self.assertRaisesRegexp(ValueError, 'name "#" must contain only'):
             analytics.Registry.register('#', 'Foo', 'foo.html')
 
     def test_illegal_generator(self):
-        with self.assertRaisesRegexp(ValueError, 'data_source_classes'):
+        with self.assertRaisesRegexp(
+            ValueError,
+            'All data source classes used in analytics must be registered'):
             analytics.Registry.register('foo', 'foo', 'foo', [MockHandler])
 
     def test_run_all_with_no_analytics_does_not_crash(self):
@@ -274,21 +284,21 @@ class AnalyticsTests(unittest.TestCase):
     def test_run_generator_for_analytic_with_none_does_not_crash(self):
         name = 'no_generator'
         analytics.Registry.register(
-            name, name, 'modules_analytics_section.html', [NoGenSource])
+            name, name, 'models_analytics_section.html', [NoGenSource])
         analytics.Registry.run_generators_for_analytic(
             self._mock_app_context, name)
 
     def test_cancel_generator_for_analytic_with_none_does_not_crash(self):
         name = 'no_generator'
         analytics.Registry.register(
-            name, name, 'modules_analytics_section.html', [NoGenSource])
+            name, name, 'models_analytics_section.html', [NoGenSource])
         analytics.Registry.cancel_generators_for_analytic(
             self._mock_app_context, name)
 
     def test_no_generator_display(self):
         name = 'no_generator'
         analytics.Registry.register(
-            name, name, 'modules_analytics_section.html', [NoGenSource])
+            name, name, 'models_analytics_section.html', [NoGenSource])
         result = self._generate_analytics_page()
 
         # Statistic reports result to page
@@ -301,7 +311,7 @@ class AnalyticsTests(unittest.TestCase):
     def test_generator_run_cancel_state_display(self):
         name = 'foo'
         analytics.Registry.register(
-            name, name, 'modules_analytics_section.html', [OneGenSource])
+            name, name, 'models_analytics_section.html', [OneGenSource])
 
         result = self._generate_analytics_page()
         self.assertIn('Statistics for gen one have not been', result)
@@ -351,7 +361,7 @@ class AnalyticsTests(unittest.TestCase):
     def test_run_all_generators(self):
         name = 'foo'
         analytics.Registry.register(
-            name, name, 'modules_analytics_section.html', [OneGenSource])
+            name, name, 'models_analytics_section.html', [OneGenSource])
 
         result = self._generate_analytics_page()
         self.assertIn('Statistics for gen one have not been calculated yet',
@@ -367,13 +377,13 @@ class AnalyticsTests(unittest.TestCase):
 
     def test_multiple_analytics_multiple_generators_multiple_sources(self):
         analytics.Registry.register(
-            'trivial', 'Trivial Statistics', 'modules_analytics_section.html',
+            'trivial', 'Trivial Statistics', 'models_analytics_section.html',
             [NoGenSource])
         analytics.Registry.register(
-            'simple', 'Simple Statistics', 'modules_analytics_section.html',
+            'simple', 'Simple Statistics', 'models_analytics_section.html',
             [OneGenSource])
         analytics.Registry.register(
-            'complex', 'Complex Statistics', 'modules_analytics_section.html',
+            'complex', 'Complex Statistics', 'models_analytics_section.html',
             [NoGenSource, OneGenSource, TwoGenSource, ThreeGenSource])
 
         analytics.Registry.run_all_generators(self._mock_app_context)

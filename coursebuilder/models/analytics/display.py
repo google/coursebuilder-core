@@ -18,10 +18,10 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import safe_dom
 from controllers import utils
+from models import data_sources
 from models import jobs
-from modules.analytics import base_types
-from modules.analytics import registry
-from modules.analytics import utils as analytics_utils
+from models.analytics import registry
+from models.analytics import utils as analytics_utils
 from modules.mapreduce import mapreduce_module
 
 
@@ -32,16 +32,16 @@ def _generate_display_html(template_renderer, xsrf, app_context):
     # Jobs may directly contain small results, just hold references to
     # larger results, or both.
     data_source_jobs = {}
-    # Packagage-private access - safer to mark private and suppress lint.
+    # Package-private access - safer to mark private and suppress lint.
     # pylint: disable-msg=protected-access
-    for generator_class in registry.Registry._all_generator_classes():
+    for generator_class in registry._Registry._all_generator_classes():
         data_source_jobs[generator_class] = (
             generator_class(app_context).load())
 
     # Generate HTML section for each analytic.
-    # Packagage-private access - safer to mark private and suppress lint.
+    # Package-private access - safer to mark private and suppress lint.
     # pylint: disable-msg=protected-access
-    for analytic in registry.Registry._get_analytics():
+    for analytic in registry._Registry._get_analytics():
          html_sections.extend(_generate_analytic_section(
              template_renderer, xsrf, app_context, analytic, data_source_jobs))
     return html_sections
@@ -80,9 +80,9 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
     if all_generators_completed_ok:
         template_values = {'analytic': analytic.name}
         for source_class in analytic.data_source_classes:
-            if issubclass(source_class, base_types.SynchronousQuery):
+            if issubclass(source_class, data_sources.SynchronousQuery):
                 required_generator_classes = (
-                    # Utils has packagage-private functions common to analytics
+                    # Utils has package-private functions common to analytics
                     # pylint: disable-msg=protected-access
                     analytics_utils._get_required_generators(source_class))
                 synchronous_query_jobs = []
@@ -97,7 +97,7 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
 
     # Boilerplate content for each analytic's required generators
     html_sections.append(template_renderer.render(
-        None, 'common_footer.html',
+        None, 'models/analytics/common_footer.html',
         {
             'analytic': analytic.name,
             'any_generator_still_running': any_generator_still_running,

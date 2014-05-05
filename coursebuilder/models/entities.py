@@ -19,7 +19,6 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 from counters import PerfCounter
 from google.appengine.ext import db
 
-
 # datastore performance counters
 DB_QUERY = PerfCounter(
     'gcb-models-db-query',
@@ -131,10 +130,11 @@ class BaseEntity(db.Model):
         assert cls.kind() == db_key.kind()
         return db_key
 
-    def _get_export_blacklist(self):
+    @classmethod
+    def _get_export_blacklist(cls):
         """Collapses all _PROPERTY_EXPORT_BLACKLISTs in the class hierarchy."""
         blacklist = []
-        for klass in self.__class__.__mro__:
+        for klass in cls.__mro__:
             if hasattr(klass, '_PROPERTY_EXPORT_BLACKLIST'):
                 # Treat as module-protected.
                 # pylint: disable-msg=protected-access

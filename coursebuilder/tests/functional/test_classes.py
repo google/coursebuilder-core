@@ -50,6 +50,7 @@ from controllers import utils
 from controllers.utils import XsrfTokenManager
 from models import config
 from models import courses
+from models import entities
 from models import jobs
 from models import models
 from models import transforms
@@ -66,6 +67,7 @@ from tools.etl import remote
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
+
 
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
@@ -3566,7 +3568,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         students = sorted(
             transforms.loads(archive.get(student_entity.path))['rows'],
             key=lambda d: d['key.name'])
-        entities = sorted(
+        entitiez = sorted(
             transforms.loads(archive.get(entity_entity.path))['rows'],
             key=lambda d: d['key.name'])
         # Spot check their contents.
@@ -3575,7 +3577,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             [student['key.name'] for student in students])
         self.assertEqual(
             [model.key().name() for model in [first_entity, second_entity]],
-            [entity['key.name'] for entity in entities])
+            [entity['key.name'] for entity in entitiez])
 
     def test_download_datastore_with_privacy_maintains_references(self):
         """Test download of datastore data and archive creation."""
@@ -3940,6 +3942,40 @@ class MemcacheTestBase(actions.TestBase):
 
 class MemcacheTest(MemcacheTestBase):
     """Executes all tests with memcache enabled."""
+
+
+class PiiHolder(entities.BaseEntity):
+    user_id = db.StringProperty(indexed=True)
+    age = db.IntegerProperty(indexed=False)
+    class_rank = db.IntegerProperty(indexed=False)
+    registration_date = db.DateTimeProperty(indexed=True, required=True)
+    class_goal = db.StringProperty(indexed=False, required=True)
+    albedo = db.FloatProperty(indexed=False)
+
+    _PROPERTY_EXPORT_BLACKLIST = [user_id, age]
+
+
+class TransformsEntitySchema(actions.TestBase):
+
+    def test_schema(self):
+        schema = transforms.get_schema_for_entity(PiiHolder)
+        schema = schema.get_json_schema_dict()['properties']
+        self.assertNotIn('user_id', schema)
+        self.assertNotIn('age', schema)
+        self.assertIn('class_rank', schema)
+        self.assertEquals('integer', schema['class_rank']['type'])
+        self.assertIn('optional', schema['class_rank'])
+        self.assertEquals(True, schema['class_rank']['optional'])
+        self.assertIn('registration_date', schema)
+        self.assertEquals('datetime', schema['registration_date']['type'])
+        self.assertNotIn('optional', schema['registration_date'])
+        self.assertIn('class_goal', schema)
+        self.assertEquals('string', schema['class_goal']['type'])
+        self.assertNotIn('optional', schema['class_goal'])
+        self.assertIn('albedo', schema)
+        self.assertEquals('number', schema['albedo']['type'])
+        self.assertIn('optional', schema['albedo'])
+        self.assertEquals(True, schema['albedo']['optional'])
 
 
 class TransformsJsonFileTestCase(actions.TestBase):

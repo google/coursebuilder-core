@@ -119,7 +119,7 @@ class EncryptionManager(object):
         return cls._build_crypto(secret).encrypt(message)
 
     @classmethod
-    def encrypt_to_base64(cls, message, secret=None):
+    def encrypt_to_urlsafe_ciphertext(cls, message, secret=None):
         """Convenience wrapper to get URL-safe version of encrytped data."""
         return base64.urlsafe_b64encode(cls.encrypt(message, secret))
 
@@ -134,7 +134,7 @@ class EncryptionManager(object):
         return message[delim_index + 1:delim_index + 1 + original_length]
 
     @classmethod
-    def decrypt_from_base64(cls, message, secret=None):
+    def decrypt_from_urlsafe_ciphertext(cls, message, secret=None):
         return cls.decrypt(base64.urlsafe_b64decode(message), secret)
 
 

@@ -25,6 +25,8 @@ from xml.etree import ElementTree
 import entities
 import yaml
 
+from common import schema_fields
+
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
@@ -50,13 +52,24 @@ _JSON_DATETIME_FORMATS = [
 ]
 JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html', 'boolean',
               'integer', 'number', 'array', 'object']
+PYTHON_TYPE_TO_JSON_TYPE = {
+    basestring: 'string',
+    datetime.date: 'date',
+    datetime.datetime: 'datetime',
+    int: 'integer',
+    float: 'number',
+    bool: 'boolean',
+    datastore_types.Text: 'text',
+}
+
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
 # sync with modules/oeditor/oeditor.html.
-_JSON_XSSI_PREFIX = ")]}'\n"
+JSON_XSSI_PREFIX = ")]}'\n"
 SIMPLE_TYPES = (int, long, float, bool, dict, basestring, list)
 SUPPORTED_TYPES = (
     datastore_types.Key,
     datetime.date,
+    datetime.datetime,
     db.GeoPt,
 )
 
@@ -110,7 +123,7 @@ def dumps(*args, **kwargs):
     return json.dumps(*args, **kwargs)
 
 
-def loads(s, prefix=_JSON_XSSI_PREFIX, strict=True, **kwargs):
+def loads(s, prefix=JSON_XSSI_PREFIX, strict=True, **kwargs):
     """Wrapper around json.loads that handles XSSI-protected responses.
 
     To prevent XSSI we insert a prefix before our JSON responses during server-
@@ -198,6 +211,8 @@ def json_to_dict(source_dict, schema):
                                             attr_type == 'date')
         elif attr_type == 'number':
             output[key] = float(source_dict[key])
+        elif attr_type == 'integer':
+            output[key] = int(source_dict[key])
         elif attr_type == 'boolean':
             output[key] = convert_bool(source_dict[key], key)
         elif attr_type == 'array':
@@ -209,6 +224,41 @@ def json_to_dict(source_dict, schema):
         else:
             output[key] = source_dict[key]
     return output
+
+
+def _get_schema_field(property_type):
+    name = property_type.name
+    if property_type.data_type == list:
+        # Shallow evaluation here is OK; Python DB API does not permit
+        # array-of-array; when declaring a ListProperty, the item type
+        # must be a Type instance (and thus cannot be a class, and thus
+        # cannot be a Property class)
+        item_type = schema_fields.SchemaField(
+            name=name + ':item', label=name + ':item', optional=True,
+            property_type=PYTHON_TYPE_TO_JSON_TYPE[property_type.item_type])
+        ret = schema_fields.FieldArray(
+            name=name, label=name,
+            description=property_type.verbose_name,
+            item_type=item_type)
+    else:
+        ret = schema_fields.SchemaField(
+            name=name, label=name,
+            property_type=PYTHON_TYPE_TO_JSON_TYPE[property_type.data_type],
+            description=property_type.verbose_name,
+            optional=not property_type.required)
+    return ret
+
+
+def get_schema_for_entity(clazz):
+    assert issubclass(clazz, entities.BaseEntity)  # Must have blacklist.
+    available_properties = clazz.properties()
+    # Treating as module-protected. pylint: disable-msg=protected-access
+    suppressed = clazz._get_export_blacklist()
+    registry = schema_fields.FieldRegistry(clazz.__name__)
+    for property_type in available_properties.values():
+        if property_type not in suppressed:
+            registry.add_property(_get_schema_field(property_type))
+    return registry
 
 
 def entity_to_dict(entity, force_utf_8_encoding=False):
@@ -331,7 +381,7 @@ def send_json_response(
         response['payload'] = dumps(payload_dict)
     if xsrf_token:
         response['xsrf_token'] = xsrf_token
-    handler.response.write(_JSON_XSSI_PREFIX + dumps(response))
+    handler.response.write(JSON_XSSI_PREFIX + dumps(response))
 
 
 def send_file_upload_response(

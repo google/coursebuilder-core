@@ -16,10 +16,11 @@
 
 __author__ = 'Sean Lip (sll@google.com)'
 
+from models import analytics
 from models import courses
+from models import data_sources
 from models import jobs
 from models import transforms
-from modules.analytics import analytics
 from modules.review import peer
 
 
@@ -51,7 +52,7 @@ class PeerReviewStatsGenerator(jobs.MapReduceJob):
         yield (unit_and_count, quantity)
 
 
-class PeerReviewStatsSource(analytics.SynchronousQuery):
+class PeerReviewStatsSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
@@ -114,6 +115,7 @@ class PeerReviewStatsSource(analytics.SynchronousQuery):
 
 
 def register_analytic():
+    data_sources.Registry.register(PeerReviewStatsSource)
     analytics.Registry.register(
         'peer_review',
         'Peer Review',
