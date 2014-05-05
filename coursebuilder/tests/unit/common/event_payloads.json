@@ -1,0 +1,219 @@
+{
+  "multiple_choice_activity": {
+    "event_data": {
+      "index": 0,
+      "type": "activity-choice",
+      "value": 0,
+      "correct": true,
+      "location": "https://localhost:8080/activity?unit=1&lesson=2"
+    },
+    "event_source": "attempt-activity",
+    "event_async": true,
+    "transformed_dict_list": [{
+      "id": "u.1.l.2.b.0",
+      "score": 1.0,
+      "answers": [0]
+    }]
+  },
+
+  "multiple_choice_group_activity": {
+    "event_data": {
+      "index": 0,
+      "type": "activity-group",
+      "values": [
+        {"index": 0, "value": [0], "correct": true},
+        {"index": 1, "value": [1], "correct": true}
+      ],
+      "num_expected": 2,
+      "num_submitted": 0,
+      "num_correct": 2,
+      "location": "https://localhost:8080/activity?unit=1&lesson=3"
+    },
+    "event_source": "attempt-activity",
+    "event_async": true,
+    "transformed_dict_list": [
+      {
+        "id": "u.1.l.3.b.0.i.0",
+        "score": 1.0,
+        "answers": [0]
+      },
+      {
+        "id": "u.1.l.3.b.0.i.1",
+        "score": 1.0,
+        "answers": [1]
+      }
+    ]
+  },
+
+  "free_text_activity": {
+    "event_data": {
+      "index": 0,
+      "type": "activity-freetext",
+      "value": "42",
+      "correct": true,
+      "location": "https://localhost:8080/activity?unit=1&lesson=4"
+    },
+    "event_source": "attempt-activity",
+    "event_async": true,
+    "transformed_dict_list": []
+  },
+
+  "mixed_assessment": {
+    "event_data": {
+      "type": "assessment-Pre",
+      "values":[
+        {"index": 0, "type": "choices", "value": 0, "correct": true},
+        {"index": 1, "type": "string", "value": "Rectus", "correct": true},
+        {"index": 2, "type": "regex", "value": "match", "correct": true},
+        {"index": 3, "type": "numeric", "value": 42, "correct": true}
+      ],
+      "num_expected": 4,
+      "num_submitted": 4,
+      "num_correct": 4,
+      "location": "https://localhost:8080/assessment?name=Pre"
+    },
+    "event_source": "attempt-assessment",
+    "event_async": true,
+    "transformed_dict_list": [{
+      "id": "s.Pre.i.0",
+      "score": 1.0,
+      "answers": [0]
+    }]
+  },
+
+  "multiple_choice_15": {
+    "event_data": {
+      "type": "McQuestion",
+      "instanceid": "mc-0",
+      "answer": [0],
+      "score": 1,
+      "location": "http://localhost:8080/unit?unit=1&lesson=2"
+    },
+    "event_source": "tag-assessment",
+    "event_async": true,
+    "transformed_dict_list": [{
+        "id": "u.1.l.2.c.mc-0",
+        "score": 1,
+        "answers": [0]
+    }]
+  },
+
+  "short_answer_15": {
+    "event_data": {
+      "type": "SaQuestion",
+      "instanceid": "sa-0",
+      "answer": "falafel",
+      "score": 1,
+      "location": "http://localhost:8080/unit?unit=1&lesson=2"
+    },
+    "event_source": "tag-assessment",
+    "event_async": true,
+    "transformed_dict_list": []
+  },
+
+  "question_group_15": {
+    "event_data": {
+      "type": "QuestionGroup",
+      "instanceid": "qg-0",
+      "answer": [[ 0 ], "falafel"],
+      "score": 1.0,
+      "individualScores": [1, 1],
+      "containedTypes": ["McQuestion", "SaQuestion"],
+      "location": "http://localhost:8080/unit?unit=1&lesson=2"
+    },
+    "event_source": "tag-assessment",
+    "event_async": true,
+    "transformed_dict_list": [{
+        "answers": [0],
+        "score": 1.0,
+        "id": "u.1.l.2.c.qg-0.i.0"
+    }]
+  },
+
+  "scored_lesson_15": {
+    "event_data": {
+      "type": "scored-lesson",
+      "answers": {
+        "version": "1.5",
+        "mc-0": [0],
+        "sa-0": "falafel"
+      },
+      "individualScores": {
+        "mc-0": 1,
+        "sa-0": 1
+      },
+      "score": 2,
+      "containedTypes": {
+        "mc-0": "McQuestion",
+        "sa-0": "SaQuestion"
+      },
+      "location": "http://localhost:8080/unit?unit=1&lesson=2"
+    },
+    "event_source": "attempt-lesson",
+    "event_async": true,
+    "transformed_dict_list": [{
+        "id": "u.1.l.2.c.mc-0",
+        "score": 1,
+        "answers": [0]
+    }]
+  },
+
+  "scored_lesson_15_qg": {
+    "event_data": {
+      "type": "scored-lesson",
+      "answers": {
+        "version": "1.5",
+        "qg-0": [[0], "falafel"]
+      },
+      "individualScores": {
+        "qg-0": [1, 1]
+      },
+      "score": 25,
+      "containedTypes": {
+        "qg-0": ["McQuestion", "SaQuestion"]
+      },
+      "location": "http://localhost:8080/unit?unit=1&lesson=2"
+    },
+    "event_source": "attempt-lesson",
+    "event_async": true,
+    "transformed_dict_list": [{
+        "id": "u.1.l.2.c.qg-0.i.0",
+        "score": 1,
+        "answers": [0]
+    }]
+  },
+
+  "assessment_15": {
+    "event_data": {
+      "type": "assessment-6",
+      "values": {
+        "version": "1.5",
+        "individualScores": {
+          "mc-0": 1,
+          "sa-0": 1
+        },
+        "containedTypes": {
+          "mc-0": "McQuestion",
+          "sa-0": "SaQuestion"
+        },
+        "answers": {
+          "mc-0": [0],
+          "sa-0": "falafel"
+        },
+        "mc-0": [true, false],
+        "sa-0": {
+          "response": "falafel"
+        }
+      },
+      "location": "AnswerHandler"
+    },
+    "event_source": "submit-assessment",
+    "transformed_dict_list": [
+      {
+        "id": "s.6.c.mc-0",
+        "score": 1,
+        "answers": [0]
+      }
+    ]
+  }
+}
