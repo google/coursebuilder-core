@@ -34,10 +34,10 @@
 
           <div class="gcb-lesson-title-with-progress">
             {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
-              {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
+              {{ display_lesson_title(unit, lesson) }}
             {% else %}
               <a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
-                {{ unit.index }}.{{ lesson.index }} {{ lesson.title }}
+                {{ display_lesson_title(unit, lesson) }}
               </a>
             {% endif %}
           </div>
@@ -104,7 +104,7 @@
             <span class="gcb-grayed">
           {% endif %}
 
-            {{ unit.index}}.{{ lesson.index }} {{ lesson.title }}
+            {{ lesson.index }} {{ lesson.title }}
           </span>
 
           {% if lesson.activity %}

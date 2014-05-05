@@ -276,6 +276,11 @@ def create_course_registry():
         'course:browsable', 'Make Course Browsable', 'boolean',
         description='Allow non-registered users to view course content.'))
     course_opts.add_property(SchemaField(
+        'course:display_unit_title_without_index',
+        'Display Unit Title Without Index', 'boolean',
+        description='Omit the unit number when displaying unit titles.'))
+
+    course_opts.add_property(SchemaField(
         'course:google_analytics_id', 'ID for Google Analytics', 'string',
         optional=True, description='This ID tells Google Analytics who is '
         'calling, and allows it to string together routes that visitors '

@@ -30,6 +30,7 @@ from common import tags
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 from controllers import sites
+from controllers import utils
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -945,8 +946,7 @@ class LessonRESTHandler(BaseRESTHandler):
         for unit in units:
             if unit.type == 'U':
                 unit_list.append({
-                    'label': cgi.escape(
-                        'Unit %s - %s' % (unit.index, unit.title)),
+                    'label': cgi.escape(utils.display_unit_title(unit)),
                     'value': unit.unit_id})
 
         return [

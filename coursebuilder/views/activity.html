@@ -13,8 +13,7 @@
 {% endblock %}
 
 {% block subtitle %}
-  {# I18N: Title of the webpage. #}
-  - {{ gettext('Unit') }} {{ unit.index }} - {{ unit.title }}
+  - {{ display_unit_title(unit) }}
 {% endblock subtitle %}
 
 {% block top_content %}
@@ -37,8 +36,7 @@
     <li><a href="course">{{ gettext('Course') }}</a></li>
     <li>
       <a href="unit?unit={{ unit.unit_id }}">
-        {# I18N: Navigation breadcrumb. #}
-        {{ gettext('Unit') }} {{ unit.index }}</a></li>
+        {{ display_short_unit_title(unit) }}</a></li>
     {% if lesson %}
       <li>
         <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
@@ -49,8 +47,7 @@
   </ul>
   <div>
     <h1 class="gcb-unit-header">
-      {# I18N: Header text for a unit page. #}
-      {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
+      {{ display_unit_title(unit) }}
     </h1>
   </div>
 

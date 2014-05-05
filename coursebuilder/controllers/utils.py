@@ -17,10 +17,13 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import base64
+import gettext
 import hmac
 import os
 import time
 import urlparse
+
+import sites
 
 import webapp2
 
@@ -195,6 +198,37 @@ class ReflectiveRequestHandler(object):
         return handler()
 
 
+def display_unit_title(unit):
+    """Prepare an internationalized display for the unit title."""
+    app_context = sites.get_course_for_current_request()
+    if Course.get_environ(app_context)['course'].get(
+            'display_unit_title_without_index'):
+        return unit.title
+    else:
+        # I18N: Message displayed as title for unit
+        return gettext.gettext('Unit %s - %s' % (unit.index, unit.title))
+
+
+def display_short_unit_title(unit):
+    """Prepare a short unit title."""
+    app_context = sites.get_course_for_current_request()
+    if Course.get_environ(app_context)['course'].get(
+            'display_unit_title_without_index'):
+        return unit.title
+    else:
+        return '%s %s' % (gettext.gettext('Unit'), unit.index)
+
+
+def display_lesson_title(unit, lesson):
+    """Prepare an internationalized display for the unit title."""
+    app_context = sites.get_course_for_current_request()
+    if Course.get_environ(app_context)['course'].get(
+            'display_unit_title_without_index'):
+        return '%s %s' % (lesson.index, lesson.title)
+    else:
+        return '%s.%s %s' % (unit.index, lesson.index, lesson.title)
+
+
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
@@ -235,6 +269,11 @@ class ApplicationHandler(webapp2.RequestHandler):
         )
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
+        template_environ.globals.update({
+            'display_unit_title': display_unit_title,
+            'display_short_unit_title': display_short_unit_title,
+            'display_lesson_title': display_lesson_title})
+
         return template_environ.get_template(template_file)
 
     def canonicalize_url(self, location):

@@ -52,6 +52,7 @@ import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from controllers import sites
+from controllers import utils
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import config
@@ -305,7 +306,7 @@ class DashboardHandler(
                     safe_dom.Element(
                         'a', href='unit?unit=%s' % unit.unit_id,
                         className='strong').add_text(
-                            'Unit %s - %s' % (unit.index, unit.title))
+                            utils.display_unit_title(unit))
                 ).add_child(self._get_availability(unit))
                 if is_editable:
                     url = self.canonicalize_url(
