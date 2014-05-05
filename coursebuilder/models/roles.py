@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import re
 
 import config
 from google.appengine.api import users
@@ -27,9 +28,11 @@ GCB_ADMIN_LIST = config.ConfigProperty(
         'WARNING! Super-admin users have the highest level of access to your '
         'Google App Engine instance and to all data about all courses and '
         'students within that instance. Be very careful when modifying this '
-        'property. Syntax: Surround each email address with [ and ]; for '
-        'example, [test@example.com]. Separate the entries with either a new '
-        'line or a space. Do not use regular expressions.'),
+        'property.  '
+        'Syntax: Entries may be separated with any combination of '
+        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
+        '"]" around email addresses continues to be supported.  '
+        'Regular expressions are not supported.'),
     '', multiline=True)
 
 KEY_COURSE = 'course'
@@ -43,10 +46,12 @@ GCB_WHITELISTED_USERS = config.ConfigProperty(
         'course admins, so you need not repeat those names here.  '
         'Course-specific whitelists trump this list - if a course has a '
         'non-blank whitelist, this one is ignored.  '
-        'Syntax: Surround each email address with [ and ]; for '
-        'example, [test@example.com]. Separate the entries with either a new '
-        'line or a space. Do not use regular expressions.'),
+        'Syntax: Entries may be separated with any combination of '
+        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
+        '"]" around email addresses continues to be supported.  '
+        'Regular expressions are not supported.'),
     '', multiline=True)
+EMAIL_LIST_SPLITTER = re.compile(r'[\[\] ,\t\n]+', flags=re.M)
 
 
 class Roles(object):
@@ -64,7 +69,7 @@ class Roles(object):
             return True
 
         user = users.get_current_user()
-        if user and '[%s]' % user.email() in GCB_ADMIN_LIST.value:
+        if user and user.email() in cls._to_list(GCB_ADMIN_LIST.value):
             return True
         return False
 
@@ -79,7 +84,7 @@ class Roles(object):
             if KEY_ADMIN_USER_EMAILS in environ:
                 allowed = environ[KEY_ADMIN_USER_EMAILS]
                 user = users.get_current_user()
-                if allowed and user and '[%s]' % user.email() in allowed:
+                if allowed and user and user.email() in cls._to_list(allowed):
                     return True
 
         return False
@@ -88,14 +93,18 @@ class Roles(object):
     def is_user_whitelisted(cls, app_context):
         user = users.get_current_user()
         global_whitelist = GCB_WHITELISTED_USERS.value.strip()
-        course_whitelist = app_context.whitelist
+        course_whitelist = app_context.whitelist.strip()
 
         # Most-specific whitelist used if present.
         if course_whitelist:
-            return user and '[%s]' % user.email() in course_whitelist
+            return user and user.email() in cls._to_list(course_whitelist)
         # Global whitelist if no course whitelist
         elif global_whitelist:
-            return user and '[%s]' % user.email() in global_whitelist
+            return user and user.email() in cls._to_list(global_whitelist)
         # Lastly, no whitelist = no restrictions
         else:
             return True
+
+    @classmethod
+    def _to_list(cls, text):
+        return [item for item in EMAIL_LIST_SPLITTER.split(text) if item]

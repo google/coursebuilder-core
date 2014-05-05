@@ -107,9 +107,11 @@ def _create_course_registry():
         'course:title', 'Course Name', 'string'))
     course_opts.add_property(schema_fields.SchemaField(
         'course:admin_user_emails', 'Course Admin Emails', 'string',
-        description='A space-separated list of email addresses of course '
-        'administrators. Each email address must be placed between \'[\' '
-        'and \']\'.'))
+        description='A list of email addresses of course administrators.  '
+        'Syntax: Entries may be separated with any combination of '
+        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
+        '"]" around email addresses continues to be supported.  '
+        'Regular expressions are not supported.'))
     course_opts.add_property(schema_fields.SchemaField(
         'course:forum_email', 'Forum Email', 'string', optional=True,
         description='Email for the forum, e.g. '
@@ -122,8 +124,10 @@ def _create_course_registry():
     course_opts.add_property(schema_fields.SchemaField(
         'course:whitelist', 'Whitelisted Students', 'text', optional=True,
         description='List of email addresses of students who may register.'
-        'Each email address must be placed between \'[\' and \']\'.'
-        'e.g., "[foo@bar.com] [quux@bar.com]"'))
+        'Syntax: Entries may be separated with any combination of '
+        'tabs, spaces, commas, or newlines.  Existing values using "[" and '
+        '"]" around email addresses continues to be supported.  '
+        'Regular expressions are not supported.'))
     course_opts.add_property(schema_fields.SchemaField(
         'course:locale', 'Locale', 'string'))
     course_opts.add_property(schema_fields.SchemaField(
