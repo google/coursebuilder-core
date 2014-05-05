@@ -99,9 +99,14 @@ class JsonToDictTests(unittest.TestCase):
 
     def test_convert_date(self):
         schema = wrap_properties({'field': {'type': 'date'}})
+
         source = {'field': '2005/03/01'}
         result = transforms.json_to_dict(source, schema)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result['field'], datetime.date(2005, 3, 1))
+
+        source = {'field': '2005-03-01'}
+        result = transforms.json_to_dict(source, schema)
         self.assertEqual(result['field'], datetime.date(2005, 3, 1))
 
     def test_reject_bad_dates(self):
@@ -120,15 +125,32 @@ class JsonToDictTests(unittest.TestCase):
             self.fail('Expected ValueException')
         except ValueError as e:
             self.assertEqual(
-                str(e), 'time data \'cat\' does not match format \'%Y/%m/%d\'')
+                str(e), 'time data \'cat\' does not match format \'%s\'' %
+                transforms.ISO_8601_DATE_FORMAT)
 
     def test_convert_datetime(self):
         schema = wrap_properties({'field': {'type': 'datetime'}})
+
         source = {'field': '2005/03/01 20:30'}
         result = transforms.json_to_dict(source, schema)
         self.assertEqual(len(result), 1)
         self.assertEqual(
             result['field'], datetime.datetime(2005, 3, 1, 20, 30, 0))
+
+        source = {'field': '2005-03-01 20:30:19'}
+        result = transforms.json_to_dict(source, schema)
+        self.assertEqual(
+            result['field'], datetime.datetime(2005, 3, 1, 20, 30, 19))
+
+        source = {'field': '2005-03-01 20:30:19Z'}
+        result = transforms.json_to_dict(source, schema)
+        self.assertEqual(
+            result['field'], datetime.datetime(2005, 3, 1, 20, 30, 19))
+
+        source = {'field': '2005-03-01T20:30:19.123456Z'}
+        result = transforms.json_to_dict(source, schema)
+        self.assertEqual(
+            result['field'], datetime.datetime(2005, 3, 1, 20, 30, 19, 123456))
 
     def test_reject_bad_datetimes(self):
         schema = wrap_properties({'field': {'type': 'datetime'}})
@@ -147,7 +169,8 @@ class JsonToDictTests(unittest.TestCase):
         except ValueError as e:
             self.assertEqual(
                 str(e),
-                'time data \'cat\' does not match format \'%Y/%m/%d %H:%M\'')
+                'time data \'cat\' does not match format \'%s\'' %
+                transforms.ISO_8601_DATETIME_FORMAT)
 
 
 class StringValueConversionTests(unittest.TestCase):

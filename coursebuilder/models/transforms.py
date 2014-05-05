@@ -18,6 +18,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import base64
 import datetime
+import itertools
 import json
 from xml.etree import ElementTree
 
@@ -27,8 +28,26 @@ import yaml
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
-JSON_DATE_FORMAT = '%Y/%m/%d'
-JSON_DATETIME_FORMAT = '%Y/%m/%d %H:%M'
+ISO_8601_DATE_FORMAT = '%Y-%m-%d'
+ISO_8601_DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+_LEGACY_DATE_FORMAT = '%Y/%m/%d'
+_JSON_DATE_FORMATS = [
+    ISO_8601_DATE_FORMAT,
+    _LEGACY_DATE_FORMAT,
+]
+_JSON_DATETIME_FORMATS = [
+    ISO_8601_DATETIME_FORMAT
+] + [
+    ''.join(parts) for parts in itertools.product(
+        # Permutations of reasonably-expected permitted variations on ISO-8601.
+        # The first item in each tuple indicates the preferred choice.
+        _JSON_DATE_FORMATS,
+        ('T', ' '),
+        ('%H:%M:%S', '%H:%M'),
+        ('.%f', ',%f', ''),  # US/Euro decimal separator
+        ('Z', ''),  # Be explicit about Zulu timezone.  Blank implies local.
+    )
+]
 JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html', 'boolean',
               'integer', 'number', 'array', 'object']
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
@@ -51,9 +70,9 @@ def dict_to_json(source_dict, unused_schema):
         elif isinstance(value, datastore_types.Key):
             output[key] = str(value)
         elif isinstance(value, datetime.datetime):
-            output[key] = value.strftime(JSON_DATETIME_FORMAT)
+            output[key] = value.strftime(ISO_8601_DATETIME_FORMAT)
         elif isinstance(value, datetime.date):
-            output[key] = value.strftime(JSON_DATE_FORMAT)
+            output[key] = value.strftime(ISO_8601_DATE_FORMAT)
         elif isinstance(value, db.GeoPt):
             output[key] = {'lat': value.lat, 'lon': value.lon}
         else:
@@ -118,6 +137,35 @@ def loads(s, prefix=_JSON_XSSI_PREFIX, strict=True, **kwargs):
         return yaml.safe_load(s, **kwargs)
 
 
+def _json_to_datetime(value, date_only=False):
+    DNMF = 'does not match format'
+    if date_only:
+        formats = _JSON_DATE_FORMATS
+    else:
+        formats = _JSON_DATETIME_FORMATS
+
+    exception = None
+    for format_str in formats:
+        try:
+            value = datetime.datetime.strptime(value, format_str)
+            if date_only:
+                value = value.date()
+            return value
+        except ValueError as e:
+            # Save first exception so as to preserve the error message that
+            # describes the most-preferred format, unless the new error
+            # message is something other than "does-not-match-format", (and
+            # the old one is) in which case save that, because anything other
+            # than DNMF is more useful/informative.
+            if not exception or (DNMF not in str(e) and DNMF in str(exception)):
+               exception = e
+
+    # We cannot get here without an exception.
+    # The linter thinks we might still have 'None', but is mistaken.
+    # pylint: disable-msg=raising-bad-type
+    raise exception
+
+
 def json_to_dict(source_dict, schema):
     """Converts JSON dictionary into Python dictionary using schema."""
 
@@ -145,12 +193,9 @@ def json_to_dict(source_dict, schema):
             raise ValueError('Unsupported JSON type: %s' % attr_type)
         if attr_type == 'object':
             output[key] = json_to_dict(source_dict[key], attr)
-        elif attr_type == 'datetime':
-            output[key] = datetime.datetime.strptime(
-                source_dict[key], JSON_DATETIME_FORMAT)
-        elif attr_type == 'date':
-            output[key] = datetime.datetime.strptime(
-                source_dict[key], JSON_DATE_FORMAT).date()
+        elif attr_type == 'datetime' or attr_type == 'date':
+            output[key] = _json_to_datetime(source_dict[key],
+                                            attr_type == 'date')
         elif attr_type == 'number':
             output[key] = float(source_dict[key])
         elif attr_type == 'boolean':
