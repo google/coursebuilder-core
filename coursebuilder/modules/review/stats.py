@@ -19,11 +19,15 @@ __author__ = 'Sean Lip (sll@google.com)'
 from models import courses
 from models import jobs
 from models import transforms
-from modules.dashboard import analytics
+from modules.analytics import analytics
 from modules.review import peer
 
 
-class PeerReviewStatsCalculator(jobs.MapReduceJob):
+class PeerReviewStatsGenerator(jobs.MapReduceJob):
+
+    @staticmethod
+    def get_description():
+        return 'peer review'
 
     def entity_class(self):
         return peer.ReviewSummary
@@ -47,17 +51,14 @@ class PeerReviewStatsCalculator(jobs.MapReduceJob):
         yield (unit_and_count, quantity)
 
 
-class PeerReviewStatsHandler(analytics.MapReduceHandler):
-    name = 'peer_review_stats'
-    # The class that generates the data to be displayed.
-    stats_computer = PeerReviewStatsCalculator
-    _description = 'peer review'
-    _html_template_name = 'stats.html'
+class PeerReviewStatsSource(analytics.SynchronousQuery):
 
-    def _fill_completed_values(self, job, template_values):
-        super(PeerReviewStatsHandler, self)._fill_completed_values(
-            job, template_values)
+    @staticmethod
+    def required_generators():
+        return PeerReviewStatsGenerator
 
+    @staticmethod
+    def fill_values(app_context, template_values, job):
         # What we want to produce as output is a list of review results for
         # each unit, ordered by where the unit appears in the course.
         # For each unit, we produce a dict of {unit_id, title, stats}
@@ -98,7 +99,8 @@ class PeerReviewStatsHandler(analytics.MapReduceHandler):
         # Now march through the units, in course order and generate the
         # {unit_id, title, stats} dicts used for display.
         serialized_units = []
-        for unit in courses.Course(self).get_peer_reviewed_units():
+        course = courses.Course(None, app_context=app_context)
+        for unit in course.get_peer_reviewed_units():
             if unit.unit_id in counts_by_unit:
                 serialized_units.append({
                     'stats': counts_by_unit[unit.unit_id],
@@ -109,3 +111,11 @@ class PeerReviewStatsHandler(analytics.MapReduceHandler):
             'serialized_units': serialized_units,
             'serialized_units_json': transforms.dumps(serialized_units),
         })
+
+
+def register_analytic():
+    analytics.Registry.register(
+        'peer_review',
+        'Peer Review',
+        'stats.html',
+        data_source_classes=[PeerReviewStatsSource])

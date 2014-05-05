@@ -464,6 +464,10 @@ def check_jobs_and_submit(job, app_context):
 class IndexCourse(jobs.DurableJob):
     """A job that indexes the course."""
 
+    @staticmethod
+    def get_description():
+        return 'course index'
+
     def __init__(self, app_context, incremental=True):
         super(IndexCourse, self).__init__(app_context)
         self.incremental = incremental
@@ -480,6 +484,10 @@ class IndexCourse(jobs.DurableJob):
 
 class ClearIndex(jobs.DurableJob):
     """A job that clears the index for a course."""
+
+    @staticmethod
+    def get_description():
+        return 'clear course index'
 
     def run(self):
         """Clear the index."""

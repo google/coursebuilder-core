@@ -61,10 +61,10 @@ class PeerReviewAnalyticsTest(actions.TestBase):
             response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-compute-student-stats']
+        compute_form = response.forms['gcb-generate-analytics-data']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 5
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -76,7 +76,7 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 2', response.body)
         assert_contains('total: 2', response.body)
 
-        assert_contains('Peer Review Statistics', response.body)
+        assert_contains('Peer Review', response.body)
         assert_contains('Sample peer review assignment', response.body)
         # JSON code for the completion statistics.
         assert_contains('"[{\\"stats\\": [2]', response.body)
@@ -103,12 +103,12 @@ class PeerReviewAnalyticsTest(actions.TestBase):
                 self.canonicalize('dashboard'),
             response.body)
 
-        compute_form = response.forms['gcb-compute-student-stats']
+        compute_form = response.forms['gcb-generate-analytics-data']
         response = self.submit(compute_form)
         self.execute_all_deferred_tasks()
 
         response = self.get('dashboard?action=analytics')
-        assert_contains('Peer Review Statistics', response.body)
+        assert_contains('Peer Review', response.body)
         # JSON code for the completion statistics.
         assert_contains('"[{\\"stats\\": [1, 1]', response.body)
         actions.logout()

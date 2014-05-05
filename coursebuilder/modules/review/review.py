@@ -29,6 +29,7 @@ from models import utils
 import models.review
 from modules.review import domain
 from modules.review import peer
+from modules.review import stats
 from google.appengine.ext import db
 
 
@@ -1057,13 +1058,10 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    import modules.dashboard  # pylint: disable-msg=g-import-not-at-top
-    from modules.review import stats  # pylint: disable-msg=g-import-not-at-top
+    # Avert circular dependency
     from modules.review import cron  # pylint: disable-msg=g-import-not-at-top
 
-    # register custom dashboard section
-    modules.dashboard.dashboard.DashboardRegistry.add_analytics_section(
-        stats.PeerReviewStatsHandler)
+    stats.register_analytic()
 
     # register this peer review implementation
     models.review.ReviewsProcessor.set_peer_matcher(Manager)

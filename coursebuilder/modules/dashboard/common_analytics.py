@@ -17,192 +17,26 @@
 __author__ = 'Sean Lip (sll@google.com)'
 
 import logging
-import os
-import re
 import urlparse
 
-import jinja2
-
 from common import safe_dom
-from controllers import utils
 from models import courses
 from models import jobs
-from models import models
 from models import progress
 from models import transforms
 from models import utils as models_utils
 from models.models import EventEntity
 from models.models import Student
 from models.models import StudentPropertyEntity
-from modules.mapreduce import mapreduce_module
+from modules.analytics import analytics
 
 
-class AnalyticsHandler(utils.ApplicationHandler):
-    """Base class providing common implementations to fill Jinja templates.
-
-    This class knows the various statuses that an analysis job can be in
-    and generates appropriate HTML output for display on the analytics
-    sub-page of the dashboard.
-    """
-
-    @property
-    def description(self):
-        return self._description
-
-    @property
-    def html_template_name(self):
-        return self._html_template_name
-
-    def _get_template_dir_names(self):
-        # Clip off trailing ....py or ...pyc up to root of CB install.
-        cb_base_dir_offset = __file__.find('/modules/dashboard/analytics.py')
-        assert cb_base_dir_offset >= 0
-        cb_base_dir = __file__[:cb_base_dir_offset]
-
-        # Add back path to actual handler class, minus the .py file
-        # in which the handler class exists.
-        template_relative_dir = os.path.dirname(
-            self.__class__.__module__.replace('.', os.path.sep))
-
-        return [cb_base_dir, os.path.join(cb_base_dir, template_relative_dir)]
-
-    def _fill_completed_values(self, job, template_values):
-        raise NotImplementedError(
-            'Classes derived from AnalyticsHandler are expected to implement '
-            '_fill_completed_values().  This function should put elements into '
-            '"template_values" that are to be displayed on the results page '
-            'fragment.  In addition to whatever class-specific messages '
-            'they like, implementations may also wish to overwrite the '
-            'value of "update_message" which is shown as an overall status '
-            'message.')
-
-    def _fill_pending_values(self, job, template_values):
-      """Override to fill in template values when job has not yet completed."""
-      pass
-
-    def _get_error_message(self, job):
-        """Only called when job has status_code of STATUS_CODE_FAILED."""
-
-        return job.output
-
-    def get_markup(self, job, handler_name):
-        template_values = {}
-        template_values['stats_calculated'] = False
-        template_values['handler_name'] = handler_name
-        template_values['subtitle'] = ''.join(
-            [w.capitalize() for w in re.split(r'(\W+)', self.description)]
-            ) + ' Statistics'
-
-        # Controls for starting/stopping individual jobs
-        if not job or job.has_finished:
-            template_values['job_running'] = False
-            template_values['xsrf_token_run_job'] = (
-                utils.XsrfTokenManager.create_xsrf_token(
-                    'run_analytics_job'))
-        else:
-            template_values['job_running'] = True
-            template_values['xsrf_token_cancel_job'] = (
-                utils.XsrfTokenManager.create_xsrf_token(
-                    'cancel_analytics_job'))
-
-        if not job:
-            message = (
-                '%s statistics have not been calculated yet.' %
-                self.description.capitalize())
-            template_values['update_message'] = safe_dom.Text(message)
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                template_values['stats_calculated'] = True
-                default_message = (
-                    '%s statistics were last updated at %s in about %s sec.' % (
-                        self.description.capitalize(),
-                        job.updated_on.strftime(
-                            utils.HUMAN_READABLE_TIME_FORMAT),
-                        job.execution_time_sec))
-                # This message can be overridden by _fill_completed_values()
-                # as necessary and approprate.
-                template_values['update_message'] = safe_dom.Text(
-                    default_message)
-
-                self._fill_completed_values(job, template_values)
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                message = (
-                    'There was an error updating %s statistics.  Error msg:' %
-                           self.description)
-                update_message = safe_dom.NodeList()
-                update_message.append(safe_dom.Text(message))
-                update_message.append(safe_dom.Element('br'))
-                update_message.append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text(
-                            '\n%s' % self._get_error_message(job))))
-                template_values['update_message'] = update_message
-            else:
-                message = (
-                    '%s statistics update started at %s and is running now.' % (
-                        self.description.capitalize(),
-                        job.updated_on.strftime(
-                            utils.HUMAN_READABLE_TIME_FORMAT)))
-                template_values['update_message'] = safe_dom.Text(message)
-                self._fill_pending_values(job, template_values)
-        return jinja2.utils.Markup(self.get_template(
-            self.html_template_name, self._get_template_dir_names()
-        ).render(template_values, autoescape=True))
-
-
-class MapReduceHandler(AnalyticsHandler):
-    """Base class to fill Jinja templates specifically for map/reduce analytics.
-
-    Encapsulates knowledge of when and how to generate a link to map/reduce
-    job status interface.
-    """
-
-    def _pipeline_link_appropriate(self, job):
-        # Don't give access to the pipeline details UI unless someone
-        # has actively intended to provide access.  The UI allows you to
-        # kill jobs, and we don't want naive users stumbling around in
-        # there without adult supervision.
-        if not mapreduce_module.GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS.value:
-            return False
-
-        # Status URL may not be available immediately after job is launched;
-        # pipeline setup is done w/ 'yield', and happens a bit later.
-        if not jobs.MapReduceJob.has_status_url(job):
-            return False
-
-        return True
-
-    def _add_pipeline_link(self, job, template_values, message):
-        status_url = jobs.MapReduceJob.get_status_url(
-            # app_context is forcibly injected into instances from
-            # modules.dashboard.get_analytics()
-            # pylint: disable=undefined-variable
-            job, self.app_context.get_namespace_name(),
-            utils.XsrfTokenManager.create_xsrf_token(
-                mapreduce_module.XSRF_ACTION_NAME))
-        update_message = safe_dom.NodeList()
-        update_message.append(template_values['update_message'])
-        update_message.append(safe_dom.Text('    '))
-        update_message.append(safe_dom.A(status_url, target='_blank')
-                              .add_text(message))
-        template_values['update_message'] = update_message
-
-    def _fill_completed_values(self, job, template_values):
-        if self._pipeline_link_appropriate(job):
-            self._add_pipeline_link(job, template_values,
-                                    'View completed job run details')
-
-    def _fill_pending_values(self, job, template_values):
-        if self._pipeline_link_appropriate(job):
-            self._add_pipeline_link(job, template_values,
-                                    'Check status of job')
-
-    def _get_error_message(self, job):
-        return jobs.MapReduceJob.get_error_message(job)
-
-
-class ComputeStudentStats(jobs.DurableJob):
+class StudentEnrollmentAndScoresGenerator(jobs.DurableJob):
     """A job that computes student statistics."""
+
+    @staticmethod
+    def get_description():
+        return 'student enrollment and scores'
 
     class ScoresAggregator(object):
         """Aggregates scores statistics."""
@@ -261,24 +95,19 @@ class ComputeStudentStats(jobs.DurableJob):
         return data
 
 
-class StudentEnrollmentAndScoresHandler(AnalyticsHandler):
+class StudentEnrollmentAndScoresSource(analytics.SynchronousQuery):
     """Shows student enrollment analytics on the dashboard."""
 
-    # The key used in the statistics dict that generates the dashboard page.
-    # Must be unique.
-    name = 'enrollment_and_scores'
-    # The class that generates the data to be displayed.
-    stats_computer = ComputeStudentStats
-    _description = 'enrollment/assessment'
-    _html_template_name = 'basic_analytics.html'
+    @staticmethod
+    def required_generators():
+        return StudentEnrollmentAndScoresGenerator
 
-    def _fill_completed_values(self, job, template_values):
+    @staticmethod
+    def fill_values(app_context, template_values, job):
         stats = transforms.loads(job.output)
 
         template_values['enrolled'] = stats['enrollment']['enrolled']
-        template_values['unenrolled'] = (
-            stats['enrollment']['unenrolled'])
-
+        template_values['unenrolled'] = stats['enrollment']['unenrolled']
         scores = []
         total_records = 0
         for key, value in stats['scores'].items():
@@ -290,8 +119,12 @@ class StudentEnrollmentAndScoresHandler(AnalyticsHandler):
         template_values['total_records'] = total_records
 
 
-class ComputeStudentProgressStats(jobs.DurableJob):
+class StudentProgressStatsGenerator(jobs.DurableJob):
     """A job that computes student progress statistics."""
+
+    @staticmethod
+    def get_description():
+        return 'student progress'
 
     class ProgressAggregator(object):
         """Aggregates student progress statistics."""
@@ -319,7 +152,7 @@ class ComputeStudentProgressStats(jobs.DurableJob):
                     self.progress_data[entity] = entity_score
 
     def __init__(self, app_context):
-        super(ComputeStudentProgressStats, self).__init__(app_context)
+        super(StudentProgressStatsGenerator, self).__init__(app_context)
         self._course = courses.Course(None, app_context)
 
     def run(self):
@@ -331,16 +164,16 @@ class ComputeStudentProgressStats(jobs.DurableJob):
         return student_progress.progress_data
 
 
-class StudentProgressStatsHandler(AnalyticsHandler):
+class StudentProgressStatsSource(analytics.SynchronousQuery):
     """Shows student progress analytics on the dashboard."""
 
-    name = 'student_progress_stats'
-    stats_computer = ComputeStudentProgressStats
-    _description = 'student progress'
-    _html_template_name = 'progress_stats.html'
+    @staticmethod
+    def required_generators():
+        return StudentProgressStatsGenerator
 
-    def _fill_completed_values(self, job, template_values):
-        course = courses.Course(self)
+    @staticmethod
+    def fill_values(app_context, template_values, job):
+        course = courses.Course(None, app_context=app_context)
         template_values['entity_codes'] = transforms.dumps(
             progress.UnitLessonCompletionTracker.EVENT_CODE_MAPPING.values())
         value = transforms.loads(job.output)
@@ -359,8 +192,12 @@ class StudentProgressStatsHandler(AnalyticsHandler):
                 'This feature is supported by CB 1.3 and up.')
 
 
-class ComputeQuestionStats(jobs.DurableJob):
+class QuestionStatsGenerator(jobs.DurableJob):
     """A job that computes stats for student submissions to questions."""
+
+    @staticmethod
+    def get_description():
+        return 'question analysis'
 
     class MultipleChoiceQuestionAggregator(object):
         """Class that aggregates submissions for multiple-choice questions."""
@@ -639,7 +476,7 @@ class ComputeQuestionStats(jobs.DurableJob):
                 self._append_data(summarized_question, dict_to_update)
 
     def __init__(self, app_context):
-        super(ComputeQuestionStats, self).__init__(app_context)
+        super(QuestionStatsGenerator, self).__init__(app_context)
         self._course = courses.Course(None, app_context)
 
     def run(self):
@@ -652,15 +489,15 @@ class ComputeQuestionStats(jobs.DurableJob):
                 question_stats.id_to_assessments_dict)
 
 
-class QuestionStatsHandler(AnalyticsHandler):
+class QuestionStatsSource(analytics.SynchronousQuery):
     """Shows statistics on the dashboard for students' answers to questions."""
 
-    name = 'question_answers_stats'
-    stats_computer = ComputeQuestionStats
-    _description = 'multiple-choice question'
-    _html_template_name = 'question_stats.html'
+    @staticmethod
+    def required_generators():
+        return QuestionStatsGenerator
 
-    def _fill_completed_values(self, job, template_values):
+    @staticmethod
+    def fill_values(app_context, template_values, job):
         accumulated_question_answers, accumulated_assessment_answers = (
             transforms.loads(job.output))
 
@@ -670,39 +507,19 @@ class QuestionStatsHandler(AnalyticsHandler):
             accumulated_assessment_answers)
 
 
-class ComputeQuestionScores(jobs.MapReduceJob):
-
-    def entity_class(self):
-      return models.Student
-
-    @staticmethod
-    def map(student):
-      if student.scores:
-        scores = transforms.loads(student.scores)
-        for key, value in scores.items():
-          yield key, value
-
-    @staticmethod
-    def reduce(question_id, scores):
-      scores = [float(score) for score in scores]
-      scores.sort()
-      yield question_id, {
-          'num_answers': len(scores),
-          'average': sum(scores)/len(scores),
-          'median': scores[len(scores)/2],
-      }
-
-
-class QuestionScoreHandler(MapReduceHandler):
-    """Display class."""
-
-    name = 'question_scores'
-    stats_computer = ComputeQuestionScores
-    _description = 'question difficulty'
-    _html_template_name = 'map_reduce.html'
-
-    def _fill_completed_values(self, job, template_values):
-        super(QuestionScoreHandler, self)._fill_completed_values(
-            job, template_values)
-
-        template_values['stats'] = sorted(jobs.MapReduceJob.get_results(job))
+def register_analytics():
+    analytics.Registry.register(
+        'multiple_choice_question',
+        'Multiple Choice Question',
+        'multiple_choice_question.html',
+        data_source_classes=[QuestionStatsSource])
+    analytics.Registry.register(
+        'student_progress',
+        'Student Progress',
+        'student_progress.html',
+        data_source_classes=[StudentProgressStatsSource])
+    analytics.Registry.register(
+        'enrollment_assessment',
+        'Enrollment/Assessment',
+        'enrollment_assessment.html',
+        data_source_classes=[StudentEnrollmentAndScoresSource])

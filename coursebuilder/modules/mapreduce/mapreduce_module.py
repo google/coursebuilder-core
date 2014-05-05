@@ -26,7 +26,6 @@ from common.utils import Namespace
 from controllers import utils
 from models import custom_modules
 from models.config import ConfigProperty
-from modules import dashboard
 
 from google.appengine.api import users
 
@@ -123,9 +122,6 @@ def ui_access_wrapper(self, *args, **kwargs):
 
 def register_module():
     """Registers this module in the registry."""
-
-    dashboard.dashboard.DashboardRegistry.add_analytics_section(
-        dashboard.analytics.QuestionScoreHandler)
 
     global_handlers = []
     for path, handler_class in mapreduce_main.create_handlers_map():

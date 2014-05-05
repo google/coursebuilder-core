@@ -1,0 +1,16 @@
+<ul>
+  <li>previously enrolled: {{ unenrolled }}</li>
+  <li>currently enrolled: {{ enrolled }}</li>
+  <li>total: {{ unenrolled + enrolled }}</li>
+</ul>
+
+<ul>
+  {% for unit in scores %}
+    <li>
+      {{ unit['key'] }}: completed {{ unit['completed'] }}, average score {{ unit['avg'] }}
+    </li>
+  {% endfor %}
+  <li>
+    total: {{ total_records }}
+  </li>
+</ul>

@@ -49,6 +49,21 @@ STATUS_CODE_FAILED = 3
 class DurableJobBase(object):
     """A class that represents a deferred durable job at runtime."""
 
+    @staticmethod
+    def get_description():
+        """Briefly describe the nature and purpose of your job type.
+
+        This is used in the display code of analytics to complete
+        sentences like "<description> statistics have not been
+        calculated yet".  Don't capitalize; captialization will be
+        automatically performed where <description> appears at the
+        start of a sentence or in a section title.
+        """
+        raise NotImplementedError(
+            'Leaf classes inheriting from DurableJobBase should provide a '
+            'brief description of their nature and purpose.  E.g., '
+            '"student ranking"')
+
     def __init__(self, app_context):
         self._namespace = app_context.get_namespace_name()
         self._job_name = 'job-%s-%s' % (

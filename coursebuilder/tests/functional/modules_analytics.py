@@ -33,7 +33,7 @@ from models import models
 from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
-from modules.dashboard import analytics
+from modules.dashboard import common_analytics
 
 
 class ProgressAnalyticsTest(actions.TestBase):
@@ -58,10 +58,10 @@ class ProgressAnalyticsTest(actions.TestBase):
             response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-compute-student-stats']
+        compute_form = response.forms['gcb-generate-analytics-data']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 5
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -73,7 +73,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 0', response.body)
         assert_contains('total: 0', response.body)
 
-        assert_contains('Student Progress Statistics', response.body)
+        assert_contains('Student Progress', response.body)
         assert_contains(
             'No student progress has been recorded for this course.',
             response.body)
@@ -111,10 +111,10 @@ class ProgressAnalyticsTest(actions.TestBase):
             response.body)
         assert_contains('have not been calculated yet', response.body)
 
-        compute_form = response.forms['gcb-compute-student-stats']
+        compute_form = response.forms['gcb-generate-analytics-data']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
-        assert len(self.taskq.GetTasks('default')) == 5
+        assert len(self.taskq.GetTasks('default')) == 4
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
@@ -126,7 +126,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         assert_contains('currently enrolled: 2', response.body)
         assert_contains('total: 2', response.body)
 
-        assert_contains('Student Progress Statistics', response.body)
+        assert_contains('Student Progress', response.body)
         assert_does_not_contain(
             'No student progress has been recorded for this course.',
             response.body)
@@ -145,43 +145,43 @@ class ProgressAnalyticsTest(actions.TestBase):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics')
-        response = response.forms['gcb-compute-student-stats'].submit().follow()
+        response = response.forms[
+            'gcb-generate-analytics-data'].submit().follow()
 
         # Ensure that analytics appear to be running and have cancel buttons.
-        response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)
-        assert_contains('Cancel Job', response.body)
+        assert_contains('Cancel Jobs', response.body)
 
         # Now that all analytics are pending, ensure that we do _not_ have
         # an update-all button.
         with self.assertRaises(KeyError):
-            response = response.forms['gcb-compute-student-stats']
+            response = response.forms['gcb-generate-analytics-data']
 
         # Click the cancel button for one of the slower jobs.
         response = response.forms[
-            'gcb-cancel-analytics-job-peer_review_stats'].submit().follow()
+            'gcb-cancel-analytic-peer_review'].submit().follow()
 
         # Verify that page shows job was canceled.
         assert_contains('error updating peer review statistics', response.body)
         assert_contains('Canceled by ' + email, response.body)
 
         # We should now have our update-statistics button back.
-        self.assertIsNotNone(response.forms['gcb-compute-student-stats'])
+        self.assertIsNotNone(response.forms['gcb-generate-analytics-data'])
 
         # Should also have a button to run the canceled job; click that.
         response = response.forms[
-            'gcb-run-analytics-job-peer_review_stats'].submit().follow()
+            'gcb-run-analytic-peer_review'].submit().follow()
 
         # All jobs should now again be running, and update-all button gone.
         with self.assertRaises(KeyError):
-            response = response.forms['gcb-compute-student-stats']
+            response = response.forms['gcb-generate-analytics-data']
 
     def test_cancel_map_reduce(self):
         email = 'admin@google.com'
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics')
         response = response.forms[
-            'gcb-run-analytics-job-peer_review_stats'].submit().follow()
+            'gcb-run-analytic-peer_review'].submit().follow()
 
         # Launch 1st stage of map/reduce job; we must do this in order to
         # get the pipeline woken up enough to have built a root pipeline
@@ -190,7 +190,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # Cancel the job.
         response = response.forms[
-            'gcb-cancel-analytics-job-peer_review_stats'].submit().follow()
+            'gcb-cancel-analytic-peer_review'].submit().follow()
         assert_contains('Canceled by ' + email, response.body)
 
         # Now permit any pending tasks to complete, and expect the job's
@@ -466,9 +466,8 @@ class QuestionAnalyticsTest(actions.TestBase):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
 
-        question_aggregator = (
-            analytics.ComputeQuestionStats.MultipleChoiceQuestionAggregator(
-                course))
+        question_aggregator = (common_analytics.QuestionStatsGenerator
+                               .MultipleChoiceQuestionAggregator(course))
 
         event_payloads = open(os.path.join(
             appengine_config.BUNDLE_ROOT,
@@ -486,7 +485,8 @@ class QuestionAnalyticsTest(actions.TestBase):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         app_context = sites.get_all_courses()[0]
 
-        question_stats_computer = analytics.ComputeQuestionStats(app_context)
+        question_stats_computer = (
+            common_analytics.QuestionStatsGenerator(app_context))
         id_to_questions, id_to_assessments = question_stats_computer.run()
         assert_equals({}, id_to_questions)
         assert_equals({}, id_to_assessments)

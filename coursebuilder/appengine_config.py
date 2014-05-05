@@ -33,6 +33,7 @@ BUNDLE_ROOT = os.path.dirname(__file__)
 
 # make all Windows and Linux paths have the same separator '/'
 BUNDLE_ROOT = BUNDLE_ROOT.replace('\\', '/')
+CODE_ROOT = BUNDLE_ROOT
 
 # Default namespace name is '' and not None.
 DEFAULT_NAMESPACE_NAME = ''

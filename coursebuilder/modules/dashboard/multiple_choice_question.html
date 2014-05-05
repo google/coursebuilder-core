@@ -1,0 +1,114 @@
+<style type="text/css">
+  .table-container {
+    margin: 20px 0;
+  }
+</style>
+
+<script type="text/javascript" src="//www.google.com/jsapi"></script>
+<script type="text/javascript">
+  google.load('visualization', '1', {packages: ['table']});
+  google.setOnLoadCallback(drawAllTables);
+  var answerCountsDict = JSON.parse("{{accumulated_question_answers | js_string}}");
+  var answerCountsAssessmentDict = JSON.parse("{{accumulated_assessment_answers | js_string}}");
+
+  function getSizeOfObject(obj) {
+    var size = 0;
+    for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        size++;
+      }
+    }
+    return size;
+  }
+
+  function getSortedKeys(obj) {
+    var keys = [];
+    for (var item in obj) {
+      keys.push(item);
+    }
+    keys.sort();
+    return keys;
+  }
+
+  function getMaxAnswerCount(answerCountsDict) {
+    // Gets the maximum number of answer choices for a multiple-choice question.
+    var maxAnswerCount = 0;
+    for (var key in answerCountsDict) {
+      var numChoices = getSizeOfObject(answerCountsDict[key]['answer_counts']);
+      maxAnswerCount = Math.max(maxAnswerCount, numChoices);
+    }
+    return maxAnswerCount;
+  }
+
+  function getScoreLabel(score, attempts) {
+    if (attempts === 0) {
+      return 'No attempts recorded';
+    } else {
+      var roundedScore = Math.round(score / attempts * 100.0) / 100;
+      var attemptsSuffix = (attempts == 1) ? ' attempt' : ' attempts';
+      return roundedScore + ' (' + attempts + attemptsSuffix + ')';
+    }
+  }
+
+  // Adds data to the displayed table.
+  function populateTable(table, answerDict) {
+    var rowKeys = getSortedKeys(answerDict);
+
+    for (var rowIndex = 0; rowIndex < rowKeys.length; rowIndex++) {
+      // The row key is the question identifier, e.g. 'u.1.l.1.b.2'.
+      var rowKey = rowKeys[rowIndex];
+      var answerInfo = answerDict[rowKey];
+
+      table.setCell(rowIndex, 0, answerInfo['label']);
+      table.setCell(
+        rowIndex, 1,
+        '<a href="' + answerInfo['location'] +'">view</a>');
+
+      var scoreLabel = getScoreLabel(
+          answerInfo['score'], answerInfo['num_attempts']);
+      table.setCell(rowIndex, 2, scoreLabel);
+
+      for (var i = 0; i < answerInfo['answer_counts'].length; i++) {
+        table.setCell(rowIndex, i + 3, answerInfo['answer_counts'][i]);
+      }
+    }
+  }
+
+  function drawTable(divId, sourceDict) {
+    // Create and populate the data table.
+    var table = new google.visualization.DataTable();
+    table.addColumn('string', 'Question Identifier');
+    table.addColumn('string', 'Link')
+    table.addColumn('string', 'Average Score');
+
+    var maxDataColumns = getMaxAnswerCount(sourceDict);
+    for (var i = 0; i < maxDataColumns; i++) {
+      table.addColumn('number', 'Choice ' + (i + 1));
+    }
+
+    var numRows = getSizeOfObject(sourceDict);
+    table.addRows(numRows);
+    populateTable(table, sourceDict);
+
+    new google.visualization.Table(
+      document.getElementById(divId)
+    ).draw(
+      table, {
+        allowHtml: true,
+        sortColumn: 0,  // Force sort on Question Identifier.
+        title: 'Answer distribution per question'
+      }
+    );
+  }
+
+  function drawAllTables() {
+    drawTable('questionStatisticsTable', answerCountsDict);
+    drawTable('assessmentStatisticsTable', answerCountsAssessmentDict);
+  }
+</script>
+
+<h4>Questions in lessons</h4>
+<div id="questionStatisticsTable" class="table-container"></div>
+
+<h4>Questions in assessments</h4>
+<div id="assessmentStatisticsTable" class="table-container"></div>
