@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module providing analytics display as HTML/JS."""
+"""Module providing visualizations display as HTML/JS."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
@@ -24,46 +24,48 @@ from models.analytics import utils as analytics_utils
 from modules.mapreduce import mapreduce_module
 
 
-def _generate_display_html(template_renderer, xsrf, app_context, analytics):
+def _generate_display_html(template_renderer, xsrf, app_context,
+                           visualizations):
     # Package-protected: pylint: disable-msg=protected-access
 
-    # First, load jobs for all generators required for an analytic.
+    # First, load jobs for all generators required for an visualization.
     # Jobs may directly contain small results, just hold references to
     # larger results, or both.
     any_generator_not_running = False
     data_source_jobs = {}
-    for generator_class in analytics_utils._generators_for_analytics(analytics):
+    for generator_class in analytics_utils._generators_for_visualizations(
+        visualizations):
         job = generator_class(app_context).load()
         data_source_jobs[generator_class] = job
         if not job or job.has_finished:
             any_generator_not_running = True
 
-    # Generate HTML section for each analytic.
+    # Generate HTML section for each visualization.
     html_sections = []
-    for analytic in analytics:
-        html_sections.extend(_generate_analytic_section(
-            template_renderer, xsrf, app_context, analytic, data_source_jobs))
+    for v in visualizations:
+        html_sections.extend(_generate_visualization_section(
+            template_renderer, xsrf, app_context, v, data_source_jobs))
 
     # Generate page content
     token = data_sources.utils.generate_data_source_token(xsrf)
-    names_of_analytics_with_generators = []
-    for analytic in analytics:
-        if analytics_utils._generators_for_analytics([analytic]):
-            names_of_analytics_with_generators.append(analytic.name)
+    names_of_visualizations_with_generators = []
+    for visualization in visualizations:
+        if analytics_utils._generators_for_visualizations([visualization]):
+            names_of_visualizations_with_generators.append(visualization.name)
     return template_renderer.render(
         None, 'models/analytics/display.html',
         {
             'data_source_token': token,
             'sections': html_sections,
             'any_generator_not_running': any_generator_not_running,
-            'xsrf_token_run': xsrf.create_xsrf_token('run_analytics'),
-            'analytics': names_of_analytics_with_generators,
+            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
+            'visualizations': names_of_visualizations_with_generators,
             'r': template_renderer.get_current_url(),
         })
 
 
-def _generate_analytic_section(template_renderer, xsrf, app_context,
-                               analytic, data_source_jobs):
+def _generate_visualization_section(template_renderer, xsrf, app_context,
+                                    visualization, data_source_jobs):
     html_sections = []
 
     # Collect statuses of generators and build a display messages for each.
@@ -71,7 +73,7 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
     any_generator_still_running = False
     all_generators_completed_ok = True
     all_generators_have_ever_run = True
-    for generator_class in analytic.generator_classes:
+    for generator_class in visualization.generator_classes:
         job = data_source_jobs[generator_class]
         if job is None:
             all_generators_have_ever_run = False
@@ -85,7 +87,7 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
                 _get_pipeline_link(xsrf, app_context, generator_class, job)))
 
     # <h3> title block.
-    html_sections.append(safe_dom.Element('h3').add_text(analytic.title))
+    html_sections.append(safe_dom.Element('h3').add_text(visualization.title))
     html_sections.append(safe_dom.Element('br'))
 
     # If this source wants to generate inline values for its template,
@@ -93,11 +95,10 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
     # generators are depended on) then-and-only-then allow the source
     # to generate template values
     if all_generators_completed_ok:
-        template_values = {'analytic': analytic.name}
-        for source_class in analytic.data_source_classes:
+        template_values = {'visualization': visualization.name}
+        for source_class in visualization.data_source_classes:
             if issubclass(source_class, data_sources.SynchronousQuery):
                 required_generator_classes = (
-                    # Utils has package-private functions common to analytics
                     # pylint: disable-msg=protected-access
                     analytics_utils._get_required_generators(source_class))
                 synchronous_query_jobs = []
@@ -108,18 +109,19 @@ def _generate_analytic_section(template_renderer, xsrf, app_context,
                                          *synchronous_query_jobs)
 
         html_sections.append(template_renderer.render(
-                analytic, analytic.template_name, template_values))
+                visualization, visualization.template_name, template_values))
 
-    # Boilerplate content for each analytic's required generators
+    # Boilerplate content for each visualization's required generators
     html_sections.append(template_renderer.render(
         None, 'models/analytics/common_footer.html',
         {
-            'analytic': analytic.name,
+            'visualization': visualization.name,
             'any_generator_still_running': any_generator_still_running,
             'all_generators_have_ever_run': all_generators_have_ever_run,
             'status_messages': generator_status_messages,
-            'xsrf_token_run': xsrf.create_xsrf_token('run_analytics'),
-            'xsrf_token_cancel': xsrf.create_xsrf_token('cancel_analytics'),
+            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
+            'xsrf_token_cancel': xsrf.create_xsrf_token(
+                'cancel_visualizations'),
             'r': template_renderer.get_current_url(),
         }))
     return html_sections

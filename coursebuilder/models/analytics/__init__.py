@@ -35,30 +35,31 @@ class Visualization(object):
 
     def __init__(self, name, title, html_template_name,
                  data_source_classes=None):
-        """Establish a new analytic.
+        """Establish a new visualization.
 
         Args:
-            name: Valid Javascript identifier to be used for this analytic
+            name: Valid Javascript identifier to be used for this visualization
                 when generating scripts via templates.
 
-            title: Section title for analytic on Dashboard -> Analytics page.
+            title: Section title for visualization on the
+                Dashboard -> Analytics page.
 
-            html_template_name: Name of a file which contains a Jinja
-                template which will be used to generate a chart or graph
-                for the analytic.  This can be specified as a path relative
-                to the CB installation root
-                (e.g. 'modules/my_new_module/my_analytic.html'), or
-                relative to any of the data sources or generators used for
-                the analytic (meaning you can just use the name of the
-                HTML file without any path components if it's in the
-                same directory).
+            html_template_name: Name of a file which contains a Jinja template
+                which will be used to generate a chart or graph for the
+                visualization.  This can be specified as a path relative to
+                the CB installation root
+                (e.g. 'modules/my_new_module/my_visualization.html'), or
+                relative to any of the data sources or generators used for the
+                visualization (meaning you can just use the name of the HTML
+                file without any path components if it's in the same
+                directory).
 
             data_source_classes: An optional array of data source classes.
                 This should contain only classes inheriting from
                 data_sources.base_types._DataSource.
         Raises:
             ValueError: when any of
-            - name is already registered as an analytic
+            - name is already registered as an visualization
             - name is not a valid JavaScript identifier.
             - a data source class is not registered with the data_sources
               module.
@@ -76,7 +77,7 @@ class Visualization(object):
         for data_source_class in data_source_classes:
             if not data_sources.Registry.is_registered(data_source_class):
                 raise ValueError(
-                    'All data source classes used in analytics must be '
+                    'All data source classes used in visualizations must be '
                     'registered in models.data_sources.Registry; '
                     '"%s" is not registered.' % data_source_class.__name__)
 
@@ -126,10 +127,11 @@ class _TemplateRenderer(object):
     def __init__(self, handler):
         self._handler = handler
 
-    def render(self, analytic, template_name, template_values):
+    def render(self, visualization, template_name, template_values):
         return jinja2.utils.Markup(
             self._handler.get_template(
-                template_name, analytics_utils._get_template_dir_names(analytic)
+                template_name,
+                analytics_utils._get_template_dir_names(visualization)
             ).render(template_values, autoescape=True))
 
     def get_base_href(self):
@@ -139,12 +141,12 @@ class _TemplateRenderer(object):
         return self._handler.request.url
 
 
-def generate_display_html(handler, xsrf_creator, analytics):
-    """Generate sections of HTML representing each analytic.
+def generate_display_html(handler, xsrf_creator, visualizations):
+    """Generate sections of HTML representing each visualization.
 
     This generates multiple small HTML sections which are intended for
     inclusion as-is into a larger display (specifically, the dashboard
-    page showing analytics).  The HTML will likely contain JavaScript
+    page showing visualizations).  The HTML will likely contain JavaScript
     elements that induce callbacks from the page to the REST service
     providing JSON data.
 
@@ -163,26 +165,26 @@ def generate_display_html(handler, xsrf_creator, analytics):
 
     return display._generate_display_html(
         _TemplateRenderer(handler), xsrf_creator, handler.app_context,
-        analytics)
+        visualizations)
 
 
 class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,
                        controllers_utils.ApplicationHandler):
 
-    default_action = 'run_analytic'
+    default_action = 'run_visualization'
     get_actions = []
-    post_actions = ['run_analytics', 'cancel_analytics']
+    post_actions = ['run_visualizations', 'cancel_visualizations']
 
     def _get_generator_classes(self):
-        return analytics_utils._generators_for_analytics(
-            [by_name[name] for name in self.request.get_all('analytic')])
+        return analytics_utils._generators_for_visualizations(
+            [by_name[name] for name in self.request.get_all('visualization')])
 
-    def post_run_analytics(self):
+    def post_run_visualizations(self):
         for generator_class in self._get_generator_classes():
             generator_class(self.app_context).submit()
         self.redirect(str(self.request.get('r')))
 
-    def post_cancel_analytics(self):
+    def post_cancel_visualizations(self):
         for generator_class in self._get_generator_classes():
             generator_class(self.app_context).cancel()
         self.redirect(str(self.request.get('r')))

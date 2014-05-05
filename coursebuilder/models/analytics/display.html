@@ -4,12 +4,12 @@
 
 {% if any_generator_not_running %}
   <form id="gcb-generate-analytics-data"
-        action="analytics?action=run_analytics"
+        action="analytics?action=run_visualizations"
         method="POST">
     <input type="hidden" name="r" value="{{ r }}">
     <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run }}">
-    {% for analytic in analytics %}
-      <input type="hidden" name="analytic" value="{{ analytic }}">
+    {% for visualization in visualizations %}
+      <input type="hidden" name="visualization" value="{{ visualization }}">
     {% endfor %}
     <button class="gcb-button" type="submit">Update All Statistics</button>
   </form>

@@ -784,7 +784,7 @@ class DashboardHandler(
             'page_title_linked': self.format_title(title_text, as_link=True),
             'top_nav': [top_nav],
             'main_content': analytics.generate_display_html(
-                self, crypto.XsrfTokenManager, tab.analytics),
+                self, crypto.XsrfTokenManager, tab.visualizations),
             }
         self.render_page(template_values)
 

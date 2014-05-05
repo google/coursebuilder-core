@@ -197,7 +197,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # Click the cancel button for one of the slower jobs.
         response = response.forms[
-            'gcb-cancel-analytic-peer_review'].submit().follow()
+            'gcb-cancel-visualization-peer_review'].submit().follow()
 
         # Verify that page shows job was canceled.
         assert_contains('error updating peer review statistics', response.body)
@@ -208,7 +208,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # Should also have a button to run the canceled job; click that.
         response = response.forms[
-            'gcb-run-analytic-peer_review'].submit().follow()
+            'gcb-run-visualization-peer_review'].submit().follow()
 
         # All jobs should now again be running, and update-all button gone.
         with self.assertRaises(KeyError):
@@ -219,7 +219,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics&tab=peer_review')
         response = response.forms[
-            'gcb-run-analytic-peer_review'].submit().follow()
+            'gcb-run-visualization-peer_review'].submit().follow()
 
         # Launch 1st stage of map/reduce job; we must do this in order to
         # get the pipeline woken up enough to have built a root pipeline
@@ -228,7 +228,7 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         # Cancel the job.
         response = response.forms[
-            'gcb-cancel-analytic-peer_review'].submit().follow()
+            'gcb-cancel-visualization-peer_review'].submit().follow()
         assert_contains('Canceled by ' + email, response.body)
 
         # Now permit any pending tasks to complete, and expect the job's

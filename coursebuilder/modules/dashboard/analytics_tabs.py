@@ -23,18 +23,18 @@ class Registry(object):
 
     class _Tab(object):
 
-        def __init__(self, name, title, analytics):
+        def __init__(self, name, title, visualizations):
             if not re.match('^[a-z0-9_]+$', name):
                 raise ValueError('Sub-tabs under Dashboard->Analytics must '
                                  'have names consisting only of lowercase '
                                  'letters, numbers, and underscore.')
-            if len(analytics) < 1:
+            if len(visualizations) < 1:
                 raise ValueError('Sub-tabs under Dashboard->Analytics must '
-                                 'contain at least one analytic.')
+                                 'contain at least one visualization.')
 
             self._name = name
             self._title = title
-            self._analytics = analytics
+            self._visualizations = visualizations
 
         @property
         def name(self):
@@ -45,18 +45,18 @@ class Registry(object):
             return self._title
 
         @property
-        def analytics(self):
-            return self._analytics
+        def visualizations(self):
+            return self._visualizations
 
     _tabs = []
 
     @classmethod
-    def register(cls, tab_name, tab_title, analytics):
+    def register(cls, tab_name, tab_title, visualizations):
         if cls._get_tab(tab_name):
             raise ValueError(
                 'There is already an analytics sub-tab named "%s" registered.' %
                 tab_name)
-        cls._tabs.append(cls._Tab(tab_name, tab_title, analytics))
+        cls._tabs.append(cls._Tab(tab_name, tab_title, visualizations))
 
     @classmethod
     def _get_tab(cls, name):

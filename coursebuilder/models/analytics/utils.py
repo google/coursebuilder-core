@@ -22,10 +22,10 @@ import sys
 import appengine_config
 
 
-def _generators_for_analytics(analytics):
+def _generators_for_visualizations(visualizations):
     ret = set()
-    for analytic in analytics:
-        ret.update(analytic.generator_classes)
+    for visualization in visualizations:
+        ret.update(visualization.generator_classes)
     return ret
 
 
@@ -42,18 +42,19 @@ def _get_required_generators(source_class):
     return ret
 
 
-def _get_template_dir_names(analytic=None):
-    """Find directories in which the template for this analytic can be found.
+def _get_template_dir_names(visualization=None):
+    """Find directories where the template for this visualization can be found.
 
     Always includes the CourseBuilder base install directory and the
     directory for the analytics module.
 
     Args:
-        analytic: If the analytic is non-blank, we will also include the
-            directories of all of the data sources and generators specified
-            for that analytic.  This behavior permits simple naming of
-            templates as just their base names, as long as they are in
-            the same directory as the code that provides their content.
+        visualization: If the visualization is non-blank, we will also include
+            the directories of all of the data sources and generators
+            specified for that visualization.  This behavior permits simple
+            naming of templates as just their base names, as long as they are
+            in the same directory as the code that provides their content.
+
     Returns:
         Array of directories in which to seek a template.  Note that the
         CourseBuilder root directory is always listed first so that fully
@@ -67,15 +68,15 @@ def _get_template_dir_names(analytic=None):
     # content, and the former to the supporting code.
     ret = [
         appengine_config.CODE_ROOT,
-        os.path.join(appengine_config.CODE_ROOT, 'modules', 'analytics')]
+        os.path.join(appengine_config.CODE_ROOT, 'modules', 'visualizations')]
 
-    if analytic:
+    if visualization:
         # Add back path to source/generator classes, minus the .py file
         # in which the handler class exists.
-        for source_class in analytic.data_source_classes:
+        for source_class in visualization.data_source_classes:
             ret.append(os.path.join(appengine_config.CODE_ROOT, os.path.dirname(
                 sys.modules[source_class.__module__].__file__)))
-        for generator_class in analytic.generator_classes:
+        for generator_class in visualization.generator_classes:
             ret.append(os.path.join(appengine_config.CODE_ROOT, os.path.dirname(
                 sys.modules[generator_class.__module__].__file__)))
     return ret

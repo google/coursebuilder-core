@@ -152,7 +152,7 @@ class MockHandler(object):
 
 
 #-------------------------------------------------------------------------------
-# Generators and data source classes for use in analytics.
+# Generators and data source classes for use in visualizations.
 
 
 class GenOne(MockJobBase):
@@ -245,16 +245,19 @@ class AnalyticsTests(unittest.TestCase):
         self._mock_handler = MockHandler(self._mock_app_context)
         self._mock_xsrf = MockXsrfCreator()
 
-    def _generate_analytics_page(self, analytics_):
+    def _generate_analytics_page(self, visualizations):
         return analytics.generate_display_html(
-            self._mock_handler, self._mock_xsrf, analytics_)
+            self._mock_handler, self._mock_xsrf, visualizations)
 
-    def _run_generators_for_analytics(self, app_context, analytics_):
-        for gen_class in analytics.utils._generators_for_analytics(analytics_):
+    def _run_generators_for_visualizations(self, app_context, visualizations):
+        for gen_class in analytics.utils._generators_for_visualizations(
+            visualizations):
             gen_class(app_context).submit()
 
-    def _cancel_generators_for_analytics(self, app_context, analytics_):
-        for gen_class in analytics.utils._generators_for_analytics(analytics_):
+    def _cancel_generators_for_visualizations(self, app_context,
+                                              visualizations):
+        for gen_class in analytics.utils._generators_for_visualizations(
+            visualizations):
             gen_class(app_context).cancel()
 
     def test_illegal_name(self):
@@ -268,7 +271,7 @@ class AnalyticsTests(unittest.TestCase):
     def test_illegal_generator(self):
         with self.assertRaisesRegexp(
             ValueError,
-            'All data source classes used in analytics must be registered'):
+            'All data source classes used in visualizations must be'):
             analytics.Visualization('foo', 'foo', 'foo', [MockHandler])
 
     def test_no_generator_display(self):
@@ -292,55 +295,58 @@ class AnalyticsTests(unittest.TestCase):
         result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one have not been', result)
         self.assertIn('  Run Jobs', result)
-        self.assertIn('action=run_analytic', result)
+        self.assertIn('action=run_visualizations', result)
 
-        self._run_generators_for_analytics(self._mock_app_context, [analytic])
+        self._run_generators_for_visualizations(self._mock_app_context,
+                                                [analytic])
         result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
         self.assertIn('Cancel Jobs', result)
-        self.assertIn('action=cancel_analytic', result)
+        self.assertIn('action=cancel_visualizations', result)
 
-        self._cancel_generators_for_analytics(self._mock_app_context,
-                                              [analytic])
+        self._cancel_generators_for_visualizations(self._mock_app_context,
+                                                   [analytic])
         result = self._generate_analytics_page([analytic])
         self.assertIn('There was an error updating gen one statistics', result)
         self.assertIn('<pre>Canceled</pre>', result)
         self.assertIn('Re-Run Jobs', result)
-        self.assertIn('action=run_analytic', result)
+        self.assertIn('action=run_visualizations', result)
 
-        self._run_generators_for_analytics(self._mock_app_context, [analytic])
+        self._run_generators_for_visualizations(self._mock_app_context,
+                                                [analytic])
         result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
         self.assertIn('Cancel Jobs', result)
-        self.assertIn('action=cancel_analytic', result)
+        self.assertIn('action=cancel_visualizations', result)
 
         GenOne(self._mock_app_context).load().complete('run_state_display')
         result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one were last updated at', result)
         self.assertIn('in about 0 sec', result)
         self.assertIn('Re-Run Jobs', result)
-        self.assertIn('action=run_analytic', result)
+        self.assertIn('action=run_visualizations', result)
         self.assertIn('foo_one_gen_source_gen_one: "run_state_display"', result)
 
-    def test_multiple_analytics_multiple_generators_multiple_sources(self):
-        analytics_ = []
-        analytics_.append(analytics.Visualization(
+    def test_multiple_visualizationsmultiple_generators_multiple_sources(self):
+        visualizations = []
+        visualizations.append(analytics.Visualization(
             'trivial', 'Trivial Statistics', 'models_analytics_section.html',
             [NoGenSource]))
-        analytics_.append(analytics.Visualization(
+        visualizations.append(analytics.Visualization(
             'simple', 'Simple Statistics', 'models_analytics_section.html',
             [OneGenSource]))
-        analytics_.append(analytics.Visualization(
+        visualizations.append(analytics.Visualization(
             'complex', 'Complex Statistics', 'models_analytics_section.html',
             [NoGenSource, OneGenSource, TwoGenSource, ThreeGenSource]))
 
-        self._run_generators_for_analytics(self._mock_app_context, analytics_)
+        self._run_generators_for_visualizations(self._mock_app_context,
+                                                visualizations)
         # Verify that not-all generators are running, but that 'complex'
         # is still not reporting data, as the generator it's relying on
         # (GenThree) is still running.
         GenOne(self._mock_app_context).load().complete('gen_one_data')
         GenTwo(self._mock_app_context).load().complete('gen_two_data')
-        result = self._generate_analytics_page(analytics_)
+        result = self._generate_analytics_page(visualizations)
         self.assertIn('simple_one_gen_source_gen_one: "gen_one_data"', result)
         self.assertIn('Statistics for gen one were last updated', result)
         self.assertIn('Statistics for gen two were last updated', result)
@@ -349,7 +355,7 @@ class AnalyticsTests(unittest.TestCase):
 
         # Finish last generator; should now have all data from all sources.
         GenThree(self._mock_app_context).load().complete('gen_three_data')
-        result = self._generate_analytics_page(analytics_)
+        result = self._generate_analytics_page(visualizations)
         self.assertIn('trivial_no_gen_source: "no_gen_value"', result)
         self.assertIn('simple_one_gen_source_gen_one: "gen_one_data"', result)
         self.assertIn('complex_no_gen_source: "no_gen_value"', result)
@@ -374,9 +380,12 @@ class AnalyticsTests(unittest.TestCase):
         self.assertIn('<h3>Complex Statistics</h3>', result)
 
         # And submission forms for analytics w/ generators
-        self.assertNotIn('<input type="hidden" name="analytic" value="trivial"',
-                         result)
-        self.assertIn('<input type="hidden" name="analytic" value="simple"',
-                      result)
-        self.assertIn('<input type="hidden" name="analytic" value="complex"',
-                      result)
+        self.assertNotIn(
+            '<input type="hidden" name="visualization" value="trivial"',
+            result)
+        self.assertIn(
+            '<input type="hidden" name="visualization" value="simple"',
+            result)
+        self.assertIn(
+            '<input type="hidden" name="visualization" value="complex"',
+            result)
