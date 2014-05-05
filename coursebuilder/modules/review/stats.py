@@ -24,6 +24,7 @@ from modules.review import peer
 
 
 class PeerReviewStatsCalculator(jobs.MapReduceJob):
+
     def entity_class(self):
         return peer.ReviewSummary
 

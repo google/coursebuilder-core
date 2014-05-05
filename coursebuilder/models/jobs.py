@@ -138,6 +138,7 @@ class DurableJob(DurableJobBase):
 
 
 class MapReduceJobPipeline(base_handler.PipelineBase):
+
     def run(self, job_name, sequence_num, kwargs, namespace):
         time_started = time.time()
 
@@ -154,6 +155,7 @@ class MapReduceJobPipeline(base_handler.PipelineBase):
 
 
 class StoreMapReduceResults(base_handler.PipelineBase):
+
     def run(self, job_name, sequence_num, time_started, namespace, output):
         results = []
 

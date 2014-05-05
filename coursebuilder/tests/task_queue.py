@@ -111,6 +111,7 @@ class MapReduceTaskQueueItemHandler(TaskQueueItemHandler):
 
 
 class TaskQueueHandlerDispatcher(object):
+
     def __init__(self, testapp, task_queue):
         self._handlers = []
         self._task_queue = task_queue
