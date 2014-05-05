@@ -68,7 +68,7 @@ _PARSER.add_argument(
 
 
 # Base filesystem location for test data.
-TEST_DATA_BASE = '/tmp/experimental/coursebuilder/test-data/'
+TEST_DATA_BASE = '/usr/local/google/coursebuilder/test-data/'
 
 
 def empty_environ():
