@@ -18,6 +18,7 @@ __author__ = 'Sean Lip (sll@google.com)'
 
 import logging
 import os
+import re
 import urlparse
 
 import jinja2
@@ -87,7 +88,9 @@ class AnalyticsHandler(utils.ApplicationHandler):
     def get_markup(self, job):
         template_values = {}
         template_values['stats_calculated'] = False
-        template_values['subtitle'] = self.description.capitalize()
+        template_values['subtitle'] = ''.join(
+            [w.capitalize() for w in re.split(r'(\W+)', self.description)]
+            ) + ' Statistics'
         if not job:
             message = (
                 '%s statistics have not been calculated yet.' %
