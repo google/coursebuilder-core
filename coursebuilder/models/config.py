@@ -147,6 +147,18 @@ class ConfigProperty(object):
         return self.get_value(db_overrides=Registry.get_overrides())
 
 
+class ValidateLength(object):
+
+    def __init__(self, length):
+        self._length = length
+
+    def validator(self, value, errors):
+        if len(value) != self._length:
+            errors.append(
+                'The length of this field must be exactly %d, ' % self._length +
+                'but the value "%s" is of length %d.' % (value, len(value)))
+
+
 class Registry(object):
     """Holds all registered properties and their various overrides."""
     registered = {}

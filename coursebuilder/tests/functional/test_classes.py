@@ -42,6 +42,7 @@ from review_stats import PeerReviewAnalyticsTest
 from webtest.app import AppError
 
 import appengine_config
+from common import crypto
 from common.utils import Namespace
 from controllers import lessons
 from controllers import sites
@@ -3869,16 +3870,6 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             NotImplementedError, etl.main, upload_datastore_args,
             environment_class=FakeEnvironment)
 
-
-class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
-    """Tests privacy transforms."""
-
-    # Testing protected functions. pylint: disable=protected-access
-    def test_hmac_sha_2_256_is_stable(self):
-        self.assertEqual(
-            etl._hmac_sha_2_256('secret', 'value'),
-            etl._hmac_sha_2_256('secret', 'value'))
-
     def test_is_identity_transform_when_privacy_false(self):
         self.assertEqual(
             1, etl._get_privacy_transform_fn(False, 'no_effect')(1))
@@ -3886,8 +3877,12 @@ class EtlPrivacyTransformFunctionTestCase(actions.TestBase):
             1, etl._get_privacy_transform_fn(False, 'other_value')(1))
 
     def test_is_hmac_sha_2_256_when_privacy_true(self):
+        # Must run etl.main() to get crypto module loaded.
+        args = etl.PARSER.parse_args(['download'] + self.common_course_args)
+        etl.main(args, environment_class=FakeEnvironment)
         self.assertEqual(
-            etl._hmac_sha_2_256('secret', 'value'),
+            crypto.hmac_sha_2_256_transform('secret', 'value'),
+            # Testing protected functions. pylint: disable=protected-access
             etl._get_privacy_transform_fn(True, 'secret')('value'))
 
 

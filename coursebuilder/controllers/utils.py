@@ -16,30 +16,24 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
-import base64
 import gettext
-import hmac
-import os
-import time
 import urlparse
 
 import sites
 
 import webapp2
 
-import appengine_config
 from common import jinja_utils
+from common.crypto import XsrfTokenManager
 from models import models
 from models import transforms
 from models.config import ConfigProperty
-from models.config import ConfigPropertyEntity
 from models.courses import Course
 from models.models import Student
 from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
 
-from google.appengine.api import namespace_manager
 from google.appengine.api import users
 
 # The name of the template dict key that stores a course's base location.
@@ -49,18 +43,6 @@ COURSE_BASE_KEY = 'gcb_course_base'
 COURSE_INFO_KEY = 'course_info'
 
 TRANSIENT_STUDENT = TransientStudent()
-
-XSRF_SECRET_LENGTH = 20
-
-XSRF_SECRET = ConfigProperty(
-    'gcb_xsrf_secret', str, (
-        'Text used to encrypt tokens, which help prevent Cross-site request '
-        'forgery (CSRF, XSRF). You can set the value to any alphanumeric text, '
-        'preferably using 16-64 characters. Once you change this value, the '
-        'server rejects all subsequent requests issued using an old value for '
-        'this variable.'),
-    'course builder XSRF secret')
-
 
 # Whether to record page load/unload events in a database.
 CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
@@ -628,107 +610,3 @@ class StudentUnenrollHandler(BaseHandler):
         self.template_value['navbar'] = {}
         self.template_value['transient_student'] = True
         self.render('unenroll_confirmation.html')
-
-
-class XsrfTokenManager(object):
-    """Provides XSRF protection by managing action/user tokens in memcache."""
-
-    # Max age of the token (4 hours).
-    XSRF_TOKEN_AGE_SECS = 60 * 60 * 4
-
-    # Token delimiters.
-    DELIMITER_PRIVATE = ':'
-    DELIMITER_PUBLIC = '/'
-
-    # Default nickname to use if a user does not have a nickname,
-    USER_ID_DEFAULT = 'default'
-
-    @classmethod
-    def init_xsrf_secret_if_none(cls):
-        """Verifies that non-default XSRF secret exists; creates one if not."""
-
-        # Any non-default value is fine.
-        if XSRF_SECRET.value and XSRF_SECRET.value != XSRF_SECRET.default_value:
-            return
-
-        # All property manipulations must run in the default namespace.
-        old_namespace = namespace_manager.get_namespace()
-        try:
-            namespace_manager.set_namespace(
-                appengine_config.DEFAULT_NAMESPACE_NAME)
-
-            # Look in the datastore directly.
-            entity = ConfigPropertyEntity.get_by_key_name(XSRF_SECRET.name)
-            if not entity:
-                entity = ConfigPropertyEntity(key_name=XSRF_SECRET.name)
-
-            # Any non-default non-None value is fine.
-            if (entity.value and not entity.is_draft and
-                (str(entity.value) != str(XSRF_SECRET.default_value))):
-                return
-
-            # Initialize to random value.
-            entity.value = base64.urlsafe_b64encode(
-                os.urandom(XSRF_SECRET_LENGTH))
-            entity.is_draft = False
-            entity.put()
-        finally:
-            namespace_manager.set_namespace(old_namespace)
-
-    @classmethod
-    def _create_token(cls, action_id, issued_on):
-        """Creates a string representation (digest) of a token."""
-        cls.init_xsrf_secret_if_none()
-
-        # We have decided to use transient tokens stored in memcache to reduce
-        # datastore costs. The token has 4 parts: hash of the actor user id,
-        # hash of the action, hash of the time issued and the plain text of time
-        # issued.
-
-        # Lookup user id.
-        user = users.get_current_user()
-        if user:
-            user_id = user.user_id()
-        else:
-            user_id = cls.USER_ID_DEFAULT
-
-        # Round time to seconds.
-        issued_on = long(issued_on)
-
-        digester = hmac.new(str(XSRF_SECRET.value))
-        digester.update(str(user_id))
-        digester.update(cls.DELIMITER_PRIVATE)
-        digester.update(str(action_id))
-        digester.update(cls.DELIMITER_PRIVATE)
-        digester.update(str(issued_on))
-
-        digest = digester.digest()
-        token = '%s%s%s' % (
-            issued_on, cls.DELIMITER_PUBLIC, base64.urlsafe_b64encode(digest))
-
-        return token
-
-    @classmethod
-    def create_xsrf_token(cls, action):
-        return cls._create_token(action, time.time())
-
-    @classmethod
-    def is_xsrf_token_valid(cls, token, action):
-        """Validate a given XSRF token by retrieving it from memcache."""
-        try:
-            parts = token.split(cls.DELIMITER_PUBLIC)
-            if len(parts) != 2:
-                return False
-
-            issued_on = long(parts[0])
-            age = time.time() - issued_on
-            if age > cls.XSRF_TOKEN_AGE_SECS:
-                return False
-
-            authentic_token = cls._create_token(action, issued_on)
-            if authentic_token == token:
-                return True
-
-            return False
-        except Exception:  # pylint: disable=broad-except
-            return False

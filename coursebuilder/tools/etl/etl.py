@@ -111,8 +111,6 @@ __author__ = [
 
 import argparse
 import functools
-import hashlib
-import hmac
 import logging
 import os
 import random
@@ -128,6 +126,7 @@ import yaml
 appengine_config = None
 config = None
 courses = None
+crypto = None
 db = None
 etl_lib = None
 memcache = None
@@ -686,7 +685,8 @@ def _get_privacy_transform_fn(privacy, privacy_secret):
     if not privacy:
         return _IDENTITY_TRANSFORM
     else:
-        return functools.partial(_hmac_sha_2_256, privacy_secret)
+        return functools.partial(crypto.hmac_sha_2_256_transform,
+                                 privacy_secret)
 
 
 def _get_privacy_secret(privacy_secret):
@@ -706,13 +706,6 @@ def _get_course_from(app_context):
             self.app_context = app_context
 
     return courses.Course(_Adapter(app_context))
-
-
-def _hmac_sha_2_256(privacy_secret, value):
-    """HMAC-SHA-2-256 for use as a privacy transformation function."""
-    return hmac.new(
-        str(privacy_secret), msg=str(value), digestmod=hashlib.sha256
-    ).hexdigest()
 
 
 def _import_entity_modules():
@@ -743,6 +736,7 @@ def _import_modules_into_global_scope():
     global metadata
     global config
     global courses
+    global crypto
     global models
     global transforms
     global vfs
@@ -754,6 +748,7 @@ def _import_modules_into_global_scope():
         from google.appengine.api import namespace_manager
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
+        from common import crypto
         from models import config
         from models import courses
         from models import models

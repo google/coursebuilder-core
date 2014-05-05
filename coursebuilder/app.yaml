@@ -18,6 +18,8 @@ builtins:
 libraries:
 - name: jinja2
   version: "2.6"
+- name: pycrypto
+  version: "2.6"
 - name: webapp2
   version: "2.5.2"
 - name: webob
