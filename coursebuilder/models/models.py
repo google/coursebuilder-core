@@ -443,6 +443,7 @@ class Student(BaseEntity):
 
     # Each of the following is a string representation of a JSON dict.
     scores = db.TextProperty(indexed=False)
+    labels_for_tracks = db.StringProperty(indexed=False)
 
     _PROPERTY_EXPORT_BLACKLIST = [additional_fields, name]
 

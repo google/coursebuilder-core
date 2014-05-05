@@ -28,17 +28,21 @@ from controllers import sites
 from models import analytics
 from models import custom_modules
 from models import data_sources
+from models import student_labels
 
-# Import, register, and enable configured modules.
+# Import, register, & enable modules named in app.yaml's GCB_REGISTERED_MODULES.
 appengine_config.import_and_enable_modules()
 
-# compute all possible routes
+# Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
+
+# Collect routes from core components; these are always present.
 global_routes.extend(analytics.get_global_handlers())
 namespaced_routes.extend(analytics.get_namespaced_handlers())
 namespaced_routes.extend(data_sources.get_namespaced_handlers())
+namespaced_routes.extend(student_labels.get_namespaced_handlers())
 
-# routes available at '/%namespace%/' context paths
+# Configure routes available at '/%namespace%/' context paths
 sites.ApplicationRequestHandler.bind(namespaced_routes)
 app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 

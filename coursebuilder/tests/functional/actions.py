@@ -178,6 +178,12 @@ class TestBase(suite.AppEngineTestBase):
         response = self.testapp.put(url, params, expect_errors=expect_errors)
         return self.hook_response(response)
 
+    def delete(self, url, expect_errors=False):
+        url = self.canonicalize(url)
+        logging.info('HTTP Delete: %s', url)
+        response = self.testapp.delete(url, expect_errors=expect_errors)
+        return self.hook_response(response)
+
     def click(self, response, name):
         logging.info('Link click: %s', name)
         response = response.click(name)
