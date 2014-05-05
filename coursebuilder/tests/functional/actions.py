@@ -199,7 +199,7 @@ class ExportTestBase(TestBase):
     def assert_blacklisted_properties_removed(self, original_model, exported):
         # Treating as module-protected. pylint: disable-msg=protected-access
         for prop in original_model._get_export_blacklist():
-            self.assertFalse(hasattr(exported, prop.name))
+            self.assertFalse(hasattr(exported, prop))
 
     def transform(self, value):
         return 'transformed_' + value

@@ -33,7 +33,7 @@ from models import models
 from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
-from modules.dashboard import common_analytics
+from modules.data_source_providers import synchronous_providers
 
 
 class ProgressAnalyticsTest(actions.TestBase):
@@ -466,7 +466,7 @@ class QuestionAnalyticsTest(actions.TestBase):
         sites.setup_courses('course:/test::ns_test, course:/:/')
         course = courses.Course(None, app_context=sites.get_all_courses()[0])
 
-        question_aggregator = (common_analytics.QuestionStatsGenerator
+        question_aggregator = (synchronous_providers.QuestionStatsGenerator
                                .MultipleChoiceQuestionAggregator(course))
 
         event_payloads = open(os.path.join(
@@ -486,7 +486,7 @@ class QuestionAnalyticsTest(actions.TestBase):
         app_context = sites.get_all_courses()[0]
 
         question_stats_computer = (
-            common_analytics.QuestionStatsGenerator(app_context))
+            synchronous_providers.QuestionStatsGenerator(app_context))
         id_to_questions, id_to_assessments = question_stats_computer.run()
         assert_equals({}, id_to_questions)
         assert_equals({}, id_to_assessments)

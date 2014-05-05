@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Classes and methods to create and manage analytics dashboards."""
+"""Provide data sources performing synchronous (non-paginated) reads."""
 
 __author__ = 'Sean Lip (sll@google.com)'
 
@@ -20,7 +20,6 @@ import logging
 import urlparse
 
 from common import safe_dom
-from models import analytics
 from models import courses
 from models import data_sources
 from models import jobs
@@ -506,25 +505,3 @@ class QuestionStatsSource(data_sources.SynchronousQuery):
             accumulated_question_answers)
         template_values['accumulated_assessment_answers'] = transforms.dumps(
             accumulated_assessment_answers)
-
-
-def register_analytics():
-    data_sources.Registry.register(QuestionStatsSource)
-    data_sources.Registry.register(StudentEnrollmentAndScoresSource)
-    data_sources.Registry.register(StudentProgressStatsSource)
-
-    analytics.Registry.register(
-        'multiple_choice_question',
-        'Multiple Choice Question',
-        'multiple_choice_question.html',
-        data_source_classes=[QuestionStatsSource])
-    analytics.Registry.register(
-        'student_progress',
-        'Student Progress',
-        'student_progress.html',
-        data_source_classes=[StudentProgressStatsSource])
-    analytics.Registry.register(
-        'enrollment_assessment',
-        'Enrollment/Assessment',
-        'enrollment_assessment.html',
-        data_source_classes=[StudentEnrollmentAndScoresSource])

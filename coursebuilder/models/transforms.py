@@ -486,3 +486,41 @@ def convert_json_rows_file_to_xml(json_fn, xml_fn):
         xml_file.write('\n')
     xml_file.write('</rows>')
     xml_file.close()
+
+
+def nested_lists_as_string_to_dict(stringified_list_of_lists):
+    """Convert list of 2-item name/value lists to dict.
+
+    This is for converting Student.additional_fields.  When creating a
+    Student, the raw HTML form content is just added to additional_fields
+    without first converting into a dict.  Thus we have a very dict-like
+    thing which is actually expressed as a stringified list-of-lists.
+    E.g., '[["age", "27"], ["gender", "female"], ["course_goal", "dabble"]]
+
+    Args:
+      stringified_list_of_lists: String as example above
+    Returns:
+      dict version of the list-of-key/value 2-tuples
+    """
+
+    if not isinstance(stringified_list_of_lists, basestring):
+        return None
+    try:
+        items = json.loads(stringified_list_of_lists)
+        if not isinstance(items, list):
+            return None
+        for item in items:
+            if not isinstance(item, list):
+                return False
+            if len(item) != 2:
+                return False
+            if not isinstance(item[0], basestring):
+                return False
+        return {item[0]: item[1] for item in items}
+    except ValueError:
+        return None
+
+
+def dict_to_nested_lists_as_string(d):
+    """Convert a dict to stringified list-of-2-tuples format."""
+    return json.dumps([[a, b] for a, b in d.items()])

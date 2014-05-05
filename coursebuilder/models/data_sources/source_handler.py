@@ -128,7 +128,7 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
         """Save context as opaque string for use as arg to next call."""
         context_class = self.get_data_source_class().get_context_class()
         context_dict = context_class.save_to_dict(source_context)
-        plaintext_context = transforms.dumps(context_dict.__dict__)
+        plaintext_context = transforms.dumps(context_dict)
         return crypto.EncryptionManager.encrypt_to_urlsafe_ciphertext(
             plaintext_context)
 

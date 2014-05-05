@@ -34,6 +34,7 @@ from modules.assessment_tags import questions
 from modules.course_explorer import course_explorer
 from modules.courses import courses
 from modules.dashboard import dashboard
+from modules.data_source_providers import data_source_providers
 from modules.mapreduce import mapreduce_module
 from modules.oauth2 import oauth2
 from modules.oeditor import oeditor
@@ -52,6 +53,7 @@ announcements.register_module().enable()
 questions.register_module().enable()
 course_explorer.register_module().enable()
 courses.register_module().enable()
+data_source_providers.register_module().enable()
 dashboard.register_module().enable()
 mapreduce_module.register_module().enable()
 oeditor.register_module().enable()

@@ -63,7 +63,7 @@ from models import roles
 from models import vfs
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
-from modules.dashboard import common_analytics
+from modules.data_source_providers import synchronous_providers
 from modules.search.search import SearchDashboardHandler
 from tools import verify
 
@@ -806,7 +806,24 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    common_analytics.register_analytics()
+    analytics.Registry.register(
+        'multiple_choice_question',
+        'Multiple Choice Question',
+        'multiple_choice_question.html',
+        data_source_classes=[
+            synchronous_providers.QuestionStatsSource])
+    analytics.Registry.register(
+        'student_progress',
+        'Student Progress',
+        'student_progress.html',
+        data_source_classes=[
+            synchronous_providers.StudentProgressStatsSource])
+    analytics.Registry.register(
+        'enrollment_assessment',
+        'Enrollment/Assessment',
+        'enrollment_assessment.html',
+        data_source_classes=[
+            synchronous_providers.StudentEnrollmentAndScoresSource])
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

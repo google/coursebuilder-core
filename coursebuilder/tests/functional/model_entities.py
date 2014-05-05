@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 from models import entities
+from models import transforms
 from tests.functional import actions
 from google.appengine.ext import db
 
@@ -35,6 +36,19 @@ class SecondChild(FirstChild):
     second_removed = db.Property()
 
     _PROPERTY_EXPORT_BLACKLIST = [second_removed]
+
+
+class MockStudent(entities.BaseEntity):
+    name = db.StringProperty(indexed=False)
+    class_rank = db.IntegerProperty(indexed=False)
+    additional_fields = db.TextProperty(indexed=False)
+
+    _PROPERTY_EXPORT_BLACKLIST = [
+        'name',
+        'additional_fields.age',
+        'additional_fields.gender',
+        'additional_fields.hobby.cost',
+    ]
 
 
 class BaseEntityTestCase(actions.TestBase):
@@ -66,6 +80,34 @@ class BaseEntityTestCase(actions.TestBase):
         self.assertFalse(hasattr(second_export, SecondChild.first_removed.name))
         self.assertFalse(
             hasattr(second_export, SecondChild.second_removed.name))
+
+    def test_blacklist_by_name(self):
+        additional = transforms.dict_to_nested_lists_as_string({
+            'age': 37,
+            'class_goal': 'Completion',
+            'gender': 'Male',
+            'hobby': transforms.dict_to_nested_lists_as_string({
+                'name': 'woodworking',
+                'level': 'journeyman',
+                'cost': 10000,
+            })
+        })
+
+        blacklisted = transforms.dict_to_nested_lists_as_string({
+            'class_goal': 'Completion',
+            'hobby': transforms.dict_to_nested_lists_as_string({
+                'name': 'woodworking',
+                'level': 'journeyman',
+            })
+        })
+
+        mock_student = MockStudent(name='John Smith', class_rank=23,
+                                   additional_fields=additional)
+        db.put(mock_student)
+        data = mock_student.for_export(lambda x: x)
+        self.assertFalse(hasattr(data, 'name'))
+        self.assertEquals(23, data.class_rank)
+        self.assertEquals(blacklisted, data.additional_fields)
 
 
 class ExportEntityTestCase(actions.TestBase):

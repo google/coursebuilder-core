@@ -17,6 +17,8 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 from counters import PerfCounter
+import transforms
+
 from google.appengine.ext import db
 
 # datastore performance counters
@@ -80,9 +82,21 @@ class ExportEntity(db.Expando):
 class BaseEntity(db.Model):
     """A common class to all datastore entities."""
 
-    # List of db.Property. The properties on this model that should be purged
-    # before export via tools/etl.py because they contain private information
-    # about a user. For fields that must be transformed rather than purged, see
+    # List of db.Property, or string.  This lists the properties on this
+    # model that should be purged before export via tools/etl.py because they
+    # contain private information about a user.  If a property is internally
+    # structured, the name may identify sub-components to remove.  E.g.,
+    # for a record of type Student, you might specify:
+    # _PROPERTY_EXPORT_BLACKLIST = [
+    #     name,                        # A db.Property in Student
+    #     'additional_fields.gender',  # A named sub-element
+    #     'additional_fields.age',     # ditto.
+    #     ]
+    # This syntax permits non-PII fields (e.g. 'additional_fields.course_goal')
+    # to remain present.  It is harmless to name items that are not present;
+    # this permits backward compatibility with older versions of DB entities.
+    #
+    # For fields that must be transformed rather than purged, see
     # BaseEntity.for_export().
     _PROPERTY_EXPORT_BLACKLIST = []
 
@@ -139,6 +153,16 @@ class BaseEntity(db.Model):
                 # Treat as module-protected.
                 # pylint: disable-msg=protected-access
                 blacklist.extend(klass._PROPERTY_EXPORT_BLACKLIST)
+
+        for index, item in enumerate(blacklist):
+            if isinstance(item, db.Property):
+                blacklist[index] = item.name
+            elif isinstance(item, basestring):
+                pass
+            else:
+                raise ValueError(
+                    'Blacklist entries must be either a db.Property ' +
+                    'or a string.  The entry "%s" is neither. ' % str(item))
         return sorted(set(blacklist))
 
     def put(self):
@@ -168,6 +192,10 @@ class BaseEntity(db.Model):
                 is safe for export. If no user data is sensitive, the identity
                 transform should be used.
 
+        Raises:
+            ValueError: if the _PROPERTY_EXPORT_BLACKLIST contains anything
+            other than db.Property references or strings.
+
         Returns:
             EventEntity populated with the fields from self, plus a new field
             called 'safe_key', containing a string representation of the value
@@ -183,7 +211,31 @@ class BaseEntity(db.Model):
         properties[SAFE_KEY_NAME] = self.safe_key(self.key(), transform_fn)
 
         for name in self.properties():
-            if name not in [prop.name for prop in self._get_export_blacklist()]:
-                properties[name] = getattr(self, name)
+            properties[name] = getattr(self, name)
 
+        # Blacklist may contain db.Property, or names as strings.  If string,
+        # the name may be a dotted list of containers.  This is useful for
+        # redacting sub-items.  E.g., for the type Student,
+        # specifying 'additional_items.name' would remove the PII item for
+        # the student's name, but not affect additional_items['goal'],
+        # (the student's goal for the course), which is not PII.
+        for item in  self._get_export_blacklist():
+            self._remove_named_component(item, properties)
         return ExportEntity(**properties)
+
+    @classmethod
+    def _remove_named_component(cls, spec, container):
+        name, tail = spec.split('.', 1) if '.' in spec else (spec, None)
+
+        if isinstance(container, dict) and name in container:
+            if tail:
+                tmp_dict = transforms.nested_lists_as_string_to_dict(
+                    container[name])
+                if tmp_dict:
+                    cls._remove_named_component(tail, tmp_dict)
+                    container[name] = transforms.dict_to_nested_lists_as_string(
+                        tmp_dict)
+                else:
+                    cls._remove_named_component(tail, container[name])
+            else:
+                del container[name]

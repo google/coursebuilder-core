@@ -239,7 +239,8 @@ class _DbTableContext(base_types._AbstractContextManager):
 
     @classmethod
     def save_to_dict(cls, context):
-        return context  # namedtuple is close enough.
+        # convert namedtuple to regular Python dict
+        return context.__dict__
 
     @classmethod
     def get_public_params_for_display(cls, context):
