@@ -217,10 +217,10 @@ class MapReduceJob(DurableJobBase):
         content = transforms.loads(job.output)
         return content[MapReduceJob._OUTPUT_KEY_ERROR]
 
-    def entity_type_name(self):
-        """Gives the fully-qualified name of the DB/NDB type to map over."""
+    def entity_class(self):
+        """Return a reference to the class for the DB/NDB type to map over."""
         raise NotImplementedError('Classes derived from MapReduceJob must '
-                                  'implement entity_type_name()')
+                                  'implement entity_class()')
 
     @staticmethod
     def map(item):
@@ -228,7 +228,7 @@ class MapReduceJob(DurableJobBase):
 
         Args:
           item: The parameter passed to this function is a single element of the
-          type given by entity_type_name().  This function may <em>yield</em> as
+          type given by entity_class().  This function may <em>yield</em> as
           many times as appropriate (including zero) to return key/value
           2-tuples.  E.g., for calculating student scores from a packed block of
           course events, this function would take as input the packed block.  It
@@ -267,6 +267,9 @@ class MapReduceJob(DurableJobBase):
         if self.is_active():
             return
         super(MapReduceJob, self).non_transactional_submit()
+        entity_class_type = self.entity_class()
+        entity_class_name = '%s.%s' % (entity_class_type.__module__,
+                                       entity_class_type.__name__)
         kwargs = {
             'job_name': self._job_name,
             'mapper_spec': '%s.%s.map' % (
@@ -278,7 +281,7 @@ class MapReduceJob(DurableJobBase):
             'output_writer_spec':
                 'mapreduce.output_writers.BlobstoreRecordsOutputWriter',
             'mapper_params': {
-                'entity_kind': self.entity_type_name(),
+                'entity_kind': entity_class_name,
                 'namespace': self._namespace,
             },
         }

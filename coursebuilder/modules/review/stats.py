@@ -16,133 +16,95 @@
 
 __author__ = 'Sean Lip (sll@google.com)'
 
-import os
-
-import jinja2
-
-from common import safe_dom
-from controllers.utils import ApplicationHandler
-from controllers.utils import HUMAN_READABLE_TIME_FORMAT
 from models import courses
 from models import jobs
 from models import transforms
-from models import utils
+from modules.dashboard import analytics
 from modules.review import peer
 
 
-class ReviewStatsAggregator(object):
-    """Aggregates peer review statistics."""
+class PeerReviewStatsCalculator(jobs.MapReduceJob):
+    def entity_class(self):
+        return peer.ReviewSummary
 
-    def __init__(self):
-        # This dict records, for each unit, how many submissions have a given
-        # number of completed reviews. The format of each key-value pair is
-        #     unit_id: {num_reviews: count_of_submissions}
-        self.counts_by_completed_reviews = {}
+    @staticmethod
+    def map(review_summary):
+        key = '%s:%s' % (review_summary.unit_id, review_summary.completed_count)
+        yield (key, 1)
 
-    def visit(self, review_summary):
-        unit_id = review_summary.unit_id
-        if unit_id not in self.counts_by_completed_reviews:
-            self.counts_by_completed_reviews[unit_id] = {}
+    @staticmethod
+    def combine(unit_and_count, values, previously_combined_outputs=None):
+        quantity = sum([int(value) for value in values])
+        if previously_combined_outputs is not None:
+            quantity += sum(
+                [int(value) for value in previously_combined_outputs])
+        yield quantity
 
-        count = review_summary.completed_count
-        if count not in self.counts_by_completed_reviews[unit_id]:
-            self.counts_by_completed_reviews[unit_id][count] = 1
-        else:
-            self.counts_by_completed_reviews[unit_id][count] += 1
-
-
-class ComputeReviewStats(jobs.DurableJob):
-    """A job for computing peer review statistics."""
-
-    def run(self):
-        """Computes peer review statistics."""
-
-        stats = ReviewStatsAggregator()
-        mapper = utils.QueryMapper(
-            peer.ReviewSummary.all(), batch_size=500, report_every=1000)
-
-        mapper.run(stats.visit)
-
-        completed_arrays_by_unit = {}
-        for unit_id in stats.counts_by_completed_reviews:
-            max_completed_reviews = max(
-                stats.counts_by_completed_reviews[unit_id].keys())
-
-            completed_reviews_array = []
-            for i in range(max_completed_reviews + 1):
-                if i in stats.counts_by_completed_reviews[unit_id]:
-                    completed_reviews_array.append(
-                        stats.counts_by_completed_reviews[unit_id][i])
-                else:
-                    completed_reviews_array.append(0)
-            completed_arrays_by_unit[unit_id] = completed_reviews_array
-
-        return {'counts_by_completed_reviews': completed_arrays_by_unit}
+    @staticmethod
+    def reduce(unit_and_count, values):
+        quantity = sum(int(value) for value in values)
+        yield (unit_and_count, quantity)
 
 
-class PeerReviewStatsHandler(ApplicationHandler):
-    """Shows peer review analytics on the dashboard."""
-
-    # The key used in the statistics dict that generates the dashboard page.
-    # Must be unique.
+class PeerReviewStatsHandler(analytics.MapReduceHandler):
     name = 'peer_review_stats'
     # The class that generates the data to be displayed.
-    stats_computer = ComputeReviewStats
+    stats_computer = PeerReviewStatsCalculator
+    _description = 'peer review'
+    _html_template_name = 'stats.html'
 
-    def get_markup(self, job):
-        """Returns Jinja markup for peer review statistics."""
+    def _fill_completed_values(self, job, template_values):
+        super(PeerReviewStatsHandler, self)._fill_completed_values(
+            job, template_values)
 
-        errors = []
-        stats_calculated = False
-        update_message = safe_dom.Text('')
+        # What we want to produce as output is a list of review results for
+        # each unit, ordered by where the unit appears in the course.
+        # For each unit, we produce a dict of {unit_id, title, stats}
+        # The unit_id and title are from the unit itself.
+        #
+        # The 'stats' item is an array.  In the 0th position of the
+        # array, we give the number of peer reviews requests that have
+        # had 0 completed responses.  In the 1th position, those with
+        # 1 response, and so on.
+        # The 'stats' array in each unit's dict must be the same length,
+        # and thus is right-padded with zeroes as appropriate.
 
-        course = courses.Course(self)
+        # First, generate a stats list for each unit.  This will have
+        # a ragged right edge.
+        counts_by_unit = {}
+        max_completed_count = 0
+        for unit_and_count, quantity in jobs.MapReduceJob.get_results(job):
+
+            # Burst values
+            unit, completed_count = unit_and_count.rsplit(':')
+            completed_count = int(completed_count)
+            quantity = int(quantity)
+            max_completed_count = max(completed_count, max_completed_count)
+
+            # Ensure the array for the unit exists and is long enough.
+            unit_stats = counts_by_unit[unit] = counts_by_unit.get(unit, [])
+            unit_stats.extend([0] * (completed_count - len(unit_stats) + 1))
+
+            # Install the quantity of reviews with N responses for this unit.
+            unit_stats[completed_count] = quantity
+
+        # Fix the ragged right edge by padding all arrays out to a length
+        # corresponding to the maximum number of completed responses for
+        # any peer-review request.
+        for unit_stats in counts_by_unit.values():
+            unit_stats.extend([0] * (max_completed_count - len(unit_stats) + 1))
+
+        # Now march through the units, in course order and generate the
+        # {unit_id, title, stats} dicts used for display.
         serialized_units = []
-
-        if not job:
-            update_message = safe_dom.Text(
-                'Peer review statistics have not been calculated yet.')
-        else:
-            if job.status_code == jobs.STATUS_CODE_COMPLETED:
-                stats = transforms.loads(job.output)
-                stats_calculated = True
-
-                for unit in course.get_peer_reviewed_units():
-                    if unit.unit_id in stats['counts_by_completed_reviews']:
-                        unit_stats = (
-                            stats['counts_by_completed_reviews'][unit.unit_id])
-                        serialized_units.append({
-                            'stats': unit_stats,
-                            'title': unit.title,
-                            'unit_id': unit.unit_id,
-                        })
-                update_message = safe_dom.Text("""
-                    Peer review statistics were last updated at
-                    %s in about %s second(s).""" % (
-                        job.updated_on.strftime(HUMAN_READABLE_TIME_FORMAT),
-                        job.execution_time_sec))
-            elif job.status_code == jobs.STATUS_CODE_FAILED:
-                update_message = safe_dom.NodeList().append(
-                    safe_dom.Text("""
-                        There was an error updating peer review statistics.
-                        Here is the message:""")
-                ).append(
-                    safe_dom.Element('br')
-                ).append(
-                    safe_dom.Element('blockquote').add_child(
-                        safe_dom.Element('pre').add_text('\n%s' % job.output)))
-            else:
-                update_message = safe_dom.Text("""
-                    Peer review statistics update started at %s and is running
-                    now. Please come back shortly.""" % job.updated_on.strftime(
-                        HUMAN_READABLE_TIME_FORMAT))
-
-        return jinja2.utils.Markup(self.get_template(
-            'stats.html', [os.path.dirname(__file__)]
-        ).render({
-            'errors': errors,
+        for unit in courses.Course(self).get_peer_reviewed_units():
+            if unit.unit_id in counts_by_unit:
+                serialized_units.append({
+                    'stats': counts_by_unit[unit.unit_id],
+                    'title': unit.title,
+                    'unit_id': unit.unit_id,
+                })
+        template_values.update({
             'serialized_units': serialized_units,
             'serialized_units_json': transforms.dumps(serialized_units),
-            'stats_calculated': stats_calculated,
-            'update_message': update_message,
-        }, autoescape=True))
+        })

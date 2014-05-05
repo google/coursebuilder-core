@@ -26,6 +26,7 @@ from common import safe_dom
 from controllers import utils
 from models import courses
 from models import jobs
+from models import models
 from models import progress
 from models import transforms
 from models import utils as models_utils
@@ -50,6 +51,19 @@ class AnalyticsHandler(utils.ApplicationHandler):
     @property
     def html_template_name(self):
         return self._html_template_name
+
+    def _get_template_dir_name(self):
+        # Clip off trailing ....py or ...pyc up to root of CB install.
+        cb_base_dir_offset = __file__.find('/modules/dashboard/analytics.py')
+        assert cb_base_dir_offset >= 0
+        cb_base_dir = __file__[:cb_base_dir_offset]
+
+        # Add back path to actual handler class, minus the .py file
+        # in which the handler class exists.
+        template_relative_dir = os.path.dirname(
+            self.__class__.__module__.replace('.', os.path.sep))
+
+        return os.path.join(cb_base_dir, template_relative_dir)
 
     def _fill_completed_values(self, job, template_values):
         raise NotImplementedError(
@@ -114,7 +128,7 @@ class AnalyticsHandler(utils.ApplicationHandler):
                 template_values['update_message'] = safe_dom.Text(message)
                 self._fill_pending_values(job, template_values)
         return jinja2.utils.Markup(self.get_template(
-            self.html_template_name, [os.path.dirname(__file__)]
+            self.html_template_name, [self._get_template_dir_name()]
         ).render(template_values, autoescape=True))
 
 
@@ -640,8 +654,8 @@ class QuestionStatsHandler(AnalyticsHandler):
 
 class ComputeQuestionScores(jobs.MapReduceJob):
 
-    def entity_type_name(self):
-      return 'models.models.Student'
+    def entity_class(self):
+      return models.Student
 
     @staticmethod
     def map(student):
