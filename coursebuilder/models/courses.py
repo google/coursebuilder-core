@@ -31,6 +31,7 @@ import vfs
 import yaml
 
 import appengine_config
+from common import utils as common_utils
 import common.tags
 import models
 from models import MemcacheManager
@@ -1693,6 +1694,29 @@ class Course(object):
 
     def get_units_of_type(self, unit_type):
         return [unit for unit in self.get_units() if unit_type == unit.type]
+
+    def get_units_matching_student(self, student):
+        """Gets units whose labels match those on the student.
+
+        If the student has no labels, all units are taken.
+        Similarly, if a unit has no labels, it is included.
+
+        Args:
+          student: the logged-in Student matching the user for this request.
+        Returns:
+          A list of Unit instances.
+        """
+        units = self.get_units()
+        if student and not student.is_transient:
+            student_matches = set(
+                common_utils.text_to_list(student.labels_for_tracks))
+            for unit in list(units):
+                unit_matches = set(common_utils.text_to_list(
+                    getattr(unit, 'labels', '')))
+                if (student_matches and unit_matches and
+                    student_matches.isdisjoint(unit_matches)):
+                    units.remove(unit)
+        return units
 
     def get_lessons(self, unit_id):
         return self._model.get_lessons(unit_id)

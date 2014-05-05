@@ -27,7 +27,6 @@ from google.appengine.api import users
 
 PARAMETER_LABELS = 'labels'
 STUDENT_LABELS_URL = '/rest/student/labels/'
-LABELS_SPLITTER_RE = re.compile(r'[ ,\t\n]+', flags=re.M)
 
 GROUP_TO_PROPERTY = {
     'tracks': models.Student.labels_for_tracks,
@@ -52,9 +51,8 @@ class StudentLabelsRestHandler(utils.ApplicationHandler):
         if not student or not group:
             return
 
-        # Regularize stored labels string to comma-separated, no spaces
-        labels = self._merge_list(
-            self._split_list(self.request.get(PARAMETER_LABELS)))
+        labels = common_utils.list_to_text(
+            common_utils.text_to_list(self.request.get(PARAMETER_LABELS)))
         self._save_labels(student, group, labels)
         return self._send_response(student, group)
 
@@ -64,11 +62,12 @@ class StudentLabelsRestHandler(utils.ApplicationHandler):
             return
 
         request_labels = set(
-            self._split_list(self.request.get(PARAMETER_LABELS)))
+            common_utils.text_to_list(self.request.get(PARAMETER_LABELS)))
         existing_labels = set(
-            self._split_list(group.__get__(student, models.Student)))
+            common_utils.text_to_list(group.__get__(student, models.Student)))
         existing_labels.update(request_labels)
-        self._save_labels(student, group, self._merge_list(existing_labels))
+        self._save_labels(student, group,
+                          common_utils.list_to_text(existing_labels))
         return self._send_response(student, group)
 
     def delete(self):
@@ -91,15 +90,15 @@ class StudentLabelsRestHandler(utils.ApplicationHandler):
             self._send_response(None, None, 403, 'User is not enrolled')
             return None, None
 
-        group_name = self.request.path.replace(STUDENT_LABELS_URL, '')
+        group_name = re.sub('.*' + STUDENT_LABELS_URL, '', self.request.path)
         if not group_name:
-            self.send_response(None, None, 400, 'No label group specified')
+            self._send_response(None, None, 400, 'No label group specified')
             return None, None
 
         if group_name not in GROUP_TO_PROPERTY:
-            self.send_response(None, None, 400,
-                               'Label group not in: ' + ', '.join(
-                                   GROUP_TO_PROPERTY.keys()))
+            self._send_response(None, None, 400,
+                                'Label group not in: ' + ', '.join(
+                                    GROUP_TO_PROPERTY.keys()))
             return None, None
 
         return student, GROUP_TO_PROPERTY[group_name]
@@ -112,16 +111,10 @@ class StudentLabelsRestHandler(utils.ApplicationHandler):
     def _send_response(self, student, group, status_code=None, message=None):
         payload = {}
         if student and group:
-            payload['labels'] = self._split_list(
+            payload['labels'] = common_utils.text_to_list(
                 group.__get__(student, models.Student))
         transforms.send_json_response(
             self, status_code or 200, message or 'OK', payload)
-
-    def _split_list(self, text):
-        return [item for item in LABELS_SPLITTER_RE.split(text or '') if item]
-
-    def _merge_list(self, items):
-        return ','.join(items)
 
 
 def get_namespaced_handlers():

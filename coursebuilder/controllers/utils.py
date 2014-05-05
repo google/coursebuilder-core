@@ -295,6 +295,10 @@ class BaseHandler(ApplicationHandler):
         """Gets all units in the course."""
         return self.get_course().get_units()
 
+    def get_units_matching_student(self, student):
+        """Gets units whose labels match those on the student."""
+        return self.get_course().get_units_matching_student(student)
+
     def get_lessons(self, unit_id):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)

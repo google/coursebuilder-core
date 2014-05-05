@@ -303,7 +303,7 @@ class StudentProfileDAO(object):
 
     @classmethod
     def _update_course_profile_attributes(
-        cls, student, nick_name=None, is_enrolled=None):
+        cls, student, nick_name=None, is_enrolled=None, labels_for_tracks=None):
         """Modifies various attributes of Student's Course Profile."""
 
         if nick_name is not None:
@@ -312,12 +312,15 @@ class StudentProfileDAO(object):
         if is_enrolled is not None:
             student.is_enrolled = is_enrolled
 
+        if labels_for_tracks is not None:
+            student.labels_for_tracks = labels_for_tracks
+
     @classmethod
     def _update_attributes(
         cls, profile, student,
         email=None, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
-        course_info=None):
+        course_info=None, labels_for_tracks=None):
         """Modifies various attributes of Student and Profile."""
 
         if profile:
@@ -329,7 +332,8 @@ class StudentProfileDAO(object):
 
         if student:
             cls._update_course_profile_attributes(
-                student, nick_name=nick_name, is_enrolled=is_enrolled)
+                student, nick_name=nick_name, is_enrolled=is_enrolled,
+                labels_for_tracks=labels_for_tracks)
 
     @classmethod
     def _put_profile(cls, profile):
@@ -410,7 +414,7 @@ class StudentProfileDAO(object):
     def update(
         cls, user_id, email, legal_name=None, nick_name=None,
         date_of_birth=None, is_enrolled=None, final_grade=None,
-        course_info=None, profile_only=False):
+        course_info=None, labels_for_tracks=None, profile_only=False):
         """Updates a student and/or their global profile."""
         student = None
         if not profile_only:
@@ -426,7 +430,7 @@ class StudentProfileDAO(object):
             profile, student, email=email, legal_name=legal_name,
             nick_name=nick_name, date_of_birth=date_of_birth,
             is_enrolled=is_enrolled, final_grade=final_grade,
-            course_info=course_info)
+            course_info=course_info, labels_for_tracks=labels_for_tracks)
 
         cls._put_profile(profile)
         if not profile_only:
@@ -543,6 +547,13 @@ class Student(BaseEntity):
         _, student = cls._get_user_and_student()
         StudentProfileDAO.update(
             student.user_id, student.email, is_enrolled=is_enrolled)
+
+    @classmethod
+    def set_labels_for_tracks_for_current(cls, labels_for_tracks):
+        """Set labels for tracks on the student."""
+        _, student = cls._get_user_and_student()
+        StudentProfileDAO.update(
+            student.user_id, student.email, labels_for_tracks=labels_for_tracks)
 
     def get_key(self, transform_fn=None):
         """Gets a version of the key that uses user_id for the key name."""

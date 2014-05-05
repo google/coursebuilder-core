@@ -16,8 +16,24 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import re
 
 from google.appengine.api import namespace_manager
+
+BACKWARD_COMPATIBLE_SPLITTER = re.compile(r'[\[\] ,\t\n]+', flags=re.M)
+SPLITTER = re.compile(r'[ ,\t\n]+', flags=re.M)
+
+
+def text_to_list(text, splitter=SPLITTER):
+    if not text:
+        return []
+    return [item for item in splitter.split(text) if item]
+
+
+def list_to_text(items):
+    if not items:
+        return ''
+    return ' '.join(items)
 
 
 class Namespace(object):

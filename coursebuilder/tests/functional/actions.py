@@ -189,8 +189,27 @@ class TestBase(suite.AppEngineTestBase):
         response = response.click(name)
         return self.hook_response(response)
 
-    def submit(self, form):
+    def submit(self, form, response_containing_form=None):
+        """Submit a form to the appropriate handler.
+
+        Args:
+          form: The form to submit.
+          response_containing_form: The response object in which the 'form'
+              parameter is found.  This is optional.  Forms which use relative
+              URLs may have <base> tags indicate the base URL for relative
+              URLs.  The webtest library does not know about this, so we
+              manually try to see if this is the case, and modify the form's
+              action URL appropriately if so.
+        Returns:
+          a Response object - the return value from the webserver in response
+          to the form submission
+        """
         logging.info('Form submit: %s', form)
+        if not form.action.startswith('/') and response_containing_form:
+            matches = re.search(r'<base href=[\'"]([^\'"]+)["\']',
+                                response_containing_form.body)
+            if matches:
+                form.action = matches.group(1) + form.action
         response = form.submit()
         return self.hook_response(response)
 
@@ -324,32 +343,37 @@ def logout():
     del os.environ['USER_IS_ADMIN']
 
 
-def register(browser, name):
+def in_course(course, url):
+    if not course:
+        return url
+    return '%s/%s' % (course, url)
+
+
+def register(browser, name, course=None):
     """Registers a new student with the given name."""
 
-    response = view_registration(browser)
-
+    response = view_registration(browser, course)
     register_form = get_form_by_action(response, 'register')
     register_form.set('form01', name)
-    response = browser.submit(register_form)
+    response = browser.submit(register_form, response)
 
     assert_equals(response.status_int, 302)
     assert_contains(
         'course#registration_confirmation', response.headers['location'])
-    check_profile(browser, name)
+    check_profile(browser, name, course)
     return response
 
 
-def check_profile(browser, name):
-    response = view_my_profile(browser)
+def check_profile(browser, name, course=None):
+    response = view_my_profile(browser, course)
     assert_contains('Email', response.body)
     assert_contains(cgi.escape(name), response.body)
     assert_contains(get_current_user_email(), response.body)
     return response
 
 
-def view_registration(browser):
-    response = browser.get('register')
+def view_registration(browser, course=None):
+    response = browser.get(in_course(course, 'register'))
     check_personalization(browser, response)
     assert_contains('What is your name?', response.body)
     assert_contains_all_of([
@@ -510,8 +534,8 @@ def view_announcements(browser):
     return response
 
 
-def view_my_profile(browser):
-    response = browser.get('student/home')
+def view_my_profile(browser, course=None):
+    response = browser.get(in_course(course, 'student/home'))
     assert_contains('Date enrolled', response.body)
     check_personalization(browser, response)
     return response

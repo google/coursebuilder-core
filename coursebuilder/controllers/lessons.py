@@ -167,7 +167,7 @@ class CourseHandler(BaseHandler):
             self.redirect('/preview')
             return
 
-        self.template_value['units'] = self.get_units()
+        self.template_value['units'] = self.get_units_matching_student(student)
         self.template_value['show_registration_page'] = True
 
         if student and not student.is_transient:

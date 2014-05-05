@@ -16,11 +16,9 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
-import re
-
 import config
+from common import utils
 from google.appengine.api import users
-
 
 GCB_ADMIN_LIST = config.ConfigProperty(
     'gcb_admin_user_emails', str, (
@@ -51,7 +49,6 @@ GCB_WHITELISTED_USERS = config.ConfigProperty(
         '"]" around email addresses continues to be supported.  '
         'Regular expressions are not supported.'),
     '', multiline=True)
-EMAIL_LIST_SPLITTER = re.compile(r'[\[\] ,\t\n]+', flags=re.M)
 
 
 class Roles(object):
@@ -67,11 +64,8 @@ class Roles(object):
         """Checks if current user is a super admin, possibly via delegation."""
         if cls.is_direct_super_admin():
             return True
-
-        user = users.get_current_user()
-        if user and user.email() in cls._to_list(GCB_ADMIN_LIST.value):
-            return True
-        return False
+        return cls._user_email_in(users.get_current_user(),
+                                  GCB_ADMIN_LIST.value)
 
     @classmethod
     def is_course_admin(cls, app_context):
@@ -84,9 +78,8 @@ class Roles(object):
             if KEY_ADMIN_USER_EMAILS in environ:
                 allowed = environ[KEY_ADMIN_USER_EMAILS]
                 user = users.get_current_user()
-                if allowed and user and user.email() in cls._to_list(allowed):
+                if allowed and cls._user_email_in(user, allowed):
                     return True
-
         return False
 
     @classmethod
@@ -97,14 +90,17 @@ class Roles(object):
 
         # Most-specific whitelist used if present.
         if course_whitelist:
-            return user and user.email() in cls._to_list(course_whitelist)
+            return cls._user_email_in(user, course_whitelist)
+
         # Global whitelist if no course whitelist
         elif global_whitelist:
-            return user and user.email() in cls._to_list(global_whitelist)
+            return cls._user_email_in(user, global_whitelist)
+
         # Lastly, no whitelist = no restrictions
         else:
             return True
 
     @classmethod
-    def _to_list(cls, text):
-        return [item for item in EMAIL_LIST_SPLITTER.split(text) if item]
+    def _user_email_in(cls, user, text):
+        return user and user.email() in utils.text_to_list(
+            text, utils.BACKWARD_COMPATIBLE_SPLITTER)
