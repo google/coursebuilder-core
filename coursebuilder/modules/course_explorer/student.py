@@ -88,8 +88,8 @@ class BaseStudentHandler(webapp2.RequestHandler):
         """Get all the public courses."""
         public_courses = []
         for course in sites.get_all_courses():
-            info = sites.ApplicationContext.get_environ(course)
-            if info['course']['now_available']:
+            if ((course.now_available and Roles.is_user_whitelisted(course))
+                or Roles.is_course_admin(course)):
                 public_courses.append(course)
         return public_courses
 

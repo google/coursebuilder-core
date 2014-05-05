@@ -733,6 +733,11 @@ class ApplicationContext(object):
         course = self.get_environ().get('course')
         return course and course.get('now_available')
 
+    @property
+    def whitelist(self):
+        course = self.get_environ().get('course')
+        return '' if not course else course.get('whitelist', '')
+
     def get_title(self):
         return self.get_environ()['course']['title']
 
@@ -1010,7 +1015,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def can_handle_course_requests(self, context):
         """Reject all, but authors requests, to an unpublished course."""
-        return context.now_available or Roles.is_course_admin(context)
+        return ((context.now_available and Roles.is_user_whitelisted(context))
+                or Roles.is_course_admin(context))
 
     def _get_handler_factory_for_path(self, path):
         """Picks a handler to handle the path."""
@@ -1082,7 +1088,10 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             set_path_info(path)
             handler = self.get_handler()
             if not handler:
-                self.error(404)
+                if not users.get_current_user():
+                    self.redirect(users.create_login_url(path))
+                else:
+                    self.error(404)
             else:
                 set_default_response_headers(handler)
                 handler.get()

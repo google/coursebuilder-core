@@ -120,6 +120,11 @@ def _create_course_registry():
         'can register to receive course announcements, e.g. '
         '\'My-Course-Announce@googlegroups.com\''))
     course_opts.add_property(schema_fields.SchemaField(
+        'course:whitelist', 'Whitelisted Students', 'text', optional=True,
+        description='List of email addresses of students who may register.'
+        'Each email address must be placed between \'[\' and \']\'.'
+        'e.g., "[foo@bar.com] [quux@bar.com]"'))
+    course_opts.add_property(schema_fields.SchemaField(
         'course:locale', 'Locale', 'string'))
     course_opts.add_property(schema_fields.SchemaField(
         'course:start_date', 'Course Start Date', 'string', optional=True))

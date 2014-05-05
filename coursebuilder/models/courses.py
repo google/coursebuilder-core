@@ -104,7 +104,8 @@ DEFAULT_COURSE_YAML_DICT = {
     'unit': {},
     'reg_form': {
         'can_register': True,
-        'additional_registration_fields': ''
+        'whitelist': '',
+        'additional_registration_fields': '',
         }
 }
 

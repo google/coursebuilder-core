@@ -137,6 +137,10 @@ reg_form:
   # Whether to allow new students to register for the course.
   can_register: True
 
+  # Whitelist of student email addresses who are allowed to register for
+  # the course.  Each email must be surrounded by '[' and ']'.  E.g,
+  # "[foo@bar.com] [quux@bar.com]"
+  whitelist: ''
 
 ##############################
 # Assessment confirmation page

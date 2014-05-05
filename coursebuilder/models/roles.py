@@ -35,6 +35,19 @@ GCB_ADMIN_LIST = config.ConfigProperty(
 KEY_COURSE = 'course'
 KEY_ADMIN_USER_EMAILS = 'admin_user_emails'
 
+GCB_WHITELISTED_USERS = config.ConfigProperty(
+    'gcb_user_whitelist', str, (
+        'A list of email addresses of users allowed access to courses.  '
+        'If this is blank, site-wide user whitelisting is disabled.  '
+        'Access to courses is also implicitly granted to super admins and '
+        'course admins, so you need not repeat those names here.  '
+        'Course-specific whitelists trump this list - if a course has a '
+        'non-blank whitelist, this one is ignored.  '
+        'Syntax: Surround each email address with [ and ]; for '
+        'example, [test@example.com]. Separate the entries with either a new '
+        'line or a space. Do not use regular expressions.'),
+    '', multiline=True)
+
 
 class Roles(object):
     """A class that provides information about user roles."""
@@ -71,3 +84,18 @@ class Roles(object):
 
         return False
 
+    @classmethod
+    def is_user_whitelisted(cls, app_context):
+        user = users.get_current_user()
+        global_whitelist = GCB_WHITELISTED_USERS.value.strip()
+        course_whitelist = app_context.whitelist
+
+        # Most-specific whitelist used if present.
+        if course_whitelist:
+            return user and '[%s]' % user.email() in course_whitelist
+        # Global whitelist if no course whitelist
+        elif global_whitelist:
+            return user and '[%s]' % user.email() in global_whitelist
+        # Lastly, no whitelist = no restrictions
+        else:
+            return True
