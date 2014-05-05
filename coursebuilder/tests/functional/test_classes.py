@@ -488,6 +488,7 @@ class InfrastructureTest(actions.TestBase):
         sites.ApplicationContext.get_environ = get_environ_old
         sites.reset_courses()
 
+    # pylint: disable-msg=too-many-statements
     def test_unit_lesson_not_available(self):
         """Tests that unavailable units and lessons behave correctly."""
 
@@ -650,6 +651,7 @@ class InfrastructureTest(actions.TestBase):
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old
 
+    # pylint: disable-msg=too-many-statements
     def test_custom_assessments(self):
         """Tests that custom assessments are evaluated correctly."""
 
@@ -1282,6 +1284,7 @@ class AdminAspectTest(actions.TestBase):
 class CourseAuthorAspectTest(actions.TestBase):
     """Tests the site from the Course Author perspective."""
 
+    # pylint: disable-msg=too-many-statements
     def test_dashboard(self):
         """Test course dashboard."""
 
@@ -2101,6 +2104,7 @@ class ActivityTest(actions.TestBase):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
+    # pylint: disable-msg=too-many-statements
     def test_progress(self):
         """Test student activity progress in detail, using the sample course."""
 
@@ -2246,6 +2250,7 @@ class AssessmentTest(actions.TestBase):
         assert_contains('70', response.body)
         assert_contains('100', response.body)
 
+    # pylint: disable-msg=too-many-statements
     def test_assessments(self):
         """Test assessment scores are properly submitted and summarized."""
 
@@ -2857,6 +2862,7 @@ class DatastoreBackedCourseTest(actions.TestBase):
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
     """Prepares a sample course running on datastore-backed file system."""
 
+    # pylint: disable-msg=too-many-statements
     def test_course_import(self):
         """Test importing of the course."""
 

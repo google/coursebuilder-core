@@ -384,6 +384,7 @@ class ActivityHandler(BaseHandler):
 class AssessmentHandler(BaseHandler):
     """Handler for generating assessment page."""
 
+    # pylint: disable-msg=too-many-statements
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled(
@@ -675,6 +676,7 @@ class ReviewDashboardHandler(BaseHandler):
 class ReviewHandler(BaseHandler):
     """Handler for generating the submission page for individual reviews."""
 
+    # pylint: disable-msg=too-many-statements
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()

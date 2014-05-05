@@ -1335,6 +1335,7 @@ class ExportAssessmentRESTHandler(BaseRESTHandler):
 
     VERSION = '1.5'
 
+    # pylint: disable-msg=too-many-statements
     def put(self):
         """Handle the PUT verb to export an assessment."""
         request = transforms.loads(self.request.get('request'))

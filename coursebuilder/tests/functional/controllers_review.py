@@ -330,6 +330,7 @@ class PeerReviewControllerTest(actions.TestBase):
 
         actions.logout()
 
+    # pylint: disable-msg=too-many-statements
     def test_draft_review_behaviour(self):
         """Test correctness of draft review visibility."""
 

@@ -28,6 +28,7 @@ from controllers_review import LEGACY_REVIEW_UNIT_ID
 class PeerReviewAnalyticsTest(actions.TestBase):
     """Tests the peer review analytics page on the Course Author dashboard."""
 
+    # pylint: disable-msg=too-many-statements
     def test_peer_review_analytics(self):
         """Test analytics page on course dashboard."""
 

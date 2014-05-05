@@ -1399,6 +1399,7 @@ def run_all_regex_unit_tests():
             r"""gcb_regex('354\\s*[+]\\s*651', '')""")
 
 
+# pylint: disable-msg=too-many-statements
 def run_all_schema_helper_unit_tests():
     """Executes all tests related to schema validation."""
 

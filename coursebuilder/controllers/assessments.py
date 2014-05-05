@@ -115,6 +115,7 @@ class AnswerHandler(BaseHandler):
         """
         self.redirect('/course')
 
+    # pylint: disable-msg=too-many-statements
     def post(self):
         """Handles POST requests."""
         student = self.personalize_page_and_get_enrolled()
