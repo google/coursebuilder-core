@@ -52,7 +52,7 @@ class AnalyticsHandler(utils.ApplicationHandler):
     def html_template_name(self):
         return self._html_template_name
 
-    def _get_template_dir_name(self):
+    def _get_template_dir_names(self):
         # Clip off trailing ....py or ...pyc up to root of CB install.
         cb_base_dir_offset = __file__.find('/modules/dashboard/analytics.py')
         assert cb_base_dir_offset >= 0
@@ -63,7 +63,7 @@ class AnalyticsHandler(utils.ApplicationHandler):
         template_relative_dir = os.path.dirname(
             self.__class__.__module__.replace('.', os.path.sep))
 
-        return os.path.join(cb_base_dir, template_relative_dir)
+        return [cb_base_dir, os.path.join(cb_base_dir, template_relative_dir)]
 
     def _fill_completed_values(self, job, template_values):
         raise NotImplementedError(
@@ -87,6 +87,7 @@ class AnalyticsHandler(utils.ApplicationHandler):
     def get_markup(self, job):
         template_values = {}
         template_values['stats_calculated'] = False
+        template_values['subtitle'] = self.description.capitalize()
         if not job:
             message = (
                 '%s statistics have not been calculated yet.' %
@@ -128,7 +129,7 @@ class AnalyticsHandler(utils.ApplicationHandler):
                 template_values['update_message'] = safe_dom.Text(message)
                 self._fill_pending_values(job, template_values)
         return jinja2.utils.Markup(self.get_template(
-            self.html_template_name, [self._get_template_dir_name()]
+            self.html_template_name, self._get_template_dir_names()
         ).render(template_values, autoescape=True))
 
 

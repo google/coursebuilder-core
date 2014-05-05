@@ -1,6 +1,6 @@
-<h3>Statistics for multiple-choice questions</h3>
+{% extends 'modules/dashboard/analytics_base.html' %}
 
-{% if stats_calculated %}
+{% block stats %}
   <style type="text/css">
     .table-container {
       margin: 20px 0;
@@ -115,17 +115,4 @@
 
   <h4>Questions in assessments</h4>
   <div id="assessmentStatisticsTable" class="table-container"></div>
-{% endif %}
-
-{% if errors %}
-  <b>Errors:</b>
-  <ul>
-    {% for error in errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{{ update_message }}
-
-<br><br>
+{% endblock %}

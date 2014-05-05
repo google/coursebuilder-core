@@ -1,6 +1,6 @@
-<h3>Enrollment Statistics</h3>
+{% extends 'modules/dashboard/analytics_base.html' %}
 
-{% if stats_calculated %}
+{% block stats %}
   <ul>
     <li>previously enrolled: {{ unenrolled }}</li>
     <li>currently enrolled: {{ enrolled }}</li>
@@ -17,17 +17,4 @@
       total: {{ total_records }}
     </li>
   </ul>
-{% endif %}
-
-{% if errors %}
-  <b>Errors:</b>
-  <ul>
-    {% for error in errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{{ update_message }}
-
-<br><br>
+{% endblock %}

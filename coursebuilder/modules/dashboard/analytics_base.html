@@ -1,0 +1,25 @@
+<h3>{{ subtitle }}</h3>
+
+{% block stats_header %}
+{% endblock %}
+
+{% if stats_calculated %}
+  {% block stats %}
+  {% endblock %}
+{% endif %}
+
+{% if errors %}
+  <b>Errors:</b>
+  <ul>
+    {% for error in errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{{ update_message }}
+
+{% block stats_footer %}
+{% endblock %}
+
+<br><br>

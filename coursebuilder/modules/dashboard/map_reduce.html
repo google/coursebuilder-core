@@ -1,7 +1,6 @@
-<h3>Question Score -- Results</h3>
+{% extends 'modules/dashboard/analytics_base.html' %}
 
-{% if stats_calculated %}
-
+{% block stats %}
   <!-- TODO(mgainer): Make pretty later.  For now, proof-of-concept.  -->
   {% if not stats %}
     <p>No answers to questions have been recorded for this course.</p>
@@ -25,17 +24,4 @@
       </table>
     </ul>
   {% endif %}
-{% endif %}
-
-{% if errors %}
-  <b>Errors:</b>
-  <ul>
-    {% for error in errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{{ update_message }}
-
-<br><br>
+{% endblock %}

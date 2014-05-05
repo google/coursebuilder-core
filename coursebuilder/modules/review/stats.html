@@ -1,6 +1,6 @@
-<h3>Peer Review Statistics</h3>
+{% extends 'modules/dashboard/analytics_base.html' %}
 
-{% if stats_calculated %}
+{% block stats %}
   {% if serialized_units %}
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
@@ -50,17 +50,4 @@
   {% else %}
     <p>No submissions to peer-reviewed assignments have been recorded for this course.</p>
   {% endif %}
-{% endif %}
-
-{% if errors %}
-  <b>Errors:</>
-  <ul>
-    {% for error in errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{{ update_message }}
-
-<br><br>
+{% endblock %}
