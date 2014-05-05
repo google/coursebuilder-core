@@ -58,14 +58,31 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
 
     @classmethod
     def fetch_values(cls, app_context, source_context, schema, log,
-                     page_number):
+                     sought_page_number):
         with Namespace(app_context.get_namespace_name()):
-            cls._acquire_necessary_cursors(source_context, schema,
-                                           page_number, log)
-            query = cls._build_query(source_context, schema, page_number, log)
-            rows = cls._fetch_page(source_context, query, page_number, log)
+            stopped_early = False
+            while len(source_context.cursors) < sought_page_number:
+                page_number = len(source_context.cursors)
+                query = cls._build_query(source_context, schema, page_number,
+                                         log)
+                rows = cls._fetch_page(source_context, query, page_number, log)
+
+                # Stop early if we notice we've hit the end of the table.
+                if len(rows) < source_context.chunk_size:
+                    log.warning('Fewer pages available than requested.  '
+                                'Stopping at last page %d' % page_number)
+                    stopped_early = True
+                    break
+
+            if not stopped_early:
+                page_number = sought_page_number
+                query = cls._build_query(source_context, schema, page_number,
+                                         log)
+                rows = cls._fetch_page(source_context, query, page_number, log)
+
             return cls._postprocess_rows(
-                app_context, source_context, schema, log, page_number, rows)
+                app_context, source_context, schema, log, page_number, rows
+                ), page_number
 
     @classmethod
     def _postprocess_rows(cls, unused_app_context, source_context,
@@ -75,15 +92,6 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
         entities = [row.for_export(transform_fn) for row in rows]
         dicts = [transforms.entity_to_dict(entity) for entity in entities]
         return [transforms.dict_to_json(d, schema) for d in dicts]
-
-    @classmethod
-    def _acquire_necessary_cursors(cls, source_context, schema, page_number,
-                                   log):
-        while len(source_context.cursors) < page_number:
-            prior_page_num = len(source_context.cursors)
-            query = cls._build_query(source_context, schema, prior_page_num,
-                                     log)
-            cls._fetch_page(source_context, query, prior_page_num, log)
 
     @classmethod
     def _build_query(cls, source_context, schema, page_number, log):

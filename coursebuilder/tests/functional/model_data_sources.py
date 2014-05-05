@@ -310,6 +310,7 @@ class PaginatedTableTest(actions.TestBase):
         response = transforms.loads(self.get(
             '/rest/data/character/items?chunk_size=3&page_number=0').body)
         source_context = response['source_context']
+        self.assertEquals(0, response['page_number'])
         self._verify_data(self.characters[:3], response['data'])
         self._assert_have_only_logs(response, [
             'Creating new context for given parameters',
@@ -322,6 +323,7 @@ class PaginatedTableTest(actions.TestBase):
             '/rest/data/character/items?chunk_size=3&page_number=1'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']
+        self.assertEquals(1, response['page_number'])
         self._verify_data(self.characters[3:6], response['data'])
         self._assert_have_only_logs(response, [
             'Existing context matches parameters; using existing context',
@@ -334,6 +336,7 @@ class PaginatedTableTest(actions.TestBase):
             '/rest/data/character/items?chunk_size=3&page_number=2'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']
+        self.assertEquals(2, response['page_number'])
         self._verify_data(self.characters[6:9], response['data'])
         self._assert_have_only_logs(response, [
             'Existing context matches parameters; using existing context',
@@ -346,12 +349,51 @@ class PaginatedTableTest(actions.TestBase):
             '/rest/data/character/items?chunk_size=3&page_number=3'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']
+        self.assertEquals(3, response['page_number'])
         self._verify_data(self.characters[9:], response['data'])
         self._assert_have_only_logs(response, [
             'Existing context matches parameters; using existing context',
             'fetch page 3 start cursor present; end cursor missing',
             'fetch page 3 using limit 3',
             'fetch page 3 is partial; not saving end cursor',
+            ])
+
+    def test_non_present_page_request(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=9&page_number=5').body)
+        self._verify_data(self.characters[9:], response['data'])
+        self.assertEquals(1, response['page_number'])
+        self._assert_have_only_logs(response, [
+            'Creating new context for given parameters',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 9',
+            'fetch page 0 saving end cursor',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 9',
+            'fetch page 1 is partial; not saving end cursor',
+            'Fewer pages available than requested.  Stopping at last page 1',
+            ])
+
+    def test_empty_last_page_request(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+
+        response = transforms.loads(self.get(
+            '/rest/data/character/items?chunk_size=10&page_number=3').body)
+        self._verify_data([], response['data'])
+        self.assertEquals(1, response['page_number'])
+        self._assert_have_only_logs(response, [
+            'Creating new context for given parameters',
+            'fetch page 0 start cursor missing; end cursor missing',
+            'fetch page 0 using limit 10',
+            'fetch page 0 saving end cursor',
+            'fetch page 1 start cursor present; end cursor missing',
+            'fetch page 1 using limit 10',
+            'fetch page 1 is partial; not saving end cursor',
+            'Fewer pages available than requested.  Stopping at last page 1',
             ])
 
     def test_nonsequential_pagination(self):
@@ -361,6 +403,7 @@ class PaginatedTableTest(actions.TestBase):
         response = transforms.loads(self.get(
             '/rest/data/character/items?chunk_size=3&page_number=2').body)
         source_context = response['source_context']
+        self.assertEquals(2, response['page_number'])
         self._verify_data(self.characters[6:9], response['data'])
         self._assert_have_only_logs(response, [
             'Creating new context for given parameters',
@@ -393,6 +436,7 @@ class PaginatedTableTest(actions.TestBase):
             '/rest/data/character/items?filter=rank>=5&ordering=rank'
             '&chunk_size=3&page_number=1').body)
         source_context = response['source_context']
+        self.assertEquals(1, response['page_number'])
         self._verify_data([self.characters[4], self.characters[6]],
                           response['data'])
         self._assert_have_only_logs(response, [
@@ -410,6 +454,7 @@ class PaginatedTableTest(actions.TestBase):
             '&chunk_size=3&page_number=0'
             '&source_context=%s' % source_context).body)
         source_context = response['source_context']
+        self.assertEquals(0, response['page_number'])
         self._verify_data([self.characters[7], self.characters[1],
                            self.characters[8]], response['data'])
         self._assert_have_only_logs(response, [
@@ -433,6 +478,7 @@ class PaginatedTableTest(actions.TestBase):
         response = transforms.loads(self.get(
             '/rest/data/character/items?page_number=1'
             '&source_context=%s' % source_context).body)
+        self.assertEquals(1, response['page_number'])
         self._verify_data([self.characters[4], self.characters[6]],
                           response['data'])
         self._assert_have_only_logs(response, [

@@ -38,10 +38,6 @@ class CourseElementsDataSource(data_sources.AbstractRestDataSource):
         return None
 
     @classmethod
-    def _acquire_necessary_cursors(cls, *args, **kwargs):
-        pass
-
-    @classmethod
     def _sanitize_values(cls, source_context, rows):
         return rows
 
@@ -92,7 +88,7 @@ class AssessmentsDataSource(CourseElementsDataSource):
                 'weight': assessment.weight,
                 'html_check_answers': assessment.html_check_answers,
                 'properties': assessment.properties})
-        return ret
+        return ret, 0
 
 
 class UnitsDataSource(CourseElementsDataSource):
@@ -128,7 +124,7 @@ class UnitsDataSource(CourseElementsDataSource):
                 'title': unit.title,
                 'properties': unit.properties,
             })
-        return ret
+        return ret, 0
 
 
 class LessonsDataSource(CourseElementsDataSource):
@@ -176,7 +172,7 @@ class LessonsDataSource(CourseElementsDataSource):
                 'has_activity': lesson.has_activity,
                 'activity_title': lesson.activity_title,
             })
-        return ret
+        return ret, 0
 
 
 # TODO(mgainer): Provide a REST service to list the locations from which

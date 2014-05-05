@@ -108,9 +108,11 @@ class _AbstractRestDataSourceHandler(utils.ApplicationHandler):
             output['schema'] = schema
         if source_context and schema:
             with catch_and_log_.consume_exceptions('Fetching results data'):
-                output['data'] = data_source_class.fetch_values(
+                data, page_number = data_source_class.fetch_values(
                     self.app_context, source_context, schema, catch_and_log_,
                     page_number)
+                output['data'] = data
+                output['page_number'] = page_number
             with catch_and_log_.consume_exceptions('Encoding context'):
                 output['source_context'] = self._encode_context(source_context)
                 output['params'] = context_class.get_public_params_for_display(
