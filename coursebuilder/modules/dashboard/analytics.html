@@ -1,8 +1,11 @@
 {% if show_recalculate_button %}
-  <form id="gcb-compute-student-stats" action="dashboard?action=compute_student_stats" method="POST">
+  <form id="gcb-compute-student-stats"
+        action="dashboard?action=compute_student_stats" method="POST">
       <input type="hidden" name="xsrf_token" value="{{xsrf_token}}">
       <p>
-          <button class="gcb-button" type="submit">Update Statistics</button>
+          <button class="gcb-button" type="submit">
+              Update All Statistics
+          </button>
       </p>
   </form>
 {% endif %}

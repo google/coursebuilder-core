@@ -89,7 +89,7 @@ class DashboardHandler(
         'compute_student_stats', 'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_basic_course_settings', 'add_reviewer',
-        'delete_reviewer']
+        'delete_reviewer', 'cancel_analytics_job', 'run_analytics_job']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -770,7 +770,7 @@ class DashboardHandler(
             'page_title_linked': self.format_title('Analytics', as_link=True),
         }
 
-        all_jobs_have_finished = True
+        show_recalculate_button = False
         stats_html = ''
 
         for callback in DashboardRegistry.analytics_handlers:
@@ -780,16 +780,16 @@ class DashboardHandler(
             handler.response = self.response
 
             job = handler.stats_computer(self.app_context).load()
-            stats_html += handler.get_markup(job)
+            stats_html += handler.get_markup(job, handler.name)
 
-            if job and not job.has_finished:
-                all_jobs_have_finished = False
+            if not job or job.has_finished:
+                show_recalculate_button = True
 
         template_values['main_content'] = jinja2.utils.Markup(
             self.get_template(
                 'analytics.html', [os.path.dirname(__file__)]
             ).render({
-                'show_recalculate_button': all_jobs_have_finished,
+                'show_recalculate_button': show_recalculate_button,
                 'stats_html': stats_html,
                 'xsrf_token': self.create_xsrf_token('compute_student_stats'),
             }, autoescape=True)
@@ -800,10 +800,23 @@ class DashboardHandler(
     def post_compute_student_stats(self):
         """Submits a new student statistics calculation task."""
 
-        for callback in DashboardRegistry.analytics_handlers:
-            job = callback().stats_computer(self.app_context)
-            job.submit()
+        for handler_class in DashboardRegistry.analytics_handlers:
+             handler_class().stats_computer(self.app_context).submit()
 
+        self.redirect('/dashboard?action=analytics')
+
+    def post_cancel_analytics_job(self):
+        handler_name = self.request.get('handler_name')
+        handler_class = DashboardRegistry.find_by_name(handler_name)
+        if handler_class:
+            handler_class().stats_computer(self.app_context).cancel()
+        self.redirect('/dashboard?action=analytics')
+
+    def post_run_analytics_job(self):
+        handler_name = self.request.get('handler_name')
+        handler_class = DashboardRegistry.find_by_name(handler_name)
+        if handler_class:
+            handler_class().stats_computer(self.app_context).submit()
         self.redirect('/dashboard?action=analytics')
 
 
@@ -817,13 +830,18 @@ class DashboardRegistry(object):
     @classmethod
     def add_analytics_section(cls, handler):
         """Adds handlers that provide data for the Analytics page."""
-        if handler not in cls.analytics_handlers:
-            existing_names = [h.name for h in cls.analytics_handlers]
-            if handler.name in existing_names:
-                raise Exception('Stats handler name %s is being duplicated.'
-                                % handler.name)
+        if cls.find_by_name(handler.name):
+            raise Exception('Stats handler name %s is being duplicated.'
+                            % handler.name)
 
-            cls.analytics_handlers.append(handler)
+        cls.analytics_handlers.append(handler)
+
+    @classmethod
+    def find_by_name(cls, name):
+        for handler in cls.analytics_handlers:
+            if handler.name == name:
+                return handler
+        return None
 
 
 custom_module = None

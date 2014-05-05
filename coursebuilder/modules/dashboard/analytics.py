@@ -85,12 +85,26 @@ class AnalyticsHandler(utils.ApplicationHandler):
 
         return job.output
 
-    def get_markup(self, job):
+    def get_markup(self, job, handler_name):
         template_values = {}
         template_values['stats_calculated'] = False
+        template_values['handler_name'] = handler_name
         template_values['subtitle'] = ''.join(
             [w.capitalize() for w in re.split(r'(\W+)', self.description)]
             ) + ' Statistics'
+
+        # Controls for starting/stopping individual jobs
+        if not job or job.has_finished:
+            template_values['job_running'] = False
+            template_values['xsrf_token_run_job'] = (
+                utils.XsrfTokenManager.create_xsrf_token(
+                    'run_analytics_job'))
+        else:
+            template_values['job_running'] = True
+            template_values['xsrf_token_cancel_job'] = (
+                utils.XsrfTokenManager.create_xsrf_token(
+                    'cancel_analytics_job'))
+
         if not job:
             message = (
                 '%s statistics have not been calculated yet.' %

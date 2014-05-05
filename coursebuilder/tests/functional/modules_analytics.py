@@ -138,6 +138,72 @@ class ProgressAnalyticsTest(actions.TestBase):
             '\\"u.1\\": {\\"progress\\": 2, \\"completed\\": 0}',
             response.body)
 
+    def test_analytics_are_individually_cancelable_and_runnable(self):
+        """Test run/cancel controls for individual analytics jobs."""
+
+        # Submit all analytics.
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        response = self.get('dashboard?action=analytics')
+        response = response.forms['gcb-compute-student-stats'].submit().follow()
+
+        # Ensure that analytics appear to be running and have cancel buttons.
+        response = self.get('dashboard?action=analytics')
+        assert_contains('is running', response.body)
+        assert_contains('Cancel Job', response.body)
+
+        # Now that all analytics are pending, ensure that we do _not_ have
+        # an update-all button.
+        with self.assertRaises(KeyError):
+            response = response.forms['gcb-compute-student-stats']
+
+        # Click the cancel button for one of the slower jobs.
+        response = response.forms[
+            'gcb-cancel-analytics-job-peer_review_stats'].submit().follow()
+
+        # Verify that page shows job was canceled.
+        assert_contains('error updating peer review statistics', response.body)
+        assert_contains('Canceled by ' + email, response.body)
+
+        # We should now have our update-statistics button back.
+        self.assertIsNotNone(response.forms['gcb-compute-student-stats'])
+
+        # Should also have a button to run the canceled job; click that.
+        response = response.forms[
+            'gcb-run-analytics-job-peer_review_stats'].submit().follow()
+
+        # All jobs should now again be running, and update-all button gone.
+        with self.assertRaises(KeyError):
+            response = response.forms['gcb-compute-student-stats']
+
+    def test_cancel_map_reduce(self):
+        email = 'admin@google.com'
+        actions.login(email, is_admin=True)
+        response = self.get('dashboard?action=analytics')
+        response = response.forms[
+            'gcb-run-analytics-job-peer_review_stats'].submit().follow()
+
+        # Launch 1st stage of map/reduce job; we must do this in order to
+        # get the pipeline woken up enough to have built a root pipeline
+        # record.  Without this, we do not have an ID to use when canceling.
+        self.execute_all_deferred_tasks(iteration_limit=1)
+
+        # Cancel the job.
+        response = response.forms[
+            'gcb-cancel-analytics-job-peer_review_stats'].submit().follow()
+        assert_contains('Canceled by ' + email, response.body)
+
+        # Now permit any pending tasks to complete, and expect the job's
+        # status message to remain at "Canceled by ...".
+        #
+        # If the cancel didn't take effect, the map/reduce should have run to
+        # completion and the job's status would change to completed, changing
+        # the message.  This is verified in
+        # model_jobs.JobOperationsTest.test_killed_job_can_still_complete
+        self.execute_all_deferred_tasks()
+        response = self.get('dashboard?action=analytics')
+        assert_contains('Canceled by ' + email, response.body)
+
     def test_get_entity_id_wrapper_in_progress_works(self):
         """Tests get_entity_id wrappers in progress.ProgressStats."""
         sites.setup_courses('course:/test::ns_test, course:/:/')

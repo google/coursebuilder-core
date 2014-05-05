@@ -209,17 +209,20 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.deactivate()
         super(AppEngineTestBase, self).tearDown()
 
-    def execute_all_deferred_tasks(self, queue_name='default'):
+    def execute_all_deferred_tasks(self, queue_name='default',
+                                   iteration_limit=None):
         """Executes all pending deferred tasks."""
 
         # Outer loop here because some tasks (esp. map/reduce) will enqueue
         # more tasks as part of their operation.
-        while True:
+        while iteration_limit is None or iteration_limit > 0:
             tasks = self.taskq.GetTasks(queue_name)
             if not tasks:
                 break
             for task in tasks:
                 self.task_dispatcher.dispatch_task(task)
+            if iteration_limit:
+                iteration_limit -= 1
 
 
 def create_test_suite(parsed_args):

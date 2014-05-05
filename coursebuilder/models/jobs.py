@@ -17,7 +17,7 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import ast
-from datetime import datetime
+import datetime
 import logging
 import time
 import traceback
@@ -27,11 +27,12 @@ import entities
 from mapreduce import base_handler
 from mapreduce import input_readers
 from mapreduce import mapreduce_pipeline
+from mapreduce.lib.pipeline import pipeline
 import transforms
-
 from common.utils import Namespace
 
 from google.appengine import runtime
+from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 
@@ -54,17 +55,45 @@ class DurableJobBase(object):
             self.__class__.__name__, self._namespace)
 
     def submit(self):
+        if self.is_active():
+            return -1
         with Namespace(self._namespace):
-            db.run_in_transaction(self.non_transactional_submit)
+            return db.run_in_transaction(self.non_transactional_submit)
 
     def non_transactional_submit(self):
         with Namespace(self._namespace):
-            DurableJobEntity._create_job(self._job_name)
+            return DurableJobEntity._create_job(self._job_name)
 
     def load(self):
         """Loads the last known state of this job from the datastore."""
         with Namespace(self._namespace):
             return DurableJobEntity._get_by_name(self._job_name)
+
+    def cancel(self):
+        job = self.load()
+        if job and not job.has_finished:
+            user = users.get_current_user()
+            message = 'Canceled by %s' % (
+                user.nickname() if user else 'default')
+            duration = int((datetime.datetime.now() - job.updated_on)
+                           .total_seconds())
+
+            with Namespace(self._namespace):
+                # Do work specific to job type outside of our transaction
+                self._cancel_queued_work(job, message)
+
+                # Update our job record
+                return db.run_in_transaction(self._mark_job_canceled,
+                                             job, message, duration)
+        return job
+
+    def _cancel_queued_work(self, unused_job, unused_message):
+        """Override in subclasses to do cancel work outside transaction."""
+        pass
+
+    def _mark_job_canceled(self, job, message, duration):
+        DurableJobEntity._fail_job(
+            self._job_name, job.sequence_num, message, duration)
 
     def is_active(self):
         job = self.load()
@@ -76,52 +105,56 @@ class DurableJob(DurableJobBase):
     def run(self):
         """Override this method to provide actual business logic."""
 
-    def main(self):
+    def main(self, sequence_num):
         """Main method of the deferred task."""
 
         with Namespace(self._namespace):
-            logging.info('Job started: %s', self._job_name)
+            logging.info('Job started: %s w/ sequence number %d',
+                         self._job_name, sequence_num)
 
             time_started = time.time()
             try:
                 db.run_in_transaction(DurableJobEntity._start_job,
-                                      self._job_name)
+                                      self._job_name, sequence_num)
                 result = self.run()
                 db.run_in_transaction(DurableJobEntity._complete_job,
-                                      self._job_name, transforms.dumps(result),
+                                      self._job_name, sequence_num,
+                                      transforms.dumps(result),
                                       long(time.time() - time_started))
                 logging.info('Job completed: %s', self._job_name)
             except (Exception, runtime.DeadlineExceededError) as e:
                 logging.error(traceback.format_exc())
                 logging.error('Job failed: %s\n%s', self._job_name, e)
                 db.run_in_transaction(DurableJobEntity._fail_job,
-                                      self._job_name, traceback.format_exc(),
+                                      self._job_name, sequence_num,
+                                      traceback.format_exc(),
                                       long(time.time() - time_started))
                 raise deferred.PermanentTaskFailure(e)
 
     def non_transactional_submit(self):
-        super(DurableJob, self).non_transactional_submit()
-        with Namespace(self._namespace):
-            deferred.defer(self.main)
+        sequence_num = super(DurableJob, self).non_transactional_submit()
+        deferred.defer(self.main, sequence_num)
+        return sequence_num
 
 
 class MapReduceJobPipeline(base_handler.PipelineBase):
-    def run(self, job_name, kwargs, namespace):
+    def run(self, job_name, sequence_num, kwargs, namespace):
         time_started = time.time()
 
         with Namespace(namespace):
-            db.run_in_transaction(DurableJobEntity._start_job, job_name,
-                                  MapReduceJob.build_output(
-                                      self.root_pipeline_id, []))
+            db.run_in_transaction(
+                DurableJobEntity._start_job, job_name, sequence_num,
+                MapReduceJob.build_output(self.root_pipeline_id, []))
         output = yield mapreduce_pipeline.MapreducePipeline(**kwargs)
-        yield StoreMapReduceResults(job_name, time_started, namespace, output)
+        yield StoreMapReduceResults(job_name, sequence_num, time_started,
+                                    namespace, output)
 
     def finalized(self):
         pass  # Suppress default Pipeline behavior of sending email.
 
 
 class StoreMapReduceResults(base_handler.PipelineBase):
-    def run(self, job_name, time_started, namespace, output):
+    def run(self, job_name, sequence_num, time_started, namespace, output):
         results = []
 
         # TODO(mgainer): Notice errors earlier in pipeline, and mark job
@@ -135,10 +168,10 @@ class StoreMapReduceResults(base_handler.PipelineBase):
                 results.append(ast.literal_eval(item))
             time_completed = time.time()
             with Namespace(namespace):
-                db.run_in_transaction(DurableJobEntity._complete_job, job_name,
-                                      MapReduceJob.build_output(
-                                          self.root_pipeline_id, results),
-                                      long(time_completed - time_started))
+                db.run_in_transaction(
+                    DurableJobEntity._complete_job, job_name, sequence_num,
+                    MapReduceJob.build_output(self.root_pipeline_id, results),
+                    long(time_completed - time_started))
         # Don't know what exceptions are currently, or will be in future,
         # thrown from Map/Reduce or Pipeline libraries; these are under
         # active development.
@@ -147,12 +180,11 @@ class StoreMapReduceResults(base_handler.PipelineBase):
         except Exception, ex:
             time_completed = time.time()
             with Namespace(namespace):
-                db.run_in_transaction(DurableJobEntity._fail_job, job_name,
-                                      MapReduceJob.build_output(
-                                          self.root_pipeline_id,
-                                          results,
-                                          str(ex)),
-                                      long(time_completed - time_started))
+                db.run_in_transaction(
+                    DurableJobEntity._fail_job, job_name, sequence_num,
+                    MapReduceJob.build_output(self.root_pipeline_id, results,
+                                              str(ex)),
+                    long(time_completed - time_started))
 
 
 class MapReduceJob(DurableJobBase):
@@ -196,6 +228,13 @@ class MapReduceJob(DurableJobBase):
                 urllib.urlencode({'root': pipeline_id,
                                   'namespace': namespace,
                                   'xsrf_token': xsrf_token}))
+
+    @staticmethod
+    def _get_root_pipeline_id(job):
+        if not job or not job.output:
+            return None
+        content = transforms.loads(job.output)
+        return content[MapReduceJob._OUTPUT_KEY_ROOT_PIPELINE_ID]
 
     @staticmethod
     def has_status_url(job):
@@ -265,8 +304,8 @@ class MapReduceJob(DurableJobBase):
 
     def non_transactional_submit(self):
         if self.is_active():
-            return
-        super(MapReduceJob, self).non_transactional_submit()
+            return -1
+        sequence_num = super(MapReduceJob, self).non_transactional_submit()
         entity_class_type = self.entity_class()
         entity_class_name = '%s.%s' % (entity_class_type.__module__,
                                        entity_class_type.__name__)
@@ -285,9 +324,20 @@ class MapReduceJob(DurableJobBase):
                 'namespace': self._namespace,
             },
         }
-        mr_pipeline = MapReduceJobPipeline(self._job_name, kwargs,
-                                           self._namespace)
+        mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
+                                           kwargs, self._namespace)
         mr_pipeline.start(base_path='/mapreduce/worker/pipeline')
+        return sequence_num
+
+    def _cancel_queued_work(self, job, message):
+        root_pipeline_id = MapReduceJob._get_root_pipeline_id(job)
+        if root_pipeline_id:
+            pipeline.Pipeline.from_id(root_pipeline_id).abort(message)
+
+    def _mark_job_canceled(self, job, message, duration):
+        DurableJobEntity._fail_job(
+            self._job_name, job.sequence_num,
+            MapReduceJob.build_output(None, None, message), duration)
 
 
 class DurableJobEntity(entities.BaseEntity):
@@ -297,13 +347,15 @@ class DurableJobEntity(entities.BaseEntity):
     execution_time_sec = db.IntegerProperty(indexed=False)
     status_code = db.IntegerProperty(indexed=False)
     output = db.TextProperty(indexed=False)
+    sequence_num = db.IntegerProperty(indexed=False)
 
     @classmethod
     def _get_by_name(cls, name):
         return DurableJobEntity.get_by_key_name(name)
 
     @classmethod
-    def _update(cls, name, status_code, output, execution_time_sec):
+    def _update(cls, name, sequence_num, status_code, output,
+                execution_time_sec):
         """Updates job state in a datastore."""
         assert db.is_in_transaction()
 
@@ -311,10 +363,17 @@ class DurableJobEntity(entities.BaseEntity):
         if not job:
             logging.error('Job was not started or was deleted: %s', name)
             return
-        job.updated_on = datetime.now()
+        if job.sequence_num != sequence_num:
+            logging.warning(
+                'Request to update status code to %d ' % status_code +
+                'for sequence number %d ' % sequence_num +
+                'but job is already on run %d' % job.sequence_num)
+            return
+        job.updated_on = datetime.datetime.now()
         job.execution_time_sec = execution_time_sec
         job.status_code = status_code
-        job.output = output
+        if output:
+            job.output = output
         job.put()
 
     @classmethod
@@ -325,24 +384,30 @@ class DurableJobEntity(entities.BaseEntity):
         job = DurableJobEntity._get_by_name(name)
         if not job:
             job = DurableJobEntity(key_name=name)
-        job.updated_on = datetime.now()
+        job.updated_on = datetime.datetime.now()
         job.execution_time_sec = 0
         job.status_code = STATUS_CODE_QUEUED
         job.output = None
+        if not job.sequence_num:
+            job.sequence_num = 1
+        else:
+            job.sequence_num += 1
         job.put()
+        return job.sequence_num
 
     @classmethod
-    def _start_job(cls, name, output=None):
-        return cls._update(name, STATUS_CODE_STARTED, output, 0)
+    def _start_job(cls, name, sequence_num, output=None):
+        return cls._update(name, sequence_num, STATUS_CODE_STARTED, output, 0)
 
     @classmethod
-    def _complete_job(cls, name, output, execution_time_sec):
-        return cls._update(
-            name, STATUS_CODE_COMPLETED, output, execution_time_sec)
+    def _complete_job(cls, name, sequence_num, output, execution_time_sec):
+        return cls._update(name, sequence_num, STATUS_CODE_COMPLETED,
+                           output, execution_time_sec)
 
     @classmethod
-    def _fail_job(cls, name, output, execution_time_sec):
-        return cls._update(name, STATUS_CODE_FAILED, output, execution_time_sec)
+    def _fail_job(cls, name, sequence_num, output, execution_time_sec):
+        return cls._update(name, sequence_num, STATUS_CODE_FAILED,
+                           output, execution_time_sec)
 
     @property
     def has_finished(self):

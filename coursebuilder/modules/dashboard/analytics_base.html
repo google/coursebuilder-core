@@ -17,7 +17,31 @@
   </ul>
 {% endif %}
 
+<br>
 {{ update_message }}
+
+{% if job_running %}
+  <form id="gcb-cancel-analytics-job-{{ handler_name }}"
+        action="dashboard?action=cancel_analytics_job" method="POST">
+    <input type="hidden" name="xsrf_token" value="{{ xsrf_token_cancel_job }}">
+    <input type="hidden" name="handler_name" value="{{ handler_name }}">
+    <button class="gcb-button" type="submit">Cancel Job</button>
+  </form>
+{% else %}
+  <form id="gcb-run-analytics-job-{{ handler_name }}"
+        action="dashboard?action=run_analytics_job" method="POST">
+    <input type="hidden" name="xsrf_token" value="{{ xsrf_token_run_job }}">
+    <input type="hidden" name="handler_name" value="{{ handler_name }}">
+    <button class="gcb-button" type="submit">
+      {% if stats_calculated %}
+      Re-Run Job
+      {% else %}
+      Run Job
+      {% endif %}
+    </button>
+  </form>
+{% endif %}
+
 
 {% block stats_footer %}
 {% endblock %}
