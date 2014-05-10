@@ -1614,6 +1614,7 @@ class Course(object):
         course_yaml = None
         course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()
+
         if app_context.fs.isfile(course_data_filename):
             course_yaml = app_context.fs.open(course_data_filename)
         if not course_yaml:
@@ -1695,8 +1696,8 @@ class Course(object):
     def get_units_of_type(self, unit_type):
         return [unit for unit in self.get_units() if unit_type == unit.type]
 
-    def get_units_matching_student(self, student):
-        """Gets units whose labels match those on the student.
+    def get_track_matching_student(self, student):
+        """Gets course track units whose labels match those on the student.
 
         If the student has no labels, all units are taken.
         Similarly, if a unit has no labels, it is included.
@@ -1706,13 +1707,20 @@ class Course(object):
         Returns:
           A list of Unit instances.
         """
+        all_ids_of_type = {label.id for label in
+                           models.LabelDAO.get_all_of_type(
+                               models.LabelDTO.LABEL_TYPE_COURSE_TRACK)}
+
         units = self.get_units()
         if student and not student.is_transient:
-            student_matches = set(
-                common_utils.text_to_list(student.labels_for_tracks))
+            student_matches = set([label_id for label_id in
+                                   common_utils.text_to_list(student.labels)
+                                   if int(label_id) in all_ids_of_type])
             for unit in list(units):
-                unit_matches = set(common_utils.text_to_list(
-                    getattr(unit, 'labels', '')))
+                unit_matches = set([label_id for label_id in
+                                    common_utils.text_to_list(
+                                        getattr(unit, 'labels', ''))
+                                    if int(label_id) in all_ids_of_type])
                 if (student_matches and unit_matches and
                     student_matches.isdisjoint(unit_matches)):
                     units.remove(unit)

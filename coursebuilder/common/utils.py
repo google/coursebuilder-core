@@ -33,7 +33,7 @@ def text_to_list(text, splitter=SPLITTER):
 def list_to_text(items):
     if not items:
         return ''
-    return ' '.join(items)
+    return ' '.join([unicode(item) for item in items])
 
 
 class Namespace(object):

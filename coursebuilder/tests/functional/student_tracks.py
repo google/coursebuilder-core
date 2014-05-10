@@ -16,20 +16,20 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-import urllib
-
-from common import crypto
+from common import utils as common_utils
 from controllers import sites
 from models import courses
-from models import transforms
+from models import models
 from tests.functional import actions
 
 COURSE_NAME = 'tracks_test'
+COURSE_TITLE = 'Tracks Test'
+NAMESPACE = 'ns_%s' % COURSE_NAME
 ADMIN_EMAIL = 'admin@foo.com'
 REGISTERED_STUDENT_EMAIL = 'foo@bar.com'
 REGISTERED_STUDENT_NAME = 'John Smith'
 UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
-STUDENT_LABELS_URL = '/%s/rest/student/labels/tracks' % COURSE_NAME
+STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
 COURSE_OVERVIEW_URL = '/%s/course' % COURSE_NAME
 
 
@@ -57,22 +57,27 @@ class StudentTracksTest(actions.TestBase):
     def setUp(self):
         super(StudentTracksTest, self).setUp()
 
-        # Add a course that is real enough to show on /<ns>/course
-        actions.login(ADMIN_EMAIL, is_admin=True)
-        payload_dict = {
-            'name': COURSE_NAME,
-            'title': 'Tracks Test',
-            'admin_email': ADMIN_EMAIL}
-        request = {
-            'payload': transforms.dumps(payload_dict),
-            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'add-course-put')}
-        response = self.testapp.put('/rest/courses/item?%s' % urllib.urlencode(
-            {'request': transforms.dumps(request)}), {})
-        self.assertEquals(response.status_int, 200)
-        sites.setup_courses('course:/%s::ns_%s, course:/:/' % (
-                COURSE_NAME, COURSE_NAME))
-        actions.logout()
+        # Add a course that will show up.
+        actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL, COURSE_TITLE)
+
+        # Add labels
+        with common_utils.Namespace(NAMESPACE):
+            self.foo_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Foo',
+                       'descripton': 'foo',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.bar_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Bar',
+                       'descripton': 'bar',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.baz_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Baz',
+                       'descripton': 'baz',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.quux_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Quux',
+                       'descripton': 'quux',
+                       'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
 
         # Register a student for that course.
         actions.login(REGISTERED_STUDENT_EMAIL)
@@ -88,11 +93,20 @@ class StudentTracksTest(actions.TestBase):
         self._unit_labels_foo = self._course.add_unit()
         self._unit_labels_foo.title = 'Unit Labels: Foo'
         self._unit_labels_foo.now_available = True
-        self._unit_labels_foo.labels = 'foo'
+        self._unit_labels_foo.labels = str(self.foo_id)
         self._unit_labels_foo_bar = self._course.add_unit()
         self._unit_labels_foo_bar.title = 'Unit Labels: Bar, Foo'
         self._unit_labels_foo_bar.now_available = True
-        self._unit_labels_foo_bar.labels = 'bar, foo'
+        self._unit_labels_foo_bar.labels = '%s %s' % (self.bar_id, self.foo_id)
+        self._unit_labels_quux = self._course.add_unit()
+        self._unit_labels_quux.title = 'Unit Labels: Quux'
+        self._unit_labels_quux.now_available = True
+        self._unit_labels_quux.labels = str(self.quux_id)
+        self._unit_labels_foo_quux = self._course.add_unit()
+        self._unit_labels_foo_quux.title = 'Unit Labels: Foo Quux'
+        self._unit_labels_foo_quux.now_available = True
+        self._unit_labels_foo_quux.labels = '%s %s' % (str(self.foo_id),
+                                                       str(self.quux_id))
         self._course.save()
 
     def tearDown(self):
@@ -108,7 +122,7 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_foo(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': 'foo'})
+        self.put(STUDENT_LABELS_URL, {'labels': str(self.foo_id)})
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
@@ -116,7 +130,8 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_foo_bar(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': 'foo, bar'})
+        self.put(STUDENT_LABELS_URL, {'labels': '%s %s' % (
+            self.foo_id, self.bar_id)})
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
@@ -124,7 +139,7 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_bar(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        response = self.put(STUDENT_LABELS_URL, {'labels': 'bar'})
+        response = self.put(STUDENT_LABELS_URL, {'labels': str(self.bar_id)})
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertNotIn(self._unit_labels_foo.title, response.body)
@@ -132,8 +147,29 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_baz(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': 'baz'})
+        self.put(STUDENT_LABELS_URL, {'labels': str(self.baz_id)})
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertNotIn(self._unit_labels_foo.title, response.body)
         self.assertNotIn(self._unit_labels_foo_bar.title, response.body)
+
+    def test_unit_with_general_and_tracks_student_with_no_tracks(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        response = self.put(STUDENT_LABELS_URL, {'labels': str(self.quux_id)})
+        response = self.get(COURSE_OVERVIEW_URL)
+        self.assertIn(self._unit_labels_quux.title, response.body)
+        self.assertIn(self._unit_labels_foo_quux.title, response.body)
+
+    def test_unit_with_general_and_tracks_student_with_matching_tracks(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        response = self.put(STUDENT_LABELS_URL, {'labels': str(self.foo_id)})
+        response = self.get(COURSE_OVERVIEW_URL)
+        self.assertIn(self._unit_labels_quux.title, response.body)
+        self.assertIn(self._unit_labels_foo_quux.title, response.body)
+
+    def test_unit_with_general_and_tracks_student_with_mismatched_tracks(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        response = self.put(STUDENT_LABELS_URL, {'labels': str(self.bar_id)})
+        response = self.get(COURSE_OVERVIEW_URL)
+        self.assertIn(self._unit_labels_quux.title, response.body)
+        self.assertNotIn(self._unit_labels_foo_quux.title, response.body)

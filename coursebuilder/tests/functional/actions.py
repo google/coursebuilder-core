@@ -22,17 +22,22 @@ import logging
 import os
 import re
 import urllib
+import yaml
 
 import appengine_config
+from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 import main
 from models import config
+from models import courses
 from models import custom_modules
 from models import transforms
+from models import vfs
 from tests import suite
 
 from google.appengine.api import namespace_manager
+from google.appengine.api import users
 
 
 # All URLs referred to from all the pages.
@@ -771,3 +776,79 @@ class Permissions(object):
             browser, Permissions.get_unenrolled_student_allowed_pages())
         assert_all_fail(
             browser, Permissions.get_unenrolled_student_denied_pages())
+
+
+def update_course_config(name, settings):
+    """Merge settings into the saved course.yaml configuration.
+
+    Args:
+      name: Name of the course.  E.g., 'my_test_course'.
+      settings: A nested dict of name/value settings.  Names for items here
+          can be found in modules/dashboard/course_settings.py in
+          create_course_registry.  See below in simple_add_course()
+          for an example.
+    Returns:
+      Context object for the modified course.
+    """
+    site_type = 'course'
+    namespace = 'ns_%s' % name
+    slug = '/%s' % name
+    folder = '/'
+    rule = '%s:%s::%s' % (site_type, slug, namespace)
+
+    fs = vfs.DatastoreBackedFileSystem(
+        ns=namespace,
+        logical_home_folder=appengine_config.BUNDLE_ROOT,
+        inherits_from=vfs.LocalReadOnlyFileSystem(
+            logical_home_folder=folder),
+        inheritable_folders=sites.GCB_INHERITABLE_FOLDER_NAMES)
+    context = sites.ApplicationContext(site_type, slug, folder, namespace,
+                                       vfs.AbstractFileSystem(fs), rule)
+    environ = courses.Course.get_environ(context)
+    environ = courses.deep_dict_merge(settings,
+                                      courses.Course.get_environ(context))
+    content = yaml.safe_dump(environ)
+    with common_utils.Namespace(namespace):
+        fs.put(fs.physical_to_logical('course.yaml'),
+               vfs.string_to_stream(unicode(content)))
+
+    course_config = config.Registry.test_overrides.get(
+        sites.GCB_COURSES_CONFIG.name, 'course:/:/')
+    if rule not in course_config:
+        course_config = '%s, %s' % (rule, course_config)
+        sites.setup_courses(course_config)
+    return context
+
+
+def update_course_config_as_admin(name, admin_email, settings):
+    """Log in as admin and merge settings into course.yaml."""
+
+    prev_user = users.get_current_user()
+    if not prev_user:
+        login(admin_email, is_admin=True)
+    elif prev_user.email() != admin_email:
+        logout()
+        login(admin_email, is_admin=True)
+
+    ret = update_course_config(name, settings)
+
+    if not prev_user:
+        logout()
+    elif prev_user and prev_user.email() != admin_email:
+        logout()
+        login(prev_user.email())
+    return ret
+
+
+def simple_add_course(name, admin_email, title):
+    """Convenience wrapper to add an active course."""
+
+    return update_course_config_as_admin(
+        name, admin_email, {
+            'course': {
+                'title': title,
+                'admin_user_emails': admin_email,
+                'now_available': True,
+                'browsable': True,
+                },
+            })

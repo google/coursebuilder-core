@@ -16,8 +16,6 @@
 
 __author__ = 'mgainer@google.com (Mike Gainer)'
 
-import re
-
 from common import utils as common_utils
 from controllers import utils
 import models
@@ -26,99 +24,96 @@ from models import transforms
 from google.appengine.api import users
 
 PARAMETER_LABELS = 'labels'
-STUDENT_LABELS_URL = '/rest/student/labels/'
-
-GROUP_TO_PROPERTY = {
-    'tracks': models.Student.labels_for_tracks,
-    # Extend when we need more kinds of labels.  This should be the
-    # only place where a new label type needs to be registered; code below
-    # is done in terms of the property accessor objects listed here.
-}
+STUDENT_LABELS_URL = '/rest/student/labels'
 
 
 class StudentLabelsRestHandler(utils.ApplicationHandler):
     """Allow web pages to mark students as having labels."""
 
     def get(self):
-        student, group = self._setup()
-        if not student or not group:
+        student = self._setup()
+        if not student:
             return
-
-        return self._send_response(student, group)
+        label_ids = self._get_existing_label_ids(student)
+        return self._send_response(student, label_ids)
 
     def put(self):
-        student, group = self._setup()
-        if not student or not group:
+        student = self._setup()
+        if not student:
             return
-
-        labels = common_utils.list_to_text(
-            common_utils.text_to_list(self.request.get(PARAMETER_LABELS)))
-        self._save_labels(student, group, labels)
-        return self._send_response(student, group)
+        request_ids = self._get_request_label_ids()
+        if not self._request_label_ids_ok(request_ids):
+            return
+        self._save_labels(student, request_ids)
+        return self._send_response(student, request_ids)
 
     def post(self):
-        student, group = self._setup()
-        if not student or not group:
+        student = self._setup()
+        if not student:
             return
-
-        request_labels = set(
-            common_utils.text_to_list(self.request.get(PARAMETER_LABELS)))
-        existing_labels = set(
-            common_utils.text_to_list(group.__get__(student, models.Student)))
-        existing_labels.update(request_labels)
-        self._save_labels(student, group,
-                          common_utils.list_to_text(existing_labels))
-        return self._send_response(student, group)
+        request_ids = self._get_request_label_ids()
+        if not self._request_label_ids_ok(request_ids):
+            return
+        existing_ids = self._get_existing_label_ids(student)
+        label_ids = existing_ids.union(request_ids)
+        self._save_labels(student, existing_ids.union(label_ids))
+        return self._send_response(student, label_ids)
 
     def delete(self):
-        student, group = self._setup()
-        if not student or not group:
+        student = self._setup()
+        if not student:
             return
 
-        self._save_labels(student, group, '')
-        return self._send_response(student, group)
+        label_ids = []
+        self._save_labels(student, label_ids)
+        return self._send_response(student, label_ids)
 
     def _setup(self):
         user = users.get_current_user()
         if not user:
-            self._send_response(None, None, 403, 'No logged-in user')
-            return None, None
+            self._send_response(None, [], 403, 'No logged-in user')
+            return None
         student = (
             models.StudentProfileDAO.get_enrolled_student_by_email_for(
                 user.email(), self.app_context))
         if not student or not student.is_enrolled:
-            self._send_response(None, None, 403, 'User is not enrolled')
-            return None, None
+            self._send_response(None, [], 403, 'User is not enrolled')
+            return None
+        return student
 
-        group_name = re.sub('.*' + STUDENT_LABELS_URL, '', self.request.path)
-        if not group_name:
-            self._send_response(None, None, 400, 'No label group specified')
-            return None, None
+    def _get_request_label_ids(self):
+        return set([int(l) for l in common_utils.text_to_list(
+            self.request.get(PARAMETER_LABELS))])
 
-        if group_name not in GROUP_TO_PROPERTY:
-            self._send_response(None, None, 400,
-                                'Label group not in: ' + ', '.join(
-                                    GROUP_TO_PROPERTY.keys()))
-            return None, None
+    def _request_label_ids_ok(self, label_ids):
+        all_label_ids = {label.id for label in models.LabelDAO.get_all()}
+        invalid = label_ids.difference(all_label_ids)
+        if invalid:
+            self._send_response(
+                None, [], 400, 'Unknown label id(s): %s' %
+                ([str(label_id) for label_id in invalid]))
+            return False
+        return True
 
-        return student, GROUP_TO_PROPERTY[group_name]
+    def _get_existing_label_ids(self, student):
+        # Prune label IDs that no longer refer to a valid Label object.
+        all_label_ids = {label.id for label in models.LabelDAO.get_all()}
+        existing_labels = set([int(label_id) for label_id in
+                               common_utils.text_to_list(student.labels)])
+        return existing_labels.intersection(all_label_ids)
 
-    def _save_labels(self, student, group, labels):
-        with common_utils.Namespace(self.app_context.get_namespace_name()):
-            group.__set__(student, labels)
-            student.put()
+    def _save_labels(self, student, labels):
+        student.labels = common_utils.list_to_text(labels)
+        student.put()
 
-    def _send_response(self, student, group, status_code=None, message=None):
-        payload = {}
-        if student and group:
-            payload['labels'] = common_utils.text_to_list(
-                group.__get__(student, models.Student))
+    def _send_response(self, student, label_ids, status_code=None,
+                       message=None):
         transforms.send_json_response(
-            self, status_code or 200, message or 'OK', payload)
+            self, status_code or 200, message or 'OK',
+            {'labels': list(label_ids)})
 
 
 def get_namespaced_handlers():
     ret = []
-    for name in GROUP_TO_PROPERTY:
-        ret.append(('/rest/student/labels/' + name, StudentLabelsRestHandler))
+    ret.append((STUDENT_LABELS_URL, StudentLabelsRestHandler))
     return ret
