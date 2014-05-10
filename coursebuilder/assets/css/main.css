@@ -77,7 +77,7 @@ th, td {
 #gcb-nav-y {
   float: left;
   margin: 0 0 120px;
-  width: 14.1104296%;
+  width: 16%;
 }
 
 #gcb-nav-y.gcb-nav-full {
@@ -649,14 +649,15 @@ table.gcb-student-data-table {
 
 /* Styles for the circular progress indicators. */
 .gcb-progress-icon {
-  margin: 2px 7px 0 0;
+  margin: 2px;
   opacity: 0.7;
+  vertical-align: text-top;
 }
 .gcb-progress-empty {
   display: inline-block;
-  height: 14px;
-  margin: 2px 7px 0 0;
-  width: 15px;
+  height: 12px;
+  margin: 0;
+  width: 17px;
 }
 .gcb-progress-icon-holder {
   float: left;
@@ -667,6 +668,48 @@ table.gcb-student-data-table {
 }
 .gcb-activity-title-with-progress {
   margin-left: 35px;
+}
+
+/* Styles for unit names in in the left menu. */
+.left-menu .gcb-unit-title {
+  background-color: #f9f9f9;
+  cursor: pointer;
+}
+
+.left-menu .gcb-top-content {
+  font-size: 11px;
+  line-height: normal;
+  margin: 0px;
+}
+
+.left-menu #gcb-lesson-container {
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  font-size: 11px;
+  line-height: normal;
+}
+
+#gcb-nav-y.left-menu {
+  border-top: 1px solid;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  border-radius: 4px;
+  border-color: #f2f2f2;
+  margin: 9px 0 120px 0;
+}
+
+#gcb-nav-y.left-menu li  {
+  font-size: 11px;
+  line-height: normal;
+}
+
+.gcb-lesson-container-expanded {
+  display: block;
+}
+
+.gcb-lesson-container-collapsed {
+  display: none;
 }
 
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */

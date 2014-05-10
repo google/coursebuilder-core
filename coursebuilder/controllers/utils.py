@@ -197,8 +197,9 @@ def display_short_unit_title(unit):
     if Course.get_environ(app_context)['course'].get(
             'display_unit_title_without_index'):
         return unit.title
-    else:
-        return '%s %s' % (gettext.gettext('Unit'), unit.index)
+    if unit.type != 'U':
+        return unit.title
+    return '%s %s' % (gettext.gettext('Unit'), unit.index)
 
 
 def display_lesson_title(unit, lesson):

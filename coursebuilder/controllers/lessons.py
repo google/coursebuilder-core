@@ -120,6 +120,24 @@ def create_readonly_assessment_params(content, answers):
     return assessment_params
 
 
+def add_course_outline_to_template(handler, student):
+    """Adds course outline with all units, lessons, progress to the template."""
+    _tracker = handler.get_progress_tracker()
+    _tuples = []
+    for _unit in handler.get_track_matching_student(student):
+        _lessons = handler.get_lessons(_unit.unit_id)
+        _lesson_progress = None
+        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+            _lesson_progress = _tracker.get_lesson_progress(
+                student, _unit.unit_id)
+        _tuple = (_unit, _lessons, _lesson_progress)
+        _tuples.append(_tuple)
+
+    handler.template_value['course_outline'] = _tuples
+    handler.template_value['unit_progress'] = _tracker.get_unit_progress(
+        student)
+
+
 class CourseHandler(BaseHandler):
     """Handler for generating course page."""
 
@@ -286,14 +304,12 @@ class UnitHandler(BaseHandler):
                     'unit?unit=%s&lesson=%s' % (
                         unit_id, next_lesson.lesson_id))
 
+        add_course_outline_to_template(self, student)
+
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
-            self.template_value['lesson_progress'] = (
-                self.get_progress_tracker().get_lesson_progress(
-                    student, unit_id))
-
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -361,14 +377,12 @@ class ActivityHandler(BaseHandler):
                 'unit?unit=%s&lesson=%s' % (
                     unit_id, next_lesson.lesson_id))
 
+        add_course_outline_to_template(self, student)
+
         # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
-            self.template_value['lesson_progress'] = (
-                self.get_progress_tracker().get_lesson_progress(
-                    student, unit_id))
-
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.

@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import traceback
 import jinja2
 import safe_dom
 import tags
@@ -89,6 +90,16 @@ def create_jinja_environment(loader, locale=None):
     if locale:
         i18n.get_i18n().set_locale(locale)
         jinja_environment.install_gettext_translations(i18n)
+
+    old_handle_exception = jinja_environment.handle_exception
+
+    def _handle_exception(exc_info=None, rendered=False, source_hint=None):
+        """Handle template exception."""
+        traceback.print_exc(exc_info)
+        result = old_handle_exception(exc_info, rendered, source_hint)
+        return result
+
+    jinja_environment.handle_exception = _handle_exception
 
     return jinja_environment
 

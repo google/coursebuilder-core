@@ -1,133 +1,42 @@
+{% import 'macros.html' as macros %}
 <div class="gcb-nav left-menu" id="gcb-nav-y" role="navigation">
   <ul>
     {{course_info.unit.after_leftnav_begins | safe}}
 
-    {% for lesson in lessons %}
-
-      {% if lesson.now_available or is_course_admin %}
-
-        <li {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}class="active"{% endif %}>
-
-          {% if is_progress_recorded %}
-            <div class="gcb-progress-icon-holder">
-              {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] == 2 %}
-                <img src="assets/lib/completed.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                     class="gcb-progress-icon"
-                     id="progress-completed-{{lesson.lesson_id}}">
-              {% elif lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['html'] == 1 %}
-                <img src="assets/lib/in_progress.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                     class="gcb-progress-icon"
-                     id="progress-inprogress-{{lesson.lesson_id}}">
-              {% else %}
-                <img src="assets/lib/not_started.png"
-                     alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                     title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                     class="gcb-progress-icon"
-                     id="progress-notstarted-{{lesson.lesson_id}}">
-              {% endif %}
-            </div>
-          {% endif %}
-
-          <div class="gcb-lesson-title-with-progress">
-            {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
-              {{ display_lesson_title(unit, lesson) }}
-            {% else %}
-              <a href="unit?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
-                {{ display_lesson_title(unit, lesson) }}
-              </a>
+    {% if not course_info.unit.show_unit_links_in_leftnav %}
+        {% for unit, lessons, lesson_progress in course_outline %}
+            {% if unit_id == unit.unit_id %}
+                {% for lesson in lessons %}
+                    {{ macros.render_lesson_title(
+                         page_type, unit, lesson, lesson_id, lesson_progress,
+                         is_progress_recorded, is_course_admin) }}
+                {% endfor %}
             {% endif %}
-          </div>
-
-        {% if not lesson.now_available and is_course_admin %}
-          <span class="gcb-grayed">
-            (Private)
-          </span>
-        {% endif %}
-
-        {% if lesson.activity and lesson.activity_listed %}
-          <ul>
-            {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-              <li class="active">
-            {% else %}
-              <li>
-            {% endif %}
-                {% if is_progress_recorded %}
-                  <div class="gcb-progress-icon-holder">
-                    {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] == 2 %}
-                      <img src="assets/lib/completed.png"
-                           alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                           title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
-                           class="gcb-progress-icon"
-                           id="progress-completed-{{lesson.lesson_id}}-activity">
-                    {% elif lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] == 1 %}
-                      <img src="assets/lib/in_progress.png"
-                           alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                           title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
-                           class="gcb-progress-icon"
-                           id="progress-inprogress-{{lesson.lesson_id}}-activity">
-                    {% else %}
-                      <img src="assets/lib/not_started.png"
-                           alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                           title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
-                           class="gcb-progress-icon"
-                           id="progress-notstarted-{{lesson.lesson_id}}-activity">
-                    {% endif %}
-                  </div>
-                {% endif %}
-
-                <div class="gcb-activity-title-with-progress">
-                  {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-                    {# I18N: Menu item. #}
-                    {{ gettext('Activity') }}
-                  {% else %}
-                    <a href="activity?unit={{ unit_id }}&lesson={{ lesson.lesson_id }}">
-                      {# I18N: Menu item. #}
-                      {{ gettext('Activity') }}
-                    </a>
-                  {% endif %}
-                </div>
-              </li>
-          </ul>
-        {% endif %}
-
-        </li>
-
-      {% else %}
-        <li>
-          {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
-            <span class="gcb-grayed-active">
-          {% else %}
-            <span class="gcb-grayed">
-          {% endif %}
-
-            {{ lesson.index }} {{ lesson.title }}
-          </span>
-
-          {% if lesson.activity %}
-            <ul>
-              <li>
-                <span class="gcb-progress-empty"></span>
-                {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-                  <span class="gcb-grayed-active">
+        {% endfor %}
+    {% else %}
+        {% for unit, lessons, lesson_progress in course_outline %}
+            {{ macros.render_unit_title(
+                 unit, unit_progress, is_progress_recorded, transient_student,
+                 is_course_admin, unit.type != 'U') }}
+            <div id="gcb-lesson-container"
+                {% if unit_id == unit.unit_id %}
+                    class="gcb-lesson-container-expanded"
                 {% else %}
-                  <span class="gcb-grayed">
-                {% endif %}
-
-                  {# I18N: Menu item. #}
-                  {{ gettext('Activity') }}
-
-                </span>
-              </li>
-            </ul>
-          {% endif %}
-        </li>
-      {% endif %}
-
-    {% endfor %}
+                    class="gcb-lesson-container-collapsed"
+                {% endif%}>
+            {% for lesson in lessons %}
+                {{ macros.render_lesson_title(
+                     page_type, unit, lesson, lesson_id, lesson_progress,
+                     is_progress_recorded, is_course_admin) }}
+            {% endfor %}
+            </div>
+        {% endfor %}
+        <script>
+            $('li.gcb-unit-title').click(function() {
+                $(this).next().toggle('fast');
+            });
+        </script>
+    {% endif %}
 
     {{course_info.unit.before_leftnav_ends | safe}}
   </ul>

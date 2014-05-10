@@ -1791,6 +1791,45 @@ class StudentAspectTest(actions.TestBase):
         assert_does_not_contain('Next Page', response.body)
         assert_contains('End', response.body)
 
+    def test_show_hide_unit_links_on_sidebar(self):
+        """Test display of unit links in side bar."""
+        email = 'test_show_hide_unit_links_on_sidebar@example.com'
+        name = 'Test Show/Hide of Unit Links on Side Bar'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        text_to_check = [
+            'unit?unit=1', 'Unit 1 - ',
+            'unit?unit=3', 'Unit 3 - ',
+            'assessment?name=Mid', 'Mid-course assessment',
+            'unit?unit=1&lesson=5', 'Word order matters',
+            'unit?unit=3&lesson=4', 'OR and quotes'
+            ]
+
+        # The default behavior is to show links to other units and lessons.
+        response = self.get('unit?unit=2')
+        for item in text_to_check:
+            assert_contains(item, response.body)
+
+        # Override course.yaml settings by patching app_context.
+        get_environ_old = sites.ApplicationContext.get_environ
+
+        def get_environ_new(self):
+            environ = get_environ_old(self)
+            environ['unit']['show_unit_links_in_leftnav'] = False
+            return environ
+
+        sites.ApplicationContext.get_environ = get_environ_new
+
+        # Check that now we don't have links to other units and lessons.
+        response = self.get('unit?unit=2')
+        for item in text_to_check:
+            assert_does_not_contain(item, response.body)
+
+        # Clean up app_context.
+        sites.ApplicationContext.get_environ = get_environ_old
+
     def test_show_hide_lesson_navigation(self):
         """Test display of lesson navigation buttons."""
         email = 'test_show_hide_of_lesson_navigation@example.com'
