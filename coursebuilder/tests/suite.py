@@ -40,6 +40,7 @@ import argparse
 import os
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -249,8 +250,10 @@ def create_test_suite(parsed_args):
 
 def start_integration_server(integration_server_start_cmd, modules):
     if modules:
-        fp = open(
-            os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml'), 'w')
+        _fn = os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml')
+        _st = os.stat(_fn)
+        os.chmod(_fn, _st.st_mode | stat.S_IWUSR)
+        fp = open(_fn, 'w')
         fp.writelines([
             'env_variables:\n',
             '  GCB_REGISTERED_MODULES_CUSTOM:\n'])
