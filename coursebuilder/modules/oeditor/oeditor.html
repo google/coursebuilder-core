@@ -476,6 +476,51 @@
     width: auto;
   }
 
+  /*
+   * CSS for label selection.
+   */
+
+  div.label-group-list > span, div.label-group-list a, div.label-group span {
+    display: none;
+  }
+
+  div#formContainer div.label-group-list div.inputEx-Group {
+    margin-left: 0;
+  }
+
+  div#formContainer div.label-group-list div.inputEx-Group fieldset {
+    border-top: none;
+    margin-left: 0;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  div#formContainer div.label-group fieldset {
+    border-top: none;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  div#formContainer div.label-group div.inputEx-fieldWrapper {
+    float: left;
+    display: inline-block;
+  }
+  div#formContainer div.label-group div.inputEx-Field {
+    width: auto;
+    margin-left: 0.5em;
+  }
+
+  div.label-group div.label-description {
+    padding-top: 0.2em;
+    margin-left: 1.0em;
+  }
+
+  div.label-none-in-group {
+    padding-top: 0.33em;
+    margin-left: -3.0em;
+    background-color: #fff
+  }
+
   {% for file in extra_css_files %}
     {% include file %}
   {% endfor %}
@@ -543,4 +588,3 @@
     onPageLoad(cb_global);
   })();
 </script>
-

@@ -886,11 +886,12 @@ class LabelDTO(object):
     # with types added by the CourseBuilder team in future releases.
 
     # Provide consistent naming and labeling for admin UI elements.
-    LabelLabel = collections.namedtuple('LabelLabel', ['name', 'title'])
-    LABEL_LABELS = {
-        LABEL_TYPE_GENERAL: LabelLabel('general', 'General'),
-        LABEL_TYPE_COURSE_TRACK: LabelLabel('course_track', 'Course Track'),
-        }
+    LabelType = collections.namedtuple(
+        'LabelType', ['type', 'name', 'title', 'menu_order'])
+    LABEL_TYPES = [
+        LabelType(LABEL_TYPE_GENERAL, 'general', 'General', 0),
+        LabelType(LABEL_TYPE_COURSE_TRACK, 'course_track', 'Course Track', 1),
+        ]
 
     def __init__(self, the_id, the_dict):
         self.id = the_id

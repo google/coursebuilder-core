@@ -69,8 +69,13 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
             'items marked with this label.'))
         schema.add_property(schema_fields.SchemaField(
             'type', 'Type', 'integer',
+            description='The purpose for which this label will be used. '
+            'E.g., Course Track labels are used to match to labels on '
+            'students to select which units the student will see when '
+            'taking the course.  More types of label will be added '
+            'as more features are added to Course Builder.',
             select_data=[
-                (k, v.title) for k, v in models.LabelDTO.LABEL_LABELS.items()],
+                (lt.type, lt.title) for lt in models.LabelDTO.LABEL_TYPES],
             extra_schema_dict_values={
                 '_type': 'radio',
                 'className': 'label-selection'}))

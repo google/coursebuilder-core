@@ -27,6 +27,8 @@ import yaml
 
 from common import safe_dom
 from common import tags
+from common import utils as common_utils
+from common.schema_fields import FieldArray
 from common.schema_fields import FieldRegistry
 from common.schema_fields import SchemaField
 from controllers import sites
@@ -58,6 +60,59 @@ PUBLISHED_TEXT = 'Public'
 STATUS_ANNOTATION = oeditor.create_bool_select_annotation(
     ['properties', 'is_draft'], 'Status', DRAFT_TEXT,
     PUBLISHED_TEXT, class_name='split-from-main-group')
+
+
+def generate_common_schema(title):
+    common = FieldRegistry(title)
+    common.add_property(SchemaField(
+        'key', 'ID', 'string', editable=False,
+        extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
+    common.add_property(
+        SchemaField('type', 'Type', 'string', editable=False))
+    common.add_property(
+        SchemaField('title', 'Title', 'string', optional=True))
+
+    # Label Groups
+    label = FieldRegistry(None, description='label')
+    label.add_property(SchemaField('id', 'ID', 'integer',
+                                   hidden=True,
+                                   editable=False))
+    label.add_property(SchemaField('checked', None, 'boolean'))
+    label.add_property(SchemaField('title', None, 'string',
+                                   optional=True,
+                                   editable=False))
+    label.add_property(SchemaField('description', None, 'string',
+                                   optional=True,
+                                   editable=False,
+                                   extra_schema_dict_values={
+                                       'className': 'label-description'}))
+    label.add_property(SchemaField('no_labels', None, 'string',
+                                   optional=True,
+                                   editable=False,
+                                   extra_schema_dict_values={
+                                       'className': 'label-none-in-group'}))
+
+    label_group = FieldRegistry('', description='label groups')
+    label_group.add_property(SchemaField('title', None, 'string',
+                                         editable=False))
+    label_group.add_property(FieldArray('labels', None,
+                                        item_type=label,
+                                        extra_schema_dict_values={
+                                            'className': 'label-group'}))
+    common.add_property(
+        FieldArray('label_groups', 'Labels',
+                   item_type=label_group,
+                   extra_schema_dict_values={
+                       'className': 'inputEx-Field label-group-list',
+                       }))
+
+    # Public/Draft status
+    common.add_property(SchemaField('is_draft', 'Status', 'boolean',
+                                    select_data=[(True, DRAFT_TEXT),
+                                                 (False, PUBLISHED_TEXT)],
+                                    extra_schema_dict_values={
+                                        'className': 'split-from-main-group'}))
+    return common
 
 
 # Allowed matchers. Keys of this dict represent internal keys for the matcher
@@ -277,6 +332,56 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         """Applies changes to a unit; modifies unit input argument."""
         raise Exception('Not implemented')
 
+    def unit_to_dict_common(self, unit):
+        return {
+            'key': unit.unit_id,
+            'type': verify.UNIT_TYPE_NAMES[unit.type],
+            'title': unit.title,
+            'is_draft': not unit.now_available,
+            'label_groups': self.labels_to_dict(unit),
+            }
+
+    def labels_to_dict(self, unit):
+        all_labels = m_models.LabelDAO.get_all()
+        unit_labels = common_utils.text_to_list(unit.labels)
+        label_groups = []
+        for label_type in sorted(m_models.LabelDTO.LABEL_TYPES,
+                                 lambda a, b: cmp(a.menu_order, b.menu_order)):
+            label_group = []
+            for label in sorted(all_labels, lambda a, b: cmp(a.title, b.title)):
+                if label.type == label_type.type:
+                    label_group.append({
+                        'id': str(label.id),
+                        'title': label.title,
+                        'description': label.description,
+                        'checked': str(label.id) in unit_labels,
+                        })
+            if not label_group:
+                label_group.append({
+                    'id': -1,
+                    'title': '',
+                    'description': '',
+                    'checked': False,
+                    'no_labels': '&lt;No labels of this type&gt;'
+                    })
+            label_groups.append({
+                'title': label_type.title,
+                'labels': label_group,
+                })
+        return label_groups
+
+    def apply_updates_common(self, unit, updated_unit_dict, errors):
+        """Apply changes common to all unit types."""
+        unit.title = updated_unit_dict.get('title')
+        unit.now_available = not updated_unit_dict.get('is_draft')
+
+        labels = set()
+        for label_group in updated_unit_dict['label_groups']:
+            for label in label_group['labels']:
+                if label['checked'] and label['id'] > 0:
+                    labels.add(str(label['id']))
+        unit.labels = common_utils.list_to_text(labels)
+
     def get(self):
         """A GET REST method shared by all unit types."""
         key = self.request.get('key')
@@ -367,122 +472,51 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to unit."""
 
     URI = '/rest/course/unit'
-
-    SCHEMA_JSON = """
-    {
-        "id": "Unit Entity",
-        "type": "object",
-        "description": "Unit",
-        "properties": {
-            "key" : {"type": "string"},
-            "type": {"type": "string"},
-            "title": {"optional": true, "type": "string"},
-            "is_draft": {"type": "boolean"},
-            "labels": {"optional": true, "type": "string"}
-            }
-    }
-    """
-
-    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
-
-    SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Unit'),
-        (['properties', 'key', '_inputex'], {
-            'label': 'ID', '_type': 'uneditable'}),
-        (['properties', 'type', '_inputex'], {
-            'label': 'Type', '_type': 'uneditable'}),
-        (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        (['properties', 'labels', '_inputex'], {
-            'label': 'Labels',
-            'description':
-                'Add labels that apply to this unit.  These are '
-                'used to select units in various contexts.  (E.g., '
-                'setting a student\'s labels to select tracks through '
-                'a course.  Labels may be separated by any combination '
-                'of spaces, tabs, commas, or newlines.'
-            }),
-        STATUS_ANNOTATION]
-
+    SCHEMA = generate_common_schema('Unit')
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+    SCHEMA_DICT = SCHEMA.get_json_schema_dict()
+    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable']
+        'inputex-string', 'inputex-select', 'inputex-uneditable',
+        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
 
     def unit_to_dict(self, unit):
         assert unit.type == 'U'
-        return {
-            'key': unit.unit_id,
-            'type': verify.UNIT_TYPE_NAMES[unit.type],
-            'title': unit.title,
-            'is_draft': not unit.now_available,
-            'labels': unit.labels or '' if hasattr(unit, 'labels') else ''}
+        return self.unit_to_dict_common(unit)
 
-    def apply_updates(self, unit, updated_unit_dict, unused_errors):
-        unit.title = updated_unit_dict.get('title')
-        unit.now_available = not updated_unit_dict.get('is_draft')
-        unit.labels = updated_unit_dict.get('labels')
+    def apply_updates(self, unit, updated_unit_dict, errors):
+        self.apply_updates_common(unit, updated_unit_dict, errors)
+
+
+def generate_link_schema():
+    schema = generate_common_schema('Link')
+    schema.add_property(SchemaField(
+        'url', 'URL', 'string', optional=True,
+        description=messages.LINK_EDITOR_URL_DESCRIPTION))
+    return schema
 
 
 class LinkRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to link."""
 
     URI = '/rest/course/link'
-
-    SCHEMA_JSON = """
-    {
-        "id": "Link Entity",
-        "type": "object",
-        "description": "Link",
-        "properties": {
-            "key" : {"type": "string"},
-            "type": {"type": "string"},
-            "title": {"optional": true, "type": "string"},
-            "url": {"optional": true, "type": "string"},
-            "is_draft": {"type": "boolean"},
-            "labels": {"optional": true, "type": "string"}
-            }
-    }
-    """
-
-    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
-
-    SCHEMA_ANNOTATIONS_DICT = [
-        (['title'], 'Link'),
-        (['properties', 'key', '_inputex'], {
-            'label': 'ID', '_type': 'uneditable'}),
-        (['properties', 'type', '_inputex'], {
-            'label': 'Type', '_type': 'uneditable'}),
-        (['properties', 'title', '_inputex'], {'label': 'Title'}),
-        (['properties', 'url', '_inputex'], {
-            'label': 'URL',
-            'description': messages.LINK_EDITOR_URL_DESCRIPTION}),
-        (['properties', 'labels', '_inputex'], {
-            'label': 'Labels',
-            'description':
-                'Add labels that apply to this unit.  These are '
-                'used to select units in various contexts.  (E.g., '
-                'setting a student\'s labels to select tracks through '
-                'a course.  labels may be separated by any combination '
-                'of spaces, tabs, commas, or newlines.'
-            }),
-        STATUS_ANNOTATION]
-
+    SCHEMA = generate_link_schema()
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+    SCHEMA_DICT = SCHEMA.get_json_schema_dict()
+    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
-        'inputex-string', 'inputex-select', 'inputex-uneditable']
+        'inputex-string', 'inputex-select', 'inputex-uneditable',
+        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
 
     def unit_to_dict(self, unit):
         assert unit.type == 'O'
-        return {
-            'key': unit.unit_id,
-            'type': verify.UNIT_TYPE_NAMES[unit.type],
-            'title': unit.title,
-            'url': unit.href,
-            'is_draft': not unit.now_available,
-            'labels': unit.labels or ''}
+        ret = self.unit_to_dict_common(unit)
+        ret['url'] = unit.href
+        return ret
 
-    def apply_updates(self, unit, updated_unit_dict, unused_errors):
-        unit.title = updated_unit_dict.get('title')
+    def apply_updates(self, unit, updated_unit_dict, errors):
+        self.apply_updates_common(unit, updated_unit_dict, errors)
         unit.href = updated_unit_dict.get('url')
-        unit.now_available = not updated_unit_dict.get('is_draft')
-        unit.labels = updated_unit_dict.get('labels')
 
 
 class ImportCourseRESTHandler(CommonUnitRESTHandler):
@@ -604,23 +638,9 @@ def create_assessment_registry():
     reg = FieldRegistry('Assessment Entity', description='Assessment')
 
     # Course level settings.
-    course_opts = reg.add_sub_registry('assessment', 'Assessment Config')
-    course_opts.add_property(SchemaField(
-        'key', 'ID', 'string', editable=False,
-        extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
-    course_opts.add_property(
-        SchemaField('type', 'Type', 'string', editable=False))
-    course_opts.add_property(
-        SchemaField('title', 'Title', 'string', optional=True))
+    course_opts = generate_common_schema('Assessment Config')
     course_opts.add_property(
         SchemaField('weight', 'Weight', 'string', optional=True))
-    course_opts.add_property(
-        SchemaField('labels', 'Labels', 'string', optional=True,
-                    description='Add labels that apply to this unit.  These '
-                    'are used to select units in various contexts.  (E.g., '
-                    'setting a student\'s labels to select tracks through '
-                    'a course.  Labels may be separated by any combination '
-                    'of spaces, tabs, commas, or newlines.'))
     course_opts.add_property(SchemaField(
         'content', 'Assessment Content', 'text', optional=True,
         description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),
@@ -644,11 +664,8 @@ def create_assessment_registry():
         SchemaField(workflow_key(courses.GRADER_KEY), 'Grading Method',
                     'string',
                     select_data=ALLOWED_GRADERS_NAMES.items()))
-    course_opts.add_property(
-        SchemaField('is_draft', 'Status', 'boolean',
-                    select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
-                    extra_schema_dict_values={
-                        'className': 'split-from-main-group'}))
+    reg.add_sub_registry('assessment', 'Assessment Config',
+                         registry=course_opts)
 
     review_opts = reg.add_sub_registry(
         'review_opts', 'Review Config',
@@ -704,7 +721,7 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
         'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
-        'inputex-checkbox']
+        'inputex-checkbox', 'inputex-list']
 
     def _get_assessment_path(self, unit):
         return self.app_context.fs.impl.physical_to_logical(
@@ -745,24 +762,21 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         else:
             review_due_date = ''
 
+        unit_common = self.unit_to_dict_common(unit)
+        unit_common.update({
+            'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
+            'content': content,
+            'html_content': (unit.html_content or ''
+                             if hasattr(unit, 'html_content') else ''),
+            'html_check_answers': (
+                unit.html_check_answers
+                if hasattr(unit, 'html_check_answers') else False),
+            workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
+                submission_due_date),
+            workflow_key(courses.GRADER_KEY): workflow.get_grader(),
+            })
         return {
-            'assessment': {
-                'key': unit.unit_id,
-                'type': verify.UNIT_TYPE_NAMES[unit.type],
-                'title': unit.title,
-                'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
-                'labels': unit.labels or '',
-                'content': content,
-                'html_content': (unit.html_content or ''
-                                 if hasattr(unit, 'html_content') else ''),
-                'html_check_answers': (
-                    unit.html_check_answers
-                    if hasattr(unit, 'html_check_answers') else False),
-                'is_draft': not unit.now_available,
-                workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
-                    submission_due_date),
-                workflow_key(courses.GRADER_KEY): workflow.get_grader(),
-                },
+            'assessment': unit_common,
             'review_opts': {
                 workflow_key(courses.MATCHER_KEY): workflow.get_matcher(),
                 workflow_key(courses.REVIEW_DUE_DATE_KEY): review_due_date,
@@ -783,17 +797,13 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         entity_dict = {}
         AssessmentRESTHandler.REG.convert_json_to_entity(
             updated_unit_dict, entity_dict)
-        unit.title = entity_dict.get('title')
-
+        self.apply_updates_common(unit, entity_dict, errors)
         try:
             unit.weight = int(entity_dict.get('weight'))
             if unit.weight < 0:
                 errors.append('The weight must be a non-negative integer.')
         except ValueError:
             errors.append('The weight must be an integer.')
-        unit.labels = entity_dict.get('labels')
-
-        unit.now_available = not entity_dict.get('is_draft')
         course = courses.Course(self)
         content = entity_dict.get('content')
         if content:
