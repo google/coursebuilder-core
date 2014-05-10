@@ -3,10 +3,17 @@
 #}
 {% macro render_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
-    include_link=True) -%}
+    include_link, css_class) -%}
+
+    {% if is_progress_recorded %}
+      {% set progress_class = 'gcb-progress-empty' %}
+    {% else %}
+      {% set progress_class = 'gcb-progress-none' %}
+    {% endif %}
+
     {% if unit.now_available or is_course_admin %}
       {% if unit.type == 'A' %}
-        <li class='gcb-unit-title'><p class="gcb-top-content">
+        <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if not transient_student %}
             {% if progress[unit.unit_id] > 0 %}
               <img src="assets/lib/completed.png"
@@ -22,7 +29,7 @@
                    id="progress-notstarted-{{unit.unit_id}}">
             {% endif %}
           {% else %}
-            <span class="gcb-progress-empty"></span>
+            <span class="{{ progress_class }}"></span>
           {% endif %}
           {% if include_link %}
               <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
@@ -36,7 +43,7 @@
             </p></li>
             <li>
               <p class="gcb-top-content">
-                <span class="gcb-progress-empty"></span>
+                <span class="{{ progress_class }}"></span>
 
               {% if not transient_student %}
                 {% if unit.review_progress == 2 %}
@@ -79,7 +86,7 @@
           {% endif %}
 
       {% elif unit.type == 'U' %}
-        <li class='gcb-unit-title'><p class="gcb-top-content">
+        <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if is_progress_recorded and not transient_student %}
             {% if progress[unit.unit_id] == 2 %}
               <img src="assets/lib/completed.png"
@@ -101,7 +108,7 @@
                    id="progress-notstarted-{{unit.unit_id}}">
             {% endif %}
           {% else %}
-            <span class="gcb-progress-empty"></span>
+            <span class="{{ progress_class }}"></span>
           {% endif %}
 
           {% if include_link %}
@@ -110,18 +117,18 @@
               {{ display_unit_title(unit) }}
           {% endif %}
       {% elif unit.type == 'O' %}
-        <li class='gcb-unit-title'>
+        <li class='{{ css_class }}'>
           <p class="gcb-top-content">
-            <span class="gcb-progress-empty"></span>
+            <span class="{{ progress_class }}"></span>
             {% if include_link %}
                 <a href="{{ unit.href }}"> {{ unit.title }}</a>
             {% else %}
                 {{ unit.title }}
             {% endif %}
       {% else %}
-        <li class='gcb-unit-title'>
+        <li class='{{ css_class }}'>
           <p class="gcb-top-content">
-            <span class="gcb-progress-empty"></span>
+            <span class="{{ progress_class }}"></span>
             Error: unit type not recognized.
       {% endif %}
           {% if not unit.now_available and is_course_admin %}
@@ -139,6 +146,12 @@
 {% macro render_lesson_title(
     page_type, unit, lesson, lesson_id, lesson_progress, is_progress_recorded, is_course_admin) -%}
   {% if lesson.now_available or is_course_admin %}
+
+    {% if is_progress_recorded %}
+      {% set progress_class = 'gcb-progress-empty' %}
+    {% else %}
+      {% set progress_class = 'gcb-progress-none' %}
+    {% endif %}
 
     <li {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}class="active"{% endif %}>
 
@@ -166,7 +179,13 @@
         </div>
       {% endif %}
 
-      <div class="gcb-lesson-title-with-progress">
+      <div
+        {% if is_progress_recorded %}
+          class="gcb-lesson-title-with-progress"
+        {% else %}
+          class="gcb-lesson-title-no-progress"
+        {% endif %}
+      >
         {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
           {{ display_lesson_title(unit, lesson) }}
         {% else %}
@@ -213,7 +232,13 @@
               </div>
             {% endif %}
 
-            <div class="gcb-activity-title-with-progress">
+            <div
+              {% if is_progress_recorded %}
+                class="gcb-activity-title-with-progress"
+              {% else %}
+                class="gcb-activity-title-no-progress"
+              {% endif %}
+            >
               {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
                 {# I18N: Menu item. #}
                 {{ gettext('Activity') }}
@@ -244,7 +269,7 @@
       {% if lesson.activity %}
         <ul>
           <li>
-            <span class="gcb-progress-empty"></span>
+            <span class="{{ progress_class }}"></span>
             {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
               <span class="gcb-grayed-active">
             {% else %}

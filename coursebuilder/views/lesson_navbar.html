@@ -17,12 +17,15 @@
         {% for unit, lessons, lesson_progress in course_outline %}
             {{ macros.render_unit_title(
                  unit, unit_progress, is_progress_recorded, transient_student,
-                 is_course_admin, unit.type != 'U') }}
+                 is_course_admin, unit.type != 'U',
+                 'gcb-unit-title expanded'
+                     if unit_id == unit.unit_id else 'gcb-unit-title'
+                         if lessons else 'gcb-unit-title expanded leaf') }}
             <div id="gcb-lesson-container"
                 {% if unit_id == unit.unit_id %}
-                    class="gcb-lesson-container-expanded"
+                    class="gcb-lesson-container expanded"
                 {% else %}
-                    class="gcb-lesson-container-collapsed"
+                    class="gcb-lesson-container"
                 {% endif%}>
             {% for lesson in lessons %}
                 {{ macros.render_lesson_title(
@@ -33,7 +36,16 @@
         {% endfor %}
         <script>
             $('li.gcb-unit-title').click(function() {
-                $(this).next().toggle('fast');
+                if ($(this).hasClass('leaf')) {
+                    return;
+                }
+                if ($(this).hasClass('expanded')) {
+                    $(this).removeClass('expanded');
+                    $(this).next().removeClass('expanded');
+                } else {
+                    $(this).addClass('expanded');
+                    $(this).next().addClass('expanded');
+                }
             });
         </script>
     {% endif %}

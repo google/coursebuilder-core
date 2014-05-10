@@ -51,7 +51,7 @@
               {% for unit in units %}
                 {{ macros.render_unit_title(
                     unit, progress, is_progress_recorded,
-                    transient_student, is_course_admin) }}
+                    transient_student, is_course_admin, True) }}
               {% endfor %}
             </ul>
           </div>

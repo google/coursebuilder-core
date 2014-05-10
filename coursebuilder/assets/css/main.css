@@ -659,6 +659,9 @@ table.gcb-student-data-table {
   margin: 0;
   width: 17px;
 }
+.gcb-progress-none {
+  display: none;
+}
 .gcb-progress-icon-holder {
   float: left;
   width: 20px;
@@ -669,27 +672,14 @@ table.gcb-student-data-table {
 .gcb-activity-title-with-progress {
   margin-left: 35px;
 }
+.gcb-lesson-title-no-progress {
+  margin-left: 2px;
+}
+.gcb-activity-title-no-progress {
+  margin-left: 17px;
+}
 
 /* Styles for unit names in in the left menu. */
-.left-menu .gcb-unit-title {
-  background-color: #f9f9f9;
-  cursor: pointer;
-}
-
-.left-menu .gcb-top-content {
-  font-size: 11px;
-  line-height: normal;
-  margin: 0px;
-}
-
-.left-menu #gcb-lesson-container {
-  margin: 0px;
-  padding: 0px;
-  width: 100%;
-  font-size: 11px;
-  line-height: normal;
-}
-
 #gcb-nav-y.left-menu {
   border-top: 1px solid;
   -moz-border-radius: 4px;
@@ -698,18 +688,36 @@ table.gcb-student-data-table {
   border-color: #f2f2f2;
   margin: 9px 0 120px 0;
 }
-
-#gcb-nav-y.left-menu li  {
+#gcb-nav-y.left-menu .gcb-top-content {
+  font-size: 11px;
+  line-height: normal;
+  margin: 0px;
+}
+#gcb-nav-y.left-menu #gcb-lesson-container {
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  font-size: 11px;
+  line-height: normal;
+  display: none;
+}
+#gcb-nav-y.left-menu #gcb-lesson-container.expanded {
+  display: block;
+}
+#gcb-nav-y.left-menu #gcb-lesson-container > li {
+  padding-left: 12px;
+}
+#gcb-nav-y.left-menu li {
   font-size: 11px;
   line-height: normal;
 }
-
-.gcb-lesson-container-expanded {
-  display: block;
+#gcb-nav-y.left-menu li.gcb-unit-title {
+  background-color: #f9f9f9;
+  cursor: pointer;
+  padding-left: 2px;
 }
-
-.gcb-lesson-container-collapsed {
-  display: none;
+#gcb-nav-y.left-menu li.gcb-unit-title.expanded {
+  background-color: #ffffff;
 }
 
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */
