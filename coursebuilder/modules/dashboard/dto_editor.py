@@ -31,10 +31,10 @@ from modules.oeditor import oeditor
 
 class BaseDatastoreAssetEditor(utils.ApplicationHandler):
 
-    def get_form(self, rest_handler, key=''):
+    def get_form(self, rest_handler, key, exit_url):
         """Build the Jinja template for the editor form."""
         rest_url = self.canonicalize_url(rest_handler.URI)
-        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        exit_url = self.canonicalize_url(exit_url)
         if key:
             delete_url = '%s?%s' % (
                 self.canonicalize_url(rest_handler.URI),

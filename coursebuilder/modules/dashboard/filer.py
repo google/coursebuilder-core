@@ -33,6 +33,7 @@ from models import courses
 from models import roles
 from models import transforms
 from models import vfs
+from modules.dashboard import utils as dashboard_utils
 from modules.oeditor import oeditor
 
 from google.appengine.api import users
@@ -154,8 +155,10 @@ class FileManagerAndEditor(ApplicationHandler):
     def get_add_asset(self):
         """Show an upload dialog for assets."""
 
+        tab_name = self.request.get('tab')
         key = self._get_normalized_base()
-        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        exit_url = self.canonicalize_url(
+            dashboard_utils.build_assets_url(tab_name))
         rest_url = self.canonicalize_url(
             AssetItemRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
@@ -170,14 +173,16 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values['page_title'] = self.format_title('Upload Asset')
         template_values['page_description'] = messages.UPLOAD_ASSET_DESCRIPTION
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        self.render_page(template_values, 'assets', tab_name)
 
     def get_delete_asset(self):
         """Show an review/delete page for assets."""
 
         uri = self.request.get('uri')
+        tab_name = self.request.get('tab')
 
-        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        exit_url = self.canonicalize_url(
+            dashboard_utils.build_assets_url(tab_name))
         rest_url = self.canonicalize_url(
             AssetUriRESTHandler.URI)
         delete_url = self._get_delete_url(
@@ -192,13 +197,14 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values = {}
         template_values['page_title'] = self.format_title('View Asset')
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        self.render_page(template_values, 'assets', tab_name)
 
     def get_manage_text_asset(self):
         """Show an edit/save/delete/revert form for a text asset."""
         assert is_editable_fs(self.app_context)
         uri = self.request.get('uri')
         assert uri
+        tab_name = self.request.get('tab')
 
         asset = self.app_context.fs.impl.get(
             os.path.join(appengine_config.BUNDLE_ROOT, uri))
@@ -210,7 +216,8 @@ class FileManagerAndEditor(ApplicationHandler):
         except IOError:
             asset_in_local_fs = False
 
-        exit_url = self.canonicalize_url('/dashboard?action=assets')
+        exit_url = self.canonicalize_url(
+            dashboard_utils.build_assets_url(tab_name))
         rest_url = self.canonicalize_url(TextAssetRESTHandler.URI)
 
         delete_button_caption = 'Delete'
@@ -250,7 +257,7 @@ class FileManagerAndEditor(ApplicationHandler):
         self.render_page({
             'page_title': self.format_title('Edit ' + uri),
             'main_content': form_html,
-        })
+        }, 'assets', tab_name)
 
 
 class TextAssetRESTHandler(BaseRESTHandler):

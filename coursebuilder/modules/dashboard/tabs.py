@@ -23,18 +23,19 @@ class Registry(object):
 
     class _Tab(object):
 
-        def __init__(self, name, title, visualizations):
+        def __init__(self, group, name, title, contents):
             if not re.match('^[a-z0-9_]+$', name):
-                raise ValueError('Sub-tabs under Dashboard->Analytics must '
+                raise ValueError('Sub-tabs under Dashboard must '
                                  'have names consisting only of lowercase '
                                  'letters, numbers, and underscore.')
-            if len(visualizations) < 1:
-                raise ValueError('Sub-tabs under Dashboard->Analytics must '
-                                 'contain at least one visualization.')
-
+            self._group = group
             self._name = name
             self._title = title
-            self._visualizations = visualizations
+            self._contents = contents
+
+        @property
+        def group(self):
+            return self._group
 
         @property
         def name(self):
@@ -45,28 +46,26 @@ class Registry(object):
             return self._title
 
         @property
-        def visualizations(self):
-            return self._visualizations
+        def contents(self):
+            return self._contents
 
-    _tabs = []
+    _tabs_by_group = {}
 
     @classmethod
-    def register(cls, tab_name, tab_title, visualizations):
-        if cls._get_tab(tab_name):
+    def register(cls, group_name, tab_name, tab_title, contents=None):
+        if cls.get_tab(group_name, tab_name):
             raise ValueError(
-                'There is already an analytics sub-tab named "%s" registered.' %
-                tab_name)
-        cls._tabs.append(cls._Tab(tab_name, tab_title, visualizations))
+                'There is already a sub-tab named "%s" ' % tab_name +
+                'registered in group %s.' % group_name)
+        tab = cls._Tab(group_name, tab_name, tab_title, contents)
+        cls._tabs_by_group.setdefault(group_name, []).append(tab)
 
     @classmethod
-    def _get_tab(cls, name):
-        matches = [tab for tab in cls._tabs if tab.name == name]
+    def get_tab(cls, group_name, tab_name):
+        matches = [tab for tab in cls._tabs_by_group.get(group_name, [])
+                   if tab.name == tab_name]
         return matches[0] if matches else None
 
     @classmethod
-    def _get_registered_tabs(cls):
-        return cls._tabs
-
-    @classmethod
-    def _get_default_tab_name(cls):
-        return cls._tabs[0].name
+    def get_tab_group(cls, group_name):
+        return cls._tabs_by_group.get(group_name, None)

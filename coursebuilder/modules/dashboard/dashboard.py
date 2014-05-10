@@ -65,7 +65,7 @@ from models import vfs
 from models.models import LabelDAO
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
-from modules.dashboard import analytics_tabs
+from modules.dashboard import tabs
 from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
 from modules.search.search import SearchDashboardHandler
@@ -173,8 +173,10 @@ class DashboardHandler(
             alerts.append('The course is not publicly available.')
         return '\n'.join(alerts)
 
-    def _get_top_nav(self):
-        current_action = self.request.get('action')
+    def _get_top_nav(self, in_action, in_tab):
+        current_action = in_action or self.request.get('action')
+
+        nav_bars = []
         nav = safe_dom.NodeList()
         for action, title in self.nav_mappings:
 
@@ -201,14 +203,26 @@ class DashboardHandler(
                 'course-builder-forum/general-troubleshooting'),
             target='_blank'
         ).add_text('Support'))
+        nav_bars.append(nav)
 
-        return nav
+        tab_group = tabs.Registry.get_tab_group(current_action)
+        if tab_group:
+            tab_name = in_tab or self.request.get('tab') or tab_group[0].name
+            sub_nav = safe_dom.NodeList()
+            for tab in tab_group:
+                sub_nav.append(
+                    safe_dom.A(
+                        'dashboard?action=%s&tab=%s' % (
+                            current_action, tab.name),
+                        className=('selected' if tab.name == tab_name else ''))
+                    .add_text(tab.title))
+            nav_bars.append(sub_nav)
+        return nav_bars
 
-    def render_page(self, template_values):
+    def render_page(self, template_values, in_action=None, in_tab=None):
         """Renders a page using provided template values."""
-        if 'top_nav' not in template_values:
-            template_values['top_nav'] = []
-        template_values['top_nav'].insert(0, self._get_top_nav())
+
+        template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
             safe_dom.Text('%s | ' % users.get_current_user().email())
@@ -549,7 +563,7 @@ class DashboardHandler(
         return sorted(result)
 
     def list_and_format_file_list(
-        self, title, subfolder,
+        self, title, subfolder, tab_name,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
         edit_url_template=None, merge_local_files=False, sub_title=None,
         all_paths=None):
@@ -586,7 +600,8 @@ class DashboardHandler(
             # add actions if available
             if (edit_url_template and
                 self.app_context.fs.impl.is_read_write()):
-                edit_url = edit_url_template % urllib.quote(filename)
+                edit_url = edit_url_template % (tab_name,
+                                                urllib.quote(filename))
                 li.add_child(
                     safe_dom.Entity('&nbsp;')
                 ).add_child(
@@ -602,7 +617,9 @@ class DashboardHandler(
                 safe_dom.Element(
                     'a', className='gcb-button gcb-pull-right',
                     href='dashboard?%s' % urllib.urlencode(
-                        {'action': 'add_asset', 'base': subfolder})
+                        {'action': 'add_asset',
+                         'tab': tab_name,
+                         'base': subfolder})
                 ).add_text(
                     'Upload to ' +
                     filer.strip_leading_and_trailing_slashes(subfolder))
@@ -752,84 +769,82 @@ class DashboardHandler(
 
         all_paths = self.app_context.fs.list(
             sites.abspath(self.app_context.get_home_folder(), '/'))
-
-        def inherits_from(folder):
-            return '< inherited from %s >' % folder
-
-        text_asset_url_template = 'dashboard?action=manage_text_asset&uri=%s'
-
+        tab = tabs.Registry.get_tab(
+            'assets', self.request.get('tab') or 'questions')
         items = safe_dom.NodeList()
-        for asset_lister in self.contrib_asset_listers:
-            items.append(asset_lister(self))
-
-        items.append(
-            self.list_questions()
-        ).append(
-            self.list_question_groups()
-        ).append(
-            self.list_labels()
-        ).append(
-            self.list_and_format_file_list(
-                'Assessments', '/assets/js/', links=True,
-                prefix='assets/js/assessment-', all_paths=all_paths)
-        ).append(
-            self.list_and_format_file_list(
-                'Activities', '/assets/js/', links=True,
-                prefix='assets/js/activity-', all_paths=all_paths)
-        ).append(
-            self.list_and_format_file_list(
-                'Images & Documents', '/assets/img/', links=True, upload=True,
-                edit_url_template='dashboard?action=delete_asset&uri=%s',
-                caption_if_empty=inherits_from('/assets/img/'),
-                all_paths=all_paths)
-        ).append(
-            self.list_and_format_file_list(
-                'Cascading Style Sheets', '/assets/css/', links=True,
-                upload=True, edit_url_template=text_asset_url_template,
-                caption_if_empty=inherits_from('/assets/css/'),
-                merge_local_files=True, all_paths=all_paths)
-        ).append(
-            self.list_and_format_file_list(
-                'JavaScript Libraries', '/assets/lib/', links=True,
-                upload=True, edit_url_template=text_asset_url_template,
-                caption_if_empty=inherits_from('/assets/lib/'),
-                merge_local_files=True, all_paths=all_paths)
-        ).append(
-            self.list_and_format_file_list(
-                'View Templates', '/views/', upload=True,
-                edit_url_template=text_asset_url_template,
-                caption_if_empty=inherits_from('/views/'),
-                merge_local_files=True, all_paths=all_paths)
-        )
-
+        tab.contents(self, items, tab, all_paths)
+        title_text = 'Assets > %s' % tab.title
         template_values = {
-            'page_title': self.format_title('Assets'),
-            'page_title_linked': self.format_title('Assets', as_link=True),
+            'page_title': self.format_title(title_text),
+            'page_title_linked': self.format_title(title_text, as_link=True),
             'page_description': messages.ASSETS_DESCRIPTION,
             'main_content': items,
         }
         self.render_page(template_values)
 
+    def filer_url_template(self):
+        return 'dashboard?action=manage_text_asset&tab=%s&uri=%s'
+
+    def get_assets_contrib(self, items, tab, all_paths):
+        for asset_lister in self.contrib_asset_listers:
+            items.append(asset_lister(self))
+
+    def get_assets_questions(self, items, tab, all_paths):
+        items.append(self.list_questions())
+        items.append(self.list_question_groups())
+
+    def get_assets_labels(self, items, tab, all_paths):
+        items.append(self.list_labels())
+
+    def get_assets_assessments(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'Assessments', '/assets/js/', tab.name, links=True,
+            prefix='assets/js/assessment-', all_paths=all_paths))
+
+    def get_assets_activities(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'Activities', '/assets/js/', tab.name, links=True,
+            prefix='assets/js/activity-', all_paths=all_paths))
+
+    def get_assets_images(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'Images & Documents', '/assets/img/', tab.name, links=True,
+            upload=True,
+            edit_url_template='dashboard?action=delete_asset&tab=%s&uri=%s',
+            caption_if_empty='< inherited from /assets/img/ >',
+            all_paths=all_paths))
+
+    def get_assets_css(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'Cascading Style Sheets', '/assets/css/', tab.name, links=True,
+            upload=True, edit_url_template=self.filer_url_template(),
+            caption_if_empty='< inherited from /assets/css/ >',
+            merge_local_files=True, all_paths=all_paths))
+
+    def get_assets_js(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'JavaScript Libraries', '/assets/lib/', tab.name, links=True,
+            upload=True, edit_url_template=self.filer_url_template(),
+            caption_if_empty='< inherited from /assets/lib/ >',
+            merge_local_files=True, all_paths=all_paths))
+
+    def get_assets_templates(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'View Templates', '/views/', tab.name, upload=True,
+            edit_url_template=self.filer_url_template(),
+            caption_if_empty='< inherited from /views/ >',
+            merge_local_files=True, all_paths=all_paths))
+
     def get_analytics(self):
         """Renders course analytics view."""
-        # Package private access to tabs: pylint: disable-msg=protected-access
-        tab_name = self.request.get('tab') or 'students'
-        tab = analytics_tabs.Registry._get_tab(tab_name)
+        tab = tabs.Registry.get_tab('analytics',
+                                    self.request.get('tab') or 'students')
         title_text = 'Analytics > %s' % tab.title
-        top_nav = safe_dom.NodeList()
-        for item in analytics_tabs.Registry._get_registered_tabs():
-            top_nav.append(
-                safe_dom.A(
-                    'dashboard?action=analytics&tab=%s' % item.name,
-                    className=('selected' if tab_name == item.name else ''))
-                .add_text(item.title))
-
         template_values = {
             'page_title': self.format_title(title_text),
             'page_title_linked': self.format_title(title_text, as_link=True),
-            'top_nav': [top_nav],
             'main_content': analytics.generate_display_html(
-                self, crypto.XsrfTokenManager, tab.visualizations),
+                self, crypto.XsrfTokenManager, tab.contents),
             }
         self.render_page(template_values)
 
@@ -865,12 +880,31 @@ def register_module():
         data_source_classes=[
             rest_providers.StudentAssessmentScoresDataSource])
 
-    analytics_tabs.Registry.register('students', 'Students',
-                                     [student_progress, enrollment_assessment])
-    analytics_tabs.Registry.register('questions', 'Questions',
-                                     [multiple_choice_question])
-    analytics_tabs.Registry.register('assessments', 'Assessments',
-                                     [assessment_difficulty])
+    tabs.Registry.register('analytics', 'students', 'Students',
+                           [student_progress, enrollment_assessment])
+    tabs.Registry.register('analytics', 'questions', 'Questions',
+                           [multiple_choice_question])
+    tabs.Registry.register('analytics', 'assessments', 'Assessments',
+                           [assessment_difficulty])
+
+    tabs.Registry.register('assets', 'questions', 'Questions',
+                           DashboardHandler.get_assets_questions)
+    tabs.Registry.register('assets', 'labels', 'Labels',
+                           DashboardHandler.get_assets_labels)
+    tabs.Registry.register('assets', 'assessments', 'Assessments',
+                           DashboardHandler.get_assets_assessments)
+    tabs.Registry.register('assets', 'activities', 'Activities',
+                           DashboardHandler.get_assets_activities)
+    tabs.Registry.register('assets', 'images', 'Images and Documents',
+                           DashboardHandler.get_assets_images)
+    tabs.Registry.register('assets', 'css', 'Cascading Style Sheets',
+                           DashboardHandler.get_assets_css)
+    tabs.Registry.register('assets', 'js', 'JavaScript Libraries',
+                           DashboardHandler.get_assets_js)
+    tabs.Registry.register('assets', 'templates', 'Templates',
+                           DashboardHandler.get_assets_templates)
+    tabs.Registry.register('assets', 'contrib', 'Extension Items',
+                           DashboardHandler.get_assets_contrib)
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

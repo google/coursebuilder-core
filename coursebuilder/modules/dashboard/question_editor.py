@@ -26,6 +26,7 @@ from models.models import QuestionDAO
 from models.models import QuestionDTO
 from models.models import SaQuestionConstants
 from modules.dashboard import dto_editor
+from modules.dashboard import utils as dashboard_utils
 
 
 class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -35,15 +36,19 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         """Build the Jinja template for adding a question."""
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
-        template_values['main_content'] = self.get_form(rest_handler, key=key)
+        template_values['main_content'] = self.get_form(
+            rest_handler, key,
+            dashboard_utils.build_assets_url('questions'))
 
         return template_values
 
     def get_add_mc_question(self):
-        self.render_page(self.qmae_prepare_template(McQuestionRESTHandler))
+        self.render_page(self.qmae_prepare_template(McQuestionRESTHandler),
+                         'assets', 'questions')
 
     def get_add_sa_question(self):
-        self.render_page(self.qmae_prepare_template(SaQuestionRESTHandler))
+        self.render_page(self.qmae_prepare_template(SaQuestionRESTHandler),
+                         'assets', 'questions')
 
     def get_edit_question(self):
         key = self.request.get('key')
@@ -54,10 +59,12 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
 
         if question.type == QuestionDTO.MULTIPLE_CHOICE:
             self.render_page(
-                self.qmae_prepare_template(McQuestionRESTHandler, key=key))
+                self.qmae_prepare_template(McQuestionRESTHandler, key=key),
+                'assets', 'questions')
         elif question.type == QuestionDTO.SHORT_ANSWER:
             self.render_page(
-                self.qmae_prepare_template(SaQuestionRESTHandler, key=key))
+                self.qmae_prepare_template(SaQuestionRESTHandler, key=key),
+                'assets', 'questions')
         else:
             raise Exception('Unknown question type: %s' % question.type)
 

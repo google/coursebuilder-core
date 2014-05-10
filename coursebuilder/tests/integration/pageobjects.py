@@ -291,6 +291,10 @@ class LessonPage(RootPage):
 class AssetsPage(PageObject):
     """Page object for the dashboard's assets tab."""
 
+    def click_sub_tab(self, text):
+        self.find_element_by_link_text(text).click()
+        return self
+
     def click_upload(self):
         self.find_element_by_link_text('Upload to assets/img').click()
         return AssetsEditorPage(self._tester)

@@ -19,6 +19,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 from common import schema_fields
 from models import models
 from modules.dashboard import dto_editor
+from modules.dashboard import utils as dashboard_utils
 
 
 class LabelManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -26,11 +27,14 @@ class LabelManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     def lme_prepare_template(self, key):
         return {
             'page_title': self.format_title('Edit Label'),
-            'main_content': self.get_form(LabelRestHandler, key=key),
+            'main_content': self.get_form(
+                LabelRestHandler, key,
+                dashboard_utils.build_assets_url('labels'))
         }
 
     def get_add_label(self):
-        self.render_page(self.lme_prepare_template(''))
+        self.render_page(self.lme_prepare_template(''),
+                         'assets', 'labels')
 
     def get_edit_label(self):
         key = self.request.get('key')
@@ -38,7 +42,8 @@ class LabelManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
 
         if not label:
             raise Exception('No label found')
-        self.render_page(self.lme_prepare_template(key=key))
+        self.render_page(self.lme_prepare_template(key=key),
+                         'assets', 'labels')
 
 
 class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):

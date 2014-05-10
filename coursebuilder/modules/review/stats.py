@@ -21,7 +21,7 @@ from models import courses
 from models import data_sources
 from models import jobs
 from models import transforms
-from modules.dashboard import analytics_tabs
+from modules.dashboard import tabs
 from modules.review import peer
 
 
@@ -122,4 +122,4 @@ def register_analytic():
     peer_review = analytics.Visualization(
         name, title, 'stats.html',
         data_source_classes=[PeerReviewStatsSource])
-    analytics_tabs.Registry.register(name, title, [peer_review])
+    tabs.Registry.register('analytics', name, title, [peer_review])

@@ -208,6 +208,8 @@ class AdminTests(BaseIntegrationTest):
 
         # Test Upload asset
         self.load_dashboard(name).click_assets(
+        ).click_sub_tab(
+            'Images and Documents'
         ).click_upload(
         ).click_close(
         ).verify_selected_tab('Assets')
@@ -222,6 +224,8 @@ class AdminTests(BaseIntegrationTest):
         self.load_dashboard(
             name
         ).click_assets(
+        ).click_sub_tab(
+            'Images and Documents'
         ).click_upload(
         ).select_file(
             image_file
@@ -298,6 +302,8 @@ class AdminTests(BaseIntegrationTest):
         self.load_dashboard(
             name
         ).click_assets(
+        ).click_sub_tab(
+            'Labels'
         ).click_add_label(
         ).set_title(
             'Liver'
@@ -341,6 +347,8 @@ class QuestionsTest(BaseIntegrationTest):
         self.load_dashboard(
             name
         ).click_assets(
+        ).click_sub_tab(
+            'Questions'
         ).click_add_multiple_choice(
         ).set_question(
             'What is your favorite color?'

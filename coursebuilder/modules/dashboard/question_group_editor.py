@@ -20,6 +20,7 @@ from common import schema_fields
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from modules.dashboard import dto_editor
+from modules.dashboard import utils as dashboard_utils
 
 
 class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
@@ -29,15 +30,16 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question Group')
         template_values['main_content'] = self.get_form(
-            QuestionGroupRESTHandler, key)
-
+            QuestionGroupRESTHandler, key,
+            dashboard_utils.build_assets_url('questions'))
         return template_values
 
     def get_add_question_group(self):
-        self.render_page(self.qgmae_prepare_template(''))
+        self.render_page(self.qgmae_prepare_template(''), 'assets', 'questions')
 
     def get_edit_question_group(self):
-        self.render_page(self.qgmae_prepare_template(self.request.get('key')))
+        self.render_page(self.qgmae_prepare_template(self.request.get('key')),
+                         'assets', 'questions')
 
 
 class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):

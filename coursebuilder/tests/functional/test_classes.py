@@ -1347,19 +1347,21 @@ class CourseAuthorAspectTest(actions.TestBase):
             assert_does_not_contain('Add Assessment', response.body)
 
         # Test assets view.
-        response = self.get('dashboard?action=assets')
+        response = self.get('dashboard?action=assets&tab=css')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
         # Verify body does have linked breadcrumb trail.
         assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Assets' %
-                self.canonicalize('dashboard'),
+            'Google &gt;<a href="%s">' % self.canonicalize('dashboard') +
+            ' Dashboard </a>&gt; Assets &gt; Cascading Style Sheets',
             response.body)
         assert_contains('assets/css/main.css', response.body)
+        response = self.get('dashboard?action=assets&tab=images')
         assert_contains('assets/img/Image1.5.png', response.body)
-        assert_contains('assets/js/activity-3.2.js', response.body)
+        response = self.get('dashboard?action=assets&tab=js')
+        assert_contains('assets/lib/activity-generic-1.3.js', response.body)
 
         # Test settings view.
         response = self.get('dashboard?action=settings')

@@ -21,7 +21,7 @@ from controllers import utils
 from models import analytics
 from models import custom_modules
 from models import data_sources
-from modules.dashboard import analytics_tabs
+from modules.dashboard import tabs
 
 
 class FakeDataSource(data_sources.AbstractRestDataSource):
@@ -170,9 +170,9 @@ def register_on_enable():
         'scoring', 'Scoring', 'fake_visualizations.html',
         [ExamsDataSource, PupilsDataSource, AnswersDataSource])
 
-    analytics_tabs.Registry.register('exams', 'Exams', [exams])
-    analytics_tabs.Registry.register('pupils', 'Pupils', [pupils])
-    analytics_tabs.Registry.register('scoring', 'Scoring', [scoring])
+    tabs.Registry.register('analytics', 'exams', 'Exams', [exams])
+    tabs.Registry.register('analytics', 'pupils', 'Pupils', [pupils])
+    tabs.Registry.register('analytics', 'scoring', 'Scoring', [scoring])
 
 
 def register_module():
