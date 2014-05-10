@@ -29,8 +29,9 @@ ADMIN_EMAIL = 'admin@foo.com'
 REGISTERED_STUDENT_EMAIL = 'foo@bar.com'
 REGISTERED_STUDENT_NAME = 'John Smith'
 UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
-STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
 COURSE_OVERVIEW_URL = '/%s/course' % COURSE_NAME
+STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
+STUDENT_SETTINGS_URL = '/%s/student/home' % COURSE_NAME
 
 
 class StudentTracksTest(actions.TestBase):
@@ -113,16 +114,27 @@ class StudentTracksTest(actions.TestBase):
         super(StudentTracksTest, self).tearDown()
         sites.reset_courses()
 
+    def _choose_tracks(self, label_ids):
+        response = self.get(STUDENT_SETTINGS_URL)
+        form = response.forms['student_set_tracks']
+        labels_by_ids = {}
+        for label_field in form.fields['labels']:
+            labels_by_ids[label_field.id] = label_field
+        for label_id in label_ids:
+            labels_by_ids['label_id_%d' % label_id].checked = True
+        self.submit(form, response)
+
     def test_unit_matching_no_labels(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
         response = self.get(COURSE_OVERVIEW_URL)
+        self._choose_tracks([])
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
         self.assertIn(self._unit_labels_foo_bar.title, response.body)
 
     def test_unit_matching_foo(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': str(self.foo_id)})
+        self._choose_tracks([self.foo_id])
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
@@ -130,8 +142,7 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_foo_bar(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': '%s %s' % (
-            self.foo_id, self.bar_id)})
+        self._choose_tracks([self.foo_id, self.bar_id])
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
@@ -139,7 +150,7 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_bar(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        response = self.put(STUDENT_LABELS_URL, {'labels': str(self.bar_id)})
+        self._choose_tracks([self.bar_id])
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertNotIn(self._unit_labels_foo.title, response.body)
@@ -147,7 +158,7 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_baz(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        self.put(STUDENT_LABELS_URL, {'labels': str(self.baz_id)})
+        self._choose_tracks([self.baz_id])
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertNotIn(self._unit_labels_foo.title, response.body)

@@ -28,6 +28,7 @@
       {% if student %}
 
         {% include 'student_data_table.html' %}
+        {% include 'track_selection.html' %}
 
         {% if can_edit_name %}
           <form action='student/editstudent' method='post'>

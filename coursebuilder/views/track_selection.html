@@ -1,0 +1,112 @@
+{% if track_labels %}
+<style type="text/css">
+  div.unit_selected {
+    color: #000;
+  }
+  div.unit_deselected {
+    color: #bbb;
+  }
+</style>
+
+<h2>
+  {# I18N: Title hown on the student profile page #}
+  {{ gettext('Course Tracks') }}
+</h2>
+<form action="student/settracks" method="post" id='student_set_tracks'>
+  <input type="hidden"
+         name="xsrf_token"
+         value="{{ student_edit_xsrf_token|escape }}"
+         >
+  <table>
+    <tr>
+      {% for label in track_labels %}
+      <th>
+        <div>{{ label.title }}</div>
+        <input type="checkbox"
+               id="label_id_{{ label.id }}"
+               name="labels"
+               value="{{ label.id }}"
+               onchange="gcb_track_highlight()"
+               {% if label.id in student_labels %}
+               checked="true"
+               {% endif %}>
+      </th>
+      {% endfor %}
+      <th align="left">
+        {# I18N: Text indicating which units will be shown for the course #}
+        {{ gettext('Units shown in course') }}
+      </th>
+    </tr>
+    {% for unit in units %}
+    <tr>
+      {% for label in track_labels %}
+      <!-- label ID is {{ label.id }} -->
+      <td>
+        <center>
+          <!-- unit labels {{ unit.labels }} -->
+          {% if label.id in unit.labels %}
+          <img src="assets/lib/completed.png">
+          {% else %}
+          <img src="assets/lib/not_started.png">
+          {% endif %}
+        </center>
+    </td>
+      {% endfor %}
+      <td>
+        <div id="unit_id_{{ unit.unit_id }}" class="unit_deselected">
+          {{ unit.title }}
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p>
+    <button class="gcb-button" type="submit">
+      {# I18N: Text for a button to save selected course tracks for student. #}
+      {{ gettext('Set Tracks') }}
+    </button>
+  </p>
+</form>
+
+<script type="text/javascript">
+function gcb_track_highlight() {
+  var units = [];
+  {% for unit in units %}
+  units.push({
+    'unit_id': {{ unit.unit_id }},
+    'labels': {{ unit.labels }},
+  });
+  {% endfor %}
+  var label_ids = [];
+  {% for label in track_labels %}
+  label_ids.push({{ label.id }});
+  {% endfor %}
+
+  var all_labels_unchecked = true;
+  for (var i = 0; i < label_ids.length; i++) {
+    if ($('#label_id_' + label_ids[i])[0].checked) {
+      all_labels_unchecked = false;
+    }
+  }
+
+  for (var i = 0; i < units.length; i++) {
+    var unit = units[i];
+    var unit_div = $('#unit_id_' + unit.unit_id)[0];
+    if (unit.labels.length < 1 || all_labels_unchecked) {
+      unit_div.setAttribute('class', 'unit_selected');
+    } else {
+      unit_div.setAttribute('class', 'unit_deselected');
+      for (var j = 0; j < unit.labels.length; j++) {
+        var checkbox = $('#label_id_' + unit.labels[j])[0];
+        if (checkbox.checked) {
+          unit_div.setAttribute('class', 'unit_selected');
+          break;
+        }
+      }
+    }
+  }
+}
+
+gcb_track_highlight();
+</script>
+{% endif %}

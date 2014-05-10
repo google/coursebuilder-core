@@ -16,6 +16,7 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+from common import crypto
 from common import utils as common_utils
 from models import models
 from models import transforms
@@ -29,6 +30,7 @@ REGISTERED_STUDENT_EMAIL = 'foo@bar.com'
 REGISTERED_STUDENT_NAME = 'John Smith'
 UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
 STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
+STUDENT_SETTRACKS_URL = '/%s/student/settracks' % COURSE_NAME
 
 
 class FakeContext(object):
@@ -50,14 +52,18 @@ class StudentLabelsTest(actions.TestBase):
             self.foo_id = models.LabelDAO.save(models.LabelDTO(
                 None, {'title': 'Foo',
                        'descripton': 'foo',
-                       'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
             self.bar_id = models.LabelDAO.save(models.LabelDTO(
                 None, {'title': 'Bar',
                        'descripton': 'bar',
-                       'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
             self.baz_id = models.LabelDAO.save(models.LabelDTO(
                 None, {'title': 'Baz',
                        'descripton': 'baz',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.quux_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Quux',
+                       'descripton': 'quux',
                        'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
 
         actions.login(REGISTERED_STUDENT_EMAIL)
@@ -244,3 +250,45 @@ class StudentLabelsTest(actions.TestBase):
         self._verify_labels(self.delete(STUDENT_LABELS_URL,
                                         {'labels': '%d' % (self.bar_id)}),
                             [])
+
+    # ------------------------------------ POST on student tracks selection
+    def test_post_tracks_replaces(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('student-edit')
+        self.put(STUDENT_LABELS_URL,
+                 {'labels': '%d,%d' % (
+                     self.foo_id, self.bar_id)})
+        self.post(STUDENT_SETTRACKS_URL,
+                  {'labels': '%d' % self.baz_id,
+                   'xsrf_token': xsrf_token})
+        self._verify_labels(self.get(STUDENT_LABELS_URL), [self.baz_id])
+
+    def test_post_tracks_clears(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('student-edit')
+        self.put(STUDENT_LABELS_URL,
+                 {'labels': '%d,%d' % (
+                     self.foo_id, self.bar_id)})
+        self.post(STUDENT_SETTRACKS_URL,
+                  {'xsrf_token': xsrf_token})
+        self._verify_labels(self.get(STUDENT_LABELS_URL), [])
+
+    def test_post_tracks_sets(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('student-edit')
+        self.post(STUDENT_SETTRACKS_URL,
+                  {'labels': '%d' % self.foo_id,
+                   'xsrf_token': xsrf_token})
+        self._verify_labels(self.get(STUDENT_LABELS_URL), [self.foo_id])
+
+    def test_post_tracks_does_not_affect_non_tracks_labels(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('student-edit')
+        self.put(STUDENT_LABELS_URL,
+                 {'labels': '%d,%d' % (
+                     self.foo_id, self.quux_id)})
+        self.post(STUDENT_SETTRACKS_URL,
+                  {'labels': '%d' % self.baz_id,
+                   'xsrf_token': xsrf_token})
+        self._verify_labels(self.get(STUDENT_LABELS_URL), [self.baz_id,
+                                                           self.quux_id])

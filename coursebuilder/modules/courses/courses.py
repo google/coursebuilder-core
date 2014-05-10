@@ -46,6 +46,7 @@ def register_module():
         ('/review', lessons.ReviewHandler),
         ('/reviewdashboard', lessons.ReviewDashboardHandler),
         ('/student/editstudent', utils.StudentEditStudentHandler),
+        ('/student/settracks', utils.StudentSetTracksHandler),
         ('/student/home', utils.StudentProfileHandler),
         ('/student/unenroll', utils.StudentUnenrollHandler),
         ('/unit', lessons.UnitHandler)]

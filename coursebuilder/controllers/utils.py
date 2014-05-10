@@ -24,6 +24,7 @@ import sites
 import webapp2
 
 from common import jinja_utils
+from common import utils as common_utils
 from common.crypto import XsrfTokenManager
 from models import models
 from models import transforms
@@ -551,11 +552,33 @@ class StudentProfileHandler(BaseHandler):
         if not student:
             return
 
+        track_labels = models.LabelDAO.get_all_of_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+        track_label_ids = set([label.id for label in track_labels])
+
         course = self.get_course()
+        units = []
+        for unit in course.get_units():
+            unit_dict = {
+                'unit_id': unit.unit_id,
+                'title': unit.title,
+                }
+            if hasattr(unit, 'labels'):
+                unit_dict['labels'] = [
+                    int(x)
+                    for x in common_utils.text_to_list(unit.labels)
+                    if int(x) in track_label_ids]
+            else:
+                unit_dict['labels'] = []
+            units.append(unit_dict)
+
         name = student.name
         profile = student.profile
         if profile:
             name = profile.nick_name
+        student_labels = [
+            int(x) for x in common_utils.text_to_list(student.labels)
+            if int(x) in track_label_ids]
 
         self.template_value['navbar'] = {'progress': True}
         self.template_value['student'] = student
@@ -568,6 +591,9 @@ class StudentProfileHandler(BaseHandler):
             XsrfTokenManager.create_xsrf_token('student-edit'))
         self.template_value['can_edit_name'] = (
             not models.CAN_SHARE_STUDENT_PROFILE.value)
+        self.template_value['track_labels'] = track_labels
+        self.template_value['student_labels'] = student_labels
+        self.template_value['units'] = units
 
         # Append any extra data which is provided by modules
         extra_student_data = {}
@@ -591,6 +617,39 @@ class StudentEditStudentHandler(BaseHandler):
             return
 
         Student.rename_current(self.request.get('name'))
+
+        self.redirect('/student/home')
+
+
+class StudentSetTracksHandler(BaseHandler):
+    """Handles submission of student tracks selections."""
+
+    def post(self):
+        student = self.personalize_page_and_get_enrolled()
+        if not student:
+            return
+        if not self.assert_xsrf_token_or_fail(self.request, 'student-edit'):
+            return
+
+        all_track_labels = set(
+            [label.id
+             for label in models.LabelDAO.get_all_of_type(
+                 models.LabelDTO.LABEL_TYPE_COURSE_TRACK)])
+        new_track_labels = set(
+            [int(label_id)
+             for label_id in self.request.get_all('labels')
+             if label_id and int(label_id) in all_track_labels])
+        student_labels = set(
+            [int(label_id)
+             for label_id in common_utils.text_to_list(student.labels)
+             if label_id])
+
+        # Remove all existing track (and only track) labels from student,
+        # then merge in selected set from form.
+        student_labels = student_labels.difference(all_track_labels)
+        student_labels = student_labels.union(new_track_labels)
+        models.Student.set_labels_for_current(
+            common_utils.list_to_text(list(student_labels)))
 
         self.redirect('/student/home')
 
