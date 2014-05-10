@@ -25,6 +25,11 @@ if [[ -e $COURSEBUILDER_RESOURCES && \
   exit 1
 fi
 
+# Ensure that start_in_shell.sh is executable
+if [ ! -x "$SOURCE_DIR/scripts/start_in_shell.sh" ]; then
+  chmod u+x "$SOURCE_DIR/scripts/start_in_shell.sh"
+fi
+
 # Configures the runtime environment.
 PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
 PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$RUNTIME_HOME/chromedriver:$PATH

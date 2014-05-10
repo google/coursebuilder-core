@@ -2,16 +2,17 @@
 #
 # author: sll@google.com (Sean Lip)
 
-#
-# This script runs the functional tests in the tests/functional folder.
-#
 # Run this script from the Course Builder folder as follows:
 #     sh ./scripts/test.sh --test_class <dotted test name>
 # E.g.,
-#     sh ./scripts/test.sh --test_class tests.unit.common_safe_dom
-#     sh ./scripts/test.sh --test_class tests.unit.common_safe_dom.EntityTests
-#     sh ./scripts/test.sh --test_class \
-#       tests.unit.common_safe_dom.NodeListTests.test_list
+#   Run all tests in a module:
+#     sh ./scripts/test.sh tests.unit.common_safe_dom
+#
+#   Run all tests in a class:
+#     sh ./scripts/test.sh tests.unit.common_safe_dom.EntityTests
+#
+#   Run a single test method:
+#     sh ./scripts/test.sh tests.unit.common_safe_dom.NodeListTests.test_list
 #
 # Run this script and measure test coverage as follows:
 #     install coverage:
@@ -25,8 +26,21 @@
 #         sh scripts/test.sh
 #
 
+usage () {
+  echo
+  echo "Usage: $0 <dotted_test_name>"
+  echo "E.g.,"
+  echo "  $0 tests.unit.common_safe_dom"
+  echo
+}
+
 # Force shell to fail on any errors.
 set -e
+
+if [ -z $1 ]; then
+  usage
+  exit 1
+fi
 
 # Reinstall AE runtime environment and CB-distributed libs if necessary.
 . "$(dirname "$0")/common.sh"
@@ -46,6 +60,7 @@ CB_SERVER_START=$SCRIPTS_DIR/start_in_shell.sh
 
 echo Running functional tests
 python "$SOURCE_DIR/tests/suite.py" \
-  --integration_server_start_cmd="$CB_SERVER_START" $@
+  --integration_server_start_cmd="$CB_SERVER_START" \
+  --test_class_name $1
 
 echo Done!

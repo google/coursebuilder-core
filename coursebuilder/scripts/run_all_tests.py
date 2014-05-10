@@ -226,7 +226,7 @@ class FunctionalTestTask(object):
         log('Running all tests in: %s.' % (self.test_class_name))
         test_sh = os.path.join(os.path.dirname(__file__), 'test.sh')
         result, self.output = run(
-            ['sh', test_sh, '--test_class_name %s' % self.test_class_name],
+            ['sh', test_sh, self.test_class_name],
             verbose=self.verbose)
         if result != 0:
             raise Exception()
