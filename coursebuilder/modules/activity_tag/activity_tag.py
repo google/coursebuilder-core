@@ -45,7 +45,7 @@ class Activity(tags.BaseTag):
         script = cElementTree.XML("""
 <div>
   <script></script>
-  <div style="width: 785px;" id="activityContents"></div>
+  <div id="activityContents"></div>
 </div>""")
         script[0].set('src', 'assets/js/%s' % activity_id)
         return script

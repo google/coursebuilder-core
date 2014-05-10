@@ -74,7 +74,7 @@
         <div class="gcb-aside gcb-button-box">
           {% if lesson.now_available or is_course_admin %}
             <div class="gcb-cols">
-              <div class="gcb-col-7">
+              <div id="lesson-title" class="gcb-col-7">
                 <h1 class="gcb-lesson-title">
                   {{ lesson.title }}
                   {% if not lesson.now_available and is_course_admin %}
@@ -84,7 +84,7 @@
                   {% endif %}
                 </h1>
               </div>
-              <div class="gcb-col-3">
+              <div id="get-text-button" class="gcb-col-3">
                 <p style="float:right; margin-top: 0px;">
                   {% if lesson.notes %}
                   <a role="button" class="gcb-button" id="lessonNotesLink" href="{{ lesson.notes }}" target="_blank">
