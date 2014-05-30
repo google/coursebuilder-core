@@ -46,6 +46,30 @@
          class="gcb-button gcb-button-action">Edit assessment</a>
     {% endif %}
   {% endif %}
+
+  <div id="gcb-left-nav-toggle">
+    <a href="" class="gcb-button">
+      <span class='show'>{{ gettext('Show Schedule') }}</span>
+      <span class='hide'>{{ gettext('Hide Schedule') }}</span>
+    </a>
+  </div>
+  <script>
+    $('#gcb-left-nav-toggle a').click(function(){
+        if ($(this).hasClass('show')) {
+            $(this).removeClass('show');
+            $('#gcb-nav-y').hide();
+            $('.gcb-unit-header').show('fast');
+            $('#gcb-nav-y + .gcb-article').show('fast');
+        } else {
+            $(this).addClass('show');
+            $('#gcb-nav-y').show('fast');
+            $('.gcb-unit-header').hide();
+            $('#gcb-nav-y + .gcb-article').hide();
+        }
+        return false;
+    });
+  </script>
+
   <ul class="gcb-breadcrumb">
     {# I18N: Navigation breadcrumb. #}
     <li><a href="course">{{ gettext('Course') }}</a></li>
@@ -62,9 +86,8 @@
         <li>{# I18N: Navigation breadcrumb. #} {{ gettext('Activity') }}</li>
       {% endif %}
     {% endif %}
-
-
   </ul>
+
   <div>
     <h1 class="gcb-unit-header">
       {{ display_unit_title(unit) }}

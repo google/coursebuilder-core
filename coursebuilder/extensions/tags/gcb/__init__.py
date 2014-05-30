@@ -151,8 +151,7 @@ class YouTube(tags.BaseTag):
         iframe = cElementTree.XML("""
 <p class="gcb-video-container">
   <iframe class="youtube-player" title="YouTube Video Player"
-    type="text/html" width="650" height="400" frameborder="0"
-    allowfullscreen="allowfullscreen">
+    type="text/html" frameborder="0" allowfullscreen="allowfullscreen">
   </iframe>
 </p>""")
         iframe[0].set('src', you_tube_url)

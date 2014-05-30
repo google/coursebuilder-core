@@ -1,0 +1,12 @@
+#gcb-left-nav-toggle {
+  display: block;
+}
+
+#gcb-nav-y.left-menu {
+  width: 100%;
+  display: none;
+}
+
+div#gcb-main div.gcb-article {
+  width: 100%;
+}
