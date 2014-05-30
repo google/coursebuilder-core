@@ -1,4 +1,4 @@
-{% if is_read_write_course and is_course_admin %}
+{% if is_read_write_course and is_course_admin and not as_lesson %}
   <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
     class="gcb-button gcb-button-action">Edit assessment</a>
 {% endif %}

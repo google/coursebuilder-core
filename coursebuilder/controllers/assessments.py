@@ -22,6 +22,7 @@ import logging
 from utils import BaseHandler
 from utils import HUMAN_READABLE_DATETIME_FORMAT
 
+from controllers import lessons
 from models import courses
 from models import models
 from models import review
@@ -217,4 +218,15 @@ class AnswerHandler(BaseHandler):
             self.template_value['overall_score'] = course.get_overall_score(
                 student)
 
-            self.render('test_confirmation.html')
+            parent_unit = course.get_parent_unit(unit.unit_id)
+            if parent_unit:
+                unit_contents = lessons.UnitHandler.UnitLeftNavElements(
+                    course, parent_unit)
+                next_url = unit_contents.get_url_by('assessment',
+                                                    unit.unit_id, 1)
+                if next_url:
+                    self.redirect('/' + next_url)
+                else:
+                    self.redirect('/course')
+            else:
+                self.render('test_confirmation.html')

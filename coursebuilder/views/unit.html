@@ -38,6 +38,10 @@
       <a href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
         class="gcb-button gcb-button-action">Edit lesson</a>
     {% endif %}
+    {% if assessment %}
+      <a href="dashboard?action=edit_assessment&key={{ assessment.unit_id }}"
+         class="gcb-button gcb-button-action">Edit assessment</a>
+    {% endif %}
   {% endif %}
   <ul class="gcb-breadcrumb">
     {# I18N: Navigation breadcrumb. #}

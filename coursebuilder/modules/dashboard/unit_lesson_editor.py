@@ -531,19 +531,38 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         ret['post_assessment'] = unit.post_assessment or -1
         return ret
 
+    def _is_assessment_unused(self, course, unit, assessment_id, errors):
+        parent_unit = course.get_parent_unit(assessment_id)
+        if parent_unit and parent_unit.unit_id != unit.unit_id:
+            assessment = course.find_unit_by_id(assessment_id)
+            errors.append(
+                'Assessment "%s" is already asssociated to unit "%s"' % (
+                    assessment.title, unit.title))
+            return False
+        return True
+
     def apply_updates(self, unit, updated_unit_dict, errors):
         self.apply_updates_common(unit, updated_unit_dict, errors)
-        if updated_unit_dict['pre_assessment'] >= 0:
-            unit.pre_assessment = updated_unit_dict['pre_assessment']
+
+        course = courses.Course(self)
+        pre_assessment_id = updated_unit_dict['pre_assessment']
+        if (pre_assessment_id >= 0 and
+            self._is_assessment_unused(course, unit, pre_assessment_id,
+                                       errors)):
+            unit.pre_assessment = pre_assessment_id
         else:
             unit.pre_assessment = None
 
-        if updated_unit_dict['post_assessment'] >= 0:
-            unit.post_assessment = updated_unit_dict['post_assessment']
+        post_assessment_id = updated_unit_dict['post_assessment']
+        if post_assessment_id >= 0 and pre_assessment_id == post_assessment_id:
+            errors.append(
+                'The same assessment cannot be used as both the pre '
+                'and post assessment of a unit.')
+        elif (post_assessment_id >= 0 and
+              self._is_assessment_unused(course, unit, post_assessment_id,
+                                         errors)):
+            unit.post_assessment = post_assessment_id
         else:
-            unit.post_assessment = None
-
-        if unit.pre_assessment == unit.post_assessment:
             unit.post_assessment = None
 
 

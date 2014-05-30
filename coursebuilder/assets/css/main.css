@@ -719,6 +719,10 @@ table.gcb-student-data-table {
 #gcb-nav-y.left-menu li.gcb-unit-title.expanded {
   background-color: #ffffff;
 }
+#gcb-nav-y.left-menu li.gcb-assessment-as-lesson {
+  margin: 0;
+  padding-left: 2px;
+}
 
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */
 .gcb-grayed {

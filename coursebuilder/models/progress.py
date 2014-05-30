@@ -152,7 +152,16 @@ class UnitLessonCompletionTracker(object):
         )
 
     def _get_assessment_key(self, assessment_id):
-        return '%s.%s' % (self.EVENT_CODE_MAPPING['assessment'], assessment_id)
+        assessment_key = '%s.%s' % (
+            self.EVENT_CODE_MAPPING['assessment'], assessment_id)
+
+        # If this assessment is used as a "lesson" within a unit, prepend
+        # the unit identifier.
+        parent_unit = self._get_course().get_parent_unit(assessment_id)
+        if parent_unit:
+            assessment_key = '.'.join([self._get_unit_key(parent_unit.unit_id),
+                                       assessment_key])
+        return assessment_key
 
     def get_entity_type_from_key(self, progress_entity_key):
         return progress_entity_key.split('.')[-2]
@@ -490,6 +499,17 @@ class UnitLessonCompletionTracker(object):
                     unit_id, lesson.lesson_id) != self.COMPLETED_STATE):
                 return
 
+        # Check whether pre/post assessments in this unit have been completed.
+        unit = self._get_course().find_unit_by_id(unit_id)
+        pre_assessment_id = unit.pre_assessment
+        if (pre_assessment_id and
+            not self.get_assessment_status(progress, pre_assessment_id)):
+            return
+        post_assessment_id = unit.post_assessment
+        if (post_assessment_id and
+            not self.get_assessment_status(progress, post_assessment_id)):
+            return
+
         # Record that all lessons in this unit have been completed.
         self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
@@ -582,31 +602,37 @@ class UnitLessonCompletionTracker(object):
         'block': (
             {
                 'entity': 'activity',
-                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2])),
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
             },
         ),
         'activity': (
             {
                 'entity': 'lesson',
-                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2])),
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
             },
         ),
         'lesson': (
             {
                 'entity': 'unit',
-                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2])),
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
             },
         ),
         'component': (
             {
                 'entity': 'html',
-                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2])),
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
             },
         ),
         'html': (
             {
                 'entity': 'lesson',
-                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2])),
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
+            },
+        ),
+        'assessment': (
+            {
+                'entity': 'unit',
+                'generate_parent_id': (lambda s: '.'.join(s.split('.')[:-2]))
             },
         ),
     }
@@ -708,12 +734,13 @@ class UnitLessonCompletionTracker(object):
 
         if event_entity in self.DERIVED_EVENTS:
             for derived_event in self.DERIVED_EVENTS[event_entity]:
-                self._update_event(
-                    student=student,
-                    progress=progress,
-                    event_entity=derived_event['entity'],
-                    event_key=derived_event['generate_parent_id'](event_key),
-                )
+                event_key = derived_event['generate_parent_id'](event_key)
+                if event_key:
+                    self._update_event(
+                        student=student,
+                        progress=progress,
+                        event_entity=derived_event['entity'],
+                        event_key=event_key)
 
     def get_unit_status(self, progress, unit_id):
         return self._get_entity_value(progress, self._get_unit_key(unit_id))

@@ -353,6 +353,14 @@ class Unit12(object):
         """Returns the workflow as an object."""
         return Workflow(self.workflow_yaml)
 
+    @property
+    def pre_assessment(self):
+        return None
+
+    @property
+    def post_assessment(self):
+        return None
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -1928,6 +1936,22 @@ class Course(object):
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
+
+    def get_parent_unit(self, unit_id):
+        try:
+            unit_id = int(unit_id)  # Some handlers are sloppy and pass strings.
+        except ValueError:
+            return  # Older courses use strings for IDs; parentage not supported
+
+        # See if the unit is an assessment being used as a pre/post
+        # unit lesson.
+        for unit in self.get_units_of_type(verify.UNIT_TYPE_UNIT):
+            if (unit.pre_assessment == unit_id or
+                unit.post_assessment == unit_id):
+                return unit
+
+        # Nope, no other kinds of parentage; no parent.
+        return None
 
     def get_components(self, unit_id, lesson_id):
         """Returns a list of dicts representing the components in a lesson.

@@ -4,36 +4,78 @@
     {{course_info.unit.after_leftnav_begins | safe}}
 
     {% if not course_info.unit.show_unit_links_in_leftnav %}
-        {% for unit, lessons, lesson_progress in course_outline %}
+        {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
             {% if unit_id == unit.unit_id %}
+                {% if pre_assessment %}
+                  {{ macros.render_unit_title(pre_assessment, unit_progress,
+                         is_progress_recorded, transient_student,
+                         is_course_admin,
+                         not assessment or assessment.unit_id != pre_assessment.unit_id,
+                         'gcb-assessment-as-lesson',
+                         'unit?unit=%s&assessment=%s' % (
+                             unit.unit_id, pre_assessment.unit_id)
+                         ) }}
+                {% endif %}
                 {% for lesson in lessons %}
                     {{ macros.render_lesson_title(
                          page_type, unit, lesson, lesson_progress, is_progress_recorded,
                          unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
                          is_course_admin) }}
                 {% endfor %}
+                {% if post_assessment %}
+                  {{ macros.render_unit_title(post_assessment, unit_progress,
+                         is_progress_recorded, transient_student,
+                         is_course_admin,
+                         not assessment or assessment.unit_id != post_assessment.unit_id,
+                         'gcb-assessment-as-lesson',
+                         'unit?unit=%s&assessment=%s' % (
+                             unit.unit_id, post_assessment.unit_id)
+
+                         ) }}
+                {% endif %}
             {% endif %}
         {% endfor %}
     {% else %}
-        {% for unit, lessons, lesson_progress in course_outline %}
+        {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
             {{ macros.render_unit_title(
                  unit, unit_progress, is_progress_recorded, transient_student,
                  is_course_admin, unit.type != 'U',
                  'gcb-unit-title expanded'
                      if unit_id == unit.unit_id else 'gcb-unit-title'
-                         if lessons else 'gcb-unit-title expanded leaf') }}
+                         if lessons else 'gcb-unit-title expanded leaf',
+                 'assessment?name=%s' % unit.unit_id) }}
             <div id="gcb-lesson-container"
                 {% if unit_id == unit.unit_id %}
                     class="gcb-lesson-container expanded"
                 {% else %}
                     class="gcb-lesson-container"
-                {% endif%}>
+                {% endif %}>
+            {% if pre_assessment %}
+              {{ macros.render_unit_title(pre_assessment, unit_progress,
+                     is_progress_recorded, transient_student,
+                     is_course_admin,
+                     not assessment or assessment.unit_id != pre_assessment.unit_id,
+                     'gcb-assessment-as-lesson',
+                     'unit?unit=%s&assessment=%s' % (
+                         unit.unit_id, pre_assessment.unit_id)
+                     ) }}
+            {% endif %}
             {% for lesson in lessons %}
                 {{ macros.render_lesson_title(
                      page_type, unit, lesson, lesson_progress, is_progress_recorded,
                      unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
                      is_course_admin) }}
             {% endfor %}
+            {% if post_assessment %}
+              {{ macros.render_unit_title(post_assessment, unit_progress,
+                     is_progress_recorded, transient_student,
+                     is_course_admin,
+                     not assessment or assessment.unit_id != post_assessment.unit_id,
+                     'gcb-assessment-as-lesson',
+                     'unit?unit=%s&assessment=%s' % (
+                         unit.unit_id, post_assessment.unit_id)
+                     ) }}
+            {% endif %}
             </div>
         {% endfor %}
         <script>

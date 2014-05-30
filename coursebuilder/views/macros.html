@@ -3,7 +3,7 @@
 #}
 {% macro render_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
-    include_link, css_class) -%}
+    include_link, css_class, target_url) -%}
 
     {% if is_progress_recorded %}
       {% set progress_class = 'gcb-progress-empty' %}
@@ -32,7 +32,7 @@
             <span class="{{ progress_class }}"></span>
           {% endif %}
           {% if include_link %}
-              <a href="assessment?name={{ unit.unit_id }}">{{ unit.title }}</a>
+            <a href="{{ target_url }}">{{ unit.title }}</a>
           {% else %}
               {{ unit.title }}
           {% endif %}

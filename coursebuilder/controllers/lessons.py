@@ -68,9 +68,7 @@ def get_first_lesson(handler, unit_id):
     return lessons[0] if lessons else None
 
 
-def extract_unit_and_lesson(handler):
-    """Loads unit and lesson specified in the request."""
-
+def _get_selected_unit_or_first_unit(handler):
     # Finds unit requested or a first unit in the course.
     u = handler.request.get('unit')
     unit = handler.get_course().find_unit_by_id(u)
@@ -80,9 +78,10 @@ def extract_unit_and_lesson(handler):
             if verify.UNIT_TYPE_UNIT == current_unit.type:
                 unit = current_unit
                 break
-    if not unit:
-        return None, None
+    return unit
 
+
+def _get_selected_or_first_lesson(handler, unit):
     # Find lesson requested or a first lesson in the unit.
     l = handler.request.get('lesson')
     lesson = None
@@ -90,7 +89,49 @@ def extract_unit_and_lesson(handler):
         lesson = get_first_lesson(handler, unit.unit_id)
     else:
         lesson = handler.get_course().find_lesson_by_id(unit, l)
-    return unit, lesson
+    return lesson
+
+
+def extract_unit_and_lesson(handler):
+    """Loads unit and lesson specified in the request."""
+
+    unit = _get_selected_unit_or_first_unit(handler)
+    if not unit:
+        return None, None
+    return unit, _get_selected_or_first_lesson(handler, unit)
+
+
+def extract_unit_and_lesson_or_assessment(handler):
+    unit = _get_selected_unit_or_first_unit(handler)
+    if not unit:
+        return None, None, None
+
+    lesson = None
+    lesson_id = handler.request.get('lesson')
+    if lesson_id:
+        lesson = handler.get_course().find_lesson_by_id(unit, lesson_id)
+
+    assessment = None
+    assessment_id = handler.request.get('assessment')
+    if assessment_id:
+        assessment = handler.get_course().find_unit_by_id(assessment_id)
+
+    if lesson or assessment:
+        return unit, lesson, assessment
+
+    if unit.pre_assessment:
+        return unit, None, handler.get_course().find_unit_by_id(
+            unit.pre_assessment)
+
+    first_lesson = get_first_lesson(handler, unit.unit_id)
+    if first_lesson:
+        return unit, first_lesson, None
+
+    if unit.post_assessment:
+        return unit, None, handler.get_course().find_unit_by_id(
+            unit.post_assessment)
+
+    return unit, None, None
 
 
 def get_unit_and_lesson_id_from_url(handler, url):
@@ -122,17 +163,43 @@ def create_readonly_assessment_params(content, answers):
     return assessment_params
 
 
+def filter_assessments_used_within_units(units):
+    # Remove assessments that are to be treated as if they were in a unit.
+    referenced_assessments = set()
+    for unit in units:
+        if unit.type == verify.UNIT_TYPE_UNIT:
+            if unit.pre_assessment:
+                referenced_assessments.add(unit.pre_assessment)
+            if unit.post_assessment:
+                referenced_assessments.add(unit.post_assessment)
+    ret = []
+    for unit in list(units):
+        if unit.unit_id not in referenced_assessments:
+            ret.append(unit)
+    return ret
+
+
 def add_course_outline_to_template(handler, student):
     """Adds course outline with all units, lessons, progress to the template."""
     _tracker = handler.get_progress_tracker()
     _tuples = []
-    for _unit in handler.get_track_matching_student(student):
+    units = handler.get_track_matching_student(student)
+    units = filter_assessments_used_within_units(units)
+    for _unit in units:
         _lessons = handler.get_lessons(_unit.unit_id)
         _lesson_progress = None
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
             _lesson_progress = _tracker.get_lesson_progress(
                 student, _unit.unit_id)
-        _tuple = (_unit, _lessons, _lesson_progress)
+        pre_assessment = None
+        if _unit.pre_assessment:
+            pre_assessment = handler.find_unit_by_id(_unit.pre_assessment)
+        post_assessment = None
+        if _unit.post_assessment:
+            post_assessment = handler.find_unit_by_id(_unit.post_assessment)
+
+        _tuple = (_unit, _lessons, _lesson_progress,
+                  pre_assessment, post_assessment)
         _tuples.append(_tuple)
 
     handler.template_value['course_outline'] = _tuples
@@ -187,7 +254,9 @@ class CourseHandler(BaseHandler):
             self.redirect('/preview')
             return
 
-        self.template_value['units'] = self.get_track_matching_student(student)
+        units = self.get_track_matching_student(student)
+        units = filter_assessments_used_within_units(units)
+        self.template_value['units'] = units
         self.template_value['show_registration_page'] = True
 
         if student and not student.is_transient:
@@ -231,6 +300,13 @@ class UnitHandler(BaseHandler):
             self._index_by_label = {}
             index = 0
 
+            if unit.pre_assessment:
+                self._urls.append('unit?unit=%s&assessment=%d' % (
+                    unit.unit_id, unit.pre_assessment))
+                self._index_by_label['assessment.%d' % unit.pre_assessment] = (
+                    index)
+                index += 1
+
             for lesson in course.get_lessons(unit.unit_id):
                 self._urls.append('unit?unit=%s&lesson=%s' % (
                     unit.unit_id, lesson.lesson_id))
@@ -243,6 +319,13 @@ class UnitHandler(BaseHandler):
                     self._index_by_label['activity.%s' % lesson.lesson_id] = (
                         index)
                     index += 1
+
+            if unit.post_assessment:
+                self._urls.append('unit?unit=%s&assessment=%d' % (
+                    unit.unit_id, unit.post_assessment))
+                self._index_by_label['assessment.%d' % unit.post_assessment] = (
+                    index)
+                index += 1
 
         def get_url_by(self, item_type, item_id, offset):
             index = self._index_by_label['%s.%s' % (item_type, item_id)]
@@ -260,7 +343,7 @@ class UnitHandler(BaseHandler):
             return
 
         # Extract incoming args
-        unit, lesson = extract_unit_and_lesson(self)
+        unit, lesson, assessment = extract_unit_and_lesson_or_assessment(self)
         unit_id = unit.unit_id
 
         # If the unit is not currently available, and the user is not an admin,
@@ -280,19 +363,15 @@ class UnitHandler(BaseHandler):
         self.template_value['unit_id'] = unit.unit_id
 
         # If this unit contains no lessons, return.
-        if not lesson:
+        if not lesson and not assessment:
             self.render('unit.html')
             return
-        self.template_value['lesson'] = lesson
-        self.template_value['lesson_id'] = lesson.lesson_id
 
         # These attributes are needed in order to render questions (with
         # progress indicators) in the lesson body. They are used by the
         # custom component renderers in the assessment_tags module.
         self.student = student
         self.unit_id = unit_id
-        self.lesson_id = lesson.lesson_id
-        self.lesson_is_scored = lesson.scored
 
         add_course_outline_to_template(self, student)
         self.template_value['is_progress_recorded'] = (
@@ -303,17 +382,34 @@ class UnitHandler(BaseHandler):
             self.get_course(), unit)
         activity = (self.request.get('activity') or
                     '/activity' in self.request.path)
-        if activity:
+        if assessment:
+            self.set_assessment_content(unit, assessment, left_nav_elements)
+            assessment_handler = AssessmentHandler()
+            assessment_handler.app_context = self.app_context
+            assessment_handler.request = self.request
+            self.template_value['display_content'] = (
+                assessment_handler.get_assessment_content(
+                    student, self.get_course(), assessment, as_lesson=True))
+        elif activity:
             self.set_activity_content(student, unit, lesson, left_nav_elements)
+            self.template_value['display_content'] = (
+                self.get_display_content())
         else:
             self.set_lesson_content(student, unit, lesson, left_nav_elements)
-
-        self.template_value['display_content'] = (
+            self.template_value['display_content'] = (
                 self.get_display_content())
-
         self.render('unit.html')
 
+    def set_assessment_content(self, unit, assessment, left_nav_elements):
+        self.template_value['assessment'] = assessment
+        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+            'assessment', assessment.unit_id, -1)
+        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+            'assessment', assessment.unit_id, 1)
+
     def set_activity_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['lesson'] = lesson
+        self.template_value['lesson_id'] = lesson.lesson_id
         self.template_value['back_button_url'] = left_nav_elements.get_url_by(
             'activity', lesson.lesson_id, -1)
         self.template_value['next_button_url'] = left_nav_elements.get_url_by(
@@ -334,6 +430,8 @@ class UnitHandler(BaseHandler):
                 student, unit.unit_id, lesson.lesson_id)
 
     def set_lesson_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['lesson'] = lesson
+        self.template_value['lesson_id'] = lesson.lesson_id
         self.template_value['back_button_url'] = left_nav_elements.get_url_by(
             'lesson', lesson.lesson_id, -1)
         self.template_value['next_button_url'] = left_nav_elements.get_url_by(
@@ -389,7 +487,8 @@ class AssessmentHandler(BaseHandler):
         self.template_value['navbar'] = {'course': True}
         self.render('assessment_page.html')
 
-    def get_assessment_content(self, student, course, unit):
+    def get_assessment_content(self, student, course, unit, as_lesson=False):
+        self.template_value['as_lesson'] = as_lesson
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
         self.template_value['model_version'] = model_version
@@ -405,7 +504,7 @@ class AssessmentHandler(BaseHandler):
         else:
             raise ValueError('Bad assessment model version: %s' % model_version)
 
-        self.template_value['unit_id'] = self.unit_id
+        self.template_value['unit_id'] = unit.unit_id
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (
