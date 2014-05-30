@@ -16,6 +16,7 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
+import copy
 import messages
 import yaml
 
@@ -70,21 +71,43 @@ class CourseSettingsHandler(ApplicationHandler):
         if not fs.isfile(course_yaml):
             fs.put(course_yaml, vfs.string_to_stream(
                 courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
-
+        extra_args = {}
+        show = self.request.get('show')
+        if show:
+            extra_args['show'] = show
         self.redirect(self.get_action_url(
-            'edit_basic_settings', key='/course.yaml'))
+            'edit_basic_settings', key='/course.yaml', extra_args=extra_args))
 
     def get_edit_basic_settings(self):
         """Shows editor for course.yaml."""
 
         key = self.request.get('key')
 
+        # The editor for all course settings is getting rather large.  Here,
+        # prune out all sections except the one named.  Names can name either
+        # entire sub-registries, or a single item.  E.g., "course" selects all
+        # items under the 'course' sub-registry, while
+        # "base:before_head_tag_ends" selects just that one field.
+        registry = copy.deepcopy(CourseSettingsRESTHandler.REGISTRY)
+        show = self.request.get('show')
+        if show:
+            name_parts = show.split(':')
+            sub_registry = registry
+            for name in name_parts:
+                for p in copy.copy(sub_registry.properties):
+                    if not p.name.endswith(':' + name):
+                        sub_registry.remove_property(p)
+                for sub_name in copy.copy(sub_registry.sub_registries):
+                    if sub_name != name:
+                        sub_registry.remove_sub_registry(sub_name)
+                    else:
+                        next_sub_registry = sub_registry.sub_registries[name]
+                sub_registry = next_sub_registry
+
         exit_url = self.canonicalize_url('/dashboard?action=settings')
         rest_url = self.canonicalize_url('/rest/course/settings')
         form_html = oeditor.ObjectEditor.get_html_for(
-            self,
-            CourseSettingsRESTHandler.REGISTRY.get_json_schema(),
-            CourseSettingsRESTHandler.REGISTRY.get_schema_dict(),
+            self, registry.get_json_schema(), registry.get_schema_dict(),
             key, rest_url, exit_url,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
 
@@ -100,6 +123,52 @@ def _create_course_registry():
 
     reg = schema_fields.FieldRegistry('Basic Course Settings',
                                       description='Course Settings')
+
+    base_opts = reg.add_sub_registry('base', 'Base Config')
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:before_head_tag_ends', 'Before Head Tag Ends', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'before the &lt;head&gt; tag ends '))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:after_body_tag_begins', 'After Body Tag Begins', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'after the &lt;body&gt; tag begins'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:after_navbar_begins', 'After Nav Bar Begins', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'after the navigation bar begins'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:before_navbar_ends', 'Before Nav Bar Ends', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'before the end of the navigation bar'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:after_top_content_ends', 'After Top Content Ends', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'after the top content ends'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:after_main_content_ends', 'After Main Content Ends', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'after the main content ends'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:before_body_tag_ends', 'Before Body Tag Ends', 'text',
+        optional=True, description='HTML to insert on course pages '
+        'before the &lt;body&gt; tag ends'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:show_gplus_button', 'Show G+ Button', 'boolean',
+        optional=True, description='Whether to show a G+ button on the '
+        'header of all pages.'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:nav_header', 'Nav Header', 'string',
+        optional=True, description='Header phrase for the main navigation bar'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:privacy_terms_url', 'Privacy Terms URL', 'string',
+        optional=True, description='Link to your privacy policy '
+        'and terms of service'))
+    base_opts.add_property(schema_fields.SchemaField(
+        'base:locale', 'Locale', 'string',
+        optional=True, description='Locale for internationalization '
+        'of explorer pages. See modules/i18n/resources/locale for '
+        'available locales.'))
 
     # Course level settings.
     course_opts = reg.add_sub_registry('course', 'Course Config')
@@ -271,6 +340,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
         json_payload = transforms.dict_to_json(
             entity,
             CourseSettingsRESTHandler.REGISTRY.get_json_schema_dict())
+
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
@@ -298,21 +368,23 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
         CourseSettingsRESTHandler.REGISTRY.convert_json_to_entity(
             transforms.loads(payload), request_data)
 
-        course_data = request_data['course']
-        if 'forum_email' in course_data.keys():
-            forum_email = course_data['forum_email']
-            forum_web_url = self.get_groups_web_url(forum_email)
-            if forum_web_url:
-                course_data['forum_url'] = forum_web_url
-            forum_web_url = self.get_groups_embed_url(forum_email)
-            if forum_web_url:
-                course_data['forum_embed_url'] = forum_web_url
+        if 'course' in request_data:
+            course_data = request_data['course']
+            if 'forum_email' in course_data:
+                forum_email = course_data['forum_email']
+                forum_web_url = self.get_groups_web_url(forum_email)
+                if forum_web_url:
+                    course_data['forum_url'] = forum_web_url
+                forum_web_url = self.get_groups_embed_url(forum_email)
+                if forum_web_url:
+                    course_data['forum_embed_url'] = forum_web_url
 
-        if 'announcement_list_email' in course_data.keys():
-            announcement_email = course_data['announcement_list_email']
-            announcement_web_url = self.get_groups_web_url(announcement_email)
-            if announcement_web_url:
-                course_data['announcement_list_url'] = announcement_web_url
+            if 'announcement_list_email' in course_data:
+                announcement_email = course_data['announcement_list_email']
+                announcement_web_url = self.get_groups_web_url(
+                    announcement_email)
+                if announcement_web_url:
+                    course_data['announcement_list_url'] = announcement_web_url
 
         entity = courses.deep_dict_merge(request_data, self.get_course_dict())
         content = yaml.safe_dump(entity)
