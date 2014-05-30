@@ -34,9 +34,8 @@ retries message delivery for several days, so if you exhaust your daily mail
 quota today we'll try again tomorrow.
 
 The second major advantage is that we keep a record of messages sent, so you can
-do analytics on them.
-
-TODO(johncox): write dashboards and document them here.
+do analytics on them. We provide a base set of dashboards in the admin UI
+showing both overall and recent notification state.
 
 For users who are sending mail occasionally, this module smoothes away some of
 the gotchas of App Engine's mail service. However, App Engine is not optimized

@@ -244,11 +244,6 @@ class StudentProfileDAOTestCase(actions.ExportTestBase):
                     'title': title,
                     'welcome_notifications_sender': sender,
                 },
-                'modules': {
-                    'unsubscribe': {
-                        'key': 'a_very_very_very_very_secret_key',
-                    }
-                }
             }))
         models.StudentProfileDAO._send_welcome_notification(handler, email)
         self.execute_all_deferred_tasks()
@@ -258,10 +253,10 @@ class StudentProfileDAOTestCase(actions.ExportTestBase):
 
         self.assertEqual(title, audit_trail['course_title'])
         self.assertEqual(
-            'http://mycourse.appspot.com/new_course/',
+            'http://mycourse.appspot.com/slug/',
             audit_trail['course_url'])
         self.assertTrue(audit_trail['unsubscribe_url'].startswith(
-            'http://mycourse.appspot.com/new_course/modules/unsubscribe'))
+            'http://mycourse.appspot.com/slug/modules/unsubscribe'))
         self.assertTrue(notification._done_date)
         self.assertEqual(email, notification.to)
         self.assertEqual(sender, notification.sender)

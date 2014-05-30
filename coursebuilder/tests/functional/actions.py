@@ -68,21 +68,26 @@ PREVIEW_HOOK_POINTS = [
 
 class MockAppContext(object):
 
-    def __init__(self, environ=None):
+    def __init__(self, environ=None, namespace=None, slug=None):
         self.environ = environ or {}
+        self.namespace = namespace or 'namespace'
+        self.slug = slug or 'slug'
 
     def get_environ(self):
         return self.environ
+
+    def get_namespace_name(self):
+        return self.namespace
 
 
 class MockHandler(object):
 
     def __init__(self, app_context=None, base_href=None):
         self.app_context = app_context or MockAppContext()
-        self.base_href = base_href or 'http://mycourse.appspot.com/new_course/'
+        self.base_href = base_href or 'http://mycourse.appspot.com/'
 
     def get_base_href(self, unused_handler):
-        return self.base_href
+        return self.base_href + self.app_context.slug + '/'
 
 
 class ShouldHaveFailedByNow(Exception):

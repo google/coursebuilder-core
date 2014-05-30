@@ -12,20 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module to support users unsubscribing from notifications.
-
-Note: In order for this module to function, the course admin must set a secret
-key which is used to sign the unsubscribe request URLs. This key is set by
-editing course.yaml in the Dashboard > Settings with the Advanced Edit button.
-Add the following YAML snippet, replacing <secret_key> with your own string:
-
-modules:
-  unsubscribe:
-    key: <secret_key>
-
-The key must be between 16 and 64 characters long, and must be kept secure to
-prevent malevolent third-parties from unsusbcribing your users.
-"""
+"""Module to support users unsubscribing from notifications."""
 
 __author__ = 'John Orr (jorr@google.com)'
 
@@ -35,6 +22,7 @@ import urllib
 import urlparse
 
 import appengine_config
+from common import crypto
 from controllers import utils
 from models import custom_modules
 from models import entities
@@ -45,11 +33,6 @@ from google.appengine.ext import db
 
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'unsubscribe', 'templates')
-
-# The shortest length allowed for the secret in modules/unsubscribe/key
-MIN_SECRET_KEY_LENGTH = 16
-# The breatest length allowed for the secret in modules/unsubscribe/key
-MAX_SECRET_KEY_LENGTH = 64
 
 
 def get_unsubscribe_url(handler, email):
@@ -145,15 +128,11 @@ class UnsubscribeHandler(utils.BaseHandler):
 
 
 def _get_signature(handler, email):
-    secret_key = handler.app_context.get_environ().get('modules', {}).get(
-        'unsubscribe', {}).get('key')
-    assert secret_key, 'No secret_key set in course.yaml'
-    assert len(secret_key) >= MIN_SECRET_KEY_LENGTH, (
-        'The secret_key must be at least %s characters' % MIN_SECRET_KEY_LENGTH)
-    assert len(secret_key) <= MAX_SECRET_KEY_LENGTH, (
-        'The secret_key must be less than %s characters' %
-        MAX_SECRET_KEY_LENGTH)
-    return sha.new('%s%s' % (email, secret_key)).hexdigest()
+    return sha.new(
+        '%s%s%s' % (
+            email, handler.app_context.get_namespace_name(),
+            crypto.XSRF_SECRET.value)
+    ).hexdigest()
 
 
 class SubscriptionStateEntity(entities.BaseEntity):
