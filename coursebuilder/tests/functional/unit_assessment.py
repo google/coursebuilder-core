@@ -18,10 +18,13 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import re
 
+from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from modules.dashboard import unit_lesson_editor
 from tests.functional import actions
+from tools import verify
 
 COURSE_NAME = 'unit_pre_post'
 COURSE_TITLE = 'Unit Pre/Post Assessments'
@@ -263,3 +266,178 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self._assert_progress_state(
             'Completed', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
             response)
+
+    def _get_selection_choices(self, schema, match):
+        ret = {}
+        for item in schema:
+            if item[0] == match:
+                for choice in item[1]['choices']:
+                    ret[choice['label']] = choice['value']
+        return ret
+
+    def test_old_assessment_availability(self):
+        # Get default course, which has version 1.4 assessments
+        ctx = sites.get_all_courses(rules_text='course:/:/')[0]
+        course = courses.Course(None, ctx)
+
+        # Prove that there are at least some assessments in this course.
+        assessments = course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT)
+        self.assertIsNotNone(assessments[0])
+
+        # Get the first Unit
+        unit = course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
+
+        unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
+        schema = unit_rest_handler.get_annotations_dict(course, unit.unit_id)
+
+        # Verify that despite having some Assessments, we don't have any
+        # valid choices for pre- or post-asssments for the unit, since
+        # old-style assessments don't play nicely in that role.
+        choices = self._get_selection_choices(
+            schema, ['properties', 'pre_assessment', '_inputex'])
+        self.assertEquals({'-- None --': -1}, choices)
+
+        choices = self._get_selection_choices(
+            schema, ['properties', 'post_assessment', '_inputex'])
+        self.assertEquals({'-- None --': -1}, choices)
+
+    def test_old_assessment_assignment(self):
+        ctx = sites.get_all_courses(rules_text='course:/:/')[0]
+        course = courses.Course(None, ctx)
+        unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
+        unit_rest_handler.app_context = ctx
+
+        # Use REST handler function to save pre/post handlers on one unit.
+        errors = []
+        unit = course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
+        assessment = course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT)[0]
+        unit_rest_handler.apply_updates(
+            unit,
+            {
+                'title': unit.title,
+                'now_available': unit.now_available,
+                'label_groups': [],
+                'pre_assessment': assessment.unit_id,
+                'post_assessment': -1,
+            }, errors)
+        self.assertEquals([
+            'The version of assessment "Pre-course assessment" is '
+            'not compatible with use as a pre/post unit element'], errors)
+
+    def test_new_assessment_availability(self):
+        unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
+
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_no_lessons.unit_id)
+        choices = self._get_selection_choices(
+            schema, ['properties', 'pre_assessment', '_inputex'])
+        self.assertEquals({
+            '-- None --': -1,
+            self.assessment_one.title: self.assessment_one.unit_id,
+            self.assessment_two.title: self.assessment_two.unit_id}, choices)
+
+        choices = self._get_selection_choices(
+            schema, ['properties', 'post_assessment', '_inputex'])
+        self.assertEquals({
+            '-- None --': -1,
+            self.assessment_one.title: self.assessment_one.unit_id,
+            self.assessment_two.title: self.assessment_two.unit_id}, choices)
+
+    def test_rest_unit_assignment(self):
+        unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
+        unit_rest_handler.app_context = self.course.app_context
+        # Use REST handler function to save pre/post handlers on one unit.
+        errors = []
+        unit_rest_handler.apply_updates(
+            self.unit_no_lessons,
+            {
+                'title': self.unit_no_lessons.title,
+                'now_available': self.unit_no_lessons.now_available,
+                'label_groups': [],
+                'pre_assessment': self.assessment_one.unit_id,
+                'post_assessment': self.assessment_two.unit_id,
+            }, errors)
+        self.assertEquals([], errors)
+        self.assertEquals(self.unit_no_lessons.pre_assessment,
+                          self.assessment_one.unit_id)
+        self.assertEquals(self.unit_no_lessons.post_assessment,
+                          self.assessment_two.unit_id)
+        self.course.save()
+
+        # Verify that the assessments are no longer available for choosing
+        # on the other unit.
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_one_lesson.unit_id)
+        choices = self._get_selection_choices(
+            schema, ['properties', 'pre_assessment', '_inputex'])
+        self.assertEquals({'-- None --': -1}, choices)
+
+        # Verify that they are available for choosing on the unit where
+        # they are assigned.
+        schema = unit_rest_handler.get_annotations_dict(
+            self.course, self.unit_no_lessons.unit_id)
+        choices = self._get_selection_choices(
+            schema, ['properties', 'pre_assessment', '_inputex'])
+        self.assertEquals({
+            '-- None --': -1,
+            self.assessment_one.title: self.assessment_one.unit_id,
+            self.assessment_two.title: self.assessment_two.unit_id}, choices)
+
+        # Verify that attempting to set pre/post assessments that
+        # are already in use fails.
+        errors = []
+        unit_rest_handler.apply_updates(
+            self.unit_one_lesson,
+            {
+                'title': self.unit_one_lesson.title,
+                'now_available': self.unit_one_lesson.now_available,
+                'label_groups': [],
+                'pre_assessment': self.assessment_one.unit_id,
+                'post_assessment': self.assessment_two.unit_id,
+            }, errors)
+        self.assertEquals(
+            ['Assessment "Assessment One" is already '
+             'asssociated to unit "No Lessons"',
+             'Assessment "Assessment Two" is already '
+             'asssociated to unit "No Lessons"'], errors)
+        self.assertEquals(self.unit_one_lesson.pre_assessment, None)
+        self.assertEquals(self.unit_one_lesson.post_assessment, None)
+        self.course.save()
+
+        # Verify that swapping the order of pre/post assessments on the
+        # unit that already has them is fine.
+        errors = []
+        unit_rest_handler.apply_updates(
+            self.unit_no_lessons,
+            {
+                'title': self.unit_no_lessons.title,
+                'now_available': self.unit_no_lessons.now_available,
+                'label_groups': [],
+                'pre_assessment': self.assessment_two.unit_id,
+                'post_assessment': self.assessment_one.unit_id,
+            }, errors)
+        self.assertEquals([], errors)
+        self.assertEquals(self.unit_no_lessons.pre_assessment,
+                          self.assessment_two.unit_id)
+        self.assertEquals(self.unit_no_lessons.post_assessment,
+                          self.assessment_one.unit_id)
+        self.course.save()
+
+        # Verify that using the same assessment as both pre and post fails.
+        errors = []
+        unit_rest_handler.apply_updates(
+            self.unit_no_lessons,
+            {
+                'title': self.unit_no_lessons.title,
+                'now_available': self.unit_no_lessons.now_available,
+                'label_groups': [],
+                'pre_assessment': self.assessment_one.unit_id,
+                'post_assessment': self.assessment_one.unit_id,
+            }, errors)
+        self.assertEquals([
+            'The same assessment cannot be used as both the pre '
+            'and post assessment of a unit.'], errors)
+        self.assertEquals(self.unit_no_lessons.pre_assessment,
+                          self.assessment_one.unit_id)
+        self.assertEquals(self.unit_no_lessons.post_assessment, None)
+        self.course.save()

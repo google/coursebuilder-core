@@ -98,7 +98,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
     'tests.functional.test_classes.VirtualFileSystemTest': 41,
     'tests.functional.test_classes.ImportActivityTests': 6,
-    'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 7,
+    'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 11,
     'tests.functional.whitelist.WhitelistTest': 12,
     'tests.integration.test_classes': 15,
     'tests.unit.etl_mapreduce.HistogramTests': 5,

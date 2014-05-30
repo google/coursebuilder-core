@@ -297,7 +297,7 @@ class UnitLessonEditor(ApplicationHandler):
             UnitRESTHandler, 'Unit',
             page_description=messages.UNIT_EDITOR_DESCRIPTION,
             annotations_dict=UnitRESTHandler.get_annotations_dict(
-                courses.Course(self).get_units(), int(self.request.get('key'))))
+                courses.Course(self), int(self.request.get('key'))))
 
     def get_edit_link(self):
         """Shows link editor."""
@@ -493,7 +493,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         'inputex-checkbox']
 
     @classmethod
-    def get_annotations_dict(cls, all_units, this_unit_id):
+    def get_annotations_dict(cls, course, this_unit_id):
 
         # The set of available assesments needs to be dynamically
         # generated and set as selection choices on the form.
@@ -501,9 +501,11 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         # selected by other units.
         available_assessments = {}
         referenced_assessments = {}
-        for unit in all_units:
+        for unit in course.get_units():
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                available_assessments[unit.unit_id] = unit
+                model_version = course.get_assessment_model_version(unit)
+                if model_version != courses.ASSESSMENT_MODEL_VERSION_1_4:
+                    available_assessments[unit.unit_id] = unit
             elif (unit.type == verify.UNIT_TYPE_UNIT and
                   this_unit_id != unit.unit_id):
                 if unit.pre_assessment:
@@ -537,7 +539,26 @@ class UnitRESTHandler(CommonUnitRESTHandler):
             assessment = course.find_unit_by_id(assessment_id)
             errors.append(
                 'Assessment "%s" is already asssociated to unit "%s"' % (
-                    assessment.title, unit.title))
+                    assessment.title, parent_unit.title))
+            return False
+        return True
+
+    def _is_assessment_version_ok(self, course, assessment_id, errors):
+        # Here, we want to establish that the display model for the
+        # assessment is compatible with the assessment being used in
+        # the context of a Unit.  Model version 1.4 is not, because
+        # the way sets up submission is to build an entirely new form
+        # from JavaScript (independent of the form used to display the
+        # assessment), and the way it learns the ID of the assessment
+        # is by looking in the URL (as opposed to taking a parameter).
+        # This is incompatible with the URLs for unit display, so we
+        # just disallow older assessments here.
+        assessment = course.find_unit_by_id(assessment_id)
+        model_version = course.get_assessment_model_version(assessment)
+        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
+            errors.append(
+                'The version of assessment "%s" ' % assessment.title +
+                'is not compatible with use as a pre/post unit element')
             return False
         return True
 
@@ -548,7 +569,8 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         pre_assessment_id = updated_unit_dict['pre_assessment']
         if (pre_assessment_id >= 0 and
             self._is_assessment_unused(course, unit, pre_assessment_id,
-                                       errors)):
+                                       errors) and
+            self._is_assessment_version_ok(course, pre_assessment_id, errors)):
             unit.pre_assessment = pre_assessment_id
         else:
             unit.pre_assessment = None
@@ -558,9 +580,12 @@ class UnitRESTHandler(CommonUnitRESTHandler):
             errors.append(
                 'The same assessment cannot be used as both the pre '
                 'and post assessment of a unit.')
+            unit.post_assessment = None
         elif (post_assessment_id >= 0 and
               self._is_assessment_unused(course, unit, post_assessment_id,
-                                         errors)):
+                                         errors) and
+              self._is_assessment_version_ok(course, post_assessment_id,
+                                             errors)):
             unit.post_assessment = post_assessment_id
         else:
             unit.post_assessment = None

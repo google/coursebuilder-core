@@ -357,9 +357,17 @@ class Unit12(object):
     def pre_assessment(self):
         return None
 
+    @pre_assessment.setter
+    def pre_assessment(self, value):
+        pass
+
     @property
     def post_assessment(self):
         return None
+
+    @post_assessment.setter
+    def post_assessment(self, value):
+        pass
 
 
 class Lesson12(object):
