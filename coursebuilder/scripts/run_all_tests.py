@@ -67,6 +67,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_unsubscribe.GetUnsubscribeUrlTests': 4,
     'tests.functional.modules_unsubscribe.SubscribeAndUnsubscribeTests': 4,
     'tests.functional.modules_unsubscribe.UnsubscribeHandlerTests': 2,
+    'tests.functional.progress_percent.ProgressPercent': 4,
     'tests.functional.review_module.ManagerTest': 55,
     'tests.functional.review_peer.ReviewStepTest': 3,
     'tests.functional.review_peer.ReviewSummaryTest': 5,

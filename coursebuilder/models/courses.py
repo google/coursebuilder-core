@@ -398,6 +398,11 @@ class Lesson12(object):
     def index(self):
         return self._index
 
+    @property
+    def has_activity(self):
+        # pylint: disable-msg=g-explicit-bool-comparison
+        return self.activity != ''
+
 
 class CachedCourse12(AbstractCachedObject):
     """A representation of a Course12 optimized for storing in memcache."""

@@ -799,13 +799,55 @@ class UnitLessonCompletionTracker(object):
 
         result = {}
         for unit in units:
-            if unit.type == 'A':
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 result[unit.unit_id] = self.is_assessment_completed(
                     progress, unit.unit_id)
-            elif unit.type == 'U':
+            elif unit.type == verify.UNIT_TYPE_UNIT:
                 value = self.get_unit_status(progress, unit.unit_id)
                 result[unit.unit_id] = value or 0
 
+        return result
+
+    def get_unit_percent_complete(self, student):
+        """Returns a dict with each unit's completion in [0.0, 1.0]."""
+        if student.is_transient:
+            return {}
+
+        course = self._get_course()
+        units = course.get_units()
+        assessment_scores = {int(s['id']): s['score'] / 100.0
+                             for s in course.get_all_scores(student)}
+        result = {}
+        for unit in units:
+            # Assessments are scored as themselves.
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                result[unit.unit_id] = assessment_scores[unit.unit_id]
+            elif unit.type == verify.UNIT_TYPE_UNIT:
+                if (unit.pre_assessment and
+                    assessment_scores[unit.pre_assessment] >= 1.0):
+                    # Use pre-assessment iff it exists and student scored 100%
+                    result[unit.unit_id] = 1.0
+                else:
+                    # Otherwise, count % completion on lessons within unit.
+                    num_completed = 0
+                    lesson_progress = self.get_lesson_progress(student,
+                                                               unit.unit_id)
+                    if not lesson_progress:
+                        result[unit.unit_id] = 0.0
+                    else:
+                        for lesson in lesson_progress.values():
+                            if lesson['has_activity']:
+                                # Lessons that have activities must be
+                                # activity-complete as well as HTML complete.
+                                if (lesson['html'] == self.COMPLETED_STATE and
+                                    lesson['activity'] == self.COMPLETED_STATE):
+                                    num_completed += 1
+                            else:
+                                # Lessons without activities just need HTML
+                                if lesson['html'] == self.COMPLETED_STATE:
+                                    num_completed += 1
+                        result[unit.unit_id] = round(
+                            num_completed / float(len(lesson_progress)), 3)
         return result
 
     def get_lesson_progress(self, student, unit_id):
@@ -823,6 +865,7 @@ class UnitLessonCompletionTracker(object):
                     progress, unit_id, lesson.lesson_id) or 0,
                 'activity': self.get_activity_status(
                     progress, unit_id, lesson.lesson_id) or 0,
+                'has_activity': lesson.has_activity,
             }
         return result
 
