@@ -169,7 +169,7 @@ class DashboardHandler(
 
     def _get_alerts(self):
         alerts = []
-        if not courses.is_editable_fs(self.app_context):
+        if not self.app_context.is_editable_fs():
             alerts.append('Read-only course.')
         if not self.app_context.now_available:
             alerts.append('The course is not publicly available.')
@@ -311,7 +311,7 @@ class DashboardHandler(
                 className='strong'
             ).add_text(unit.title)
         ).add_child(self._get_availability(unit))
-        if filer.is_editable_fs(self.app_context):
+        if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_assessment',
@@ -325,7 +325,7 @@ class DashboardHandler(
                 'a', href=unit.href, className='strong'
             ).add_text(unit.title)
         ).add_child(self._get_availability(unit))
-        if filer.is_editable_fs(self.app_context):
+        if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_link',
@@ -334,7 +334,7 @@ class DashboardHandler(
         return li
 
     def _render_unit_li(self, course, unit):
-        is_editable = filer.is_editable_fs(self.app_context)
+        is_editable = self.app_context.is_editable_fs()
         li = safe_dom.Element('li').add_child(
             safe_dom.Element(
                 'a', href='unit?unit=%s' % unit.unit_id,
@@ -387,7 +387,7 @@ class DashboardHandler(
             ).add_text('Course')]
 
         outline_actions = []
-        if filer.is_editable_fs(self.app_context):
+        if self.app_context.is_editable_fs():
             outline_actions.append({
                 'id': 'edit_unit_lesson',
                 'caption': 'Organize',
@@ -476,7 +476,7 @@ class DashboardHandler(
                 self.app_context.get_home_folder(), '/')))
 
         # Enable editing if supported.
-        if filer.is_editable_fs(self.app_context):
+        if self.app_context.is_editable_fs():
             yaml_actions.append({
                 'id': 'edit_course_yaml',
                 'caption': 'Advanced Edit',
@@ -661,7 +661,7 @@ class DashboardHandler(
 
         output = safe_dom.NodeList()
 
-        if filer.is_editable_fs(self.app_context) and upload:
+        if self.app_context.is_editable_fs() and upload:
             output.append(
                 safe_dom.Element(
                     'a', className='gcb-button gcb-pull-right',
@@ -696,7 +696,7 @@ class DashboardHandler(
 
     def list_questions(self):
         """Prepare a list of the question bank contents."""
-        if not filer.is_editable_fs(self.app_context):
+        if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
 
         output = safe_dom.NodeList().append(
@@ -736,7 +736,7 @@ class DashboardHandler(
 
     def list_question_groups(self):
         """Prepare a list of question groups."""
-        if not filer.is_editable_fs(self.app_context):
+        if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
 
         all_questions = QuestionDAO.get_all()
@@ -780,7 +780,7 @@ class DashboardHandler(
     def list_labels(self):
         """Prepare a list of labels for use on the Assets page."""
         output = safe_dom.NodeList()
-        if not filer.is_editable_fs(self.app_context):
+        if not self.app_context.is_editable_fs():
             return output
 
         output.append(

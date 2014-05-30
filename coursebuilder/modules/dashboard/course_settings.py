@@ -33,10 +33,6 @@ from modules.oeditor import oeditor
 from google.appengine.api import users
 
 
-def is_editable_fs(app_context):
-    return app_context.fs.impl.__class__ == vfs.DatastoreBackedFileSystem
-
-
 class CourseSettingsRights(object):
     """Manages view/edit rights for files."""
 
@@ -62,7 +58,7 @@ class CourseSettingsHandler(ApplicationHandler):
 
     def post_edit_basic_course_settings(self):
         """Handles editing of course.yaml."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         # Check if course.yaml exists; create if not.
         fs = self.app_context.fs.impl
@@ -298,7 +294,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         key = self.request.get('key')
 
@@ -337,7 +333,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         request = transforms.loads(self.request.get('request'))
         key = request.get('key')

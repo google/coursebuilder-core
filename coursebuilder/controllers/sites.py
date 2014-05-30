@@ -786,6 +786,9 @@ class ApplicationContext(object):
         jinja_environment.install_gettext_translations(i18n)
         return jinja_environment
 
+    def is_editable_fs(self):
+        return self._fs.impl.__class__ == DatastoreBackedFileSystem
+
 
 def _courses_config_validator(rules_text, errors):
     """Validates a textual definition of courses entries."""

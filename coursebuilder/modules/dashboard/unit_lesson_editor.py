@@ -21,7 +21,6 @@ import logging
 import random
 import urllib
 
-import filer
 import messages
 import yaml
 
@@ -280,7 +279,7 @@ class UnitLessonEditor(ApplicationHandler):
             key, rest_url, exit_url,
             extra_args=extra_args,
             delete_url=delete_url, delete_method='delete',
-            read_only=not filer.is_editable_fs(self.app_context),
+            read_only=not self.app_context.is_editable_fs(),
             required_modules=rest_handler_cls.REQUIRED_MODULES,
             extra_js_files=extra_js_files)
 

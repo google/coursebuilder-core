@@ -56,10 +56,6 @@ ALLOWED_ASSET_UPLOAD_BASES = ALLOWED_ASSET_BINARY_BASES.union(
 MAX_ASSET_UPLOAD_SIZE_K = 500
 
 
-def is_editable_fs(app_context):
-    return app_context.fs.impl.__class__ == vfs.DatastoreBackedFileSystem
-
-
 def is_text_payload(payload):
     try:
         transforms.dumps(payload)
@@ -121,7 +117,7 @@ class FileManagerAndEditor(ApplicationHandler):
 
     def post_create_or_edit_settings(self):
         """Handles creation or/and editing of course.yaml."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         # Check if course.yaml exists; create if not.
         fs = self.app_context.fs.impl
@@ -201,7 +197,7 @@ class FileManagerAndEditor(ApplicationHandler):
 
     def get_manage_text_asset(self):
         """Show an edit/save/delete/revert form for a text asset."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
         uri = self.request.get('uri')
         assert uri
         tab_name = self.request.get('tab')
@@ -287,7 +283,7 @@ class TextAssetRESTHandler(BaseRESTHandler):
 
     def delete(self):
         """Handles the delete verb."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
         filename = self.request.get('key')
 
         if not (filename and self.assert_xsrf_token_or_fail(
@@ -331,7 +327,7 @@ class TextAssetRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles the put verb."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
         request = self.request.get('request')
         assert request
         request = transforms.loads(request)
@@ -407,7 +403,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         key = self.request.get('key')
         if not FilesRights.can_view(self):
@@ -448,7 +444,7 @@ class FilesItemRESTHandler(BaseRESTHandler):
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         request = transforms.loads(self.request.get('request'))
         key = request.get('key')
@@ -566,7 +562,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
     def post(self):
         """Handles asset uploads."""
-        assert is_editable_fs(self.app_context)
+        assert self.app_context.is_editable_fs()
 
         if not FilesRights.can_add(self):
             transforms.send_file_upload_response(

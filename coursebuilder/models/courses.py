@@ -176,10 +176,6 @@ LEGACY_HUMAN_GRADER_WORKFLOW = yaml.safe_dump({
 }, default_flow_style=False)
 
 
-def is_editable_fs(app_context):
-    return isinstance(app_context.fs.impl, vfs.DatastoreBackedFileSystem)
-
-
 def copy_attributes(source, target, converter):
     """Copies source object attributes into a target using a converter."""
     for source_name, value in converter.items():
@@ -1459,7 +1455,7 @@ class CourseModel13(object):
                 namespace_manager.set_namespace(old_namespace)
 
         # check editable
-        if not is_editable_fs(self._app_context):
+        if not self._app_context.is_editable_fs():
             errors.append(
                 'Target course %s must be '
                 'on read-write media.' % self.app_context.raw)
@@ -1702,7 +1698,7 @@ class Course(object):
     @classmethod
     def _load(cls, app_context):
         """Loads course data from persistence storage into this instance."""
-        if not is_editable_fs(app_context):
+        if not app_context.is_editable_fs():
             model = CourseModel12.load(app_context)
             if model:
                 return model
