@@ -578,6 +578,13 @@ class Unit13(object):
         # Valid for all values of unit.type
         self.labels = None
 
+        # TEMPORARY - a hack to support the appearance of assessments as
+        # being part of units.  Only valid for UNIT_TYPE_UNIT.
+        # TODO(psimakov): Decide what "temporary" means; do we need a
+        # more general hierarchical-container strategy, and if so, when?
+        self.pre_assessment = None
+        self.post_assessment = None
+
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
@@ -669,7 +676,10 @@ class PersistentCourse13(object):
                     'html_check_answers': False,
                     'html_review_form': '',
                     'properties': {},
-                    'labels': ''}
+                    'labels': '',
+                    'pre_assessment': None,
+                    'post_assessment': None,
+                    }
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
 
@@ -1096,6 +1106,8 @@ class CourseModel13(object):
         existing_unit.release_date = unit.release_date
         existing_unit.now_available = unit.now_available
         existing_unit.labels = unit.labels
+        existing_unit.pre_assessment = unit.pre_assessment
+        existing_unit.post_assessment = unit.post_assessment
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href

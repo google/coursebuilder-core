@@ -295,7 +295,9 @@ class UnitLessonEditor(ApplicationHandler):
         """Shows unit editor."""
         self._render_edit_form_for(
             UnitRESTHandler, 'Unit',
-            page_description=messages.UNIT_EDITOR_DESCRIPTION)
+            page_description=messages.UNIT_EDITOR_DESCRIPTION,
+            annotations_dict=UnitRESTHandler.get_annotations_dict(
+                courses.Course(self).get_units(), int(self.request.get('key'))))
 
     def get_edit_link(self):
         """Shows link editor."""
@@ -351,10 +353,11 @@ class CommonUnitRESTHandler(BaseRESTHandler):
             for label in sorted(all_labels, lambda a, b: cmp(a.title, b.title)):
                 if label.type == label_type.type:
                     label_group.append({
-                        'id': str(label.id),
+                        'id': label.id,
                         'title': label.title,
                         'description': label.description,
                         'checked': str(label.id) in unit_labels,
+                        'no_labels': '',
                         })
             if not label_group:
                 label_group.append({
@@ -362,7 +365,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                     'title': '',
                     'description': '',
                     'checked': False,
-                    'no_labels': '&lt;No labels of this type&gt;'
+                    'no_labels': '-- No labels of this type --',
                     })
             label_groups.append({
                 'title': label_type.title,
@@ -468,24 +471,80 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
+def generate_unit_schema():
+    schema = generate_common_schema('Unit')
+    schema.add_property(SchemaField(
+        'pre_assessment', 'Pre Assessment', 'integer', optional=True))
+    schema.add_property(SchemaField(
+        'post_assessment', 'Post Assessment', 'integer', optional=True))
+    return schema
+
+
 class UnitRESTHandler(CommonUnitRESTHandler):
     """Provides REST API to unit."""
 
     URI = '/rest/course/unit'
-    SCHEMA = generate_common_schema('Unit')
+    SCHEMA = generate_unit_schema()
     SCHEMA_JSON = SCHEMA.get_json_schema()
     SCHEMA_DICT = SCHEMA.get_json_schema_dict()
-    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable',
-        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
+        'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-integer',
+        'inputex-checkbox']
+
+    @classmethod
+    def get_annotations_dict(cls, all_units, this_unit_id):
+
+        # The set of available assesments needs to be dynamically
+        # generated and set as selection choices on the form.
+        # We want to only show assessments that are not already
+        # selected by other units.
+        available_assessments = {}
+        referenced_assessments = {}
+        for unit in all_units:
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                available_assessments[unit.unit_id] = unit
+            elif (unit.type == verify.UNIT_TYPE_UNIT and
+                  this_unit_id != unit.unit_id):
+                if unit.pre_assessment:
+                    referenced_assessments[unit.pre_assessment] = True
+                if unit.post_assessment:
+                    referenced_assessments[unit.post_assessment] = True
+        for referenced in referenced_assessments:
+            if referenced in available_assessments:
+                del available_assessments[referenced]
+
+        schema = generate_unit_schema()
+        choices = [(-1, '-- None --')]
+        for assessment_id in sorted(available_assessments):
+            choices.append(
+                (assessment_id, available_assessments[assessment_id].title))
+        schema.get_property('pre_assessment').set_select_data(choices)
+        schema.get_property('post_assessment').set_select_data(choices)
+
+        return schema.get_schema_dict()
 
     def unit_to_dict(self, unit):
         assert unit.type == 'U'
-        return self.unit_to_dict_common(unit)
+        ret = self.unit_to_dict_common(unit)
+        ret['pre_assessment'] = unit.pre_assessment or -1
+        ret['post_assessment'] = unit.post_assessment or -1
+        return ret
 
     def apply_updates(self, unit, updated_unit_dict, errors):
         self.apply_updates_common(unit, updated_unit_dict, errors)
+        if updated_unit_dict['pre_assessment'] >= 0:
+            unit.pre_assessment = updated_unit_dict['pre_assessment']
+        else:
+            unit.pre_assessment = None
+
+        if updated_unit_dict['post_assessment'] >= 0:
+            unit.post_assessment = updated_unit_dict['post_assessment']
+        else:
+            unit.post_assessment = None
+
+        if unit.pre_assessment == unit.post_assessment:
+            unit.post_assessment = None
 
 
 def generate_link_schema():

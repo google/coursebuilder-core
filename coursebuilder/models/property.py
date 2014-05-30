@@ -37,6 +37,9 @@ class Property(object):
     def name(self):
         return self._name
 
+    def set_select_data(self, select_data):
+        self._select_data = select_data
+
 
 class Registry(object):
     """Registry is a collection of Property's."""
@@ -58,6 +61,12 @@ class Registry(object):
     def add_property(self, schema_field):
         """Add a Property to this Registry."""
         self._properties.append(schema_field)
+
+    def get_property(self, property_name):
+        for prop in self._properties:
+            if prop.name == property_name:
+                return prop
+        return None
 
     def add_sub_registry(
         self, name, title=None, description=None, registry=None):
