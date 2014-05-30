@@ -3,10 +3,10 @@
 {% block gcb_page_info %}
   if ('gcbSetPageInfo' in window) {
     gcbSetPageInfo({
-      'page_type': 'unit',
-      'unit_id': '{{ unit_id }}',
-      {% if lesson_id %}
-        'lesson_id': '{{ lesson_id }}',
+      'page_type': '{{ page_type }}',
+      'unit_id': '{{ unit.unit_id }}',
+      {% if lesson %}
+        'lesson_id': '{{ lesson.lesson_id }}',
       {% endif %}
     });
   }
@@ -20,6 +20,7 @@
 {% endblock %}
 
 {% block main_content %}
+
 <script>
   var questionData = {};
   {% if lesson and lesson.scored %}
@@ -31,10 +32,10 @@
 
 <div id="gcb-main">
   {% if is_read_write_course and is_course_admin %}
-    <a href="dashboard?action=edit_unit&key={{ unit_id }}"
+    <a href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
       class="gcb-button gcb-button-action">Edit unit</a>
     {% if lesson %}
-      <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
+      <a href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
         class="gcb-button gcb-button-action">Edit lesson</a>
     {% endif %}
   {% endif %}
@@ -44,9 +45,18 @@
     <li><a href="unit?unit={{ unit.unit_id }}">
       {{ display_short_unit_title(unit) }}</a></li>
     {% if lesson %}
-      {# I18N: Navigation breadcrumb. #}
-      <li>{{ gettext('Lesson') }} {{ lesson.index }}</li>
+      <li>
+        {% if activity %}
+        <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
+        {% endif %}
+          {# I18N: Navigation breadcrumb. #}
+          {{ gettext('Lesson') }} {{ lesson.index }}{% if activity %}</a>{% endif %}</li>
+      {% if activity %}
+        <li>{# I18N: Navigation breadcrumb. #} {{ gettext('Activity') }}</li>
+      {% endif %}
     {% endif %}
+
+
   </ul>
   <div>
     <h1 class="gcb-unit-header">
@@ -54,14 +64,14 @@
     </h1>
   </div>
 
-  {% if lessons %}
+  {% if course_outline %}
     {% include 'lesson_navbar.html' %}
   {% endif %}
 
   <div class="gcb-article tab-content" role="main">
     {{course_info.unit.after_content_begins | safe}}
 
-    {% if not lesson %}
+    {% if not display_content %}
       <div style="padding-bottom: 20px;">
         <div class="gcb-aside gcb-button-box">
           {# I18N: Text shown for a unit that has had no lessons added to it yet. #}
@@ -72,7 +82,7 @@
 
       <div style="padding-bottom: 20px;">
 
-        {{ lesson_content }}
+        {{ display_content }}
 
         <div class="gcb-button-box" {% if course_info.unit.hide_lesson_navigation_buttons %}style="display: none;"{% endif%}>
           <div class="gcb-prev-button">

@@ -1,68 +1,26 @@
-<div class="gcb-aside gcb-button-box">
-  {% if lesson.now_available or is_course_admin %}
-    <div class="gcb-cols">
-      <div id="lesson-title" class="gcb-col-7">
-        <h1 class="gcb-lesson-title">
-          {{ lesson.title }}
-          {% if not lesson.now_available and is_course_admin %}
-            <span id="lesson-title-private">
-              (Private)
-            </span>
-          {% endif %}
-        </h1>
+{% if lesson.objectives %}
+  <div class="gcb-lesson-content">
+    {{ lesson.objectives | gcb_tags}}
+    {% if lesson.scored %}
+      <div class="qt-grade-scored-lesson qt-hidden">
+        <button class="gcb-button qt-check-answer-button">
+          {# I18N: Button at the bottom of a lesson page offering the student the opportunity to grade his/her answers. #}
+          {{ gettext('Grade Questions') }}
+        </button>
       </div>
-      <div id="get-text-button" class="gcb-col-3">
-        <p style="float:right; margin-top: 0px;">
-          {% if lesson.notes %}
-          <a role="button" class="gcb-button" id="lessonNotesLink"
-             href="{{ lesson.notes }}" target="_blank">
-            {# I18N: Link to a text version of a lesson video. #}
-            {{ gettext('Text Version') }}
-          </a>
-          {% endif %}
-        </p>
-      </div>
-    </div><!-- /gcb-cols -->
-
-    {% if lesson.objectives %}
-      <div class="gcb-lesson-content">
-        {{ lesson.objectives | gcb_tags}}
-        {% if lesson.scored %}
-          <div class="qt-grade-scored-lesson qt-hidden">
-            <button class="gcb-button qt-check-answer-button">
-              {# I18N: Button at the bottom of a lesson page offering the student the opportunity to grade his/her answers. #}
-              {{ gettext('Grade Questions') }}
-            </button>
-          </div>
-          <div class="qt-grade-report qt-hidden"></div>
-        {% endif %}
-      </div>
+      <div class="qt-grade-report qt-hidden"></div>
     {% endif %}
+  </div>
+{% endif %}
 
-    {% if lesson.video %}
-      <p class="gcb-video-container">
-        {# I18N: Alt text for an embedded YouTube video player. #}
-        <iframe class="youtube-player"
-                title="{{ gettext('YouTube Video Player') }}"
-                type="text/html" width="650" height="400"
-                frameborder="0" allowfullscreen
-                src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
-        </iframe>
-      </p>
-    {% endif %}
-
-  {% else %}
-
-    <h1 class="gcb-lesson-title">
-      {{ lesson.title }}
-    </h1>
-
-    <br><br>
-
-    <div>
-      {# I18N: Text shown for a lesson that has not been made public. #}
-      {{ gettext('This lesson is not available.')}}
-    </div>
-
-  {% endif %}
-</div><!-- /gcb-aside -->
+{% if lesson.video %}
+  <p class="gcb-video-container">
+    {# I18N: Alt text for an embedded YouTube video player. #}
+    <iframe class="youtube-player"
+            title="{{ gettext('YouTube Video Player') }}"
+            type="text/html" width="650" height="400"
+            frameborder="0" allowfullscreen
+            src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
+    </iframe>
+  </p>
+{% endif %}

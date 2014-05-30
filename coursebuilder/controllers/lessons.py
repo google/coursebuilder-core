@@ -224,8 +224,33 @@ class CourseHandler(BaseHandler):
 class UnitHandler(BaseHandler):
     """Handler for generating unit page."""
 
-    def _show_activity_on_separate_page(self, lesson):
-        return lesson.activity and lesson.activity_listed
+    class UnitLeftNavElements(object):
+
+        def __init__(self, course, unit):
+            self._urls = []
+            self._index_by_label = {}
+            index = 0
+
+            for lesson in course.get_lessons(unit.unit_id):
+                self._urls.append('unit?unit=%s&lesson=%s' % (
+                    unit.unit_id, lesson.lesson_id))
+                self._index_by_label['lesson.%s' % lesson.lesson_id] = index
+                index += 1
+
+                if lesson.activity and lesson.activity_listed:
+                    self._urls.append('unit?unit=%s&lesson=%s&activity=true' % (
+                        unit.unit_id, lesson.lesson_id))
+                    self._index_by_label['activity.%s' % lesson.lesson_id] = (
+                        index)
+                    index += 1
+
+        def get_url_by(self, item_type, item_id, offset):
+            index = self._index_by_label['%s.%s' % (item_type, item_id)]
+            index += offset
+            if index >= 0 and index < len(self._urls):
+                return self._urls[index]
+            else:
+                return None
 
     def get(self):
         """Handles GET requests."""
@@ -246,163 +271,88 @@ class UnitHandler(BaseHandler):
             self.redirect('/')
             return
 
-        if lesson:
-            self.template_value['lesson_content'] = (
-                self.get_lesson_content(lesson))
-
         # Set template values for nav bar and page type.
         self.template_value['navbar'] = {'course': True}
         self.template_value['page_type'] = UNIT_PAGE_TYPE
 
-        lessons = self.get_lessons(unit_id)
-
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
-        self.template_value['unit_id'] = unit_id
-        self.template_value['lesson'] = lesson
-        self.template_value['lessons'] = lessons
+        self.template_value['unit_id'] = unit.unit_id
 
         # If this unit contains no lessons, return.
         if not lesson:
             self.render('unit.html')
             return
-
-        lesson_id = lesson.lesson_id
-        self.template_value['lesson_id'] = lesson_id
+        self.template_value['lesson'] = lesson
+        self.template_value['lesson_id'] = lesson.lesson_id
 
         # These attributes are needed in order to render questions (with
         # progress indicators) in the lesson body. They are used by the
         # custom component renderers in the assessment_tags module.
         self.student = student
         self.unit_id = unit_id
-        self.lesson_id = lesson_id
+        self.lesson_id = lesson.lesson_id
         self.lesson_is_scored = lesson.scored
 
-        index = lesson.index - 1  # indexes are 1-based
-
-        # Format back button.
-        if index == 0:
-            self.template_value['back_button_url'] = ''
-        else:
-            prev_lesson = lessons[index - 1]
-            if self._show_activity_on_separate_page(prev_lesson):
-                self.template_value['back_button_url'] = (
-                    'activity?unit=%s&lesson=%s' % (
-                        unit_id, prev_lesson.lesson_id))
-            else:
-                self.template_value['back_button_url'] = (
-                    'unit?unit=%s&lesson=%s' % (unit_id, prev_lesson.lesson_id))
-
-        # Format next button.
-        if self._show_activity_on_separate_page(lesson):
-            self.template_value['next_button_url'] = (
-                'activity?unit=%s&lesson=%s' % (
-                    unit_id, lesson_id))
-        else:
-            if index >= len(lessons) - 1:
-                self.template_value['next_button_url'] = ''
-            else:
-                next_lesson = lessons[index + 1]
-                self.template_value['next_button_url'] = (
-                    'unit?unit=%s&lesson=%s' % (
-                        unit_id, next_lesson.lesson_id))
-
         add_course_outline_to_template(self, student)
-
-        # Set template values for student progress
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
-        if CAN_PERSIST_ACTIVITY_EVENTS.value:
-            # Mark this page as accessed. This is done after setting the
-            # student progress template value, so that the mark only shows up
-            # after the student visits the page for the first time.
-            self.get_course().get_progress_tracker().put_html_accessed(
-                student, unit_id, lesson_id)
+
+        # Add markup to page which depends on the kind of content.
+        left_nav_elements = UnitHandler.UnitLeftNavElements(
+            self.get_course(), unit)
+        activity = (self.request.get('activity') or
+                    '/activity' in self.request.path)
+        if activity:
+            self.set_activity_content(student, unit, lesson, left_nav_elements)
+        else:
+            self.set_lesson_content(student, unit, lesson, left_nav_elements)
+
+        self.template_value['display_content'] = (
+                self.get_display_content())
 
         self.render('unit.html')
 
-    def get_lesson_content(self, lesson):
-        template = self.get_template('lesson.html')
-        self.template_value['lesson'] = lesson
-        ret = jinja2.utils.Markup(
-            template.render(self.template_value, autoescape=True))
-        return ret
+    def set_activity_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+            'activity', lesson.lesson_id, -1)
+        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+            'activity', lesson.lesson_id, 1)
+        self.template_value['activity'] = {
+            'title': lesson.activity_title,
+            'activity_script_src': (
+                self.get_course().get_activity_filename(unit.unit_id,
+                                                        lesson.lesson_id))}
+        self.template_value['page_type'] = 'activity'
+        self.template_value['title'] = lesson.activity_title
 
-
-class ActivityHandler(BaseHandler):
-    """Handler for generating activity page and receiving submissions."""
-
-    def get(self):
-        """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled(
-            supports_transient_student=True)
-        if not student:
-            return
-
-        # Extract incoming args
-        unit, lesson = extract_unit_and_lesson(self)
-        unit_id = unit.unit_id
-
-        # If the unit is not currently available, and the user is not an admin,
-        # redirect to the main page.
-        if (not unit.now_available and
-            not Roles.is_course_admin(self.app_context)):
-            self.redirect('/')
-            return
-
-        # Set template values for nav bar and page type.
-        self.template_value['navbar'] = {'course': True}
-        self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
-
-        lessons = self.get_lessons(unit_id)
-
-        # Set template values for a unit and its lesson entities
-        self.template_value['unit'] = unit
-        self.template_value['unit_id'] = unit_id
-        self.template_value['lesson'] = lesson
-        self.template_value['lessons'] = lessons
-
-        # If this unit contains no lessons, return.
-        if not lesson:
-            self.render('activity.html')
-            return
-
-        lesson_id = lesson.lesson_id
-        self.template_value['lesson_id'] = lesson_id
-        self.template_value['activity_script_src'] = (
-            self.get_course().get_activity_filename(unit_id, lesson_id))
-
-        index = lesson.index - 1  # indexes are 1-based
-
-        # Format back button.
-        self.template_value['back_button_url'] = (
-            'unit?unit=%s&lesson=%s' % (unit_id, lesson_id))
-
-        # Format next button.
-        if index >= len(lessons) - 1:
-            self.template_value['next_button_url'] = ''
-        else:
-            next_lesson = lessons[index + 1]
-            self.template_value['next_button_url'] = (
-                'unit?unit=%s&lesson=%s' % (
-                    unit_id, next_lesson.lesson_id))
-
-        add_course_outline_to_template(self, student)
-
-        # Set template values for student progress
-        self.template_value['is_progress_recorded'] = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
             self.get_course().get_progress_tracker().put_activity_accessed(
-                student, unit_id, lesson_id)
+                student, unit.unit_id, lesson.lesson_id)
 
-        self.template_value['event_xsrf_token'] = (
-            XsrfTokenManager.create_xsrf_token('event-post'))
+    def set_lesson_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+            'lesson', lesson.lesson_id, -1)
+        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+            'lesson', lesson.lesson_id, 1)
+        self.template_value['page_type'] = 'unit'
+        self.template_value['title'] = lesson.title
 
-        self.render('activity.html')
+        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+            # Mark this page as accessed. This is done after setting the
+            # student progress template value, so that the mark only shows up
+            # after the student visits the page for the first time.
+            self.get_course().get_progress_tracker().put_html_accessed(
+                student, unit.unit_id, lesson.lesson_id)
+
+    def get_display_content(self):
+        template = self.get_template('lesson_common.html')
+        ret = jinja2.utils.Markup(
+            template.render(self.template_value, autoescape=True))
+        return ret
 
 
 class AssessmentHandler(BaseHandler):

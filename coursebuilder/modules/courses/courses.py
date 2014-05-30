@@ -36,7 +36,7 @@ def register_module():
     # setup routes
     courses_routes = [
         ('/', lessons.CourseHandler),
-        ('/activity', lessons.ActivityHandler),
+        ('/activity', lessons.UnitHandler),
         ('/answer', assessments.AnswerHandler),
         ('/assessment', lessons.AssessmentHandler),
         ('/course', lessons.CourseHandler),
