@@ -18,7 +18,7 @@ TODO(johncox): fill in docs after full implementation written.
 """
 
 __author__ = [
-  'John Cox'
+  'johncox@google.com (John Cox)'
 ]
 
 import datetime
@@ -35,6 +35,10 @@ from google.appengine.api import taskqueue
 from google.appengine.datastore import datastore_rpc
 from google.appengine.ext import db
 from google.appengine.ext import deferred
+
+
+_LOG = logging.getLogger('modules.notifications.notifications')
+logging.basicConfig()
 
 
 _APP_ENGINE_MAIL_FATAL_ERRORS = frozenset([
@@ -127,6 +131,14 @@ def _epoch_usec_to_dt(usec):
       datetime.datetime.utcfromtimestamp(0) +
       datetime.timedelta(microseconds=usec)
   )
+
+
+class Error(Exception):
+  """Base error class."""
+
+
+class NotificationTooOldError(Error):
+  """Recorded on a notification by cron when it's too old to re-enqueue."""
 
 
 class RetentionPolicy(object):
@@ -369,7 +381,7 @@ class Manager(object):
           'Recoverable failure cap (%s) exceeded for notification with '
           'key %s'
       ) % (_RECOVERABLE_FAILURE_CAP, str(notification.key()))
-      logging.error(message)
+      _LOG.error(message)
       permanent_failure = deferred.PermanentTaskFailure(message)
 
       try:
@@ -381,7 +393,7 @@ class Manager(object):
         COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
       # Must be vague. pylint: disable-msg=broad-except
       except Exception, e:
-        logging.error(
+        _LOG.error(
             cls._get_record_failure_error_message(notification, payload, e)
         )
         COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.inc()
@@ -409,14 +421,14 @@ class Manager(object):
           COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
         # Must be vague. pylint: disable-msg=broad-except
         except Exception, e:
-          logging.error(
+          _LOG.error(
               cls._get_record_failure_error_message(
                   notification, payload, exception
               )
           )
           COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.inc()
 
-        logging.error(
+        _LOG.error(
             ('Recoverable error encountered when processing notification task; '
              'will retry. Error was: ' + str(exception))
         )
@@ -522,12 +534,25 @@ class Manager(object):
     }
 
   @classmethod
+  def _get_in_process_notifications_query(cls):
+    return Notification.all(
+    ).filter(
+        '%s =' % Notification._done_date.name, None
+    ).order(
+        '-' + Notification.enqueue_date.name
+    )
+
+  @classmethod
   def _done(cls, notification):
     return bool(notification._done_date)
 
   @classmethod
   def _failed(cls, notification):
     return bool(notification._fail_date)
+
+  @classmethod
+  def _is_too_old_to_reenqueue(cls, dt, now):
+    return now - dt > datetime.timedelta(days=_MAX_RETRY_DAYS)
 
   @classmethod
   def _is_send_mail_error_permanent(cls, exception):
@@ -732,6 +757,16 @@ def register_module():
 
   global custom_module
 
+  # Avert circular dependency. pylint: disable-msg=g-import-not-at-top
+  from modules.notifications import cron
+
+  cron_handlers = [(
+      '/cron/process_pending_notifications',
+      cron.ProcessPendingNotificationsHandler
+  )]
+
   custom_module = custom_modules.Module(
-      'Notifications', 'Student notification management system.', [], [])
+      'Notifications', 'Student notification management system.', cron_handlers,
+      []
+  )
   return custom_module

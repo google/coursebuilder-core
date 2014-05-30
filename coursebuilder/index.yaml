@@ -13,6 +13,12 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: Notification
+  properties:
+  - name: _done_date
+  - name: enqueue_date
+    direction: desc
+
 - kind: ReviewStep
   properties:
   - name: assigner_kind

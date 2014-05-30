@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Functional tests for modules/notifications/notifications.py."""
+"""Functional tests for the notifications module."""
 
 __author__ = [
-    'johncox@google.com'
+    'johncox@google.com (John Cox)'
 ]
 
 import datetime
@@ -23,6 +23,7 @@ import types
 
 from models import config
 from models import counters
+from modules.notifications import cron
 from modules.notifications import notifications
 from tests.functional import actions
 
@@ -36,6 +37,194 @@ from google.appengine.ext import deferred
 
 class UnregisteredRetentionPolicy(notifications.RetentionPolicy):
   NAME = 'unregistered'
+
+
+class CronTest(actions.TestBase):
+  """Tests notifications/cron.py."""
+
+  def setUp(self):
+    super(CronTest, self).setUp()
+    self.now = datetime.datetime.utcnow()
+    self.old_retention_policies = dict(notifications._RETENTION_POLICIES)
+
+    self.audit_trail = {'key': 'value'}
+    self.body = 'body'
+    self.intent = 'intent'
+    self.to = 'to@example.com'
+    self.sender = 'sender@example.com'
+    self.stats = cron._Stats('namespace')
+    self.subject = 'subject'
+
+  def tearDown(self):
+    config.Registry.test_overrides.clear()
+    counters.Registry._clear_all()
+    notifications._RETENTION_POLICIES = self.old_retention_policies
+    super(CronTest, self).tearDown()
+
+  def assert_task_enqueued(self):
+    self.assertEqual(1, len(self.taskq.GetTasks('default')))
+
+  def assert_task_not_enqueued(self):
+    self.assertEqual(0, len(self.taskq.GetTasks('default')))
+
+  def test_process_notification_enqueues_notification_correctly(self):
+    notification_key, _ = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+
+    self.assert_task_enqueued()
+
+    self.execute_all_deferred_tasks()
+
+    self.assertTrue(db.get(notification_key)._done_date)
+    self.assertEqual(1, self.stats.started)
+    self.assertEqual(1, self.stats.reenqueued)
+
+  def test_process_notification_if_fail_date_set_and_policy_found(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._fail_date = self.now
+    notification.put()
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assert_task_not_enqueued()
+    self.assertTrue(notification._done_date)
+    self.assertFalse(payload.body)  # RetainAuditTrail applied.
+    self.assertEqual(0, self.stats.missing_policy)
+    self.assertEqual(1, self.stats.policy_run)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_if_fail_date_set_and_policy_missing(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._fail_date = self.now
+    notification.put()
+    notifications._RETENTION_POLICIES.pop(notifications.RetainAuditTrail.NAME)
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assert_task_not_enqueued()
+    self.assertTrue(notification._done_date)
+    self.assertTrue(payload.body)  # RetainAuditTrail not applied.
+    self.assertEqual(0, self.stats.policy_run)
+    self.assertEqual(0, self.stats.reenqueued)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_if_notification_too_old(self):
+    too_old = self.now - datetime.timedelta(
+        days=notifications._MAX_RETRY_DAYS, seconds=1)
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, too_old, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assert_task_not_enqueued()
+    self.assertTrue(notification._done_date)
+    self.assertTrue(notification._fail_date)
+    self.assertIn(
+        'NotificationTooOldError', notification._last_exception['type'])
+    self.assertIsNone(payload.body)  # RetainAuditTrail applied.
+    self.assertEqual(1, self.stats.policy_run)
+    self.assertEqual(1, self.stats.started)
+    self.assertEqual(1, self.stats.too_old)
+
+  def test_process_notification_if_payload_missing(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    db.delete(payload_key)
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+
+    self.assert_task_not_enqueued()
+    self.assertEqual(1, self.stats.missing_payload)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_if_send_date_set_and_policy_missing(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._send_date = self.now
+    notification.put()
+    notifications._RETENTION_POLICIES.pop(notifications.RetainAuditTrail.NAME)
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assert_task_not_enqueued()
+    self.assertTrue(notification._done_date)
+    self.assertTrue(payload.body)  # RetainAuditTrail not applied.
+    self.assertEqual(1, self.stats.missing_policy)
+    self.assertEqual(0, self.stats.policy_run)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_if_send_date_set_and_policy_found(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._send_date = self.now
+    notification.put()
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assert_task_not_enqueued()
+    self.assertTrue(notification._done_date)
+    self.assertFalse(payload.body)  # RetainAuditTrail applied.
+    self.assertEqual(0, self.stats.missing_policy)
+    self.assertEqual(1, self.stats.policy_run)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_skips_if_already_done(self):
+    notification_key, _ = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._done_date = self.now
+    notification.put()
+    cron.process_notification(db.get(notification_key), self.now, self.stats)
+
+    self.assert_task_not_enqueued()
+    self.assertEqual(1, self.stats.skipped)
+    self.assertEqual(1, self.stats.started)
 
 
 class DatetimeConversionTest(actions.TestBase):
@@ -68,6 +257,51 @@ class ManagerTest(actions.TestBase):
     counters.Registry._clear_all()
     notifications._RETENTION_POLICIES = self.old_retention_policies
     super(ManagerTest, self).tearDown()
+
+  def test_get_in_process_notifications_query(self):
+    exact_cutoff = self.now - datetime.timedelta(
+        days=notifications._MAX_RETRY_DAYS)
+    already_done = notifications.Notification(
+        enqueue_date=exact_cutoff, to=self.to, intent=self.intent,
+        _done_date=exact_cutoff,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject)
+    oldest_match = notifications.Notification(
+        enqueue_date=exact_cutoff - datetime.timedelta(seconds=1), to=self.to,
+        intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject)
+    newest_match = notifications.Notification(
+        enqueue_date=exact_cutoff, to=self.to, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject
+    )
+    db.put([already_done, oldest_match, newest_match])
+    found = notifications.Manager._get_in_process_notifications_query().fetch(
+        10
+    )
+
+    self.assertEqual(
+        [newest_match.key(), oldest_match.key()],
+        [match.key() for match in found]
+    )
+
+  def test_is_too_old_to_reenqueue(self):
+    newer = self.now - datetime.timedelta(
+        days=notifications._MAX_RETRY_DAYS - 1)
+    equal = self.now - datetime.timedelta(days=notifications._MAX_RETRY_DAYS)
+    older = self.now - datetime.timedelta(
+        days=notifications._MAX_RETRY_DAYS + 1)
+
+    self.assertFalse(
+        notifications.Manager._is_too_old_to_reenqueue(newer, self.now)
+    )
+    self.assertFalse(
+        notifications.Manager._is_too_old_to_reenqueue(equal, self.now)
+    )
+    self.assertTrue(
+        notifications.Manager._is_too_old_to_reenqueue(older, self.now)
+    )
 
   def test_send_async_with_defaults_set_initial_state_and_can_run_tasks(self):
     notification_key, payload_key = notifications.Manager.send_async(
