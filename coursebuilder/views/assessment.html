@@ -1,25 +1,3 @@
-{% extends 'base_course.html' %}
-
-{% block gcb_page_info %}
-  if ('gcbSetPageInfo' in window) {
-    gcbSetPageInfo({
-      'page_type': 'assessment',
-      'assessment_id': '{{ assessment_name }}',
-      'unit_id': '{{ unit_id }}',
-    });
-  }
-{% endblock %}
-
-{% block subtitle %}
-  {# I18N: Title of the webpage. #}
-  - {{ gettext('Assessment') }}
-{% endblock subtitle %}
-
-{% block top_content %}
-{% endblock %}
-
-{% block main_content %}
-
 {% if is_read_write_course and is_course_admin %}
   <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
     class="gcb-button gcb-button-action">Edit assessment</a>
@@ -145,4 +123,3 @@
 
   </div>
 </div>
-{% endblock %}

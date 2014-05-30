@@ -20,6 +20,8 @@ import datetime
 import urllib
 import urlparse
 
+import jinja2
+
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import CAN_PERSIST_ACTIVITY_EVENTS
@@ -243,6 +245,10 @@ class UnitHandler(BaseHandler):
             self.redirect('/')
             return
 
+        if lesson:
+            self.template_value['lesson_content'] = (
+                self.get_lesson_content(lesson))
+
         # Set template values for nav bar and page type.
         self.template_value['navbar'] = {'course': True}
         self.template_value['page_type'] = UNIT_PAGE_TYPE
@@ -253,10 +259,6 @@ class UnitHandler(BaseHandler):
         self.template_value['unit'] = unit
         self.template_value['unit_id'] = unit_id
         self.template_value['lesson'] = lesson
-
-        if lesson:
-            self.template_value['objectives'] = lesson.objectives
-
         self.template_value['lessons'] = lessons
 
         # If this unit contains no lessons, return.
@@ -317,6 +319,13 @@ class UnitHandler(BaseHandler):
                 student, unit_id, lesson_id)
 
         self.render('unit.html')
+
+    def get_lesson_content(self, lesson):
+        template = self.get_template('lesson.html')
+        self.template_value['lesson'] = lesson
+        ret = jinja2.utils.Markup(
+            template.render(self.template_value, autoescape=True))
+        return ret
 
 
 class ActivityHandler(BaseHandler):
@@ -409,7 +418,6 @@ class AssessmentHandler(BaseHandler):
         # Extract incoming args, binding to self if needed.
         assessment_name = self.request.get('name')
         self.unit_id = assessment_name
-        self.template_value['assessment_name'] = assessment_name
         course = self.get_course()
         unit = course.find_unit_by_id(self.unit_id)
         if not unit:
@@ -423,6 +431,14 @@ class AssessmentHandler(BaseHandler):
             self.redirect('/')
             return
 
+        self.template_value['main_content'] = (
+            self.get_assessment_content(student, course, unit))
+        self.template_value['assessment_name'] = assessment_name
+        self.template_value['unit_id'] = self.unit_id
+        self.template_value['navbar'] = {'course': True}
+        self.render('assessment_page.html')
+
+    def get_assessment_content(self, student, course, unit):
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
         self.template_value['model_version'] = model_version
@@ -438,7 +454,6 @@ class AssessmentHandler(BaseHandler):
         else:
             raise ValueError('Bad assessment model version: %s' % model_version)
 
-        self.template_value['navbar'] = {'course': True}
         self.template_value['unit_id'] = self.unit_id
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
@@ -509,8 +524,10 @@ class AssessmentHandler(BaseHandler):
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
             configure_active_view(unit, submission_contents)
-
-        self.render('assessment.html')
+        template = self.get_template('assessment.html')
+        ret = jinja2.utils.Markup(
+            template.render(self.template_value, autoescape=True))
+        return ret
 
     def configure_readonly_view_1_4(self, unit, submission_contents):
         self.template_value['readonly_student_assessment'] = (
