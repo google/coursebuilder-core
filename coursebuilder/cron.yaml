@@ -4,7 +4,7 @@ cron:
   schedule: every 15 minutes  # Max execution is 10 minutes.
 - description: process pending notifications
   url: /cron/process_pending_notifications
-  schedule: every day 03:00
+  schedule: every 1 hours
 - description: indexes all courses
   url: /cron/search/index_courses
   schedule: every day 06:00

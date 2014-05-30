@@ -44,7 +44,9 @@ logging.basicConfig()
 _APP_ENGINE_MAIL_FATAL_ERRORS = frozenset([
     mail_errors.BadRequestError, mail_errors.InvalidSenderError,
 ])
+_ENQUEUED_BUFFER_MULTIPLIER = 1.5
 _KEY_DELIMITER = ':'
+_MAX_ENQUEUED_HOURS = 3
 _MAX_RETRY_DAYS = 3
 # Number of times past which recoverable failure of send_mail() calls becomes
 # hard failure. Used as a brake on runaway queues. Should be larger than the
@@ -303,6 +305,8 @@ class Manager(object):
       COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS.inc()
       raise e
 
+    cls._mark_enqueued(notification, enqueue_date)
+
     try:
       notification_key, payload_key = cls._save_notification_and_payload(
           notification, payload,
@@ -517,21 +521,12 @@ class Manager(object):
         notification_key, payload_key)
 
   @classmethod
-  def _get_retry_options(cls):
-    # Retry up to once every hour with exponential backoff; limit tasks to
-    # three days.
-    return taskqueue.TaskRetryOptions(
-        min_backoff_seconds=1, max_backoff_seconds=_SECONDS_PER_HOUR,
-        max_doublings=12, task_age_limit=_MAX_RETRY_DAYS * _SECONDS_PER_DAY,
-    )
+  def _done(cls, notification):
+    return bool(notification._done_date)
 
   @classmethod
-  def _get_last_exception_value(cls, exception):
-    return {
-        'type': '%s.%s' % (
-            exception.__class__.__module__, exception.__class__.__name__),
-        'string': str(exception),
-    }
+  def _failed(cls, notification):
+    return bool(notification._fail_date)
 
   @classmethod
   def _get_in_process_notifications_query(cls):
@@ -543,12 +538,29 @@ class Manager(object):
     )
 
   @classmethod
-  def _done(cls, notification):
-    return bool(notification._done_date)
+  def _get_last_exception_value(cls, exception):
+    return {
+        'type': '%s.%s' % (
+            exception.__class__.__module__, exception.__class__.__name__),
+        'string': str(exception),
+    }
 
   @classmethod
-  def _failed(cls, notification):
-    return bool(notification._fail_date)
+  def _get_retry_options(cls):
+    # Retry up to once every hour with exponential backoff; limit tasks to
+    # three hours; cron will re-enqueue them for days. This is because the
+    # purpose of the queue is retrying in case of transient errors (datastore or
+    # send_mail burbles), and the purpose of the cron is retrying in case of
+    # longer errors (quota exhaustion).
+    return taskqueue.TaskRetryOptions(
+        min_backoff_seconds=1, max_backoff_seconds=_SECONDS_PER_HOUR,
+        max_doublings=12,  # Overflows task age limit -- don't want underflow.
+        task_age_limit=cls._get_task_age_limit_seconds(),
+    )
+
+  @classmethod
+  def _get_task_age_limit_seconds(cls):
+    return _MAX_ENQUEUED_HOURS * _SECONDS_PER_HOUR
 
   @classmethod
   def _is_too_old_to_reenqueue(cls, dt, now):
@@ -559,8 +571,43 @@ class Manager(object):
     return type(exception) in _APP_ENGINE_MAIL_FATAL_ERRORS
 
   @classmethod
+  def _is_still_enqueued(cls, notification, dt):
+    """Whether or not an item is still on the deferred queue.
+
+    This isn't exact -- we can't query the queue. We can know how long items can
+    be on the queue, so we can make a guess. Our guess has false positives:
+    there is clock skew between datastore and taskqueue, and false negatives are
+    terrible because they cause multiple messages to get sent. Consequently, we
+    consider items that were last enqueued slightly too long ago to still be on
+    the queue. This can cause re-enqueueing of some items to get delayed by one
+    cron interval. We ameliorate this a bit by checking for side-effects of the
+    dequeue (_done|fail|send_date set).
+
+    Args:
+      notification: Notification. The notification to check status of.
+      dt: datetime, assumed UTC. The datetime to check enqueued status at.
+
+    Returns:
+      Boolean. False if the item has never been enqueued, or was enqueued long
+      enough ago we're sure it's no longer on the queue, or has already been
+      processed (indicating it's been enqueued and dequeued). True otherwise.
+    """
+    if (notification._done_date or notification._fail_date or
+        notification._send_date) or not notification._last_enqueue_date:
+      return False
+
+    return cls._get_task_age_limit_seconds() > (
+        ((dt - notification._last_enqueue_date).total_seconds() *
+         _ENQUEUED_BUFFER_MULTIPLIER)
+    )
+
+  @classmethod
   def _mark_done(cls, notification, dt):
     notification._done_date = dt
+
+  @classmethod
+  def _mark_enqueued(cls, notification, dt):
+    notification._last_enqueue_date = dt
 
   @classmethod
   def _mark_failed(cls, notification, dt, exception, permanent=False):
@@ -712,6 +759,8 @@ class Notification(_Model):
   # this has not happened. Does not indicated the retention policy has been
   # applied; see _done_date.
   _fail_date = db.DateTimeProperty()
+  # When the notification was last placed on the deferred queue.
+  _last_enqueue_date = db.DateTimeProperty()
   # JSON representation of the last recordable exception encountered while
   # processing the notification. Format is
   # {'type': type_str, 'string': str(exception)}.

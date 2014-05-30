@@ -67,7 +67,8 @@ class CronTest(actions.TestBase):
   def assert_task_not_enqueued(self):
     self.assertEqual(0, len(self.taskq.GetTasks('default')))
 
-  def test_process_notification_enqueues_notification_correctly(self):
+  def test_process_notification_enqueues_task_and_updates_notification(self):
+    later_date = self.now + datetime.timedelta(seconds=1)
     notification_key, _ = db.put(
         notifications.Manager._make_unsaved_models(
             self.audit_trail, self.body, self.now, self.intent,
@@ -75,13 +76,20 @@ class CronTest(actions.TestBase):
             self.to,
         )
     )
-    cron.process_notification(db.get(notification_key), self.now, self.stats)
 
+    notification = db.get(notification_key)
+    self.assertIsNone(notification._last_enqueue_date)
+
+    cron.process_notification(db.get(notification_key), later_date, self.stats)
+
+    notification = db.get(notification_key)
+    self.assertEqual(later_date, notification._last_enqueue_date)
     self.assert_task_enqueued()
 
     self.execute_all_deferred_tasks()
+    notification = db.get(notification_key)
 
-    self.assertTrue(db.get(notification_key)._done_date)
+    self.assertTrue(notification._done_date)
     self.assertEqual(1, self.stats.started)
     self.assertEqual(1, self.stats.reenqueued)
 
@@ -223,7 +231,24 @@ class CronTest(actions.TestBase):
     cron.process_notification(db.get(notification_key), self.now, self.stats)
 
     self.assert_task_not_enqueued()
-    self.assertEqual(1, self.stats.skipped)
+    self.assertEqual(1, self.stats.skipped_already_done)
+    self.assertEqual(1, self.stats.started)
+
+  def test_process_notification_skips_if_still_enqueued(self):
+    notification_key, _ = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._last_enqueue_date = self.now
+    notification.put()
+    cron.process_notification(notification, self.now, self.stats)
+
+    self.assert_task_not_enqueued()
+    self.assertEqual(1, self.stats.skipped_still_enqueued)
     self.assertEqual(1, self.stats.started)
 
 
@@ -303,6 +328,115 @@ class ManagerTest(actions.TestBase):
         notifications.Manager._is_too_old_to_reenqueue(older, self.now)
     )
 
+  def test_is_still_enqueued_false_if_done_date_set(self):
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent, _last_enqueue_date=self.now,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+    notification._done_date = self.now
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_false_if_fail_date_set(self):
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent, _last_enqueue_date=self.now,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+    notification._fail_date = self.now
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_false_if_send_date_set(self):
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent, _last_enqueue_date=self.now,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+    notification._fail_date = self.now
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_false_if_last_enqueue_date_not_set(self):
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent, _last_enqueue_date=self.now,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+    notification._last_enqueue_date = None
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_false_if_last_enqueue_date_equal(self):
+    equal = datetime.timedelta(
+        seconds=notifications.Manager._get_task_age_limit_seconds() /
+            notifications._ENQUEUED_BUFFER_MULTIPLIER
+    )
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _last_enqueue_date=self.now - equal,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_false_if_last_enqueue_date_too_old(self):
+    equal = datetime.timedelta(
+        seconds=notifications.Manager._get_task_age_limit_seconds() /
+            notifications._ENQUEUED_BUFFER_MULTIPLIER
+    )
+    too_old = self.now - (equal + datetime.timedelta(seconds=1))
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent, _last_enqueue_date=too_old,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+
+    self.assertFalse(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_true_if_last_enqueue_date_greater_than_now(self):
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _last_enqueue_date=self.now + datetime.timedelta(seconds=1),
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
+  def test_is_still_enqueued_true_if_last_enqueue_date_within_window(self):
+    equal = datetime.timedelta(
+        seconds=notifications.Manager._get_task_age_limit_seconds() /
+            notifications._ENQUEUED_BUFFER_MULTIPLIER
+    )
+    inside_window = self.now - (equal - datetime.timedelta(seconds=1))
+    notification = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _last_enqueue_date=inside_window,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to,
+    )
+
+    self.assertTrue(
+        notifications.Manager._is_still_enqueued(notification, self.now))
+
   def test_send_async_with_defaults_set_initial_state_and_can_run_tasks(self):
     notification_key, payload_key = notifications.Manager.send_async(
         self.to, self.sender, self.intent, self.body, self.subject
@@ -318,6 +452,7 @@ class ManagerTest(actions.TestBase):
 
     self.assertTrue(notification._change_date)
     self.assertIsNone(notification._done_date)
+    self.assertEqual(notification.enqueue_date, notification._last_enqueue_date)
     self.assertIsNone(notification._fail_date)
     self.assertIsNone(notification._last_exception)
     self.assertEqual(
@@ -365,6 +500,7 @@ class ManagerTest(actions.TestBase):
 
     self.assertTrue(notification._change_date)
     self.assertIsNone(notification._done_date)
+    self.assertEqual(notification.enqueue_date, notification._last_enqueue_date)
     self.assertIsNone(notification._fail_date)
     self.assertIsNone(notification._last_exception)
     self.assertEqual(
@@ -890,13 +1026,12 @@ class NotificationTest(ModelTestSpec, ModelTestBase):
     super(NotificationTest, self).setUp()
     self.sender = 'sender@example.com'
     self.subject = 'subject'
-    self.template_path = 'template_path'
     self.utcnow = datetime.datetime.utcnow()
     self.test_utcnow_fn = lambda: self.utcnow
     self.notification = notifications.Notification(
         enqueue_date=self.enqueue_date, intent=self.intent,
         _retention_policy=self.retention_policy, sender=self.sender,
-        subject=self.subject, template_path=self.template_path, to=self.to,
+        subject=self.subject, to=self.to,
     )
     self.key = self.notification.put()
 

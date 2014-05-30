@@ -47,7 +47,15 @@ def process_notification(notification, now, stats):
         'Skipping offline processing of notification with key %s; already '
         'done at %s', notification_key, notification._done_date
     )
-    stats.skipped += 1
+    stats.skipped_already_done += 1
+    return
+
+  if notifications.Manager._is_still_enqueued(notification, now):
+    _LOG.info(
+        'Skipping offline processing of notification with key %s; still on '
+        'queue (last enqueued: %s)', notification_key,
+        notification._last_enqueue_date)
+    stats.skipped_still_enqueued += 1
     return
 
   payload_key = db.Key.from_path(
@@ -95,6 +103,8 @@ def process_notification(notification, now, stats):
       stats.missing_policy += 1
     db.put([notification, payload])
   else:
+    notifications.Manager._mark_enqueued(notification, now)
+    db.put(notification)
     deferred.defer(
         notifications.Manager._transactional_send_mail_task, notification_key,
         payload_key, _retry_options=notifications.Manager._get_retry_options()
@@ -110,18 +120,20 @@ class _Stats(object):
     self.namespace = namespace
     self.policy_run = 0
     self.reenqueued = 0
-    self.skipped = 0
+    self.skipped_already_done = 0
+    self.skipped_still_enqueued = 0
     self.started = 0
     self.too_old = 0
 
   def __str__(self):
     return (
-        'Stats for namespace "%(namespace)s:'
+        'Stats for namespace "%(namespace)s":'
         '\n\tmissing_payload: %(missing_payload)s'
         '\n\tmissing_policy: %(missing_policy)s'
         '\n\tpolicy_run: %(policy_run)s'
         '\n\tre-enqueued: %(reenqueued)s'
-        '\n\tskipped: %(skipped)s'
+        '\n\tskipped_already_done: %(skipped_already_done)s'
+        '\n\tskipped_still_enqueued: %(skipped_still_enqueued)s'
         '\n\tstarted: %(started)s'
         '\n\ttoo_old: %(too_old)s'
     ) % self.__dict__
