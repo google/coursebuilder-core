@@ -290,77 +290,90 @@ class DashboardHandler(
         course = courses.Course(self)
         if not course.get_units():
             return []
-
-        is_editable = filer.is_editable_fs(self.app_context)
-
         lines = safe_dom.Element('ul', style='list-style: none;')
         for unit in course.get_units():
+            if course.get_parent_unit(unit.unit_id):
+                continue  # Will be rendered as part of containing element.
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                li = safe_dom.Element('li').add_child(
-                    safe_dom.Element(
-                        'a', href='assessment?name=%s' % unit.unit_id,
-                        className='strong'
-                    ).add_text(unit.title)
-                ).add_child(self._get_availability(unit))
-                if is_editable:
-                    url = self.canonicalize_url(
-                        '/dashboard?%s') % urllib.urlencode({
-                            'action': 'edit_assessment',
-                            'key': unit.unit_id})
-                    li.add_child(self._get_edit_link(url))
-                lines.add_child(li)
-                continue
-
-            if unit.type == verify.UNIT_TYPE_LINK:
-                li = safe_dom.Element('li').add_child(
-                    safe_dom.Element(
-                        'a', href=unit.href, className='strong'
-                    ).add_text(unit.title)
-                ).add_child(self._get_availability(unit))
-                if is_editable:
-                    url = self.canonicalize_url(
-                        '/dashboard?%s') % urllib.urlencode({
-                            'action': 'edit_link',
-                            'key': unit.unit_id})
-                    li.add_child(self._get_edit_link(url))
-                lines.add_child(li)
-                continue
-
-            if unit.type == verify.UNIT_TYPE_UNIT:
-                li = safe_dom.Element('li').add_child(
-                    safe_dom.Element(
-                        'a', href='unit?unit=%s' % unit.unit_id,
-                        className='strong').add_text(
-                            utils.display_unit_title(unit))
-                ).add_child(self._get_availability(unit))
-                if is_editable:
-                    url = self.canonicalize_url(
-                        '/dashboard?%s') % urllib.urlencode({
-                            'action': 'edit_unit',
-                            'key': unit.unit_id})
-                    li.add_child(self._get_edit_link(url))
-
-                ol = safe_dom.Element('ol')
-                for lesson in course.get_lessons(unit.unit_id):
-                    li2 = safe_dom.Element('li').add_child(
-                        safe_dom.Element(
-                            'a',
-                            href='unit?unit=%s&lesson=%s' % (
-                                unit.unit_id, lesson.lesson_id),
-                        ).add_text(lesson.title)
-                    ).add_child(self._get_availability(lesson))
-                    if is_editable:
-                        url = self.get_action_url(
-                            'edit_lesson', key=lesson.lesson_id)
-                        li2.add_child(self._get_edit_link(url))
-                    ol.add_child(li2)
-                li.add_child(ol)
-                lines.add_child(li)
-                continue
-
-            raise Exception('Unknown unit type: %s.' % unit.type)
-
+                lines.add_child(self._render_assessment_li(unit))
+            elif unit.type == verify.UNIT_TYPE_LINK:
+                lines.add_child(self._render_link_li(unit))
+            elif unit.type == verify.UNIT_TYPE_UNIT:
+                lines.add_child(self._render_unit_li(course, unit))
+            else:
+                raise Exception('Unknown unit type: %s.' % unit.type)
         return lines
+
+    def _render_assessment_li(self, unit):
+        li = safe_dom.Element('li').add_child(
+            safe_dom.Element(
+                'a', href='assessment?name=%s' % unit.unit_id,
+                className='strong'
+            ).add_text(unit.title)
+        ).add_child(self._get_availability(unit))
+        if filer.is_editable_fs(self.app_context):
+            url = self.canonicalize_url(
+                '/dashboard?%s') % urllib.urlencode({
+                    'action': 'edit_assessment',
+                    'key': unit.unit_id})
+            li.add_child(self._get_edit_link(url))
+        return li
+
+    def _render_link_li(self, unit):
+        li = safe_dom.Element('li').add_child(
+            safe_dom.Element(
+                'a', href=unit.href, className='strong'
+            ).add_text(unit.title)
+        ).add_child(self._get_availability(unit))
+        if filer.is_editable_fs(self.app_context):
+            url = self.canonicalize_url(
+                '/dashboard?%s') % urllib.urlencode({
+                    'action': 'edit_link',
+                    'key': unit.unit_id})
+            li.add_child(self._get_edit_link(url))
+        return li
+
+    def _render_unit_li(self, course, unit):
+        is_editable = filer.is_editable_fs(self.app_context)
+        li = safe_dom.Element('li').add_child(
+            safe_dom.Element(
+                'a', href='unit?unit=%s' % unit.unit_id,
+                className='strong').add_text(
+                    utils.display_unit_title(unit))
+        ).add_child(self._get_availability(unit))
+        if is_editable:
+            url = self.canonicalize_url(
+                '/dashboard?%s') % urllib.urlencode({
+                    'action': 'edit_unit',
+                    'key': unit.unit_id})
+            li.add_child(self._get_edit_link(url))
+
+        if unit.pre_assessment:
+            ul = safe_dom.Element('ul')
+            ul.add_child(self._render_assessment_li(
+                course.find_unit_by_id(unit.pre_assessment)))
+            li.add_child(ul)
+        ol = safe_dom.Element('ol')
+        for lesson in course.get_lessons(unit.unit_id):
+            li2 = safe_dom.Element('li').add_child(
+                safe_dom.Element(
+                    'a',
+                    href='unit?unit=%s&lesson=%s' % (
+                        unit.unit_id, lesson.lesson_id),
+                ).add_text(lesson.title)
+            ).add_child(self._get_availability(lesson))
+            if is_editable:
+                url = self.get_action_url(
+                    'edit_lesson', key=lesson.lesson_id)
+                li2.add_child(self._get_edit_link(url))
+            ol.add_child(li2)
+        li.add_child(ol)
+        if unit.post_assessment:
+            ul = safe_dom.Element('ul')
+            ul.add_child(self._render_assessment_li(
+                course.find_unit_by_id(unit.post_assessment)))
+            li.add_child(ul)
+        return li
 
     def get_outline(self):
         """Renders course outline view."""

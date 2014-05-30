@@ -30,6 +30,7 @@ COURSE_NAME = 'unit_pre_post'
 COURSE_TITLE = 'Unit Pre/Post Assessments'
 ADMIN_EMAIL = 'admin@foo.com'
 BASE_URL = '/' + COURSE_NAME
+DASHBOARD_URL = BASE_URL + '/dashboard'
 STUDENT_EMAIL = 'foo@foo.com'
 
 
@@ -84,6 +85,13 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
     def _click_prev_button(self, response):
         return self._click_button('gcb-prev-button', response)
+
+    def _assert_contains_in_order(self, response, expected):
+        index = 0
+        for item in expected:
+            index = response.body.find(item, index)
+            if index == -1:
+                self.fail('Did not find expected content "%s" ' % item)
 
     def test_assements_in_units_not_shown_on_course_page(self):
         response = self.get(BASE_URL)
@@ -441,3 +449,59 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                           self.assessment_one.unit_id)
         self.assertEquals(self.unit_no_lessons.post_assessment, None)
         self.course.save()
+
+    def test_admin_page_display_ordering(self):
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.get(DASHBOARD_URL)
+
+        # In order declared.
+        self._assert_contains_in_order(response, [
+            'No Lessons',
+            'One Lesson',
+            'Lesson One',
+            'Assessment One',
+            'Assessment Two',
+            ])
+
+        # Assessments attached to 'No Lessons' unit
+        self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
+        self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
+        self.course.save()
+        response = self.get(DASHBOARD_URL)
+        self._assert_contains_in_order(response, [
+            'No Lessons',
+            'Assessment One',
+            'Assessment Two',
+            'One Lesson',
+            'Lesson One',
+            ])
+
+        # Assessments attached to 'One Lesson' unit
+        self.unit_no_lessons.pre_assessment = None
+        self.unit_no_lessons.post_assessment = None
+        self.unit_one_lesson.pre_assessment = self.assessment_one.unit_id
+        self.unit_one_lesson.post_assessment = self.assessment_two.unit_id
+        self.course.save()
+        response = self.get(DASHBOARD_URL)
+        self._assert_contains_in_order(response, [
+            'No Lessons',
+            'One Lesson',
+            'Assessment One',
+            'Lesson One',
+            'Assessment Two',
+            ])
+
+        # One as pre-asssesment on one unit, one as post- on the other.
+        self.unit_no_lessons.pre_assessment = None
+        self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
+        self.unit_one_lesson.pre_assessment = self.assessment_one.unit_id
+        self.unit_one_lesson.post_assessment = None
+        self.course.save()
+        response = self.get(DASHBOARD_URL)
+        self._assert_contains_in_order(response, [
+            'No Lessons',
+            'Assessment Two',
+            'One Lesson',
+            'Assessment One',
+            'Lesson One',
+            ])
