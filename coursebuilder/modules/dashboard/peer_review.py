@@ -144,8 +144,12 @@ class AssignmentManager(ApplicationHandler):
         course = courses.Course(self)
         peer_reviewed_units = course.get_peer_reviewed_units()
 
+        page_title = 'Peer Review'
+
         template_values = {}
-        template_values['page_title'] = self.format_title('Peer Review')
+        template_values['page_title'] = self.format_title(page_title)
+        template_values['page_title_linked'] = self.format_title(
+            page_title, as_link=True)
         template_values['page_description'] = (
             messages.ASSIGNMENTS_MENU_DESCRIPTION)
 

@@ -822,14 +822,14 @@ class DashboardHandler(
 
     def get_assets_css(self, items, tab, all_paths):
         items.append(self.list_and_format_file_list(
-            'Cascading Style Sheets', '/assets/css/', tab.name, links=True,
+            'CSS', '/assets/css/', tab.name, links=True,
             upload=True, edit_url_template=self.filer_url_template(),
             caption_if_empty='< inherited from /assets/css/ >',
             merge_local_files=True, all_paths=all_paths))
 
     def get_assets_js(self, items, tab, all_paths):
         items.append(self.list_and_format_file_list(
-            'JavaScript Libraries', '/assets/lib/', tab.name, links=True,
+            'JavaScript', '/assets/lib/', tab.name, links=True,
             upload=True, edit_url_template=self.filer_url_template(),
             caption_if_empty='< inherited from /assets/lib/ >',
             merge_local_files=True, all_paths=all_paths))
@@ -924,9 +924,9 @@ def register_module():
                            DashboardHandler.get_assets_activities)
     tabs.Registry.register('assets', 'images', 'Images and Documents',
                            DashboardHandler.get_assets_images)
-    tabs.Registry.register('assets', 'css', 'Cascading Style Sheets',
+    tabs.Registry.register('assets', 'css', 'CSS',
                            DashboardHandler.get_assets_css)
-    tabs.Registry.register('assets', 'js', 'JavaScript Libraries',
+    tabs.Registry.register('assets', 'js', 'JavaScript',
                            DashboardHandler.get_assets_js)
     tabs.Registry.register('assets', 'templates', 'Templates',
                            DashboardHandler.get_assets_templates)
