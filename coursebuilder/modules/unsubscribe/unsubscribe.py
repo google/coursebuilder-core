@@ -38,6 +38,7 @@ import appengine_config
 from controllers import utils
 from models import custom_modules
 from models import entities
+from models import services
 
 from google.appengine.ext import db
 
@@ -188,4 +189,20 @@ def register_module():
         'Unsubscribe Module',
         'A module to enable unsubscription from emails.',
         [], namespaced_routes)
+
+    class Service(services.Unsubscribe):
+
+      def enabled(self):
+        return custom_module.enabled
+
+      def get_unsubscribe_url(self, handler, email):
+        return get_unsubscribe_url(handler, email)
+
+      def  has_unsubscribed(self, email):
+        return has_unsubscribed(email)
+
+      def set_subscribed(self, email, is_subscribed):
+        return set_subscribed(email, is_subscribed)
+
+    services.unsubscribe = Service()
     return custom_module

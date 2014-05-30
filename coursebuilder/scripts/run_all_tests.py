@@ -52,6 +52,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_models.QuestionDAOTestCase': 3,
     'tests.functional.model_models.StudentTestCase': 3,
     'tests.functional.model_models.StudentAnswersEntityTestCase': 1,
+    'tests.functional.model_models.StudentProfileDAOTestCase': 6,
     'tests.functional.model_models.StudentPropertyEntityTestCase': 1,
     'tests.functional.model_student_work.KeyPropertyTest': 4,
     'tests.functional.model_student_work.ReviewTest': 3,

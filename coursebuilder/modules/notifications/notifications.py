@@ -72,6 +72,7 @@ import logging
 from models import counters
 from models import custom_modules
 from models import entities
+from models import services
 from models import transforms
 from models import utils
 
@@ -920,14 +921,29 @@ def register_module():
   from modules.notifications import stats
 
   stats.register_analytic()
-
   cron_handlers = [(
       '/cron/process_pending_notifications',
       cron.ProcessPendingNotificationsHandler
   )]
-
   custom_module = custom_modules.Module(
       'Notifications', 'Student notification management system.', cron_handlers,
       []
   )
+
+  class Service(services.Notifications):
+
+    def enabled(self):
+      return custom_module.enabled
+
+    def query(self, to, intent):
+      return Manager.query(to, intent)
+
+    def send_async(
+        self, to, sender, intent, body, subject, audit_trail=None,
+        retention_policy=None):
+      return Manager.send_async(
+          to, sender, intent, body, subject, audit_trail=audit_trail,
+          retention_policy=retention_policy)
+
+  services.notifications = Service()
   return custom_module

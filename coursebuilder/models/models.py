@@ -18,11 +18,13 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import collections
 import logging
+import os
 
 from config import ConfigProperty
 import counters
 from counters import PerfCounter
 from entities import BaseEntity
+import services
 import transforms
 
 import appengine_config
@@ -63,6 +65,10 @@ CACHE_MISS = PerfCounter(
 CACHE_DELETE = PerfCounter(
     'gcb-models-cache-delete',
     'A number of times an object was deleted from memcache.')
+
+
+# Intent for sending welcome notifications.
+WELCOME_NOTIFICATION_INTENT = 'welcome'
 
 
 class MemcacheManager(object):
@@ -360,7 +366,8 @@ class StudentProfileDAO(object):
         return cls._add_new_profile(user_id, email)
 
     @classmethod
-    def add_new_student_for_current_user(cls, nick_name, additional_fields):
+    def add_new_student_for_current_user(
+        cls, nick_name, additional_fields, handler):
         user = users.get_current_user()
 
         student_by_uid = Student.get_student_by_user_id(user.user_id())
@@ -371,6 +378,12 @@ class StudentProfileDAO(object):
 
         cls._add_new_student_for_current_user(
             user.user_id(), user.email(), nick_name, additional_fields)
+
+        try:
+            cls._send_welcome_notification(handler, user.email())
+        except Exception, e:  # On purpose. pylint: disable-msg=broad-except
+            logging.error(
+                'Unable to send welcome notification; error was: ' + str(e))
 
     @classmethod
     @db.transactional(xg=True)
@@ -400,6 +413,59 @@ class StudentProfileDAO(object):
         # put both
         cls._put_profile(profile)
         student.put()
+
+    @classmethod
+    def _send_welcome_notification(cls, handler, email):
+        if not cls._can_send_welcome_notifications(handler):
+            return
+
+        if services.unsubscribe.has_unsubscribed(email):
+            return
+
+        # Imports don't resolve at top.
+        # pylint: disable-msg=g-import-not-at-top
+        from common import jinja_utils
+        from controllers import sites
+
+        context = sites.get_course_for_current_request()
+        course_title = handler.app_context.get_environ()['course']['title']
+        sender = cls._get_welcome_notifications_sender(handler)
+
+        assert sender, 'Must set welcome_notifications_sender in course.yaml'
+
+        subject = 'Welcome to ' + course_title
+        context = {
+            'course_title': course_title,
+            'course_url': handler.get_base_href(handler),
+            'unsubscribe_url': services.unsubscribe.get_unsubscribe_url(
+                handler, email)
+        }
+        template = jinja_utils.get_template(
+            'welcome.txt',
+            [os.path.join(
+                appengine_config.BUNDLE_ROOT, 'views', 'notifications')])
+        services.notifications.send_async(
+            email, sender, WELCOME_NOTIFICATION_INTENT,
+            template.render(context), subject, audit_trail=context,
+        )
+
+    @classmethod
+    def _can_send_welcome_notifications(cls, handler):
+        return (
+            services.notifications.enabled() and services.unsubscribe.enabled()
+            and cls._get_send_welcome_notifications(handler))
+
+    @classmethod
+    def _get_send_welcome_notifications(cls, handler):
+        return handler.app_context.get_environ().get(
+            'course', {}
+        ).get('send_welcome_notifications', False)
+
+    @classmethod
+    def _get_welcome_notifications_sender(cls, handler):
+        return handler.app_context.get_environ().get(
+            'course', {}
+        ).get('welcome_notifications_sender')
 
     @classmethod
     def get_enrolled_student_by_email_for(cls, email, app_context):
@@ -499,9 +565,10 @@ class Student(BaseEntity):
         MemcacheManager.delete(self._memcache_key(self.key().name()))
 
     @classmethod
-    def add_new_student_for_current_user(cls, nick_name, additional_fields):
+    def add_new_student_for_current_user(
+        cls, nick_name, additional_fields, handler):
         StudentProfileDAO.add_new_student_for_current_user(
-            nick_name, additional_fields)
+            nick_name, additional_fields, handler)
 
     @classmethod
     def get_by_email(cls, email):

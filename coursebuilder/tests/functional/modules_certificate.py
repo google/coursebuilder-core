@@ -64,13 +64,13 @@ class CertificateHandlerTestCase(actions.TestBase):
             'http://localhost/preview', response.headers['Location'])
 
         # If the student is enrolled, expect certificate
-        models.Student.add_new_student_for_current_user('Test User', None)
+        models.Student.add_new_student_for_current_user('Test User', None, self)
         response = self.get('/certificate')
         self.assertEquals(200, response.status_code)
 
     def test_student_must_be_qualified(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Test User', None)
+        models.Student.add_new_student_for_current_user('Test User', None, self)
 
         # If student is not qualified, expect redirect to home page
         self.is_qualified = False
@@ -85,7 +85,7 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def test_certificate_should_have_student_nickname(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Jane Doe', None)
+        models.Student.add_new_student_for_current_user('Jane Doe', None, self)
 
         response = self.get('/certificate')
         self.assertEquals(200, response.status_code)
@@ -93,7 +93,7 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def test_certificate_table_entry(self):
         actions.login('test@example.com')
-        models.Student.add_new_student_for_current_user('Test User', None)
+        models.Student.add_new_student_for_current_user('Test User', None, self)
         student = models.Student.get_by_email('test@example.com')
 
         all_courses = sites.get_all_courses()

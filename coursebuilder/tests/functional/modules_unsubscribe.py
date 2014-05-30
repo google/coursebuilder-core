@@ -25,25 +25,6 @@ from tests.functional import actions
 from google.appengine.ext import db
 
 
-class MockAppContext(object):
-
-    def __init__(self, environ=None):
-        self.environ = environ or {}
-
-    def get_environ(self):
-        return self.environ
-
-
-class MockHandler(object):
-
-    def __init__(self, app_context=None, base_href=None):
-        self.app_context = app_context or MockAppContext()
-        self.base_href = base_href or 'http://mycourse.appspot.com/new_course/'
-
-    def get_base_href(self, unused_handler):
-        return self.base_href
-
-
 class BaseUnsubscribeTests(actions.TestBase):
 
     def assertUnsubscribed(self, email):
@@ -57,32 +38,33 @@ class GetUnsubscribeUrlTests(actions.TestBase):
 
     def test_get_unsubscribe_url_fails_if_no_secret_set(self):
         with self.assertRaises(AssertionError):
-            unsubscribe.get_unsubscribe_url(MockHandler(), 'test@example.com')
+            unsubscribe.get_unsubscribe_url(
+                actions.MockHandler(), 'test@example.com')
 
     def test_get_unsubscribe_url_fails_if_secret_key_too_short(self):
-        app_context = MockAppContext(environ={
+        app_context = actions.MockAppContext(environ={
             'modules': {
                 'unsubscribe': {
                     'key': 'x' * 15}}})
-        handler = MockHandler(app_context=app_context)
+        handler = actions.MockHandler(app_context=app_context)
         with self.assertRaises(AssertionError):
             unsubscribe.get_unsubscribe_url(handler, 'test@example.com')
 
     def test_get_unsubscribe_url_fails_if_secret_key_too_long(self):
-        app_context = MockAppContext(environ={
+        app_context = actions.MockAppContext(environ={
             'modules': {
                 'unsubscribe': {
                     'key': 'x' * 65}}})
-        handler = MockHandler(app_context=app_context)
+        handler = actions.MockHandler(app_context=app_context)
         with self.assertRaises(AssertionError):
             unsubscribe.get_unsubscribe_url(handler, 'test@example.com')
 
     def test_get_unsubscribe_url(self):
-        app_context = MockAppContext(environ={
+        app_context = actions.MockAppContext(environ={
             'modules': {
                 'unsubscribe': {
                     'key': 'a_good_secret_key'}}})
-        handler = MockHandler(app_context=app_context)
+        handler = actions.MockHandler(app_context=app_context)
         url = unsubscribe.get_unsubscribe_url(handler, 'test@example.com')
         parsed_url = urlparse.urlparse(url)
         self.assertEquals('http', parsed_url.scheme)
@@ -131,11 +113,11 @@ class UnsubscribeHandlerTests(BaseUnsubscribeTests):
         self.get_environ_old = sites.ApplicationContext.get_environ
         sites.ApplicationContext.get_environ = get_environ_new
 
-        self.app_context = MockAppContext(environ={
+        self.app_context = actions.MockAppContext(environ={
             'modules': {
                 'unsubscribe': {
                     'key': 'a_good_secret_key'}}})
-        self.handler = MockHandler(
+        self.handler = actions.MockHandler(
             base_href='http://localhost/',
             app_context=self.app_context)
         self.email = 'test@example.com'

@@ -208,6 +208,23 @@ def _create_course_registry():
         'tracking services what users are doing on the site.  Obtain this '
         'ID by signing up at http://www.google.com/tagmanager'))
 
+    # Course-level notifications settings.
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:send_welcome_notifications',
+        'Send welcome notifications', 'boolean', description='If enabled, '
+        'welcome notifications will be sent when new users register for the '
+        'course. Must also set "Welcome notifications sender" for messages to '
+        'be sent successfully, and you must have both the notifications and '
+        'unsubscribe modules active (which is the default)'))
+    course_opts.add_property(schema_fields.SchemaField(
+        'course:welcome_notifications_sender', 'Welcome notifications sender',
+        'string', optional=True, description='The "From:" email address used '
+        'on outgoing notifications. If "Send welcome notifications" is '
+        'enabled, you must set this to a valid value for App Engine email or '
+        'outgoing messages will fail. Note that you cannot use the user in '
+        'session. See https://developers.google.com/appengine/docs/python/mail/'
+        'emailmessagefields for details'))
+
     # Unit level settings.
     unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
     unit_opts.add_property(schema_fields.SchemaField(

@@ -66,6 +66,25 @@ PREVIEW_HOOK_POINTS = [
     '<!-- preview.after_main_content_ends -->']
 
 
+class MockAppContext(object):
+
+    def __init__(self, environ=None):
+        self.environ = environ or {}
+
+    def get_environ(self):
+        return self.environ
+
+
+class MockHandler(object):
+
+    def __init__(self, app_context=None, base_href=None):
+        self.app_context = app_context or MockAppContext()
+        self.base_href = base_href or 'http://mycourse.appspot.com/new_course/'
+
+    def get_base_href(self, unused_handler):
+        return self.base_href
+
+
 class ShouldHaveFailedByNow(Exception):
     """Special exception raised when a prior method did not raise."""
     pass

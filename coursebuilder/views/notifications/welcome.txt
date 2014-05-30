@@ -1,0 +1,3 @@
+Thank you for registering for {{course_title}}. You can visit the course at {{course_url}} any time.
+
+To unsubscribe from all future mail for this course, visit {{unsubscribe_url}}.

@@ -21,6 +21,8 @@ __author__ = [
 import datetime
 
 from models import models
+from models import services
+from modules.notifications import notifications
 from tests.functional import actions
 
 # Disable complaints about docstrings for self-documenting tests.
@@ -153,6 +155,118 @@ class StudentTestCase(actions.ExportTestBase):
         self.assertEqual(
             'transformed_name',
             models.Student.safe_key(key, self.transform).name())
+
+
+class StudentProfileDAOTestCase(actions.ExportTestBase):
+
+    # Allow tests of protected state. pylint: disable-msg=protected-access
+
+    def test_can_send_welcome_notifications_false_if_config_value_false(self):
+        self.swap(services.notifications, 'enabled', lambda: True)
+        self.swap(services.unsubscribe, 'enabled', lambda: True)
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': False}
+            }))
+
+        self.assertFalse(
+            models.StudentProfileDAO._can_send_welcome_notifications(handler))
+
+    def test_can_send_welcome_notifications_false_notifications_disabled(self):
+        self.swap(services.notifications, 'enabled', lambda: False)
+        self.swap(services.unsubscribe, 'enabled', lambda: True)
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': True}
+            }))
+
+        self.assertFalse(
+            models.StudentProfileDAO._can_send_welcome_notifications(handler))
+
+    def test_can_send_welcome_notifications_false_unsubscribe_disabled(self):
+        self.swap(services.notifications, 'enabled', lambda: True)
+        self.swap(services.unsubscribe, 'enabled', lambda: False)
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': True}
+            }))
+
+        self.assertFalse(
+            models.StudentProfileDAO._can_send_welcome_notifications(handler))
+
+    def test_can_send_welcome_notifications_true_if_all_true(self):
+        self.swap(services.notifications, 'enabled', lambda: True)
+        self.swap(services.unsubscribe, 'enabled', lambda: True)
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': True}
+            }))
+
+        self.assertTrue(
+            models.StudentProfileDAO._can_send_welcome_notifications(handler))
+
+    def test_get_send_welcome_notifications(self):
+        handler = actions.MockHandler(app_context=actions.MockAppContext())
+        self.assertFalse(
+            models.StudentProfileDAO._get_send_welcome_notifications(handler))
+
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {}
+            }))
+        self.assertFalse(
+            models.StudentProfileDAO._get_send_welcome_notifications(handler))
+
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': False}
+            }))
+        self.assertFalse(
+            models.StudentProfileDAO._get_send_welcome_notifications(handler))
+
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {'send_welcome_notifications': True}
+            }))
+        self.assertTrue(
+            models.StudentProfileDAO._get_send_welcome_notifications(handler))
+
+    def test_send_welcome_notification_enqueues_and_sends(self):
+        email = 'user@example.com'
+        sender = 'sender@example.com'
+        title = 'title'
+        self.swap(services.notifications, 'enabled', lambda: True)
+        self.swap(services.unsubscribe, 'enabled', lambda: True)
+        handler = actions.MockHandler(
+            app_context=actions.MockAppContext(environ={
+                'course': {
+                    'send_welcome_notifications': True,
+                    'title': title,
+                    'welcome_notifications_sender': sender,
+                },
+                'modules': {
+                    'unsubscribe': {
+                        'key': 'a_very_very_very_very_secret_key',
+                    }
+                }
+            }))
+        models.StudentProfileDAO._send_welcome_notification(handler, email)
+        self.execute_all_deferred_tasks()
+        notification = notifications.Notification.all().get()
+        payload = notifications.Payload.all().get()
+        audit_trail = notification.audit_trail
+
+        self.assertEqual(title, audit_trail['course_title'])
+        self.assertEqual(
+            'http://mycourse.appspot.com/new_course/',
+            audit_trail['course_url'])
+        self.assertTrue(audit_trail['unsubscribe_url'].startswith(
+            'http://mycourse.appspot.com/new_course/modules/unsubscribe'))
+        self.assertTrue(notification._done_date)
+        self.assertEqual(email, notification.to)
+        self.assertEqual(sender, notification.sender)
+        self.assertEqual('Welcome to ' + title, notification.subject)
+        self.assertTrue(payload)
 
 
 class StudentAnswersEntityTestCase(actions.ExportTestBase):
