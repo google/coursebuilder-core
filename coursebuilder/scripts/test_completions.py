@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
@@ -30,8 +30,8 @@ import os
 import re
 import sys
 
-CLASS_REGEX = re.compile('^class (\w+)\(([^)]+)\):')
-TEST_REGEX = re.compile('^    def (test_\w+)')
+CLASS_REGEX = re.compile(r'^class (\w+)\(([^)]+)\):')
+TEST_REGEX = re.compile(r'^    def (test_\w+)')
 
 
 def enumerate_tests(filename, all_test_names):
@@ -50,7 +50,7 @@ def enumerate_tests(filename, all_test_names):
                 current_class = test_class
         matches = TEST_REGEX.match(line)
         if matches:
-            all_test_names.append (
+            all_test_names.append(
                 '%s.%s.%s' %
                 (cleaned_filename, current_class, matches.group(1)))
 
