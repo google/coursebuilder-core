@@ -120,8 +120,7 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
         for source_class in visualization.data_source_classes:
             if issubclass(source_class, data_sources.SynchronousQuery):
                 required_generator_classes = (
-                    # pylint: disable-msg=protected-access
-                    analytics_utils._get_required_generators(source_class))
+                    source_class.required_generators())
                 synchronous_query_jobs = []
                 for generator_class in required_generator_classes:
                     synchronous_query_jobs.append(

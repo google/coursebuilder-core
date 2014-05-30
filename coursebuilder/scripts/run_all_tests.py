@@ -69,6 +69,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.review_module.ManagerTest': 55,
     'tests.functional.review_peer.ReviewStepTest': 3,
     'tests.functional.review_peer.ReviewSummaryTest': 5,
+    'tests.functional.student_answers.StudentAnswersAnalyticsTest': 1,
     'tests.functional.student_labels.StudentLabelsTest': 31,
     'tests.functional.student_tracks.StudentTracksTest': 8,
     'tests.functional.review_stats.PeerReviewAnalyticsTest': 1,

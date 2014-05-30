@@ -348,3 +348,24 @@ class _NullContextManager(_AbstractContextManager):
     @classmethod
     def equivalent(cls, context_one, context_two):
         return context_one == context_two
+
+
+class _AbstractSmallRestDataSource(_AbstractRestDataSource):
+    """Default methods for data source classes not requiring a context.
+
+    This is most commonly the case when a REST data source is based on
+    a resource that is always going to be small enough to be sent in
+    a single page.  E.g., items based on course items.  There will at
+    most be hundreds, or possibly thousands of units, questions, etc.
+    This is well within the recommended limit of 10,000.
+    """
+
+    @classmethod
+    def get_context_class(cls):
+        # Expect at most hundreds of course elements; no need for pagination,
+        # so null context is fine.
+        return _NullContextManager
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 0  # Meaning we don't require or support paginated access.

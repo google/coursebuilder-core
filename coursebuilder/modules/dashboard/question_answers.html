@@ -1,0 +1,135 @@
+<!-- -*- mode: javascript; -*- -->
+
+<div id='question_answers_graphs'></div>
+
+<script>
+
+var QUESTION_ANSWER_DIV_PREFIX = 'question_answer_graph_'
+
+// Called back by framework to display graphs.
+function question_answers(data) {
+
+  // Convenience function: Build unique key for {unit, sequence, question_id}.
+  function questionUsageId(answer) {
+    return (QUESTION_ANSWER_DIV_PREFIX +
+        answer.unit_id + '_' +
+        answer.sequence + '_' +
+        answer.question_id );
+  }
+
+  var display = $('#question_answers_graphs')[0]
+
+  // Build a map of unit_id -> unit data for each unit in the course.
+  var units = {};
+  for (var i = 0; i < data.course_units.data.length; i++) {
+    var unit = data.course_units.data[i];
+    units[unit.unit_id] = unit;
+  }
+
+  // Build a map of question_id -> question data for each question.
+  var questions = {};
+  for (var i = 0; i < data.course_questions.data.length; i++) {
+    var question = data.course_questions.data[i];
+    questions[question.question_id] = question
+  }
+
+  // Yes, one crossfilter per question.  Yes, that's a lot of crossfilters.
+  // However, we will only ever draw this page once: all our data sources
+  // are single-page.
+  var crossfilters = {};
+
+  // Question answers are provided to us in order by: unit_id, question
+  // position on the page, and question ID.  Answers within a single
+  // question usage are also sorted so that incorrect answers appear last.
+  var prevUnit = -1
+  var prevQuestion = -1
+  var answerIndex = 0;
+  var markedInvalidIndex = false;
+  for (var i = 0; i < data.question_answers.data.length; i++) {
+    var answer = data.question_answers.data[i];
+
+    // Emit title for unit when we see a new unit.
+    if (prevUnit != answer.unit_id) {
+      prevUnit = answer.unit_id;
+      answerIndex = 0;
+      prevQuestion = -1;
+
+      var hr = document.createElement('hr');
+      display.appendChild(hr);
+      var title = document.createElement('h4');
+      title.textContent = units[answer.unit_id].title;
+      display.appendChild(title);
+    }
+
+    // For new question...
+    if (prevQuestion != answer.question_id) {
+      prevQuestion = answer.question_id;
+      answerIndex = 0;
+      markedInvalidIndex = false;
+
+      // Title and text of question.
+      var title = document.createElement('h5');
+      title.textContent = questions[answer.question_id].description;
+      display.appendChild(title);
+      var p = document.createElement('p');
+      p.textContent = questions[answer.question_id].text;
+      display.appendChild(p);
+
+      // Display elements for chart to display into.
+      var div_id = questionUsageId(answer);
+      var div = document.createElement('div');
+      div.id = div_id;
+      display.appendChild(div);
+      var div = document.createElement('div');
+      div.style.clear = 'both';
+      display.appendChild(div);
+
+      // Chart
+      var xf = crossfilter();
+      var dimension = xf.dimension(
+          function byAnswer(answer) {
+            // If there are choices, this is a multiple-choice question.
+            // Use the displayed text for the choice, rather than the
+            // answer itelf, which is just a 0-based index.
+            var question = questions[answer.question_id];
+            if (question.choices.length > 0) {
+              return question.choices[answer.answer];
+            } else {
+              return answer.answer;
+            }
+          });
+      var grouping = dimension.group().reduceSum(
+          function getCount(answer) {
+            return answer.count;
+          });
+      console.log('Adding crossfilter for ' + div_id);
+      crossfilters[div_id] = xf;
+      var chart = dc.rowChart('#' + div_id)
+          .width(600)
+          .height(200)
+          .dimension(dimension)
+          .group(grouping);
+    }
+
+    // Add each answer to the crossfilter to which it belongs.
+    console.log('Seeking crossfilter for ' + questionUsageId(answer));
+    crossfilters[questionUsageId(answer)].add([answer]);
+
+    // If this is the first invalid index (these appear last in the sequence)
+    // then set the colors array to mark invalid responses distictively.
+    if (!answer.is_valid && !markedInvalidIndex) {
+      markedInvalidIndex = true;
+      var source = d3.scale.category20c();
+      var colors = [];
+      for (var j = 0; j < answerIndex; j++) {
+        colors.push(source(j));
+      }
+      colors.push('#000000');
+      chart.colors(colors);
+    }
+    answerIndex++;
+  }
+  dc.renderAll();
+}
+
+</script>

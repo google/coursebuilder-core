@@ -65,12 +65,15 @@ class DurableJobBase(object):
             '"student ranking"')
 
     def __init__(self, app_context):
+        self._app_context = app_context
         self._namespace = app_context.get_namespace_name()
         self._job_name = 'job-%s-%s' % (
             self.__class__.__name__, self._namespace)
 
     def submit(self):
         if self.is_active():
+            return -1
+        if not self._pre_transaction_setup():
             return -1
         with Namespace(self._namespace):
             return db.run_in_transaction(self.non_transactional_submit)
@@ -113,6 +116,9 @@ class DurableJobBase(object):
     def is_active(self):
         job = self.load()
         return job and not job.has_finished
+
+    def _pre_transaction_setup(self):
+        return True  # All is well.
 
 
 class DurableJob(DurableJobBase):
@@ -319,6 +325,56 @@ class MapReduceJob(DurableJobBase):
         raise NotImplementedError('Classes derived from MapReduceJob must '
                                   'implement map as a @staticmethod.')
 
+    def build_additional_mapper_params(self, unused_app_context):
+        """Build a dict of additional parameters to make available to mappers.
+
+        The map/reduce framework permits an arbitrary dict of plain-old-data
+        items to be passed along and made available to mapper jobs.  This is
+        very useful if you have a small-ish (10s of K) amount of data that
+        is needed as a lookup table or similar when the mapper is running,
+        and which is expensive to re-calculate within each mapper job.
+
+        To make use of this, override this function and return a dict.
+        This will be merged with the mapper_params.  Note that you cannot
+        override the reserved items already in mapper_params:
+        - 'entity_kind' - The name of the DB entity class mapped over
+        - 'namespace' - The namespace in which mappers operate.
+
+        To access this extra data, you need to:
+
+        from mapreduce import context
+        class MyMapReduceClass(jobs.MapReduceJob):
+
+            def build_additional_mapper_params(self, app_context):
+                .... set up values to be conveyed to mappers ...
+                return {
+                   'foo': foo,
+                   ....
+                   }
+
+            @staticmethod
+            def map(item):
+                mapper_params = context.get().mapreduce_spec.mapper.params
+                foo = mapper_params['foo']
+                ....
+                yield(...)
+
+        Args:
+          unused_app_context: Caller provides namespaced context for subclass
+              implementation of this function.
+        Returns:
+          A dict of name/value pairs that should be made available to
+          map jobs.
+        """
+        return {}
+
+    def _pre_transaction_setup(self):
+        """Hack to allow use of DB before we are formally in a txn."""
+
+        self.mapper_params = self.build_additional_mapper_params(
+            self._app_context)
+        return True
+
     def non_transactional_submit(self):
         if self.is_active():
             return -1
@@ -326,6 +382,15 @@ class MapReduceJob(DurableJobBase):
         entity_class_type = self.entity_class()
         entity_class_name = '%s.%s' % (entity_class_type.__module__,
                                        entity_class_type.__name__)
+
+        # Build config parameters to make available to map framework
+        # and individual mapper jobs.  Overwrite important parameters
+        # so derived class cannot mistakenly set them.
+        self.mapper_params.update({
+            'entity_kind': entity_class_name,
+            'namespace': self._namespace,
+            })
+
         kwargs = {
             'job_name': self._job_name,
             'mapper_spec': '%s.%s.map' % (
@@ -336,10 +401,7 @@ class MapReduceJob(DurableJobBase):
                 'mapreduce.input_readers.DatastoreInputReader',
             'output_writer_spec':
                 'mapreduce.output_writers.BlobstoreRecordsOutputWriter',
-            'mapper_params': {
-                'entity_kind': entity_class_name,
-                'namespace': self._namespace,
-            },
+            'mapper_params': self.mapper_params,
         }
         mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
                                            kwargs, self._namespace)

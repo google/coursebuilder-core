@@ -26,32 +26,7 @@ from models import transforms
 from tools import verify
 
 
-class CourseElementsDataSource(data_sources.AbstractRestDataSource):
-
-    @classmethod
-    def get_context_class(cls):
-        # Expect at most hundreds of course elements; no need for pagination,
-        # so null context is fine.
-        return data_sources.NullContextManager
-
-    @classmethod
-    def get_default_chunk_size(cls):
-        return 0  # Meaning we don't support paginated access.
-
-    @classmethod
-    def _build_query(cls, *args, **kwargs):
-        return None
-
-    @classmethod
-    def _sanitize_values(cls, source_context, rows):
-        return rows
-
-    @classmethod
-    def _transform_to_dict(cls, rows):
-        return rows
-
-
-class AssessmentsDataSource(CourseElementsDataSource):
+class AssessmentsDataSource(data_sources.AbstractSmallRestDataSource):
 
     @classmethod
     def get_name(cls):
@@ -100,7 +75,7 @@ class AssessmentsDataSource(CourseElementsDataSource):
         return ret, 0
 
 
-class UnitsDataSource(CourseElementsDataSource):
+class UnitsDataSource(data_sources.AbstractSmallRestDataSource):
 
     @classmethod
     def get_name(cls):
@@ -140,7 +115,7 @@ class UnitsDataSource(CourseElementsDataSource):
         return ret, 0
 
 
-class LessonsDataSource(CourseElementsDataSource):
+class LessonsDataSource(data_sources.AbstractSmallRestDataSource):
 
     @classmethod
     def get_name(cls):

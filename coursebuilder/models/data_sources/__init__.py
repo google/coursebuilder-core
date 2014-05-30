@@ -28,6 +28,7 @@ from models.data_sources import registry
 # code does not have to know about our internal structure.
 AbstractDbTableRestDataSource = paginated_table._AbstractDbTableRestDataSource
 AbstractRestDataSource = base_types._AbstractRestDataSource
+AbstractSmallRestDataSource = base_types._AbstractSmallRestDataSource
 AbstractContextManager = base_types._AbstractContextManager
 DbTableContext = paginated_table._DbTableContext
 NullContextManager = base_types._NullContextManager

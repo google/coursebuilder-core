@@ -37,6 +37,7 @@ from question_editor import QuestionManagerAndEditor
 from question_editor import SaQuestionRESTHandler
 from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
+import student_answers_analytics
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ExportAssessmentRESTHandler
@@ -60,6 +61,7 @@ from models import analytics
 from models import config
 from models import courses
 from models import custom_modules
+from models import data_sources
 from models import roles
 from models import vfs
 from models.models import LabelDAO
@@ -859,6 +861,13 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
+    data_sources.Registry.register(
+        student_answers_analytics.QuestionAnswersDataSource)
+    data_sources.Registry.register(
+        student_answers_analytics.CourseQuestionsDataSource)
+    data_sources.Registry.register(
+        student_answers_analytics.CourseUnitsDataSource)
+
     multiple_choice_question = analytics.Visualization(
         'multiple_choice_question',
         'Multiple Choice Question',
@@ -888,16 +897,23 @@ def register_module():
         'Labels on Students',
         'labels_on_students.html',
         data_source_classes=[rest_providers.LabelsOnStudentsDataSource])
+    question_answers = analytics.Visualization(
+        'question_answers',
+        'Question Answers',
+        'question_answers.html',
+        data_source_classes=[
+            student_answers_analytics.QuestionAnswersDataSource,
+            student_answers_analytics.CourseQuestionsDataSource,
+            student_answers_analytics.CourseUnitsDataSource])
 
     tabs.Registry.register('analytics', 'students', 'Students',
                            [labels_on_students,
                             student_progress,
                             enrollment_assessment])
     tabs.Registry.register('analytics', 'questions', 'Questions',
-                           [multiple_choice_question])
+                           [multiple_choice_question, question_answers])
     tabs.Registry.register('analytics', 'assessments', 'Assessments',
                            [assessment_difficulty])
-
     tabs.Registry.register('assets', 'questions', 'Questions',
                            DashboardHandler.get_assets_questions)
     tabs.Registry.register('assets', 'labels', 'Labels',

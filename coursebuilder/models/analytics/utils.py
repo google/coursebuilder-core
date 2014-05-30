@@ -36,19 +36,6 @@ def _rest_data_source_classes(visualizations):
     return ret
 
 
-def _get_required_generators(source_class):
-    """Allow client code to return list or single instance.  Convert to list."""
-
-    ret = []
-    required = source_class.required_generators()
-    if required:
-        try:
-            ret.extend(required)
-        except TypeError:
-            ret.append(required)
-    return ret
-
-
 def _get_template_dir_names(visualization=None):
     """Find directories where the template for this visualization can be found.
 
