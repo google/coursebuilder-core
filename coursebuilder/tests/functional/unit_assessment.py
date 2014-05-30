@@ -284,19 +284,23 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         return ret
 
     def test_old_assessment_availability(self):
-        # Get default course, which has version 1.4 assessments
-        ctx = sites.get_all_courses(rules_text='course:/:/')[0]
-        course = courses.Course(None, ctx)
+        new_course_context = actions.simple_add_course(
+            'new_course', ADMIN_EMAIL, 'My New Course')
+        new_course = courses.Course(None, new_course_context)
+        new_course.import_from(
+            sites.get_all_courses(rules_text='course:/:/')[0])
+        new_course.save()
 
         # Prove that there are at least some assessments in this course.
-        assessments = course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT)
+        assessments = new_course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT)
         self.assertIsNotNone(assessments[0])
 
         # Get the first Unit
-        unit = course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
+        unit = new_course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
 
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
-        schema = unit_rest_handler.get_annotations_dict(course, unit.unit_id)
+        schema = unit_rest_handler.get_annotations_dict(
+            new_course, unit.unit_id)
 
         # Verify that despite having some Assessments, we don't have any
         # valid choices for pre- or post-asssments for the unit, since
@@ -310,15 +314,21 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.assertEquals({'-- None --': -1}, choices)
 
     def test_old_assessment_assignment(self):
-        ctx = sites.get_all_courses(rules_text='course:/:/')[0]
-        course = courses.Course(None, ctx)
+        new_course_context = actions.simple_add_course(
+            'new_course', ADMIN_EMAIL, 'My New Course')
+        new_course = courses.Course(None, new_course_context)
+        new_course.import_from(
+            sites.get_all_courses(rules_text='course:/:/')[0])
+        new_course.save()
+
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
-        unit_rest_handler.app_context = ctx
+        unit_rest_handler.app_context = new_course_context
 
         # Use REST handler function to save pre/post handlers on one unit.
         errors = []
-        unit = course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
-        assessment = course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT)[0]
+        unit = new_course.get_units_of_type(verify.UNIT_TYPE_UNIT)[0]
+        assessment = new_course.get_units_of_type(
+            verify.UNIT_TYPE_ASSESSMENT)[0]
         unit_rest_handler.apply_updates(
             unit,
             {
