@@ -66,6 +66,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_notifications.ManagerTest': 31,
     'tests.functional.modules_notifications.NotificationTest': 8,
     'tests.functional.modules_notifications.PayloadTest': 6,
+    'tests.functional.modules_notifications.StatsTest': 2,
     'tests.functional.modules_search.SearchTest': 11,
     'tests.functional.modules_unsubscribe.GetUnsubscribeUrlTests': 4,
     'tests.functional.modules_unsubscribe.SubscribeAndUnsubscribeTests': 4,

@@ -917,6 +917,9 @@ def register_module():
 
   # Avert circular dependency. pylint: disable-msg=g-import-not-at-top
   from modules.notifications import cron
+  from modules.notifications import stats
+
+  stats.register_analytic()
 
   cron_handlers = [(
       '/cron/process_pending_notifications',

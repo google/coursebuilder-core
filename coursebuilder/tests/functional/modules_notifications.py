@@ -19,12 +19,14 @@ __author__ = [
 ]
 
 import datetime
+import itertools
 import types
 
 from models import config
 from models import counters
 from modules.notifications import cron
 from modules.notifications import notifications
+from modules.notifications import stats
 from tests.functional import actions
 
 from google.appengine.api import mail_errors
@@ -1185,3 +1187,55 @@ class PayloadTest(ModelTestSpec, ModelTestBase):
 
   def test_for_export_blacklists_data(self):
     self.assert_for_export_removes_blacklisted_fields(self.payload)
+
+
+class StatsTest(actions.TestBase):
+
+  def setUp(self):
+    self.now = datetime.datetime.utcnow()
+    self.result = stats._Result(self.now)
+    super(StatsTest, self).setUp()
+
+  def test_result_bins_and_counts_correctly(self):
+    within_hour = self.now - datetime.timedelta(minutes=59)
+    on_hour = self.now - datetime.timedelta(hours=1)
+    within_day = self.now - datetime.timedelta(hours=23)
+    on_day = self.now - datetime.timedelta(days=1)
+    within_week = self.now - datetime.timedelta(days=6)
+    on_week = self.now - datetime.timedelta(days=7)
+
+    all_state_and_date_permutations = [x for x in itertools.product(
+        notifications.Status._STATES,
+        [self.now, within_hour, on_hour, within_day, on_day, within_week,
+         on_week]
+    )]
+
+    for status, dt in all_state_and_date_permutations:
+        self.result.add(status, dt)
+
+    self.assertEqual(21, self.result.total())
+    self.assertEqual(7, self.result.failed())
+    self.assertEqual(7, self.result.pending())
+    self.assertEqual(7, self.result.succeeded())
+
+    self.assertEqual(6, self.result.last_hour.total())
+    self.assertEqual(2, self.result.last_hour.failed())
+    self.assertEqual(2, self.result.last_hour.pending())
+    self.assertEqual(2, self.result.last_hour.succeeded())
+
+    self.assertEqual(12, self.result.last_day.total())
+    self.assertEqual(4, self.result.last_day.failed())
+    self.assertEqual(4, self.result.last_day.pending())
+    self.assertEqual(4, self.result.last_day.succeeded())
+
+    self.assertEqual(18, self.result.last_week.total())
+    self.assertEqual(6, self.result.last_week.failed())
+    self.assertEqual(6, self.result.last_week.pending())
+    self.assertEqual(6, self.result.last_week.succeeded())
+
+  def test_result_does_not_count_bad_state(self):
+    bad_state = 'bad'
+    self.result.add(bad_state, self.now)
+
+    self.assertNotIn(bad_state, notifications.Status._STATES)
+    self.assertEqual(0, self.result.total())

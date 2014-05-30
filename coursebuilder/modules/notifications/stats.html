@@ -1,0 +1,45 @@
+{% if not result.total() %}
+  <p>No notifications have been recorded for this course.</p>
+{% else %}
+  <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+  <script type='text/javascript'>
+    google.load('visualization', '1', {packages: ['corechart']});
+    google.setOnLoadCallback(drawCharts);
+
+    function drawCharts() {
+      drawChart('cb-day-chart');
+      drawChart('cb-hour-chart');
+      drawChart('cb-week-chart');
+    }
+
+    function drawChart(id) {
+      var element = document.getElementById(id);
+      var chart = new google.visualization.PieChart(element);
+      var data = element.dataset;
+      var chartData = google.visualization.arrayToDataTable([
+        ['Status', 'Count'],
+        ['Failed', parseInt(data.failed, 10)],
+        ['Pending', parseInt(data.pending, 10)],
+        ['Succeeded', parseInt(data.succeeded, 10)]
+      ]);
+      var kind = data.total == 1 ? 'notification' : 'notifications';
+      var options = {
+        sliceVisibilityThreshold: 0,
+        title: 'Last ' + data.name + ' (' + data.total + ' ' + kind + ')',
+      };
+      chart.draw(chartData, options);
+    }
+  </script>
+  <p>Total notifications processed for this course: <strong>{{result.total()}}</strong> (<strong>{{result.failed()}}</strong> failed, <strong>{{result.pending()}}</strong> pending, <strong>{{result.succeeded()}}</strong> succeeded)</p>
+  <p>Recent stats:</p>
+  {% for bin in result.bins %}
+    <div
+        id='cb-{{bin.name}}-chart'
+        data-failed='{{bin.failed()}}'
+        data-name='{{bin.name}}'
+        data-pending='{{bin.pending()}}'
+        data-succeeded='{{bin.succeeded()}}'
+        data-total='{{bin.total()}}'>
+    </div>
+  {% endfor %}
+{% endif %}
