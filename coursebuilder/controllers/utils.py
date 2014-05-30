@@ -528,7 +528,9 @@ class RegisterHandler(BaseHandler):
             name = self.request.get('form01')
 
         Student.add_new_student_for_current_user(
-            name, transforms.dumps(self.request.POST.items()), self)
+            name, transforms.dumps(self.request.POST.items()), self,
+            labels=self.request.get('labels'))
+
         # Render registration confirmation page
         self.redirect('/course#registration_confirmation')
 

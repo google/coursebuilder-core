@@ -32,6 +32,7 @@ UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
 STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
 STUDENT_SETTRACKS_URL = '/%s/student/settracks' % COURSE_NAME
 ANALYTICS_URL = '/%s/dashboard?action=analytics&tab=students' % COURSE_NAME
+LABELS_STUDENT_EMAIL = 'labels@bar.com'
 
 
 class FakeContext(object):
@@ -330,3 +331,15 @@ class StudentLabelsTest(actions.TestBase):
               'type': 'Course Track',
               'description': ''}],
             label_counts['data'])
+
+    # --------------------------------- Registration
+    def test_register_with_labels(self):
+        actions.login(LABELS_STUDENT_EMAIL)
+        response = actions.view_registration(self, COURSE_NAME)
+        register_form = actions.get_form_by_action(response, 'register')
+        self.post('/%s/%s' % (COURSE_NAME, register_form.action), {
+            'name': 'John Smith from Back East',
+            'xsrf_token': register_form['xsrf_token'].value,
+            'labels': common_utils.list_to_text([self.bar_id, self.baz_id])})
+        self._verify_labels(self.get(STUDENT_LABELS_URL), [self.bar_id,
+                                                           self.baz_id])

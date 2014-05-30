@@ -20,6 +20,7 @@ __author__ = [
 ]
 
 import cgi
+import copy
 import urllib
 
 from common.crypto import XsrfTokenManager
@@ -225,7 +226,9 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
                     self, 403, 'Version %s not supported.' % version,
                     {'key': key})
                 return
-            payload_dict = self.transform_for_editor_hook(item.dict)
+            display_dict = copy.copy(item.dict)
+            display_dict['id'] = item.id
+            payload_dict = self.transform_for_editor_hook(display_dict)
         else:
             payload_dict = self.get_default_content()
 

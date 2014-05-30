@@ -367,7 +367,7 @@ class StudentProfileDAO(object):
 
     @classmethod
     def add_new_student_for_current_user(
-        cls, nick_name, additional_fields, handler):
+        cls, nick_name, additional_fields, handler, labels=None):
         user = users.get_current_user()
 
         student_by_uid = Student.get_student_by_user_id(user.user_id())
@@ -377,7 +377,7 @@ class StudentProfileDAO(object):
             'Student\'s email and user id do not match.')
 
         cls._add_new_student_for_current_user(
-            user.user_id(), user.email(), nick_name, additional_fields)
+            user.user_id(), user.email(), nick_name, additional_fields, labels)
 
         try:
             cls._send_welcome_notification(handler, user.email())
@@ -388,7 +388,7 @@ class StudentProfileDAO(object):
     @classmethod
     @db.transactional(xg=True)
     def _add_new_student_for_current_user(
-        cls, user_id, email, nick_name, additional_fields):
+        cls, user_id, email, nick_name, additional_fields, labels=None):
         """Create new or re-enroll old student."""
 
         # create profile if does not exist
@@ -404,7 +404,8 @@ class StudentProfileDAO(object):
 
         # update profile
         cls._update_attributes(
-            profile, student, nick_name=nick_name, is_enrolled=True)
+            profile, student, nick_name=nick_name, is_enrolled=True,
+            labels=labels)
 
         # update student
         student.user_id = user_id
@@ -566,9 +567,9 @@ class Student(BaseEntity):
 
     @classmethod
     def add_new_student_for_current_user(
-        cls, nick_name, additional_fields, handler):
+        cls, nick_name, additional_fields, handler, labels=None):
         StudentProfileDAO.add_new_student_for_current_user(
-            nick_name, additional_fields, handler)
+            nick_name, additional_fields, handler, labels)
 
     @classmethod
     def get_by_email(cls, email):

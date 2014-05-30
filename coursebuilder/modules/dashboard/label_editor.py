@@ -52,7 +52,7 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
 
     REQUIRED_MODULES = [
         'gcb-rte', 'inputex-radio', 'inputex-string', 'inputex-number',
-        'inputex-hidden']
+        'inputex-hidden', 'inputex-uneditable']
     EXTRA_JS_FILES = []
 
     XSRF_TOKEN = 'label-edit'
@@ -66,6 +66,8 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         schema = schema_fields.FieldRegistry('Label', 'label')
         schema.add_property(schema_fields.SchemaField(
             'version', '', 'string', optional=True, hidden=True))
+        schema.add_property(schema_fields.SchemaField(
+            'id', 'ID', 'string', optional=True, editable=False))
         schema.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string'))
         schema.add_property(schema_fields.SchemaField(
@@ -87,6 +89,7 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         return schema
 
     def sanitize_input_dict(self, json_dict):
+        json_dict['id'] = None
         json_dict['title'] = json_dict['title'].strip()
         json_dict['description'] = json_dict['description'].strip()
         json_dict['type'] = int(json_dict['type'])

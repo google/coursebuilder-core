@@ -62,6 +62,7 @@ from models import config
 from models import courses
 from models import custom_modules
 from models import data_sources
+from models import models
 from models import roles
 from models import vfs
 from models.models import LabelDAO
@@ -799,18 +800,32 @@ class DashboardHandler(
         )
         labels = LabelDAO.get_all()
         if labels:
-            ol = safe_dom.Element('ol')
-            for label in labels:
-                li = safe_dom.Element('li')
-                li.add_text(
-                    label.title
-                ).add_child(
-                    safe_dom.Entity('&nbsp;')
-                ).add_child(
-                    safe_dom.A('dashboard?action=edit_label&key=%s' % label.id,
-                               id='label_%s' % label.title).add_text('[Edit]'))
-                ol.add_child(li)
-            output.append(ol)
+
+            all_labels_ul = safe_dom.Element('ul')
+            output.append(all_labels_ul)
+            for label_type in sorted(
+                models.LabelDTO.LABEL_TYPES,
+                lambda a, b: cmp(a.menu_order, b.menu_order)):
+
+                type_li = safe_dom.Element('li').add_text(label_type.title)
+                all_labels_ul.add_child(type_li)
+                labels_of_type_ul = safe_dom.Element('ul')
+                type_li.add_child(labels_of_type_ul)
+                for label in sorted(
+                    labels, lambda a, b: cmp(a.title, b.title)):
+                    if label.type == label_type.type:
+                        li = safe_dom.Element('li')
+                        labels_of_type_ul.add_child(li)
+                        li.add_text(
+                            label.title
+                        ).add_child(
+                            safe_dom.Entity('&nbsp;')
+                        ).add_child(
+                            safe_dom.A(
+                                'dashboard?action=edit_label&key=%s' %
+                                label.id,
+                                id='label_%s' % label.title
+                            ).add_text('[Edit]'))
         else:
             output.append(safe_dom.Element('blockquote').add_text('< none >'))
         return output
