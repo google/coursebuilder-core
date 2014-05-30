@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Wrapper script for tools/etl/etl.py that sets up the environment correctly.

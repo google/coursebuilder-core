@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
 # author: sll@google.com (Sean Lip)
@@ -31,6 +33,11 @@ usage () {
   echo "Usage: $0 <dotted_test_name>"
   echo "E.g.,"
   echo "  $0 tests.unit.common_safe_dom"
+  echo
+  echo
+  echo "To set up tab completion for test names within bash, add the following"
+  echo "command to your .bashrc file:"
+  echo "export complete -o nospace -C scripts/test_completions.py test.sh"
   echo
 }
 
