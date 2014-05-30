@@ -8,8 +8,9 @@
             {% if unit_id == unit.unit_id %}
                 {% for lesson in lessons %}
                     {{ macros.render_lesson_title(
-                         page_type, unit, lesson, lesson_id, lesson_progress,
-                         is_progress_recorded, is_course_admin) }}
+                         page_type, unit, lesson, lesson_progress, is_progress_recorded,
+                         unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
+                         is_course_admin) }}
                 {% endfor %}
             {% endif %}
         {% endfor %}
@@ -29,8 +30,9 @@
                 {% endif%}>
             {% for lesson in lessons %}
                 {{ macros.render_lesson_title(
-                     page_type, unit, lesson, lesson_id, lesson_progress,
-                     is_progress_recorded, is_course_admin) }}
+                     page_type, unit, lesson, lesson_progress, is_progress_recorded,
+                     unit.unit_id == unit_id and lesson.lesson_id == lesson_id,
+                     is_course_admin) }}
             {% endfor %}
             </div>
         {% endfor %}

@@ -144,7 +144,8 @@
 # macro to render a lesson title along with a progress indicator
 #}
 {% macro render_lesson_title(
-    page_type, unit, lesson, lesson_id, lesson_progress, is_progress_recorded, is_course_admin) -%}
+    page_type, unit, lesson, lesson_progress, is_progress_recorded,
+    is_active, is_course_admin) -%}
   {% if lesson.now_available or is_course_admin %}
 
     {% if is_progress_recorded %}
@@ -153,7 +154,7 @@
       {% set progress_class = 'gcb-progress-none' %}
     {% endif %}
 
-    <li {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}class="active"{% endif %}>
+    <li{% if page_type == 'unit' and is_active %} class="active"{% endif %}>
 
       {% if is_progress_recorded %}
         <div class="gcb-progress-icon-holder">
@@ -186,7 +187,7 @@
           class="gcb-lesson-title-no-progress"
         {% endif %}
       >
-        {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
+        {% if page_type == 'unit' and is_active %}
           {{ display_lesson_title(unit, lesson) }}
         {% else %}
           <a href="unit?unit={{ unit.unit_id }}&lesson={{ lesson.lesson_id }}">
@@ -203,11 +204,7 @@
 
     {% if lesson.activity and lesson.activity_listed %}
       <ul>
-        {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
-          <li class="active">
-        {% else %}
-          <li>
-        {% endif %}
+        <li{% if page_type == 'activity' and is_active %} class="active"{% endif %}>
             {% if is_progress_recorded %}
               <div class="gcb-progress-icon-holder">
                 {% if lesson.lesson_id in lesson_progress and lesson_progress[lesson.lesson_id]['activity'] == 2 %}
@@ -239,7 +236,7 @@
                 class="gcb-activity-title-no-progress"
               {% endif %}
             >
-              {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
+              {% if page_type == 'activity' and is_active %}
                 {# I18N: Menu item. #}
                 {{ gettext('Activity') }}
               {% else %}
@@ -257,7 +254,7 @@
 
   {% else %}
     <li>
-      {% if page_type == 'unit' and lesson.lesson_id == lesson_id %}
+      {% if page_type == 'unit' and is_active %}
         <span class="gcb-grayed-active">
       {% else %}
         <span class="gcb-grayed">
@@ -270,7 +267,7 @@
         <ul>
           <li>
             <span class="{{ progress_class }}"></span>
-            {% if page_type == 'activity' and lesson.lesson_id == lesson_id %}
+            {% if page_type == 'activity' and is_active %}
               <span class="gcb-grayed-active">
             {% else %}
               <span class="gcb-grayed">

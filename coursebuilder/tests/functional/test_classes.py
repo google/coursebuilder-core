@@ -1355,7 +1355,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         # Verify body does have linked breadcrumb trail.
         assert_contains(
             'Google &gt;<a href="%s">' % self.canonicalize('dashboard') +
-            ' Dashboard </a>&gt; Assets &gt; Cascading Style Sheets',
+            ' Dashboard </a>&gt; Assets &gt; CSS',
             response.body)
         assert_contains('assets/css/main.css', response.body)
         response = self.get('dashboard?action=assets&tab=images')
