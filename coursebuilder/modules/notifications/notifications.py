@@ -42,12 +42,12 @@ _APP_ENGINE_MAIL_FATAL_ERRORS = frozenset([
 ])
 _KEY_DELIMITER = ':'
 _MAX_RETRY_DAYS = 3
-_SECONDS_PER_HOUR = 60 * 60
-_SECONDS_PER_DAY = 24 * _SECONDS_PER_HOUR
 # Number of times past which recoverable failure of send_mail() calls becomes
 # hard failure. Used as a brake on runaway queues. Should be larger than the
 # expected cap on the number of retries imposed by taskqueue.
 _RECOVERABLE_FAILURE_CAP = 20
+_SECONDS_PER_HOUR = 60 * 60
+_SECONDS_PER_DAY = 24 * _SECONDS_PER_HOUR
 _USECS_PER_SECOND = 10 ** 6
 
 COUNTER_RETENTION_POLICY_RUN = counters.PerfCounter(
@@ -108,12 +108,6 @@ COUNTER_SEND_MAIL_TASK_STARTED = counters.PerfCounter(
 COUNTER_SEND_MAIL_TASK_SUCCESS = counters.PerfCounter(
     'gcb-notifications-send-mail-task-success',
     'number of times send mail task completed successfully'
-)
-COUNTER_SEND_MAIL_SOFT_LIMIT_GUARD = counters.PerfCounter(
-    'gcb-notifications-send-mail-soft-limit-guard',
-    ("guard for the critical region surrounding App Engine's mail.send_mail(). "
-     'Used to enforce a soft limit on the number of requests happening '
-     'concurrently')
 )
 
 
@@ -373,7 +367,7 @@ class Manager(object):
     if notification._recoverable_failure_count > _RECOVERABLE_FAILURE_CAP:
       message = (
           'Recoverable failure cap (%s) exceeded for notification with '
-          'key%s'
+          'key %s'
       ) % (_RECOVERABLE_FAILURE_CAP, str(notification.key()))
       logging.error(message)
       permanent_failure = deferred.PermanentTaskFailure(message)
@@ -491,6 +485,7 @@ class Manager(object):
 
       cls._mark_done(notification, dt)
       policy.run(notification, payload)
+      COUNTER_RETENTION_POLICY_RUN.inc()
 
     return db.put([notification, payload])
 

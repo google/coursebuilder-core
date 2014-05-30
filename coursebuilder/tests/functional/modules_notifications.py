@@ -239,7 +239,7 @@ class ManagerTest(actions.TestBase):
     self.assertEqual(over_cap + 1, notification._recoverable_failure_count)
     self.assertIsNone(payload.body)  # Policy applied.
 
-    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
     self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
     self.assertEqual(
         1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
