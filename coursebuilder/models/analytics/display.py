@@ -82,11 +82,9 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
     generator_status_messages = []
     any_generator_still_running = False
     all_generators_completed_ok = True
-    all_generators_have_ever_run = True
     for generator_class in visualization.generator_classes:
         job = data_source_jobs[generator_class]
         if job is None:
-            all_generators_have_ever_run = False
             all_generators_completed_ok = False
         elif job.status_code != jobs.STATUS_CODE_COMPLETED:
             all_generators_completed_ok = False
@@ -99,6 +97,19 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
     # <h3> title block.
     html_sections.append(safe_dom.Element('h3').add_text(visualization.title))
     html_sections.append(safe_dom.Element('br'))
+
+    # Boilerplate content for each visualization's required generators
+    html_sections.append(template_renderer.render(
+        None, 'models/analytics/common_footer.html',
+        {
+            'visualization': visualization.name,
+            'any_generator_still_running': any_generator_still_running,
+            'status_messages': generator_status_messages,
+            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
+            'xsrf_token_cancel': xsrf.create_xsrf_token(
+                'cancel_visualizations'),
+            'r': template_renderer.get_current_url(),
+        }))
 
     # If this source wants to generate inline values for its template,
     # and all generators that this source depends are complete (or zero
@@ -121,19 +132,6 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
         html_sections.append(template_renderer.render(
                 visualization, visualization.template_name, template_values))
 
-    # Boilerplate content for each visualization's required generators
-    html_sections.append(template_renderer.render(
-        None, 'models/analytics/common_footer.html',
-        {
-            'visualization': visualization.name,
-            'any_generator_still_running': any_generator_still_running,
-            'all_generators_have_ever_run': all_generators_have_ever_run,
-            'status_messages': generator_status_messages,
-            'xsrf_token_run': xsrf.create_xsrf_token('run_visualizations'),
-            'xsrf_token_cancel': xsrf.create_xsrf_token(
-                'cancel_visualizations'),
-            'r': template_renderer.get_current_url(),
-        }))
     return html_sections
 
 

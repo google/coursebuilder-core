@@ -786,8 +786,12 @@ class DashboardHandler(
         return 'dashboard?action=manage_text_asset&tab=%s&uri=%s'
 
     def get_assets_contrib(self, items, tab, all_paths):
-        for asset_lister in self.contrib_asset_listers:
-            items.append(asset_lister(self))
+        if not self.contrib_asset_listers:
+            items.append(safe_dom.Text(
+                'No assets extensions have been registered'))
+        else:
+            for asset_lister in self.contrib_asset_listers:
+                items.append(asset_lister(self))
 
     def get_assets_questions(self, items, tab, all_paths):
         items.append(self.list_questions())

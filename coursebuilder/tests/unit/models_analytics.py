@@ -294,14 +294,14 @@ class AnalyticsTests(unittest.TestCase):
 
         result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one have not been', result)
-        self.assertIn('  Run Jobs', result)
+        self.assertIn('Update Statistic', result)
         self.assertIn('action=run_visualizations', result)
 
         self._run_generators_for_visualizations(self._mock_app_context,
                                                 [analytic])
         result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
-        self.assertIn('Cancel Jobs', result)
+        self.assertIn('Cancel Statistic Calculation', result)
         self.assertIn('action=cancel_visualizations', result)
 
         self._cancel_generators_for_visualizations(self._mock_app_context,
@@ -309,21 +309,21 @@ class AnalyticsTests(unittest.TestCase):
         result = self._generate_analytics_page([analytic])
         self.assertIn('There was an error updating gen one statistics', result)
         self.assertIn('<pre>Canceled</pre>', result)
-        self.assertIn('Re-Run Jobs', result)
+        self.assertIn('Update Statistic', result)
         self.assertIn('action=run_visualizations', result)
 
         self._run_generators_for_visualizations(self._mock_app_context,
                                                 [analytic])
         result = self._generate_analytics_page([analytic])
         self.assertIn('Job for gen one statistics started at', result)
-        self.assertIn('Cancel Jobs', result)
+        self.assertIn('Cancel Statistic Calculation', result)
         self.assertIn('action=cancel_visualizations', result)
 
         GenOne(self._mock_app_context).load().complete('run_state_display')
         result = self._generate_analytics_page([analytic])
         self.assertIn('Statistics for gen one were last updated at', result)
         self.assertIn('in about 0 sec', result)
-        self.assertIn('Re-Run Jobs', result)
+        self.assertIn('Update Statistic', result)
         self.assertIn('action=run_visualizations', result)
         self.assertIn('foo_one_gen_source_gen_one: "run_state_display"', result)
 

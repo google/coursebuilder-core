@@ -17,10 +17,11 @@
 {% endblock %}
 
 {% block main_content %}
+
 <div id="gcb-main">
   <div class="gcb-article tab-content">
     <div class="gcb-aside">
-      <h2>
+      <h2 class="gcb-section-division">
         {# I18N: Title of the student progress page.#}
         {{ gettext('Student Progress') }}
       </h2>
@@ -33,7 +34,8 @@
         {% if can_edit_name %}
           <form action='student/editstudent' method='post'>
             <input type="hidden" name="xsrf_token" value="{{ student_edit_xsrf_token|escape }}">
-            <h2><label for="name">
+            <h2 class="gcb-section-division">
+              <label for="name">
               {# I18N: Label for the input field that allows the student to change the name on his/her certificate. #}
               {{ gettext('New Name') }}
             </label></h2>
@@ -53,7 +55,7 @@
             </p>
           </form>
 
-          <h2>
+          <h2 class="gcb-section-division">
             {# I18N: Shown on the student profile page. #}
             {{ gettext('To leave the course permanently, click on Unenroll') }}
           </h2>

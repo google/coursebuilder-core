@@ -8,8 +8,8 @@
   }
 </style>
 
-<h2>
-  {# I18N: Title hown on the student profile page #}
+<h2 class="gcb-section-division">
+  {# I18N: Title shown on the student profile page #}
   {{ gettext('Course Tracks') }}
 </h2>
 <form action="student/settracks" method="post" id='student_set_tracks'>
@@ -19,26 +19,23 @@
          >
   <table>
     <tr>
+      <th align="left">
+        {# I18N: Text indicating which units will be shown for the course #}
+        {{ gettext('Course Components') }}
+      </th>
       {% for label in track_labels %}
       <th>
         <div>{{ label.title }}</div>
-        <input type="checkbox"
-               id="label_id_{{ label.id }}"
-               name="labels"
-               value="{{ label.id }}"
-               onchange="gcb_track_highlight()"
-               {% if label.id in student_labels %}
-               checked="true"
-               {% endif %}>
       </th>
       {% endfor %}
-      <th align="left">
-        {# I18N: Text indicating which units will be shown for the course #}
-        {{ gettext('Units shown in course') }}
-      </th>
     </tr>
     {% for unit in units %}
     <tr>
+      <td>
+        <div id="unit_id_{{ unit.unit_id }}" class="unit_deselected">
+          {{ unit.title }}
+        </div>
+      </td>
       {% for label in track_labels %}
       <!-- label ID is {{ label.id }} -->
       <td>
@@ -46,20 +43,35 @@
           <!-- unit labels {{ unit.labels }} -->
           {% if label.id in unit.labels %}
           <img src="assets/lib/completed.png">
-          {% else %}
-          <img src="assets/lib/not_started.png">
           {% endif %}
         </center>
-    </td>
-      {% endfor %}
-      <td>
-        <div id="unit_id_{{ unit.unit_id }}" class="unit_deselected">
-          {{ unit.title }}
-        </div>
       </td>
+      {% endfor %}
     </tr>
     {% endfor %}
+    <tr>
+      <th>
+        {# I18N: Text indicating which course tracks the student has selected #}
+        {{ gettext('My Tracks') }}
+      </th>
+      {% for label in track_labels %}
+      <td>
+        <center>
+          <input type="checkbox"
+                 id="label_id_{{ label.id }}"
+                 name="labels"
+                 value="{{ label.id }}"
+                 onchange="gcb_track_highlight()"
+                 {% if label.id in student_labels %}
+                 checked="true"
+                 {% endif %}>
+        </center>
+      </td>
+      {% endfor %}
+    </tr>
   </table>
+  <br>
+  <div style="clear:both;"></div>
   <p>
     <button class="gcb-button" type="submit">
       {# I18N: Text for a button to save selected course tracks for student. #}

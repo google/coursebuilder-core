@@ -755,6 +755,11 @@ table.gcb-student-data-table {
   float: right;
 }
 
+.gcb-section-division {
+    top-margin: 30px;
+    border-bottom: solid 1px #999999;
+}
+
 /* Registration page form. */
 .gcb-reg-form-label {
   display: block;
