@@ -491,6 +491,13 @@ class AssessmentHandler(BaseHandler):
             self.error(404)
             return
 
+        # If assessment is used as a pre/post within a unit, go see that view.
+        parent_unit = course.get_parent_unit(self.unit_id)
+        if parent_unit:
+            self.redirect('/unit?unit=%s&assessment=%s' %
+                          (parent_unit.unit_id, self.unit_id))
+            return
+
         # If the assessment is not currently available, and the user is not an
         # admin, redirect to the main page.
         if (not unit.now_available and
