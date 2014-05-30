@@ -260,6 +260,10 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self._assert_progress_state(
             'Not yet submitted', self.assessment_two.title, response)
 
+        # Verify that we're on the assessment confirmation page.
+        self.assertIn('Thank you for taking the assessment one', response.body)
+        response = self._click_next_button(response)
+
         # Next-button past the lesson content
         response = self._click_next_button(response)
         self._assert_progress_state(
@@ -271,6 +275,18 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         # Submit post-assessment; unit should now be marked complete.
         response = self._post_assessment(response).follow()
+
+        # Verify that we get confirmation page on post-assessment
+        self.assertIn('Thank you for taking the assessment two', response.body)
+        self._assert_progress_state(
+            'Completed', self.assessment_one.title, response)
+        self._assert_progress_state(
+            'Completed', '2.1 ' + self.lesson.title, response)
+        self._assert_progress_state(
+            'Completed', self.assessment_two.title, response)
+
+        # Verify that the overall course state is completed.
+        response = self._click_next_button(response)
         self._assert_progress_state(
             'Completed', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
             response)

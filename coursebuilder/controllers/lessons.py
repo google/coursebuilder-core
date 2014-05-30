@@ -54,6 +54,8 @@ COURSE_EVENTS_RECORDED = PerfCounter(
 
 UNIT_PAGE_TYPE = 'unit'
 ACTIVITY_PAGE_TYPE = 'activity'
+ASSESSMENT_PAGE_TYPE = 'assessment'
+ASSESSMENT_CONFIRMATION_PAGE_TYPE = 'test_confirmation'
 
 TAGS_THAT_TRIGGER_BLOCK_COMPLETION = ['attempt-activity']
 TAGS_THAT_TRIGGER_COMPONENT_COMPLETION = ['tag-assessment']
@@ -296,34 +298,30 @@ class UnitHandler(BaseHandler):
         def __init__(self, course, unit):
             self._urls = []
             self._index_by_label = {}
-            index = 0
 
             if unit.pre_assessment:
+                self._index_by_label['assessment.%d' % unit.pre_assessment] = (
+                    len(self._urls))
                 self._urls.append('unit?unit=%s&assessment=%d' % (
                     unit.unit_id, unit.pre_assessment))
-                self._index_by_label['assessment.%d' % unit.pre_assessment] = (
-                    index)
-                index += 1
 
             for lesson in course.get_lessons(unit.unit_id):
+                self._index_by_label['lesson.%s' % lesson.lesson_id] = (
+                    len(self._urls))
                 self._urls.append('unit?unit=%s&lesson=%s' % (
                     unit.unit_id, lesson.lesson_id))
-                self._index_by_label['lesson.%s' % lesson.lesson_id] = index
-                index += 1
 
                 if lesson.activity and lesson.activity_listed:
+                    self._index_by_label['activity.%s' % lesson.lesson_id] = (
+                        len(self._urls))
                     self._urls.append('unit?unit=%s&lesson=%s&activity=true' % (
                         unit.unit_id, lesson.lesson_id))
-                    self._index_by_label['activity.%s' % lesson.lesson_id] = (
-                        index)
-                    index += 1
 
             if unit.post_assessment:
+                self._index_by_label['assessment.%d' % unit.post_assessment] = (
+                    len(self._urls))
                 self._urls.append('unit?unit=%s&assessment=%d' % (
                     unit.unit_id, unit.post_assessment))
-                self._index_by_label['assessment.%d' % unit.post_assessment] = (
-                    index)
-                index += 1
 
         def get_url_by(self, item_type, item_id, offset):
             index = self._index_by_label['%s.%s' % (item_type, item_id)]
@@ -354,7 +352,6 @@ class UnitHandler(BaseHandler):
 
         # Set template values for nav bar and page type.
         self.template_value['navbar'] = {'course': True}
-        self.template_value['page_type'] = UNIT_PAGE_TYPE
 
         # Set template values for a unit and its lesson entities
         self.template_value['unit'] = unit
@@ -381,13 +378,20 @@ class UnitHandler(BaseHandler):
         activity = (self.request.get('activity') or
                     '/activity' in self.request.path)
         if assessment:
-            self.set_assessment_content(unit, assessment, left_nav_elements)
-            assessment_handler = AssessmentHandler()
-            assessment_handler.app_context = self.app_context
-            assessment_handler.request = self.request
-            self.template_value['display_content'] = (
-                assessment_handler.get_assessment_content(
-                    student, self.get_course(), assessment, as_lesson=True))
+            if 'confirmation' in self.request.params:
+                self.set_confirmation_content(student, unit, assessment,
+                                              left_nav_elements)
+                self.template_value['display_content'] = (
+                    self.render_template_to_html(
+                        self.template_value, 'test_confirmation_content.html'))
+            else:
+                self.set_assessment_content(unit, assessment, left_nav_elements)
+                assessment_handler = AssessmentHandler()
+                assessment_handler.app_context = self.app_context
+                assessment_handler.request = self.request
+                self.template_value['display_content'] = (
+                    assessment_handler.get_assessment_content(
+                        student, self.get_course(), assessment, as_lesson=True))
         else:
             if activity:
                 self.set_activity_content(student, unit, lesson,
@@ -401,13 +405,32 @@ class UnitHandler(BaseHandler):
         self.render('unit.html')
 
     def set_assessment_content(self, unit, assessment, left_nav_elements):
+        self.template_value['page_type'] = ASSESSMENT_PAGE_TYPE
         self.template_value['assessment'] = assessment
         self.template_value['back_button_url'] = left_nav_elements.get_url_by(
             'assessment', assessment.unit_id, -1)
         self.template_value['next_button_url'] = left_nav_elements.get_url_by(
             'assessment', assessment.unit_id, 1)
 
+    def set_confirmation_content(self, student, unit, assessment,
+                                 left_nav_elements):
+        course = self.get_course()
+        self.template_value['page_type'] = ASSESSMENT_CONFIRMATION_PAGE_TYPE
+        self.template_value['assessment_name'] = assessment.title
+        self.template_value['score'] = (
+            course.get_score(student, str(assessment.unit_id)))
+        self.template_value['is_last_assessment'] = (
+            course.is_last_assessment(assessment))
+        self.template_value['overall_score'] = (
+            course.get_overall_score(student))
+        self.template_value['result'] = course.get_overall_result(student)
+        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+            'assessment', assessment.unit_id, 0)
+        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+            'assessment', assessment.unit_id, 1)
+
     def set_activity_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['page_type'] = ACTIVITY_PAGE_TYPE
         self.template_value['lesson'] = lesson
         self.template_value['lesson_id'] = lesson.lesson_id
         self.template_value['back_button_url'] = left_nav_elements.get_url_by(
@@ -430,6 +453,7 @@ class UnitHandler(BaseHandler):
                 student, unit.unit_id, lesson.lesson_id)
 
     def set_lesson_content(self, student, unit, lesson, left_nav_elements):
+        self.template_value['page_type'] = UNIT_PAGE_TYPE
         self.template_value['lesson'] = lesson
         self.template_value['lesson_id'] = lesson.lesson_id
         self.template_value['back_button_url'] = left_nav_elements.get_url_by(

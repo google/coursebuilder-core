@@ -1775,6 +1775,11 @@ class Course(object):
         for current_unit in reversed(self.get_units()):
             if current_unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 return current_unit.unit_id == unit.unit_id
+            elif current_unit.type == verify.UNIT_TYPE_UNIT:
+                if current_unit.post_assessment:
+                    return current_unit.post_assessment == unit.unit_id
+                if current_unit.pre_assessment:
+                    return current_unit.pre_assessment == unit.unit_id
         return False
 
     def add_unit(self):

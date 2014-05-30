@@ -186,8 +186,14 @@ class ProgressPercent(actions.TestBase):
           self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
               self.student)[self.unit.unit_id])
 
-        # But have 33% progress when following the redirect to the 1st lesson
+        # Still zero progress when take redirect to assessment confirmation.
         response = response.follow()
+        with Namespace(NAMESPACE):
+          self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
+              self.student)[self.unit.unit_id])
+
+        # But have 33% progress when following the link to the 1st lesson
+        response = self._click_next_button(response)
         with Namespace(NAMESPACE):
           self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
               self.student)[self.unit.unit_id])

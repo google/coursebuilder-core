@@ -213,20 +213,17 @@ class AnswerHandler(BaseHandler):
                 unit.unit_id, student.get_key(), answers)
             course.update_final_grades(student)
 
-            self.template_value['result'] = course.get_overall_result(student)
-            self.template_value['score'] = score
-            self.template_value['overall_score'] = course.get_overall_score(
-                student)
-
             parent_unit = course.get_parent_unit(unit.unit_id)
             if parent_unit:
                 unit_contents = lessons.UnitHandler.UnitLeftNavElements(
                     course, parent_unit)
-                next_url = unit_contents.get_url_by('assessment',
-                                                    unit.unit_id, 1)
-                if next_url:
-                    self.redirect('/' + next_url)
-                else:
-                    self.redirect('/course')
+                next_url = unit_contents.get_url_by(
+                    'assessment', unit.unit_id, 0) + '&confirmation'
+                self.redirect('/' + next_url)
             else:
+                self.template_value['result'] = course.get_overall_result(
+                    student)
+                self.template_value['score'] = score
+                self.template_value['overall_score'] = course.get_overall_score(
+                    student)
                 self.render('test_confirmation.html')
