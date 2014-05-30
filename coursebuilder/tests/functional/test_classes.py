@@ -1077,7 +1077,7 @@ class AdminAspectTest(actions.TestBase):
         assert_equals(response.status_int, 200)
 
         response.form.set('code', 'print "foo" + "bar"')
-        response = self.submit(response.form)
+        response = self.submit(response.form, response)
         assert_contains('foobar', response.body)
 
         # Finally, test that the console is not found when it is disabled

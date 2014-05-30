@@ -240,7 +240,8 @@ class UnitHandler(BaseHandler):
 
         # If the unit is not currently available, and the user is not an admin,
         # redirect to the main page.
-        if (not unit.now_available and
+        available_units = self.get_track_matching_student(student)
+        if ((not unit.now_available or unit not in available_units) and
             not Roles.is_course_admin(self.app_context)):
             self.redirect('/')
             return

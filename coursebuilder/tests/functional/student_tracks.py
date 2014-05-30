@@ -126,8 +126,8 @@ class StudentTracksTest(actions.TestBase):
 
     def test_unit_matching_no_labels(self):
         actions.login(REGISTERED_STUDENT_EMAIL)
-        response = self.get(COURSE_OVERVIEW_URL)
         self._choose_tracks([])
+        response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_no_labels.title, response.body)
         self.assertIn(self._unit_labels_foo.title, response.body)
         self.assertIn(self._unit_labels_foo_bar.title, response.body)
@@ -184,3 +184,43 @@ class StudentTracksTest(actions.TestBase):
         response = self.get(COURSE_OVERVIEW_URL)
         self.assertIn(self._unit_labels_quux.title, response.body)
         self.assertNotIn(self._unit_labels_foo_quux.title, response.body)
+
+    def test_load_units_student_no_labels(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        self._choose_tracks([])
+        response = self.get(COURSE_OVERVIEW_URL)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_no_labels.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo_bar.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_quux.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo_quux.unit_id,
+                                        response).status_int)
+
+    def test_load_units_student_labeled_foo(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        self._choose_tracks([self.foo_id])
+        response = self.get(COURSE_OVERVIEW_URL)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_no_labels.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo_bar.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_quux.unit_id,
+                                        response).status_int)
+        self.assertEquals(200, self.get('unit?unit=%d' %
+                                        self._unit_labels_foo_quux.unit_id,
+                                        response).status_int)

@@ -182,8 +182,8 @@ class TestBase(suite.AppEngineTestBase):
             namespaceHTMLElements=False)
         return parser.parse(html_str)
 
-    def get(self, url, **kwargs):
-        url = self.canonicalize(url)
+    def get(self, url, previous_response=None, **kwargs):
+        url = self.canonicalize(url, response=previous_response)
         logging.info('HTTP Get: %s', url)
         response = self.testapp.get(url, **kwargs)
         return self.hook_response(response)
@@ -211,27 +211,9 @@ class TestBase(suite.AppEngineTestBase):
         response = response.click(name)
         return self.hook_response(response)
 
-    def submit(self, form, response_containing_form=None):
-        """Submit a form to the appropriate handler.
-
-        Args:
-          form: The form to submit.
-          response_containing_form: The response object in which the 'form'
-              parameter is found.  This is optional.  Forms which use relative
-              URLs may have <base> tags indicate the base URL for relative
-              URLs.  The webtest library does not know about this, so we
-              manually try to see if this is the case, and modify the form's
-              action URL appropriately if so.
-        Returns:
-          a Response object - the return value from the webserver in response
-          to the form submission
-        """
+    def submit(self, form, previous_response=None):
         logging.info('Form submit: %s', form)
-        if not form.action.startswith('/') and response_containing_form:
-            matches = re.search(r'<base href=[\'"]([^\'"]+)["\']',
-                                response_containing_form.body)
-            if matches:
-                form.action = matches.group(1) + form.action
+        form.action = self.canonicalize(form.action, previous_response)
         response = form.submit()
         return self.hook_response(response)
 
