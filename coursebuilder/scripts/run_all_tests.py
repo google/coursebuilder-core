@@ -61,7 +61,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_notifications.CronTest': 9,
     'tests.functional.modules_notifications.DatetimeConversionTest': 1,
-    'tests.functional.modules_notifications.ManagerTest': 29,
+    'tests.functional.modules_notifications.ManagerTest': 31,
     'tests.functional.modules_notifications.NotificationTest': 8,
     'tests.functional.modules_notifications.PayloadTest': 6,
     'tests.functional.modules_search.SearchTest': 11,

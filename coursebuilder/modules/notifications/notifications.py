@@ -14,7 +14,52 @@
 
 """Notification module.
 
-TODO(johncox): fill in docs after full implementation written.
+Provides Manager.send_async, which sends notifications; and Manager.query, which
+queries the current status of notifications.
+
+Notifications are transported by email. Every message you send consumes email
+quota. A message is a single payload delivered to a single user. We do not
+provide the entire interface email does (no CC, BCC, attachments, or HTML
+bodies). Note that messages are not sent when you call Manager.send_async(), but
+instead enqueued and sent later -- usually within a minute.
+
+This module has several advantages over using App Engine's mail.send_mail()
+directly.
+
+First, we queue and retry sending messages. This happens on two levels: first,
+send_async() adds items to a task queue, which retries if there are transient
+failures (like the datastore being slow, or you enqueueing more messages than
+App Engine's mail service can send in a minute). Second, we provide a cron that
+retries message delivery for several days, so if you exhaust your daily mail
+quota today we'll try again tomorrow.
+
+The second major advantage is that we keep a record of messages sent, so you can
+do analytics on them.
+
+TODO(johncox): write dashboards and document them here.
+
+For users who are sending mail occasionally, this module smoothes away some of
+the gotchas of App Engine's mail service. However, App Engine is not optimized
+to be a bulk mail delivery service, so if you need to send amounts of mail in
+excess of App Engine's max daily quota (1.7M messages) or minute-by-minute quota
+(5k messages), you should consider using a third-party mail delivery service.
+
+We provide a second module that allows your users to opt out of receiving email.
+We strongly encourage use of that module so you don't spam people. See
+modules/unsubscribe/unsubscribe.py. The general pattern for using these modules
+is:
+
+  from modules.notifications import notifications
+  from modules.unsubscribe import unsubscribe
+
+  from google.appengine.api import users
+
+  user = users.get_current_user()
+
+  if user and not unsubscribe.has_unsubscribed(user.email):
+    notifications.Manager.send_async(
+        user.email, 'sender@example.com', 'intent', 'subject', 'body'
+    )
 """
 
 __author__ = [
@@ -28,6 +73,7 @@ from models import counters
 from models import custom_modules
 from models import entities
 from models import transforms
+from models import utils
 
 from google.appengine.api import mail
 from google.appengine.api import mail_errors
@@ -212,18 +258,60 @@ _RETENTION_POLICIES = {
 class Status(object):
   """DTO for email status."""
 
-  FAILED = 1
-  PENDING = 2
-  SUCCEEDED = 3
+  FAILED = 'failed'
+  PENDING = 'pending'
+  SUCCEEDED = 'succeeded'
   _STATES = frozenset((FAILED, PENDING, SUCCEEDED))
 
-  def __init__(self, to, sender, intent, state):
+  def __init__(self, to, sender, intent, enqueue_date, state):
     assert state in self._STATES
 
+    self.enqueue_date = enqueue_date
     self.intent = intent
-    self.to = to
     self.sender = sender
     self.state = state
+    self.to = to
+
+  @classmethod
+  def from_notification(cls, notification):
+    state = cls.PENDING
+
+    # Treating as module-protected. pylint: disable-msg=protected-access
+    if notification._fail_date:
+      state = cls.FAILED
+    elif notification._done_date:
+      state = cls.SUCCEEDED
+
+    return cls(
+        notification.to, notification.sender, notification.intent,
+        notification.enqueue_date, state
+    )
+
+  def __eq__(self, other):
+    return (
+        self.enqueue_date == other.enqueue_date and
+        self.intent == other.intent and
+        self.sender == other.sender and
+        self.state == other.state and
+        self.to == other.to
+    )
+
+  def __str__(self):
+    return (
+        'Status - to: %(to)s, from: %(sender)s, intent: %(intent)s, '
+        'enqueued: %(enqueue_date)s, state: %(state)s' % {
+            'enqueue_date': self.enqueue_date,
+            'intent': self.intent,
+            'sender': self.sender,
+            'state': self.state,
+            'to': self.to,
+    })
+
+
+def _accumulate_statuses(notification, results):
+  for_user = results.get(notification.to, [])
+  for_user.append(Status.from_notification(notification))
+  results[notification.to] = for_user
 
 
 class Manager(object):
@@ -235,16 +323,23 @@ class Manager(object):
   def query(cls, to, intent):
     """Gets the Status of notifications queued previously via send_async().
 
+    Serially performs one datastore query per user in the to list.
+
     Args:
       to: list of string. The recipients of the notification.
       intent: string. Short string identifier of the intent of the notification
           (for example, 'invitation' or 'reminder').
 
     Returns:
-      List of Status objects matching query.
+      Dict of to string -> [Status, sorted by descending enqueue date].
     """
-    # TODO(johncox): fill in stub.
-    raise NotImplementedError()
+    results = {}
+
+    for address in to:
+      mapper = utils.QueryMapper(cls._get_query_query(address, intent))
+      mapper.run(_accumulate_statuses, results)
+
+    return results
 
   @classmethod
   def send_async(
@@ -256,7 +351,8 @@ class Manager(object):
       to: string. Recipient email address. Must have a valid form, but we cannot
           know that the address can actually be delivered to.
       sender: string. Email address of the sender of the notification. Must be a
-          valid sender for the App Engine deployment. See
+          valid sender for the App Engine deployment or your attempts to send
+          will always fail when they are executed later. See
           https://developers.google.com/appengine/docs/python/mail/emailmessagefields.
       intent: string. Short string identifier of the intent of the notification
           (for example, 'invitation' or 'reminder'). Each kind of notification
@@ -533,6 +629,17 @@ class Manager(object):
     return Notification.all(
     ).filter(
         '%s =' % Notification._done_date.name, None
+    ).order(
+        '-' + Notification.enqueue_date.name
+    )
+
+  @classmethod
+  def _get_query_query(cls, to, intent):
+    return Notification.all(
+    ).filter(
+        Notification.to.name, to
+    ).filter(
+        Notification.intent.name, intent
     ).order(
         '-' + Notification.enqueue_date.name
     )

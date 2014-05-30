@@ -19,6 +19,13 @@ indexes:
   - name: enqueue_date
     direction: desc
 
+- kind: Notification
+  properties:
+  - name: intent
+  - name: to
+  - name: enqueue_date
+    direction: desc
+
 - kind: ReviewStep
   properties:
   - name: assigner_kind

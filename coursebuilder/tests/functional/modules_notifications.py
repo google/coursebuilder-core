@@ -311,6 +311,81 @@ class ManagerTest(actions.TestBase):
         [match.key() for match in found]
     )
 
+  def test_query_returns_correctly_populated_statuses(self):
+    to2 = 'to2@example.com'
+    date2 = self.now + datetime.timedelta(seconds=1)
+    user1_match1 = notifications.Notification(
+        _done_date=self.now, enqueue_date=self.now, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to
+    )
+    user1_match2 = notifications.Notification(
+        # Both done and failed so we can test failed trumps done.
+        _done_date=self.now, enqueue_date=date2, _fail_date=self.now,
+        intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to
+    )
+    user2_match1 = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=to2
+    )
+    user2_match2 = notifications.Notification(
+        enqueue_date=date2, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=to2
+    )
+    db.put([user1_match1, user1_match2, user2_match1, user2_match2])
+    expected = {
+        self.to: [
+            notifications.Status.from_notification(user1_match2),
+            notifications.Status.from_notification(user1_match1),
+        ],
+        to2: [
+            notifications.Status.from_notification(user2_match2),
+            notifications.Status.from_notification(user2_match1),
+        ],
+    }
+    results = notifications.Manager.query([self.to, to2], self.intent)
+
+    self.assertEqual(expected, results)
+    self.assertEqual(notifications.Status.FAILED, results[self.to][0].state)
+    self.assertEqual(notifications.Status.SUCCEEDED, results[self.to][1].state)
+    self.assertEqual(notifications.Status.PENDING, results[to2][0].state)
+
+  def test_get_query_query_returns_expected_records(self):
+    first_match = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to
+    )
+    second_match = notifications.Notification(
+        enqueue_date=self.now + datetime.timedelta(seconds=1),
+        intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to
+    )
+    different_to = notifications.Notification(
+        enqueue_date=self.now, intent=self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to='not_' + self.to
+    )
+    different_intent = notifications.Notification(
+        enqueue_date=self.now, intent='not_' + self.intent,
+        _retention_policy=notifications.RetainAuditTrail.NAME,
+        sender=self.sender, subject=self.subject, to=self.to
+    )
+    keys = db.put([first_match, second_match, different_to, different_intent])
+    first_match_key, second_match_key = keys[:2]
+    results = notifications.Manager._get_query_query(
+        self.to, self.intent
+    ).fetch(10)
+
+    self.assertEqual(
+        [second_match_key, first_match_key], [n.key() for n in results]
+    )
+
   def test_is_too_old_to_reenqueue(self):
     newer = self.now - datetime.timedelta(
         days=notifications._MAX_RETRY_DAYS - 1)
