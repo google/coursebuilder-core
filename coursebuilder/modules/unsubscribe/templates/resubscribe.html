@@ -1,0 +1,24 @@
+{% extends 'base_course.html' %}
+
+{% block assets %}
+  {{ super() }}
+  <style type="text/css">
+    div.display_email {
+      font-family: monospace;
+      text-align: center;
+    }
+  </style>
+{% endblock %}
+
+{% block main_content %}
+<div id="resubscribe-message">
+  <p>
+    {{ gettext(
+        'The following email address has been subscribed to receive '
+        'emails for this course:') }}
+  </p>
+  <div class="display_email">
+    {{ email }}
+  </div>
+</div>
+{% endblock %}

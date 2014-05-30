@@ -22,6 +22,9 @@ import logging
 import os
 import re
 import urllib
+from xml.etree import cElementTree
+
+import html5lib
 import yaml
 
 import appengine_config
@@ -164,6 +167,20 @@ class TestBase(suite.AppEngineTestBase):
             return True
 
         return False
+
+    def parse_html_string(self, html_str):
+        """Parse the given HTML string to a XML DOM tree.
+
+        Args:
+          html_str: string. The HTML document to be parsed.
+
+        Returns:
+          An ElementTree representation of the DOM.
+        """
+        parser = html5lib.HTMLParser(
+            tree=html5lib.treebuilders.getTreeBuilder('etree', cElementTree),
+            namespaceHTMLElements=False)
+        return parser.parse(html_str)
 
     def get(self, url, **kwargs):
         url = self.canonicalize(url)

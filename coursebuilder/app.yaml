@@ -22,6 +22,7 @@ env_variables:
     modules.oeditor.oeditor
     modules.review.review
     modules.search.search
+    modules.unsubscribe.unsubscribe
     modules.upload.upload
     modules.oauth2.oauth2=disabled
 

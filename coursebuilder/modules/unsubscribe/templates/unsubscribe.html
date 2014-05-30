@@ -1,0 +1,46 @@
+{% extends 'base_course.html' %}
+
+{% block assets %}
+  {{ super() }}
+  <style type="text/css">
+    div.display-email {
+      font-family: monospace;
+      text-align: center;
+    }
+  </style>
+  <script type="text/javascript">
+    $(function() {
+      var resubscribeUrl = $("#resubscribe-button").data('resubscribe-url');
+      $("#resubscribe-button").click(function() {
+        window.location = resubscribeUrl;
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block main_content %}
+<div id="unsubscribe-message">
+  <p>
+    {{ gettext(
+        'The following email address has been unsubscribed from '
+        'emails for this course:') }}
+  </p>
+  <div class="display-email">
+    {{ email }}
+  </div>
+  <p>
+    {{ gettext(
+        'If you prefer to continue receiving notifications, please click below '
+        'to resubscribe.') }}
+  </p>
+  <div>
+    <button
+        id="resubscribe-button"
+        class="gcb-button"
+        data-resubscribe-url="{{resubscribe_url}}">
+      {# I18N: Button at the bottom of the page to resubscribe to notifications. #}
+      {{ gettext('Resubscribe') }}
+    </button>
+  </div>
+</div>
+{% endblock %}
