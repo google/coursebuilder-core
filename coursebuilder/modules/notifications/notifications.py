@@ -22,18 +22,100 @@ __author__ = [
 ]
 
 import datetime
-import pickle
+import logging
 
+from models import counters
 from models import custom_modules
 from models import entities
+from models import transforms
 
+from google.appengine.api import mail
+from google.appengine.api import mail_errors
+from google.appengine.api import taskqueue
+from google.appengine.datastore import datastore_rpc
 from google.appengine.ext import db
+from google.appengine.ext import deferred
 
 
-# String. Delimiter used when calculating keys.
+_APP_ENGINE_MAIL_FATAL_ERRORS = frozenset([
+    mail_errors.BadRequestError, mail_errors.InvalidSenderError,
+])
 _KEY_DELIMITER = ':'
-# Int. Microseconds in a second.
+_MAX_RETRY_DAYS = 3
+_SECONDS_PER_HOUR = 60 * 60
+_SECONDS_PER_DAY = 24 * _SECONDS_PER_HOUR
+# Number of times past which recoverable failure of send_mail() calls becomes
+# hard failure. Used as a brake on runaway queues. Should be larger than the
+# expected cap on the number of retries imposed by taskqueue.
+_RECOVERABLE_FAILURE_CAP = 20
 _USECS_PER_SECOND = 10 ** 6
+
+COUNTER_RETENTION_POLICY_RUN = counters.PerfCounter(
+    'gcb-notifications-retention-policy-run',
+    'number of times a retention policy was run'
+)
+COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS = counters.PerfCounter(
+    'gcb-notifications-send-async-failed-bad-arguments',
+    'number of times send_async failed because arguments were bad'
+)
+COUNTER_SEND_ASYNC_FAILED_DATASTORE_ERROR = counters.PerfCounter(
+    'gcb-notifications-send-async-failed-datastore-error',
+    'number of times send_async failed because of datastore error'
+)
+COUNTER_SEND_ASYNC_START = counters.PerfCounter(
+    'gcb-notifications-send-async-called',
+    'number of times send_async has been called'
+)
+COUNTER_SEND_ASYNC_SUCCESS = counters.PerfCounter(
+    'gcb-notifications-send-async-success',
+    'number of times send_async succeeded'
+)
+COUNTER_SEND_MAIL_TASK_FAILED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-failed',
+    'number of times the send mail task failed, but could be retried'
+)
+COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-failed-permanently',
+    'number of times the send mail task failed permanently'
+)
+COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-recoverable-failure-cap-exceeded',
+    'number of times the recoverable failure cap was exceeded'
+)
+COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-record-failure-called',
+    'number of times _record_failure was called in the send mail task'
+)
+COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-record-failure-failed',
+    'number of times _record_failure failed in the send mail task'
+)
+COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-record-failure-success',
+    'number of times _record_failure succeeded in the send mail task'
+)
+COUNTER_SEND_MAIL_TASK_SENT = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-sent',
+    'number of times the send mail task called send_mail successfully'
+)
+COUNTER_SEND_MAIL_TASK_SKIPPED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-skipped',
+    'number of times send mail task skipped sending mail'
+)
+COUNTER_SEND_MAIL_TASK_STARTED = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-started',
+    'number of times the send mail task was dequeued and started')
+COUNTER_SEND_MAIL_TASK_SUCCESS = counters.PerfCounter(
+    'gcb-notifications-send-mail-task-success',
+    'number of times send mail task completed successfully'
+)
+COUNTER_SEND_MAIL_SOFT_LIMIT_GUARD = counters.PerfCounter(
+    'gcb-notifications-send-mail-soft-limit-guard',
+    ("guard for the critical region surrounding App Engine's mail.send_mail(). "
+     'Used to enforce a soft limit on the number of requests happening '
+     'concurrently')
+)
+
 
 # TODO(johncox): remove suppression once stubs are implemented.
 # pylint: disable-msg=unused-argument
@@ -57,8 +139,8 @@ class RetentionPolicy(object):
   """Retention policy for notification data.
 
   Notification data is spread between the Notification and Payload objects (of
-  which see below). Two parts of this data may be large: the context for
-  rendering the notification body, or the contents of the rendered body itself.
+  which see below). Two parts of this data may be large:
+  Notification.audit_trail, and Payload.body.
 
   We allow clients to specify a retention policy when calling
   Manager.send_async(). This retention policy is a bundle of logic applied after
@@ -80,19 +162,19 @@ class RetentionPolicy(object):
 
   @classmethod
   def run(cls, notification, payload):
-    """Runs the policy, transforming notification and payload.
+    """Runs the policy, transforming notification and payload in place.
 
     run does not apply mutations to the backing datastore entities; it merely
     returns versions of those entities that we will later attempt to persist.
+    Your transforms must not touch protected fields on notification or payload;
+    those are used by the subsystem, and changing them can violate constraints
+    and cause unpredictable behavior and data corruption.
 
     Args:
       notification: Notification. The notification to process.
       payload: Payload. The payload to process.
-
-    Returns:
-      A (notification, payload) 2-tuple with the desired mutations done.
     """
-    return notification, payload
+    pass
 
 
 class RetainAll(RetentionPolicy):
@@ -101,22 +183,21 @@ class RetainAll(RetentionPolicy):
   NAME = 'all'
 
 
-class RetainContext(RetentionPolicy):
-  """Policy that blanks payload but not context."""
+class RetainAuditTrail(RetentionPolicy):
+  """Policy that blanks Payload.body but not Notification.audit_trail."""
 
-  NAME = 'context'
+  NAME = 'audit_trail'
 
   @classmethod
-  def run(cls, notification, payload):
-    # TODO(johncox): write after send_async.
-    raise NotImplementedError()
+  def run(cls, unused_notification, payload):
+    payload.body = None
 
 
 # Dict of string -> RetentionPolicy where key is the policy's NAME. All
 # available retention policies.
 _RETENTION_POLICIES = {
     RetainAll.NAME: RetainAll,
-    RetainContext.NAME: RetainContext,
+    RetainAuditTrail.NAME: RetainAuditTrail,
 }
 
 
@@ -140,6 +221,8 @@ class Status(object):
 class Manager(object):
   """Manages state and operation of the notifications subsystem."""
 
+  # Treating access as module-protected. pylint: disable-msg=protected-access
+
   @classmethod
   def query(cls, to, intent):
     """Gets the Status of notifications queued previously via send_async().
@@ -157,8 +240,8 @@ class Manager(object):
 
   @classmethod
   def send_async(
-      cls, to, sender, intent, context, template_path, subject,
-      retention_policy=None, send_after=None):
+      cls, to, sender, intent, body, subject, audit_trail=None,
+      retention_policy=None):
     """Asyncronously sends a notification via email.
 
     Args:
@@ -172,27 +255,307 @@ class Manager(object):
           you are sending should have its own intent. Used when creating keys in
           the index; values that cause the resulting key to be >500B will fail.
           May not contain a colon.
-      context: dict of string -> object. The template context used to render the
-          notification body. Must be pickle-able; see
-          https://docs.python.org/2/library/pickle.html?highlight=pickle#what-can-be-pickled-and-unpickled
-      template_path: string. Path to the Jinja2 template for the notification
-          body. Templates are expected to be plain text; HTML is not yet
-          supported, but this is not enforced.
+      body: string. The data payload of the notification. Must fit in a
+          datastore entity.
       subject: string. Subject line for the notification.
+      audit_trail: JSON-serializable object. An optional audit trail that, when
+          used with the default retention policy, will be retained even after
+          the body is scrubbed from the datastore.
       retention_policy: RetentionPolicy. The retention policy to use for data
-          after a Notification has been sent. By default, we retain the context
-          but not the rendered payload.
-      send_after: datetime.datetime. UTC datetime of the earliest this
-          notification should be sent. Defaults to utcnow (that is, no delay).
+          after a Notification has been sent. By default, we retain the
+          audit_trail but not the body.
 
     Returns:
-      None.
+      (notification_key, payload_key). A 2-tuple of datastore keys for the
+      created notification and payload.
 
     Raises:
-      ValueError: if intent is invalid.
+      Exception: if values delegated to model initializers are invalid.
+      ValueError: if to or sender are malformed according to App Engine (note
+          that well-formed values do not guarantee success).
     """
-    # TODO(johncox): fill in stub.
-    raise NotImplementedError()
+    COUNTER_SEND_ASYNC_START.inc()
+    enqueue_date = datetime.datetime.utcnow()
+    retention_policy = (
+        retention_policy if retention_policy else RetainAuditTrail)
+
+    for email in (to, sender):
+      if not mail.is_email_valid(email):
+        COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS.inc()
+        raise ValueError('Malformed email address: "%s"' % email)
+
+    if retention_policy.NAME not in _RETENTION_POLICIES:
+      COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS.inc()
+      raise ValueError('Invalid retention policy: ' + str(retention_policy))
+
+    try:
+      notification, payload = cls._make_unsaved_models(
+          audit_trail, body, enqueue_date, intent, retention_policy.NAME,
+          sender, subject, to,
+      )
+    except Exception, e:
+      COUNTER_SEND_ASYNC_FAILED_BAD_ARGUMENTS.inc()
+      raise e
+
+    try:
+      notification_key, payload_key = cls._save_notification_and_payload(
+          notification, payload,
+      )
+    except Exception, e:
+      COUNTER_SEND_ASYNC_FAILED_DATASTORE_ERROR.inc()
+      raise e
+
+    deferred.defer(
+        cls._transactional_send_mail_task, notification_key, payload_key,
+        _retry_options=cls._get_retry_options())
+    COUNTER_SEND_ASYNC_SUCCESS.inc()
+
+    return notification_key, payload_key
+
+  @classmethod
+  def _make_unsaved_models(
+      cls, audit_trail, body, enqueue_date, intent, retention_policy, sender,
+      subject, to):
+    notification = Notification(
+        audit_trail=audit_trail, enqueue_date=enqueue_date, intent=intent,
+        _retention_policy=retention_policy, sender=sender, subject=subject,
+        to=to,
+    )
+    payload = Payload(
+      body=body, enqueue_date=enqueue_date, intent=intent, to=to,
+      _retention_policy=retention_policy,
+    )
+
+    return notification, payload
+
+  @classmethod
+  @db.transactional(xg=True)
+  def _save_notification_and_payload(cls, notification, payload):
+    return db.put([notification, payload])
+
+  @classmethod
+  def _send_mail_task(
+      cls, notification_key, payload_key, test_send_mail_fn=None):
+    exception = None
+    failed_permanently = False
+    now = datetime.datetime.utcnow()
+    notification, payload = db.get([notification_key, payload_key])
+    send_mail_fn = test_send_mail_fn if test_send_mail_fn else mail.send_mail
+    sent = False
+
+    COUNTER_SEND_MAIL_TASK_STARTED.inc()
+
+    if not notification:
+      COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.inc()
+      raise deferred.PermanentTaskFailure(
+          'Notification missing: ' + str(notification_key)
+      )
+
+    if not payload:
+      COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.inc()
+      raise deferred.PermanentTaskFailure(
+          'Payload missing: ' + str(payload_key)
+      )
+
+    policy = _RETENTION_POLICIES.get(notification._retention_policy)
+    if not policy:
+      COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.inc()
+      raise deferred.PermanentTaskFailure(
+          'Unknown retention policy: ' + notification._retention_policy
+      )
+
+    if (cls._done(notification) or cls._failed(notification) or
+        cls._sent(notification)):
+      COUNTER_SEND_MAIL_TASK_SKIPPED.inc()
+      COUNTER_SEND_MAIL_TASK_SUCCESS.inc()
+      return
+
+    if notification._recoverable_failure_count > _RECOVERABLE_FAILURE_CAP:
+      message = (
+          'Recoverable failure cap (%s) exceeded for notification with '
+          'key%s'
+      ) % (_RECOVERABLE_FAILURE_CAP, str(notification.key()))
+      logging.error(message)
+      permanent_failure = deferred.PermanentTaskFailure(message)
+
+      try:
+        COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED.inc()
+        cls._record_failure(
+            notification, payload, permanent_failure, dt=now, permanent=True,
+            policy=policy
+        )
+        COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
+      # Must be vague. pylint: disable-msg=broad-except
+      except Exception, e:
+        logging.error(
+            cls._get_record_failure_error_message(notification, payload, e)
+        )
+        COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.inc()
+
+      COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.inc()
+      COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.inc()
+
+      raise permanent_failure
+
+    try:
+      send_mail_fn(
+          notification.sender, notification.to, notification.subject,
+          payload.body
+      )
+      sent = True
+    # Must be vague. pylint: disable-msg=broad-except
+    except Exception, exception:
+      failed_permanently = cls._is_send_mail_error_permanent(exception)
+
+      if not failed_permanently:
+
+        try:
+          COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED.inc()
+          cls._record_failure(notification, payload, exception)
+          COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
+        # Must be vague. pylint: disable-msg=broad-except
+        except Exception, e:
+          logging.error(
+              cls._get_record_failure_error_message(
+                  notification, payload, exception
+              )
+          )
+          COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.inc()
+
+        logging.error(
+            ('Recoverable error encountered when processing notification task; '
+             'will retry. Error was: ' + str(exception))
+        )
+        COUNTER_SEND_MAIL_TASK_FAILED.inc()
+
+        # Set by except: clause above. pylint: disable-msg=raising-bad-type
+        raise exception
+
+    if sent:
+      cls._mark_sent(notification, now)
+
+    if failed_permanently:
+      cls._mark_failed(notification, now, exception, permanent=True)
+
+    if sent or failed_permanently:
+      policy.run(notification, payload)
+      cls._mark_done(notification, now)
+
+    db.put([notification, payload])
+
+    COUNTER_RETENTION_POLICY_RUN.inc()
+
+    if sent:
+      COUNTER_SEND_MAIL_TASK_SENT.inc()
+    elif failed_permanently:
+      COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.inc()
+
+    COUNTER_SEND_MAIL_TASK_SUCCESS.inc()
+
+  @classmethod
+  @db.transactional(
+      propagation=datastore_rpc.TransactionOptions.INDEPENDENT, xg=True)
+  def _record_failure(
+      cls, notification, payload, exception, dt=None, permanent=False,
+      policy=None):
+    """Marks failure data on entities in an external transaction.
+
+    IMPORTANT: because we're using datastore_rpc.TransactionOptions.INDEPENDENT,
+    mutations on notification and payload here are *not* transactionally
+    consistent in the caller. Consequently, callers must not read or mutate them
+    after calling this method.
+
+    The upside is that this allows us to record failure data on entities inside
+    a transaction, and that transaction can throw without rolling back these
+    mutations.
+
+    Args:
+      notification: Notification. The notification to mutate.
+      payload: Payload. The payload to mutate.
+      exception: Exception. The exception that prompted the mutation.
+      dt: datetime. notification_fail_time and notification._done_time to record
+          if permanent is True.
+      permanent: boolean. If True, the notification will be marked done and
+          the retention policy will be run.
+      policy: RetentionPolicy. The retention policy to apply if permanent was
+          True.
+
+    Returns:
+      (notification_key, payload_key) 2-tuple.
+    """
+    notification._recoverable_failure_count += 1
+    cls._mark_failed(notification, dt, exception, permanent=permanent)
+
+    if permanent:
+      assert dt and policy
+
+      cls._mark_done(notification, dt)
+      policy.run(notification, payload)
+
+    return db.put([notification, payload])
+
+  @classmethod
+  def _get_record_failure_error_message(cls, notification, payload, exception):
+    return (
+        'Unable to record failure for notification with key %s and payload '
+        'with key %s; encountered %s error with text: "%s"') % (
+            str(notification.key()), str(payload.key()),
+            exception.__class__.__name__, str(exception))
+
+  @classmethod
+  def _transactional_send_mail_task(cls, notification_key, payload_key):
+    # Can't use decorator because of taskqueue serialization.
+    db.run_in_transaction_options(
+        db.create_transaction_options(xg=True), cls._send_mail_task,
+        notification_key, payload_key)
+
+  @classmethod
+  def _get_retry_options(cls):
+    # Retry up to once every hour with exponential backoff; limit tasks to
+    # three days.
+    return taskqueue.TaskRetryOptions(
+        min_backoff_seconds=1, max_backoff_seconds=_SECONDS_PER_HOUR,
+        max_doublings=12, task_age_limit=_MAX_RETRY_DAYS * _SECONDS_PER_DAY,
+    )
+
+  @classmethod
+  def _get_last_exception_value(cls, exception):
+    return {
+        'type': '%s.%s' % (
+            exception.__class__.__module__, exception.__class__.__name__),
+        'string': str(exception),
+    }
+
+  @classmethod
+  def _done(cls, notification):
+    return bool(notification._done_date)
+
+  @classmethod
+  def _failed(cls, notification):
+    return bool(notification._fail_date)
+
+  @classmethod
+  def _is_send_mail_error_permanent(cls, exception):
+    return type(exception) in _APP_ENGINE_MAIL_FATAL_ERRORS
+
+  @classmethod
+  def _mark_done(cls, notification, dt):
+    notification._done_date = dt
+
+  @classmethod
+  def _mark_failed(cls, notification, dt, exception, permanent=False):
+    notification._last_exception = cls._get_last_exception_value(exception)
+
+    if permanent:
+      notification._fail_date = dt
+
+  @classmethod
+  def _mark_sent(cls, notification, dt):
+    notification._send_date = dt
+
+  @classmethod
+  def _sent(cls, notification):
+    return bool(notification._send_date)
 
 
 class _IntentProperty(db.StringProperty):
@@ -219,28 +582,23 @@ class _IntentProperty(db.StringProperty):
 
 
 class _SerializedProperty(db.Property):
-  """Custom property that stores serialized Python dicts of pickle-able data."""
+  """Custom property that stores JSON-serialized data."""
 
   def get_value_for_datastore(self, model_instance):
-    return pickle.dumps(super(
+    return transforms.dumps(super(
         _SerializedProperty, self
     ).get_value_for_datastore(model_instance))
 
   def make_value_from_datastore(self, value):
-    return pickle.loads(value)
+    return transforms.loads(value)
 
   def validate(self, value):
     value = super(_SerializedProperty, self).validate(value)
-
-    if value is not None and not isinstance(value, dict):
-      raise db.BadValueError(
-          'value must be a dict; got %s' % type(value).__name__)
-
     try:
-      pickle.dumps(value)
-    except TypeError as e:
+      transforms.dumps(value)
+    except TypeError, e:
       raise db.BadValueError(
-          '%s is not serializable; error was "%s"' % (value, e))
+          '%s is not JSON-serializable; error was "%s"' % (value, e))
 
     return value
 
@@ -252,6 +610,24 @@ class _Model(entities.BaseEntity):
   _KEY_TEMPLATE = (
       '(%(kind)s%(delim)s%(to)s%(delim)s%(intent)s%(delim)s%(enqueue_date)s)'
   )
+
+  # When the record was enqueued in client code.
+  enqueue_date = db.DateTimeProperty(required=True)
+  # String indicating the intent of the notification. Intents are used to group
+  # and index notifications. Used in key formation; may not contain a colon.
+  intent = _IntentProperty(required=True)
+  # Email address used to compose the To:. May house only one value. Subject to
+  # the restrictions of the underlying App Engine mail library; see the to field
+  # in
+  # https://developers.google.com/appengine/docs/python/mail/emailmessagefields.
+  to = db.StringProperty(required=True)
+
+  # When the record was last changed.
+  _change_date = db.DateTimeProperty(auto_now=True, required=True)
+  # RetentionPolicy.NAME string. Identifier for the retention policy for the
+  # Payload.
+  _retention_policy = db.StringProperty(
+      required=True, choices=_RETENTION_POLICIES.keys())
 
   def __init__(self, *args, **kwargs):
     assert 'key_name' not in kwargs, 'Setting key_name manually not supported'
@@ -296,66 +672,38 @@ class _Model(entities.BaseEntity):
 
 class Notification(_Model):
 
-  # Information used to compose messages.
-
-  # Context dict used to render the template for the notification. Must be
-  # pickle-serializable.
-  context = _SerializedProperty()
-  # String indicating the intent of the notification. Intents are used to group
-  # and index notifications. Used in key formation; may not contain a colon.
-  intent = _IntentProperty(required=True)
-  # Date before which the notification will be skipped during processing. Used
-  # for rudimentary scheduling.
-  send_after = db.DateTimeProperty(required=True)
+  # Audit trail of JSON-serializable data. By default Payload.body is deleted
+  # when it is no longer needed. If you need information for audit purposes,
+  # pass it here, and the default retention policy will keep it.
+  audit_trail = _SerializedProperty()
   # Email address used to compose the From:. Subject to the sender restrictions
   # of the underlying App Engine mail library; see the sender field in
   # https://developers.google.com/appengine/docs/python/mail/emailmessagefields.
   sender = db.StringProperty(required=True)
   # Subject line of the notification.
   subject = db.TextProperty(required=True)
-  # Path to the template used to render the text of the notification.
-  template = db.StringProperty(required=True)
-  # Email address used to compose the To:. May house only one value. Subject to
-  # the restrictions of the underlying App Engine mail library; see the to field
-  # in
-  # https://developers.google.com/appengine/docs/python/mail/emailmessagefields.
-  to = db.StringProperty(required=True)
 
-  # Bookkeeping information used for system state.
+  # When processing the record fully finished, meaning that the record will
+  # never be processed by the notification subsystem again. None if the record
+  # is still in flight. Indicates that the record has either succeeded or failed
+  # and its retention policy has been applied.
+  _done_date = db.DateTimeProperty()
+  # When processing of the record failed and will no longer be retried. None if
+  # this has not happened. Does not indicated the retention policy has been
+  # applied; see _done_date.
+  _fail_date = db.DateTimeProperty()
+  # JSON representation of the last recordable exception encountered while
+  # processing the notification. Format is
+  # {'type': type_str, 'string': str(exception)}.
+  _last_exception = _SerializedProperty()
+  # Number of recoverable failures we've had for this notification.
+  _recoverable_failure_count = db.IntegerProperty(required=True, default=0)
+  # When a send_mail # call finshed for the record and we recorded it in the
+  # datastore. May be None if this has not yet happend. Does not indicate the
+  # retention policy has been applied; see _done_date.
+  _send_date = db.DateTimeProperty()
 
-  # When the record was last changed.
-  change_date = db.DateTimeProperty(auto_now=True, required=True)
-  # When the record was enqueued in client code.
-  enqueue_date = db.DateTimeProperty(required=True)
-  # When processing of the record last started. May be None if the record has
-  # never been processed.
-  start_date = db.DateTimeProperty()
-  # When processing of the record completed successfully, meaning a send_mail
-  # call finshed for the record and we recorded it in the datastore. May be None
-  # if this has not yet happend.
-  complete_date = db.DateTimeProperty()
-  # When processing of the record failed unrecoverably. Unrecoverable failure is
-  # failure that does not get retried (for example, because we know a priori
-  # that subsequent attempts will fail). An example of unrecoverable error is a
-  # malformed sender. May be None if failure has not occurred. Note that entries
-  # that are past the retry cutoff will not be retried, but this is not
-  # considered unrecoverable failure.
-  fail_date = db.DateTimeProperty()
-  # String representation of the last exception encountered when processing the
-  # record. May be None if there has never been an exception during processing.
-  last_exception = db.TextProperty()
-  # RetentionPolicy.NAME string. Identifier for the retention policy for the
-  # Notification.
-  retention_policy = db.StringProperty(
-      required=True, choices=_RETENTION_POLICIES.keys())
-
-  _PROPERTY_EXPORT_BLACKLIST = [context, last_exception]
-
-  def __init__(self, *args, **kwargs):
-    # Injectable for tests only -- do not pass in ordinary operation.
-    utcnow_fn = kwargs.get('utcnow_fn', datetime.datetime.utcnow)
-    kwargs['send_after'] = kwargs.get('send_after', utcnow_fn())
-    super(Notification, self).__init__(*args, **kwargs)
+  _PROPERTY_EXPORT_BLACKLIST = [audit_trail, _last_exception]
 
   def for_export(self, transform_fn):
     model = super(Notification, self).for_export(transform_fn)
@@ -367,32 +715,14 @@ class Notification(_Model):
 class Payload(_Model):
   """The data payload of a Notification.
 
-  In the current implementation, this is the email body rendered from the
-  context and the template supplied by the user when Manager.send_async() is
-  called.
-
-  We calculate the payload at call time rather than at send time because there
-  may be an arbitrary delay between the two during which the template changes.
-  This would cause the actual payload of the notification to differ from the
-  payload expected at call time, with no way for the caller to be aware of the
-  resulting payload in the notification.
-
   We extract this data from Notification to increase the total size budget
   available to the user, which is capped at 1MB/entity.
   """
 
-  # When the record was last changed.
-  change_date = db.DateTimeProperty(auto_now=True, required=True)
-  # Text of the payload.
-  data = db.TextProperty()
-  # When the record was enqueued in client code.
-  enqueue_date = db.DateTimeProperty(required=True)
-  # RetentionPolicy.NAME string. Identifier for the retention policy for the
-  # Payload.
-  retention_policy = db.StringProperty(
-      required=True, choices=_RETENTION_POLICIES.keys())
+  # Body of the payload.
+  body = db.TextProperty()
 
-  _PROPERTY_EXPORT_BLACKLIST = [data]
+  _PROPERTY_EXPORT_BLACKLIST = [body]
 
   def __init__(self, *args, **kwargs):
     super(Payload, self).__init__(*args, **kwargs)

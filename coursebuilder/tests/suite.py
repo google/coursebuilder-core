@@ -202,6 +202,7 @@ class AppEngineTestBase(FunctionalTestBase):
         self.testbed.init_urlfetch_stub()
         self.testbed.init_files_stub()
         self.testbed.init_blobstore_stub()
+        self.testbed.init_mail_stub()
         # TODO(emichael): Fix this when an official stub is created
         self.testbed._register_stub(
             'search', simple_search_stub.SearchServiceStub())
@@ -211,6 +212,9 @@ class AppEngineTestBase(FunctionalTestBase):
     def tearDown(self):  # pylint: disable=g-bad-name
         self.testbed.deactivate()
         super(AppEngineTestBase, self).tearDown()
+
+    def get_mail_stub(self):
+        return self.testbed.get_stub(testbed.MAIL_SERVICE_NAME)
 
     def execute_all_deferred_tasks(self, queue_name='default',
                                    iteration_limit=None):

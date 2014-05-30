@@ -37,6 +37,10 @@ class PerfCounter(object):
 
         Registry.registered[self.name] = self
 
+    def _clear(self):
+        """Resets value for tests."""
+        self._value = 0
+
     def inc(
         self, increment=1, context=None):  # pylint: disable-msg=unused-argument
         """Increments value by a given increment."""
@@ -65,3 +69,9 @@ class PerfCounter(object):
 class Registry(object):
     """Holds all registered counters."""
     registered = {}
+
+    @classmethod
+    def _clear_all(cls):
+        """Clears all counters for tests."""
+        for counter in cls.registered.values():
+            counter._clear()  # pylint: disable-msg=protected-access

@@ -19,29 +19,23 @@ __author__ = [
 ]
 
 import datetime
+import types
 
+from models import config
+from models import counters
 from modules.notifications import notifications
 from tests.functional import actions
 
+from google.appengine.api import mail_errors
 from google.appengine.ext import db
+from google.appengine.ext import deferred
 
 
 # Allow access to code under test. pylint: disable-msg=protected-access
 
 
-class Custom(object):
-  """Custom toplevel class to test serialization."""
-
-  SOME_DATA = 'some_value'
-
-  def has_some_behavior(self):
-    return True
-
-  def __eq__(self, other):
-    return str(self) == str(other)
-
-  def __str__(self):
-    return str(self.__dict__)
+class UnregisteredRetentionPolicy(notifications.RetentionPolicy):
+  NAME = 'unregistered'
 
 
 class DatetimeConversionTest(actions.TestBase):
@@ -55,13 +49,538 @@ class DatetimeConversionTest(actions.TestBase):
           notifications._dt_to_epoch_usec(dt_with_usec)))
 
 
+class ManagerTest(actions.TestBase):
+
+  def setUp(self):
+    super(ManagerTest, self).setUp()
+    self.now = datetime.datetime.utcnow()
+    self.old_retention_policies = dict(notifications._RETENTION_POLICIES)
+
+    self.audit_trail = {'key': 'value'}
+    self.body = 'body'
+    self.intent = 'intent'
+    self.to = 'to@example.com'
+    self.sender = 'sender@example.com'
+    self.subject = 'subject'
+
+  def tearDown(self):
+    config.Registry.test_overrides.clear()
+    counters.Registry._clear_all()
+    notifications._RETENTION_POLICIES = self.old_retention_policies
+    super(ManagerTest, self).tearDown()
+
+  def test_send_async_with_defaults_set_initial_state_and_can_run_tasks(self):
+    notification_key, payload_key = notifications.Manager.send_async(
+        self.to, self.sender, self.intent, self.body, self.subject
+    )
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assertIsNone(notification.audit_trail)
+    self.assertTrue(notification.enqueue_date)
+    self.assertEqual(self.intent, notification.intent)
+    self.assertEqual(self.sender, notification.sender)
+    self.assertEqual(self.subject, notification.subject)
+    self.assertEqual(self.to, notification.to)
+
+    self.assertTrue(notification._change_date)
+    self.assertIsNone(notification._done_date)
+    self.assertIsNone(notification._fail_date)
+    self.assertIsNone(notification._last_exception)
+    self.assertEqual(
+        notifications.RetainAuditTrail.NAME, notification._retention_policy)
+    self.assertIsNone(notification._send_date)
+
+    self.assertEqual(notification.enqueue_date, payload.enqueue_date)
+    self.assertEqual(self.intent, payload.intent)
+    self.assertEqual(self.to, payload.to)
+
+    self.assertEqual(self.body, payload.body)
+    self.assertTrue(payload._change_date)
+    self.assertEqual(
+        notifications.RetainAuditTrail.NAME, payload._retention_policy)
+
+    self.assertEqual(1, len(self.taskq.GetTasks('default')))
+    self.execute_all_deferred_tasks()
+    messages = self.get_mail_stub().get_sent_messages()
+    self.assertEqual(1, len(messages))
+
+    self.assertIsNone(db.get(payload_key).body)  # Ran default policy.
+
+    self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_async_with_overrides_sets_initial_state_and_can_run_tasks(self):
+    notification_key, payload_key = notifications.Manager.send_async(
+        self.to, self.sender, self.intent, self.body, self.subject,
+        audit_trail=self.audit_trail, retention_policy=notifications.RetainAll,
+    )
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assertEqual(self.audit_trail, notification.audit_trail)
+    self.assertTrue(notification.enqueue_date)
+    self.assertEqual(self.intent, notification.intent)
+    self.assertEqual(self.sender, notification.sender)
+    self.assertEqual(self.subject, notification.subject)
+    self.assertEqual(self.to, notification.to)
+
+    self.assertTrue(notification._change_date)
+    self.assertIsNone(notification._done_date)
+    self.assertIsNone(notification._fail_date)
+    self.assertIsNone(notification._last_exception)
+    self.assertEqual(
+        notifications.RetainAll.NAME, notification._retention_policy)
+    self.assertIsNone(notification._send_date)
+
+    self.assertEqual(notification.enqueue_date, payload.enqueue_date)
+    self.assertEqual(self.intent, payload.intent)
+    self.assertEqual(self.to, payload.to)
+
+    self.assertEqual(self.body, payload.body)
+    self.assertTrue(payload._change_date)
+    self.assertEqual(notifications.RetainAll.NAME, payload._retention_policy)
+
+    self.assertEqual(1, len(self.taskq.GetTasks('default')))
+    self.execute_all_deferred_tasks()
+    messages = self.get_mail_stub().get_sent_messages()
+    self.assertEqual(1, len(messages))
+
+    self.assertEqual(self.body, db.get(payload_key).body)  # Policy override.
+
+    self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_async_raises_exception_if_datastore_errors(self):
+
+    def throw(unused_self, unused_notification, unused_payload):
+      raise db.Error('thrown')
+
+    bound_throw = types.MethodType(
+        throw, notifications.Manager(), notifications.Manager)
+    self.swap(
+        notifications.Manager, '_save_notification_and_payload', bound_throw
+    )
+
+    with self.assertRaisesRegexp(db.Error, 'thrown'):
+      notifications.Manager.send_async(
+          self.to, self.sender, self.intent, self.body, self.subject,
+      )
+
+  def test_send_async_raises_exception_if_models_cannot_be_made(self):
+    bad_audit_trail = self.now
+    with self.assertRaisesRegexp(db.BadValueError, 'not JSON-serializable'):
+      notifications.Manager.send_async(
+          self.to, self.sender, self.intent, self.body, self.subject,
+          audit_trail=bad_audit_trail,
+      )
+
+  def test_send_async_raises_value_error_if_retention_policy_missing(self):
+    self.assertNotIn(
+        UnregisteredRetentionPolicy.NAME, notifications._RETENTION_POLICIES)
+
+    with self.assertRaisesRegexp(ValueError, 'Invalid retention policy: '):
+      notifications.Manager.send_async(
+          self.to, self.sender, self.intent, self.body, self.subject,
+          retention_policy=UnregisteredRetentionPolicy,
+      )
+
+  def test_send_async_raises_value_error_if_sender_invalid(self):
+    # App Engine's validator is not comprehensive, but blank is bad.
+    invalid_sender = ''
+
+    with self.assertRaisesRegexp(ValueError, 'Malformed email address: ""'):
+      notifications.Manager.send_async(
+          self.to, invalid_sender, self.intent, self.body, self.subject,
+      )
+
+  def test_send_async_raises_value_error_if_to_invalid(self):
+    # App Engine's validator is not comprehensive, but blank is bad.
+    invalid_to = ''
+
+    with self.assertRaisesRegexp(ValueError, 'Malformed email address: ""'):
+      notifications.Manager.send_async(
+          invalid_to, self.sender, self.intent, self.body, self.subject,
+      )
+
+  def test_send_mail_task_fails_permanently_and_marks_entities_if_cap_hit(self):
+    over_cap = notifications._RECOVERABLE_FAILURE_CAP + 1
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._recoverable_failure_count = over_cap
+    notification.put()
+
+    with self.assertRaisesRegexp(
+        deferred.PermanentTaskFailure, 'Recoverable failure cap'):
+      notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    notification, payload = db.get([notification_key, payload_key])
+
+    self.assertIsNotNone(notification._done_date)
+    self.assertEqual(notification._done_date, notification._fail_date)
+    self.assertIn(
+        'Recoverable failure cap', notification._last_exception['string'])
+    self.assertEqual(over_cap + 1, notification._recoverable_failure_count)
+    self.assertIsNone(payload.body)  # Policy applied.
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_error_promotion_with_record_failure_error(self):
+    over_cap = notifications._RECOVERABLE_FAILURE_CAP + 1
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._recoverable_failure_count = over_cap
+    notification.put()
+
+    def record_failure(unused_notification, unused_payload, unused_exception):
+      raise ValueError('message')
+
+    bound_record_failure = types.MethodType(
+        record_failure, notifications.Manager(), notifications.Manager)
+    self.swap(
+        notifications.Manager, '_record_failure', bound_record_failure
+    )
+
+    with self.assertRaisesRegexp(
+        deferred.PermanentTaskFailure, 'Recoverable failure cap '):
+      notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.value)
+
+  def test_send_mail_task_fails_permanently_if_notification_missing(self):
+    notification_key = db.Key.from_path(
+        notifications.Notification.kind(),
+        notifications.Notification.key_name(self.to, self.intent, self.now)
+    )
+    payload_key = db.Key.from_path(
+        notifications.Notification.kind(),
+        notifications.Notification.key_name(self.to, self.intent, self.now)
+    )
+
+    with self.assertRaisesRegexp(
+        deferred.PermanentTaskFailure, 'Notification missing: '):
+      notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_fails_permanently_if_payload_missing(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    db.delete(payload_key)
+
+    with self.assertRaisesRegexp(
+        deferred.PermanentTaskFailure, 'Payload missing: '):
+      notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_fails_permanently_if_retention_policy_missing(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notifications._RETENTION_POLICIES.pop(notification._retention_policy)
+
+    with self.assertRaisesRegexp(
+        deferred.PermanentTaskFailure, 'Unknown retention policy: '):
+      notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_throws_if_send_mail_failure_recoverable(self):
+    # Ideally we'd do a full test of the retry mechanism, but the testbed just
+    # throws when your task raises an uncaught error.
+    exception_text = 'thrown'
+
+    def recoverable_error(
+        unused_sender, unused_to, unused_subject, unused_body):
+      raise ValueError(exception_text)
+
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+
+    with self.assertRaisesRegexp(ValueError, 'thrown'):
+      notifications.Manager._send_mail_task(
+          notification_key, payload_key, recoverable_error)
+    notification = db.get(notification_key)
+
+    self.assertEqual(exception_text, notification._last_exception['string'])
+    self.assertEqual(1, notification._recoverable_failure_count)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_recoverable_error_record_failure_error(self):
+    exception_text = 'thrown'
+
+    def recoverable_error(
+        unused_sender, unused_to, unused_subject, unused_body):
+      raise ValueError(exception_text)
+
+    def record_failure(unused_notification, unused_payload, unused_exception):
+      raise IOError('not_' + exception_text)
+
+    bound_record_failure = types.MethodType(
+        record_failure, notifications.Manager(), notifications.Manager)
+    self.swap(
+        notifications.Manager, '_record_failure', bound_record_failure
+    )
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+
+    with self.assertRaisesRegexp(ValueError, '^thrown$'):
+      notifications.Manager._send_mail_task(
+          notification_key, payload_key, recoverable_error)
+
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.value)
+
+  def test_send_mail_task_marks_fatal_failure_of_send_mail_and_succeeds(self):
+    def fatal_error(unused_sender, unused_to, unused_subject, unused_body):
+      raise mail_errors.BadRequestError('thrown')
+
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notifications.Manager._send_mail_task(
+        notification_key, payload_key, fatal_error)
+    notification, payload = db.get([notification_key, payload_key])
+    expected_last_exception = {
+        'type': 'google.appengine.api.mail_errors.BadRequestError',
+        'string': 'thrown'
+    }
+
+    self.assertEqual(expected_last_exception, notification._last_exception)
+    self.assertGreater(notification._fail_date, notification._enqueue_date)
+    self.assertIsNone(payload.body)  # Policy applied.
+
+    self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        1, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_sends_marks_and_applies_default_policy(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notifications.Manager._send_mail_task(notification_key, payload_key)
+    notification, payload = db.get([notification_key, payload_key])
+    messages = self.get_mail_stub().get_sent_messages()
+    message = messages[0]
+
+    self.assertEqual(1, len(messages))
+    self.assertEqual(self.body, message.body.decode())
+    self.assertEqual(self.sender, message.sender)
+    self.assertEqual(self.subject, message.subject)
+    self.assertEqual(self.to, message.to)
+
+    self.assertGreater(notification._send_date, notification._enqueue_date)
+    self.assertEqual(notification._done_date, notification._send_date)
+    self.assertIsNone(notification._fail_date)
+    self.assertIsNone(notification._last_exception)
+
+    self.assertIsNotNone(notification.audit_trail)
+    self.assertIsNone(payload.body)
+
+    self.assertEqual(1, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_skips_if_already_done(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._done_date = self.now
+    notification.put()
+    notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_skips_if_already_failed(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._fail_date = self.now
+    notification.put()
+    notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+  def test_send_mail_task_skips_if_already_sent(self):
+    notification_key, payload_key = db.put(
+        notifications.Manager._make_unsaved_models(
+            self.audit_trail, self.body, self.now, self.intent,
+            notifications.RetainAuditTrail.NAME, self.sender, self.subject,
+            self.to,
+        )
+    )
+    notification = db.get(notification_key)
+    notification._send_date = self.now
+    notification.put()
+    notifications.Manager._send_mail_task(notification_key, payload_key)
+
+    self.assertEqual(0, notifications.COUNTER_RETENTION_POLICY_RUN.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_FAILED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILURE_CAP_EXCEEDED.value)
+    self.assertEqual(
+        0, notifications.COUNTER_SEND_MAIL_TASK_FAILED_PERMANENTLY.value)
+    self.assertEqual(0, notifications.COUNTER_SEND_MAIL_TASK_SENT.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SKIPPED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_STARTED.value)
+    self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
+
+
 class ModelTestBase(actions.TestBase):
 
   def setUp(self):
     super(ModelTestBase, self).setUp()
     self.enqueue_date = datetime.datetime(2000, 1, 1, 1, 1, 1, 1)
     self.intent = 'intent'
-    self.retention_policy = notifications.RetainContext.NAME
+    self.retention_policy = notifications.RetainAuditTrail.NAME
     self.transform_fn = lambda x: 'transformed_' + x
     self.to = 'to@example.com'
 
@@ -137,93 +656,59 @@ class NotificationTest(ModelTestSpec, ModelTestBase):
     super(NotificationTest, self).setUp()
     self.sender = 'sender@example.com'
     self.subject = 'subject'
-    self.template = 'template'
+    self.template_path = 'template_path'
     self.utcnow = datetime.datetime.utcnow()
     self.test_utcnow_fn = lambda: self.utcnow
     self.notification = notifications.Notification(
         enqueue_date=self.enqueue_date, intent=self.intent,
-        retention_policy=self.retention_policy, sender=self.sender,
-        subject=self.subject, template=self.template, to=self.to,
+        _retention_policy=self.retention_policy, sender=self.sender,
+        subject=self.subject, template_path=self.template_path, to=self.to,
     )
     self.key = self.notification.put()
 
   def _get_init_kwargs(self):
     return {
-        'context': {},
+        'audit_trail': {},
         'enqueue_date': self.enqueue_date,
         'intent': self.intent,
         'retention_policy': self.retention_policy,
         'sender': self.sender,
         'subject': self.subject,
-        'template': self.template,
         'to': self.to,
     }
 
-  def test_constructor_defaults_send_after_and_accepts_override(self):
-    defaulted = notifications.Notification(
-        context={}, enqueue_date=self.enqueue_date, intent=self.intent,
-        retention_policy=self.retention_policy, sender=self.sender,
-        subject=self.subject, template=self.template, to=self.to,
-        utcnow_fn=self.test_utcnow_fn
-    )
-
-    self.assertEqual(self.utcnow, defaulted.send_after)
-
-    utcnow = datetime.datetime.utcnow()
-    overridden = notifications.Notification(
-        context={}, enqueue_date=self.enqueue_date, intent=self.intent,
-        retention_policy=self.retention_policy, send_after=utcnow,
-        sender=self.sender, subject=self.subject, template=self.template,
-        to=self.to,
-    )
-
-    self.assertEqual(utcnow, overridden.send_after)
-
-  def test_context_raise_bad_value_error_when_not_dict(self):
-    with self.assertRaisesRegexp(db.BadValueError, 'must be a dict'):
-      notifications.Notification(
-          context='', enqueue_date=self.enqueue_date, intent=self.intent,
-          retention_policy=self.retention_policy, sender=self.sender,
-          subject=self.subject, template=self.template, to=self.to,
-      )
-
-  def test_context_raises_bad_value_error_when_not_serializable(self):
-    unpicklable = {'modules_cannot_be_pickled': datetime}
-
-    with self.assertRaisesRegexp(db.BadValueError, 'is not serializable'):
-      notifications.Notification(
-          context=unpicklable, enqueue_date=self.enqueue_date,
-          intent=self.intent, retention_policy=self.retention_policy,
-          sender=self.sender, subject=self.subject, template=self.template,
-          to=self.to,
-      )
-
-  def test_context_round_trips_complex_dict_to_datastore_successfully(self):
-    context = {
-        'string': 1,
-        False: None,
-        'can_handle_custom_toplevel_types': Custom,
-        'can_handle_custom_toplevel_type_instances': Custom(),
-        'nested': {
-            'key': [datetime.datetime.utcnow(), datetime.datetime.utcnow()],
-        },
+  def test_audit_trail_round_trips_successfully(self):
+    serializable = {
+        'int': 1,
+        'bool': True,
     }
     notification = notifications.Notification(
-        context=context, enqueue_date=self.enqueue_date, intent=self.intent,
-        retention_policy=self.retention_policy, sender=self.sender,
-        subject=self.subject, template=self.template, to=self.to,
+        audit_trail=serializable, enqueue_date=self.enqueue_date,
+        intent=self.intent, _retention_policy=self.retention_policy,
+        sender=self.sender, subject=self.subject, to=self.to,
     )
+    notification = db.get(notification.put())
 
-    self.assertEqual(context, db.get(notification.put()).context)
+    self.assertEqual(serializable, db.get(notification.put()).audit_trail)
+
+  def test_ctor_raises_bad_value_error_when_not_serializable(self):
+    not_json_serializable = datetime.datetime.utcnow()
+
+    with self.assertRaisesRegexp(db.BadValueError, 'is not JSON-serializable'):
+      notifications.Notification(
+          audit_trail=not_json_serializable, enqueue_date=self.enqueue_date,
+          intent=self.intent, _retention_policy=self.retention_policy,
+          sender=self.sender, subject=self.subject, to=self.to,
+      )
 
   def test_for_export_transforms_to_and_sender_and_strips_blacklist_items(self):
-    context = {'will_be': 'stripped'}
+    audit_trail = {'will_be': 'stripped'}
     last_exception = 'will_be_stripped'
     unsafe = notifications.Notification(
-        context=context, enqueue_date=self.enqueue_date, intent=self.intent,
-        last_exception=last_exception, retention_policy=self.retention_policy,
-        sender=self.sender, subject=self.subject, template=self.template,
-        to=self.to,
+        audit_trail=audit_trail, enqueue_date=self.enqueue_date,
+        intent=self.intent, last_exception=last_exception,
+        _retention_policy=self.retention_policy, sender=self.sender,
+        subject=self.subject, to=self.to,
     )
     unsafe.put()
     safe = unsafe.for_export(self.transform_fn)
@@ -239,10 +724,10 @@ class PayloadTest(ModelTestSpec, ModelTestBase):
 
   def setUp(self):
     super(PayloadTest, self).setUp()
-    self.data = 'data'
+    self.body = 'body'
     self.payload = notifications.Payload(
-        data='data', enqueue_date=self.enqueue_date, intent=self.intent,
-        retention_policy=self.retention_policy, to=self.to)
+        body='body', enqueue_date=self.enqueue_date, intent=self.intent,
+        _retention_policy=self.retention_policy, to=self.to)
     self.key = self.payload.put()
 
   def _get_init_kwargs(self):
