@@ -351,8 +351,10 @@ class Manager(object):
       to: string. Recipient email address. Must have a valid form, but we cannot
           know that the address can actually be delivered to.
       sender: string. Email address of the sender of the notification. Must be a
-          valid sender for the App Engine deployment or your attempts to send
-          will always fail when they are executed later. See
+          valid sender for the App Engine deployment at the time the deferred
+          send_mail() call actually executes (meaning it cannot be the email
+          address of the user currently in session, because the user will not be
+          in session at call time). See
           https://developers.google.com/appengine/docs/python/mail/emailmessagefields.
       intent: string. Short string identifier of the intent of the notification
           (for example, 'invitation' or 'reminder'). Each kind of notification
@@ -879,7 +881,7 @@ class Notification(_Model):
   # retention policy has been applied; see _done_date.
   _send_date = db.DateTimeProperty()
 
-  _PROPERTY_EXPORT_BLACKLIST = [audit_trail, _last_exception]
+  _PROPERTY_EXPORT_BLACKLIST = [audit_trail, _last_exception, subject]
 
   def for_export(self, transform_fn):
     model = super(Notification, self).for_export(transform_fn)

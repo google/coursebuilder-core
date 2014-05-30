@@ -1148,11 +1148,12 @@ class NotificationTest(ModelTestSpec, ModelTestBase):
   def test_for_export_transforms_to_and_sender_and_strips_blacklist_items(self):
     audit_trail = {'will_be': 'stripped'}
     last_exception = 'will_be_stripped'
+    subject = 'will be stripped'
     unsafe = notifications.Notification(
         audit_trail=audit_trail, enqueue_date=self.enqueue_date,
         intent=self.intent, last_exception=last_exception,
         _retention_policy=self.retention_policy, sender=self.sender,
-        subject=self.subject, to=self.to,
+        subject=subject, to=self.to,
     )
     unsafe.put()
     safe = unsafe.for_export(self.transform_fn)
