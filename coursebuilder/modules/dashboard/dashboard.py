@@ -484,9 +484,43 @@ class DashboardHandler(
                 'xsrf_token': self.create_xsrf_token(
                     'create_or_edit_settings')})
             yaml_actions.append({
-                'id': 'edit_basic_course_settings',
-                'caption': 'Edit',
-                'action': self.get_action_url('edit_basic_course_settings'),
+                'id': 'edit_basic_course_settings_unit',
+                'caption': 'Unit Options',
+                'action': self.get_action_url(
+                    'edit_basic_course_settings',
+                    extra_args={'section_names': 'unit'}),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
+            yaml_actions.append({
+                'id': 'edit_basic_course_settings_reg_opts',
+                'caption': 'Course Homepage Options',
+                'action': self.get_action_url(
+                    'edit_basic_course_settings',
+                    extra_args={'section_names': 'homepage'}),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
+            yaml_actions.append({
+                'id': 'edit_basic_course_settings_reg_opts',
+                'caption': 'Registration Options',
+                'action': self.get_action_url(
+                    'edit_basic_course_settings',
+                    extra_args={'section_names': 'reg_form'}),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
+            yaml_actions.append({
+                'id': 'edit_basic_course_settings_course',
+                'caption': 'Course Options',
+                'action': self.get_action_url(
+                    'edit_basic_course_settings',
+                    extra_args={'section_names': 'course'}),
+                'xsrf_token': self.create_xsrf_token(
+                    'edit_basic_course_settings')})
+            yaml_actions.append({
+                'id': 'edit_basic_course_settings_base',
+                'caption': 'Base Options',
+                'action': self.get_action_url(
+                    'edit_basic_course_settings',
+                    extra_args={'section_names': 'base'}),
                 'xsrf_token': self.create_xsrf_token(
                     'edit_basic_course_settings')})
 

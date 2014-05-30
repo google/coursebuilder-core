@@ -17,6 +17,7 @@
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import collections
+import copy
 
 
 class Property(object):
@@ -78,3 +79,21 @@ class Registry(object):
 
     def has_subregistries(self):
         return True if self._sub_registories else False
+
+    def clone_only_items_named(self, names):
+        # Only accessing protected members of cloned registry/sub-registries
+        # pylint: disable-msg=protected-access
+        registry = copy.deepcopy(self)
+        sub_registry = registry
+        for name in names:
+            # Here and below: copy() to permit deleting while iterating.
+            for p in copy.copy(sub_registry._properties):
+                if not p.name.endswith(':' + name):
+                    sub_registry._properties.remove(p)
+            for sub_name in copy.copy(sub_registry._sub_registories):
+                if sub_name != name:
+                    del sub_registry._sub_registories[sub_name]
+                else:
+                    next_sub_registry = sub_registry._sub_registories[name]
+            sub_registry = next_sub_registry
+        return registry
