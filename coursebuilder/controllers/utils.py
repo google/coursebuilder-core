@@ -560,7 +560,6 @@ class StudentProfileHandler(BaseHandler):
 
         track_labels = models.LabelDAO.get_all_of_type(
             models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-        track_label_ids = set([label.id for label in track_labels])
 
         course = self.get_course()
         units = []
@@ -568,28 +567,18 @@ class StudentProfileHandler(BaseHandler):
             # Don't show assessments that are part of units.
             if course.get_parent_unit(unit.unit_id):
                 continue
-
-            unit_dict = {
+            units.append({
                 'unit_id': unit.unit_id,
                 'title': unit.title,
-                }
-            if hasattr(unit, 'labels'):
-                unit_dict['labels'] = [
-                    int(x)
-                    for x in common_utils.text_to_list(unit.labels)
-                    if int(x) in track_label_ids]
-            else:
-                unit_dict['labels'] = []
-            units.append(unit_dict)
+                'labels': list(course.get_unit_track_labels(unit)),
+                })
 
         name = student.name
         profile = student.profile
         if profile:
             name = profile.nick_name
-        student_labels = [
-            int(x) for x in common_utils.text_to_list(student.labels)
-            if int(x) in track_label_ids]
-
+        student_labels = student.get_labels_of_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
         self.template_value['navbar'] = {'progress': True}
         self.template_value['student'] = student
         self.template_value['student_name'] = name
@@ -641,25 +630,23 @@ class StudentSetTracksHandler(BaseHandler):
         if not self.assert_xsrf_token_or_fail(self.request, 'student-edit'):
             return
 
-        all_track_labels = set(
-            [label.id
-             for label in models.LabelDAO.get_all_of_type(
-                 models.LabelDTO.LABEL_TYPE_COURSE_TRACK)])
-        new_track_labels = set(
+        all_track_label_ids = models.LabelDAO.get_set_of_ids_of_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+        new_track_label_ids = set(
             [int(label_id)
              for label_id in self.request.get_all('labels')
-             if label_id and int(label_id) in all_track_labels])
-        student_labels = set(
+             if label_id and int(label_id) in all_track_label_ids])
+        student_label_ids = set(
             [int(label_id)
              for label_id in common_utils.text_to_list(student.labels)
              if label_id])
 
         # Remove all existing track (and only track) labels from student,
         # then merge in selected set from form.
-        student_labels = student_labels.difference(all_track_labels)
-        student_labels = student_labels.union(new_track_labels)
+        student_label_ids = student_label_ids.difference(all_track_label_ids)
+        student_label_ids = student_label_ids.union(new_track_label_ids)
         models.Student.set_labels_for_current(
-            common_utils.list_to_text(list(student_labels)))
+            common_utils.list_to_text(list(student_label_ids)))
 
         self.redirect('/student/home')
 

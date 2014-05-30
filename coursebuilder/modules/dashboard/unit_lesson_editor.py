@@ -343,11 +343,19 @@ class CommonUnitRESTHandler(BaseRESTHandler):
             }
 
     def labels_to_dict(self, unit):
+        course = courses.Course(self)
+        parent_unit = course.get_parent_unit(unit.unit_id)
         all_labels = m_models.LabelDAO.get_all()
         unit_labels = common_utils.text_to_list(unit.labels)
         label_groups = []
         for label_type in sorted(m_models.LabelDTO.LABEL_TYPES,
                                  lambda a, b: cmp(a.menu_order, b.menu_order)):
+            # If unit has a parent, don't even bother showing the UI elements
+            # for setting tracks.
+            if (parent_unit and
+                label_type.type == m_models.LabelDTO.LABEL_TYPE_COURSE_TRACK):
+                continue
+
             label_group = []
             for label in sorted(all_labels, lambda a, b: cmp(a.title, b.title)):
                 if label.type == label_type.type:
@@ -372,7 +380,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
                 })
         return label_groups
 
-    def apply_updates_common(self, unit, updated_unit_dict, errors):
+    def apply_updates_common(self, course, unit, updated_unit_dict, errors):
         """Apply changes common to all unit types."""
         unit.title = updated_unit_dict.get('title')
         unit.now_available = not updated_unit_dict.get('is_draft')
@@ -381,7 +389,15 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         for label_group in updated_unit_dict['label_groups']:
             for label in label_group['labels']:
                 if label['checked'] and label['id'] > 0:
-                    labels.add(str(label['id']))
+                    labels.add(label['id'])
+
+        if course.get_parent_unit(unit.unit_id):
+            track_label_ids = m_models.LabelDAO.get_set_of_ids_of_type(
+                m_models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+            if track_label_ids.intersection(labels):
+                errors.append('Cannot set track labels on entities which '
+                              'are used within other units.')
+
         unit.labels = common_utils.list_to_text(labels)
 
     def get(self):
@@ -493,7 +509,6 @@ class UnitRESTHandler(CommonUnitRESTHandler):
 
     @classmethod
     def get_annotations_dict(cls, course, this_unit_id):
-
         # The set of available assesments needs to be dynamically
         # generated and set as selection choices on the form.
         # We want to only show assessments that are not already
@@ -503,7 +518,12 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         for unit in course.get_units():
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 model_version = course.get_assessment_model_version(unit)
-                if model_version != courses.ASSESSMENT_MODEL_VERSION_1_4:
+                track_labels = course.get_unit_track_labels(unit)
+                # Don't allow selecting old-style assessments, which we
+                # can't display within Unit page.
+                # Don't allow selection of assessments with parents
+                if (model_version != courses.ASSESSMENT_MODEL_VERSION_1_4 and
+                    not track_labels):
                     available_assessments[unit.unit_id] = unit
             elif (unit.type == verify.UNIT_TYPE_UNIT and
                   this_unit_id != unit.unit_id):
@@ -532,17 +552,16 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         ret['post_assessment'] = unit.post_assessment or -1
         return ret
 
-    def _is_assessment_unused(self, course, unit, assessment_id, errors):
-        parent_unit = course.get_parent_unit(assessment_id)
+    def _is_assessment_unused(self, course, unit, assessment, errors):
+        parent_unit = course.get_parent_unit(assessment.unit_id)
         if parent_unit and parent_unit.unit_id != unit.unit_id:
-            assessment = course.find_unit_by_id(assessment_id)
             errors.append(
                 'Assessment "%s" is already asssociated to unit "%s"' % (
                     assessment.title, parent_unit.title))
             return False
         return True
 
-    def _is_assessment_version_ok(self, course, assessment_id, errors):
+    def _is_assessment_version_ok(self, course, assessment, errors):
         # Here, we want to establish that the display model for the
         # assessment is compatible with the assessment being used in
         # the context of a Unit.  Model version 1.4 is not, because
@@ -552,7 +571,6 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         # is by looking in the URL (as opposed to taking a parameter).
         # This is incompatible with the URLs for unit display, so we
         # just disallow older assessments here.
-        assessment = course.find_unit_by_id(assessment_id)
         model_version = course.get_assessment_model_version(assessment)
         if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
             errors.append(
@@ -561,33 +579,40 @@ class UnitRESTHandler(CommonUnitRESTHandler):
             return False
         return True
 
-    def apply_updates(self, unit, updated_unit_dict, errors):
-        self.apply_updates_common(unit, updated_unit_dict, errors)
+    def _is_assessment_on_track(self, course, assessment, errors):
+        if course.get_unit_track_labels(assessment):
+            errors.append(
+                'Assessment "%s" has track labels, ' % assessment.title +
+                'so it cannot be used as a pre/post unit element')
+            return True
+        return False
 
+    def apply_updates(self, unit, updated_unit_dict, errors):
         course = courses.Course(self)
+        self.apply_updates_common(course, unit, updated_unit_dict, errors)
+        unit.pre_assessment = None
+        unit.post_assessment = None
+
         pre_assessment_id = updated_unit_dict['pre_assessment']
-        if (pre_assessment_id >= 0 and
-            self._is_assessment_unused(course, unit, pre_assessment_id,
-                                       errors) and
-            self._is_assessment_version_ok(course, pre_assessment_id, errors)):
-            unit.pre_assessment = pre_assessment_id
-        else:
-            unit.pre_assessment = None
+        if pre_assessment_id >= 0:
+            assessment = course.find_unit_by_id(pre_assessment_id)
+            if (self._is_assessment_unused(course, unit, assessment, errors) and
+                self._is_assessment_version_ok(course, assessment, errors) and
+                not self._is_assessment_on_track(course, assessment, errors)):
+                unit.pre_assessment = pre_assessment_id
 
         post_assessment_id = updated_unit_dict['post_assessment']
         if post_assessment_id >= 0 and pre_assessment_id == post_assessment_id:
             errors.append(
                 'The same assessment cannot be used as both the pre '
                 'and post assessment of a unit.')
-            unit.post_assessment = None
-        elif (post_assessment_id >= 0 and
-              self._is_assessment_unused(course, unit, post_assessment_id,
-                                         errors) and
-              self._is_assessment_version_ok(course, post_assessment_id,
-                                             errors)):
-            unit.post_assessment = post_assessment_id
-        else:
-            unit.post_assessment = None
+        elif post_assessment_id >= 0:
+            assessment = course.find_unit_by_id(post_assessment_id)
+            if (assessment and
+                self._is_assessment_unused(course, unit, assessment, errors) and
+                self._is_assessment_version_ok(course, assessment, errors) and
+                not self._is_assessment_on_track(course, assessment, errors)):
+                unit.post_assessment = post_assessment_id
 
 
 def generate_link_schema():
@@ -617,7 +642,8 @@ class LinkRESTHandler(CommonUnitRESTHandler):
         return ret
 
     def apply_updates(self, unit, updated_unit_dict, errors):
-        self.apply_updates_common(unit, updated_unit_dict, errors)
+        course = courses.Course(self)
+        self.apply_updates_common(course, unit, updated_unit_dict, errors)
         unit.href = updated_unit_dict.get('url')
 
 
@@ -896,17 +922,17 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
     def apply_updates(self, unit, updated_unit_dict, errors):
         """Store the updated assessment."""
 
+        course = courses.Course(self)
         entity_dict = {}
         AssessmentRESTHandler.REG.convert_json_to_entity(
             updated_unit_dict, entity_dict)
-        self.apply_updates_common(unit, entity_dict, errors)
+        self.apply_updates_common(course, unit, entity_dict, errors)
         try:
             unit.weight = int(entity_dict.get('weight'))
             if unit.weight < 0:
                 errors.append('The weight must be a non-negative integer.')
         except ValueError:
             errors.append('The weight must be an integer.')
-        course = courses.Course(self)
         content = entity_dict.get('content')
         if content:
             course.set_assessment_content(

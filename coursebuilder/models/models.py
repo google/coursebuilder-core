@@ -26,6 +26,7 @@ from entities import BaseEntity
 import transforms
 
 import appengine_config
+from common import utils as common_utils
 
 from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
@@ -575,6 +576,13 @@ class Student(BaseEntity):
         """Checks if the key of the student and the given key are equal."""
         return key == self.get_key()
 
+    def get_labels_of_type(self, label_type):
+        label_ids = LabelDAO.get_set_of_ids_of_type(label_type)
+
+        return set([int(label) for label in
+                    common_utils.text_to_list(self.labels)
+                    if int(label) in label_ids])
+
 
 class TransientStudent(object):
     """A transient student (i.e. a user who hasn't logged in or registered)."""
@@ -938,3 +946,7 @@ class LabelDAO(BaseJsonDao):
     def get_all_of_type(cls, label_type):
         return [label for label in cls.get_all()
                 if label.type == label_type]
+
+    @classmethod
+    def get_set_of_ids_of_type(cls, label_type):
+        return set([label.id for label in cls.get_all_of_type(label_type)])

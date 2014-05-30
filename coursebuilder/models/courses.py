@@ -357,6 +357,10 @@ class Unit12(object):
     def post_assessment(self):
         return None
 
+    @property
+    def labels(self):
+        return None
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -1749,24 +1753,28 @@ class Course(object):
         Returns:
           A list of Unit instances.
         """
-        all_ids_of_type = {label.id for label in
-                           models.LabelDAO.get_all_of_type(
-                               models.LabelDTO.LABEL_TYPE_COURSE_TRACK)}
+        all_track_ids = models.LabelDAO.get_set_of_ids_of_type(
+                               models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
 
         units = self.get_units()
         if student and not student.is_transient:
-            student_matches = set([label_id for label_id in
-                                   common_utils.text_to_list(student.labels)
-                                   if int(label_id) in all_ids_of_type])
+            student_matches = student.get_labels_of_type(
+                models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
             for unit in list(units):
-                unit_matches = set([label_id for label_id in
-                                    common_utils.text_to_list(
-                                        getattr(unit, 'labels', ''))
-                                    if int(label_id) in all_ids_of_type])
+                unit_matches = set([int(label_id) for label_id in
+                                    common_utils.text_to_list(unit.labels)
+                                    if int(label_id) in all_track_ids])
                 if (student_matches and unit_matches and
                     student_matches.isdisjoint(unit_matches)):
                     units.remove(unit)
         return units
+
+    def get_unit_track_labels(self, unit):
+        all_track_ids = models.LabelDAO.get_set_of_ids_of_type(
+            models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+        return set([int(label_id) for label_id in
+                    common_utils.text_to_list(unit.labels)
+                    if int(label_id) in all_track_ids])
 
     def get_lessons(self, unit_id):
         return self._model.get_lessons(unit_id)
