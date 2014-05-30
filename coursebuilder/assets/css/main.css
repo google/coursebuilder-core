@@ -263,6 +263,10 @@ th, td {
   overflow: hidden;
 }
 
+.gcb-activity-contents {
+  text-align: left;
+}
+
 .gcb-assessment-contents {
   text-align: left;
 }
