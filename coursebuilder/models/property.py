@@ -69,17 +69,3 @@ class Registry(object):
 
     def has_subregistries(self):
         return True if self._sub_registories else False
-
-    @property
-    def properties(self):
-        return self._properties
-
-    def remove_property(self, p):
-        self._properties.remove(p)
-
-    @property
-    def sub_registries(self):
-        return self._sub_registories
-
-    def remove_sub_registry(self, name):
-        del self._sub_registories[name]
