@@ -565,6 +565,10 @@ class StudentProfileHandler(BaseHandler):
         course = self.get_course()
         units = []
         for unit in course.get_units():
+            # Don't show assessments that are part of units.
+            if course.get_parent_unit(unit.unit_id):
+                continue
+
             unit_dict = {
                 'unit_id': unit.unit_id,
                 'title': unit.title,
