@@ -18,16 +18,19 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import re
 
+from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from models import models
 from modules.dashboard import unit_lesson_editor
 from tests.functional import actions
 from tools import verify
 
 COURSE_NAME = 'unit_pre_post'
 COURSE_TITLE = 'Unit Pre/Post Assessments'
+NAMESPACE = 'ns_%s' % COURSE_NAME
 ADMIN_EMAIL = 'admin@foo.com'
 BASE_URL = '/' + COURSE_NAME
 DASHBOARD_URL = BASE_URL + '/dashboard'
@@ -70,6 +73,16 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         actions.register(self, STUDENT_EMAIL, COURSE_NAME)
         config.Registry.test_overrides[
             utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+
+        with common_utils.Namespace(NAMESPACE):
+            self.track_one_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Track One',
+                       'descripton': 'track_one',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.general_one_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Track One',
+                       'descripton': 'track_one',
+                       'type': models.LabelDTO.LABEL_TYPE_GENERAL}))
 
     def _get_unit_page(self, unit):
         return self.get(BASE_URL + '/unit?unit=' + str(unit.unit_id))
@@ -543,3 +556,57 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         actions.login(ADMIN_EMAIL, is_admin=True)
         response = self.get(DASHBOARD_URL)
         self.assertEquals(200, response.status_int)
+
+    def test_assessments_with_tracks_not_settable_as_pre_post(self):
+        self.assessment_one.labels = str(self.track_one_id)
+        self.assessment_two.labels = str(self.track_one_id)
+        self.course.save()
+        unit_rest_handler = unit_lesson_editor.UnitRESTHandler()
+        unit_rest_handler.app_context = self.course.app_context
+
+        with common_utils.Namespace(NAMESPACE):
+            errors = []
+            unit_rest_handler.apply_updates(
+                self.unit_no_lessons,
+                {
+                    'title': self.unit_no_lessons.title,
+                    'now_available': self.unit_no_lessons.now_available,
+                    'label_groups': [],
+                    'pre_assessment': self.assessment_one.unit_id,
+                    'post_assessment': self.assessment_two.unit_id,
+                }, errors)
+            self.assertEquals([
+                'Assessment "Assessment One" has track labels, so it '
+                'cannot be used as a pre/post unit element',
+                'Assessment "Assessment Two" has track labels, so it '
+                'cannot be used as a pre/post unit element'], errors)
+
+    def _test_assessments_as_pre_post_labels(self, label_id, expected_errors):
+        self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
+        self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
+        self.course.save()
+
+        assessment_rest_handler = unit_lesson_editor.AssessmentRESTHandler()
+        assessment_rest_handler.app_context = self.course.app_context
+
+        with common_utils.Namespace(NAMESPACE):
+            errors = []
+            properties = assessment_rest_handler.unit_to_dict(
+                self.assessment_one)
+            properties['label_groups'] = [{
+                'labels': [{
+                    'checked': True,
+                    'id': label_id
+                }]
+            }]
+            assessment_rest_handler.apply_updates(self.assessment_one,
+                                                  properties, errors)
+            self.assertEquals(expected_errors, errors)
+
+    def test_assessments_as_pre_post_cannot_have_tracks_added(self):
+        self._test_assessments_as_pre_post_labels(
+            self.track_one_id, ['Cannot set track labels on entities which are '
+                                'used within other units.'])
+
+    def test_assessments_as_pre_post_can_have_general_labels_added(self):
+        self._test_assessments_as_pre_post_labels(self.general_one_id, [])
