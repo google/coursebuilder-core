@@ -349,10 +349,11 @@ class DashboardHandler(
             li.add_child(self._get_edit_link(url))
 
         if unit.pre_assessment:
-            ul = safe_dom.Element('ul')
-            ul.add_child(self._render_assessment_li(
-                course.find_unit_by_id(unit.pre_assessment)))
-            li.add_child(ul)
+            assessment = course.find_unit_by_id(unit.pre_assessment)
+            if assessment:
+                ul = safe_dom.Element('ul')
+                ul.add_child(self._render_assessment_li(assessment))
+                li.add_child(ul)
         ol = safe_dom.Element('ol')
         for lesson in course.get_lessons(unit.unit_id):
             li2 = safe_dom.Element('li').add_child(
@@ -369,10 +370,11 @@ class DashboardHandler(
             ol.add_child(li2)
         li.add_child(ol)
         if unit.post_assessment:
-            ul = safe_dom.Element('ul')
-            ul.add_child(self._render_assessment_li(
-                course.find_unit_by_id(unit.post_assessment)))
-            li.add_child(ul)
+            assessment = course.find_unit_by_id(unit.post_assessment)
+            if assessment:
+                ul = safe_dom.Element('ul')
+                ul.add_child(self._render_assessment_li(assessment))
+                li.add_child(ul)
         return li
 
     def get_outline(self):
