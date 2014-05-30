@@ -505,6 +505,7 @@ class AssessmentHandler(BaseHandler):
             raise ValueError('Bad assessment model version: %s' % model_version)
 
         self.template_value['unit_id'] = unit.unit_id
+        self.template_value['assessment_title'] = unit.title
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))
         self.template_value['event_xsrf_token'] = (

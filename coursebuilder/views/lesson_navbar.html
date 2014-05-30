@@ -7,14 +7,9 @@
         {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
             {% if unit_id == unit.unit_id %}
                 {% if pre_assessment %}
-                  {{ macros.render_unit_title(pre_assessment, unit_progress,
-                         is_progress_recorded, transient_student,
-                         is_course_admin,
-                         not assessment or assessment.unit_id != pre_assessment.unit_id,
-                         'gcb-assessment-as-lesson',
-                         'unit?unit=%s&assessment=%s' % (
-                             unit.unit_id, pre_assessment.unit_id)
-                         ) }}
+                  {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
+                         is_progress_recorded, transient_student, is_course_admin,
+                         assessment and assessment.unit_id == pre_assessment.unit_id) }}
                 {% endif %}
                 {% for lesson in lessons %}
                     {{ macros.render_lesson_title(
@@ -23,27 +18,20 @@
                          is_course_admin) }}
                 {% endfor %}
                 {% if post_assessment %}
-                  {{ macros.render_unit_title(post_assessment, unit_progress,
-                         is_progress_recorded, transient_student,
-                         is_course_admin,
-                         not assessment or assessment.unit_id != post_assessment.unit_id,
-                         'gcb-assessment-as-lesson',
-                         'unit?unit=%s&assessment=%s' % (
-                             unit.unit_id, post_assessment.unit_id)
-
-                         ) }}
+                  {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
+                         is_progress_recorded, transient_student, is_course_admin,
+                         assessment and assessment.unit_id == post_assessment.unit_id) }}
                 {% endif %}
             {% endif %}
         {% endfor %}
     {% else %}
         {% for unit, lessons, lesson_progress, pre_assessment, post_assessment in course_outline %}
-            {{ macros.render_unit_title(
+            {{ macros.render_u_unit_title(
                  unit, unit_progress, is_progress_recorded, transient_student,
                  is_course_admin, unit.type != 'U',
                  'gcb-unit-title expanded'
                      if unit_id == unit.unit_id else 'gcb-unit-title'
-                         if lessons else 'gcb-unit-title expanded leaf',
-                 'assessment?name=%s' % unit.unit_id) }}
+                         if lessons else 'gcb-unit-title expanded leaf') }}
             <div id="gcb-lesson-container"
                 {% if unit_id == unit.unit_id %}
                     class="gcb-lesson-container expanded"
@@ -51,14 +39,9 @@
                     class="gcb-lesson-container"
                 {% endif %}>
             {% if pre_assessment %}
-              {{ macros.render_unit_title(pre_assessment, unit_progress,
-                     is_progress_recorded, transient_student,
-                     is_course_admin,
-                     not assessment or assessment.unit_id != pre_assessment.unit_id,
-                     'gcb-assessment-as-lesson',
-                     'unit?unit=%s&assessment=%s' % (
-                         unit.unit_id, pre_assessment.unit_id)
-                     ) }}
+              {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
+                     is_progress_recorded, transient_student, is_course_admin,
+                     assessment and assessment.unit_id == pre_assessment.unit_id) }}
             {% endif %}
             {% for lesson in lessons %}
                 {{ macros.render_lesson_title(
@@ -67,14 +50,9 @@
                      is_course_admin) }}
             {% endfor %}
             {% if post_assessment %}
-              {{ macros.render_unit_title(post_assessment, unit_progress,
-                     is_progress_recorded, transient_student,
-                     is_course_admin,
-                     not assessment or assessment.unit_id != post_assessment.unit_id,
-                     'gcb-assessment-as-lesson',
-                     'unit?unit=%s&assessment=%s' % (
-                         unit.unit_id, post_assessment.unit_id)
-                     ) }}
+              {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
+                     is_progress_recorded, transient_student, is_course_admin,
+                     assessment and assessment.unit_id == post_assessment.unit_id) }}
             {% endif %}
             </div>
         {% endfor %}

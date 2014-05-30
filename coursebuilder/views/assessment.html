@@ -111,7 +111,10 @@
 
     {% endif %}
 
-    <div style="width: 970px;" id="assessmentContents"></div>
+    <div class="gcb-aside gcb-button-box gcb-assessment-contents">
+        <h1>{{ assessment_title }}</h1>
+        <div id="assessmentContents"></div>
+    </div>
 
     {% if model_version == '1.5' and not readonly_student_assessment %}
       {{

@@ -263,6 +263,10 @@ th, td {
   overflow: hidden;
 }
 
+.gcb-assessment-contents {
+  text-align: left;
+}
+
 .gcb-nav ul {
   font-family: "open sans",arial,sans-serif;
 }
@@ -722,6 +726,9 @@ table.gcb-student-data-table {
 #gcb-nav-y.left-menu li.gcb-assessment-as-lesson {
   margin: 0;
   padding-left: 2px;
+}
+#gcb-nav-y.left-menu li.gcb-assessment-as-lesson.active p.gcb-top-content {
+  font-weight: bold;
 }
 
 /* Styles for grayed-out text (e.g. to indicate private lessons/units). */

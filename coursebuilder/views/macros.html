@@ -1,5 +1,5 @@
 {#
-# macro to render a unit title along with a progress indicator
+# macro to render a title along with a progress indicator for any kind of unit
 #}
 {% macro render_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
@@ -137,6 +137,34 @@
           </p>
         </li>
     {% endif %}
+{%- endmacro %}
+
+
+{#
+# macro to render a unit title
+#}
+{% macro render_u_unit_title(
+    unit, progress, is_progress_recorded, transient_student, is_course_admin,
+    include_link, css_class) -%}
+    {{ render_unit_title(
+        unit, progress, is_progress_recorded, transient_student, is_course_admin,
+        include_link, css_class,
+        'assessment?name=%s' % unit.unit_id) }}
+{%- endmacro %}
+
+
+{#
+# macro to render an assessment title
+#}
+{% macro render_a_unit_title(
+    unit, assessment, progress, is_progress_recorded, transient_student,
+    is_course_admin, is_active) -%}
+    {{ render_unit_title(assessment, progress,
+        is_progress_recorded, transient_student,
+        is_course_admin,
+        not is_active,
+        'gcb-assessment-as-lesson active' if is_active else 'gcb-assessment-as-lesson',
+        'unit?unit=%s&assessment=%s' % (unit.unit_id, assessment.unit_id)) }}
 {%- endmacro %}
 
 
