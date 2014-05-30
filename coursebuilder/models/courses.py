@@ -501,6 +501,9 @@ class CourseModel12(object):
                 return unit
         return None
 
+    def get_parent_unit(self, unused_unit_id):
+        return None  # This model does not support any kind of unit relations
+
     def get_review_form_filename(self, unit_id):
         """Returns the corresponding review form filename."""
         return 'assets/js/review-%s.js' % unit_id
@@ -1005,6 +1008,17 @@ class CourseModel13(object):
                 return lesson
         return None
 
+    def get_parent_unit(self, unit_id):
+        # See if the unit is an assessment being used as a pre/post
+        # unit lesson.
+        for unit in self.get_units():
+            if (str(unit.pre_assessment) == str(unit_id) or
+                str(unit.post_assessment) == str(unit_id)):
+                return unit
+
+        # Nope, no other kinds of parentage; no parent.
+        return None
+
     def add_unit(self, unit_type, title):
         """Adds a brand new unit."""
         assert unit_type in verify.UNIT_TYPES
@@ -1104,6 +1118,13 @@ class CourseModel13(object):
             return False
         for lesson in self.get_lessons(unit.unit_id):
             self.delete_lesson(lesson)
+        parent = self.get_parent_unit(unit.unit_id)
+        if parent:
+            if parent.pre_assessment == unit.unit_id:
+                parent.pre_assessment = None
+            if parent.post_assessment == unit.unit_id:
+                parent.post_assessment = None
+            self._dirty_units.append(parent)
         self._units.remove(unit)
         self._index()
         self._deleted_units.append(unit)
@@ -1948,20 +1969,7 @@ class Course(object):
         return self._model.get_activity_filename(unit_id, lesson_id)
 
     def get_parent_unit(self, unit_id):
-        try:
-            unit_id = int(unit_id)  # Some handlers are sloppy and pass strings.
-        except ValueError:
-            return  # Older courses use strings for IDs; parentage not supported
-
-        # See if the unit is an assessment being used as a pre/post
-        # unit lesson.
-        for unit in self.get_units_of_type(verify.UNIT_TYPE_UNIT):
-            if (unit.pre_assessment == unit_id or
-                unit.post_assessment == unit_id):
-                return unit
-
-        # Nope, no other kinds of parentage; no parent.
-        return None
+        return self._model.get_parent_unit(unit_id)
 
     def get_components(self, unit_id, lesson_id):
         """Returns a list of dicts representing the components in a lesson.

@@ -531,3 +531,15 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             'Assessment One',
             'Lesson One',
             ])
+
+    def test_delete_assessment_as_lesson(self):
+        self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
+        self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
+        self.course.save()
+        self.course.delete_unit(self.assessment_one)
+        self.course.delete_unit(self.assessment_two)
+        self.course.save()
+
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.get(DASHBOARD_URL)
+        self.assertEquals(200, response.status_int)
