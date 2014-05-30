@@ -48,6 +48,7 @@ def _notify_module_enabled():
     data_sources.Registry.register(
         rest_providers.StudentAssessmentScoresDataSource)
     data_sources.Registry.register(rest_providers.StudentsDataSource)
+    data_sources.Registry.register(rest_providers.LabelsOnStudentsDataSource)
 
 
 def _notify_module_disabled():

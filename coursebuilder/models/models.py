@@ -931,7 +931,8 @@ class LabelDAO(BaseJsonDao):
         if items is None:
             items = super(LabelDAO, cls).get_all()
             MemcacheManager.set(LabelEntity.MEMCACHE_KEY, items)
-        return items
+        order = {lt.type: lt.menu_order for lt in LabelDTO.LABEL_TYPES}
+        return sorted(items, key=lambda l: (order[l.type], l.title))
 
     @classmethod
     def get_all_of_type(cls, label_type):

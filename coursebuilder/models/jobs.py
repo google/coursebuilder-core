@@ -357,6 +357,41 @@ class MapReduceJob(DurableJobBase):
             MapReduceJob.build_output(None, None, message), duration)
 
 
+class AbstractCountingMapReduceJob(MapReduceJob):
+    """Provide common functionality for map/reduce jobs that just count.
+
+    This class provides a common implementation of combine() and reduce()
+    so that a map/reduce task that is only concerned with counting the
+    number of occurrences of something can be more terse.  E.g., if we
+    want to get a total of the number of students with the same first
+    name, we only need to write:
+
+    class NameCounter(jobs.AbstractCountingMapReduceJob):
+        @staticmethod
+        def get_description(): return "count names"
+        @staticmethod
+        def get_entity_class(): return models.Student
+        @staticmethod
+        def map(student):
+            return (student.name.split()[0], 1)
+
+    The output of this job will be an array of 2-tuples consisting of
+    the name and the total number of students with that same first name.
+    """
+
+    @staticmethod
+    def combine(unused_key, values, previously_combined_outputs=None):
+        total = sum([int(value) for value in values])
+        if previously_combined_outputs is not None:
+            total += sum([int(value) for value in previously_combined_outputs])
+        yield total
+
+    @staticmethod
+    def reduce(key, values):
+        total = sum(int(value) for value in values)
+        yield (key, total)
+
+
 class DurableJobEntity(entities.BaseEntity):
     """A class that represents a persistent database entity of durable job."""
 

@@ -187,7 +187,7 @@ class OneGenSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
-        return GenOne
+        return [GenOne]
 
     @staticmethod
     def fill_values(app_context, template_values, gen_one_job):

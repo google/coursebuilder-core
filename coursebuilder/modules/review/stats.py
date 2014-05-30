@@ -25,7 +25,7 @@ from modules.dashboard import tabs
 from modules.review import peer
 
 
-class PeerReviewStatsGenerator(jobs.MapReduceJob):
+class PeerReviewStatsGenerator(jobs.AbstractCountingMapReduceJob):
 
     @staticmethod
     def get_description():
@@ -39,25 +39,12 @@ class PeerReviewStatsGenerator(jobs.MapReduceJob):
         key = '%s:%s' % (review_summary.unit_id, review_summary.completed_count)
         yield (key, 1)
 
-    @staticmethod
-    def combine(unit_and_count, values, previously_combined_outputs=None):
-        quantity = sum([int(value) for value in values])
-        if previously_combined_outputs is not None:
-            quantity += sum(
-                [int(value) for value in previously_combined_outputs])
-        yield quantity
-
-    @staticmethod
-    def reduce(unit_and_count, values):
-        quantity = sum(int(value) for value in values)
-        yield (unit_and_count, quantity)
-
 
 class PeerReviewStatsSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
-        return PeerReviewStatsGenerator
+        return [PeerReviewStatsGenerator]
 
     @staticmethod
     def fill_values(app_context, template_values, job):

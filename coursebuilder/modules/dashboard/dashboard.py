@@ -883,9 +883,16 @@ def register_module():
         'assessment_difficulty.html',
         data_source_classes=[
             rest_providers.StudentAssessmentScoresDataSource])
+    labels_on_students = analytics.Visualization(
+        'labels_on_students',
+        'Labels on Students',
+        'labels_on_students.html',
+        data_source_classes=[rest_providers.LabelsOnStudentsDataSource])
 
     tabs.Registry.register('analytics', 'students', 'Students',
-                           [student_progress, enrollment_assessment])
+                           [labels_on_students,
+                            student_progress,
+                            enrollment_assessment])
     tabs.Registry.register('analytics', 'questions', 'Questions',
                            [multiple_choice_question])
     tabs.Registry.register('analytics', 'assessments', 'Assessments',

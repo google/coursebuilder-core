@@ -31,6 +31,7 @@ REGISTERED_STUDENT_NAME = 'John Smith'
 UNREGISTERED_STUDENT_EMAIL = 'bar@bar.com'
 STUDENT_LABELS_URL = '/%s/rest/student/labels' % COURSE_NAME
 STUDENT_SETTRACKS_URL = '/%s/student/settracks' % COURSE_NAME
+ANALYTICS_URL = '/%s/dashboard?action=analytics&tab=students' % COURSE_NAME
 
 
 class FakeContext(object):
@@ -292,3 +293,40 @@ class StudentLabelsTest(actions.TestBase):
                    'xsrf_token': xsrf_token})
         self._verify_labels(self.get(STUDENT_LABELS_URL), [self.baz_id,
                                                            self.quux_id])
+
+    # ---------------------------------- Analytics page.
+    def test_analytics(self):
+        actions.login(REGISTERED_STUDENT_EMAIL)
+        self.put(STUDENT_LABELS_URL,
+                 {'labels': '%d,%d' % (
+                     self.foo_id, self.quux_id)})
+
+        actions.login(ADMIN_EMAIL)
+        response = self.get(ANALYTICS_URL)
+        self.submit(response.forms['gcb-run-visualization-labels_on_students'],
+                    response)
+        self.execute_all_deferred_tasks()
+
+        rest_url = (
+            '/%s/rest/data/labels_on_students/items' % COURSE_NAME +
+            '?data_source_token=%s&page_number=0&chunk_size=0' %
+            crypto.XsrfTokenManager.create_xsrf_token('data_source_access'))
+        label_counts = transforms.loads(self.get(rest_url).body)
+        self.assertEquals(
+            [{'title': 'Quux',
+              'count': 1,
+              'type': 'General',
+              'description': ''},
+             {'title': 'Bar',
+              'count': 0,
+              'type': 'Course Track',
+              'description': ''},
+             {'title': 'Baz',
+              'count': 0,
+              'type': 'Course Track',
+              'description': ''},
+             {'title': 'Foo',
+              'count': 1,
+              'type': 'Course Track',
+              'description': ''}],
+            label_counts['data'])

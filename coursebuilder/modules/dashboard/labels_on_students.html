@@ -1,0 +1,21 @@
+<!-- -*- mode: javascript; -*- -->
+<div id="labels_on_students_graph"></div>
+<script>
+function labels_on_students(data){
+  var dimension = data.labels_on_students.crossfilter.dimension(
+      function byTitle(label){
+        return label.title;
+      });
+  var group = dimension.group().reduceSum(
+      function byCount(label){
+        return label.count;
+      });
+  chart = dc.rowChart('#labels_on_students_graph')
+      .width(600)
+      .height(200)
+      .dimension(dimension)
+      .group(group);
+  dc.renderAll()
+}
+</script>
+<div style="clear: both"></div>

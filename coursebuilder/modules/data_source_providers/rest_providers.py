@@ -20,6 +20,7 @@ from common import schema_fields
 from common import utils
 from models import courses
 from models import data_sources
+from models import jobs
 from models import models
 from models import transforms
 from tools import verify
@@ -335,3 +336,77 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
                     transforms.nested_lists_as_string_to_dict(
                         item['additional_fields']))
         return ret
+
+
+class LabelsOnStudentsGenerator(jobs.AbstractCountingMapReduceJob):
+
+    @staticmethod
+    def get_description():
+        return 'labels on students'
+
+    @staticmethod
+    def entity_class():
+        return models.Student
+
+    @staticmethod
+    def map(student):
+        for label_id_str in utils.text_to_list(student.labels):
+            yield (label_id_str, 1)
+
+
+class LabelsOnStudentsDataSource(data_sources.AbstractRestDataSource):
+
+    @staticmethod
+    def required_generators():
+        return [LabelsOnStudentsGenerator]
+
+    @classmethod
+    def get_name(cls):
+        return 'labels_on_students'
+
+    @classmethod
+    def get_title(cls):
+        return 'Labels on Students'
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 0  # Meaning we don't need pagination
+
+    @classmethod
+    def get_context_class(cls):
+        return data_sources.NullContextManager
+
+    @classmethod
+    def get_schema(cls, app_context, log):
+        reg = schema_fields.FieldRegistry(
+            'Students By Label',
+            description='Count of students marked with each label')
+        reg.add_property(schema_fields.SchemaField(
+            'title', 'Title', 'string',
+            description='Name for this label'))
+        reg.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string',
+            description='Human-readable text describing the label'))
+        reg.add_property(schema_fields.SchemaField(
+            'type', 'Type', 'string',
+            description='Title of label group to which this label belongs.'))
+        reg.add_property(schema_fields.SchemaField(
+            'count', 'Count', 'integer',
+            description='Number of students with this label applied'))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def fetch_values(cls, app_context, source_context, schema, log, page_number,
+                     labels_on_students_job):
+        label_counts = jobs.MapReduceJob.get_results(labels_on_students_job)
+        counts = {int(x[0]): int(x[1]) for x in label_counts}
+        type_titles = {lt.type: lt.title for lt in models.LabelDTO.LABEL_TYPES}
+        ret = []
+        for label in models.LabelDAO.get_all():
+            ret.append({
+                'title': label.title,
+                'description': label.description,
+                'type': type_titles[label.type],
+                'count': counts.get(label.id, 0),
+                })
+        return ret, 0

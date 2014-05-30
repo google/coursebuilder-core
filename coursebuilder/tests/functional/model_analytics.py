@@ -94,6 +94,8 @@ class AnalyticsTabsWithNoJobs(actions.TestBase):
 class ProgressAnalyticsTest(actions.TestBase):
     """Tests the progress analytics page on the Course Author dashboard."""
 
+    EXPECTED_TASK_COUNT = 3
+
     def enable_progress_tracking(self):
         config.Registry.test_overrides[
             utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
@@ -114,7 +116,8 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
-        assert len(self.taskq.GetTasks('default')) == 2
+        assert len(self.taskq.GetTasks('default')) == (
+            ProgressAnalyticsTest.EXPECTED_TASK_COUNT)
 
         assert_contains('is running', response.body)
 
@@ -164,7 +167,8 @@ class ProgressAnalyticsTest(actions.TestBase):
 
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
-        assert len(self.taskq.GetTasks('default')) == 2
+        assert len(self.taskq.GetTasks('default')) == (
+            ProgressAnalyticsTest.EXPECTED_TASK_COUNT)
 
         response = self.get('dashboard?action=analytics')
         assert_contains('is running', response.body)

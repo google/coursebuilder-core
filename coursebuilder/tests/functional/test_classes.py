@@ -1399,7 +1399,7 @@ class CourseAuthorAspectTest(actions.TestBase):
 
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()
-        assert len(self.taskq.GetTasks('default')) == 2
+        assert len(self.taskq.GetTasks('default')) == 3
 
         response = self.get(response.request.url)
         assert_contains('is running', response.body)

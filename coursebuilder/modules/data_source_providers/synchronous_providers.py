@@ -100,7 +100,7 @@ class StudentEnrollmentAndScoresSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
-        return StudentEnrollmentAndScoresGenerator
+        return [StudentEnrollmentAndScoresGenerator]
 
     @staticmethod
     def fill_values(app_context, template_values, job):
@@ -169,7 +169,7 @@ class StudentProgressStatsSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
-        return StudentProgressStatsGenerator
+        return [StudentProgressStatsGenerator]
 
     @staticmethod
     def fill_values(app_context, template_values, job):
@@ -494,7 +494,7 @@ class QuestionStatsSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def required_generators():
-        return QuestionStatsGenerator
+        return [QuestionStatsGenerator]
 
     @staticmethod
     def fill_values(app_context, template_values, job):

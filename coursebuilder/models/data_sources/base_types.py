@@ -26,10 +26,11 @@ class _DataSource(object):
     def required_generators():
         """Tell what long-running jobs (if any) are required for this source.
 
-        Return either None, a single class, or an array of classes.
-        All classes named must derive from DurableJobBase.  When the
-        framework calls to the display content generator function,
-        the jobs will be provided singly as parameters.  E.g., if you
+        Return an array of classes.  The empty array is allowed if
+        your data source does not depend on any data sources.  All
+        data sources named must derive from DurableJobBase.  When the
+        framework calls to the display content generator function, the
+        jobs will be provided singly as parameters.  E.g., if you
         return [FooGenerator, BarGenerator] here, your fill_values
         method should be declared:
 
@@ -40,9 +41,11 @@ class _DataSource(object):
             template_values['foo_widgets'] = foo_results['widgets']
             template_values['foo_frammis'] = foo_results['frammis']
             ... and similarly for bar_generator_job. ...
+        Returns:
+          Array of types derived from DurableJobBase.  May be empty list.
         """
 
-        return None
+        return []
 
     @classmethod
     def verify_on_registration(cls):
