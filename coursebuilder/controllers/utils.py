@@ -19,8 +19,8 @@ __author__ = 'Saifu Angto (saifu@google.com)'
 import gettext
 import urlparse
 
+import jinja2
 import sites
-
 import webapp2
 
 from common import jinja_utils
@@ -259,6 +259,12 @@ class ApplicationHandler(webapp2.RequestHandler):
             'display_lesson_title': display_lesson_title})
 
         return template_environ.get_template(template_file)
+
+    def render_template_to_html(self, template_values, template_file,
+                                additional_dirs=None):
+        template = self.get_template(template_file, additional_dirs)
+        return jinja2.utils.Markup(
+            template.render(template_values, autoescape=True))
 
     def canonicalize_url(self, location):
         """Adds the current namespace URL prefix to the relative 'location'."""

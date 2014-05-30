@@ -20,8 +20,6 @@ import datetime
 import urllib
 import urlparse
 
-import jinja2
-
 from utils import BaseHandler
 from utils import BaseRESTHandler
 from utils import CAN_PERSIST_ACTIVITY_EVENTS
@@ -390,14 +388,16 @@ class UnitHandler(BaseHandler):
             self.template_value['display_content'] = (
                 assessment_handler.get_assessment_content(
                     student, self.get_course(), assessment, as_lesson=True))
-        elif activity:
-            self.set_activity_content(student, unit, lesson, left_nav_elements)
-            self.template_value['display_content'] = (
-                self.get_display_content())
         else:
-            self.set_lesson_content(student, unit, lesson, left_nav_elements)
+            if activity:
+                self.set_activity_content(student, unit, lesson,
+                                          left_nav_elements)
+            else:
+                self.set_lesson_content(student, unit, lesson,
+                                        left_nav_elements)
             self.template_value['display_content'] = (
-                self.get_display_content())
+                self.render_template_to_html(
+                    self.template_value, 'lesson_common.html'))
         self.render('unit.html')
 
     def set_assessment_content(self, unit, assessment, left_nav_elements):
@@ -445,12 +445,6 @@ class UnitHandler(BaseHandler):
             # after the student visits the page for the first time.
             self.get_course().get_progress_tracker().put_html_accessed(
                 student, unit.unit_id, lesson.lesson_id)
-
-    def get_display_content(self):
-        template = self.get_template('lesson_common.html')
-        ret = jinja2.utils.Markup(
-            template.render(self.template_value, autoescape=True))
-        return ret
 
 
 class AssessmentHandler(BaseHandler):
@@ -575,10 +569,9 @@ class AssessmentHandler(BaseHandler):
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
             configure_active_view(unit, submission_contents)
-        template = self.get_template('assessment.html')
-        ret = jinja2.utils.Markup(
-            template.render(self.template_value, autoescape=True))
-        return ret
+
+        return self.render_template_to_html(
+            self.template_value, 'assessment.html')
 
     def configure_readonly_view_1_4(self, unit, submission_contents):
         self.template_value['readonly_student_assessment'] = (

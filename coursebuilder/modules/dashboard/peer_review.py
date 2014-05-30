@@ -19,7 +19,6 @@ __author__ = 'Sean Lip (sll@google.com)'
 import os
 import urllib
 
-import jinja2
 import messages
 
 from controllers.lessons import create_readonly_assessment_params
@@ -63,9 +62,7 @@ class AssignmentManager(ApplicationHandler):
         """Renders a template allowing an admin to select an assignment."""
         edit_url = self.canonicalize_url('/dashboard')
 
-        return jinja2.utils.Markup(self.get_template(
-            'assignments_menu.html', [os.path.dirname(__file__)]
-        ).render({
+        return self.render_template_to_html({
             'REVIEW_STATE_COMPLETED': domain.REVIEW_STATE_COMPLETED,
             'add_reviewer_action': self.get_action_url('add_reviewer'),
             'add_reviewer_xsrf_token': self.create_xsrf_token('add_reviewer'),
@@ -83,7 +80,7 @@ class AssignmentManager(ApplicationHandler):
             'review_steps': review_steps,
             'unit_id': unit_id,
             'model_version': model_version
-        }, autoescape=True))
+            }, 'assignments_menu.html', [os.path.dirname(__file__)])
 
     def parse_request(self, course, unit_id, reviewee_id, reviewer_id=None):
         """Parses request parameters in a GET or POST request.
