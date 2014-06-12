@@ -6,23 +6,9 @@ if (tag) {
     window.parent.frameProxy.setValue(value);
 
     var tagName = tag.options[tag.selectedIndex].value;
-    window.location = getAddCustomTagUrl(cb_global, tagName);
+    window.location = getAddCustomTagUrl(cb_global, tagName,
+        window.parent.frameProxy.getContext().excludedCustomTags);
   };
-
-  // Remove excluded tags from the list
-  var excludedCustomTags =
-      window.parent.frameProxy.getContext().excludedCustomTags;
-  var selectField = cb_global.form.inputs[0].inputs[0];
-  for (var i = 0; i < excludedCustomTags.length; i++) {
-    try {
-      selectField.removeChoice({value: excludedCustomTags[i]});
-    } catch (err) {
-      if (window.console) {
-        window.console.log('Failed to remove ' + excludedCustomTags[i] +
-            ' from tag selector');
-      }
-    }
-  }
 
   // When adding elements of a list, be sure to refresh the page height.
   Y.all('.inputEx-List-link').on('click', function() {

@@ -162,7 +162,8 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
                 new FrameProxyOpener(window),
                 {
                   getAddUrl: function() {
-                    return getAddCustomTagUrl(env);
+                    return getAddCustomTagUrl(
+                        env, null, that.options.excludedCustomTags);
                   },
                   getEditUrl: function(tagName) {
                     return getEditCustomTagUrl(env, tagName);

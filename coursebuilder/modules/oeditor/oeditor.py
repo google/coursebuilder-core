@@ -180,14 +180,16 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
     def get_add_custom_tag(self):
         """Return the page for the popup used to add a custom HTML tag."""
         tag_name = self.request.get('tag_name')
+        excluded_tags = self.request.get_all('excluded_tags')
 
         tag_bindings = tags.get_tag_bindings()
 
         select_data = []
         for name in tag_bindings.keys():
-            clazz = tag_bindings[name]
-            select_data.append((name, '%s: %s' % (
-                clazz.vendor(), clazz.name())))
+            if name not in excluded_tags:
+                clazz = tag_bindings[name]
+                select_data.append((name, '%s: %s' % (
+                    clazz.vendor(), clazz.name())))
         select_data = sorted(select_data, key=lambda pair: pair[1])
 
         if tag_name:

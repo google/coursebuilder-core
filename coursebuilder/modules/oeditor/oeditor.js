@@ -144,7 +144,7 @@ function getEditCustomTagUrl(env, tagName) {
   return url;
 }
 
-function getAddCustomTagUrl(env, tagName) {
+function getAddCustomTagUrl(env, tagName, excludedCustomTags) {
   var url = 'oeditorpopup?action=add_custom_tag';
   if (env.schema.id == 'Lesson Entity' && env.schema.properties &&
       env.schema.properties.key) {
@@ -157,6 +157,11 @@ function getAddCustomTagUrl(env, tagName) {
   }
   if (tagName) {
     url += '&tag_name=' + escape(tagName);
+  }
+  if (excludedCustomTags) {
+    for (var i = 0; i < excludedCustomTags.length; i++) {
+      url += '&excluded_tags=' + escape(excludedCustomTags[i]);
+    }
   }
   return url;
 }
