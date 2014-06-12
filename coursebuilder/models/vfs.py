@@ -39,6 +39,9 @@ class AbstractFileSystem(object):
 
     def __init__(self, impl):
         self._impl = impl
+        self._readonly = False
+        self._open_cache = {}
+        self._isfile_cache = {}
 
     @property
     def impl(self):
@@ -52,28 +55,75 @@ class AbstractFileSystem(object):
             return path
         return u'' + path.replace('\\', '/')
 
+    def begin_readonly(self):
+        """Activates caching of resources and prevents mutations."""
+        self._assert_not_readonly()
+
+        self._open_cache = {}
+        self._isfile_cache = {}
+        self._readonly = True
+
+    def end_readonly(self):
+        """Deactivates caching of resources and enables mutations."""
+        if not self._readonly:
+            raise Exception('Not readonly.')
+
+        self._open_cache = {}
+        self._isfile_cache = {}
+        self._readonly = False
+
+    def _assert_not_readonly(self):
+        if self._readonly:
+            raise Exception(
+                'Unable to execute requested operation while readonly.')
+
     def isfile(self, filename):
         """Checks if file exists, similar to os.path.isfile(...)."""
-        return self._impl.isfile(filename)
+        if self._readonly and (
+            filename in self._isfile_cache or
+            filename in self._open_cache):
+            result = self._isfile_cache[filename]
+        else:
+            result = self._impl.isfile(filename)
+            if self._readonly:
+                self._isfile_cache[filename] = result
+        return result
 
     def open(self, filename):
         """Returns a stream with the file content, similar to open(...)."""
-        return self._impl.get(filename)
+        if self._readonly:
+            if filename in self._open_cache:
+                _bytes, _metadata = self._open_cache[filename]
+            else:
+                _stream = self._impl.get(filename)
+                _metadata = {}
+                if hasattr(_stream, 'metadata'):
+                    _metadata = _stream.metadata
+                _bytes = None
+                if _stream:
+                    _bytes = _stream.read()
+                self._open_cache[filename] = (_bytes, _metadata)
+            return FileStreamWrapped(_metadata, _bytes)
+        else:
+            return self._impl.get(filename)
 
     def get(self, filename):
         """Returns bytes with the file content, but no metadata."""
-        return self._impl.get(filename).read()
+        return self.open(filename).read()
 
     def put(self, filename, stream, **kwargs):
         """Replaces the contents of the file with the bytes in the stream."""
+        self._assert_not_readonly()
         self._impl.put(filename, stream, **kwargs)
 
     def delete(self, filename):
         """Deletes a file and metadata associated with it."""
+        self._assert_not_readonly()
         self._impl.delete(filename)
 
     def list(self, dir_name):
         """Lists all files in a directory."""
+        self._assert_not_readonly()
         return self._impl.list(dir_name)
 
     def get_jinja_environ(self, dir_names):

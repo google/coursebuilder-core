@@ -403,7 +403,11 @@ class BaseHandler(ApplicationHandler):
     def render(self, template_file):
         """Renders a template."""
         template = self.get_template(template_file)
-        self.response.out.write(template.render(self.template_value))
+        self.app_context.fs.begin_readonly()
+        try:
+            self.response.out.write(template.render(self.template_value))
+        finally:
+            self.app_context.fs.end_readonly()
 
 
 class BaseRESTHandler(BaseHandler):
