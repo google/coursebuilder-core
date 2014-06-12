@@ -50,10 +50,17 @@ ALLOWED_ASSET_TEXT_BASES = frozenset([
     'assets/lib',
     'views'
 ])
-# Set of string. The relative, normalized path bases we allow uploading into.
-ALLOWED_ASSET_UPLOAD_BASES = ALLOWED_ASSET_BINARY_BASES.union(
-    ALLOWED_ASSET_TEXT_BASES)
+
 MAX_ASSET_UPLOAD_SIZE_K = 500
+
+
+def allowed_asset_upload_bases():
+    """The relative, normalized path bases we allow uploading into.
+
+    Returns:
+        Set of string.
+    """
+    return ALLOWED_ASSET_BINARY_BASES.union(ALLOWED_ASSET_TEXT_BASES)
 
 
 def is_text_payload(payload):
@@ -112,7 +119,7 @@ class FileManagerAndEditor(ApplicationHandler):
         base = self.request.get('base')
         assert base
         base = strip_leading_and_trailing_slashes(base)
-        assert base in ALLOWED_ASSET_UPLOAD_BASES
+        assert base in allowed_asset_upload_bases()
         return base
 
     def post_create_or_edit_settings(self):
@@ -279,7 +286,7 @@ class TextAssetRESTHandler(BaseRESTHandler):
     XSRF_TOKEN_NAME = 'manage-text-asset'
 
     def _check_asset_in_allowed_bases(self, filename):
-        assert os.path.dirname(filename) in ALLOWED_ASSET_UPLOAD_BASES
+        assert os.path.dirname(filename) in allowed_asset_upload_bases()
 
     def delete(self):
         """Handles the delete verb."""
@@ -554,7 +561,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         """Provides empty initial content for asset upload editor."""
         # TODO(jorr): Pass base URI through as request param when generalized.
         base = self.request.get('key')
-        assert base in ALLOWED_ASSET_UPLOAD_BASES
+        assert base in allowed_asset_upload_bases()
         json_payload = {'file': '', 'base': base}
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict=json_payload,
@@ -575,7 +582,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
 
         payload = transforms.loads(request['payload'])
         base = payload['base']
-        assert base in ALLOWED_ASSET_UPLOAD_BASES
+        assert base in allowed_asset_upload_bases()
         upload = self.request.POST['file']
 
         if not isinstance(upload, cgi.FieldStorage):

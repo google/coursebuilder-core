@@ -74,6 +74,7 @@ from models import entities
 from models import services
 from models import transforms
 from models import utils
+from modules import dashboard
 
 from google.appengine.api import mail
 from google.appengine.api import mail_errors
@@ -913,6 +914,16 @@ custom_module = None
 def register_module():
   """Registers the module with the Registry."""
 
+  def on_module_enabled():
+    dashboard.filer.ALLOWED_ASSET_TEXT_BASES = (
+      dashboard.filer.ALLOWED_ASSET_TEXT_BASES.union(
+        ['views/notifications']))
+
+  def on_module_disabled():
+    dashboard.filer.ALLOWED_ASSET_TEXT_BASES = (
+      dashboard.filer.ALLOWED_ASSET_TEXT_BASES.difference(
+        ['views/notifications']))
+
   global custom_module
 
   # Avert circular dependency. pylint: disable-msg=g-import-not-at-top
@@ -926,7 +937,9 @@ def register_module():
   )]
   custom_module = custom_modules.Module(
       'Notifications', 'Student notification management system.', cron_handlers,
-      []
+      [],
+      notify_module_disabled=on_module_disabled,
+      notify_module_enabled=on_module_enabled
   )
 
   class Service(services.Notifications):
