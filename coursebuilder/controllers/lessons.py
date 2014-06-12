@@ -179,8 +179,33 @@ def filter_assessments_used_within_units(units):
     return ret
 
 
+def augment_assessment_units(course, student):
+    """Adds additional fields to assessment units."""
+    rp = course.get_reviews_processor()
+
+    for unit in course.get_units():
+        if unit.type == 'A':
+            unit.needs_human_grader = course.needs_human_grader(unit)
+            if unit.needs_human_grader:
+                review_steps = rp.get_review_steps_by(
+                    unit.unit_id, student.get_key())
+                review_min_count = unit.workflow.get_review_min_count()
+
+                unit.matcher = unit.workflow.get_matcher()
+                unit.review_progress = ReviewUtils.get_review_progress(
+                    review_steps, review_min_count,
+                    course.get_progress_tracker()
+                )
+
+                unit.is_submitted = rp.does_submission_exist(
+                    unit.unit_id, student.get_key())
+
+
 def add_course_outline_to_template(handler, student):
     """Adds course outline with all units, lessons, progress to the template."""
+    if student and not student.is_transient:
+        augment_assessment_units(handler.get_course(), student)
+
     _tracker = handler.get_progress_tracker()
     _tuples = []
     units = handler.get_track_matching_student(student)
@@ -215,28 +240,6 @@ class CourseHandler(BaseHandler):
         """Add child handlers for REST."""
         return [('/rest/events', EventsRESTHandler)]
 
-    def augment_assessment_units(self, student):
-        """Adds additional fields to assessment units."""
-        course = self.get_course()
-        rp = course.get_reviews_processor()
-
-        for unit in self.template_value['units']:
-            if unit.type == 'A':
-                unit.needs_human_grader = course.needs_human_grader(unit)
-                if unit.needs_human_grader:
-                    review_steps = rp.get_review_steps_by(
-                        unit.unit_id, student.get_key())
-                    review_min_count = unit.workflow.get_review_min_count()
-
-                    unit.matcher = unit.workflow.get_matcher()
-                    unit.review_progress = ReviewUtils.get_review_progress(
-                        review_steps, review_min_count,
-                        course.get_progress_tracker()
-                    )
-
-                    unit.is_submitted = rp.does_submission_exist(
-                        unit.unit_id, student.get_key())
-
     def get(self):
         """Handles GET requests."""
         user = self.personalize_page_and_get_user()
@@ -260,7 +263,7 @@ class CourseHandler(BaseHandler):
         self.template_value['show_registration_page'] = True
 
         if student and not student.is_transient:
-            self.augment_assessment_units(student)
+            augment_assessment_units(self.get_course(), student)
         elif user:
             profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
             additional_registration_fields = self.app_context.get_environ(
