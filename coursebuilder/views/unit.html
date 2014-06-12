@@ -114,7 +114,12 @@
 
         {{ display_content }}
 
-        <div class="gcb-button-box" {% if course_info.unit.hide_lesson_navigation_buttons %}style="display: none;"{% endif%}>
+        <div class="gcb-button-box">
+          {% if (lesson and
+                 course_info.unit.hide_lesson_navigation_buttons) or
+                (assessment and
+                 course_info.unit.hide_assessment_navigation_buttons) %}
+          {% else %}
           <div class="gcb-prev-button">
             {% if back_button_url %}
               {# I18N: Text on the navigation button at the end of a lesson page. #}
@@ -130,6 +135,7 @@
               <a href="course"> {{ gettext('End') }} </a>
             {% endif %}
           </div>
+          {% endif %}
         </div>
       </div>
     {% endif %}

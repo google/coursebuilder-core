@@ -610,3 +610,42 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
     def test_assessments_as_pre_post_can_have_general_labels_added(self):
         self._test_assessments_as_pre_post_labels(self.general_one_id, [])
+
+    def test_suppress_next_prev_buttons(self):
+        # Set up one-lesson unit w/ pre, post assessment.  Set course
+        # settings to suppress prev/next buttons only on assessments.
+        actions.login(ADMIN_EMAIL)
+        actions.update_course_config(COURSE_NAME, {
+            'unit': {'hide_assessment_navigation_buttons': True}})
+        actions.login(STUDENT_EMAIL)
+        self.unit_one_lesson.pre_assessment = self.assessment_one.unit_id
+        self.unit_one_lesson.post_assessment = self.assessment_two.unit_id
+        self.course.save()
+
+        # Verify we have suppressed prev/next/end buttons on pre-assessment.
+        response = self._get_unit_page(self.unit_one_lesson)
+        self.assertNotIn('Previous Page', response.body)
+        self.assertNotIn('Next Page', response.body)
+        self.assertNotIn(' End ', response.body)
+
+        # Submit assessment.  Verify confirmation page _does_ have prev/next.
+        response = self._post_assessment(response).follow()
+        self.assertIn('Previous Page', response.body)
+        self.assertIn('Next Page', response.body)
+
+        # Click to lesson.  Verify have prev/next.
+        response = self._click_next_button(response)
+        self.assertIn('Previous Page', response.body)
+        self.assertIn('Next Page', response.body)
+
+        # Verify we have suppressed prev/next/end buttons on post-assessment.
+        response = self._click_next_button(response)
+        self.assertNotIn('Previous Page', response.body)
+        self.assertNotIn('Next Page', response.body)
+        self.assertNotIn(' End ', response.body)
+
+        # Submit post-assessment; verify we have prev/end buttons
+        response = self._post_assessment(response).follow()
+        self.assertIn('Previous Page', response.body)
+        self.assertNotIn('Next Page', response.body)
+        self.assertIn(' End ', response.body)

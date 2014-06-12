@@ -232,6 +232,11 @@ def _create_course_registry():
         'boolean', description='Whether to hide the \'Previous Page\' and '
         ' \'Next Page\' buttons below lesson and activity pages'))
     unit_opts.add_property(schema_fields.SchemaField(
+        'unit:hide_assessment_navigation_buttons',
+        'Hide Assessment Navigation Buttons',
+        'boolean', description='Whether to hide the \'Previous Page\' and '
+        ' \'Next Page\' buttons below pre/post assessments within units'))
+    unit_opts.add_property(schema_fields.SchemaField(
         'unit:show_unit_links_in_leftnav', 'Show Units in Side Bar',
         'boolean', description='Whether to show the unit links in the side '
         'navigation bar.'))

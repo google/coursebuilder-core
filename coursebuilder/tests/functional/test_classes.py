@@ -1842,11 +1842,8 @@ class StudentAspectTest(actions.TestBase):
 
         # The default behavior is to show the lesson navigation buttons.
         response = self.get('unit?unit=2&lesson=3')
-        assert_contains(
-            '<div class="gcb-button-box" >', response.body)
-        assert_does_not_contain(
-            '<div class="gcb-button-box" style="display: none;">',
-            response.body)
+        assert_contains('<div class="gcb-prev-button">', response.body)
+        assert_contains('<div class="gcb-next-button">', response.body)
 
         # Override course.yaml settings by patching app_context.
         get_environ_old = sites.ApplicationContext.get_environ
@@ -1860,11 +1857,8 @@ class StudentAspectTest(actions.TestBase):
 
         # The lesson navigation buttons should now be hidden.
         response = self.get('unit?unit=2&lesson=3')
-        assert_contains(
-            '<div class="gcb-button-box" style="display: none;">',
-            response.body)
-        assert_does_not_contain(
-            '<div class="gcb-button-box" >', response.body)
+        assert_does_not_contain('<div class="gcb-prev-button">', response.body)
+        assert_does_not_contain('<div class="gcb-next-button">', response.body)
 
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old
