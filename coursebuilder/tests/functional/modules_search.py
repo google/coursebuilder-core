@@ -384,7 +384,6 @@ class SearchTest(search_unit_test.SearchTestBase):
         response = self.get('/test/search?query=lemon')  # Do see video refs
         self.assertIn('v=glados', response.body)
 
-
         # Student with tracks sees filtered view.
         with common_utils.Namespace('ns_test'):
             models.Student.set_labels_for_current(str(foo_id))

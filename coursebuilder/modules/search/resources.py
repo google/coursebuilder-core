@@ -371,6 +371,8 @@ class ExternalLinkResource(Resource):
         Args:
             link_dist: dict. a map from URL to distance in the link graph from
                 the course.
+            link_unit_id: dict.  A map from URL to the unit ID under which
+                the link is found.
             timestamps: dict from doc_ids to last indexed datetimes. An empty
                 dict indicates that all documents should be generated.
         Yields:
