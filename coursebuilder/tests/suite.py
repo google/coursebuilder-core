@@ -70,7 +70,8 @@ _PARSER.add_argument(
 
 
 # Base filesystem location for test data.
-TEST_DATA_BASE = '/usr/local/google/coursebuilder/test-data/'
+TEST_DATA_BASE = os.path.join(
+    os.environ['COURSEBUILDER_RESOURCES'], 'test-data/')
 
 
 def empty_environ():
