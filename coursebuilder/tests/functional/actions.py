@@ -72,6 +72,8 @@ class MockAppContext(object):
         self.environ = environ or {}
         self.namespace = namespace or 'namespace'
         self.slug = slug or 'slug'
+        self.fs = vfs.AbstractFileSystem(
+            vfs.LocalReadOnlyFileSystem(logical_home_folder='/'))
 
     def get_environ(self):
         return self.environ

@@ -425,7 +425,6 @@ class StudentProfileDAO(object):
 
         # Imports don't resolve at top.
         # pylint: disable-msg=g-import-not-at-top
-        from common import jinja_utils
         from controllers import sites
 
         context = sites.get_course_for_current_request()
@@ -441,11 +440,11 @@ class StudentProfileDAO(object):
             'unsubscribe_url': services.unsubscribe.get_unsubscribe_url(
                 handler, email)
         }
-        template = jinja_utils.get_template(
-            'welcome.txt',
+        jinja_environment = handler.app_context.fs.get_jinja_environ(
             [os.path.join(
                 appengine_config.BUNDLE_ROOT, 'views', 'notifications')],
             autoescape=False)
+        template = jinja_environment.get_template('welcome.txt')
         services.notifications.send_async(
             email, sender, WELCOME_NOTIFICATION_INTENT,
             template.render(context), subject, audit_trail=context,

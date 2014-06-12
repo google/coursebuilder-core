@@ -127,9 +127,9 @@ class AbstractFileSystem(object):
         self._assert_not_readonly()
         return self._impl.list(dir_name)
 
-    def get_jinja_environ(self, dir_names):
+    def get_jinja_environ(self, dir_names, autoescape=True):
         """Configures jinja environment loaders for this file system."""
-        return self._impl.get_jinja_environ(dir_names)
+        return self._impl.get_jinja_environ(dir_names, autoescape=autoescape)
 
     def is_read_write(self):
         return self._impl.is_read_write()
@@ -200,14 +200,15 @@ class LocalReadOnlyFileSystem(object):
                     self._physical_to_logical(os.path.join(dirname, filename)))
         return sorted(files)
 
-    def get_jinja_environ(self, dir_names):
+    def get_jinja_environ(self, dir_names, autoescape=True):
         """Configure the environment for Jinja templates."""
         physical_dir_names = []
         for dir_name in dir_names:
             physical_dir_names.append(self._logical_to_physical(dir_name))
 
         return jinja_utils.create_jinja_environment(
-            loader=jinja2.FileSystemLoader(physical_dir_names))
+            loader=jinja2.FileSystemLoader(physical_dir_names),
+            autoescape=autoescape)
 
     def is_read_write(self):
         return False
@@ -614,10 +615,11 @@ class DatastoreBackedFileSystem(object):
                     self._physical_to_logical(inheritable_folder))))
         return sorted(list(result))
 
-    def get_jinja_environ(self, dir_names):
+    def get_jinja_environ(self, dir_names, autoescape=True):
         return jinja_utils.create_jinja_environment(
             loader=VirtualFileSystemTemplateLoader(
-                self, self._logical_home_folder, dir_names))
+                self, self._logical_home_folder, dir_names),
+            autoescape=autoescape)
 
     def is_read_write(self):
         return True
