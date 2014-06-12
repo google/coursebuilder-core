@@ -65,6 +65,41 @@ class EncryptionManagerTests(actions.TestBase):
         self.assertNotEquals(e, d)
 
 
+class GetExternalUserIdTests(actions.TestBase):
+
+    def setUp(self):
+        super(GetExternalUserIdTests, self).setUp()
+        self.app_id = 'app_id'
+        self.namespace = 'namespace'
+        self.email = 'email'
+        self.id = crypto.get_external_user_id(
+            self.app_id, self.namespace, self.email)
+
+    def test_consistent(self):
+        self.assertEqual(
+            self.id,
+            crypto.get_external_user_id(
+                self.app_id, self.namespace, self.email))
+
+    def test_change_app_id_changes_hmac(self):
+        self.assertNotEqual(
+            self.id,
+            crypto.get_external_user_id(
+                'not' + self.app_id, self.namespace, self.email))
+
+    def test_change_namespace_changes_hmac(self):
+        self.assertNotEqual(
+            self.id,
+            crypto.get_external_user_id(
+                self.app_id, 'not' + self.namespace, self.email))
+
+    def test_change_email_changes_hmac(self):
+        self.assertNotEqual(
+            self.id,
+            crypto.get_external_user_id(
+                self.app_id, self.namespace, 'not' + self.email))
+
+
 class XsrfTokenManagerTests(actions.TestBase):
 
     def test_valid_token(self):

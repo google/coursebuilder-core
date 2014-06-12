@@ -69,6 +69,11 @@ class Registry(object):
                 return prop
         return None
 
+    def remove_property(self, property_name):
+        prop = self.get_property(property_name)
+        if prop:
+            return self._properties.pop(self._properties.index(prop))
+
     def add_sub_registry(
         self, name, title=None, description=None, registry=None):
         """Add a sub registry to for this Registry."""

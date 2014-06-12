@@ -17,6 +17,7 @@ env_variables:
     modules.courses.courses
     modules.data_source_providers.data_source_providers
     modules.dashboard.dashboard
+    modules.lti.lti
     modules.mapreduce.mapreduce_module
     modules.notifications.notifications
     modules.oeditor.oeditor

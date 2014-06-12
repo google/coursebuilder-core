@@ -192,7 +192,8 @@ DISTRIBUTED_LIBS="\
   mapreduce-r645.zip \
   crossfilter-1.3.7.zip \
   d3-3.4.3.zip \
-  dc.js-1.6.0.zip "
+  dc.js-1.6.0.zip \
+  oauth-1.0.1.zip "
 
 echo Checking whether third party Python packages are installed
 if [ ! -d "$DISTRIBUTED_LIBS_DIR" ]; then

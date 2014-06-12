@@ -70,8 +70,8 @@ class MockAppContext(object):
 
     def __init__(self, environ=None, namespace=None, slug=None):
         self.environ = environ or {}
-        self.namespace = namespace or 'namespace'
-        self.slug = slug or 'slug'
+        self.namespace = namespace if namespace is not None else 'namespace'
+        self.slug = slug if slug is not None else 'slug'
         self.fs = vfs.AbstractFileSystem(
             vfs.LocalReadOnlyFileSystem(logical_home_folder='/'))
 
@@ -80,6 +80,9 @@ class MockAppContext(object):
 
     def get_namespace_name(self):
         return self.namespace
+
+    def get_slug(self):
+        return self.slug
 
 
 class MockHandler(object):

@@ -204,6 +204,26 @@ class XsrfTokenManager(object):
             return False
 
 
+def get_external_user_id(app_id, namespace, email):
+    """Gets an id for a user that can be transmitted to external systems.
+
+    The returned key is scoped to a particular user within a particular course
+    on a particular Course Builder deployment, and is guaranteed to be
+    statistically unique within that scope.
+
+    Args:
+      app_id: string. Application ID of the CB App Engine deployment.
+      namespace: string. Namespace of a single course. May be the empty string.
+      email: string. Unvalidated email address for a user.
+
+    Returns:
+      String.
+    """
+    return hmac.new(
+        '%s%s%s' % (app_id, namespace, email), digestmod=hashlib.sha256
+    ).hexdigest()
+
+
 def hmac_sha_2_256_transform(privacy_secret, value):
     """HMAC-SHA-2-256 for use as a privacy transformation function."""
     return hmac.new(

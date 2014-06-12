@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LTI Launch Page</title>
+  </head>
+  <body>
+    <form
+        action='{{tool_url}}'
+        method='post'
+        name='lti_launch_form'>
+      {% for name, value in signed_parameters.iteritems() %}
+        <input type='hidden' name='{{name}}' value='{{value}}'></input>
+      {% endfor %}
+    </form>
+    <script>
+      window.onload = function() {
+        document.lti_launch_form.submit();
+      }
+    </script>
+  </body>
+</html>
