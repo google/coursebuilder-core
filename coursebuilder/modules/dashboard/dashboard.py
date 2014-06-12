@@ -721,6 +721,7 @@ class DashboardHandler(
         all_questions = QuestionDAO.get_all()
         if all_questions:
             ol = safe_dom.Element('ol')
+            all_questions.sort(key=lambda q: q.description)
             for question in all_questions:
                 edit_url = 'dashboard?action=edit_question&key=%s' % question.id
                 li = safe_dom.Element('li')
@@ -763,6 +764,7 @@ class DashboardHandler(
         all_question_groups = QuestionGroupDAO.get_all()
         if all_question_groups:
             ol = safe_dom.Element('ol')
+            all_question_groups.sort(key=lambda qg: qg.description)
             for question_group in all_question_groups:
                 edit_url = 'dashboard?action=edit_question_group&key=%s' % (
                     question_group.id)
