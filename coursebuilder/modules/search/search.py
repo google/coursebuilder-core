@@ -247,6 +247,8 @@ class SearchHandler(utils.BaseHandler):
                 self.template_value['query'] = query
                 SEARCH_QUERIES_MADE.inc()
                 response = fetch(self.get_course(), query, offset=offset)
+                response = self.filter(response, student)
+
                 self.template_value['time'] = '%.2f' % (time.time() - start)
                 self.template_value['search_results'] = response['results']
 
@@ -297,6 +299,22 @@ class SearchHandler(utils.BaseHandler):
             template = self.get_template('search.html', additional_dirs=[path])
             self.template_value['navbar'] = {}
             self.response.out.write(template.render(self.template_value))
+
+    def filter(self, response, student):
+        if not response['results']:
+            return response
+
+        filtered_results = []
+        available_unit_ids = set(
+            str(unit.unit_id) for unit in
+            self.get_course().get_track_matching_student(student))
+        for result in response['results']:
+            if not result.unit_id or str(result.unit_id) in available_unit_ids:
+                filtered_results.append(result)
+        return {
+            'results': filtered_results,
+            'total_found': len(filtered_results)
+        }
 
 
 class AssetsHandler(webapp2.RequestHandler):

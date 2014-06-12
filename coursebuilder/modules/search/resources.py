@@ -235,6 +235,9 @@ class Resource(object):
         """External links to be indexed should be stored in self.links."""
         return self.links if hasattr(self, 'links') else []
 
+    def get_unit_id(self):
+        return self.unit_id if hasattr(self, 'unit_id') else None
+
 
 class Result(object):
     """The abstract superclass for a result returned by the search module."""
@@ -318,6 +321,9 @@ class LessonResource(Resource):
         return search.Document(
             doc_id=self._get_doc_id(self.unit_id, self.lesson_id),
             fields=[
+                search.TextField(
+                    name='unit_id',
+                    value=str(self.unit_id) if self.unit_id else ''),
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
                 search.TextField(name='url', value=(
@@ -335,6 +341,7 @@ class LessonResult(Result):
         super(LessonResult, self).__init__()
         self.url = self._get_returned_field(search_result, 'url')
         self.title = self._get_returned_field(search_result, 'title')
+        self.unit_id = self._get_returned_field(search_result, 'unit_id')
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
@@ -358,7 +365,7 @@ class ExternalLinkResource(Resource):
     # TODO(emichael): Allow the user to turn off external links in the dashboard
 
     @classmethod
-    def generate_all_from_dist_dict(cls, link_dist, timestamps):
+    def generate_all_from_dist_dict(cls, link_dist, link_unit_id, timestamps):
         """Generate all external links from a map from URL to distance.
 
         Args:
@@ -384,11 +391,12 @@ class ExternalLinkResource(Resource):
                 continue
 
             dist = link_dist[url]
+            unit_id = link_unit_id.get(url)
             if dist > 1:
                 break
 
             try:
-                resource = ExternalLinkResource(url)
+                resource = ExternalLinkResource(url, unit_id)
             except URLNotParseableException as e:
                 logging.info(e)
             else:
@@ -397,14 +405,16 @@ class ExternalLinkResource(Resource):
                         if new_link not in link_dist:
                             link_dist[new_link] = dist + 1
                             url_queue.put(new_link)
+                            link_unit_id[new_link] = unit_id
                 yield resource
 
-    def __init__(self, url):
+    def __init__(self, url, unit_id):
         # distance is the distance from the course material in the link graph,
         # where a lesson notes page has a distance of 0
         super(ExternalLinkResource, self).__init__()
 
         self.url = url
+        self.unit_id = unit_id
         parser = get_parser_for_html(url)
         self.content = parser.get_content()
         self.title = parser.get_title()
@@ -421,6 +431,9 @@ class ExternalLinkResource(Resource):
                 search.TextField(name='title', value=self.title),
                 search.TextField(name='content', value=self.content),
                 search.TextField(name='url', value=self.url),
+                search.TextField(
+                    name='unit_id',
+                    value=str(self.unit_id) if self.unit_id else ''),
                 search.TextField(name='type', value=self.TYPE_NAME),
                 search.DateField(name='date',
                                  value=datetime.datetime.utcnow())])
@@ -434,6 +447,7 @@ class ExternalLinkResult(Result):
 
         self.url = self._get_returned_field(search_result, 'url')
         self.title = self._get_returned_field(search_result, 'title')
+        self.unit_id = self._get_returned_field(search_result, 'unit_id')
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
@@ -470,7 +484,7 @@ class YouTubeFragmentResource(Resource):
             if lesson.video and not cls._indexed_within_num_days(
                     timestamps, lesson.video, cls.FRESHNESS_THRESHOLD_DAYS):
                 for fragment in cls._get_fragments_for_video(
-                        lesson.video, lesson_url):
+                    lesson.unit_id, lesson.video, lesson_url):
                     yield fragment
 
             match = re.search(youtube_ct_regex, lesson.objectives)
@@ -479,7 +493,7 @@ class YouTubeFragmentResource(Resource):
                     if not cls._indexed_within_num_days(
                             timestamps, video_id, cls.FRESHNESS_THRESHOLD_DAYS):
                         for fragment in cls._get_fragments_for_video(
-                                video_id, lesson_url):
+                            lesson.unit_id, video_id, lesson_url):
                             yield fragment
 
         if announcements.custom_module.enabled:
@@ -494,7 +508,7 @@ class YouTubeFragmentResource(Resource):
                                 timestamps, video_id,
                                 cls.FRESHNESS_THRESHOLD_DAYS):
                             for fragment in cls._get_fragments_for_video(
-                                    video_id, announcement_url):
+                                None, video_id, announcement_url):
                                 yield fragment
 
     @classmethod
@@ -507,7 +521,7 @@ class YouTubeFragmentResource(Resource):
         return False
 
     @classmethod
-    def _get_fragments_for_video(cls, video_id, url_in_course):
+    def _get_fragments_for_video(cls, unit_id, video_id, url_in_course):
         """Get all of the transcript fragment docs for a specific video."""
         try:
             (transcript, title, thumbnail_url) = cls._get_video_data(video_id)
@@ -532,7 +546,7 @@ class YouTubeFragmentResource(Resource):
                     fragments.pop(0).firstChild.nodeValue))
 
             aggregated_fragment = YouTubeFragmentResource(
-                video_id, url_in_course, current_start,
+                video_id, unit_id, url_in_course, current_start,
                 '\n'.join(current_text), title, thumbnail_url)
             aggregated_fragments.append(aggregated_fragment)
 
@@ -579,11 +593,13 @@ class YouTubeFragmentResource(Resource):
     def _get_doc_id(cls, video_id, start_time):
         return '%s_%s_%s' % (cls.TYPE_NAME, video_id, start_time)
 
-    def __init__(self, video_id, url, start, text, video_title, thumbnail_url):
+    def __init__(self, video_id, unit_id, url, start, text, video_title,
+                 thumbnail_url):
         super(YouTubeFragmentResource, self).__init__()
 
         self.url = url
         self.video_id = video_id
+        self.unit_id = unit_id
         self.start = start
         self.text = text
         self.video_title = video_title
@@ -595,6 +611,9 @@ class YouTubeFragmentResource(Resource):
             fields=[
                 search.TextField(name='title', value=self.video_title),
                 search.TextField(name='video_id', value=self.video_id),
+                search.TextField(
+                    name='unit_id',
+                    value=str(self.unit_id) if self.unit_id else ''),
                 search.TextField(name='content', value=self.text),
                 search.NumberField(name='start', value=self.start),
                 search.TextField(name='thumbnail_url',
@@ -613,6 +632,7 @@ class YouTubeFragmentResult(Result):
         self.doc_id = search_result.doc_id
         self.title = self._get_returned_field(search_result, 'title')
         self.video_id = self._get_returned_field(search_result, 'video_id')
+        self.unit_id = self._get_returned_field(search_result, 'unit_id')
         self.start = self._get_returned_field(search_result, 'start')
         self.thumbnail_url = self._get_returned_field(search_result,
                                                       'thumbnail_url')
@@ -685,6 +705,7 @@ class AnnouncementResult(Result):
         super(AnnouncementResult, self).__init__()
         self.url = self._get_returned_field(search_result, 'url')
         self.title = self._get_returned_field(search_result, 'title')
+        self.unit_id = None  # Announcements are definitionally not in units.
         self.snippet = self._get_snippet(search_result)
 
     def get_html(self):
@@ -737,19 +758,22 @@ def generate_all_documents(course, timestamps):
     """
 
     link_dist = {}
+    link_unit_id = {}
 
     for resource_type, unused_result_type in RESOURCE_TYPES:
         for resource in resource_type.generate_all(course, timestamps):
-
+            unit_id = resource.get_unit_id()
             if isinstance(resource, LessonResource) and resource.notes:
                 link_dist[resource.notes] = 0
+                link_unit_id[resource.notes] = unit_id
             for link in resource.get_links():
                 link_dist[link] = 1
+                link_unit_id[resource.notes] = unit_id
 
             yield resource.get_document()
 
     for resource in ExternalLinkResource.generate_all_from_dist_dict(
-            link_dist, timestamps):
+            link_dist, link_unit_id, timestamps):
         yield resource.get_document()
 
 

@@ -21,9 +21,11 @@ import logging
 import re
 
 import actions
+from common import utils as common_utils
 from controllers import sites
 from models import courses
 from models import custom_modules
+from models import models
 from modules.announcements import announcements
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
@@ -334,3 +336,64 @@ class SearchTest(search_unit_test.SearchTestBase):
         response = self.get('/test/search?query=apple')
         self.assertNotIn('gcb-search-result', response.body)
         self.assertNotIn('v=portal', response.body)
+
+    def test_tracked_lessons(self):
+        context = actions.simple_add_course('test', 'admin@google.com',
+                                            'Test Course')
+        course = courses.Course(None, context)
+        actions.login('admin@google.com')
+        actions.register(self, 'Some Admin', 'test')
+
+        with common_utils.Namespace('ns_test'):
+            foo_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Foo',
+                       'descripton': 'foo',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            bar_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Bar',
+                       'descripton': 'bar',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+
+        unit1 = course.add_unit()
+        unit1.now_available = True
+        unit1.labels = str(foo_id)
+        lesson11 = course.add_lesson(unit1)
+        lesson11.objectives = 'common plugh <gcb-youtube videoid="glados">'
+        lesson11.now_available = True
+        lesson11.notes = search_unit_test.VALID_PAGE_URL
+        lesson11.video = 'portal'
+        course.update_unit(unit1)
+        unit2 = course.add_unit()
+        unit2.now_available = True
+        unit1.labels = str(bar_id)
+        lesson21 = course.add_lesson(unit2)
+        lesson21.objectives = 'common plover'
+        lesson21.now_available = True
+        course.update_unit(unit2)
+        course.save()
+        self.index_test_course()
+
+        # Registered, un-tracked student sees all.
+        response = self.get('/test/search?query=common')
+        self.assertIn('common', response.body)
+        self.assertIn('plugh', response.body)
+        self.assertIn('plover', response.body)
+        response = self.get('/test/search?query=link')  # Do see followed links
+        self.assertIn('Partial', response.body)
+        self.assertIn('Absolute', response.body)
+        response = self.get('/test/search?query=lemon')  # Do see video refs
+        self.assertIn('v=glados', response.body)
+
+
+        # Student with tracks sees filtered view.
+        with common_utils.Namespace('ns_test'):
+            models.Student.set_labels_for_current(str(foo_id))
+        response = self.get('/test/search?query=common')
+        self.assertIn('common', response.body)
+        self.assertNotIn('plugh', response.body)
+        self.assertIn('plover', response.body)
+        response = self.get('/test/search?query=link')  # Links are filtered
+        self.assertNotIn('Partial', response.body)
+        self.assertNotIn('Absolute', response.body)
+        response = self.get('/test/search?query=lemon')  # Don't see video refs
+        self.assertNotIn('v=glados', response.body)
