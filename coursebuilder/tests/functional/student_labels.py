@@ -334,12 +334,17 @@ class StudentLabelsTest(actions.TestBase):
 
     # --------------------------------- Registration
     def test_register_with_labels(self):
+        student_name = 'John Smith from Back East'
         actions.login(LABELS_STUDENT_EMAIL)
         response = actions.view_registration(self, COURSE_NAME)
         register_form = actions.get_form_by_action(response, 'register')
         self.post('/%s/%s' % (COURSE_NAME, register_form.action), {
-            'name': 'John Smith from Back East',
+            'form01': student_name,
             'xsrf_token': register_form['xsrf_token'].value,
             'labels': common_utils.list_to_text([self.bar_id, self.baz_id])})
         self._verify_labels(self.get(STUDENT_LABELS_URL), [self.bar_id,
                                                            self.baz_id])
+        with common_utils.Namespace(NAMESPACE):
+            student = models.Student.get_enrolled_student_by_email(
+                LABELS_STUDENT_EMAIL)
+            self.assertEquals(student.name, student_name)
