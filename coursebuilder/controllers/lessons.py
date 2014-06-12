@@ -367,6 +367,9 @@ class UnitHandler(BaseHandler):
         # custom component renderers in the assessment_tags module.
         self.student = student
         self.unit_id = unit_id
+        if lesson:
+            self.lesson_id = lesson.lesson_id
+            self.lesson_is_scored = lesson.scored
 
         add_course_outline_to_template(self, student)
         self.template_value['is_progress_recorded'] = (
