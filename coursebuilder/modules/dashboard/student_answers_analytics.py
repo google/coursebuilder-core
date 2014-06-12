@@ -105,6 +105,9 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         contained_types = unit_responses['containedTypes']
 
         for usage_id, answers in unit_responses['answers'].items():
+            if usage_id not in questions_info:
+                continue  # Skip items from no-longer-present questions.
+
             # Note: The variable names here are in plural, but for single
             # questions, 'types', 'scores' and 'answers' contain just one
             # item.  (whereas for question groups, these are all arrays)

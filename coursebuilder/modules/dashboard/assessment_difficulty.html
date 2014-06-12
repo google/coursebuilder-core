@@ -89,9 +89,9 @@ function assessment_difficulty(data) {
   // Simple pie chart: List all assessments, with size of pie slice
   // determined by number of scores for that assessment.
   var score_counts_by_assessment = scores_by_assessment1.group().reduceCount();
-  dc.pieChart('#assessment_difficulty_score_counts_by_assessment')
-      .width(175)
-      .height(175)
+  dc.rowChart('#assessment_difficulty_score_counts_by_assessment')
+      .width(400)
+      .height(200)
       .dimension(scores_by_assessment1)
       .group(score_counts_by_assessment)
       .legend(dc.legend());
