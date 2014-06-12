@@ -444,7 +444,8 @@ class StudentProfileDAO(object):
         template = jinja_utils.get_template(
             'welcome.txt',
             [os.path.join(
-                appengine_config.BUNDLE_ROOT, 'views', 'notifications')])
+                appengine_config.BUNDLE_ROOT, 'views', 'notifications')],
+            autoescape=False)
         services.notifications.send_async(
             email, sender, WELCOME_NOTIFICATION_INTENT,
             template.render(context), subject, audit_trail=context,

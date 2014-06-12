@@ -71,7 +71,7 @@ def get_gcb_tags_filter(handler):
     return gcb_tags
 
 
-def create_jinja_environment(loader, locale=None):
+def create_jinja_environment(loader, locale=None, autoescape=True):
     """Create proper jinja environment."""
 
     cache = None
@@ -82,8 +82,8 @@ def create_jinja_environment(loader, locale=None):
             prefix=prefix)
 
     jinja_environment = jinja2.Environment(
-        autoescape=True, finalize=finalize, extensions=['jinja2.ext.i18n'],
-        bytecode_cache=cache, loader=loader)
+        autoescape=autoescape, finalize=finalize,
+        extensions=['jinja2.ext.i18n'], bytecode_cache=cache, loader=loader)
 
     jinja_environment.filters['js_string'] = js_string
 
@@ -104,11 +104,12 @@ def create_jinja_environment(loader, locale=None):
     return jinja_environment
 
 
-def get_template(template_name, dirs, locale=None, handler=None):
+def get_template(
+    template_name, dirs, locale=None, handler=None, autoescape=True):
     """Sets up an environment and gets jinja template."""
 
     jinja_environment = create_jinja_environment(
-        jinja2.FileSystemLoader(dirs), locale=locale)
+        jinja2.FileSystemLoader(dirs), locale=locale, autoescape=autoescape)
 
     jinja_environment.filters['gcb_tags'] = get_gcb_tags_filter(handler)
 

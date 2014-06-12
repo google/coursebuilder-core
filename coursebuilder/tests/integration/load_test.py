@@ -29,8 +29,10 @@ Here is how to run:
         python tests/integration/load_test.py \
         --thread_count=5 \
         --start_uid=1 \
-        http://mycourse.appspot.com
+        https://mycourse.appspot.com
 
+If you use http instead of https, your tests will fail because your requests
+will instantly be redirected (which can confound GET vs POST, for example).
 """
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
@@ -261,8 +263,8 @@ class TaskThread(threading.Thread):
             raise self.exc_info[1], None, self.exc_info[2]
 
 
-class PeerReviewLoadTest(object):
-    """A peer review load test."""
+class LoadTest(object):
+    """Parent for all load tests."""
 
     def __init__(self, base_url, uid):
         self.uid = uid
@@ -279,13 +281,6 @@ class PeerReviewLoadTest(object):
             uid=uid,
             common_headers={'Gcb-Impersonate': json.dumps(impersonate_header)})
 
-    def run(self):
-        self.register_if_has_to()
-        self.submit_peer_review_assessment_if_possible()
-
-        while self.count_completed_reviews() < 2:
-            self.request_and_do_a_review()
-
     def get_hidden_field(self, name, body):
         # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
         # across multiple lines in the HTML.
@@ -294,23 +289,6 @@ class PeerReviewLoadTest(object):
             '<input type="hidden" name="%s"\s* value="([^"]*)">' % name)
         # pylint: enable-msg=anomalous-backslash-in-string
         return reg.search(body).group(1)
-
-    def get_js_var(self, name, body):
-        reg = re.compile('%s = \'([^\']*)\';\n' % name)
-        return reg.search(body).group(1)
-
-    def get_draft_review_url(self, body):
-        """Returns the URL of a draft review on the review dashboard."""
-        # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
-        # across multiple lines in the HTML.
-        # pylint: disable-msg=anomalous-backslash-in-string
-        reg = re.compile(
-            '<a href="([^"]*)">Assignment [0-9]+</a>\s*\(Draft\)')
-        # pylint: enable-msg=anomalous-backslash-in-string
-        result = reg.search(body)
-        if result is None:
-            return None
-        return result.group(1)
 
     def register_if_has_to(self):
         """Performs student registration action."""
@@ -333,6 +311,34 @@ class PeerReviewLoadTest(object):
         assert_does_not_contain('href="register"', body)
 
         return True
+
+
+class PeerReviewLoadTest(LoadTest):
+    """A peer review load test."""
+
+    def run(self):
+        self.register_if_has_to()
+        self.submit_peer_review_assessment_if_possible()
+
+        while self.count_completed_reviews() < 2:
+            self.request_and_do_a_review()
+
+    def get_js_var(self, name, body):
+        reg = re.compile('%s = \'([^\']*)\';\n' % name)
+        return reg.search(body).group(1)
+
+    def get_draft_review_url(self, body):
+        """Returns the URL of a draft review on the review dashboard."""
+        # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
+        # across multiple lines in the HTML.
+        # pylint: disable-msg=anomalous-backslash-in-string
+        reg = re.compile(
+            '<a href="([^"]*)">Assignment [0-9]+</a>\s*\(Draft\)')
+        # pylint: enable-msg=anomalous-backslash-in-string
+        result = reg.search(body)
+        if result is None:
+            return None
+        return result.group(1)
 
     def submit_peer_review_assessment_if_possible(self):
         """Submits the peer review assessment."""
@@ -435,6 +441,18 @@ class PeerReviewLoadTest(object):
         body = self.session.get(review_dashboard_url)
         num_completed = body.count('(Completed)')
         return num_completed
+
+
+class WelcomeNotificationLoadTest(LoadTest):
+    """Tests registration confirmation notifications.
+
+    You must enable notifications in the target course for this test to be
+    meaningful. You must also swap the test class that's instantiated in
+    run_all, below.
+    """
+
+    def run(self):
+        self.register_if_has_to()
 
 
 def run_all(args):
