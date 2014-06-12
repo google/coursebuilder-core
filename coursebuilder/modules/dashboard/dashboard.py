@@ -20,6 +20,8 @@ import datetime
 import os
 import urllib
 
+from admin_preferences_editor import AdminPreferencesEditor
+from admin_preferences_editor import AdminPreferencesRESTHandler
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 import filer
@@ -80,7 +82,7 @@ from google.appengine.api import users
 class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
     QuestionManagerAndEditor, QuestionGroupManagerAndEditor,
-    LabelManagerAndEditor, AssignmentManager,
+    LabelManagerAndEditor, AssignmentManager, AdminPreferencesEditor,
     ApplicationHandler, ReflectiveRequestHandler, SearchDashboardHandler):
     """Handles all pages and actions required for managing a course."""
 
@@ -99,7 +101,7 @@ class DashboardHandler(
         'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_basic_course_settings', 'add_reviewer',
-        'delete_reviewer']
+        'delete_reviewer', 'edit_admin_preferences']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -108,6 +110,7 @@ class DashboardHandler(
         ('search', 'Search'),
         ('edit_assignment', 'Peer Review')]
     child_routes = [
+            (AdminPreferencesRESTHandler.URI, AdminPreferencesRESTHandler),
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
@@ -461,8 +464,20 @@ class DashboardHandler(
     def get_settings(self):
         """Renders course settings view."""
 
+        admin_prefs_actions = []
         yaml_actions = []
         basic_setting_actions = []
+
+        # Admin prefs setup.
+        admin_prefs_actions.append({
+            'id': 'edit_admin_prefs',
+            'caption': 'Edit Prefs',
+            'action': self.get_action_url('edit_admin_preferences'),
+            'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
+        admin_prefs = models.StudentPreferencesDAO.ensure_exists()
+        admin_prefs_info = [
+            'Show hook edit buttons: %s' % admin_prefs.show_hooks
+        ]
 
         # Basic course info.
         course_info = [
@@ -557,6 +572,11 @@ class DashboardHandler(
             'page_description': messages.SETTINGS_DESCRIPTION,
         }
         template_values['sections'] = [
+            {
+                'title': 'Admin Preferences',
+                'description': messages.ADMIN_PREFERENCES_DESCRIPTION,
+                'actions': admin_prefs_actions,
+                'children': admin_prefs_info},
             {
                 'title': 'About the Course',
                 'description': messages.ABOUT_THE_COURSE_DESCRIPTION,

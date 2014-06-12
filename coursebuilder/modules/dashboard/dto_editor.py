@@ -25,18 +25,18 @@ import urllib
 
 from common.crypto import XsrfTokenManager
 from controllers import utils
+from models import roles
 from models import transforms
-from modules.dashboard import unit_lesson_editor
 from modules.oeditor import oeditor
 
 
 class BaseDatastoreAssetEditor(utils.ApplicationHandler):
 
-    def get_form(self, rest_handler, key, exit_url):
+    def get_form(self, rest_handler, key, exit_url, deletable=True):
         """Build the Jinja template for the editor form."""
         rest_url = self.canonicalize_url(rest_handler.URI)
         exit_url = self.canonicalize_url(exit_url)
-        if key:
+        if key and deletable:
             delete_url = '%s?%s' % (
                 self.canonicalize_url(rest_handler.URI),
                 urllib.urlencode({
@@ -150,7 +150,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
                 request, self.XSRF_TOKEN, {'key': key}):
             return
 
-        if not unit_lesson_editor.CourseOutlineRights.can_edit(self):
+        if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -195,7 +195,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
                 self.request, self.XSRF_TOKEN, {'key': key}):
             return
 
-        if not unit_lesson_editor.CourseOutlineRights.can_delete(self):
+        if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -213,7 +213,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
     def get(self):
         """Respond to the REST GET verb with the contents of the item."""
         key = self.request.get('key')
-        if not unit_lesson_editor.CourseOutlineRights.can_view(self):
+        if not roles.Roles.is_course_admin(self.app_context):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return

@@ -764,6 +764,26 @@ class StudentPropertyEntity(BaseEntity):
 class BaseJsonDao(object):
     """Base DAO class for entities storing their data in a single JSON blob."""
 
+    class EntityKeyTypeId(object):
+
+        @classmethod
+        def get_entity_by_key(cls, entity_class, key):
+            return entity_class.get_by_id(int(key))
+
+        @classmethod
+        def new_entity(cls, entity_class, unused_key):
+            return entity_class()  # ID auto-generated when entity is put().
+
+    class EntityKeyTypeName(object):
+
+        @classmethod
+        def get_entity_by_key(cls, entity_class, key):
+            return entity_class.get_by_key_name(key)
+
+        @classmethod
+        def new_entity(cls, entity_class, key_name):
+            return entity_class(key_name=key_name)
+
     @classmethod
     def _memcache_key(cls, obj_id):
         """Makes a memcache key from datastore id."""
@@ -785,7 +805,7 @@ class BaseJsonDao(object):
         if NO_OBJECT == entity:
             return None
         if not entity:
-            entity = cls.ENTITY.get_by_id(int(obj_id))
+            entity = cls.ENTITY_KEY_TYPE.get_entity_by_key(cls.ENTITY, obj_id)
             if entity:
                 MemcacheManager.set(memcache_key, entity)
             else:
@@ -801,13 +821,19 @@ class BaseJsonDao(object):
             return None
 
     @classmethod
-    def save(cls, dto):
+    def _create_if_necessary(cls, dto):
         entity = cls._load_entity(dto.id)
         if not entity:
-            entity = cls.ENTITY()
+            entity = cls.ENTITY_KEY_TYPE.new_entity(cls.ENTITY, dto.id)
         entity.data = transforms.dumps(dto.dict)
+        return entity
+
+    @classmethod
+    def save(cls, dto):
+        entity = cls._create_if_necessary(dto)
         entity.put()
-        MemcacheManager.set(cls._memcache_key(entity.key().id()), entity)
+        MemcacheManager.set(cls._memcache_key(entity.key().id_or_name()),
+                            entity)
         return entity.key().id()
 
     @classmethod
@@ -815,22 +841,19 @@ class BaseJsonDao(object):
         """Performs a block persist of a list of DTO's."""
         entities = []
         for dto in dtos:
-            entity = cls._load_entity(dto.id)
-            if not entity:
-                entity = cls.ENTITY()
-            entity.data = transforms.dumps(dto.dict)
+            entity = cls._create_if_necessary(dto)
             entities.append(entity)
 
         keys = db.put(entities)
         for key, entity in zip(keys, entities):
-            MemcacheManager.set(cls._memcache_key(key.id()), entity)
+            MemcacheManager.set(cls._memcache_key(key.id_or_name()), entity)
         return [key.id() for key in keys]
 
     @classmethod
     def delete(cls, dto):
         entity = cls._load_entity(dto.id)
         entity.delete()
-        MemcacheManager.delete(cls._memcache_key(entity.key().id()))
+        MemcacheManager.delete(cls._memcache_key(entity.key().id_or_name()))
 
 
 class QuestionEntity(BaseEntity):
@@ -863,6 +886,7 @@ class QuestionDTO(object):
 class QuestionDAO(BaseJsonDao):
     DTO = QuestionDTO
     ENTITY = QuestionEntity
+    ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
 
     @classmethod
     def used_by(cls, question_dto_id):
@@ -918,6 +942,7 @@ class QuestionGroupDTO(object):
 class QuestionGroupDAO(BaseJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
+    ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
 
 
 class LabelEntity(BaseEntity):
@@ -989,6 +1014,7 @@ class LabelDTO(object):
 class LabelDAO(BaseJsonDao):
     DTO = LabelDTO
     ENTITY = LabelEntity
+    ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
 
     @classmethod
     def get_all(cls):
@@ -1018,3 +1044,63 @@ class LabelDAO(BaseJsonDao):
     @classmethod
     def get_set_of_ids_of_type(cls, label_type):
         return set([label.id for label in cls.get_all_of_type(label_type)])
+
+
+class StudentPreferencesEntity(BaseEntity):
+    """A class representing an individual's preferences for a course.
+
+    Note that here, we are using "Student" in the broadest sense possible:
+    some human associated with a course.  This basically means that we want to
+    support preferences that are relevant to a student's view of a course, as
+    well as a course administrator's preferences.  These will be saved in the
+    same object.  These will be kept separate by virtue of using different
+    OEditor schemas with the StudentPreferencesDTO.  Admin preferences are
+    dealt with in .../modules/dashboard/admin_preferences_editor.py.  As of
+    June 2014, there are no required student-level preferences, so we don't
+    have a handler yet for manipulating these.
+
+    Note that this type is indexed by "name" -- the key is the same as
+    that of the user.get_current_user().user_id(), which is a string.
+    This type is course-specific, so it must be accessed within a namespaced
+    context.
+    """
+    data = db.TextProperty(indexed=False)
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.name()))
+
+
+class StudentPreferencesDTO(object):
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+    @property
+    def show_hooks(self):
+        return self.dict.get('show_hooks') or False
+
+    @show_hooks.setter
+    def show_hooks(self, value):
+        self.dict['show_hooks'] = value
+
+
+class StudentPreferencesDAO(BaseJsonDao):
+    DTO = StudentPreferencesDTO
+    ENTITY = StudentPreferencesEntity
+    ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeName
+    CURRENT_VERSION = '1.0'
+
+    @classmethod
+    def ensure_exists(cls):
+        user_id = users.get_current_user().user_id()
+        prefs = cls.load(user_id)
+        if not prefs:
+            prefs = StudentPreferencesDTO(
+                user_id, {
+                    'version': cls.CURRENT_VERSION,
+                    'show_hooks': False,
+                })
+            cls.save(prefs)
+        return prefs

@@ -34,6 +34,10 @@ ABOUT_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
 This information is configured by an administrator from the Admin pages.
 """, None)
 
+ADMIN_PREFERENCES_DESCRIPTION = assemble_sanitized_message("""
+Preferences settings for individual course admins.
+""", None)
+
 ASSESSMENT_CONTENT_DESCRIPTION = assemble_sanitized_message("""
 Assessment questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')

@@ -31,6 +31,7 @@ import threading
 
 # all test classes with a total count of tests in each
 ALL_TEST_CLASSES = {
+    'tests.functional.admin_settings.AdminSettingsTests': 2,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
     'tests.functional.common_crypto.PiiObfuscationHmac': 2,
