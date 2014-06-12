@@ -79,15 +79,16 @@ class AbstractFileSystem(object):
 
     def isfile(self, filename):
         """Checks if file exists, similar to os.path.isfile(...)."""
-        if self._readonly and (
-            filename in self._isfile_cache or
-            filename in self._open_cache):
-            result = self._isfile_cache[filename]
-        else:
+        if self._readonly:
+            if filename in self._open_cache:
+                return True
+            if filename in self._isfile_cache:
+                return self._isfile_cache[filename]
             result = self._impl.isfile(filename)
-            if self._readonly:
-                self._isfile_cache[filename] = result
-        return result
+            self._isfile_cache[filename] = result
+            return result
+        else:
+            return self._impl.isfile(filename)
 
     def open(self, filename):
         """Returns a stream with the file content, similar to open(...)."""
