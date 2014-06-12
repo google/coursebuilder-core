@@ -181,33 +181,37 @@ class ReflectiveRequestHandler(object):
         return handler()
 
 
-def display_unit_title(unit):
+def _get_course_properties():
+    return Course.get_environ(sites.get_course_for_current_request())
+
+
+def display_unit_title(unit, course_properties=None):
     """Prepare an internationalized display for the unit title."""
-    app_context = sites.get_course_for_current_request()
-    if Course.get_environ(app_context)['course'].get(
-            'display_unit_title_without_index'):
+    if not course_properties:
+        course_properties = _get_course_properties()
+    if course_properties['course'].get('display_unit_title_without_index'):
         return unit.title
     else:
         # I18N: Message displayed as title for unit
         return gettext.gettext('Unit %s - %s' % (unit.index, unit.title))
 
 
-def display_short_unit_title(unit):
+def display_short_unit_title(unit, course_properties=None):
     """Prepare a short unit title."""
-    app_context = sites.get_course_for_current_request()
-    if Course.get_environ(app_context)['course'].get(
-            'display_unit_title_without_index'):
+    if not course_properties:
+        course_properties = _get_course_properties()
+    if course_properties['course'].get('display_unit_title_without_index'):
         return unit.title
     if unit.type != 'U':
         return unit.title
     return '%s %s' % (gettext.gettext('Unit'), unit.index)
 
 
-def display_lesson_title(unit, lesson):
+def display_lesson_title(unit, lesson, course_properties=None):
     """Prepare an internationalized display for the unit title."""
-    app_context = sites.get_course_for_current_request()
-    if Course.get_environ(app_context)['course'].get(
-            'display_unit_title_without_index'):
+    if not course_properties:
+        course_properties = _get_course_properties()
+    if course_properties['course'].get('display_unit_title_without_index'):
         return '%s %s' % (lesson.index, lesson.title)
     else:
         return '%s.%s %s' % (unit.index, lesson.index, lesson.title)
@@ -240,7 +244,8 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     def get_template(self, template_file, additional_dirs=None):
         """Computes location of template files for the current namespace."""
-        self.template_value[COURSE_INFO_KEY] = self.app_context.get_environ()
+        _p = self.app_context.get_environ()
+        self.template_value[COURSE_INFO_KEY] = _p
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
         self.template_value[
@@ -254,9 +259,12 @@ class ApplicationHandler(webapp2.RequestHandler):
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         template_environ.globals.update({
-            'display_unit_title': display_unit_title,
-            'display_short_unit_title': display_short_unit_title,
-            'display_lesson_title': display_lesson_title})
+            'display_unit_title': (
+                lambda unit: display_unit_title(unit, _p)),
+            'display_short_unit_title': (
+                lambda unit: display_short_unit_title(unit, _p)),
+            'display_lesson_title': (
+                lambda unit, lesson: display_lesson_title(unit, lesson, _p))})
 
         return template_environ.get_template(template_file)
 
