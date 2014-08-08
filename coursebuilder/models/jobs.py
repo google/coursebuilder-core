@@ -49,6 +49,8 @@ STATUS_CODE_FAILED = 3
 class DurableJobBase(object):
     """A class that represents a deferred durable job at runtime."""
 
+    xg_on = db.create_transaction_options(xg=True)
+
     @staticmethod
     def get_description():
         """Briefly describe the nature and purpose of your job type.
@@ -76,7 +78,8 @@ class DurableJobBase(object):
         if not self._pre_transaction_setup():
             return -1
         with Namespace(self._namespace):
-            return db.run_in_transaction(self.non_transactional_submit)
+            return db.run_in_transaction_options(self.xg_on,
+                                                 self.non_transactional_submit)
 
     def non_transactional_submit(self):
         with Namespace(self._namespace):
