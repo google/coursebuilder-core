@@ -267,6 +267,17 @@ def create_course_file_if_not_exists(handler):
             courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
 
 
+def _is_asset_in_allowed_bases(filename,
+                               allowed_bases=allowed_asset_upload_bases()):
+    for allowed_base in allowed_bases:
+        if (filename == allowed_base or
+            (filename.startswith(allowed_base) and
+             len(filename) > len(allowed_base) and
+             filename[len(allowed_base)] == '/')):
+            return True
+    return False
+
+
 class TextAssetRESTHandler(BaseRESTHandler):
     """REST endpoints for text assets."""
 
@@ -289,9 +300,6 @@ class TextAssetRESTHandler(BaseRESTHandler):
     URI = '/rest/assets/text'
     XSRF_TOKEN_NAME = 'manage-text-asset'
 
-    def _check_asset_in_allowed_bases(self, filename):
-        assert os.path.dirname(filename) in allowed_asset_upload_bases()
-
     def delete(self):
         """Handles the delete verb."""
         assert self.app_context.is_editable_fs()
@@ -306,7 +314,10 @@ class TextAssetRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': filename})
             return
 
-        self._check_asset_in_allowed_bases(filename)
+        if not _is_asset_in_allowed_bases(filename):
+            transforms.send_json_response(
+                self, 400, 'Malformed request.', {'key': filename})
+            return
 
         self.app_context.fs.impl.delete(
             os.path.join(appengine_config.BUNDLE_ROOT, filename))
@@ -354,7 +365,10 @@ class TextAssetRESTHandler(BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': filename})
             return
 
-        self._check_asset_in_allowed_bases(filename)
+        if not _is_asset_in_allowed_bases(filename):
+            transforms.send_json_response(
+                self, 400, 'Malformed request.', {'key': filename})
+            return
 
         self.app_context.fs.impl.put(
             os.path.join(appengine_config.BUNDLE_ROOT, filename),
@@ -553,23 +567,29 @@ class AssetItemRESTHandler(BaseRESTHandler):
         'inputex-string', 'inputex-uneditable', 'inputex-file',
         'io-upload-iframe']
 
+    XSRF_TOKEN_NAME = 'asset-upload'
+
     def _can_write_payload_to_base(self, payload, base):
         """Determine if a given payload type can be put in a base directory."""
         # Binary data can go in images; text data can go anywhere else.
-        if base in ALLOWED_ASSET_BINARY_BASES:
+        if _is_asset_in_allowed_bases(base, ALLOWED_ASSET_BINARY_BASES):
             return True
         else:
-            return is_text_payload(payload) and base in ALLOWED_ASSET_TEXT_BASES
+            return is_text_payload(payload) and _is_asset_in_allowed_bases(
+                base, ALLOWED_ASSET_TEXT_BASES)
 
     def get(self):
         """Provides empty initial content for asset upload editor."""
         # TODO(jorr): Pass base URI through as request param when generalized.
         base = self.request.get('key')
-        assert base in allowed_asset_upload_bases()
+        if not _is_asset_in_allowed_bases(base):
+            transforms.send_json_response(
+                self, 400, 'Malformed request.', {'key': base})
+            return
         json_payload = {'file': '', 'base': base}
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict=json_payload,
-            xsrf_token=XsrfTokenManager.create_xsrf_token('asset-upload'))
+            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN_NAME))
 
     def post(self):
         """Handles asset uploads."""
@@ -581,12 +601,16 @@ class AssetItemRESTHandler(BaseRESTHandler):
             return
 
         request = transforms.loads(self.request.get('request'))
-        if not self.assert_xsrf_token_or_fail(request, 'asset-upload', None):
+        if not self.assert_xsrf_token_or_fail(request, self.XSRF_TOKEN_NAME,
+                                              None):
             return
 
         payload = transforms.loads(request['payload'])
         base = payload['base']
-        assert base in allowed_asset_upload_bases()
+        if not _is_asset_in_allowed_bases(base):
+            transforms.send_json_response(
+                self, 400, 'Malformed request.', {'key': base})
+            return
         upload = self.request.POST['file']
 
         if not isinstance(upload, cgi.FieldStorage):

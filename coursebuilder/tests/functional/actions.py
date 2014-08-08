@@ -244,10 +244,11 @@ class TestBase(suite.AppEngineTestBase):
         response = self.testapp.get(url, **kwargs)
         return self.hook_response(response)
 
-    def post(self, url, params, expect_errors=False):
+    def post(self, url, params, expect_errors=False, upload_files=None):
         url = self.canonicalize(url)
         logging.info('HTTP Post: %s', url)
-        response = self.testapp.post(url, params, expect_errors=expect_errors)
+        response = self.testapp.post(url, params, expect_errors=expect_errors,
+                                     upload_files=upload_files)
         return self.hook_response(response)
 
     def put(self, url, params, expect_errors=False):
