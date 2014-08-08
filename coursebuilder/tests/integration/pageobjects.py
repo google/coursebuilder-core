@@ -64,6 +64,12 @@ class PageObject(object):
             ec.text_to_be_present_in_element(
                 (by.By.ID, 'gcb-butterbar-message'), value))
 
+    def wait_until_status_message_hidden(self):
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            ec.invisibility_of_element_located(
+                (by.By.ID, 'gcb-butterbar-message')))
+        return self
+
 
 class EditorPageObject(PageObject):
     """Page object for pages which wait for the editor to finish loading."""
@@ -662,6 +668,7 @@ class CourseContentElement(DashboardEditor):
         return self
 
     def click_rich_text(self, index=0):
+        self.wait_until_status_message_hidden()
         el = self.find_element_by_css_selector('div.rte-control', index)
         self._tester.assertEqual('Rich Text', el.text)
         el.click()
