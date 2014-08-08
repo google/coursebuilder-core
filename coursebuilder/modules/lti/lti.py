@@ -366,37 +366,35 @@ def register_module():
 
   global custom_module
 
-  example = safe_dom.NodeList().append(safe_dom.Element('pre').add_text('''
-- name: my_tool
-  description: My Tool
-  url: http://launch.url
-  key: 1234
-  secret: 5678
-  version: 1.2
-'''))
-  lti_field_name = '%s:%s' % (_CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1)
-  lti_field = schema_fields.SchemaField(
-      lti_field_name, 'LTI tools', 'text', optional=True,
-      description='LTI tools. This is a YAML string containing zero or more '
-      'configurations. Each configuration needs to have a "name" (which must '
-      'be unique); a "key" and a "secret", both of which come from the LTI '
-      'tool provider you are using; a "description", which is displayed in the '
-      'editor when selecting your LTI tool; a "url", which is the LTI launch '
-      'URL of the tool you are using; and a "version", which is the version of '
-      'the LTI specification the tool uses (we support 1.0 - 1.2). For '
-      'example:' + example.sanitized)
-
-  course_registry = (
-      # Treat as module-protected. pylint: disable-msg=protected-access
-      course_settings.CourseSettingsRESTHandler.REGISTRY._sub_registories[
-          _CONFIG_KEY_COURSE])
+  def get_criteria_specification_schema(unused_course):
+    example = safe_dom.NodeList().append(safe_dom.Element('pre').add_text('''
+    - name: my_tool
+    description: My Tool
+    url: http://launch.url
+    key: 1234
+    secret: 5678
+    version: 1.2
+    '''))
+    lti_field_name = '%s:%s' % (_CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1)
+    return schema_fields.SchemaField(
+        lti_field_name, 'LTI tools', 'text', optional=True,
+        description='LTI tools. This is a YAML string containing zero or more '
+        'configurations. Each configuration needs to have a "name" (which must '
+        'be unique); a "key" and a "secret", both of which come from the LTI '
+        'tool provider you are using; a "description", which is displayed in '
+        'the editor when selecting your LTI tool; a "url", which is the LTI '
+        'launch URL of the tool you are using; and a "version", which is the '
+        'version of the LTI specification the tool uses '
+        '(we support 1.0 - 1.2). For example:' + example.sanitized)
 
   def on_module_enabled():
-    course_registry.add_property(lti_field)
+    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.append(
+        get_criteria_specification_schema)
     tags.Registry.add_tag_binding(LTIToolTag.binding_name, LTIToolTag)
 
   def on_module_disabled():
-    course_registry.remove_property(lti_field_name)
+    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
+         get_criteria_specification_schema)
     tags.Registry.remove_tag_binding(LTIToolTag.binding_name)
 
   global_handlers = []

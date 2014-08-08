@@ -1,0 +1,55 @@
+div.cc-criteria {
+  width: 500px;
+  float: left;
+}
+
+div.cc-criteria a {
+  color: #000;
+  background-color: #f2f2f2;
+  border: solid #808080 1px;
+  padding: 3px;
+  font-weight: bold;
+  font-size: 10px;
+  margin-left: 0px;
+}
+
+div.cc-criteria a:hover {
+  text-decoration: none;
+}
+
+div.cc-criteria div.inputEx-description {
+  margin-top: 10px;
+}
+
+div.cc-criterion div.inputEx-description {
+  width: 390px;
+  display: none;
+}
+
+div.cc-criterion {
+  margin-left: 0px;
+  width: 100%;
+}
+
+div.cc-criterion + a {
+  float: right;
+  margin-top: -40px;
+  margin-right: 7px;
+}
+
+div.cc-criterion select {
+  width: 220px;
+}
+
+div.cc-criterion input {
+  width: 30px;
+}
+
+div#formContainer div.cc-criterion fieldset {
+  border: solid #999 1px;
+  margin-left: 0px;
+}
+
+div#formContainer div.cc-criterion fieldset legend span {
+  font-weight: normal;
+}

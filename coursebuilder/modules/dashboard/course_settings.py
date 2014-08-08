@@ -23,6 +23,7 @@ import yaml
 from common import schema_fields
 from common import tags
 from controllers.utils import ApplicationHandler
+from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
@@ -54,8 +55,12 @@ class CourseSettingsRights(object):
         return cls.can_edit(handler)
 
 
-class CourseSettingsHandler(ApplicationHandler):
+class CourseSettingsHandler(BaseHandler):
     """Course settings handler."""
+
+    EXTRA_CSS_FILES = []
+    EXTRA_JS_FILES = []
+    ADDITIONAL_DIRS = []
 
     def post_edit_basic_course_settings(self):
         """Handles editing of course.yaml."""
@@ -77,7 +82,8 @@ class CourseSettingsHandler(ApplicationHandler):
         # entire sub-registries, or a single item.  E.g., "course" selects all
         # items under the 'course' sub-registry, while
         # "base:before_head_tag_ends" selects just that one field.
-        registry = CourseSettingsRESTHandler.REGISTRY
+        registry = create_course_settings_schema(self.get_course())
+
         section_names = self.request.get('section_names')
         if section_names:
             registry = registry.clone_only_items_named(section_names.split(':'))
@@ -86,7 +92,9 @@ class CourseSettingsHandler(ApplicationHandler):
         rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
             self, registry.get_json_schema(), registry.get_schema_dict(),
-            key, rest_url, exit_url,
+            key, rest_url, exit_url, extra_css_files=self.EXTRA_CSS_FILES,
+            extra_js_files=self.EXTRA_JS_FILES,
+            additional_dirs=self.ADDITIONAL_DIRS,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
 
         template_values = {}
@@ -96,7 +104,10 @@ class CourseSettingsHandler(ApplicationHandler):
         self.render_page(template_values)
 
 
-def _create_course_registry():
+EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS = []
+
+
+def create_course_settings_schema(course):
     """Create the registry for course properties."""
 
     reg = schema_fields.FieldRegistry('Basic Course Settings',
@@ -190,6 +201,9 @@ def _create_course_registry():
         'outgoing messages will fail. Note that you cannot use the user in '
         'session. See https://developers.google.com/appengine/docs/python/mail/'
         'emailmessagefields for details'))
+
+    for schema_provider in EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS:
+        course_opts.add_property(schema_provider(course))
 
     # Unit level settings.
     unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
@@ -372,8 +386,6 @@ class CourseYamlRESTHandler(BaseRESTHandler):
 class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     """Provides REST API for a file."""
 
-    REGISTRY = _create_course_registry()
-
     REQUIRED_MODULES = [
         'inputex-date', 'inputex-string', 'inputex-textarea', 'inputex-url',
         'inputex-checkbox', 'inputex-select', 'inputex-uneditable', 'gcb-rte']
@@ -401,17 +413,18 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
     def process_get(self):
         entity = {}
-        CourseSettingsRESTHandler.REGISTRY.convert_entity_to_json_entity(
+        schema = create_course_settings_schema(self.get_course())
+        schema.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
 
         json_payload = transforms.dict_to_json(
-            entity, CourseSettingsRESTHandler.REGISTRY.get_json_schema_dict())
+            entity, schema.get_json_schema_dict())
 
         return json_payload
 
     def process_put(self, request, payload):
         request_data = {}
-        CourseSettingsRESTHandler.REGISTRY.convert_json_to_entity(
+        create_course_settings_schema(self.get_course()).convert_json_to_entity(
             payload, request_data)
 
         if 'course' in request_data:

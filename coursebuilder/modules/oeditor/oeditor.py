@@ -56,6 +56,7 @@ class ObjectEditor(object):
         required_modules=None,
         extra_css_files=None,
         extra_js_files=None,
+        additional_dirs=None,
         delete_button_caption='Delete',
         save_button_caption='Save',
         exit_button_caption='Close'):
@@ -81,6 +82,8 @@ class ObjectEditor(object):
             required_modules: list of inputex modules required for this editor
             extra_css_files: list of extra CSS files to be included
             extra_js_files: list of extra JS files to be included
+            additional_dirs: list of extra directories to look for
+                Jinja template files, e.g., JS or CSS files included by modules.
             delete_button_caption: string. A caption for the 'Delete' button
             save_button_caption: a caption for the 'Save' button
             exit_button_caption: a caption for the 'Close' button
@@ -144,9 +147,9 @@ class ObjectEditor(object):
         if appengine_config.BUNDLE_LIB_FILES:
             template_values['bundle_lib_files'] = True
 
-        return jinja2.utils.Markup(handler.get_template(
-            'oeditor.html', [os.path.dirname(__file__)]
-        ).render(template_values))
+        return jinja2.utils.Markup(handler.get_template('oeditor.html', (
+            [os.path.dirname(__file__)] + (additional_dirs or [])
+        )).render(template_values))
 
 
 class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):

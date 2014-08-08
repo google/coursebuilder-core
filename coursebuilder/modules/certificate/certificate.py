@@ -39,10 +39,12 @@ import os
 
 import appengine_config
 from common import safe_dom
+from common import schema_fields
 from common import tags
 from controllers import utils
 from models import custom_modules
 from modules.certificate import custom_criteria
+from modules.dashboard import course_settings
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
 RESOURCES_PATH = '/modules/certificate/resources'
@@ -67,23 +69,56 @@ class ShowCertificateHandler(utils.BaseHandler):
         self.response.out.write(template.render({'student': student}))
 
 
-def _get_score_by_id(score_list, assignment_id):
+def _get_score_by_id(score_list, assessment_id):
     for score in score_list:
-        if score['id'] == str(assignment_id):
+        if score['id'] == str(assessment_id):
             return score
     return None
 
 
-def _check_assignment_criterion(criterion, score_list):
-    """Checks whether the criterion for an assessment is met."""
+def _prepare_custom_criterion(custom, student, course):
+    assert hasattr(custom_criteria, custom), ((
+        'custom criterion %s is not implemented '
+        'as a function in custom_criteria.py.') % custom)
+    assert (custom in custom_criteria.registration_table), ((
+        'Custom criterion %s is not whitelisted '
+        'in the registration_table in custom_criteria.py.') % custom)
 
-    score = _get_score_by_id(score_list, criterion['assignment_id'])
-    if not score['completed']:
-        return False
-    if 'pass_percent' in criterion:
-        return score['score'] >= criterion['pass_percent']
-    else:
+    def _check_custom_criterion():
+        if not getattr(custom_criteria, custom)(student, course):
+            return False
         return True
+
+    return _check_custom_criterion
+
+
+def _prepare_assessment_criterion(score_list, criterion):
+    score = _get_score_by_id(score_list, criterion['assessment_id'])
+    assert score is not None, (
+        'Invalid assessment id %s.' % criterion['assessment_id'])
+    pass_percent = criterion.get('pass_percent', '')
+    if pass_percent is not '':
+        # Must be machine graded
+        assert not score['human_graded'], (
+            'If pass_percent is provided, '
+            'the assessment must be machine graded.')
+        pass_percent = int(pass_percent)
+        assert (pass_percent >= 0) and (pass_percent <= 100), (
+            'pass_percent must be between 0 and 100.')
+    else:
+        # Must be peer graded
+        assert score['human_graded'], (
+            'If pass_percent is not provided, '
+            'the assessment must be human graded.')
+
+    def _check_assessment_criterion():
+        if not score['completed']:
+            return False
+        if pass_percent is not '':
+            return score['score'] >= pass_percent
+        return True
+
+    return _check_assessment_criterion
 
 
 def student_is_qualified(student, course):
@@ -97,52 +132,32 @@ def student_is_qualified(student, course):
     Returns:
         True if the student is qualified, False otherwise.
     """
-
     environ = course.app_context.get_environ()
     score_list = course.get_all_scores(student)
 
     if not environ.get('certificate_criteria'):
         return False
 
+    criteria_functions = []
     # First validate the correctness of _all_ provided criteria
     for criterion in environ['certificate_criteria']:
-        if 'custom_criteria' in criterion:
-            custom = criterion['custom_criteria']
-            assert hasattr(custom_criteria, custom), (
-                'custom criterion %s is not implemented' +
-                'as a function in custom_criteria.py.' % custom)
-            assert (custom in custom_criteria.registration_table), (
-                'Custom criterion %s is not whitelisted ' +
-                'in the registration_table in custom_criteria.py.' % custom)
-        elif 'assignment_id' in criterion:
-            score = _get_score_by_id(score_list, criterion['assignment_id'])
-            assert score is not None, (
-                'Invalid assessment id %s.' % criterion['assignment_id'])
-            if 'pass_percent' in criterion:
-                # Must be machine graded
-                assert not score['human_graded'], (
-                    'If pass_percent is provided, '
-                    'the assessment must be machine graded.')
-                assert (criterion['pass_percent'] >= 0) and (
-                    criterion['pass_percent'] <= 100), (
-                    'pass_percent must be between 0 and 100.')
-            else:
-                # Must be peer graded
-                assert score['human_graded'], (
-                    'If pass_percent is not provided, '
-                    'the assessment must be human graded.')
+        assessment_id = criterion.get('assessment_id', '')
+        custom = criterion.get('custom_criteria', '')
+        assert (assessment_id is not '') or (custom is not ''), (
+            'assessment_id and custom_criteria cannot be both empty.')
+        if custom is not '':
+            criteria_functions.append(
+                _prepare_custom_criterion(custom, student, course))
+        elif assessment_id is not '':
+            criteria_functions.append(
+                _prepare_assessment_criterion(score_list, criterion))
         else:
             assert False, 'Invalid certificate criterion %s.' % criterion
 
     # All criteria are valid, now do the checking.
-    for criterion in environ['certificate_criteria']:
-        if 'custom_criteria' in criterion:
-            if not getattr(custom_criteria, criterion['custom_criteria'])(
-                    student, course):
-                return False
-        elif 'assignment_id' in criterion:
-            if not _check_assignment_criterion(criterion, score_list):
-                return False
+    for criterion_function in criteria_functions:
+        if not criterion_function():
+            return False
 
     return True
 
@@ -162,6 +177,60 @@ def get_certificate_table_entry(student, course):
             'completion.')}
 
 
+def get_criteria_editor_schema(course):
+    criterion_type = schema_fields.FieldRegistry(
+        'Criterion',
+        extra_schema_dict_values={'className': 'cc-criterion'})
+
+    select_data = [('default', '-- Select requirement --'), (
+        '', '-- Custom criterion --')]
+    for unit in course.get_assessment_list():
+        select_data.append((unit.unit_id, unit.title + (
+            ' [Peer Graded]' if course.needs_human_grader(unit) else '')))
+
+    criterion_type.add_property(schema_fields.SchemaField(
+        'assessment_id', 'Requirement', 'string', optional=True,
+        # The JS will only reveal the following description
+        # for peer-graded assessments
+        description='When specifying a peer graded assessment as criterion, '
+            'the student should complete both the assessment '
+            'and the minimum of peer reviews.',
+        select_data=select_data,
+        extra_schema_dict_values={
+            'className': 'assessment-dropdown'}))
+
+    criterion_type.add_property(schema_fields.SchemaField(
+        'pass_percent', 'Passing Percentage', 'string', optional=True,
+        extra_schema_dict_values={
+            'className': 'pass-percent'}))
+
+    select_data = [('', '-- Select criterion method--')]+[(
+        x, x) for x in custom_criteria.registration_table]
+    criterion_type.add_property(schema_fields.SchemaField(
+        'custom_criteria', 'Custom Criterion', 'string', optional=True,
+        select_data=select_data,
+        extra_schema_dict_values={
+            'className': 'custom-criteria'}))
+
+    is_peer_assessment_table = {}
+    for unit in course.get_assessment_list():
+        is_peer_assessment_table[unit.unit_id] = (
+            True if course.needs_human_grader(unit) else False)
+
+    return schema_fields.FieldArray(
+        'certificate_criteria', 'Certificate criteria',
+        item_type=criterion_type,
+        description='Certificate award criteria. Add the criteria which '
+            'students must meet to be awarded a certificate of completion. '
+            'In order to receive a certificate, '
+            'the student must meet all the criteria.',
+        extra_schema_dict_values={
+            'is_peer_assessment_table': is_peer_assessment_table,
+            'className': 'cc-criteria',
+            'listAddLabel': 'Add a criterion',
+            'listRemoveLabel': 'Delete criterion'})
+
+
 custom_module = None
 
 
@@ -169,10 +238,30 @@ def register_module():
     """Registers this module in the registry."""
 
     def on_module_enabled():
+        course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
+            'inputex-list')
+        course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.append(
+            get_criteria_editor_schema)
+        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
+            os.path.dirname(__file__))
+        course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(
+            'course_settings.css')
+        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
+            'course_settings.js')
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.append(
             get_certificate_table_entry)
 
     def on_module_disabled():
+        course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.remove(
+            'inputex-list')
+        course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
+            get_criteria_editor_schema)
+        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
+            os.path.dirname(__file__))
+        course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.remove(
+            'course_settings.css')
+        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.remove(
+            'course_settings.js')
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
             get_certificate_table_entry)
 

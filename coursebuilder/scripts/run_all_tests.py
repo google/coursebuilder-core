@@ -135,7 +135,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_safe_dom.EntityTests': 11,
     'tests.unit.common_tags.CustomTagTests': 12,
     'tests.unit.common_utils.CommonUnitTests': 11,
-    'tests.unit.javascript_tests.AllJavaScriptTests': 5,
+    'tests.unit.javascript_tests.AllJavaScriptTests': 6,
     'tests.unit.models_analytics.AnalyticsTests': 5,
     'tests.unit.models_courses.WorkflowValidationTests': 13,
     'tests.unit.models_transforms.JsonToDictTests': 12,

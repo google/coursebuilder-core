@@ -190,7 +190,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         self.course.save()
 
         self.certificate_criteria.append(
-            {'assignment_id': assessment.unit_id, 'pass_percent': 70})
+            {'assessment_id': assessment.unit_id, 'pass_percent': 70})
 
         # Student has not yet completed assessment, expect redirect to home page
         response = self.get('certificate')
@@ -272,7 +272,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         self.course.save()
 
         self.certificate_criteria.append(
-            {'assignment_id': assessment.unit_id})
+            {'assessment_id': assessment.unit_id})
 
         response = self.get('certificate')
         self._assert_redirect_to_course_landing_page(response)
@@ -284,11 +284,11 @@ class CertificateCriteriaTestCase(actions.TestBase):
             presubmit_checks=False
         )
 
-        # Submitting assignment without doing required reviews is not enough
+        # Submitting assessment without doing required reviews is not enough
         response = self.get('certificate')
         self._assert_redirect_to_course_landing_page(response)
 
-        # Submitting assignment together with required reviews is enough
+        # Submitting assessment together with required reviews is enough
         self._submit_review(assessment)
 
         response = self.get('certificate')
@@ -329,8 +329,8 @@ class CertificateCriteriaTestCase(actions.TestBase):
         self.course.save()
 
         self.certificate_criteria.extend([
-            {'assignment_id': machine_graded.unit_id, 'pass_percent': 30},
-            {'assignment_id': peer_graded.unit_id}])
+            {'assessment_id': machine_graded.unit_id, 'pass_percent': 30},
+            {'assessment_id': peer_graded.unit_id}])
 
         # Confirm that meeting one criterion is not sufficient
         actions.submit_assessment(

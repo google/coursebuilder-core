@@ -359,7 +359,7 @@ TopLevelEditorControls.prototype = {
     // Allow custom code to register a pre-save handler. If it returns 'false'
     // it will block further action.
     if (this._env.onSaveClick && this._env.onSaveClick() === false) {
-      return;
+      return false;
     }
 
     cbShowMsg("Saving...");
@@ -497,7 +497,7 @@ TopLevelEditorControls.prototype = {
     // Allow custom code to register a pre-close handler. If it returns 'false'
     // it will block further action.
     if (this._env.onCloseClick && this._env.onCloseClick() === false) {
-      return;
+      return false;
     }
 
     disableAllControlButtons(this._env.form);
@@ -528,7 +528,7 @@ TopLevelEditorControls.prototype = {
     // Allow custom code to register a pre-delete handler. If it returns 'false'
     // it will block further action.
     if (this._env.onDeleteClick && this._env.onDeleteClick() === false) {
-      return;
+      return false;
     }
 
     disableAllControlButtons(this._env.form);
