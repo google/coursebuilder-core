@@ -1,44 +1,42 @@
-<div class="gcb-aside gcb-button-box">
-  {% if lesson.now_available or is_course_admin %}
-    <div class="gcb-cols">
-      <div id="lesson-title" class="gcb-col-7">
-        <h1 class="gcb-lesson-title">
-          {{ title }}
-          {% if not lesson.now_available and is_course_admin %}
-            <span id="lesson-title-private">
-              (Private)
-            </span>
-          {% endif %}
-        </h1>
-      </div>
-      <div id="get-text-button" class="gcb-col-3">
-        <p style="float:right; margin-top: 0px;">
-          {% if lesson.notes %}
-          <a role="button" class="gcb-button" id="lessonNotesLink"
-             href="{{ lesson.notes }}" target="_blank">
-            {# I18N: Link to a text version of a lesson video. #}
-            {{ gettext('Text Version') }}
-          </a>
-          {% endif %}
-        </p>
-      </div>
-    </div><!-- /gcb-cols -->
-
-
-    {% if activity %}
-      {% include 'activity.html' %}
-    {% else %}
-      {% include 'lesson.html' %}
-    {% endif %}
-
-  {% else %}
-    <h1 class="gcb-lesson-title">
-      {{ lesson.title }}
-    </h1>
-    <br><br>
-    <div>
-      {# I18N: Text shown for a lesson that has not been made public. #}
-      {{ gettext('This lesson is not available.')}}
+{% if lesson.now_available or is_course_admin %}
+  <div class="gcb-cols">
+    <div id="lesson-title" class="gcb-col-7">
+      <h1 class="gcb-lesson-title">
+        {{ title }}
+        {% if not lesson.now_available and is_course_admin %}
+          <span id="lesson-title-private">
+            (Private)
+          </span>
+        {% endif %}
+      </h1>
     </div>
+    <div id="get-text-button" class="gcb-col-3">
+      <p style="float:right; margin-top: 0px;">
+        {% if lesson.notes %}
+        <a role="button" class="gcb-button" id="lessonNotesLink"
+           href="{{ lesson.notes }}" target="_blank">
+          {# I18N: Link to a text version of a lesson video. #}
+          {{ gettext('Text Version') }}
+        </a>
+        {% endif %}
+      </p>
+    </div>
+  </div><!-- /gcb-cols -->
+
+
+  {% if activity %}
+    {% include 'activity.html' %}
+  {% else %}
+    {% include 'lesson.html' %}
   {% endif %}
-</div><!-- /gcb-aside -->
+
+{% else %}
+  <h1 class="gcb-lesson-title">
+    {{ lesson.title }}
+  </h1>
+  <br><br>
+  <div>
+    {# I18N: Text shown for a lesson that has not been made public. #}
+    {{ gettext('This lesson is not available.')}}
+  </div>
+{% endif %}
