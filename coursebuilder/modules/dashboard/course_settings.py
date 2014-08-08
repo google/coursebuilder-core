@@ -20,6 +20,7 @@ import cgi
 import urllib
 import yaml
 
+from common import locales
 from common import schema_fields
 from common import tags
 from controllers.utils import ApplicationHandler
@@ -158,8 +159,38 @@ def create_course_settings_schema(course):
         'tabs, spaces, commas, or newlines.  Existing values using "[" and '
         '"]" around email addresses continues to be supported.  '
         'Regular expressions are not supported.'))
+
+    locale_data_for_select = [
+        (loc, locales.get_locale_display_name(loc))
+        for loc in locales.get_system_supported_locales()]
     course_opts.add_property(schema_fields.SchemaField(
-        'course:locale', 'Locale', 'string'))
+        'course:locale', 'Base Locale', 'string',
+        select_data=locale_data_for_select))
+
+    locale_type = schema_fields.FieldRegistry(
+        'Locale',
+        extra_schema_dict_values={'className': 'settings-list-item'})
+
+    locale_type.add_property(schema_fields.SchemaField(
+        'locale', 'Locale', 'string', optional=True,
+        select_data=locale_data_for_select))
+
+    select_data = [('unavailable', 'Unavailable'), ('available', 'Available')]
+    locale_type.add_property(schema_fields.SchemaField(
+        'availability', 'Availability', 'boolean', optional=True,
+        select_data=select_data))
+
+    course_opts.add_property(schema_fields.FieldArray(
+        'extra_locales', 'Extra locales',
+        item_type=locale_type,
+        description=(
+            'Locales which are listed here and marked as available can be '
+            'selected by students as their preferred locale.'),
+        extra_schema_dict_values={
+            'className': 'settings-list',
+            'listAddLabel': 'Add a locale',
+            'listRemoveLabel': 'Delete locale'}))
+
     course_opts.add_property(schema_fields.SchemaField(
         'course:start_date', 'Course Start Date', 'string', optional=True))
     course_opts.add_property(schema_fields.SchemaField(

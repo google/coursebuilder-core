@@ -186,7 +186,7 @@ def get_certificate_table_entry(student, course):
 def get_criteria_editor_schema(course):
     criterion_type = schema_fields.FieldRegistry(
         'Criterion',
-        extra_schema_dict_values={'className': 'cc-criterion'})
+        extra_schema_dict_values={'className': 'settings-list-item'})
 
     select_data = [('default', '-- Select requirement --'), (
         '', '-- Custom criterion --')]
@@ -210,7 +210,7 @@ def get_criteria_editor_schema(course):
         extra_schema_dict_values={
             'className': 'pass-percent'}))
 
-    select_data = [('', '-- Select criterion method--')]+[(
+    select_data = [('', '-- Select criterion method--')] + [(
         x, x) for x in custom_criteria.registration_table]
     criterion_type.add_property(schema_fields.SchemaField(
         'custom_criteria', 'Custom Criterion', 'string', optional=True,
@@ -232,7 +232,7 @@ def get_criteria_editor_schema(course):
             'the student must meet all the criteria.',
         extra_schema_dict_values={
             'is_peer_assessment_table': is_peer_assessment_table,
-            'className': 'cc-criteria',
+            'className': 'settings-list',
             'listAddLabel': 'Add a criterion',
             'listRemoveLabel': 'Delete criterion'})
 

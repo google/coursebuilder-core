@@ -43,6 +43,7 @@ def register_module():
         ('/forum', utils.ForumHandler),
         ('/preview', utils.PreviewHandler),
         ('/register', utils.RegisterHandler),
+        ('/rest/locale', utils.StudentLocaleRESTHandler),
         ('/review', lessons.ReviewHandler),
         ('/reviewdashboard', lessons.ReviewDashboardHandler),
         ('/student/editstudent', utils.StudentEditStudentHandler),

@@ -1792,6 +1792,82 @@ class StudentAspectTest(actions.TestBase):
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old
 
+    def test_locale_settings(self):
+        extra_environ = {
+            'course': {'locale': 'en_US'},
+            'extra_locales': [
+                {'locale': 'el', 'availability': 'available'},
+                {'locale': 'fr', 'availability': 'unavailable'}]}
+
+        with actions.OverriddenEnvironment(extra_environ):
+
+            # Visit course home page with no locale settings and see the default
+            # locale
+            course_page = self.parse_html_string(self.get('course').body)
+            self.assertEquals(
+                'Registration', course_page.find('.//a[@href="register"]').text)
+
+            # Visit course home page with accept-language set to an available
+            # locale
+            course_page = self.parse_html_string(
+                self.get('course', headers={'Accept-Language': 'el'}).body)
+            self.assertEquals(
+                u'Εγγραφή', course_page.find('.//a[@href="register"]').text)
+
+            # Visit course home page with accept-language set to an unavailable
+            # locale
+            course_page = self.parse_html_string(
+                self.get('course', headers={'Accept-Language': 'fr'}).body)
+            self.assertEquals(
+                u'Registration',
+                course_page.find('.//a[@href="register"]').text)
+
+            # Locale picker not show for user out of session
+            locale_select = course_page.find('.//select[@id="locale-select"]')
+            self.assertIsNone(locale_select)
+
+            actions.login('user@place.com')
+
+            # Locale picker shown for user in session. Chooser shows only
+            # available locales.
+            course_page = self.parse_html_string(self.get('course').body)
+            locale_options = course_page.findall(
+                './/select[@id="locale-select"]/option')
+            self.assertEqual(2, len(locale_options))
+            self.assertEquals('en_US', locale_options[0].attrib['value'])
+            self.assertEquals('el', locale_options[1].attrib['value'])
+
+            # Set language prefs using the REST endoint
+
+            # A bad XSRF token is rejected
+            request = {'xsrf_token': '1234'}
+            response = transforms.loads(self.post(
+                'rest/locale', {'request': transforms.dumps(request)}).body)
+            self.assertEquals(403, response['status'])
+            self.assertIn('Bad XSRF token', response['message'])
+
+            xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('locales')
+
+            # An unavailable locale is rejected
+            request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'fr'}}
+            response = transforms.loads(self.post(
+                'rest/locale', {'request': transforms.dumps(request)}).body)
+            self.assertEquals(401, response['status'])
+            self.assertIn('Bad locale', response['message'])
+
+            # An available locale is accepted
+            request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'el'}}
+            response = transforms.loads(self.post(
+                'rest/locale', {'request': transforms.dumps(request)}).body)
+            self.assertEquals(200, response['status'])
+            self.assertIn('OK', response['message'])
+
+            # After setting locale, visit course homepage and see new locale
+
+            course_page = self.parse_html_string(self.get('course').body)
+            self.assertEquals(
+                u'Εγγραφή', course_page.find('.//a[@href="register"]').text)
+
     def test_lesson_activity_navigation(self):
         """Test navigation between lesson/activity pages."""
 

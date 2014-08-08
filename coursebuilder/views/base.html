@@ -135,6 +135,34 @@
         window.location=('dashboard?action=edit_html_hook&key=' +
             encodeURIComponent(key));
       }
+      $(function() {
+        function parseJson(s) {
+          var xssiPrefix = ")]}'";
+          return JSON.parse(s.replace(xssiPrefix, ''));
+        }
+
+        $("#locale-select").change(function() {
+          var localeSelect = $("#locale-select");
+          var request = JSON.stringify({
+            xsrf_token: localeSelect.data("xsrf-token"),
+            payload: {
+              selected: localeSelect.val()
+            }
+          });
+          $.ajax({
+            url: "rest/locale",
+            type: "POST",
+            data: {request: request},
+            dataType: "text",
+            success: function(data) {
+              data = parseJson(data);
+              if (data.status == 200) {
+                window.location.reload();
+              }
+            }
+          });
+        });
+      });
     </script>
     {{ course_info.base.before_head_tag_ends | safe}}
   </head>
@@ -272,6 +300,20 @@
                 {{ gettext('Privacy & Terms') }}
               </a>
             </li>
+            {% if available_locales %}
+              <li>
+                {# I18N: Text describing the locale selector. #}
+                {{ gettext('Locale:') }}
+                <select id="locale-select" data-xsrf-token="{{ locale_xsrf_token}}">
+                  {% for locale in available_locales %}
+                    <option value="{{ locale.value }}"
+                      {% if locale.value == selected_locale %}selected{% endif %}>
+                      {{ locale.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </li>
+            {% endif %}
           </ul>
         </div>
       </div>

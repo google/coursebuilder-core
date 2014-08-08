@@ -790,6 +790,15 @@ class ApplicationContext(object):
     def is_editable_fs(self):
         return self._fs.impl.__class__ == DatastoreBackedFileSystem
 
+    def get_available_locales(self):
+        environ = self.get_environ()
+        default_locale = environ['course'].get('locale')
+        extra_locales = environ.get('extra_locales', [])
+        return [default_locale] + [
+            loc['locale'] for loc in extra_locales
+            if loc['locale'] != default_locale and (
+                loc['availability'] == 'available')]
+
 
 def _courses_config_validator(rules_text, errors):
     """Validates a textual definition of courses entries."""

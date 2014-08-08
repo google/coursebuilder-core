@@ -17,7 +17,6 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import os
-import sha
 import urllib
 import urlparse
 
@@ -128,11 +127,8 @@ class UnsubscribeHandler(utils.BaseHandler):
 
 
 def _get_signature(handler, email):
-    return sha.new(
-        '%s%s%s' % (
-            email, handler.app_context.get_namespace_name(),
-            crypto.XSRF_SECRET.value)
-    ).hexdigest()
+    return crypto.EncryptionManager.hmac(
+        [email, handler.app_context.get_namespace_name()]).encode('hex')
 
 
 class SubscriptionStateEntity(entities.BaseEntity):

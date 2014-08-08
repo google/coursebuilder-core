@@ -27,6 +27,7 @@ import webapp2
 
 import appengine_config
 from common import jinja_utils
+from common import locales
 from common import safe_dom
 from common import tags
 from common import utils as common_utils
@@ -323,6 +324,22 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).__init__(*args, **kwargs)
         self.template_value = {}
 
+    def get_locale(self):
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if prefs is not None and prefs.locale is not None:
+            return prefs.locale
+
+        accept_lang_list = locales.parse_accept_language(
+            self.request.headers.get('Accept-Language'))
+        available_locales = self.app_context.get_available_locales()
+
+        for lang, _ in accept_lang_list:
+            for supported_lang in available_locales:
+                if lang.lower() == supported_lang.lower():
+                    return supported_lang
+
+        return self.template_value[COURSE_INFO_KEY]['course']['locale']
+
     def init_template_values(self, environ):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
@@ -343,14 +360,25 @@ class ApplicationHandler(webapp2.RequestHandler):
                     return context
                 self.template_value['context'] = get_context
 
+        # Common template information for the locale picker (only shown for
+        # user in session)
+        if prefs is not None:
+            self.template_value['available_locales'] = [
+                {
+                    'name': locales.get_locale_display_name(loc),
+                    'value': loc
+                } for loc in self.app_context.get_available_locales()]
+            self.template_value['locale_xsrf_token'] = (
+                XsrfTokenManager.create_xsrf_token(
+                    StudentLocaleRESTHandler.XSRF_TOKEN_NAME))
+            self.template_value['selected_locale'] = prefs.locale
+
     def get_template(self, template_file, additional_dirs=None):
         """Computes location of template files for the current namespace."""
         _p = self.app_context.get_environ()
         self.init_template_values(_p)
         template_environ = self.app_context.get_template_environ(
-            self.template_value[COURSE_INFO_KEY]['course']['locale'],
-            additional_dirs
-        )
+            self.get_locale(), additional_dirs)
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         template_environ.globals.update({
@@ -792,3 +820,30 @@ class StudentUnenrollHandler(BaseHandler):
         self.template_value['navbar'] = {}
         self.template_value['transient_student'] = True
         self.render('unenroll_confirmation.html')
+
+
+class StudentLocaleRESTHandler(BaseRESTHandler):
+    """REST handler to manage student setting their preferred locale."""
+
+    XSRF_TOKEN_NAME = 'locales'
+
+    def post(self):
+        request = transforms.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(
+                request, self.XSRF_TOKEN_NAME, {}):
+            return
+
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if prefs is None:
+            transforms.send_json_response(self, 200, 'OK')
+            return
+
+        selected = request['payload']['selected']
+        if selected not in self.app_context.get_available_locales():
+            transforms.send_json_response(self, 401, 'Bad locale')
+            return
+
+        prefs.locale = selected
+        models.StudentPreferencesDAO.save(prefs)
+
+        transforms.send_json_response(self, 200, 'OK')

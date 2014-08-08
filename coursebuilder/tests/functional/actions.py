@@ -100,6 +100,33 @@ class ShouldHaveFailedByNow(Exception):
     pass
 
 
+class OverriddenEnvironment(object):
+    """Override the course environment from course.yaml with values in a dict.
+
+    Usage:
+        Use the class in a with statement as follows:
+            with OverridenEnvironment({'course': {'browsable': True}}):
+                # calls to Course.get_environ will return a dictionary
+                # in which the original value of course/browsable has been
+                # shadowed.
+    """
+
+    def __init__(self, new_env):
+        self._old_get_environ = courses.Course.get_environ
+        self._new_env = new_env
+
+    def _get_environ(self, app_context):
+        return courses.deep_dict_merge(
+            self._new_env, self._old_get_environ(app_context))
+
+    def __enter__(self):
+        courses.Course.get_environ = self._get_environ
+
+    def __exit__(self, *unused_exception_info):
+        courses.Course.get_environ = self._old_get_environ
+        return False
+
+
 class TestBase(suite.AppEngineTestBase):
     """Contains methods common to all functional tests."""
 

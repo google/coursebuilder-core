@@ -1064,11 +1064,11 @@ class StudentPreferencesEntity(BaseEntity):
     some human associated with a course.  This basically means that we want to
     support preferences that are relevant to a student's view of a course, as
     well as a course administrator's preferences.  These will be saved in the
-    same object.  These will be kept separate by virtue of using different
-    OEditor schemas with the StudentPreferencesDTO.  Admin preferences are
-    dealt with in .../modules/dashboard/admin_preferences_editor.py.  As of
-    June 2014, there are no required student-level preferences, so we don't
-    have a handler yet for manipulating these.
+    same object but will be edited in different editors, appropriate to the
+    scope of the particular field in the DTO.  For example, show_hooks and
+    show_jinja_context are edited in the Dashboard, in
+        modules/dashboard/admin_preferences_editor.py
+    while locale is set by an Ajax widget in base.html.
 
     Note that this type is indexed by "name" -- the key is the same as
     that of the user.get_current_user().user_id(), which is a string.
@@ -1114,6 +1114,14 @@ class StudentPreferencesDTO(object):
     @show_jinja_context.setter
     def show_jinja_context(self, value):
         self.dict['show_jinja_context'] = value
+
+    @property
+    def locale(self):
+        return self.dict.get('locale')
+
+    @locale.setter
+    def locale(self, value):
+        self.dict['locale'] = value
 
 
 class StudentPreferencesDAO(BaseJsonDao):

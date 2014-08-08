@@ -2,7 +2,7 @@ var isPeerAssessmentTable = cb_global.schema.properties.course.properties
     .certificate_criteria._inputex.is_peer_assessment_table;
 
 $(function() {
-  var criterionDivs = $(".cc-criterion");
+  var criterionDivs = $(".settings-list-item");
 
   //Initial setup
   criterionDivs.find(".assessment-dropdown select").each(
@@ -15,11 +15,11 @@ $(function() {
   });
 
   //Attach handlers
-  $(".cc-criteria").on("change", ".assessment-dropdown select", function(e) {
+  $(".settings-list").on("change", ".assessment-dropdown select", function(e) {
     onAssignmentDropdownChanged($(this));
   });
 
-  $(".cc-criteria").on("change", ".custom-criteria select", function(e) {
+  $(".settings-list").on("change", ".custom-criteria select", function(e) {
     onCustomCriteriaDropdownChanged($(this));
   });
   cb_global.onSaveClick = onCourseSettingsSave;
