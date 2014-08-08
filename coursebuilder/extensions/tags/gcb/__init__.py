@@ -346,15 +346,6 @@ class IFrame(tags.BaseTag):
 
 class Include(tags.BaseTag):
 
-    class RawHtml(safe_dom.Node):
-
-        def __init__(self, raw_text):
-            self._raw_text = raw_text
-
-        @property
-        def sanitized(self):
-            return self._raw_text
-
     def render(self, node, handler):
         template_path = re.sub('^/+', '', node.attrib.get('path'))
         base_path = os.path.dirname(template_path)
@@ -363,7 +354,7 @@ class Include(tags.BaseTag):
         handler.template_value['base_path'] = base_path
         html_text = handler.render_template_to_html(
             handler.template_value, base_file,
-            additional_dirs = [
+            additional_dirs=[
                 os.path.join(appengine_config.BUNDLE_ROOT, 'views'),
                 appengine_config.BUNDLE_ROOT,
                 os.path.join(appengine_config.BUNDLE_ROOT, base_path),
