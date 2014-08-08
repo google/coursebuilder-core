@@ -146,6 +146,17 @@ class BaseStudentHandler(webapp2.RequestHandler):
         return token and XsrfTokenManager.is_xsrf_token_valid(token, action)
 
 
+class NullHtmlHooks(object):
+    """Provide a non-null callback object for pages asking for hooks.
+
+    In contexts where we have no single course to use to determine
+    hook contents, we simply return blank content.
+    """
+
+    def insert(self, unused_name):
+        return ''
+
+
 class ProfileHandler(BaseStudentHandler):
     """Global profile handler for a student."""
 
@@ -166,6 +177,7 @@ class ProfileHandler(BaseStudentHandler):
         self.template_values['student_edit_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token(
                 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID))
+        self.template_values['html_hooks'] = NullHtmlHooks()
 
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/profile.html', DIR, LOCALE)
@@ -203,6 +215,7 @@ class AllCoursesHandler(BaseStudentHandler):
         self.template_values['courses'] = (
             [self.get_course_info(course) for course in courses])
         self.template_values['navbar'] = {'course_explorer': True}
+        self.template_values['html_hooks'] = NullHtmlHooks()
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
         self.response.write(template.render(self.template_values))
@@ -221,6 +234,7 @@ class RegisteredCoursesHandler(BaseStudentHandler):
         self.template_values['navbar'] = {'mycourses': True}
         self.template_values['can_enroll_more_courses'] = (
             len(courses) - len(enrolled_courses) > 0)
+        self.template_values['html_hooks'] = NullHtmlHooks()
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
         self.response.write(template.render(self.template_values))

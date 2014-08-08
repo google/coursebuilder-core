@@ -35,16 +35,16 @@ class AdminSettingsTests(actions.TestBase):
         actions.login(ADMIN_EMAIL)
 
     def test_defaults(self):
-        prefs = models.StudentPreferencesDAO.ensure_exists()
-        self.assertEquals(False, prefs.show_hooks)
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        self.assertEquals(True, prefs.show_hooks)
 
     def test_settings_page(self):
         response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: False', response.body)
+        self.assertIn('Show hook edit buttons: True', response.body)
 
         with common_utils.Namespace(NAMESPACE):
-            prefs = models.StudentPreferencesDAO.ensure_exists()
-            prefs.show_hooks = True
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.show_hooks = False
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: True', response.body)
+        self.assertIn('Show hook edit buttons: False', response.body)

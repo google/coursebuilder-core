@@ -130,12 +130,19 @@
       <script type="text/javascript" src="https://apis.google.com/js/plusone.js"></script>
     {% endif %}
 
-    {{course_info.base.before_head_tag_ends | safe}}
+    <script>
+      function gcb_edit_hook_point(key) {
+        window.location=('dashboard?action=edit_html_hook&key=' +
+            encodeURIComponent(key));
+      }
+    </script>
+
+    {{ course_info.base.before_head_tag_ends | safe}}
   </head>
 
   <body>
 
-    {{course_info.base.after_body_tag_begins | safe}}
+    {{ html_hooks.insert('base:after_body_tag_begins') }}
 
     <script>
       // Course-Builder specific setup for Google Tag Manager.  Iff
@@ -239,11 +246,11 @@
     <div class="is-wrapper">
       <div class="gcb-aux">
         {% block top_content %}{% endblock %}
-        {{course_info.base.after_top_content_ends | safe}}
+        {{ html_hooks.insert('base:after_top_content_ends') }}
 
         <!-- main section -->
         {% block main_content %}{% endblock %}
-        {{course_info.base.after_main_content_ends | safe}}
+        {{ html_hooks.insert('base:after_main_content_ends') }}
       </div>
     </div>
 
@@ -270,6 +277,6 @@
         </div>
       </div>
     </div>
-    {{course_info.base.before_body_tag_ends | safe}}
+    {{ html_hooks.insert('base:before_body_tag_ends') }}
  </body>
 </html>

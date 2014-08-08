@@ -63,6 +63,23 @@ class Text(Node):
         return escape(self._value)
 
 
+class Comment(Node):
+    """An HTML comment."""
+
+    def __init__(self, unsafe_string=''):
+        self._value = unicode(unsafe_string)
+
+    @property
+    def sanitized(self):
+        return '<!--%s-->' % escape(self._value)
+
+    def add_attribute(self, **attr):
+        pass
+
+    def add_text(self, unsafe_string):
+        self._value += unicode(unsafe_string)
+
+
 class Element(Node):
     """Embodies an HTML element which will be sanitized when accessed."""
 

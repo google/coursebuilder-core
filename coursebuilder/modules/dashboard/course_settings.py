@@ -16,7 +16,8 @@
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
-import messages
+import cgi
+import urllib
 import yaml
 
 from common import schema_fields
@@ -28,9 +29,9 @@ from models import courses
 from models import roles
 from models import transforms
 from models import vfs
+from modules.dashboard import filer
+from modules.dashboard import messages
 from modules.oeditor import oeditor
-
-from google.appengine.api import users
 
 
 class CourseSettingsRights(object):
@@ -58,14 +59,7 @@ class CourseSettingsHandler(ApplicationHandler):
 
     def post_edit_basic_course_settings(self):
         """Handles editing of course.yaml."""
-        assert self.app_context.is_editable_fs()
-
-        # Check if course.yaml exists; create if not.
-        fs = self.app_context.fs.impl
-        course_yaml = fs.physical_to_logical('/course.yaml')
-        if not fs.isfile(course_yaml):
-            fs.put(course_yaml, vfs.string_to_stream(
-                courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
+        filer.create_course_file_if_not_exists(self)
         extra_args = {}
         section_names = self.request.get('section_names')
         if section_names:
@@ -89,7 +83,7 @@ class CourseSettingsHandler(ApplicationHandler):
             registry = registry.clone_only_items_named(section_names.split(':'))
 
         exit_url = self.canonicalize_url('/dashboard?action=settings')
-        rest_url = self.canonicalize_url('/rest/course/settings')
+        rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
             self, registry.get_json_schema(), registry.get_schema_dict(),
             key, rest_url, exit_url,
@@ -109,34 +103,6 @@ def _create_course_registry():
                                       description='Course Settings')
 
     base_opts = reg.add_sub_registry('base', 'Base Config')
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:before_head_tag_ends', 'Before Head Tag Ends', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'before the &lt;head&gt; tag ends '))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:after_body_tag_begins', 'After Body Tag Begins', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'after the &lt;body&gt; tag begins'))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:after_navbar_begins', 'After Nav Bar Begins', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'after the navigation bar begins'))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:before_navbar_ends', 'Before Nav Bar Ends', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'before the end of the navigation bar'))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:after_top_content_ends', 'After Top Content Ends', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'after the top content ends'))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:after_main_content_ends', 'After Main Content Ends', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'after the main content ends'))
-    base_opts.add_property(schema_fields.SchemaField(
-        'base:before_body_tag_ends', 'Before Body Tag Ends', 'text',
-        optional=True, description='HTML to insert on course pages '
-        'before the &lt;body&gt; tag ends'))
     base_opts.add_property(schema_fields.SchemaField(
         'base:show_gplus_button', 'Show G+ Button', 'boolean',
         optional=True, description='Whether to show a G+ button on the '
@@ -276,10 +242,134 @@ def _create_course_registry():
         'course:main_image:alt_text', 'Alternate Text', 'string',
         optional=True,
         description='Alt text for the preview image on the course homepage.'))
+
     return reg
 
 
-class CourseSettingsRESTHandler(BaseRESTHandler):
+class CourseYamlRESTHandler(BaseRESTHandler):
+    """Common base for REST handlers in this file."""
+
+    @classmethod
+    def validate_content(cls, content):
+        yaml.safe_load(content)
+
+    def get_course_dict(self):
+        return self.get_course().get_environ(self.app_context)
+
+    def get(self):
+        """Handles REST GET verb and returns an object as JSON payload."""
+        assert self.app_context.is_editable_fs()
+
+        key = self.request.get('key')
+
+        if not CourseSettingsRights.can_view(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        # Load data if possible.
+        fs = self.app_context.fs.impl
+        filename = fs.physical_to_logical('/course.yaml')
+        try:
+            stream = fs.get(filename)
+        except:  # pylint: disable=bare-except
+            stream = None
+        if not stream:
+            transforms.send_json_response(
+                self, 404, 'Object not found.', {'key': key})
+            return
+
+        # Prepare data.
+        json_payload = self.process_get()
+        transforms.send_json_response(
+            self, 200, 'Success.',
+            payload_dict=json_payload,
+            xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_ACTION))
+
+    def _save_content(self, content):
+        try:
+            self.validate_content(content)
+            content_stream = vfs.string_to_stream(unicode(content))
+        except Exception as e:  # pylint: disable=W0703
+            transforms.send_json_response(self, 412, 'Validation error: %s' % e)
+            return False
+
+        # Store new file content.
+        fs = self.app_context.fs.impl
+        filename = fs.physical_to_logical('/course.yaml')
+        fs.put(filename, content_stream)
+
+        return True
+
+    def put(self):
+        """Handles REST PUT verb with JSON payload."""
+        assert self.app_context.is_editable_fs()
+
+        request_param = self.request.get('request')
+        if not request_param:
+            transforms.send_json_response(
+                self, 400, 'Missing "request" parameter.')
+            return
+        try:
+            request = transforms.loads(request_param)
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed "request" parameter.')
+            return
+        key = request.get('key')
+        if not key:
+            transforms.send_json_response(
+                self, 400, 'Request missing "key" parameter.')
+            return
+        payload_param = request.get('payload')
+        if not payload_param:
+            transforms.send_json_response(
+                self, 400, 'Request missing "payload" parameter.')
+            return
+        try:
+            payload = transforms.loads(payload_param)
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed "payload" parameter.')
+            return
+        if not self.assert_xsrf_token_or_fail(
+                request, self.XSRF_ACTION, {'key': key}):
+            return
+        if not CourseSettingsRights.can_edit(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        request_data = self.process_put(request, payload)
+        if request_data:
+            entity = courses.deep_dict_merge(
+                request_data, self.get_course_dict())
+            content = yaml.safe_dump(entity)
+            if self._save_content(content):
+                transforms.send_json_response(self, 200, 'Saved.')
+
+    def delete(self):
+        """Handles REST DELETE verb with JSON payload."""
+
+        key = self.request.get('key')
+
+        if not self.assert_xsrf_token_or_fail(
+                self.request, self.XSRF_ACTION, {'key': key}):
+            return
+
+        if (not CourseSettingsRights.can_delete(self) or
+            not self.is_deletion_allowed()):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        entity = self.process_delete()
+        content = yaml.safe_dump(entity)
+        if self._save_content(content):
+            transforms.send_json_response(self, 200, 'Deleted.')
+
+
+class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     """Provides REST API for a file."""
 
     REGISTRY = _create_course_registry()
@@ -290,12 +380,7 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
 
     URI = '/rest/course/settings'
 
-    @classmethod
-    def validate_content(cls, content):
-        yaml.safe_load(content)
-
-    def get_course_dict(self):
-        return self.get_course().get_environ(self.app_context)
+    XSRF_ACTION = 'basic-course-settings-put'
 
     def get_group_id(self, email):
         if not email or '@googlegroups.com' not in email:
@@ -314,65 +399,20 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
             return None
         return 'https://groups.google.com/forum/embed/?place=forum/' + group_id
 
-    def get(self):
-        """Handles REST GET verb and returns an object as JSON payload."""
-        assert self.app_context.is_editable_fs()
-
-        key = self.request.get('key')
-
-        if not CourseSettingsRights.can_view(self):
-            transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
-            return
-
-        # Load data if possible.
-        fs = self.app_context.fs.impl
-        filename = fs.physical_to_logical(key)
-        try:
-            stream = fs.get(filename)
-        except:  # pylint: disable=bare-except
-            stream = None
-        if not stream:
-            transforms.send_json_response(
-                self, 404, 'Object not found.', {'key': key})
-            return
-
-        # Prepare data.
+    def process_get(self):
         entity = {}
         CourseSettingsRESTHandler.REGISTRY.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
 
-        # Render JSON response.
         json_payload = transforms.dict_to_json(
-            entity,
-            CourseSettingsRESTHandler.REGISTRY.get_json_schema_dict())
+            entity, CourseSettingsRESTHandler.REGISTRY.get_json_schema_dict())
 
-        transforms.send_json_response(
-            self, 200, 'Success.',
-            payload_dict=json_payload,
-            xsrf_token=XsrfTokenManager.create_xsrf_token(
-                'basic-course-settings-put'))
+        return json_payload
 
-    def put(self):
-        """Handles REST PUT verb with JSON payload."""
-        assert self.app_context.is_editable_fs()
-
-        request = transforms.loads(self.request.get('request'))
-        key = request.get('key')
-
-        if not self.assert_xsrf_token_or_fail(
-                request, 'basic-course-settings-put', {'key': key}):
-            return
-
-        if not CourseSettingsRights.can_edit(self):
-            transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
-            return
-
-        payload = request.get('payload')
+    def process_put(self, request, payload):
         request_data = {}
         CourseSettingsRESTHandler.REGISTRY.convert_json_to_entity(
-            transforms.loads(payload), request_data)
+            payload, request_data)
 
         if 'course' in request_data:
             course_data = request_data['course']
@@ -391,29 +431,109 @@ class CourseSettingsRESTHandler(BaseRESTHandler):
                     announcement_email)
                 if announcement_web_url:
                     course_data['announcement_list_url'] = announcement_web_url
+        return request_data
 
-        entity = courses.deep_dict_merge(request_data, self.get_course_dict())
-        content = yaml.safe_dump(entity)
+    def is_deletion_allowed(self):
+        return False
 
-        try:
-            self.validate_content(content)
-            content_stream = vfs.string_to_stream(unicode(content))
-        except Exception as e:  # pylint: disable=W0703
-            transforms.send_json_response(self, 412, 'Validation error: %s' % e)
-            return
 
-        # Store new file content.
-        fs = self.app_context.fs.impl
-        filename = fs.physical_to_logical(key)
-        fs.put(filename, content_stream)
+class HtmlHookHandler(ApplicationHandler):
+    """Set up for OEditor manipulation of HTML hook contents.
 
-        # Send reply.
-        transforms.send_json_response(self, 200, 'Saved.')
+    A separate handler and REST handler is required for hook contents,
+    since the set of hooks is not statically known.  Users are free to add
+    whatever hooks they want where-ever they want with fairly arbitrary
+    names.  This class and its companion REST class deal with persisting the
+    hook values into the course.yaml settings.
+    """
 
-    def delete(self):
-        """Handles REST DELETE verb."""
+    def post_edit_html_hook(self):
+        filer.create_course_file_if_not_exists(self)
+        self.redirect(self.get_action_url(
+            'edit_html_hook', key=self.request.get('html_hook')))
 
-        request = transforms.loads(self.request.get('request'))
-        key = request.get('key')
-        transforms.send_json_response(
-            self, 401, 'Access denied.', {'key': key})
+    def get_edit_html_hook(self):
+        key = self.request.get('key')
+
+        registry = HtmlHookRESTHandler.REGISTRY
+        exit_url = self.canonicalize_url(self.request.referer)
+        rest_url = self.canonicalize_url(HtmlHookRESTHandler.URI)
+        delete_url = '%s?%s' % (
+            self.canonicalize_url(HtmlHookRESTHandler.URI),
+            urllib.urlencode({
+                'key': key,
+                'xsrf_token': cgi.escape(
+                        self.create_xsrf_token(HtmlHookRESTHandler.XSRF_ACTION))
+            }))
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self, registry.get_json_schema(), registry.get_schema_dict(),
+            key, rest_url, exit_url,
+            delete_url=delete_url, delete_method='delete',
+            required_modules=HtmlHookRESTHandler.REQUIRED_MODULES)
+
+        template_values = {}
+        template_values['page_title'] = self.format_title('Edit Hook HTML')
+        template_values['page_description'] = (
+            messages.EDIT_HTML_HOOK_DESCRIPTION)
+        template_values['main_content'] = form_html
+        self.render_page(template_values)
+
+
+def _create_hook_registry():
+    reg = schema_fields.FieldRegistry('Html Hook', description='Html Hook')
+    reg.add_property(schema_fields.SchemaField(
+        'hook_content', 'HTML Hook Content', 'html',
+        optional=True))
+    return reg
+
+
+class HtmlHookRESTHandler(CourseYamlRESTHandler):
+    """REST API for individual HTML hook entries in course.yaml."""
+
+    REGISTRY = _create_hook_registry()
+    REQUIRED_MODULES = [
+        'inputex-textarea', 'inputex-uneditable', 'gcb-rte', 'inputex-hidden']
+    URI = '/rest/course/html_hook'
+    XSRF_ACTION = 'html-hook-put'
+
+    def process_get(self):
+        course_dict = self.get_course_dict()
+        html_hook = self.request.get('key')
+        path = html_hook.split(':')
+        for element in path:
+            item = course_dict.get(element)
+            if type(item) == dict:
+                course_dict = item
+        return {'hook_content': item}
+
+    def process_put(self, request, payload):
+        request_data = {}
+        HtmlHookRESTHandler.REGISTRY.convert_json_to_entity(
+            payload, request_data)
+        if 'hook_content' not in request_data:
+            transforms.send_json_response(
+                self, 400, 'Payload missing "hook_content" parameter.')
+            return None
+
+        # Walk from bottom to top of hook element name building up
+        # dict-in-dict until we are at outermost level, which is
+        # the course_dict we will return.
+        course_dict = request_data['hook_content']
+        for element in reversed(request['key'].split(':')):
+            course_dict = {element: course_dict}
+        return course_dict
+
+    def is_deletion_allowed(self):
+        return True
+
+    def process_delete(self):
+        html_hook = self.request.get('key')
+        course_dict = self.get_course_dict()
+        pruned_dict = course_dict
+        for element in html_hook.split(':'):
+            if element in pruned_dict:
+                if type(pruned_dict[element]) == dict:
+                    pruned_dict = pruned_dict[element]
+                else:
+                    del pruned_dict[element]
+        return course_dict

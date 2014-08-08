@@ -32,7 +32,7 @@
       <ul class="clearfix">
 
         <!-- left-aligned links in order -->
-        {{course_info.base.after_navbar_begins | safe}}
+        {{ html_hooks.insert('base:after_navbar_begins') }}
         <li {% if navbar.announcements %}class='active'{% endif %}>
           {# I18N: Navbar tab. #}
           <a href="announcements">{{ gettext('Announcements') }}</a>
@@ -82,7 +82,7 @@
             <a href="register">{{ gettext('Registration') }}</a>
           </li>
         {% endif %}
-        {{course_info.base.before_navbar_ends | safe}}
+        {{ html_hooks.insert('base:before_navbar_ends') }}
       </ul>
     </div>
   </div>

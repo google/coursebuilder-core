@@ -94,6 +94,12 @@ EDIT_SETTINGS_DESCRIPTION = assemble_sanitized_message("""
 The course.yaml file contains many course settings.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
 
+EDIT_HTML_HOOK_DESCRIPTION = assemble_sanitized_message("""
+HTML hooks are snippets of HTML code that are inserted at different points on
+the pages of a course.  Editing these snippets here permits you to make
+global changes to these items.
+""", 'https://code.google.com/p/course-builder/wiki/Dashboard#Outline')
+
 IMPORT_COURSE_DESCRIPTION = assemble_sanitized_message("""
 Import the contents of another course into this course. Both courses must be on
 the same Google App Engine instance.

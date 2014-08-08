@@ -124,15 +124,7 @@ class FileManagerAndEditor(ApplicationHandler):
 
     def post_create_or_edit_settings(self):
         """Handles creation or/and editing of course.yaml."""
-        assert self.app_context.is_editable_fs()
-
-        # Check if course.yaml exists; create if not.
-        fs = self.app_context.fs.impl
-        course_yaml = fs.physical_to_logical('/course.yaml')
-        if not fs.isfile(course_yaml):
-            fs.put(course_yaml, vfs.string_to_stream(
-                courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
-
+        create_course_file_if_not_exists(self)
         self.redirect(self.get_action_url('edit_settings', key='/course.yaml'))
 
     def get_edit_settings(self):
@@ -261,6 +253,17 @@ class FileManagerAndEditor(ApplicationHandler):
             'page_title': self.format_title('Edit ' + uri),
             'main_content': form_html,
         }, 'assets', tab_name)
+
+
+def create_course_file_if_not_exists(handler):
+    assert handler.app_context.is_editable_fs()
+
+    # Check if course.yaml exists; create if not.
+    fs = handler.app_context.fs.impl
+    course_yaml = fs.physical_to_logical('/course.yaml')
+    if not fs.isfile(course_yaml):
+        fs.put(course_yaml, vfs.string_to_stream(
+            courses.EMPTY_COURSE_YAML % users.get_current_user().email()))
 
 
 class TextAssetRESTHandler(BaseRESTHandler):

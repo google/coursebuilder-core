@@ -24,6 +24,8 @@ from admin_preferences_editor import AdminPreferencesEditor
 from admin_preferences_editor import AdminPreferencesRESTHandler
 from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
+from course_settings import HtmlHookHandler
+from course_settings import HtmlHookRESTHandler
 import filer
 from filer import AssetItemRESTHandler
 from filer import AssetUriRESTHandler
@@ -83,7 +85,8 @@ class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
     QuestionManagerAndEditor, QuestionGroupManagerAndEditor,
     LabelManagerAndEditor, AssignmentManager, AdminPreferencesEditor,
-    ApplicationHandler, ReflectiveRequestHandler, SearchDashboardHandler):
+    HtmlHookHandler, ApplicationHandler, ReflectiveRequestHandler,
+    SearchDashboardHandler):
     """Handles all pages and actions required for managing a course."""
 
     default_action = 'outline'
@@ -94,7 +97,7 @@ class DashboardHandler(
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
-        'add_label', 'edit_label']
+        'add_label', 'edit_label', 'edit_html_hook']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -114,6 +117,7 @@ class DashboardHandler(
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
+            (HtmlHookRESTHandler.URI, HtmlHookRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
@@ -474,10 +478,11 @@ class DashboardHandler(
             'caption': 'Edit Prefs',
             'action': self.get_action_url('edit_admin_preferences'),
             'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
-        admin_prefs = models.StudentPreferencesDAO.ensure_exists()
-        admin_prefs_info = [
-            'Show hook edit buttons: %s' % admin_prefs.show_hooks
-        ]
+        admin_prefs_info = []
+        admin_prefs = models.StudentPreferencesDAO.load_or_create()
+        if admin_prefs:
+            admin_prefs_info.append('Show hook edit buttons: %s' %
+                                    admin_prefs.show_hooks)
 
         # Basic course info.
         course_info = [

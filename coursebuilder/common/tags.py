@@ -348,7 +348,9 @@ def html_to_safe_dom(html_string, handler):
                     # Render the tag
                     elt = tag.render(elt, handler)
 
-            if elt.tag.lower() == 'script':
+            if elt.tag == cElementTree.Comment:
+                out_elt = safe_dom.Comment()
+            elif elt.tag.lower() == 'script':
                 out_elt = safe_dom.ScriptElement()
             else:
                 out_elt = safe_dom.Element(elt.tag)

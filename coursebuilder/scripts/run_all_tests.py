@@ -42,6 +42,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.explorer_module.GlobalProfileTest': 1,
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,
     'tests.functional.controllers_review.PeerReviewDashboardTest': 1,
+    'tests.functional.html_hook.HtmlHookTest': 10,
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
     'tests.functional.model_analytics.ProgressAnalyticsTest': 8,
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,

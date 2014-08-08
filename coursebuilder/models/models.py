@@ -1079,7 +1079,17 @@ class StudentPreferencesDTO(object):
 
     @property
     def show_hooks(self):
-        return self.dict.get('show_hooks') or False
+        """Show controls to permit editing of HTML inclusions (hook points).
+
+        On course pages, there are various locations (hook points) at which
+        HTML content is inserted.  Turn this setting on to see those locations
+        with controls that permit an admin to edit that HTML, and off to see
+        the content as a student would.
+
+        Returns:
+          True when admin wants to see edit controls, False when he doesn't.
+        """
+        return self.dict.get('show_hooks', True)
 
     @show_hooks.setter
     def show_hooks(self, value):
@@ -1093,14 +1103,17 @@ class StudentPreferencesDAO(BaseJsonDao):
     CURRENT_VERSION = '1.0'
 
     @classmethod
-    def ensure_exists(cls):
-        user_id = users.get_current_user().user_id()
+    def load_or_create(cls):
+        user = users.get_current_user()
+        if not user:
+            return None
+        user_id = user.user_id()
         prefs = cls.load(user_id)
         if not prefs:
             prefs = StudentPreferencesDTO(
                 user_id, {
                     'version': cls.CURRENT_VERSION,
-                    'show_hooks': False,
+                    'show_hooks': True,
                 })
             cls.save(prefs)
         return prefs

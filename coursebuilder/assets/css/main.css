@@ -841,3 +841,23 @@ a.gcb-explorer-course-title {
   clear: both;
   height: 0;
 }
+
+.gcb-html-hook-edit {
+  border: 2px dashed #40DA9D;
+  display: inline;
+}
+
+ul .gcb-html-hook-edit {
+  display: flex;
+  float: left;
+}
+
+.gcb-html-hook-edit:hover {
+  cursor: pointer;
+  background-color: #A0EDBF;
+  border: 2px solid #40DA9D;
+}
+
+div#base-before-navbar-ends {
+  float: right
+}

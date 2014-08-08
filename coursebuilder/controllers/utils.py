@@ -17,6 +17,8 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import gettext
+import HTMLParser
+import re
 import urlparse
 
 import jinja2
@@ -24,8 +26,11 @@ import sites
 import webapp2
 
 from common import jinja_utils
+from common import safe_dom
+from common import tags
 from common import utils as common_utils
 from common.crypto import XsrfTokenManager
+from models import courses
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -217,6 +222,80 @@ def display_lesson_title(unit, lesson, course_properties=None):
         return '%s.%s %s' % (unit.index, lesson.index, lesson.title)
 
 
+class HtmlHooks(object):
+
+    def __init__(self, app_context):
+        self.app_context = app_context
+
+    def _has_visible_content(self, html_text):
+
+        class VisibleHtmlParser(HTMLParser.HTMLParser):
+
+            def __init__(self, *args, **kwargs):
+                HTMLParser.HTMLParser.__init__(self, *args, **kwargs)
+                self._has_visible_content = False
+
+            def handle_starttag(self, unused_tag, unused_attrs):
+                # Not 100% guaranteed; e.g., <p> does not guarantee content,
+                # but <button> does -- even if the <button> does not contain
+                # data/entity/char.  I don't want to spend a lot of logic
+                # looking for specific cases, and this behavior is enough.
+                self._has_visible_content = True
+
+            def handle_data(self, data):
+                if data.strip():
+                    self._has_visible_content = True
+
+            def handle_entityref(self, unused_data):
+                self._has_visible_content = True
+
+            def handle_charref(self, unused_data):
+                self._has_visible_content = True
+
+            def has_visible_content(self):
+                return self._has_visible_content
+
+        parser = VisibleHtmlParser()
+        parser.feed(html_text)
+        parser.close()
+        return parser.has_visible_content()
+
+    def insert(self, name):
+
+        # Do we want page markup to permit course admins to edit hooks?
+        show_admin_content = False
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if prefs and prefs.show_hooks:
+            show_admin_content = True
+        course = courses.Course(None, self.app_context)
+        if course.version == courses.CourseModel12.VERSION:
+            show_admin_content = False
+
+        # Look up desired content chunk in course.yaml dict/sub-dict.
+        content = ''
+        environ = self.app_context.get_environ()
+        for part in name.split(':'):
+            if part in environ:
+                item = environ[part]
+                if type(item) == str:
+                    content = item
+                else:
+                    environ = item
+        if show_admin_content and not self._has_visible_content(content):
+            content += name
+
+        # Add the content to the page in response to the hook call.
+        hook_div = safe_dom.Element('div', className='gcb-html-hook',
+                                    id=re.sub('[^a-zA-Z-]', '-', name))
+        hook_div.add_child(tags.html_to_safe_dom(content, self))
+
+        # Mark up content to enable edit controls
+        if show_admin_content:
+            hook_div.add_attribute(onclick='gcb_edit_hook_point("%s")' % name)
+            hook_div.add_attribute(className='gcb-html-hook-edit')
+        return jinja2.Markup(hook_div.sanitized)
+
+
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
@@ -245,6 +324,7 @@ class ApplicationHandler(webapp2.RequestHandler):
     def init_template_values(self, environ):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
+        self.template_value['html_hooks'] = HtmlHooks(self.app_context)
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
         self.template_value[
