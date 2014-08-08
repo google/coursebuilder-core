@@ -341,7 +341,10 @@ class BaseHandler(ApplicationHandler):
                 )['reg_form']['can_register']
 
         if user:
-            self.template_value['email'] = user.email()
+            email = user.email()
+            self.template_value['email_no_domain_name'] = (
+                email[:email.find('@')] if '@' in email else email)
+            self.template_value['email'] = email
             self.template_value['logoutUrl'] = (
                 users.create_logout_url(self.request.uri))
             self.template_value['transient_student'] = False
