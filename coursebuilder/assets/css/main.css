@@ -633,6 +633,12 @@ a.gcb-button-action, button.gcb-button-action {
   padding-bottom: 10px;
 }
 
+.gcb-unit-description {
+  font-size: 14px;
+  font-weight: 100;
+  padding-left: 2em;
+}
+
 .gcb-lesson-title {
   font-size: 23px;
   margin: 0px;

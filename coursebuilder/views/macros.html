@@ -3,7 +3,7 @@
 #}
 {% macro render_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
-    include_link, css_class, target_url) -%}
+    include_link, css_class, target_url, include_description) -%}
 
     {% if is_progress_recorded %}
       {% set progress_class = 'gcb-progress-empty' %}
@@ -34,7 +34,12 @@
           {% if include_link %}
             <a href="{{ target_url }}">{{ unit.title }}</a>
           {% else %}
-              {{ unit.title }}
+            {{ unit.title }}
+          {% endif %}
+          {% if include_description and unit.description %}
+            <span class="gcb-unit-description">
+              {{ unit.description }}
+            </span>
           {% endif %}
           {% if unit.needs_human_grader %}
             {% if not unit.now_available and is_course_admin %}
@@ -116,6 +121,12 @@
           {% else %}
               {{ display_unit_title(unit) }}
           {% endif %}
+          {% if include_description and unit.description %}
+            <span class="gcb-unit-description">
+              {{ unit.description }}
+            </span>
+          {% endif %}
+
       {% elif unit.type == 'O' %}
         <li class='{{ css_class }}'>
           <p class="gcb-top-content">
@@ -124,6 +135,11 @@
                 <a href="{{ unit.href }}"> {{ unit.title }}</a>
             {% else %}
                 {{ unit.title }}
+            {% endif %}
+            {% if include_description and unit.description %}
+              <span class="gcb-unit-description">
+                {{ unit.description }}
+              </span>
             {% endif %}
       {% else %}
         <li class='{{ css_class }}'>

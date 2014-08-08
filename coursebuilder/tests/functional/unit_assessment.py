@@ -365,6 +365,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'post_assessment': -1,
                 'show_contents_on_one_page': False,
                 'manual_progress': False,
+                'description': None,
+                'unit_header': None,
+                'unit_footer': None,
             }, errors)
         self.assertEquals([
             'The version of assessment "Pre-course assessment" is '
@@ -404,6 +407,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'post_assessment': self.assessment_two.unit_id,
                 'show_contents_on_one_page': False,
                 'manual_progress': False,
+                'description': None,
+                'unit_header': None,
+                'unit_footer': None,
             }, errors)
         self.assertEquals([], errors)
         self.assertEquals(self.unit_no_lessons.pre_assessment,
@@ -444,6 +450,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'post_assessment': self.assessment_two.unit_id,
                 'show_contents_on_one_page': False,
                 'manual_progress': False,
+                'description': None,
+                'unit_header': None,
+                'unit_footer': None,
             }, errors)
         self.assertEquals(
             ['Assessment "Assessment One" is already '
@@ -467,6 +476,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'post_assessment': self.assessment_one.unit_id,
                 'show_contents_on_one_page': False,
                 'manual_progress': False,
+                'description': None,
+                'unit_header': None,
+                'unit_footer': None,
             }, errors)
         self.assertEquals([], errors)
         self.assertEquals(self.unit_no_lessons.pre_assessment,
@@ -487,6 +499,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'post_assessment': self.assessment_one.unit_id,
                 'show_contents_on_one_page': False,
                 'manual_progress': False,
+                'description': None,
+                'unit_header': None,
+                'unit_footer': None,
             }, errors)
         self.assertEquals([
             'The same assessment cannot be used as both the pre '
@@ -583,6 +598,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                     'post_assessment': self.assessment_two.unit_id,
                     'show_contents_on_one_page': False,
                     'manual_progress': False,
+                    'description': None,
+                    'unit_header': None,
+                    'unit_footer': None,
                 }, errors)
             self.assertEquals([
                 'Assessment "Assessment One" has track labels, so it '

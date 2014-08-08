@@ -369,6 +369,18 @@ class Unit12(object):
     def manual_progress(self):
         return False
 
+    @property
+    def description(self):
+        return None
+
+    @property
+    def unit_header(self):
+        return None
+
+    @property
+    def unit_footer(self):
+        return None
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -606,10 +618,10 @@ class Unit13(object):
         # Valid for all values of unit.type
         self.labels = None
 
-        # TEMPORARY - a hack to support the appearance of assessments as
-        # being part of units.  Only valid for UNIT_TYPE_UNIT.
-        # TODO(psimakov): Decide what "temporary" means; do we need a
-        # more general hierarchical-container strategy, and if so, when?
+        # Support the appearance of assessments as being part of
+        # units.  Only valid for UNIT_TYPE_UNIT.
+        # TODO(psimakov): Decide if/when we need a more general
+        # hierarchical-container strategy, and if so, when?
         self.pre_assessment = None
         self.post_assessment = None
 
@@ -623,6 +635,20 @@ class Unit13(object):
         # when all of their contained content is marked complete (either
         # manually or normally).
         self.manual_progress = False
+
+        # Brief text (25 words or fewer) describing unit/assessment/link
+        # for display in summaries.
+        self.description = None
+
+        # Only valid for unit_type == verify.UNIT_TYPE_UNIT.  Shown
+        # at top/bottom of page for units displayed all on one page,
+        # or on same page above(below) first(last) unit element for
+        # units displaying contained elements on separate pages.
+        self.unit_header = None
+        self.unit_footer = None
+        # TODO(mgainer): Similarly for unit-specific header/footer
+        # for each contained element within a unit, when unit shows
+        # its elements on separate pages.
 
     @property
     def index(self):
@@ -725,6 +751,9 @@ class PersistentCourse13(object):
                     'post_assessment': None,
                     'show_contents_on_one_page': False,
                     'manual_progress': False,
+                    'description': None,
+                    'unit_header': None,
+                    'unit_footer': None,
                     }
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
@@ -1176,6 +1205,9 @@ class CourseModel13(object):
         existing_unit.post_assessment = unit.post_assessment
         existing_unit.show_contents_on_one_page = unit.show_contents_on_one_page
         existing_unit.manual_progress = unit.manual_progress
+        existing_unit.description = unit.description
+        existing_unit.unit_header = unit.unit_header
+        existing_unit.unit_footer = unit.unit_footer
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href

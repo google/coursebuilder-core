@@ -70,6 +70,8 @@ def generate_common_schema(title):
         SchemaField('type', 'Type', 'string', editable=False))
     common.add_property(
         SchemaField('title', 'Title', 'string', optional=True))
+    common.add_property(
+        SchemaField('description', 'Description', 'string', optional=True))
 
     # Label Groups
     label = FieldRegistry(None, description='label')
@@ -338,6 +340,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
             'key': unit.unit_id,
             'type': verify.UNIT_TYPE_NAMES[unit.type],
             'title': unit.title,
+            'description': unit.description or '',
             'is_draft': not unit.now_available,
             'label_groups': self.labels_to_dict(unit),
             }
@@ -383,6 +386,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
     def apply_updates_common(self, course, unit, updated_unit_dict, errors):
         """Apply changes common to all unit types."""
         unit.title = updated_unit_dict.get('title')
+        unit.description = updated_unit_dict.get('description')
         unit.now_available = not updated_unit_dict.get('is_draft')
 
         labels = set()
@@ -489,6 +493,8 @@ class CommonUnitRESTHandler(BaseRESTHandler):
 def generate_unit_schema():
     schema = generate_common_schema('Unit')
     schema.add_property(SchemaField(
+        'unit_header', 'Unit Header', 'html', optional=True))
+    schema.add_property(SchemaField(
         'pre_assessment', 'Pre Assessment', 'integer', optional=True))
     schema.add_property(SchemaField(
         'post_assessment', 'Post Assessment', 'integer', optional=True))
@@ -502,6 +508,8 @@ def generate_unit_schema():
         description='When set, the manual progress REST API permits '
         'users to manually mark a unit or lesson as complete, '
         'overriding the automatic progress tracking.'))
+    schema.add_property(SchemaField(
+        'unit_footer', 'Unit Footer', 'html', optional=True))
     return schema
 
 
@@ -515,7 +523,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-integer',
-        'inputex-checkbox']
+        'inputex-checkbox', 'gcb-rte']
 
     @classmethod
     def get_annotations_dict(cls, course, this_unit_id):
@@ -558,6 +566,8 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     def unit_to_dict(self, unit):
         assert unit.type == 'U'
         ret = self.unit_to_dict_common(unit)
+        ret['unit_header'] = unit.unit_header or ''
+        ret['unit_footer'] = unit.unit_footer or ''
         ret['pre_assessment'] = unit.pre_assessment or -1
         ret['post_assessment'] = unit.post_assessment or -1
         ret['show_contents_on_one_page'] = (
@@ -603,10 +613,11 @@ class UnitRESTHandler(CommonUnitRESTHandler):
     def apply_updates(self, unit, updated_unit_dict, errors):
         course = courses.Course(self)
         self.apply_updates_common(course, unit, updated_unit_dict, errors)
+        unit.unit_header = updated_unit_dict['unit_header']
+        unit.unit_footer = updated_unit_dict['unit_footer']
         unit.pre_assessment = None
         unit.post_assessment = None
         unit.manual_progress = updated_unit_dict['manual_progress']
-
         pre_assessment_id = updated_unit_dict['pre_assessment']
         if pre_assessment_id >= 0:
             assessment = course.find_unit_by_id(pre_assessment_id)
@@ -1067,7 +1078,6 @@ class UnitLessonTitleRESTHandler(BaseRESTHandler):
                 'title': unit_title,
                 'id': unit.unit_id,
                 'lessons': lesson_data})
-
         transforms.send_json_response(
             self, 200, None,
             payload_dict={'outline': outline_data},

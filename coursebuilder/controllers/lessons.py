@@ -406,6 +406,9 @@ class UnitHandler(BaseHandler):
         left_nav_elements = UnitHandler.UnitLeftNavElements(
             self.get_course(), unit)
 
+        if unit.unit_header:
+            display_content.append(unit.unit_header)
+
         if unit.pre_assessment:
             display_content.append(self.get_assessment_display_content(
                 student, unit, course.find_unit_by_id(unit.pre_assessment),
@@ -427,14 +430,83 @@ class UnitHandler(BaseHandler):
                 student, unit, course.find_unit_by_id(unit.post_assessment),
                 left_nav_elements, {}))
 
+        if unit.unit_footer:
+            display_content.append(unit.unit_footer)
+
         self.template_value['display_content'] = display_content
+
+    def _showing_first_element(self, unit, lesson, assessment, is_activity):
+        """Whether the unit page is showing the first element of a Unit."""
+
+        # If the unit has a pre-assessment, then that's the first element;
+        # we are showing the first element iff we are showing that assessment.
+        if unit.pre_assessment:
+            return (assessment and
+                    str(assessment.unit_id) == str(unit.pre_assessment))
+
+        # If there is no pre-assessment, there may be lessons.  If there
+        # are any lessons, then the first element is the first unit component.
+        # Iff we are showing that lesson, we're on the first component.
+        unit_lessons = self.get_course().get_lessons(unit.unit_id)
+        if unit_lessons:
+            if lesson and lesson.lesson_id == unit_lessons[0].lesson_id:
+                # If the first lesson has an activity, then we are showing
+                # the first element if we are showing the lesson, and not
+                # the activity.
+                return not is_activity
+            return False
+
+        # If there is no pre-assessment and no lessons, then the post-assessment
+        # is the first element.  We are on the first element if we're showing
+        # that assessment.
+        if unit.post_assessment:
+            return (assessment and
+                    str(assessment.unit_id) == str(unit.post_assessment))
+
+        return False
+
+    def _showing_last_element(self, unit, lesson, assessment, is_activity):
+        """Whether the unit page is showing the last element of a Unit."""
+
+        # If the unit has a post-assessment, then that's the last element;
+        # we are showing the last element iff we are showing that assessment.
+        if unit.post_assessment:
+            return (assessment and
+                    str(assessment.unit_id) == str(unit.post_assessment))
+
+        # If there is no post-assessment, there may be lessons.  If there
+        # are any lessons, then the last element is the last unit component.
+        # Iff we are showing that lesson, we're on the last component.
+        unit_lessons = self.get_course().get_lessons(unit.unit_id)
+        if unit_lessons:
+            if lesson and lesson.lesson_id == unit_lessons[-1].lesson_id:
+                # If the lesson has an activity, and we're showing the
+                # activity, that's last.
+                return is_activity == lesson.has_activity
+            return False
+
+        # If there is no post-assessment and there are no lessons, then
+        # the pre-assessment is the last item in the unit.  We are on the
+        # last element if we're showing that assessment.
+        if unit.pre_assessment:
+            return (assessment and
+                    str(assessment.unit_id) == str(unit.pre_assessment))
+
+        return False
 
     def _show_single_element(self, student, unit, lesson, assessment):
         # Add markup to page which depends on the kind of content.
         left_nav_elements = UnitHandler.UnitLeftNavElements(
             self.get_course(), unit)
-        activity = (self.request.get('activity') or
-                    '/activity' in self.request.path)
+
+        # need 'activity' to be True or False, and not the string 'true' or None
+        # pylint: disable-msg=g-explicit-bool-comparison
+        is_activity = (self.request.get('activity') != '' or
+                       '/activity' in self.request.path)
+        display_content = []
+        if (unit.unit_header and
+            self._showing_first_element(unit, lesson, assessment, is_activity)):
+                display_content.append(unit.unit_header)
         if lesson:
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
@@ -442,24 +514,25 @@ class UnitHandler(BaseHandler):
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
                                               left_nav_elements)
-                self.template_value['display_content'] = [
-                    self.render_template_to_html(
-                        self.template_value, 'test_confirmation_content.html')]
+                display_content.append(self.render_template_to_html(
+                    self.template_value, 'test_confirmation_content.html'))
             else:
-                self.template_value['display_content'] = [
-                    self.get_assessment_display_content(
-                        student, unit, assessment, left_nav_elements,
-                        self.template_value)]
+                display_content.append(self.get_assessment_display_content(
+                    student, unit, assessment, left_nav_elements,
+                    self.template_value))
         else:
-            if activity:
+            if is_activity:
                 self.set_activity_content(student, unit, lesson,
                                           left_nav_elements)
             else:
                 self.set_lesson_content(student, unit, lesson,
                                         left_nav_elements, self.template_value)
-            self.template_value['display_content'] = [
-                self.render_template_to_html(
-                    self.template_value, 'lesson_common.html')]
+            display_content.append(self.render_template_to_html(
+                    self.template_value, 'lesson_common.html'))
+        if (unit.unit_footer and
+            self._showing_last_element(unit, lesson, assessment, is_activity)):
+                display_content.append(unit.unit_footer)
+        self.template_value['display_content'] = display_content
 
     def get_assessment_display_content(self, student, unit, assessment,
                                        left_nav_elements, template_values):

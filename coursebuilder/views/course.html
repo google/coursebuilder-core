@@ -53,7 +53,8 @@
                     unit, progress, is_progress_recorded,
                     transient_student, is_course_admin, True,
                     css_class=None,
-                    target_url='assessment?name=%s' % unit.unit_id) }}
+                    target_url='assessment?name=%s' % unit.unit_id,
+                    include_description=True) }}
               {% endfor %}
             </ul>
           </div>
