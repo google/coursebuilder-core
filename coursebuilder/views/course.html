@@ -54,7 +54,8 @@
                     transient_student, is_course_admin, True,
                     css_class=None,
                     target_url='assessment?name=%s' % unit.unit_id,
-                    include_description=True) }}
+                    include_description=True,
+                    student_preferences=student_preferences) }}
               {% endfor %}
             </ul>
           </div>

@@ -352,6 +352,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
 
         prefs = models.StudentPreferencesDAO.load_or_create()
+        self.template_value['student_preferences'] = prefs
         if (Roles.is_course_admin(self.app_context) and
             not appengine_config.PRODUCTION_MODE and
             prefs and prefs.show_jinja_context):
@@ -534,6 +535,29 @@ class BaseHandler(ApplicationHandler):
             self.response.out.write(template.render(self.template_value))
         finally:
             self.app_context.fs.end_readonly()
+
+        # If the page displayed successfully, save the location for registered
+        # students so future visits to the course's base URL sends the student
+        # to the most-recently-visited page.
+        user = self.get_user()
+        if user:
+            student = models.Student.get_enrolled_student_by_email(user.email())
+            if student:
+                prefs = models.StudentPreferencesDAO.load_or_create()
+                prefs.last_location = self.request.path_qs
+                models.StudentPreferencesDAO.save(prefs)
+
+    def get_redirect_location(self, student):
+        if (not student.is_transient and
+            (self.request.path == self.app_context.get_slug() or
+             self.request.path == self.app_context.get_slug() + '/' or
+             self.request.get('use_last_location'))):  # happens on '/' page
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            # Belt-and-suspenders: prevent infinite self-redirects
+            if (prefs.last_location and
+                prefs.last_location != self.request.path_qs):
+                return prefs.last_location
+        return None
 
 
 class BaseRESTHandler(BaseHandler):

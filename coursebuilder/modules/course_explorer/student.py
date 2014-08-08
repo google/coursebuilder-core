@@ -50,7 +50,7 @@ class IndexPageHandler(webapp2.RequestHandler):
         if course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
             self.redirect('/explorer')
         else:
-            self.redirect('/course')
+            self.redirect('/course?use_last_location=true')
 
 
 class BaseStudentHandler(webapp2.RequestHandler):
@@ -178,6 +178,7 @@ class ProfileHandler(BaseStudentHandler):
             XsrfTokenManager.create_xsrf_token(
                 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID))
         self.template_values['html_hooks'] = NullHtmlHooks()
+        self.template_values['student_preferences'] = {}
 
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/profile.html', DIR, LOCALE)
@@ -216,6 +217,7 @@ class AllCoursesHandler(BaseStudentHandler):
             [self.get_course_info(course) for course in courses])
         self.template_values['navbar'] = {'course_explorer': True}
         self.template_values['html_hooks'] = NullHtmlHooks()
+        self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
         self.response.write(template.render(self.template_values))
@@ -235,6 +237,7 @@ class RegisteredCoursesHandler(BaseStudentHandler):
         self.template_values['can_enroll_more_courses'] = (
             len(courses) - len(enrolled_courses) > 0)
         self.template_values['html_hooks'] = NullHtmlHooks()
+        self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
             '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
         self.response.write(template.render(self.template_values))

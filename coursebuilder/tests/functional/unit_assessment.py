@@ -34,6 +34,7 @@ COURSE_TITLE = 'Unit Pre/Post Assessments'
 NAMESPACE = 'ns_%s' % COURSE_NAME
 ADMIN_EMAIL = 'admin@foo.com'
 BASE_URL = '/' + COURSE_NAME
+COURSE_URL = BASE_URL + '/course'
 DASHBOARD_URL = BASE_URL + '/dashboard'
 STUDENT_EMAIL = 'foo@foo.com'
 
@@ -108,7 +109,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 self.fail('Did not find expected content "%s" ' % item)
 
     def test_assements_in_units_not_shown_on_course_page(self):
-        response = self.get(BASE_URL)
+        response = self.get(COURSE_URL)
         self.assertIn(self.unit_no_lessons.title, response.body)
         self.assertIn(self.unit_one_lesson.title, response.body)
         self.assertIn(self.assessment_one.title, response.body)
@@ -117,7 +118,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
         self.unit_no_lessons.post_assessment = self.assessment_two.unit_id
         self.course.save()
-        response = self.get(BASE_URL)
+        response = self.get(COURSE_URL)
         self.assertIn(self.unit_no_lessons.title, response.body)
         self.assertIn(self.unit_one_lesson.title, response.body)
         self.assertNotIn(self.assessment_one.title, response.body)
@@ -208,7 +209,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.unit_one_lesson.post_assessment = self.assessment_two.unit_id
         self.course.save()
 
-        response = self.get(BASE_URL)
+        response = self.get(COURSE_URL)
         self._assert_progress_state(
             'Not yet started', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
             response)

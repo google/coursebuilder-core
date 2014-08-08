@@ -278,6 +278,14 @@ class CourseHandler(BaseHandler):
             self.redirect('/preview')
             return
 
+        # If we are on this page due to visiting the course base URL
+        # (and not base url plus "/course"), redirect registered students
+        # to the last page they were looking at.
+        last_location = self.get_redirect_location(student)
+        if last_location:
+            self.redirect(last_location)
+            return
+
         tracker = self.get_progress_tracker()
         units = self.get_track_matching_student(student)
         units = filter_assessments_used_within_units(units)

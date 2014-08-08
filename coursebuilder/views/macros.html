@@ -3,7 +3,8 @@
 #}
 {% macro render_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
-    include_link, css_class, target_url, include_description) -%}
+    include_link, css_class, target_url, include_description,
+    student_preferences) -%}
 
     {% if is_progress_recorded %}
       {% set progress_class = 'gcb-progress-empty' %}
@@ -11,8 +12,16 @@
       {% set progress_class = 'gcb-progress-none' %}
     {% endif %}
 
+    {% if not css_class %}
+      {% set css_class = '' %}
+    {% endif %}
+
     {% if unit.now_available or is_course_admin %}
       {% if unit.type == 'A' %}
+        {% if (student_preferences and student_preferences.last_location and
+               target_url in student_preferences.last_location) %}
+          {% set css_class = css_class + ' gcb-last-location' %}
+        {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if not transient_student %}
             {% if progress[unit.unit_id] > 0 %}
@@ -91,6 +100,11 @@
           {% endif %}
 
       {% elif unit.type == 'U' %}
+        {% if (student_preferences and student_preferences.last_location and
+               '/unit?unit=%s' % unit.unit_id in
+               student_preferences.last_location) %}
+          {% set css_class = css_class + ' gcb-last-location' %}
+        {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
           {% if is_progress_recorded and not transient_student %}
             {% if progress[unit.unit_id] == 2 %}
@@ -161,11 +175,12 @@
 #}
 {% macro render_u_unit_title(
     unit, progress, is_progress_recorded, transient_student, is_course_admin,
-    include_link, css_class) -%}
+    include_link, css_class, student_preferences) -%}
     {{ render_unit_title(
-        unit, progress, is_progress_recorded, transient_student, is_course_admin,
-        include_link, css_class,
-        'assessment?name=%s' % unit.unit_id) }}
+        unit, progress, is_progress_recorded, transient_student,
+        is_course_admin, include_link, css_class,
+        'assessment?name=%s' % unit.unit_id,
+        student_preferences=student_preferences) }}
 {%- endmacro %}
 
 
@@ -174,13 +189,14 @@
 #}
 {% macro render_a_unit_title(
     unit, assessment, progress, is_progress_recorded, transient_student,
-    is_course_admin, is_active) -%}
+    is_course_admin, is_active, student_preferences) -%}
     {{ render_unit_title(assessment, progress,
         is_progress_recorded, transient_student,
         is_course_admin,
         not is_active,
         'gcb-assessment-as-lesson active' if is_active else 'gcb-assessment-as-lesson',
-        'unit?unit=%s&assessment=%s' % (unit.unit_id, assessment.unit_id)) }}
+        'unit?unit=%s&assessment=%s' % (unit.unit_id, assessment.unit_id),
+        student_preferences=student_preferences) }}
 {%- endmacro %}
 
 

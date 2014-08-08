@@ -9,7 +9,8 @@
                 {% if pre_assessment %}
                   {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
                          is_progress_recorded, transient_student, is_course_admin,
-                         assessment and assessment.unit_id == pre_assessment.unit_id) }}
+                         assessment and assessment.unit_id == pre_assessment.unit_id,
+                         student_preferences) }}
                 {% endif %}
                 {% for lesson in lessons %}
                     {{ macros.render_lesson_title(
@@ -20,7 +21,8 @@
                 {% if post_assessment %}
                   {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
                          is_progress_recorded, transient_student, is_course_admin,
-                         assessment and assessment.unit_id == post_assessment.unit_id) }}
+                         assessment and assessment.unit_id == post_assessment.unit_id,
+                         student_preferences) }}
                 {% endif %}
             {% endif %}
         {% endfor %}
@@ -31,7 +33,8 @@
                  is_course_admin, unit.type != 'U',
                  'gcb-unit-title expanded'
                      if unit_id == unit.unit_id else 'gcb-unit-title'
-                         if lessons else 'gcb-unit-title expanded leaf') }}
+                         if lessons else 'gcb-unit-title expanded leaf',
+                 student_preferences) }}
             <div id="gcb-lesson-container"
                 {% if unit_id == unit.unit_id %}
                     class="gcb-lesson-container expanded"
@@ -41,7 +44,8 @@
             {% if pre_assessment %}
               {{ macros.render_a_unit_title(unit, pre_assessment, unit_progress,
                      is_progress_recorded, transient_student, is_course_admin,
-                     assessment and assessment.unit_id == pre_assessment.unit_id) }}
+                     assessment and assessment.unit_id == pre_assessment.unit_id,
+                     student_preferences) }}
             {% endif %}
             {% for lesson in lessons %}
                 {{ macros.render_lesson_title(
@@ -52,7 +56,8 @@
             {% if post_assessment %}
               {{ macros.render_a_unit_title(unit, post_assessment, unit_progress,
                      is_progress_recorded, transient_student, is_course_admin,
-                     assessment and assessment.unit_id == post_assessment.unit_id) }}
+                     assessment and assessment.unit_id == post_assessment.unit_id,
+                     student_preferences) }}
             {% endif %}
             </div>
         {% endfor %}

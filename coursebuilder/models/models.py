@@ -1123,6 +1123,16 @@ class StudentPreferencesDTO(object):
     def locale(self, value):
         self.dict['locale'] = value
 
+    # Save the most recently visited course page so we can redirect there
+    # when student revisits the (presumably bookmarked) base URL.
+    @property
+    def last_location(self):
+        return self.dict.get('last_location')
+
+    @last_location.setter
+    def last_location(self, value):
+        self.dict['last_location'] = value
+
 
 class StudentPreferencesDAO(BaseJsonDao):
     DTO = StudentPreferencesDTO

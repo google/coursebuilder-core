@@ -874,3 +874,7 @@ div#base-before-navbar-ends {
   font-family: monospace;
   font-size: xx-small;
 }
+
+.gcb-last-location {
+  background-color: #DEF;
+}
