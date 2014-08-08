@@ -493,7 +493,11 @@ class CommonUnitRESTHandler(BaseRESTHandler):
 def generate_unit_schema():
     schema = generate_common_schema('Unit')
     schema.add_property(SchemaField(
-        'unit_header', 'Unit Header', 'html', optional=True))
+        'unit_header', 'Unit Header', 'html', optional=True,
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
+            'className': 'inputEx-Field html-content'}))
     schema.add_property(SchemaField(
         'pre_assessment', 'Pre Assessment', 'integer', optional=True))
     schema.add_property(SchemaField(
@@ -509,7 +513,12 @@ def generate_unit_schema():
         'users to manually mark a unit or lesson as complete, '
         'overriding the automatic progress tracking.'))
     schema.add_property(SchemaField(
-        'unit_footer', 'Unit Footer', 'html', optional=True))
+        'unit_footer', 'Unit Footer', 'html', optional=True,
+        extra_schema_dict_values={
+            'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+            'excludedCustomTags': tags.EditorBlacklists.DESCRIPTIVE_SCOPE,
+            'className': 'inputEx-Field html-content'}))
+
     return schema
 
 

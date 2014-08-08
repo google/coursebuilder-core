@@ -48,7 +48,7 @@ class GoogleDoc(tags.BaseTag):
 
     @classmethod
     def name(cls):
-        return'Google Doc'
+        return 'Google Doc'
 
     def render(self, node, unused_handler):
         height = node.attrib.get('height') or '300'
@@ -91,7 +91,7 @@ class GoogleSpreadsheet(tags.BaseTag):
 
     @classmethod
     def name(cls):
-        return'Google Spreadsheet'
+        return 'Google Spreadsheet'
 
     def render(self, node, unused_handler):
         height = node.attrib.get('height') or '300'
@@ -134,7 +134,7 @@ class YouTube(tags.BaseTag):
 
     @classmethod
     def name(cls):
-        return'YouTube Video'
+        return 'YouTube Video'
 
     def render(self, node, unused_handler):
         video_id = node.attrib.get('videoid')
@@ -177,6 +177,62 @@ class YouTube(tags.BaseTag):
             schema_fields.SchemaField('videoid', 'Video Id', 'string',
             optional=True,
             description='Provide YouTube video ID (e.g. Kdg2drcUjYI)'))
+        return reg
+
+
+class Html5Video(tags.BaseTag):
+
+    @classmethod
+    def name(cls):
+        return 'HTML5 Video'
+
+    def render(self, node, unused_handler):
+        if utils.CAN_PERSIST_TAG_EVENTS.value:
+            tracking_text = (
+                '<script src="/extensions/tags/gcb/resources/html5_video.js">' +
+                '</script>' +
+                '<script>' +
+                '  gcbTagHtml5TrackVideo("%s");' % (
+                    jinja_utils.js_string_raw(node.attrib.get('instanceid'))) +
+                '</script>')
+        else:
+            tracking_text = ''
+        video_text = (
+            '<div>' +
+            '  <video></video>'
+            '%s' % tracking_text +
+            '</div>')
+        video = cElementTree.XML(video_text)
+        video[0].set('id', node.attrib.get('instanceid'))
+        video[0].set('src', node.attrib.get('url'))
+        if node.attrib.get('width'):
+            video[0].set('width', node.attrib.get('width'))
+        if node.attrib.get('height'):
+            video[0].set('height', node.attrib.get('height'))
+        video[0].set('controls', 'true')
+        return video
+
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/html5-badge-h-solo.png'
+
+    def get_schema(self, unused_handler):
+        reg = schema_fields.FieldRegistry(Html5Video.name())
+        reg.add_property(
+            schema_fields.SchemaField(
+                'url', 'Video URL', 'url',
+                optional=False,
+                description='URL of the video.  Note that playing a video'
+                'from Google Docs is supported; add "&export=download".  E.g.,'
+                'https://docs.google.com/a/google.com/uc?authuser=0'
+                '&id=0B82t9jeypLokMERMQ1g5Q3NFU1E&export=download'))
+        reg.add_property(
+            schema_fields.SchemaField('width', 'Width', 'integer',
+            optional=True,
+            description='Width, in pixels.'))
+        reg.add_property(
+            schema_fields.SchemaField('height', 'Height', 'integer',
+            optional=True,
+            description='Height, in pixels.'))
         return reg
 
 

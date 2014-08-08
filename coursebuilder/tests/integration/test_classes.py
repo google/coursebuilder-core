@@ -18,6 +18,7 @@ __author__ = [
     'John Orr (jorr@google.com)'
 ]
 
+import collections
 import os.path
 import random
 import time
@@ -29,6 +30,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome import options
 
 from models import models
+from models import transforms
 from tests import suite
 from tests.integration import fake_visualizations
 
@@ -66,6 +68,10 @@ class BaseIntegrationTest(suite.TestBase):
     def load_dashboard(self, name):
         return pageobjects.DashboardPage(self).load(
             suite.TestBase.INTEGRATION_SERVER_BASE_URL, name)
+
+    def load_appengine_admin(self, course_name):
+        return pageobjects.AppengineAdminPage(
+            self, suite.TestBase.ADMIN_SERVER_BASE_URL, course_name)
 
     def get_uid(self):
         """Generate a unique id string."""
@@ -699,3 +705,117 @@ class VisualizationsTest(BaseIntegrationTest):
         self.assertEquals('', page.get_data_source_logs('pupils'))
         self.assertEquals('critical: Error for testing',
                           page.get_data_source_logs('answers'))
+
+
+class EventsTest(BaseIntegrationTest):
+
+    def test_html5_video_events(self):
+        name = self.create_new_course()[0]
+
+        # Set gcb_can_persist_tag_events so we will track video events.
+        self.load_root_page(
+        ).click_admin(
+        ).click_settings(
+        ).click_override(
+            'gcb_can_persist_tag_events'
+        ).set_value(
+            True
+        ).set_status(
+            'Active'
+        ).click_save()
+
+        # Add a unit with a video.
+        instanceid_list = []
+        self.load_dashboard(
+            name
+        ).click_add_unit(
+        ).set_title(
+            'First Unit'
+        ).set_status(
+            'Public'
+        ).click_rich_text(
+            pageobjects.AddUnit.INDEX_UNIT_HEADER
+        ).click_rte_add_custom_tag(
+        ).select_rte_custom_tag_type(
+            'gcb: HTML5 Video'
+        ).set_rte_lightbox_field(
+            'input[name=url]',
+            'http://techslides.com/demos/sample-videos/small.mp4'
+        ).click_rte_save(
+        ).click_plain_text(
+        ).take_snapshot_of_instanceid_list(
+            instanceid_list
+        ).click_save(
+        ).click_close(
+        ).click_add_lesson(
+        ).set_title(
+            'First Lesson'
+        ).set_status(
+            'Public'
+        ).click_save(
+        )
+        instanceid = instanceid_list[0]
+
+        # Load the unit with the video and fiddle with the controls.
+        self.load_dashboard(
+            name
+        ).click_on_course_outline_components(
+            'Unit 1 - First Unit'
+        ).play_video(
+            instanceid
+        ).wait_for_video_state(
+            instanceid, 'playing', 10
+        ).pause_video(
+            instanceid
+        ).wait_for_video_state(
+            instanceid, 'waiting', 10
+        ).play_video(
+            instanceid
+        ).wait_for_video_state(
+            instanceid, 'ended', 10
+        )
+
+        # Verify that we have two events logged: load-start, and error.
+        data = self.load_appengine_admin(
+            name
+        ).get_datastore(
+            'EventEntity'
+        ).get_items(
+        )
+
+        events = []
+        for datum in data:
+            events.append(transforms.loads(datum['data']))
+        events.sort(key=lambda event: event['event_id'])
+
+        # Sometimes get this, sometimes don't.  Don't check for this to
+        # avoid flakiness.
+        if events[0]['event_type'] == 'loadstart':
+            del events[0]
+
+        ExpectedEvent = collections.namedtuple(
+            'ExpectedEvent', ['event_type', 'position'])
+        expected_events = [
+            ExpectedEvent('waiting', 'zero'),
+            ExpectedEvent('loadeddata', 'zero'),
+            ExpectedEvent('playing', 'zero'),
+            ExpectedEvent('pause', 'middle'),
+            ExpectedEvent('play', 'middle'),
+            ExpectedEvent('seeked', 'middle'),
+            ExpectedEvent('playing', 'middle'),
+            ExpectedEvent('ended', 'end'),
+            ExpectedEvent('pause', 'end'),
+            ]
+        end_position = 5.568
+        for event, expected in zip(events, expected_events):
+            self.assertEquals(instanceid, event['instance_id'])
+            self.assertEquals(1, event['rate'])
+            self.assertEquals(1, event['default_rate'])
+            self.assertEquals(expected.event_type, event['event_type'])
+            if expected.position == 'zero':
+                self.assertEquals(0, event['position'])
+            elif expected.position == 'middle':
+                self.assertNotEquals(0, event['position'])
+                self.assertNotEquals(end_position, event['position'])
+            elif expected.position == 'end':
+                self.assertEquals(end_position, event['position'])

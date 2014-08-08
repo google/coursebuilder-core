@@ -103,6 +103,7 @@ class TestBase(unittest.TestCase):
     REQUIRES_INTEGRATION_SERVER = 'REQUIRES_INTEGRATION_SERVER'
     REQUIRES_TESTING_MODULES = 'REQUIRES_TESTING_MODULES'
     INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
+    ADMIN_SERVER_BASE_URL = 'http://localhost:8000'
 
     def setUp(self):
         super(TestBase, self).setUp()

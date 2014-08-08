@@ -412,7 +412,7 @@ class AdminHandler(
                         value=self.create_xsrf_token('config_override'))
                 ).add_child(
                     safe_dom.Element(
-                        'button', className='gcb-button', type='submit'
+                        'button', className='gcb-button', type='submit', id=name
                     ).add_text('Override'))
 
         def get_doc_string(item, default_value):

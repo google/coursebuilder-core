@@ -18,6 +18,7 @@ __author__ = [
     'John Orr (jorr@google.com)'
 ]
 
+import re
 import time
 
 from selenium.common import exceptions
@@ -357,6 +358,26 @@ class LessonPage(CourseContentPage):
         if report.text == 'Your score is: 0/1':
             return self
         raise Exception('Correct answer submitted')
+
+    def play_video(self, instanceid):
+        self._tester.driver.execute_script(
+            'document.getElementById("%s").controller.play();' % instanceid)
+        return self
+
+    def pause_video(self, instanceid):
+        self._tester.driver.execute_script(
+            'document.getElementById("%s").controller.pause();' % instanceid)
+        return self
+
+    def wait_for_video_state(self, instanceid, desired_state, max_patience):
+        def in_desired_state(driver):
+            state = driver.execute_script(
+                'return document.getElementById("%s").controller.playbackState'
+                % instanceid)
+            return state == desired_state
+        wait.WebDriverWait(self._tester.driver, max_patience).until(
+            in_desired_state)
+        return self
 
 
 class AssessmentConfirmationPage(RootPage):
@@ -739,8 +760,10 @@ class CourseContentElement(DashboardEditor):
         self._tester.assertEqual(value, len(self._get_instanceid_list()))
         return self
 
-    def take_snapshot_of_instanceid_list(self):
+    def take_snapshot_of_instanceid_list(self, list_to_fill=None):
         self.instanceid_list_snapshot = self._get_instanceid_list()
+        if list_to_fill is not None:
+            list_to_fill.extend(self.instanceid_list_snapshot)
         return self
 
     def ensure_instanceid_list_matches_last_snapshot(self):
@@ -754,6 +777,9 @@ class AddUnit(CourseContentElement):
 
     CREATION_MESSAGE = 'New unit has been created and saved.'
     LOADED_MESSAGE = 'Success.'
+
+    INDEX_UNIT_HEADER = 0
+    INDEX_UNIT_FOOTER = 1
 
     def __init__(self, tester, expected_message):
         super(AddUnit, self).__init__(tester)
@@ -848,6 +874,10 @@ class AdminSettingsPage(PageObject):
             'button.gcb-button')[0].click()
         return ConfigPropertyOverridePage(self._tester)
 
+    def click_override(self, setting_name):
+        self.find_element_by_id(setting_name).click()
+        return ConfigPropertyOverridePage(self._tester)
+
     def verify_admin_user_emails_contains(self, email):
         self._tester.assertTrue(
             email in self._tester.driver.find_elements_by_css_selector(
@@ -859,7 +889,15 @@ class ConfigPropertyOverridePage(EditorPageObject):
     """Page object for the admin property override editor."""
 
     def set_value(self, value):
-        self.find_element_by_name('value').send_keys(value)
+        element = self.find_element_by_name('value')
+        if type(value) is bool:
+            current_value = element.get_attribute('value').lower()
+            if str(value).lower() != current_value:
+                checkbox = element.parent.find_element_by_css_selector(
+                    '[type="checkbox"]')
+                checkbox.send_keys(' ')  # Toggle, iff necessary.
+        else:
+            element.send_keys(value)
         return self
 
     def click_close(self):
@@ -953,3 +991,64 @@ class AnalyticsPage(PageObject):
         svgs = div.find_elements_by_tag_name('svg')
         # pylint: disable-msg=g-explicit-length-test
         return len(svgs) > 0
+
+
+class AppengineAdminPage(PageObject):
+
+    def __init__(self, tester, base_url, course_name):
+        super(AppengineAdminPage, self).__init__(tester)
+        self._base_url = base_url
+        self._course_name = course_name
+
+    def get_datastore(self, entity_kind):
+        self._tester.driver.get(
+            self._base_url + '/datastore' +
+            '?namespace=ns_%s' % self._course_name +
+            '&kind=%s' % entity_kind)
+        return DatastorePage(self._tester)
+
+
+class DatastorePage(PageObject):
+
+    def get_items(self):
+        data_table = self._tester.driver.find_element_by_css_selector(
+            'table.ae-table')
+
+        title_elements = data_table.find_elements_by_css_selector(
+            'table.ae-table th')
+        for index, element in enumerate(title_elements):
+            if element.text.strip() == 'Key':
+                key_index = index
+
+        rows = data_table.find_elements_by_css_selector('tr')
+        data_urls = []
+        for row in rows:
+            cells = row.find_elements_by_css_selector('td')
+            if len(cells) > key_index:
+                url = cells[key_index].find_elements_by_tag_name(
+                    'a')[0].get_attribute('href')
+                data_urls.append(url)
+
+        data = []
+        for data_url in data_urls:
+            self._tester.driver.get(data_url)
+            rows = self._tester.driver.find_elements_by_css_selector(
+                'div.ae-settings-block')
+            item = {}
+            data.append(item)
+            for row in rows:
+                labels = row.find_elements_by_tag_name('label')
+                if labels:
+                    name = re.sub(r'\(.*\)', '', labels[0].text).strip()
+                    value_blocks = row.find_elements_by_tag_name('div')
+                    if value_blocks:
+                        inputs = value_blocks[0].find_elements_by_tag_name(
+                            'input')
+                        if inputs:
+                            value = inputs[0].get_attribute('value').strip()
+                        else:
+                            value = value_blocks[0].text.strip()
+                        item[name] = value
+            self._tester.driver.back()
+
+        return data

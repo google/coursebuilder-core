@@ -99,6 +99,8 @@ def register_module():
             tags.EditorBlacklists.COURSE_SCOPE)
         tags.EditorBlacklists.unregister(
             Activity.binding_name, tags.EditorBlacklists.ASSESSMENT_SCOPE)
+        tags.EditorBlacklists.unregister(
+            Activity.binding_name, tags.EditorBlacklists.DESCRIPTIVE_SCOPE)
 
     def on_module_enable():
         tags.Registry.add_tag_binding(Activity.binding_name, Activity)
@@ -107,6 +109,8 @@ def register_module():
             tags.EditorBlacklists.COURSE_SCOPE)
         tags.EditorBlacklists.register(
             Activity.binding_name, tags.EditorBlacklists.ASSESSMENT_SCOPE)
+        tags.EditorBlacklists.register(
+            Activity.binding_name, tags.EditorBlacklists.DESCRIPTIVE_SCOPE)
 
     global custom_module
 

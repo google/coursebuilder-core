@@ -268,27 +268,23 @@ def register_module():
         # Register custom tags.
         tags.Registry.add_tag_binding(
             QuestionTag.binding_name, QuestionTag)
-        tags.EditorBlacklists.register(
-            QuestionTag.binding_name,
-            tags.EditorBlacklists.COURSE_SCOPE)
-
         tags.Registry.add_tag_binding(
             QuestionGroupTag.binding_name, QuestionGroupTag)
-        tags.EditorBlacklists.register(
-            QuestionGroupTag.binding_name,
-            tags.EditorBlacklists.COURSE_SCOPE)
+        for binding_name in (QuestionTag.binding_name,
+                             QuestionGroupTag.binding_name):
+            for scope in (tags.EditorBlacklists.COURSE_SCOPE,
+                          tags.EditorBlacklists.DESCRIPTIVE_SCOPE):
+                tags.EditorBlacklists.register(binding_name, scope)
 
     def when_module_disabled():
         # Unregister custom tags.
         tags.Registry.remove_tag_binding(QuestionTag.binding_name)
-        tags.EditorBlacklists.unregister(
-            QuestionTag.binding_name,
-            tags.EditorBlacklists.COURSE_SCOPE)
-
         tags.Registry.remove_tag_binding(QuestionGroupTag.binding_name)
-        tags.EditorBlacklists.unregister(
-            QuestionGroupTag.binding_name,
-            tags.EditorBlacklists.COURSE_SCOPE)
+        for binding_name in (QuestionTag, binding_name,
+                             QuestionGroupTag.binding_name):
+            for scope in (tags.EditorBlacklists.COURSE_SCOPE,
+                          tags.EditorBlacklists.DESCRIPTIVE_SCOPE):
+                tags.EditorBlacklists.unregister(binding_name, scope)
 
     # Add a static handler for icons shown in the rich text editor.
     global_routes = [(

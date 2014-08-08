@@ -225,6 +225,7 @@ class EditorBlacklists(object):
 
     COURSE_SCOPE = set()
     ASSESSMENT_SCOPE = set()
+    DESCRIPTIVE_SCOPE = set()
 
     @classmethod
     def register(cls, tag_name, editor_set):

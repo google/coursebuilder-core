@@ -120,7 +120,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 9,
     'tests.functional.unit_on_one_page.UnitOnOnePageTest': 3,
     'tests.functional.whitelist.WhitelistTest': 12,
-    'tests.integration.test_classes': 15,
+    'tests.integration.test_classes': 16,
     'tests.unit.etl_mapreduce.HistogramTests': 5,
     'tests.unit.etl_mapreduce.FlattenJsonTests': 4,
     'tests.unit.common_catch_and_log.CatchAndLogTests': 6,

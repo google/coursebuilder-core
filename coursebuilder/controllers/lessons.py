@@ -30,6 +30,7 @@ from utils import HUMAN_READABLE_DATETIME_FORMAT
 from utils import TRANSIENT_STUDENT
 from utils import XsrfTokenManager
 
+from common import jinja_utils
 from models import courses
 from models import models
 from models import student_work
@@ -400,6 +401,9 @@ class UnitHandler(BaseHandler):
             self._show_single_element(student, unit, lesson, assessment)
         self.render('unit.html')
 
+    def _apply_gcb_tags(self, text):
+        return jinja_utils.get_gcb_tags_filter(self)(text)
+
     def _show_all_contents(self, student, unit):
         course = self.get_course()
         display_content = []
@@ -407,7 +411,7 @@ class UnitHandler(BaseHandler):
             self.get_course(), unit)
 
         if unit.unit_header:
-            display_content.append(unit.unit_header)
+            display_content.append(self._apply_gcb_tags(unit.unit_header))
 
         if unit.pre_assessment:
             display_content.append(self.get_assessment_display_content(
@@ -431,7 +435,7 @@ class UnitHandler(BaseHandler):
                 left_nav_elements, {}))
 
         if unit.unit_footer:
-            display_content.append(unit.unit_footer)
+            display_content.append(self._apply_gcb_tags(unit.unit_footer))
 
         self.template_value['display_content'] = display_content
 
@@ -506,7 +510,7 @@ class UnitHandler(BaseHandler):
         display_content = []
         if (unit.unit_header and
             self._showing_first_element(unit, lesson, assessment, is_activity)):
-                display_content.append(unit.unit_header)
+                display_content.append(self._apply_gcb_tags(unit.unit_header))
         if lesson:
             self.lesson_id = lesson.lesson_id
             self.lesson_is_scored = lesson.scored
@@ -531,7 +535,7 @@ class UnitHandler(BaseHandler):
                     self.template_value, 'lesson_common.html'))
         if (unit.unit_footer and
             self._showing_last_element(unit, lesson, assessment, is_activity)):
-                display_content.append(unit.unit_footer)
+                display_content.append(self._apply_gcb_tags(unit.unit_footer))
         self.template_value['display_content'] = display_content
 
     def get_assessment_display_content(self, student, unit, assessment,
