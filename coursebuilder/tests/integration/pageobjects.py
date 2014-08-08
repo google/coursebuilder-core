@@ -35,14 +35,21 @@ class PageObject(object):
     def __init__(self, tester):
         self._tester = tester
 
-    def find_element_by_css_selector(self, selector):
-        return self._tester.driver.find_element_by_css_selector(selector)
+    def find_element_by_css_selector(self, selector, index=None):
+        if index is None:
+            return self._tester.driver.find_element_by_css_selector(selector)
+        else:
+            return self._tester.driver.find_elements_by_css_selector(
+                selector)[index]
 
     def find_element_by_id(self, elt_id):
         return self._tester.driver.find_element_by_id(elt_id)
 
-    def find_element_by_link_text(self, text):
-        return self._tester.driver.find_element_by_link_text(text)
+    def find_element_by_link_text(self, text, index=None):
+        if index is None:
+            return self._tester.driver.find_element_by_link_text(text)
+        else:
+            return self._tester.driver.find_elements_by_link_text(text)[index]
 
     def find_element_by_name(self, name):
         return self._tester.driver.find_element_by_name(name)
@@ -62,7 +69,7 @@ class EditorPageObject(PageObject):
         def successful_butter_bar(driver):
             butter_bar_message = driver.find_element_by_id(
                 'gcb-butterbar-message')
-            return 'Success.' in butter_bar_message.text or (
+            return 'Success' in butter_bar_message.text or (
                 not butter_bar_message.is_displayed())
 
         wait.WebDriverWait(self._tester.driver, 15).until(successful_butter_bar)
@@ -124,7 +131,7 @@ class RegisterPage(PageObject):
         enroll = self.find_element_by_name('form01')
         enroll.send_keys(name)
         enroll.submit()
-        return RegisterPage(self._tester)
+        return self
 
     def verify_enrollment(self):
         self._tester.assertTrue(
@@ -227,7 +234,12 @@ class DashboardPage(PageObject):
 
     def click_add_unit(self):
         self.find_element_by_css_selector('#add_unit > button').click()
-        return AddUnit(self._tester)
+        return AddUnit(self._tester, AddUnit.CREATION_MESSAGE)
+
+    def click_edit_unit(self, unit_title):
+        self.find_element_by_link_text(unit_title).click()
+        self.find_element_by_link_text('Edit unit').click()
+        return AddUnit(self._tester, AddUnit.LOADED_MESSAGE)
 
     def click_add_assessment(self):
         self.find_element_by_css_selector('#add_assessment > button').click()
@@ -262,30 +274,112 @@ class DashboardPage(PageObject):
         self.find_element_by_link_text(name).click()
         return AnalyticsPage(self._tester)
 
+    def click_course(self):
+        self.find_element_by_link_text('Course').click()
+        return RootPage(self._tester)
 
-class LessonPage(RootPage):
+
+class CourseContentPage(RootPage):
     """Page object for viewing course content."""
 
-    def submit_answer_for_mc_question_and_verify(self, question_text, answer):
+    def _find_question(self, question_batch_id, question_text):
         questions = self._tester.driver.find_elements_by_css_selector(
-            '.qt-mc-question.qt-standalone')
+            '[data-question-batch-id="%s"] .qt-mc-question.qt-standalone' %
+            question_batch_id)
+        if not questions:
+            raise AssertionError('No questions in batch "%s" found' %
+                                 question_batch_id)
+
         for question in questions:
             if (question.find_element_by_css_selector('.qt-question').text ==
                 question_text):
-                choices = question.find_elements_by_css_selector(
-                    '.qt-choices > *')
-                for choice in choices:
-                    if choice.text == answer:
-                        choice.find_element_by_css_selector(
-                            'input[type="radio"]').click()
-                        question.find_element_by_css_selector(
-                            '.qt-check-answer').click()
-                        if (question.find_element_by_css_selector(
-                                '.qt-feedback').text ==
-                            'Yes, the answer is correct.'):
-                            return self
-                        else:
-                            raise Exception('Incorrect answer submitted')
+                return question
+        raise AssertionError('No questions in batch "%s" ' % question_batch_id +
+                             'matched "%s"' % question_text)
+
+    def set_answer_for_mc_question(self, question_batch_id,
+                                   question_text, answer):
+        question = self._find_question(question_batch_id, question_text)
+        choices = question.find_elements_by_css_selector(
+            '.qt-choices > *')
+        for choice in choices:
+            if choice.text == answer:
+                choice.find_element_by_css_selector(
+                    'input[type="radio"]').click()
+                return self
+
+        raise AssertionError(
+            'No answer to question "%s" ' % question_text +
+            'in batch "%s" ' + question_batch_id +
+            'had an answer matching "%s"' % answer)
+
+    def submit_question_batch(self, question_batch_id, button_text):
+        buttons = self._tester.driver.find_elements_by_css_selector(
+            'div[data-question-batch-id="%s"] .qt-check-answer-button' %
+            question_batch_id)
+        for button in buttons:
+            if button_text in button.text:
+                button.click()
+                if question_batch_id.startswith('L'):
+                    return self
+                else:
+                    return AssessmentConfirmationPage(self._tester)
+        raise AssertionError('No button found matching "%s"' % button_text)
+
+
+class LessonPage(CourseContentPage):
+    """Object specific to Lesson behavior."""
+
+    def verify_correct_submission(self, question_batch_id, question_text):
+        question = self._find_question(question_batch_id, question_text)
+        text = question.find_element_by_css_selector('.qt-feedback').text
+        if text == 'Yes, the answer is correct.':
+            return self
+        raise Exception('Incorrect answer submitted')
+
+    def verify_incorrect_submission(self, question_batch_id, question_text):
+        question = self._find_question(question_batch_id, question_text)
+        text = question.find_element_by_css_selector('.qt-feedback').text
+        if text == 'No, the answer is incorrect.':
+            return self
+        raise Exception('Correct answer submitted')
+
+    def verify_correct_grading(self, question_batch_id):
+        report = self.find_element_by_css_selector(
+            '.qt-grade-report[data-question-batch-id="%s"]' % question_batch_id)
+        if report.text == 'Your score is: 1/1':
+            return self
+        raise Exception('Incorrect answer submitted')
+
+    def verify_incorrect_grading(self, question_batch_id):
+        report = self.find_element_by_css_selector(
+            '.qt-grade-report[data-question-batch-id="%s"]' % question_batch_id)
+        if report.text == 'Your score is: 0/1':
+            return self
+        raise Exception('Correct answer submitted')
+
+
+class AssessmentConfirmationPage(RootPage):
+
+    def verify_correct_submission(self):
+        completion_p = self.find_element_by_css_selector(
+            '.gcb-top-content[role="heading"]')
+        if 'Your score for this assessment is 100%' not in completion_p.text:
+            raise AssertionError('Success indication not found in "%s"' %
+                                 completion_p.text)
+        return self
+
+    def verify_incorrect_submission(self):
+        completion_p = self.find_element_by_css_selector(
+            '.gcb-top-content[role="heading"]')
+        if 'Your score for this assessment is 0%' not in completion_p.text:
+            raise AssertionError('Failure indication not found in "%s"' %
+                                 completion_p.text)
+        return self
+
+    def return_to_unit(self):
+        self.find_element_by_link_text('Return to Unit').click()
+        return LessonPage(self._tester)
 
 
 class AssetsPage(PageObject):
@@ -514,32 +608,9 @@ class ImageEditorPage(EditorPageObject):
         return AssetsPage(self._tester)
 
 
-class AddUnit(DashboardEditor):
-    """Page object to model the dashboard's add unit editor."""
-
-    def __init__(self, tester):
-        super(AddUnit, self).__init__(tester)
-        self.expect_status_message_to_be('New unit has been created and saved.')
-
-    def set_title(self, title):
-        title_el = self.find_element_by_name('title')
-        title_el.clear()
-        title_el.send_keys(title)
-        return self
-
-
 class Import(DashboardEditor):
     """Page object to model the dashboard's unit/lesson organizer."""
     pass
-
-
-class AddAssessment(DashboardEditor):
-    """Page object to model the dashboard's assessment editor."""
-
-    def __init__(self, tester):
-        super(AddAssessment, self).__init__(tester)
-        self.expect_status_message_to_be(
-            'New assessment has been created and saved.')
 
 
 class AddLink(DashboardEditor):
@@ -551,42 +622,34 @@ class AddLink(DashboardEditor):
             'New link has been created and saved.')
 
 
-class AddLesson(DashboardEditor):
-    """Page object to model the dashboard's lesson editor."""
-    RTE_EDITOR_ID = 'gcbRteField-0_editor'
+class CourseContentElement(DashboardEditor):
+    RTE_EDITOR_FORMAT = 'gcbRteField-%d_editor'
     RTE_TEXTAREA_ID = 'gcbRteField-0'
 
-    def __init__(self, tester):
-        super(AddLesson, self).__init__(tester)
-        self.instanceid_list_snapshot = []
-        self.expect_status_message_to_be(
-            'New lesson has been created and saved.')
+    def set_title(self, title):
+        title_el = self.find_element_by_name('title')
+        title_el.clear()
+        title_el.send_keys(title)
+        return self
 
-    def click_rich_text(self):
-        el = self.find_element_by_css_selector('div.rte-control')
+    def click_rich_text(self, index=0):
+        el = self.find_element_by_css_selector('div.rte-control', index)
         self._tester.assertEqual('Rich Text', el.text)
         el.click()
         wait.WebDriverWait(self._tester.driver, 15).until(
-            ec.element_to_be_clickable((by.By.ID, AddLesson.RTE_EDITOR_ID)))
+            ec.element_to_be_clickable(
+                (by.By.ID, CourseContentElement.RTE_EDITOR_FORMAT % index)))
         return self
 
-    def click_plain_text(self):
-        el = self.find_element_by_css_selector('div.rte-control')
+    def click_plain_text(self, index=None):
+        el = self.find_element_by_css_selector('div.rte-control', index)
         self._tester.assertEqual('<HTML>', el.text)
         el.click()
         return self
 
-    def send_rte_text(self, text):
-        # Work around Selenium bug: If focus is in another window
-        # and in a text area, send_keys won't work.  Steal focus
-        # immediately before sending keys.
-        # https://code.google.com/p/selenium/issues/detail?id=2977
-        self._tester.driver.execute_script('window.focus();')
-        textarea = self.find_element_by_id('gcbRteField-0_editor')
-        textarea.click()
-        textarea.send_keys(keys.Keys.HOME)
-
-        textarea.send_keys(text)
+    def click_rte_add_custom_tag(self, index=0):
+        self.find_element_by_link_text(
+            'Insert Google Course Builder component', index).click()
         return self
 
     def select_rte_custom_tag_type(self, option_text):
@@ -602,25 +665,6 @@ class AddLesson(DashboardEditor):
         wait.WebDriverWait(self._tester.driver, 15).until(
             ec.element_to_be_clickable(
                 (by.By.PARTIAL_LINK_TEXT, 'Close')))
-        self._tester.driver.switch_to_default_content()
-        return self
-
-    def click_rte_add_custom_tag(self):
-        self.find_element_by_link_text(
-            'Insert Google Course Builder component').click()
-        return self
-
-    def set_lesson_title(self, lesson_title):
-        title_el = self.find_element_by_name('title')
-        title_el.clear()
-        title_el.send_keys(lesson_title)
-        return self
-
-    def doubleclick_rte_element(self, elt_css_selector):
-        self._tester.driver.switch_to_frame(AddLesson.RTE_EDITOR_ID)
-        target = self.find_element_by_css_selector(elt_css_selector)
-        action_chains.ActionChains(
-            self._tester.driver).double_click(target).perform()
         self._tester.driver.switch_to_default_content()
         return self
 
@@ -640,6 +684,34 @@ class AddLesson(DashboardEditor):
         self._tester.driver.switch_to_default_content()
         return self
 
+    def click_rte_save(self):
+        self._ensure_rte_iframe_ready_and_switch_to_it()
+        self.find_element_by_link_text('Save').click()
+        self._tester.driver.switch_to_default_content()
+        return self
+
+    def send_rte_text(self, text):
+        # Work around Selenium bug: If focus is in another window
+        # and in a text area, send_keys won't work.  Steal focus
+        # immediately before sending keys.
+        # https://code.google.com/p/selenium/issues/detail?id=2977
+        self._tester.driver.execute_script('window.focus();')
+        textarea = self.find_element_by_id('gcbRteField-0_editor')
+        textarea.click()
+        textarea.send_keys(keys.Keys.HOME)
+
+        textarea.send_keys(text)
+        return self
+
+    def doubleclick_rte_element(self, elt_css_selector, index=0):
+        self._tester.driver.switch_to_frame(
+            CourseContentElement.RTE_EDITOR_FORMAT % index)
+        target = self.find_element_by_css_selector(elt_css_selector)
+        action_chains.ActionChains(
+            self._tester.driver).double_click(target).perform()
+        self._tester.driver.switch_to_default_content()
+        return self
+
     def ensure_rte_lightbox_field_has_value(self, field_css_selector, value):
         self._ensure_rte_iframe_ready_and_switch_to_it()
         self._tester.assertEqual(
@@ -649,15 +721,9 @@ class AddLesson(DashboardEditor):
         self._tester.driver.switch_to_default_content()
         return self
 
-    def click_rte_save(self):
-        self._ensure_rte_iframe_ready_and_switch_to_it()
-        self.find_element_by_link_text('Save').click()
-        self._tester.driver.switch_to_default_content()
-        return self
-
     def _get_rte_contents(self):
         return self.find_element_by_id(
-            AddLesson.RTE_TEXTAREA_ID).get_attribute('value')
+            CourseContentElement.RTE_TEXTAREA_ID).get_attribute('value')
 
     def _get_instanceid_list(self):
         """Returns a list of the instanceid attrs in the lesson body."""
@@ -682,9 +748,78 @@ class AddLesson(DashboardEditor):
             self.instanceid_list_snapshot, self._get_instanceid_list())
         return self
 
+
+class AddUnit(CourseContentElement):
+    """Page object to model the dashboard's add unit editor."""
+
+    CREATION_MESSAGE = 'New unit has been created and saved.'
+    LOADED_MESSAGE = 'Success.'
+
+    def __init__(self, tester, expected_message):
+        super(AddUnit, self).__init__(tester)
+        self.expect_status_message_to_be(expected_message)
+
+    def set_pre_assessment(self, assessment_name):
+        select.Select(self.find_element_by_name(
+            'pre_assessment')).select_by_visible_text(assessment_name)
+        return self
+
+    def set_post_assessment(self, assessment_name):
+        select.Select(self.find_element_by_name(
+            'post_assessment')).select_by_visible_text(assessment_name)
+        return self
+
+    def set_contents_on_one_page(self, setting):
+        print
+        labels = self._tester.driver.find_elements_by_tag_name('label')
+        one_page_label = None
+        for label in labels:
+            if label.text == 'Show Contents on One Page':
+                one_page_label = label
+                break
+        label_div = one_page_label.find_element_by_xpath('..')
+        checkbox_div = label_div.find_element_by_xpath('..')
+        checkbox = checkbox_div.find_element_by_css_selector(
+            'input[type="checkbox"]')
+        if checkbox.is_selected() != setting:
+            checkbox.click()
+        return self
+
+
+class AddAssessment(CourseContentElement):
+    """Page object to model the dashboard's assessment editor."""
+
+    INDEX_CONTENT = 0
+    INDEX_REVIEWER_FEEDBACK = 1
+
+    def __init__(self, tester):
+        super(AddAssessment, self).__init__(tester)
+        self.expect_status_message_to_be(
+            'New assessment has been created and saved.')
+
+
+class AddLesson(CourseContentElement):
+    """Page object to model the dashboard's lesson editor."""
+
+    def __init__(self, tester):
+        super(AddLesson, self).__init__(tester)
+        self.instanceid_list_snapshot = []
+        self.expect_status_message_to_be(
+            'New lesson has been created and saved.')
+
     def ensure_lesson_body_textarea_matches_regex(self, regex):
         rte_contents = self._get_rte_contents()
         self._tester.assertRegexpMatches(rte_contents, regex)
+        return self
+
+    def set_questions_are_scored(self):
+        select.Select(self.find_element_by_name(
+            'scored')).select_by_visible_text('Questions are scored')
+        return self
+
+    def set_questions_give_feedback(self):
+        select.Select(self.find_element_by_name(
+            'scored')).select_by_visible_text('Questions only give feedback')
         return self
 
 

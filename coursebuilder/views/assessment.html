@@ -3,6 +3,10 @@
 {% endif %}
 
 <div class="gcb-assessment-contents">
+  {% if is_read_write_course and is_course_admin and as_lesson %}
+    <a href="dashboard?action=edit_assessment&key={{ unit_id }}"
+       class="gcb-button gcb-button-action">Edit assessment</a>
+  {% endif %}
   <h1>{{ assessment_title }}</h1>
 
   {% if assessment_script_src %}

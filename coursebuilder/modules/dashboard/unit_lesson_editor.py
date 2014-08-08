@@ -492,6 +492,11 @@ def generate_unit_schema():
         'pre_assessment', 'Pre Assessment', 'integer', optional=True))
     schema.add_property(SchemaField(
         'post_assessment', 'Post Assessment', 'integer', optional=True))
+    schema.add_property(SchemaField(
+        'show_contents_on_one_page', 'Show Contents on One Page', 'boolean',
+        optional=True,
+        description='Whether to show all assessments, lessons, and activities '
+        'in a Unit on one page, or to show each on its own page.'))
     return schema
 
 
@@ -550,6 +555,8 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         ret = self.unit_to_dict_common(unit)
         ret['pre_assessment'] = unit.pre_assessment or -1
         ret['post_assessment'] = unit.post_assessment or -1
+        ret['show_contents_on_one_page'] = (
+            unit.show_contents_on_one_page or False)
         return ret
 
     def _is_assessment_unused(self, course, unit, assessment, errors):
@@ -613,6 +620,8 @@ class UnitRESTHandler(CommonUnitRESTHandler):
                 self._is_assessment_version_ok(course, assessment, errors) and
                 not self._is_assessment_on_track(course, assessment, errors)):
                 unit.post_assessment = post_assessment_id
+        unit.show_contents_on_one_page = (
+            updated_unit_dict['show_contents_on_one_page'])
 
 
 def generate_link_schema():

@@ -114,6 +114,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.VirtualFileSystemTest': 41,
     'tests.functional.test_classes.ImportActivityTests': 6,
     'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 17,
+    'tests.functional.unit_on_one_page.UnitOnOnePageTest': 3,
     'tests.functional.whitelist.WhitelistTest': 12,
     'tests.integration.test_classes': 15,
     'tests.unit.etl_mapreduce.HistogramTests': 5,

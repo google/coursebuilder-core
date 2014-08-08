@@ -26,27 +26,11 @@
 
 <script>
   var questionData = {};
-  {% if lesson and lesson.scored %}
-    questionData.scored = true;
-  {% else %}
-    questionData.scored = false;
-  {% endif %}
+  questionData.scored = true;
 </script>
 
-<div id="gcb-main">
-  {% if is_read_write_course and is_course_admin %}
-    <a href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
-      class="gcb-button gcb-button-action">Edit unit</a>
-    {% if lesson %}
-      <a href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
-        class="gcb-button gcb-button-action">Edit lesson</a>
-    {% endif %}
-    {% if assessment %}
-      <a href="dashboard?action=edit_assessment&key={{ assessment.unit_id }}"
-         class="gcb-button gcb-button-action">Edit assessment</a>
-    {% endif %}
-  {% endif %}
 
+<div id="gcb-main">
   <div id="gcb-left-nav-toggle">
     <a href="" class="gcb-button">
       <span class='show'>{{ gettext('Show Schedule') }}</span>
@@ -88,6 +72,11 @@
     {% endif %}
   </ul>
 
+  {% if is_read_write_course and is_course_admin %}
+    <a href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
+       class="gcb-button gcb-button-action">Edit unit</a>
+  {% endif %}
+
   <div>
     <h1 class="gcb-unit-header">
       {{ display_unit_title(unit) }}
@@ -111,14 +100,18 @@
     {% else %}
 
       <div style="padding-bottom: 20px;">
-        <div class="gcb-aside gcb-button-box">
-          {{ display_content }}
-        </div><!-- /gcb-aside -->
+        {% for item in display_content %}
+          <div class="gcb-aside gcb-button-box">
+            {{ item }}
+          </div><!-- /gcb-aside -->
+        {% endfor %}
 
         <div class="gcb-button-box">
-          {% if (lesson and
+          {% if unit.show_contents_on_one_page or
+                (lesson and
                  course_info.unit.hide_lesson_navigation_buttons) or
                 (assessment and
+                 not is_confirmation and
                  course_info.unit.hide_assessment_navigation_buttons) %}
           {% else %}
           <div class="gcb-prev-button">

@@ -23,11 +23,11 @@ QUESTION_TYPES = {
 /**
  * Base class for rendering questions.
  */
-function BaseQuestion(el, questionData, messages, componentAudit) {
+function BaseQuestion(el, questionData, messages, componentAudit, scored) {
   this.el = el;
   this.id = this.el.attr('id');
   this.data = questionData[this.id];
-  this.scored = questionData.scored;
+  this.scored = scored;
   this.messages = messages;
   this.componentAudit = componentAudit;
 }
@@ -81,8 +81,8 @@ BaseQuestion.prototype.getWeight = function() {
 /**
  * A class to handle multiple choice questions.
  */
-function McQuestion(el, questionData, messages, componentAudit) {
-  BaseQuestion.call(this, el, questionData, messages, componentAudit);
+function McQuestion(el, questionData, messages, componentAudit, scored) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit, scored);
   this.type = QUESTION_TYPES.MC_QUESTION;
 }
 BaseQuestion.bindSubclass(McQuestion);
@@ -143,8 +143,8 @@ McQuestion.prototype.makeReadOnly = function() {
 /**
  * A class to handle short answer questions.
  */
-function SaQuestion(el, questionData, messages, componentAudit) {
-  BaseQuestion.call(this, el, questionData, messages, componentAudit);
+function SaQuestion(el, questionData, messages, componentAudit, scored) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit, scored);
   this.type = QUESTION_TYPES.SA_QUESTION;
 }
 BaseQuestion.bindSubclass(SaQuestion);
@@ -244,8 +244,8 @@ SaQuestion.prototype.makeReadOnly = function() {
  * @param el JQuery root node of the question group
  * @param questionData the global question data object
  */
-function QuestionGroup(el, questionData, messages, componentAudit) {
-  BaseQuestion.call(this, el, questionData, messages, componentAudit);
+function QuestionGroup(el, questionData, messages, componentAudit, scored) {
+  BaseQuestion.call(this, el, questionData, messages, componentAudit, scored);
   this.type = QUESTION_TYPES.QUESTION_GROUP;
   this.questionData = questionData;
   this.questions = [];
@@ -258,10 +258,11 @@ QuestionGroup.prototype.init = function() {
       .each(function(index, element) {
         var elt = $(element);
         if (elt.hasClass('qt-mc-question')) {
-          that.questions.push(new McQuestion(elt, that.questionData, [], null));
+          that.questions.push(new McQuestion(elt, that.questionData, [], null,
+              this.scored));
         } else {
-          that.questions.push(new SaQuestion(elt, that.questionData, [], null)
-              .bindHintButton());
+          that.questions.push(new SaQuestion(elt, that.questionData, [], null,
+              this.scored).bindHintButton());
         }
       });
 };
@@ -360,7 +361,7 @@ QuestionGroup.prototype.makeReadOnly = function(state) {
   });
 };
 
-function gradeScoredLesson(questions, messages) {
+function gradeScoredLesson(questions, messages, question_batch_id) {
   var score = 0.0;
   var totalWeight = 0.0;
   var answers = {'version': '1.5'};
@@ -381,7 +382,7 @@ function gradeScoredLesson(questions, messages) {
     question.displayFeedback(grade.feedback);
   });
   score = Math.round(100 * score)/100;
-  $('div.qt-grade-report')
+  $('div.qt-grade-report[data-question-batch-id="' + question_batch_id + '"]')
       .text(messages.yourScoreIs + score + '/' + totalWeight.toFixed(0))
       .removeClass('qt-hidden');
 
@@ -458,10 +459,10 @@ function submitForm(action, hiddenData) {
 }
 
 /**
- * This will move the submit answers button to a div with class
- * 'qt-assessment-button-bar-location' if the lesson author has included exactly
- * one.
- */
+    * This will move the submit answers button to a div with class
+    * 'qt-assessment-button-bar-location' if the lesson author has included exactly
+    * one.
+    */
 function maybeMoveGradingButton() {
   var buttonBarDiv = $('div.qt-assessment-button-bar');
   var buttonBarPreferredLocation = $('div.qt-assessment-button-bar-location');
@@ -470,64 +471,101 @@ function maybeMoveGradingButton() {
   }
 }
 
+function getQuestionBatchId(element) {
+  var parents = $(element).parents('[data-question-batch-id]')
+  if (parents.length > 0) {
+    return $(parents[0]).data('question-batch-id');
+  } else {
+    return 'unowned';
+  }
+}
+
 function findGcbQuestions() {
   function gcbAssessmentTagAudit(data_dict) {
     gcbTagEventAudit(data_dict, 'assessment');
   }
   var messages = window.assessmentTagMessages;
-  var gcbQuestions = [];
+  var gcbQuestions = {};
+
+  function addQuestion(gcbQuestions, element, constructor) {
+    var parent = $(element).parents('[data-question-batch-id]')[0];
+    var scored = ($(parent).data('scored').toLowerCase() == 'true');
+    var questionBatchId = $(parent).data('question-batch-id');
+    if (!(questionBatchId in gcbQuestions)) {
+      gcbQuestions[questionBatchId] = [];
+    }
+    gcbQuestions[questionBatchId].push(
+        new constructor($(element), window.questionData, messages,
+            gcbAssessmentTagAudit, scored).bind());
+  }
   $('div.qt-mc-question.qt-standalone').each(function(index, element) {
-    gcbQuestions.push(new McQuestion(
-      $(element), window.questionData, messages,
-      gcbAssessmentTagAudit).bind());
+    addQuestion(gcbQuestions, element, McQuestion);
   });
   $('div.qt-sa-question.qt-standalone').each(function(index, element) {
-    gcbQuestions.push(new SaQuestion(
-      $(element), window.questionData, messages,
-      gcbAssessmentTagAudit).bind());
+    addQuestion(gcbQuestions, element, SaQuestion);
   });
   $('div.qt-question-group').each(function(index, element) {
-    gcbQuestions.push(new QuestionGroup(
-      $(element), window.questionData, messages,
-      gcbAssessmentTagAudit).bind());
+    addQuestion(gcbQuestions, element, QuestionGroup);
   });
 
-  // restore previous answers to questions
   if (window.questionData.savedAnswers) {
-    $.each(gcbQuestions, function(index, question) {
-      question.setStudentAnswer(window.questionData.savedAnswers[question.id]);
-    });
+    for (var group in gcbQuestions) {
+      $.each(gcbQuestions[group], function(index, question) {
+
+        // restore previous answers to questions
+        question.setStudentAnswer(
+            window.questionData.savedAnswers[question.id]);
+
+        // Make read-only views read-only
+        if ($(question.el).parents('div.assessment-readonly').length > 0) {
+          question.makeReadOnly();
+        }
+      });
+    }
   }
 
-  // Make read-only views read-only
-  $.each(gcbQuestions, function(index, question) {
-    if ($(question.el).parents('div.assessment-readonly').length > 0) {
-      question.makeReadOnly();
-    }
-  });
-
   // Bind the page-level grading buttons
-  if (window.questionData.scored && gcbQuestions.length > 0) {
+  if (! $.isEmptyObject(gcbQuestions)) {
     $('div.qt-grade-scored-lesson')
         .removeClass('qt-hidden')
-        .children('button').click(function() {
-          gradeScoredLesson(gcbQuestions, messages);
+        .children('button').click(function(event) {
+          var dataDiv = $(
+              $(event.target).parents('[data-question-batch-id]')[0]);
+          var questionBatchId = dataDiv.data('question-batch-id');
+          gradeScoredLesson(gcbQuestions[questionBatchId],
+              messages, questionBatchId);
         });
     $('div.qt-grade-assessment')
         .removeClass('qt-hidden')
-        .children('button').click(function() {
-          gradeAssessment(gcbQuestions, questionData.unitId,
-              questionData.xsrfToken);
+        .children('button').click(function(event) {
+          var dataDiv = $(
+              $(event.target).parents('[data-question-batch-id]')[0]);
+          var questionBatchId = dataDiv.data('question-batch-id');
+          var unitId = dataDiv.data('unit-id');
+          var xsrfToken = dataDiv.data('xsrf-token');
+          gradeAssessment(gcbQuestions[questionBatchId], unitId, xsrfToken);
         });
     $('button.qt-save-draft')
-        .click(function() {
-          submitReview(true, gcbQuestions, questionData.unitId,
-              questionData.xsrfToken, questionData.reviewKey);
+        .click(function(event) {
+          var dataDiv = $(
+              $(event.target).parents('[data-question-batch-id]')[0]);
+          var questionBatchId = dataDiv.data('question-batch-id');
+          var unitId = dataDiv.data('unit-id');
+          var xsrfToken = dataDiv.data('xsrf-token');
+          var reviewKey = dataDiv.data('review-key');
+          submitReview(true, gcbQuestions[questionBatchId], unitId,
+                       xsrfToken, reviewKey);
         });
     $('button.qt-submit-review')
-        .click(function() {
-          submitReview(false, gcbQuestions, questionData.unitId,
-            questionData.xsrfToken, questionData.reviewKey);
+        .click(function(event) {
+          var dataDiv = $(
+              $(event.target).parents('[data-question-batch-id]')[0]);
+          var questionBatchId = dataDiv.data('question-batch-id');
+          var unitId = dataDiv.data('unit-id');
+          var xsrfToken = dataDiv.data('xsrf-token');
+          var reviewKey = dataDiv.data('review-key');
+          submitReview(false, gcbQuestions[questionBatchId], unitId,
+                       xsrfToken, reviewKey);
         });
   }
 

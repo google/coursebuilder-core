@@ -1,5 +1,7 @@
 {% if lesson.objectives %}
-  <div class="gcb-lesson-content">
+  <div class="gcb-lesson-content"
+       data-scored="{{ lesson.scored }}"
+       data-question-batch-id="L{{ lesson.lesson_id }}">
     {{ lesson.objectives | gcb_tags}}
     {% if lesson.scored %}
       <div class="qt-grade-scored-lesson qt-hidden">
@@ -8,7 +10,8 @@
           {{ gettext('Grade Questions') }}
         </button>
       </div>
-      <div class="qt-grade-report qt-hidden"></div>
+      <div class="qt-grade-report qt-hidden"
+           data-question-batch-id="L{{ lesson.lesson_id }}"></div>
     {% endif %}
   </div>
 {% endif %}

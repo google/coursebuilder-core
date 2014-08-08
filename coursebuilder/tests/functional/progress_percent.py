@@ -18,6 +18,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import re
 
+from common import crypto
 from common.utils import Namespace
 from controllers import utils
 from models import config
@@ -93,15 +94,11 @@ class ProgressPercent(actions.TestBase):
     def _click_next_button(self, response):
         return self._click_button('gcb-next-button', response)
 
-    def _get_question_data(self, name, response):
-        matches = re.search('questionData.%s = \'([^\']*)\'' % name,
-                            response.body)
-        return matches.group(1)
-
-    def _post_assessment(self, response, score):
+    def _post_assessment(self, assessment_id, score):
         return self.post(BASE_URL + '/answer', {
-            'xsrf_token': self._get_question_data('xsrfToken', response),
-            'assessment_type': self._get_question_data('unitId', response),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post'),
+            'assessment_type': assessment_id,
             'score': score})
 
     def test_progress_no_pre_assessment(self):
@@ -174,8 +171,8 @@ class ProgressPercent(actions.TestBase):
         self.unit.post_assessment = self.assessment_two.unit_id
         self.course.save()
 
-        response = self._get_unit_page(self.unit)
-        response = self._post_assessment(response, '99')
+        self._get_unit_page(self.unit)
+        response = self._post_assessment(self.assessment_one.unit_id, '99')
 
         # Reload student; assessment scores are cached in student.
         with Namespace(NAMESPACE):
@@ -203,8 +200,8 @@ class ProgressPercent(actions.TestBase):
         self.unit.post_assessment = self.assessment_two.unit_id
         self.course.save()
 
-        response = self._get_unit_page(self.unit)
-        response = self._post_assessment(response, '100')
+        self._get_unit_page(self.unit)
+        response = self._post_assessment(self.assessment_one.unit_id, '100')
 
         # Reload student; assessment scores are cached in student.
         with Namespace(NAMESPACE):

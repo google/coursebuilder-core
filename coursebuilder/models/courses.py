@@ -361,6 +361,10 @@ class Unit12(object):
     def labels(self):
         return None
 
+    @property
+    def show_contents_on_one_page(self):
+        return False
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -601,6 +605,10 @@ class Unit13(object):
         self.pre_assessment = None
         self.post_assessment = None
 
+        # Whether to show all content in the unit on a single HTML
+        # page, or display assessments/lessons/activities on separate pages.
+        self.show_contents_on_one_page = False
+
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
@@ -695,6 +703,7 @@ class PersistentCourse13(object):
                     'labels': '',
                     'pre_assessment': None,
                     'post_assessment': None,
+                    'show_contents_on_one_page': False,
                     }
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
@@ -1142,6 +1151,7 @@ class CourseModel13(object):
         existing_unit.labels = unit.labels
         existing_unit.pre_assessment = unit.pre_assessment
         existing_unit.post_assessment = unit.post_assessment
+        existing_unit.show_contents_on_one_page = unit.show_contents_on_one_page
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href

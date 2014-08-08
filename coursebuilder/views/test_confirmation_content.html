@@ -12,3 +12,13 @@
     {{course_info.assessment_confirmations['result_text'][result] % overall_score}}
   </p>
 {% endif %}
+
+{% if unit and unit.show_contents_on_one_page %}
+<p>
+  <a class="gcb-button"
+     href="unit?unit={{ unit_id }}&assessment={{ assessment.unit_id }}">
+    {# I18N: Shown after the student has submitted an assessment in a unit that contains assessments and where all unit contents are shown on a single HTML page.  This button allows the student to navigate back to the unit main page. #}
+    {{ gettext('Return to Unit') }}
+  </a>
+</p>
+{% endif %}

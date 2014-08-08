@@ -16,6 +16,7 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import copy
 import datetime
 import urllib
 import urlparse
@@ -370,58 +371,101 @@ class UnitHandler(BaseHandler):
         # custom component renderers in the assessment_tags module.
         self.student = student
         self.unit_id = unit_id
-        if lesson:
-            self.lesson_id = lesson.lesson_id
-            self.lesson_is_scored = lesson.scored
 
         add_course_outline_to_template(self, student)
         self.template_value['is_progress_recorded'] = (
             CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
 
+        if (unit.show_contents_on_one_page and
+            'confirmation' not in self.request.params):
+            self._show_all_contents(student, unit)
+        else:
+            self._show_single_element(student, unit, lesson, assessment)
+        self.render('unit.html')
+
+    def _show_all_contents(self, student, unit):
+        course = self.get_course()
+        display_content = []
+        left_nav_elements = UnitHandler.UnitLeftNavElements(
+            self.get_course(), unit)
+
+        if unit.pre_assessment:
+            display_content.append(self.get_assessment_display_content(
+                student, unit, course.find_unit_by_id(unit.pre_assessment),
+                left_nav_elements, {}))
+
+        for lesson in course.get_lessons(unit.unit_id):
+            self.lesson_id = lesson.lesson_id
+            self.lesson_is_scored = lesson.scored
+            template_values = copy.copy(self.template_value)
+            self.set_lesson_content(student, unit, lesson, left_nav_elements,
+                                    template_values)
+            display_content.append(self.render_template_to_html(
+                template_values, 'lesson_common.html'))
+        del self.lesson_id
+        del self.lesson_is_scored
+
+        if unit.post_assessment:
+            display_content.append(self.get_assessment_display_content(
+                student, unit, course.find_unit_by_id(unit.post_assessment),
+                left_nav_elements, {}))
+
+        self.template_value['display_content'] = display_content
+
+    def _show_single_element(self, student, unit, lesson, assessment):
         # Add markup to page which depends on the kind of content.
         left_nav_elements = UnitHandler.UnitLeftNavElements(
             self.get_course(), unit)
         activity = (self.request.get('activity') or
                     '/activity' in self.request.path)
+        if lesson:
+            self.lesson_id = lesson.lesson_id
+            self.lesson_is_scored = lesson.scored
         if assessment:
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
                                               left_nav_elements)
-                self.template_value['display_content'] = (
+                self.template_value['display_content'] = [
                     self.render_template_to_html(
-                        self.template_value, 'test_confirmation_content.html'))
+                        self.template_value, 'test_confirmation_content.html')]
             else:
-                self.set_assessment_content(unit, assessment, left_nav_elements)
-                assessment_handler = AssessmentHandler()
-                assessment_handler.app_context = self.app_context
-                assessment_handler.request = self.request
-                self.template_value['display_content'] = (
-                    assessment_handler.get_assessment_content(
-                        student, self.get_course(), assessment, as_lesson=True))
+                self.template_value['display_content'] = [
+                    self.get_assessment_display_content(
+                        student, unit, assessment, left_nav_elements,
+                        self.template_value)]
         else:
             if activity:
                 self.set_activity_content(student, unit, lesson,
                                           left_nav_elements)
             else:
                 self.set_lesson_content(student, unit, lesson,
-                                        left_nav_elements)
-            self.template_value['display_content'] = (
+                                        left_nav_elements, self.template_value)
+            self.template_value['display_content'] = [
                 self.render_template_to_html(
-                    self.template_value, 'lesson_common.html'))
-        self.render('unit.html')
+                    self.template_value, 'lesson_common.html')]
 
-    def set_assessment_content(self, unit, assessment, left_nav_elements):
-        self.template_value['page_type'] = ASSESSMENT_PAGE_TYPE
-        self.template_value['assessment'] = assessment
-        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+    def get_assessment_display_content(self, student, unit, assessment,
+                                       left_nav_elements, template_values):
+        template_values['page_type'] = ASSESSMENT_PAGE_TYPE
+        template_values['assessment'] = assessment
+        template_values['back_button_url'] = left_nav_elements.get_url_by(
             'assessment', assessment.unit_id, -1)
-        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+        template_values['next_button_url'] = left_nav_elements.get_url_by(
             'assessment', assessment.unit_id, 1)
+
+        assessment_handler = AssessmentHandler()
+        assessment_handler.app_context = self.app_context
+        assessment_handler.request = self.request
+        return assessment_handler.get_assessment_content(
+            student, self.get_course(), assessment, as_lesson=True)
 
     def set_confirmation_content(self, student, unit, assessment,
                                  left_nav_elements):
         course = self.get_course()
         self.template_value['page_type'] = ASSESSMENT_CONFIRMATION_PAGE_TYPE
+        self.template_value['unit'] = unit
+        self.template_value['assessment'] = assessment
+        self.template_value['is_confirmation'] = True
         self.template_value['assessment_name'] = assessment.title
         self.template_value['score'] = (
             course.get_score(student, str(assessment.unit_id)))
@@ -458,16 +502,17 @@ class UnitHandler(BaseHandler):
             self.get_course().get_progress_tracker().put_activity_accessed(
                 student, unit.unit_id, lesson.lesson_id)
 
-    def set_lesson_content(self, student, unit, lesson, left_nav_elements):
-        self.template_value['page_type'] = UNIT_PAGE_TYPE
-        self.template_value['lesson'] = lesson
-        self.template_value['lesson_id'] = lesson.lesson_id
-        self.template_value['back_button_url'] = left_nav_elements.get_url_by(
+    def set_lesson_content(self, student, unit, lesson, left_nav_elements,
+                           template_values):
+        template_values['page_type'] = UNIT_PAGE_TYPE
+        template_values['lesson'] = lesson
+        template_values['lesson_id'] = lesson.lesson_id
+        template_values['back_button_url'] = left_nav_elements.get_url_by(
             'lesson', lesson.lesson_id, -1)
-        self.template_value['next_button_url'] = left_nav_elements.get_url_by(
+        template_values['next_button_url'] = left_nav_elements.get_url_by(
             'lesson', lesson.lesson_id, 1)
-        self.template_value['page_type'] = 'unit'
-        self.template_value['title'] = lesson.title
+        template_values['page_type'] = 'unit'
+        template_values['title'] = lesson.title
 
         if CAN_PERSIST_ACTIVITY_EVENTS.value:
             # Mark this page as accessed. This is done after setting the
@@ -512,14 +557,13 @@ class AssessmentHandler(BaseHandler):
             return
 
         self.template_value['main_content'] = (
-            self.get_assessment_content(student, course, unit))
+            self.get_assessment_content(student, course, unit, as_lesson=False))
         self.template_value['assessment_name'] = assessment_name
         self.template_value['unit_id'] = self.unit_id
         self.template_value['navbar'] = {'course': True}
         self.render('assessment_page.html')
 
-    def get_assessment_content(self, student, course, unit, as_lesson=False):
-        self.template_value['as_lesson'] = as_lesson
+    def get_assessment_content(self, student, course, unit, as_lesson):
         model_version = course.get_assessment_model_version(unit)
         assert model_version in courses.SUPPORTED_ASSESSMENT_MODEL_VERSIONS
         self.template_value['model_version'] = model_version
@@ -536,6 +580,7 @@ class AssessmentHandler(BaseHandler):
             raise ValueError('Bad assessment model version: %s' % model_version)
 
         self.template_value['unit_id'] = unit.unit_id
+        self.template_value['as_lesson'] = as_lesson
         self.template_value['assessment_title'] = unit.title
         self.template_value['assessment_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('assessment-post'))

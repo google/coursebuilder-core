@@ -18,6 +18,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import re
 
+from common import crypto
 from common import utils as common_utils
 from controllers import sites
 from controllers import utils
@@ -247,15 +248,11 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             'In progress', 'Unit 2 - %s</a>' % self.unit_one_lesson.title,
             response)
 
-    def _get_question_data(self, name, response):
-        matches = re.search('questionData.%s = \'([^\']*)\'' % name,
-                            response.body)
-        return matches.group(1)
-
-    def _post_assessment(self, response):
+    def _post_assessment(self, assessment_id):
         return self.post(BASE_URL + '/answer', {
-            'xsrf_token': self._get_question_data('xsrfToken', response),
-            'assessment_type': self._get_question_data('unitId', response),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post'),
+            'assessment_type': assessment_id,
             'score': '1'})
 
     def test_progress_via_assessment_submission(self):
@@ -265,7 +262,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
 
         # Submit pre-assessment; verify completion status.
         response = self._get_unit_page(self.unit_one_lesson)
-        response = self._post_assessment(response).follow()
+        response = self._post_assessment(self.assessment_one.unit_id).follow()
         self._assert_progress_state(
             'Completed', self.assessment_one.title, response)
         self._assert_progress_state(
@@ -287,7 +284,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
             'Not yet submitted', self.assessment_two.title, response)
 
         # Submit post-assessment; unit should now be marked complete.
-        response = self._post_assessment(response).follow()
+        response = self._post_assessment(self.assessment_two.unit_id).follow()
 
         # Verify that we get confirmation page on post-assessment
         self.assertIn('Thank you for taking the assessment two', response.body)
@@ -366,6 +363,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'label_groups': [],
                 'pre_assessment': assessment.unit_id,
                 'post_assessment': -1,
+                'show_contents_on_one_page': False,
             }, errors)
         self.assertEquals([
             'The version of assessment "Pre-course assessment" is '
@@ -403,6 +401,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_two.unit_id,
+                'show_contents_on_one_page': False,
             }, errors)
         self.assertEquals([], errors)
         self.assertEquals(self.unit_no_lessons.pre_assessment,
@@ -441,6 +440,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_two.unit_id,
+                'show_contents_on_one_page': False,
             }, errors)
         self.assertEquals(
             ['Assessment "Assessment One" is already '
@@ -462,6 +462,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'label_groups': [],
                 'pre_assessment': self.assessment_two.unit_id,
                 'post_assessment': self.assessment_one.unit_id,
+                'show_contents_on_one_page': False,
             }, errors)
         self.assertEquals([], errors)
         self.assertEquals(self.unit_no_lessons.pre_assessment,
@@ -480,6 +481,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'label_groups': [],
                 'pre_assessment': self.assessment_one.unit_id,
                 'post_assessment': self.assessment_one.unit_id,
+                'show_contents_on_one_page': False,
             }, errors)
         self.assertEquals([
             'The same assessment cannot be used as both the pre '
@@ -574,6 +576,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                     'label_groups': [],
                     'pre_assessment': self.assessment_one.unit_id,
                     'post_assessment': self.assessment_two.unit_id,
+                    'show_contents_on_one_page': False,
                 }, errors)
             self.assertEquals([
                 'Assessment "Assessment One" has track labels, so it '
@@ -629,7 +632,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.assertNotIn(' End ', response.body)
 
         # Submit assessment.  Verify confirmation page _does_ have prev/next.
-        response = self._post_assessment(response).follow()
+        response = self._post_assessment(self.assessment_one.unit_id).follow()
         self.assertIn('Previous Page', response.body)
         self.assertIn('Next Page', response.body)
 
@@ -645,7 +648,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.assertNotIn(' End ', response.body)
 
         # Submit post-assessment; verify we have prev/end buttons
-        response = self._post_assessment(response).follow()
+        response = self._post_assessment(self.assessment_two.unit_id).follow()
         self.assertIn('Previous Page', response.body)
         self.assertNotIn('Next Page', response.body)
         self.assertIn(' End ', response.body)

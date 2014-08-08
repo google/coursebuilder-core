@@ -346,6 +346,14 @@ class QuestionsTest(BaseIntegrationTest):
         name = self.create_new_course()[0]
         self.load_dashboard(
             name
+        ).click_course(
+        ).click_register(
+        ).enroll(
+            'John Smith'
+        ).click_course(
+        ).click_dashboard(
+
+        #---------------------------------------------- Question
         ).click_assets(
         ).click_sub_tab(
             'Questions'
@@ -368,31 +376,134 @@ class QuestionsTest(BaseIntegrationTest):
             'Multiple choice question'
         ).click_outline(
         ).verify_not_publicly_available(
+        #---------------------------------------------- Unit
         ).click_add_unit(
         ).set_title(
             'Test Unit 1'
         ).set_status(
             'Public'
+        ).set_contents_on_one_page(
+            True
         ).click_save(
         ).click_close(
         ).verify_course_outline_contains_unit(
             'Unit 1 - Test Unit 1'
+        #---------------------------------------------- Lesson 1 (graded)
         ).click_add_lesson(
-        ).set_lesson_title(
-            'Question lesson'
+        ).set_title(
+            'Question lesson - Graded'
+        ).set_status(
+            'Public'
+        ).set_questions_are_scored(
         ).click_rich_text(
         ).click_rte_add_custom_tag(
         ).select_rte_custom_tag_type(
             'gcb: Question'
         ).set_rte_lightbox_field(
-            'input[name=weight]', 2
+            'input[name=weight]', 1
         ).click_rte_save(
         ).click_save(
         ).click_close(
+        #---------------------------------------------- Lesson 2 (ungraded)
+        ).click_add_lesson(
+        ).set_title(
+            'Question lesson - UnGraded'
+        ).set_status(
+            'Public'
+        ).click_rich_text(
+        ).click_rte_add_custom_tag(
+        ).select_rte_custom_tag_type(
+            'gcb: Question'
+        ).set_rte_lightbox_field(
+            'input[name=weight]', 1
+        ).click_rte_save(
+        ).click_save(
+        ).click_close(
+        #---------------------------------------------- Assessment pre (ID 4)
+        ).click_add_assessment(
+        ).set_title(
+            'Pre-Assessment'
+        ).set_status(
+            'Public'
+        ).click_rich_text(
+            pageobjects.AddAssessment.INDEX_CONTENT
+        ).click_rte_add_custom_tag(
+            pageobjects.AddAssessment.INDEX_CONTENT
+        ).select_rte_custom_tag_type(
+            'gcb: Question'
+        ).set_rte_lightbox_field(
+            'input[name=weight]', 1
+        ).click_rte_save(
+        ).click_save(
+        ).click_close(
+        #---------------------------------------------- Assessment post (ID 5)
+        ).click_add_assessment(
+        ).set_title(
+            'Post-Assessment'
+        ).set_status(
+            'Public'
+        ).click_rich_text(
+            pageobjects.AddAssessment.INDEX_CONTENT
+        ).click_rte_add_custom_tag(
+            pageobjects.AddAssessment.INDEX_CONTENT
+        ).select_rte_custom_tag_type(
+            'gcb: Question'
+        ).set_rte_lightbox_field(
+            'input[name=weight]', 1
+        ).click_rte_save(
+        ).click_save(
+        ).click_close(
+        #---------------------------------------------- Add assessments to unit
+        ).click_edit_unit(
+            'Unit 1 - Test Unit 1'
+        ).set_pre_assessment(
+            'Pre-Assessment'
+        ).set_post_assessment(
+            'Post-Assessment'
+        ).click_save(
+        ).click_close(
         ).click_on_course_outline_components(
-            'Question lesson'
-        ).submit_answer_for_mc_question_and_verify(
-            'What is your favorite color?', 'Red')
+            'Question lesson - UnGraded'
+        #---------------------------------------------- Verify pre-assessment
+        ).set_answer_for_mc_question(
+            'A4', 'What is your favorite color?', 'Red'
+        ).submit_question_batch(
+            'A4', 'Submit Answers'
+        ).verify_correct_submission(
+        ).return_to_unit(
+        #---------------------------------------------- Verify non-graded
+        ).set_answer_for_mc_question(
+            'L3', 'What is your favorite color?', 'Yellow'
+        ).submit_question_batch(
+            'L3', 'Check Answer'
+        ).verify_incorrect_submission(
+            'L3', 'What is your favorite color?'
+        ).set_answer_for_mc_question(
+            'L3', 'What is your favorite color?', 'Red'
+        ).submit_question_batch(
+            'L3', 'Check Answer'
+        ).verify_correct_submission(
+            'L3', 'What is your favorite color?'
+        #---------------------------------------------- Verify graded
+        ).set_answer_for_mc_question(
+            'L2', 'What is your favorite color?', 'Red'
+        ).submit_question_batch(
+            'L2', 'Grade Questions'
+        ).verify_correct_grading(
+            'L2'
+        ).set_answer_for_mc_question(
+            'L2', 'What is your favorite color?', 'Pink'
+        ).submit_question_batch(
+            'L2', 'Grade Questions'
+        ).verify_incorrect_grading(
+            'L2'
+        #---------------------------------------------- Verify post-assessment
+        ).set_answer_for_mc_question(
+            'A5', 'What is your favorite color?', 'Blue'
+        ).submit_question_batch(
+            'A5', 'Submit Answers'
+        ).verify_incorrect_submission(
+        ).return_to_unit()
 
 
 class VisualizationsTest(BaseIntegrationTest):
