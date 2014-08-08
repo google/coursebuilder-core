@@ -64,6 +64,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_student_work.SubmissionTest': 3,
     'tests.functional.model_utils.QueryMapperTest': 4,
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
+    'tests.functional.modules_certificate.CertificateCriteriaTestCase': 5,
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 5,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,

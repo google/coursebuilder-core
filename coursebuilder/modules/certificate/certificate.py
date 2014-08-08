@@ -42,8 +42,7 @@ from common import safe_dom
 from common import tags
 from controllers import utils
 from models import custom_modules
-from models import transforms
-
+from modules.certificate import custom_criteria
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
 RESOURCES_PATH = '/modules/certificate/resources'
@@ -68,35 +67,84 @@ class ShowCertificateHandler(utils.BaseHandler):
         self.response.out.write(template.render({'student': student}))
 
 
+def _get_score_by_id(score_list, assignment_id):
+    for score in score_list:
+        if score['id'] == str(assignment_id):
+            return score
+    return None
+
+
+def _check_assignment_criterion(criterion, score_list):
+    """Checks whether the criterion for an assessment is met."""
+
+    score = _get_score_by_id(score_list, criterion['assignment_id'])
+    if not score['completed']:
+        return False
+    if 'pass_percent' in criterion:
+        return score['score'] >= criterion['pass_percent']
+    else:
+        return True
+
+
 def student_is_qualified(student, course):
     """Determines whether the student has met criteria for a certificate.
 
-    Course developers should add logic to this method which will determine
-    whether the given student has met the criteria to be awarded a certificate
-    of completion for the course.
-
     Args:
-        student: models.models.Student. The student entity to test. Not
-            used in the default implementation.
+        student: models.models.Student. The student entity to test.
         course: modesl.courses.Course. The course which the student is
-            enrolled in. Test on this to implement course-specific criteria for
-            earning a certificate.
+            enrolled in.
 
     Returns:
         True if the student is qualified, False otherwise.
     """
 
-    # NOTE: This is only a sample implementation, and course creators will need
-    # to add logic appropriate to their own courses here. In this sample, the
-    # certificate is displayed only for the "Power Searching with Google"
-    # course, and only when the student has scored 66% or higher.
+    environ = course.app_context.get_environ()
+    score_list = course.get_all_scores(student)
 
-    if course.app_context.get_title() == 'Power Searching with Google':
-        scores = transforms.loads(student.scores or '{}')
-        final_assessment_score = scores.get('Fin', 0)
-        return final_assessment_score > 66
+    if not environ.get('certificate_criteria'):
+        return False
 
-    return False
+    # First validate the correctness of _all_ provided criteria
+    for criterion in environ['certificate_criteria']:
+        if 'custom_criteria' in criterion:
+            custom = criterion['custom_criteria']
+            assert hasattr(custom_criteria, custom), (
+                'custom criterion %s is not implemented' +
+                'as a function in custom_criteria.py.' % custom)
+            assert (custom in custom_criteria.registration_table), (
+                'Custom criterion %s is not whitelisted ' +
+                'in the registration_table in custom_criteria.py.' % custom)
+        elif 'assignment_id' in criterion:
+            score = _get_score_by_id(score_list, criterion['assignment_id'])
+            assert score is not None, (
+                'Invalid assessment id %s.' % criterion['assignment_id'])
+            if 'pass_percent' in criterion:
+                # Must be machine graded
+                assert not score['human_graded'], (
+                    'If pass_percent is provided, '
+                    'the assessment must be machine graded.')
+                assert (criterion['pass_percent'] >= 0) and (
+                    criterion['pass_percent'] <= 100), (
+                    'pass_percent must be between 0 and 100.')
+            else:
+                # Must be peer graded
+                assert score['human_graded'], (
+                    'If pass_percent is not provided, '
+                    'the assessment must be human graded.')
+        else:
+            assert False, 'Invalid certificate criterion %s.' % criterion
+
+    # All criteria are valid, now do the checking.
+    for criterion in environ['certificate_criteria']:
+        if 'custom_criteria' in criterion:
+            if not getattr(custom_criteria, criterion['custom_criteria'])(
+                    student, course):
+                return False
+        elif 'assignment_id' in criterion:
+            if not _check_assignment_criterion(criterion, score_list):
+                return False
+
+    return True
 
 
 def get_certificate_table_entry(student, course):
