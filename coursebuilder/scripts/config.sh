@@ -27,3 +27,4 @@ export BEAUTIFULSOUP_PATH=$RUNTIME_HOME/beautifulsoup4
 export SELENIUM_PATH=$RUNTIME_HOME/selenium/py
 export SIX_PATH=$RUNTIME_HOME/six
 export WEBTEST_PATH=$RUNTIME_HOME/webtest
+export YAML_PATH=$RUNTIME_HOME/lib/yaml/lib

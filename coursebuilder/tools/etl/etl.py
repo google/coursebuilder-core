@@ -621,7 +621,7 @@ def _download_type(
     archive, manifest, model_class, batch_size, privacy_transform_fn):
     """Downloads a set of files and adds them to the archive."""
     if model_class in _EXCLUDE_TYPES:
-        _LOG.info('Skipping download of excluded type "%s"' % model_class)
+        _LOG.info('Skipping download of excluded type "%s"', model_class)
         return
 
     json_path = os.path.join(
