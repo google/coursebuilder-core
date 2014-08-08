@@ -16,6 +16,17 @@ shopt -s nullglob
 # Set shell variables common to CB scripts.
 . "$(dirname "$0")/config.sh"
 
+if [[ $OSTYPE == linux* ]] ; then
+  NODE_DOWNLOAD_FOLDER=node-v0.10.1-linux-x64
+  CHROMEDRIVER_ZIP=chromedriver_linux64.zip
+elif [[ $OSTYPE == darwin* ]] ; then
+  NODE_DOWNLOAD_FOLDER=node-v0.10.1-darwin-x64
+  CHROMEDRIVER_ZIP=chromedriver_mac32.zip
+else
+  echo "TARGET_OS must be one of linux or macos"
+  exit -1
+fi
+
 # Ensure that ~/coursebuilder_resources is available to write
 if [[ -e $COURSEBUILDER_RESOURCES && \
     ( ! -d $COURSEBUILDER_RESOURCES || ! -w $COURSEBUILDER_RESOURCES ) ]]; then
@@ -146,7 +157,7 @@ fi
 
 if need_install_chromedriver 2.8 ; then
   echo Installing Chromedriver
-  wget http://chromedriver.storage.googleapis.com/2.8/chromedriver_linux64.zip -O chromedriver-download.zip
+  wget http://chromedriver.storage.googleapis.com/2.8/$CHROMEDRIVER_ZIP -O chromedriver-download.zip
   unzip chromedriver-download.zip -d $RUNTIME_HOME/chromedriver
   chmod a+x $RUNTIME_HOME/chromedriver/chromedriver
   rm chromedriver-download.zip
@@ -154,9 +165,9 @@ fi
 
 if need_install node ChangeLog Version 0.10.1 ; then
   echo Installing Node.js
-  wget http://nodejs.org/dist/v0.10.1/node-v0.10.1-linux-x64.tar.gz -O node-download.tgz
+  wget http://nodejs.org/dist/v0.10.1/$NODE_DOWNLOAD_FOLDER.tar.gz -O node-download.tgz
   tar xzf node-download.tgz --directory $RUNTIME_HOME
-  mv $RUNTIME_HOME/node-v0.10.1-linux-x64 $RUNTIME_HOME/node
+  mv $RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER $RUNTIME_HOME/node
   rm node-download.tgz
   echo Installing Karma
   $RUNTIME_HOME/node/bin/npm install -g karma@0.8.7
