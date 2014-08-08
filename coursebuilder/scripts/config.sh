@@ -15,7 +15,7 @@ export COURSEBUILDER_RESOURCES=~/coursebuilder_resources
 export RUNTIME_HOME=$COURSEBUILDER_RESOURCES/runtime
 export RELEASE_HOME=$COURSEBUILDER_RESOURCES/releases
 export SERVER=appengine.google.com
-export GOOGLE_APP_ENGINE_HOME=$RUNTIME_HOME/google_appengine_1_8_9
+export GOOGLE_APP_ENGINE_HOME=$RUNTIME_HOME/google_appengine_1_9_8
 export GOLDEN_INSTALL_LIST=$INTERNAL_SCRIPTS_DIR/golden_install_list
 
 # Paths for resources used by the Python runtime.
