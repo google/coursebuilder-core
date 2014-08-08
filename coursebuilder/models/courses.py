@@ -1998,6 +1998,7 @@ class Course(object):
                 'title': unit.title,
                 'weight': weight,
                 'completed': completed,
+                'attempted': str(unit.unit_id) in scores,
                 'human_graded': self.needs_human_grader(unit),
                 'score': (scores[str(unit.unit_id)]
                           if str(unit.unit_id) in scores else 0),

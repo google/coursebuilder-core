@@ -241,6 +241,8 @@ class StudentAssessmentScoresDataSource(
             for student in students_with_scores:
                 scores = course.get_all_scores(student)
                 for score in scores:
+                    if not score['attempted']:
+                        continue
                     # user_id is PII and must be encoded to obscure its value.
                     score['user_id'] = transform_fn(student.user_id)
                     student_scores.append(score)

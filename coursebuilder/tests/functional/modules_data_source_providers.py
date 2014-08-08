@@ -310,6 +310,7 @@ class StudentScoresTest(actions.TestBase):
             'weight': weight,
             'score': score,
             'user_id': 'None',
+            'attempted': True,
             'completed': False,
             'human_graded': False,
             'user_rank': 0,
@@ -328,7 +329,7 @@ class StudentScoresTest(actions.TestBase):
             [self._score_data('1', 'New Assessment', 1, 20, 0)],
             response['data'])
 
-    def test_two_student_two_scores(self):
+    def test_two_students_two_scores_each(self):
         s1_scores = '{"1": 20, "2": 30}'
         s2_scores = '{"1": 10, "2": 40}'
         with utils.Namespace('ns_test'):
@@ -346,5 +347,25 @@ class StudentScoresTest(actions.TestBase):
         self.assertItemsEqual([self._score_data('1', 'A1', 1, 20, 0),
                                self._score_data('1', 'A1', 1, 10, 0),
                                self._score_data('2', 'A2', 2, 30, 1),
+                               self._score_data('2', 'A2', 2, 40, 1)],
+                              response['data'])
+
+    def test_two_students_partial_scores(self):
+        s1_scores = '{"1": 20}'
+        s2_scores = '{"1": 10, "2": 40}'
+        with utils.Namespace('ns_test'):
+            a1 = self._course.add_assessment()
+            a1.title = 'A1'
+            a1.weight = 1
+            a2 = self._course.add_assessment()
+            a2.title = 'A2'
+            a2.weight = 2
+            self._course.save()
+            models.Student(user_id='1', scores=s1_scores).put()
+            models.Student(user_id='2', scores=s2_scores).put()
+        response = transforms.loads(self.get(
+            '/test/rest/data/assessment_scores/items').body)
+        self.assertItemsEqual([self._score_data('1', 'A1', 1, 20, 0),
+                               self._score_data('1', 'A1', 1, 10, 0),
                                self._score_data('2', 'A2', 2, 40, 1)],
                               response['data'])
