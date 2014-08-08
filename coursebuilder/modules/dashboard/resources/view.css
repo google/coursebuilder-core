@@ -151,8 +151,10 @@ div.settings-list a:hover {
 div.settings-list div.inputEx-description {
   margin-top: 10px;
 }
-div.settings-list-item div.inputEx-description {
+div.settings-list-item div.inputEx-fieldWrapper {
   width: 390px;
+}
+div.settings-list-item div.inputEx-description {
   display: none;
 }
 div.settings-list-item {
