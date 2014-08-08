@@ -265,7 +265,9 @@ class HtmlHooks(object):
         # Do we want page markup to permit course admins to edit hooks?
         show_admin_content = False
         prefs = models.StudentPreferencesDAO.load_or_create()
-        if prefs and prefs.show_hooks:
+        if (prefs and
+            prefs.show_hooks and
+            Roles.is_course_admin(self.app_context)):
             show_admin_content = True
         course = courses.Course(None, self.app_context)
         if course.version == courses.CourseModel12.VERSION:

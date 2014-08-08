@@ -274,3 +274,12 @@ class HtmlHookTest(actions.TestBase):
 
         response = self.get(BASE_URL)
         self.assertIn(html_text, response.body)
+
+    def test_student_admin_hook_visibility(self):
+        actions.login(STUDENT_EMAIL, is_admin=False)
+        response = self.get(BASE_URL)
+        self.assertNotIn('gcb-html-hook-edit', response.body)
+
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.get(BASE_URL)
+        self.assertIn('gcb-html-hook-edit', response.body)
