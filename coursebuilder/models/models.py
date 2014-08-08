@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import collections
 import logging
 import os
+import sys
 
 from config import ConfigProperty
 import counters
@@ -43,6 +44,9 @@ NO_OBJECT = {}
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 5
 
+# https://developers.google.com/appengine/docs/python/memcache/#Python_Limits
+MEMCACHE_MAX = (1000000 - (96 * 2))
+
 # Global memcache controls.
 CAN_USE_MEMCACHE = ConfigProperty(
     'gcb_can_use_memcache', bool, (
@@ -56,6 +60,9 @@ CAN_USE_MEMCACHE = ConfigProperty(
 CACHE_PUT = PerfCounter(
     'gcb-models-cache-put',
     'A number of times an object was put into memcache.')
+CACHE_PUT_TOO_BIG = PerfCounter(
+    'gcb-models-cache-put-too-big',
+    'Number of times an object was too big to put in memcache.')
 CACHE_HIT = PerfCounter(
     'gcb-models-cache-hit',
     'A number of times an object was found in memcache.')
@@ -109,9 +116,13 @@ class MemcacheManager(object):
     def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets an item in memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
-            CACHE_PUT.inc()
-            memcache.set(
-                key, value, ttl, namespace=cls._get_namespace(namespace))
+            size = sys.getsizeof(value)
+            if size > MEMCACHE_MAX:
+                CACHE_PUT_TOO_BIG.inc()
+            else:
+                CACHE_PUT.inc()
+                memcache.set(
+                    key, value, ttl, namespace=cls._get_namespace(namespace))
 
     @classmethod
     def delete(cls, key, namespace=None):
