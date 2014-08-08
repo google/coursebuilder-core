@@ -392,6 +392,24 @@ class DashboardHandler(
     def get_outline(self):
         """Renders course outline view."""
 
+        administered_courses_actions = [
+            {'id': 'add_course',
+             'caption': 'Add Course',
+             'href': '/admin?action=add_course'}]
+        administered_courses_items = []
+        all_courses = sites.get_all_courses()
+        for course in sorted(all_courses, key=lambda c: c.get_title()):
+            if roles.Roles.is_course_admin(course):
+                slug = course.get_slug()
+                content = safe_dom.NodeList()
+                administered_courses_items.append(content)
+                title = course.get_title()
+                content.append(safe_dom.A(slug).add_text(title))
+                content.append(safe_dom.Text('  %s  ' % slug))
+                content.append(
+                    safe_dom.A('%s/dashboard' % ('' if slug == '/' else slug))
+                    .add_text('Dashboard'))
+
         pages_info = [
             safe_dom.Element(
                 'a', href=self.canonicalize_url('/announcements')
@@ -438,6 +456,11 @@ class DashboardHandler(
         data_info = self.list_files('/data/')
 
         sections = [
+            {
+                'title': 'Administered Courses',
+                'description': messages.ADMINISTERED_COURSES_DESCRIPTION,
+                'actions': administered_courses_actions,
+                'children': administered_courses_items},
             {
                 'title': 'Pages',
                 'description': messages.PAGES_DESCRIPTION,

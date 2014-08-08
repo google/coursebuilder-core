@@ -109,6 +109,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.AdminAspectTest': 8,
     'tests.functional.test_classes.AssessmentTest': 2,
     'tests.functional.test_classes.CourseAuthorAspectTest': 4,
+    'tests.functional.test_classes.CourseAuthorCourseCreationTest': 2,
     'tests.functional.test_classes.CourseUrlRewritingTest': 42,
     'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 5,
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 42,

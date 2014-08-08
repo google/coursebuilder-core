@@ -105,6 +105,9 @@ class AdminHandler(
 
     def can_view(self):
         """Checks if current user has viewing rights."""
+        action = self.request.get('action')
+        if action == 'add_course':
+            return modules.admin.config.CoursesPropertyRights.can_add()
         return roles.Roles.is_super_admin()
 
     def can_edit(self):
@@ -563,18 +566,7 @@ class AdminHandler(
             count += 1
             error = safe_dom.Text('')
             slug = course.get_slug()
-            try:
-                name = course.get_title()
-            except Exception as e:  # pylint: disable-msg=broad-except
-                name = 'UNKNOWN COURSE'
-                error = safe_dom.Element('p').add_text('Error in ').add_child(
-                    safe_dom.Element('strong').add_text('course.yaml')
-                ).add_text(' file. ').add_child(
-                    safe_dom.Element('br')
-                ).add_child(
-                    safe_dom.Element('pre').add_text('\n%s\n%s\n' % (
-                        e.__class__.__name__, str(e)))
-                )
+            name = course.get_title()
 
             if course.fs.is_read_write():
                 location = 'namespace: %s' % course.get_namespace_name()

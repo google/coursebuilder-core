@@ -740,7 +740,10 @@ class ApplicationContext(object):
         return '' if not course else course.get('whitelist', '')
 
     def get_title(self):
-        return self.get_environ()['course']['title']
+        try:
+            return self.get_environ()['course']['title']
+        except KeyError:
+            return 'UNTITLED'
 
     def get_namespace_name(self):
         return self.namespace

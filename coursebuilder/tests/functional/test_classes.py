@@ -1527,6 +1527,55 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert json_dict['status'] == 404
 
 
+class CourseAuthorCourseCreationTest(actions.TestBase):
+
+    def test_course_admin_can_create_another_course(self):
+        admin_email = 'admin@foo.com'
+        author_email = 'author@foo.com'
+        actions.login(admin_email, is_admin=True)
+        actions.simple_add_course('course_one', admin_email, 'Course One')
+        actions.update_course_config('course_one', {
+            'course': {'admin_user_emails': author_email}})
+
+        # Login without super-admin authority; visit dashboard of course we
+        # may edit.
+        actions.login(author_email)
+        response = self.get('/course_one/dashboard')
+        response = self.click(response, 'Add Course')
+
+        # Ensure that clicking on add-course link does not result in a 302
+        # to '/', which would happen if we did not have access.
+        self.assertEquals(200, response.status_int)
+        self.assertEquals('http://localhost/admin?action=add_course',
+                          response.request.url)
+
+    def test_course_admin_does_not_see_courses_he_does_not_administer(self):
+        admin_email = 'admin@foo.com'
+        author_email = 'author@foo.com'
+        actions.login(admin_email, is_admin=True)
+
+        actions.simple_add_course('course_one', admin_email, 'Course One')
+        actions.simple_add_course('course_two', admin_email, 'Course Two')
+        actions.simple_add_course('course_three', admin_email, 'Course Three')
+        actions.update_course_config('course_one', {
+            'course': {'admin_user_emails': author_email}})
+        actions.update_course_config('course_two', {
+            'course': {'admin_user_emails': author_email}})
+
+        actions.login(author_email)
+
+        # Visit course_one's dashboard
+        response = self.get('/course_one/dashboard')
+
+        # Expect to be able to see peer course for which author has admin rights
+        self.assertIn('Course Two', response.body)
+        self.assertIn('/course_two', response.body)
+
+        # But not peer course for which he does not.
+        self.assertNotIn('Course Three', response.body)
+        self.assertNotIn('/course_three', response.body)
+
+
 class StudentAspectTest(actions.TestBase):
     """Test the site from the Student perspective."""
 

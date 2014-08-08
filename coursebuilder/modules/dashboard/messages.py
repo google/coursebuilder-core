@@ -38,6 +38,10 @@ ADMIN_PREFERENCES_DESCRIPTION = assemble_sanitized_message("""
 Preferences settings for individual course admins.
 """, None)
 
+ADMINISTERED_COURSES_DESCRIPTION = assemble_sanitized_message("""
+Courses for which you have administrator privileges
+""", None)
+
 ASSESSMENT_CONTENT_DESCRIPTION = assemble_sanitized_message("""
 Assessment questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/CreateAssessments')
@@ -65,6 +69,11 @@ CONTENTS_OF_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
 The course.yaml file contains many course settings.  Edit it using the buttons
 at the right.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
+
+COURSE_ADMIN_DESCRIPTION = assemble_sanitized_message("""
+Admin settings for users who are course authors but not
+site administrators.
+""", None)
 
 COURSE_OUTLINE_DESCRIPTION = assemble_sanitized_message(
     'Build, organize and preview your course here.',

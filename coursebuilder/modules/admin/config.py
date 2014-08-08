@@ -114,7 +114,10 @@ class ConfigPropertyEditor(object):
     def get_add_course(self):
         """Handles 'add_course' action and renders new course entry editor."""
 
-        exit_url = '/admin?action=courses'
+        if roles.Roles.is_super_admin():
+            exit_url = '/admin?action=courses'
+        else:
+            exit_url = self.request.referer
         rest_url = CoursesItemRESTHandler.URI
 
         template_values = {}
@@ -216,6 +219,19 @@ class ConfigPropertyEditor(object):
         self.redirect('/admin?action=settings')
 
 
+class CoursesPropertyRights(object):
+    """Manages view/edit rights for configuration properties."""
+
+    @classmethod
+    def can_add(cls):
+        if roles.Roles.is_super_admin():
+            return True
+        for course_context in sites.get_all_courses():
+            if roles.Roles.is_course_admin(course_context):
+                return True
+        return False
+
+
 class CoursesItemRESTHandler(BaseRESTHandler):
     """Provides REST API for course entries."""
 
@@ -245,7 +261,7 @@ class CoursesItemRESTHandler(BaseRESTHandler):
 
     def get(self):
         """Handles HTTP GET verb."""
-        if not ConfigPropertyRights.can_view():
+        if not CoursesPropertyRights.can_add():
             transforms.send_json_response(
                 self, 401, 'Access denied.')
             return
@@ -266,7 +282,7 @@ class CoursesItemRESTHandler(BaseRESTHandler):
                 request, 'add-course-put', {}):
             return
 
-        if not ConfigPropertyRights.can_edit():
+        if not CoursesPropertyRights.can_add():
             transforms.send_json_response(
                 self, 401, 'Access denied.')
             return
