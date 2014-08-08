@@ -217,52 +217,77 @@ class Registry(object):
         overrides = {}
         drafts = set()
         for item in ConfigPropertyEntity.all().fetch(1000):
-            name = item.key().name()
-
-            if name not in cls.registered:
-                logging.error(
-                    'Property is not registered (skipped): %s', name)
-                continue
-
-            target = cls.registered[name]
-            if target and item.is_draft:
-                drafts.add(name)
-            if target and not item.is_draft:
-                # Enforce value type.
-                try:
-                    value = transforms.string_to_value(
-                        item.value, target.value_type)
-                except Exception:  # pylint: disable-msg=broad-except
-                    logging.error(
-                        'Property %s failed to cast to a type %s; removing.',
-                        target.name, target.value_type)
-                    continue
-
-                # Enforce value validator.
-                if target.validator:
-                    errors = []
-                    try:
-                        target.validator(value, errors)
-                    except Exception as e:  # pylint: disable-msg=broad-except
-                        errors.append(
-                            'Error validating property %s.\n%s',
-                            (target.name, e))
-                    if errors:
-                        logging.error(
-                            'Property %s has invalid value:\n%s',
-                            target.name, '\n'.join(errors))
-                        continue
-
-                overrides[name] = value
-
+            cls._set_value(item, overrides, drafts)
         cls.db_overrides = overrides
         cls.names_with_draft = drafts
+
+    @classmethod
+    def _config_property_entity_changed(cls, item):
+        cls._set_value(item, cls.db_overrides, cls.names_with_draft)
+
+    @classmethod
+    def _set_value(cls, item, overrides, drafts):
+        name = item.key().name()
+        target = cls.registered.get(name, None)
+        if not target:
+            logging.error(
+                'Property is not registered (skipped): %s', name)
+            return
+
+        if item.is_draft:
+            if name in overrides:
+                del overrides[name]
+            drafts.add(name)
+        else:
+            if name in drafts:
+                drafts.remove(name)
+
+            # Enforce value type.
+            try:
+                value = transforms.string_to_value(
+                    item.value, target.value_type)
+            except Exception:  # pylint: disable-msg=broad-except
+                logging.error(
+                    'Property %s failed to cast to a type %s; removing.',
+                    target.name, target.value_type)
+                return
+
+            # Enforce value validator.
+            if target.validator:
+                errors = []
+                try:
+                    target.validator(value, errors)
+                except Exception as e:  # pylint: disable-msg=broad-except
+                    errors.append(
+                        'Error validating property %s.\n%s',
+                        (target.name, e))
+                if errors:
+                    logging.error(
+                        'Property %s has invalid value:\n%s',
+                        target.name, '\n'.join(errors))
+                    return
+
+            overrides[name] = value
 
 
 class ConfigPropertyEntity(entities.BaseEntity):
     """A class that represents a named configuration property."""
     value = db.TextProperty(indexed=False)
     is_draft = db.BooleanProperty(indexed=False)
+
+    def put(self):
+        # Persist to DB.
+        super(ConfigPropertyEntity, self).put()
+
+        # And tell local registry.  Do this by direct call and synchronously
+        # so that this setting will be internally consistent within the
+        # remainder of this server's path of execution.  (Note that the
+        # setting is _not_ going to be immediately available at all other
+        # instances; they will pick it up in due course after
+        # UPDATE_INTERVAL_SEC has elapsed.
+
+        # pylint: disable-msg=protected-access
+        Registry._config_property_entity_changed(self)
 
 
 def run_all_unit_tests():

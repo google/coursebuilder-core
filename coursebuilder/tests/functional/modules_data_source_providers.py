@@ -223,7 +223,7 @@ class StudentsTest(actions.TestBase):
             transforms.ISO_8601_DATETIME_FORMAT)
         self.assertAlmostEqual(
             0,
-            abs((expected_enrolled_on - actual_enrolled_on).total_seconds()), 2)
+            abs((expected_enrolled_on - actual_enrolled_on).total_seconds()), 1)
 
     def test_modified_blacklist_schema(self):
         # pylint: disable-msg=protected-access

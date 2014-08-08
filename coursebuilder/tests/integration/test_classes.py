@@ -746,13 +746,6 @@ class EventsTest(BaseIntegrationTest):
         ).take_snapshot_of_instanceid_list(
             instanceid_list
         ).click_save(
-        ).click_close(
-        ).click_add_lesson(
-        ).set_title(
-            'First Lesson'
-        ).set_status(
-            'Public'
-        ).click_save(
         )
         instanceid = instanceid_list[0]
 
@@ -761,18 +754,20 @@ class EventsTest(BaseIntegrationTest):
             name
         ).click_on_course_outline_components(
             'Unit 1 - First Unit'
+        ).wait_for_video_state(
+            instanceid, 'readyState', 4, 10
         ).play_video(
             instanceid
         ).wait_for_video_state(
-            instanceid, 'playing', 10
+            instanceid, 'paused', False, 10
         ).pause_video(
             instanceid
         ).wait_for_video_state(
-            instanceid, 'waiting', 10
+            instanceid, 'paused', True, 10
         ).play_video(
             instanceid
         ).wait_for_video_state(
-            instanceid, 'ended', 10
+            instanceid, 'ended', True, 10
         )
 
         # Verify that we have two events logged: load-start, and error.
@@ -796,16 +791,16 @@ class EventsTest(BaseIntegrationTest):
         ExpectedEvent = collections.namedtuple(
             'ExpectedEvent', ['event_type', 'position'])
         expected_events = [
-            ExpectedEvent('waiting', 'zero'),
             ExpectedEvent('loadeddata', 'zero'),
+            ExpectedEvent('play', 'zero'),
             ExpectedEvent('playing', 'zero'),
             ExpectedEvent('pause', 'middle'),
             ExpectedEvent('play', 'middle'),
-            ExpectedEvent('seeked', 'middle'),
             ExpectedEvent('playing', 'middle'),
-            ExpectedEvent('ended', 'end'),
             ExpectedEvent('pause', 'end'),
+            ExpectedEvent('ended', 'end'),
             ]
+
         end_position = 5.568
         for event, expected in zip(events, expected_events):
             self.assertEquals(instanceid, event['instance_id'])

@@ -361,19 +361,21 @@ class LessonPage(CourseContentPage):
 
     def play_video(self, instanceid):
         self._tester.driver.execute_script(
-            'document.getElementById("%s").controller.play();' % instanceid)
+            'document.getElementById("%s").play();' % instanceid)
+        time.sleep(1)  # Let the video get started before we do anything else.
         return self
 
     def pause_video(self, instanceid):
         self._tester.driver.execute_script(
-            'document.getElementById("%s").controller.pause();' % instanceid)
+            'document.getElementById("%s").pause();' % instanceid)
         return self
 
-    def wait_for_video_state(self, instanceid, desired_state, max_patience):
+    def wait_for_video_state(self, instanceid, attribute, desired_state,
+                             max_patience):
         def in_desired_state(driver):
             state = driver.execute_script(
-                'return document.getElementById("%s").controller.playbackState'
-                % instanceid)
+                'return document.getElementById("%s").%s' % (
+                    instanceid, attribute))
             return state == desired_state
         wait.WebDriverWait(self._tester.driver, max_patience).until(
             in_desired_state)

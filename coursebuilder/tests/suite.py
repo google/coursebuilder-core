@@ -40,6 +40,7 @@ import argparse
 import os
 import shutil
 import signal
+import socket
 import stat
 import subprocess
 import sys
@@ -254,6 +255,22 @@ def create_test_suite(parsed_args):
             os.path.dirname(__file__), pattern=parsed_args.pattern)
 
 
+def ensure_port_available(port_number):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(('localhost', port_number))
+    except socket.error, ex:
+        print '=========================================================='
+        print 'Failed to bind to port %d.' % port_number
+        print 'This probably means another CourseBuilder server is '
+        print 'already running.  Be sure to shut down any manually '
+        print 'started servers before running tests.'
+        print '=========================================================='
+        raise ex
+    s.close()
+
+
 def start_integration_server(integration_server_start_cmd, modules):
     if modules:
         _fn = os.path.join(appengine_config.BUNDLE_ROOT, 'custom.yaml')
@@ -278,10 +295,15 @@ def stop_integration_server(server, modules):
     # The new dev appserver starts a _python_runtime.py process that isn't
     # captured by start_integration_server and so doesn't get killed. Until it's
     # done, our tests will never complete so we kill it manually.
-    pid = int(subprocess.Popen(
+    (stdout, unused_stderr) = subprocess.Popen(
         ['pgrep', '-f', '_python_runtime.py'], stdout=subprocess.PIPE
-    ).communicate()[0][:-1])
-    os.kill(pid, signal.SIGKILL)
+    ).communicate()
+
+    # If tests are killed partway through, runtimes can build up; send kill
+    # signals to all of them, JIC.
+    pids = [int(pid.strip()) for pid in stdout.split('\n') if pid.strip()]
+    for pid in pids:
+        os.kill(pid, signal.SIGKILL)
 
     if modules:
         fp = open(
@@ -333,6 +355,8 @@ def main():
 
     server = None
     if TestBase.REQUIRES_INTEGRATION_SERVER in all_tags:
+        ensure_port_available(8081)
+        ensure_port_available(8000)
         server = start_integration_server(
             parsed_args.integration_server_start_cmd,
             all_tags.get(TestBase.REQUIRES_TESTING_MODULES, set()))

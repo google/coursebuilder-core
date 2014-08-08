@@ -245,7 +245,8 @@ class InfrastructureTest(actions.TestBase):
         for dependent_entity_class in courses.COURSE_CONTENT_ENTITIES:
             dependents.append(_add_data_entity(
                 dst_course_out_a.app_context,
-                dependent_entity_class, 'Test ' % dependent_entity_class))
+                dependent_entity_class, 'Test "%s"' % str(
+                    dependent_entity_class)))
         assert dependents
 
         # Import 1.3 course into 1.3.

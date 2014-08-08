@@ -54,16 +54,12 @@ class TagsInclude(actions.TestBase):
         self.lesson.now_available = True
         self.lesson.objectives = GCB_INCLUDE % HTML_FILE
         self.course.save()
-        if not os.path.isdir(HTML_DIR):
-            os.mkdir(HTML_DIR)
 
     def tearDown(self):
-        if os.path.exists(HTML_PATH):
-            os.unlink(HTML_PATH)
+        self.context.fs.delete(HTML_PATH)
 
     def _set_content(self, content):
-        with open(HTML_PATH, 'w') as fp:
-            fp.write(content)
+        self.context.fs.put(HTML_PATH, StringIO.StringIO(content))
 
     def _expect_content(self, expected, response):
         expected = '%s<div>%s</div>%s' % (PRE_INCLUDE, expected, POST_INCLUDE)
@@ -76,14 +72,22 @@ class TagsInclude(actions.TestBase):
         self.assertIn('Invalid HTML tag: no_such_file.html', response.body)
 
     def test_file_from_actual_filesystem(self):
+        # Note: This has the potential to cause a test flake: Adding an
+        # actual file to the filesystem and then removing it may cause
+        # ETL tests to complain - they saw the file, then failed to copy
+        # it because it went away.
         simple_content = 'Fiery the angels fell'
-        self._set_content(simple_content)
+        if not os.path.isdir(HTML_DIR):
+            os.mkdir(HTML_DIR)
+        with open(HTML_PATH, 'w') as fp:
+            fp.write(simple_content)
         response = self.get(LESSON_URL)
+        os.unlink(HTML_PATH)
         self._expect_content(simple_content, response)
 
-    def test_file_as_asset(self):
+    def test_simple(self):
         simple_content = 'Deep thunder rolled around their shores'
-        self.context.fs.put(HTML_PATH, StringIO.StringIO(simple_content))
+        self._set_content(simple_content)
         response = self.get(LESSON_URL)
         self._expect_content(simple_content, response)
 
@@ -115,11 +119,11 @@ class TagsInclude(actions.TestBase):
         content = 'Hello, World!'
         sub_path = os.path.join(
             appengine_config.BUNDLE_ROOT, HTML_DIR, 'sub.html')
+        self.context.fs.put(sub_path, StringIO.StringIO(content))
+
         self._set_content('{% include "sub.html" %}')
-        with open(sub_path, 'w') as fp:
-            fp.write(content)
         try:
             response = self.get(LESSON_URL)
             self._expect_content(content, response)
         finally:
-            os.unlink(sub_path)
+            self.context.fs.delete(sub_path)
