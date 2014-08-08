@@ -901,8 +901,8 @@ class ConfigPropertyOverridePage(EditorPageObject):
         if type(value) is bool:
             current_value = element.get_attribute('value').lower()
             if str(value).lower() != current_value:
-                checkbox = element.parent.find_element_by_css_selector(
-                    '[type="checkbox"]')
+                checkbox = get_parent_element(
+                    element).find_element_by_css_selector('[type="checkbox"]')
                 checkbox.send_keys(' ')  # Toggle, iff necessary.
         else:
             element.send_keys(value)
