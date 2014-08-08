@@ -69,7 +69,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_lti.FieldsTest': 6,
-    'tests.functional.modules_lti.LaunchHandlerTest': 8,
+    'tests.functional.modules_lti.LaunchHandlerTest': 9,
     'tests.functional.modules_lti.LTIToolTagTest': 3,
     'tests.functional.modules_lti.SerializerTest': 2,
     'tests.functional.modules_manual_progress.ManualProgressTest': 17,

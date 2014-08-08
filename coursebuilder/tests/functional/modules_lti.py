@@ -180,6 +180,13 @@ class LaunchHandlerTest(LtiWebappTestBase):
     return dict(re.findall(
       r"input type='hidden' name='(.+)' value='(.+)'", body))
 
+  def test_get_can_process_int_secret(self):
+    self.config['secret'] = 2
+    self.set_lti_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+
+    self.assertEqual(200, response.status_code)
+
   def test_get_returns_400_if_context_not_found(self):
     response = self.testapp.get(
         lti._LAUNCH_URL, expect_errors=True, params=self.params)

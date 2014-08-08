@@ -305,7 +305,7 @@ class LaunchHandler(utils.BaseHandler):
     unsigned_parameters = self._get_unsigned_launch_parameters(
         extra_fields, name, resource_link_id, config.url, runtime.get_user_id())
     signed_parameters = self._get_signed_launch_parameters(
-        config.key, config.secret, unsigned_parameters, config.url)
+        config.key, str(config.secret), unsigned_parameters, config.url)
     self.response.out.write(template.render({
       'signed_parameters': signed_parameters,
       'tool_url': config.url,
