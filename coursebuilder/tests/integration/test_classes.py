@@ -27,6 +27,7 @@ import urllib2
 
 import pageobjects
 from selenium import webdriver
+from selenium.common import exceptions
 from selenium.webdriver.chrome import options
 
 from models import models
@@ -48,7 +49,25 @@ class BaseIntegrationTest(suite.TestBase):
     def setUp(self):  # pylint: disable=g-bad-name
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
-        self.driver = webdriver.Chrome(chrome_options=chrome_options)
+
+        # Sadly, the max wait for the driver to become ready is hard-coded at
+        # 30 seconds.  However, that seems like it'd be enough for our
+        # purposes, so retrying the whole shebang seems like a better bet for
+        # getting rid of the flakiness due to occasional failure to connect to
+        # the Chrome driver.
+        self.driver = None
+        tries = 10
+        while not self.driver:
+            tries -= 1
+            try:
+                self.driver = webdriver.Chrome(chrome_options=chrome_options)
+            except exceptions.WebDriverException, ex:
+                print ex
+                if tries:
+                    print 'Retrying Chrome connection up to %d more times' % (
+                        tries)
+                else:
+                    raise ex
 
     def tearDown(self):  # pylint: disable=g-bad-name
         time.sleep(1)  # avoid broken sockets on the server
