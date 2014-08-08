@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LTI Redirect Page</title>
+  </head>
+  <style>
+    body: {
+      display: none;
+    }
+  </style>
+  <body>
+    <script type='text/javascript'>
+      top.location = '{{ login_url|js_string }}';
+    </script>
+  </body>
+</html>

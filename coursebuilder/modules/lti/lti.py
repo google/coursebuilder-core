@@ -43,6 +43,7 @@ from google.appengine.api import users
 
 _BASE_URL = '/lti'
 _CONFIG_KEY_COURSE = 'course'
+_CONFIG_KEY_LOCALE = 'locale'
 _CONFIG_KEY_LTI1 = 'lti1'
 _CONFIG_KEY_PROVIDER_ENABLED = 'provider_enabled'
 _CONFIG_KEY_SECURITY = 'security'
@@ -54,8 +55,9 @@ _ERROR_NAME_NOT_UNIQUE = 'Name is not unique: %s'
 _ERROR_PARSE_SETTINGS_CONFIG_YAML = 'Cannot parse settings config yaml'
 _ERROR_PARSE_TOOLS_CONFIG_YAML = 'Cannot parse tools config yaml'
 _ERROR_SECRET_NOT_UNIQUE = 'Secret is not unique: %s'
-_POST = 'POST'
 _LAUNCH_URL = _BASE_URL + '/launch'
+_LOGIN_URL = _BASE_URL + '/login'
+_POST = 'POST'
 _VALIDATION_URL = _BASE_URL
 _YAML_ENTRY_DESCRIPTION = 'description'
 _YAML_ENTRY_KEY = 'key'
@@ -83,7 +85,7 @@ COURSES_CAN_ENABLE_LTI_PROVIDER = config.ConfigProperty(
      'content. If True, courses can enable a setting to allow outside parties '
      'to embed their content via the LTI protocol. If False, the control on '
      'the course page to enable the LTI provider will be present, but it will '
-     'have no effect.'), default_value=False)
+     'have no effect.'), default_value=True)
 
 
 class Error(Exception):
@@ -105,6 +107,19 @@ def _get_signed_oauth_request(key, secret, parameters, url):
       consumer, http_method=_POST, http_url=url, parameters=parameters)
   request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), consumer, None)
   return request
+
+
+def _urljoin(*parts):
+  """Joins and normalizes URL path parts (not urls, like urlparse.urljoin)."""
+  joined = '/'.join(part.strip('/') for part in parts)
+
+  if parts[-1].endswith('/') and not joined.endswith('/'):
+    joined += '/'
+
+  if not joined.startswith('/'):
+    joined = '/' + joined
+
+  return joined
 
 
 class _Parser(object):
@@ -300,17 +315,31 @@ class _Runtime(object):
     self._security_configs = self._get_security_configs()
     self._tool_configs = self._get_tool_configs()
 
+  def get_base_url(self):
+    return self._app_context.get_slug()
+
+  def get_current_user(self):
+    return users.get_current_user()
+
   def get_default_resource_link_id(self):
     return self._app_context.get_slug().strip('/')
 
-  def get_launch_url(self, name, resource_link_id, extra_fields=None):
-    query = {'name': name, fields.RESOURCE_LINK_ID: resource_link_id}
+  def get_launch_url(
+      self, name, resource_link_id, return_url, extra_fields=None):
+    query = {
+        'name': name,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: return_url,
+        fields.RESOURCE_LINK_ID: resource_link_id,
+    }
 
     if extra_fields:
       query['extra_fields'] = extra_fields
 
-    return '%s%s?%s' % (
-        self._app_context.get_slug(), _LAUNCH_URL, urllib.urlencode(query))
+    return '%s?%s' % (
+        _urljoin(self.get_base_url(), _LAUNCH_URL), urllib.urlencode(query))
+
+  def get_locale(self):
+    return self._environ.get(_CONFIG_KEY_COURSE, {}).get(_CONFIG_KEY_LOCALE)
 
   def get_tool_config(self, name):
     return self._tool_configs.get(name)
@@ -322,7 +351,7 @@ class _Runtime(object):
     return self._security_configs.get(key)
 
   def get_user_id(self):
-    user = users.get_current_user()
+    user = self.get_current_user()
 
     if not user:
       return None
@@ -339,9 +368,6 @@ class _Runtime(object):
 
   def _get_lti_provider_enabled_for_course(self):
     return bool(self._get_yaml_value(_CONFIG_KEY_PROVIDER_ENABLED))
-
-  def _get_current_user(self):
-    return users.get_current_user()
 
   def _get_configs(self, config_key, parser):
     # This may crash if users have edited config.yaml by hand. Bad config.yaml
@@ -455,14 +481,34 @@ class LTIToolTag(tags.BaseTag):
     iframe.set(
         'src',
         runtime.get_launch_url(
-            tool, resource_link_id, extra_fields=extra_fields))
+            tool, resource_link_id, handler.request.url,
+            extra_fields=extra_fields))
     iframe.set('height', height)
     iframe.set('width', width)
 
     return iframe
 
 
-class LaunchHandler(utils.BaseHandler):
+class _BaseHandler(utils.BaseHandler):
+
+  @classmethod
+  def _get_request_arg(cls, from_dict, name):
+    return urllib.unquote(from_dict.get(name, _EMPTY_STRING))
+
+  def _get_launch_presentation_return_url_or_error(self, from_dict):
+    return_url = self._get_request_arg(
+        from_dict, fields.LAUNCH_PRESENTATION_RETURN_URL)
+
+    if not return_url:
+      _LOG.error(
+          'Unable to process LTI request; %s not specified',
+          fields.LAUNCH_PRESENTATION_RETURN_URL)
+      self.error(400)
+
+    return return_url
+
+
+class LaunchHandler(_BaseHandler):
 
   @classmethod
   def _get_signed_launch_parameters(cls, key, secret, parameters, url):
@@ -471,16 +517,21 @@ class LaunchHandler(utils.BaseHandler):
 
   def get(self):
     runtime = _get_runtime(self.app_context)
-    name = urllib.unquote(self.request.get('name', _EMPTY_STRING))
-    resource_link_id = urllib.unquote(
-        self.request.get(fields.RESOURCE_LINK_ID, _EMPTY_STRING))
+    name = self._get_request_arg(self.request, 'name')
+    resource_link_id = self._get_request_arg(
+        self.request, fields.RESOURCE_LINK_ID)
+    return_url = self._get_request_arg(
+        self.request, fields.LAUNCH_PRESENTATION_RETURN_URL)
     tool_config = runtime.get_tool_config(name)
 
-    if not (name and tool_config and resource_link_id):
+    if not (name and tool_config and resource_link_id and return_url):
       _LOG.error(
           'Unable to attempt LTI launch; invalid parameters: name: "%(name)s", '
-          'config: "%(config)s", resource_link_id: "%(resource_link_id)s"', {
+          'config: "%(config)s", resource_link_id: "%(resource_link_id)s", '
+          'launch_presentation_return_url: '
+          '"%(launch_presentation_return_url)s"', {
               'name': name, 'config': tool_config,
+              fields.LAUNCH_PRESENTATION_RETURN_URL: return_url,
               fields.RESOURCE_LINK_ID: resource_link_id})
       self.error(400)
       return
@@ -497,7 +548,7 @@ class LaunchHandler(utils.BaseHandler):
     # passed on an as-needed basis via the tag UI. If you need dynamic values,
     # you can override _get_custom_unsigned_launch_parameters below.
     unsigned_parameters = self._get_unsigned_launch_parameters(
-        extra_fields, name, resource_link_id, tool_config.url,
+        extra_fields, name, return_url, resource_link_id, tool_config.url,
         runtime.get_user_id())
     signed_parameters = self._get_signed_launch_parameters(
         tool_config.key, str(tool_config.secret), unsigned_parameters,
@@ -523,8 +574,9 @@ class LaunchHandler(utils.BaseHandler):
     pass
 
   def _get_unsigned_launch_parameters(
-        self, extra_fields, name, resource_link_id, url, user_id):
+        self, extra_fields, name, return_url, resource_link_id, url, user_id):
     from_dict = {
+        fields.LAUNCH_PRESENTATION_RETURN_URL: return_url,
         fields.RESOURCE_LINK_ID: resource_link_id,
         # No support for other roles in CB yet.
         # Treating as module-protected. pylint: disable-msg=protected-access
@@ -547,7 +599,71 @@ class LaunchHandler(utils.BaseHandler):
         else fields.LAUNCH_URL)
 
 
-class ValidationHandler(utils.BaseHandler):
+class LoginHandler(_BaseHandler):
+
+  _XSRF_TOKEN_NAME = 'modules-lti-login'
+  _XSRF_TOKEN_REQUEST_KEY = 'xsrf_token'
+
+  @classmethod
+  def _get_post_url(cls, base_url):
+    return _urljoin(base_url, _LOGIN_URL)
+
+  @classmethod
+  def _get_xsrf_token(cls):
+    return crypto.XsrfTokenManager.create_xsrf_token(cls._XSRF_TOKEN_NAME)
+
+  def get(self):
+    self._handle_request('login.html', self._get_get_context)
+
+  def _get_get_context(self, return_url, runtime):
+    return {
+        'post_url': self._get_post_url(runtime.get_base_url()),
+        'return_url_key': fields.LAUNCH_PRESENTATION_RETURN_URL,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: return_url,
+        'xsrf_token_key': self._XSRF_TOKEN_REQUEST_KEY,
+        self._XSRF_TOKEN_REQUEST_KEY: self._get_xsrf_token(),
+    }
+
+  def post(self):
+    self._handle_request(
+        'redirect.html', self._get_post_context,
+        validation_fn=self._validate_xsrf_token_or_error)
+
+  def _get_post_context(self, return_url, unused_runtime):
+    return {'login_url': users.create_login_url(dest_url=return_url)}
+
+  def _get_template(self, name, locale):
+    return jinja_utils.get_template(
+        name, [os.path.dirname(__file__)], locale=locale)
+
+  def _handle_request(self, template_name, get_context_fn, validation_fn=None):
+    runtime = _get_runtime(self.app_context)
+    return_url = self._get_launch_presentation_return_url_or_error(self.request)
+
+    if not return_url:
+      return
+
+    if validation_fn and not validation_fn():
+      return
+
+    template = self._get_template(template_name, locale=runtime.get_locale())
+    context = get_context_fn(return_url, runtime)
+    self.response.out.write(template.render(context))
+
+  def _validate_xsrf_token_or_error(self):
+    token = self._get_request_arg(
+        self.request.POST, self._XSRF_TOKEN_REQUEST_KEY)
+
+    if not (token and crypto.XsrfTokenManager.is_xsrf_token_valid(
+            token, self._XSRF_TOKEN_NAME)):
+      _LOG.error('Unable to process LTI request; invalid XSRF token')
+      self.error(400)
+      return
+
+    return token
+
+
+class ValidationHandler(_BaseHandler):
 
   OAUTH_KEY_FIELD = 'oauth_consumer_key'
   OAUTH_SIGNATURE_FIELD = 'oauth_signature'
@@ -558,11 +674,28 @@ class ValidationHandler(utils.BaseHandler):
     return request.get_parameter(cls.OAUTH_SIGNATURE_FIELD)
 
   @classmethod
+  def _get_login_redirect_url(cls, base_url, return_url):
+    return '%s?%s' % (
+        _urljoin(base_url, _LOGIN_URL), urllib.urlencode(
+            {fields.LAUNCH_PRESENTATION_RETURN_URL: return_url}))
+
+  @classmethod
   def _get_url(cls, post):
     secure_launch_url = post.get(fields.SECURE_LAUNCH_URL)
     return (
         secure_launch_url if secure_launch_url is not None else
         post.get(fields.LAUNCH_URL))
+
+  @classmethod
+  def _needs_login(cls, current_user):
+    # TODO(johncox): add support for forcing login, handling anonymous users.
+    return not bool(current_user)
+
+  def _get_launch_user_id(self):
+    return self.request.POST.get(fields.USER_ID)
+
+  def get(self):
+    self.error(404)
 
   def post(self):
     runtime = None
@@ -602,6 +735,11 @@ class ValidationHandler(utils.BaseHandler):
       self.error(400)
       return
 
+    return_url = self._get_launch_presentation_return_url_or_error(
+        self.request.POST)
+    if not return_url:
+      return
+
     # Treat as module-protected. pylint: disable-msg=protected-access
     missing = fields._get_missing_base(self.request.POST)
     if missing:
@@ -636,7 +774,12 @@ class ValidationHandler(utils.BaseHandler):
       self.error(400)
       return
 
-    # TODO(johncox): user signing if requested; resource dispatching.
+    if self._needs_login(runtime.get_current_user()):
+      self.redirect(
+          self._get_login_redirect_url(runtime.get_base_url(), return_url))
+      return
+
+    # TODO(johncox): add support for resource dispatching and rendering.
 
 
 def _get_provider_enabled_field(unused_course):
@@ -723,6 +866,7 @@ def register_module():
   global_handlers = []
   namespaced_handlers = [
       (_LAUNCH_URL, LaunchHandler),
+      (_LOGIN_URL, LoginHandler),
       (_VALIDATION_URL, ValidationHandler)]
   custom_module = custom_modules.Module(
       'LTI', 'LTI module', global_handlers, namespaced_handlers,

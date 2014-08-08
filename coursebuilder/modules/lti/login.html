@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>LTI Login Page</title>
+  </head>
+  <body>
+    {# I18N: this message is displayed to the user when they need to sign in to this tool before they can use it. #}
+    <p>{{ gettext('You must sign in to this tool to use it.') }}</p>
+    <form action='{{post_url}}' method='post'>
+      <input type='hidden' name='{{return_url_key}}' value='{{launch_presentation_return_url}}'>
+      <input name='{{xsrf_token_key}}' type='hidden' value='{{xsrf_token}}'>
+      {# I18N Sign-in text for the submit button. #}
+      <input type='submit' value='{{ gettext("Sign In") }}'></input>
+    </form>
+  </body>
+</html>

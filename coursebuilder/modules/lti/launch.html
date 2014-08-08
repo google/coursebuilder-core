@@ -9,7 +9,7 @@
         method='post'
         name='lti_launch_form'>
       {% for name, value in signed_parameters.iteritems() %}
-        <input type='hidden' name='{{name}}' value='{{value}}'></input>
+        <input type='hidden' name='{{name}}' value='{{value}}'>
       {% endfor %}
     </form>
     <script>

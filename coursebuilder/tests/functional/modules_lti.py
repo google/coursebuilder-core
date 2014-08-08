@@ -47,6 +47,7 @@ class FieldsTest(actions.TestBase):
   def test_make_overrides_defaults_from_from_dict(self):
     expected = dict(self.base)
     from_dict = {
+        fields.LAUNCH_PRESENTATION_RETURN_URL: 'return_url_override',
         fields.LAUNCH_URL: 'launch_url_override',
         fields.LTI_VERSION: 'lti_version_override',
         fields.RESOURCE_LINK_ID: 'resource_link_id_override',
@@ -125,6 +126,11 @@ class LtiWebappTestBase(actions.TestBase):
     config.Registry.test_overrides = {}
     lti._LOG.handlers = self.old_handlers
     super(LtiWebappTestBase, self).tearDown()
+
+  def assert_logged_missing_launch_presentation_url(self):
+    self.assertIn(
+        '%s not specified' % fields.LAUNCH_PRESENTATION_RETURN_URL,
+        self.get_log())
 
   def enable_courses_can_enable_lti_provider(self):
     config.Registry.test_overrides[
@@ -205,6 +211,8 @@ class RuntimeTest(LtiWebappTestBase):
 
   def test_get_provider_enabled_false_if_not_enabled_for_deployment(self):
     self.enable_lti_provider_for_course()
+    config.Registry.test_overrides[
+        lti.COURSES_CAN_ENABLE_LTI_PROVIDER.name] = False
     runtime = lti._get_runtime(self.app_context)
     self.assertFalse(runtime.get_provider_enabled())
 
@@ -229,152 +237,6 @@ class RuntimeTest(LtiWebappTestBase):
     self.set_lti_security_config()
     runtime = lti._get_runtime(self.app_context)
     self.assertIsNone(runtime.get_security_config('missing'))
-
-
-class LaunchHandlerTest(LtiWebappTestBase):
-
-  def setUp(self):
-    super(LaunchHandlerTest, self).setUp()
-    self.email = 'user@example.com'
-    self.external_userid = crypto.get_external_user_id(
-        app_identity.get_application_id(),
-        str(self.app_context.get_namespace_name()), self.email)
-    self.resource_link_id = 'resource_link_id'
-    self.params = {
-        'name': self.tool_config['name'],
-        fields.RESOURCE_LINK_ID: self.resource_link_id,
-    }
-
-  def assert_matches_form_inputs(self, expected_dict, form_inputs):
-    for k, v in expected_dict.iteritems():
-      self.assertEqual(v, form_inputs[k])
-
-  def assert_base_oauth_form_inputs_look_valid(self, form_inputs):
-    url_field = (
-        fields.SECURE_LAUNCH_URL if self.tool_config['url'].startswith('https')
-        else fields.LAUNCH_URL)
-
-    self.assertEqual('LTI-1p0', form_inputs[fields.LTI_VERSION])
-    self.assertEqual(
-        'basic-lti-launch-request', form_inputs[fields.LTI_MESSAGE_TYPE])
-    self.assertEqual(fields._ROLE_STUDENT, form_inputs[fields.ROLES])
-    self.assertEqual(self.tool_config['url'], form_inputs[url_field])
-    self.assertEqual(
-        self.resource_link_id, form_inputs[fields.RESOURCE_LINK_ID])
-
-  def assert_oauth1_signature_looks_valid(self, form_inputs):
-    for oauth_param in [
-        'oauth_consumer_key', 'oauth_nonce', 'oauth_signature',
-        'oauth_signature_method', 'oauth_timestamp', 'oauth_version']:
-      self.assertIn(oauth_param, form_inputs.keys())
-
-    self.assertEqual('HMAC-SHA1', form_inputs['oauth_signature_method'])
-    self.assertEqual('1.0', form_inputs['oauth_version'])
-
-  def assert_tool_url_set(self, body):
-    self.assertIn("action='%s'" % self.tool_config['url'], body)
-
-  def assert_user_id_equal(self, user_id, form_params):
-    self.assertEqual(user_id, form_params[fields.USER_ID])
-
-  def assert_user_not_set(self, form_params):
-    self.assertNotIn(fields.USER_ID, form_params.keys())
-
-  def get_form_inputs(self, body):
-    return dict(re.findall(
-      r"input type='hidden' name='(.+)' value='(.+)'", body))
-
-  def test_get_can_process_int_secret(self):
-    self.tool_config['secret'] = 2
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-
-    self.assertEqual(200, response.status_code)
-
-  def test_get_returns_400_if_context_not_found(self):
-    response = self.testapp.get(
-        lti._LAUNCH_URL, expect_errors=True, params=self.params)
-
-    self.assertEqual(400, response.status_code)
-
-  def test_get_returns_400_if_name_not_set(self):
-    self.set_lti_tool_config()
-    self.params.pop('name')
-    response = self.testapp.get(
-        lti._LAUNCH_URL, expect_errors=True, params=self.params)
-
-    self.assertEqual(400, response.status_code)
-
-  def test_get_returns_400_if_resource_link_id_not_set(self):
-    self.set_lti_tool_config()
-    self.params.pop(fields.RESOURCE_LINK_ID)
-    response = self.testapp.get(
-        lti._LAUNCH_URL, expect_errors=True, params=self.params)
-
-    self.assertEqual(400, response.status_code)
-
-  def test_get_when_extra_fields_set_renders_extra_fields_in_form_inputs(self):
-    context_id_value = 'context_id_value'
-    context_label_value = 'context_label_value'
-    extra_fields_yaml = '%s: %s\n%s: %s' % (
-        fields.CONTEXT_ID, context_id_value, fields.CONTEXT_LABEL,
-        context_label_value)
-    self.params.update(
-        {'extra_fields': fields._Serializer.dump(extra_fields_yaml)})
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-    form_inputs = self.get_form_inputs(response.body)
-
-    self.assertEqual(200, response.status_code)
-    self.assert_tool_url_set(response.body)
-    self.assert_matches_form_inputs(
-        {fields.CONTEXT_ID: context_id_value,
-         fields.CONTEXT_LABEL: context_label_value}, form_inputs)
-    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
-
-  def test_get_when_insecure_launch_url_set(self):
-    insecure_url = 'http://something'
-    self.tool_config['url'] = insecure_url
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-    form_inputs = self.get_form_inputs(response.body)
-
-    self.assertEqual(200, response.status_code)
-    self.assertEqual(insecure_url, form_inputs[fields.LAUNCH_URL])
-
-  def test_get_when_secure_launch_url_set(self):
-    secure_url = 'https://something'
-    self.tool_config['url'] = secure_url
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-    form_inputs = self.get_form_inputs(response.body)
-
-    self.assertEqual(200, response.status_code)
-    self.assertEqual(secure_url, form_inputs[fields.SECURE_LAUNCH_URL])
-
-  def test_get_when_user_set_renders_signed_form_inputs(self):
-    user = users.User(email=self.email)
-    self.swap(users, 'get_current_user', lambda: user)
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-    form_inputs = self.get_form_inputs(response.body)
-
-    self.assertEqual(200, response.status_code)
-    self.assert_tool_url_set(response.body)
-    self.assert_oauth1_signature_looks_valid(form_inputs)
-    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
-    self.assert_user_id_equal(self.external_userid, form_inputs)
-
-  def test_get_when_user_unset_renders_signed_form_inputs(self):
-    self.set_lti_tool_config()
-    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
-    form_inputs = self.get_form_inputs(response.body)
-
-    self.assertEqual(200, response.status_code)
-    self.assert_tool_url_set(response.body)
-    self.assert_oauth1_signature_looks_valid(form_inputs)
-    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
-    self.assert_user_not_set(form_inputs)
 
 
 class LTIToolTagTest(LtiWebappTestBase):
@@ -567,18 +429,266 @@ class ToolsParserTest(ParserTestBase):
     self.assert_parse_error()
 
 
+class LaunchHandlerTest(LtiWebappTestBase):
+
+  def setUp(self):
+    super(LaunchHandlerTest, self).setUp()
+    self.email = 'user@example.com'
+    self.external_userid = crypto.get_external_user_id(
+        app_identity.get_application_id(),
+        str(self.app_context.get_namespace_name()), self.email)
+    self.resource_link_id = 'resource_link_id'
+    self.return_url = 'return_url'
+    self.params = {
+        'name': self.tool_config['name'],
+        fields.RESOURCE_LINK_ID: self.resource_link_id,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
+    }
+
+  def assert_matches_form_inputs(self, expected_dict, form_inputs):
+    for k, v in expected_dict.iteritems():
+      self.assertEqual(v, form_inputs[k])
+
+  def assert_base_oauth_form_inputs_look_valid(self, form_inputs):
+    url_field = (
+        fields.SECURE_LAUNCH_URL if self.tool_config['url'].startswith('https')
+        else fields.LAUNCH_URL)
+
+    self.assertEqual('LTI-1p0', form_inputs[fields.LTI_VERSION])
+    self.assertEqual(
+        'basic-lti-launch-request', form_inputs[fields.LTI_MESSAGE_TYPE])
+    self.assertEqual(fields._ROLE_STUDENT, form_inputs[fields.ROLES])
+    self.assertEqual(self.tool_config['url'], form_inputs[url_field])
+    self.assertEqual(
+        self.resource_link_id, form_inputs[fields.RESOURCE_LINK_ID])
+
+  def assert_oauth1_signature_looks_valid(self, form_inputs):
+    for oauth_param in [
+        'oauth_consumer_key', 'oauth_nonce', 'oauth_signature',
+        'oauth_signature_method', 'oauth_timestamp', 'oauth_version']:
+      self.assertIn(oauth_param, form_inputs.keys())
+
+    self.assertEqual('HMAC-SHA1', form_inputs['oauth_signature_method'])
+    self.assertEqual('1.0', form_inputs['oauth_version'])
+
+  def assert_tool_url_set(self, body):
+    self.assertIn("action='%s'" % self.tool_config['url'], body)
+
+  def assert_user_id_equal(self, user_id, form_params):
+    self.assertEqual(user_id, form_params[fields.USER_ID])
+
+  def assert_user_not_set(self, form_params):
+    self.assertNotIn(fields.USER_ID, form_params.keys())
+
+  def get_form_inputs(self, body):
+    return dict(re.findall(
+      r"input type='hidden' name='(.+)' value='(.+)'", body))
+
+  def test_get_can_process_int_secret(self):
+    self.tool_config['secret'] = 2
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+
+    self.assertEqual(200, response.status_code)
+
+  def test_get_returns_400_if_context_not_found(self):
+    response = self.testapp.get(
+        lti._LAUNCH_URL, expect_errors=True, params=self.params)
+
+    self.assertEqual(400, response.status_code)
+
+  def test_get_returns_400_if_launch_presentation_return_url_not_set(self):
+    self.set_lti_tool_config()
+    self.params.pop(fields.LAUNCH_PRESENTATION_RETURN_URL)
+    response = self.testapp.get(
+        lti._LAUNCH_URL, expect_errors=True, params=self.params)
+
+    self.assertEqual(400, response.status_code)
+
+  def test_get_returns_400_if_name_not_set(self):
+    self.set_lti_tool_config()
+    self.params.pop('name')
+    response = self.testapp.get(
+        lti._LAUNCH_URL, expect_errors=True, params=self.params)
+
+    self.assertEqual(400, response.status_code)
+
+  def test_get_returns_400_if_resource_link_id_not_set(self):
+    self.set_lti_tool_config()
+    self.params.pop(fields.RESOURCE_LINK_ID)
+    response = self.testapp.get(
+        lti._LAUNCH_URL, expect_errors=True, params=self.params)
+
+    self.assertEqual(400, response.status_code)
+
+  def test_get_when_extra_fields_set_renders_extra_fields_in_form_inputs(self):
+    context_id_value = 'context_id_value'
+    context_label_value = 'context_label_value'
+    extra_fields_yaml = '%s: %s\n%s: %s' % (
+        fields.CONTEXT_ID, context_id_value, fields.CONTEXT_LABEL,
+        context_label_value)
+    self.params.update(
+        {'extra_fields': fields._Serializer.dump(extra_fields_yaml)})
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+    form_inputs = self.get_form_inputs(response.body)
+
+    self.assertEqual(200, response.status_code)
+    self.assert_tool_url_set(response.body)
+    self.assert_matches_form_inputs(
+        {fields.CONTEXT_ID: context_id_value,
+         fields.CONTEXT_LABEL: context_label_value}, form_inputs)
+    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
+
+  def test_get_when_insecure_launch_url_set(self):
+    insecure_url = 'http://something'
+    self.tool_config['url'] = insecure_url
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+    form_inputs = self.get_form_inputs(response.body)
+
+    self.assertEqual(200, response.status_code)
+    self.assertEqual(insecure_url, form_inputs[fields.LAUNCH_URL])
+
+  def test_get_when_secure_launch_url_set(self):
+    secure_url = 'https://something'
+    self.tool_config['url'] = secure_url
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+    form_inputs = self.get_form_inputs(response.body)
+
+    self.assertEqual(200, response.status_code)
+    self.assertEqual(secure_url, form_inputs[fields.SECURE_LAUNCH_URL])
+
+  def test_get_when_user_set_renders_signed_form_inputs(self):
+    user = users.User(email=self.email)
+    self.swap(users, 'get_current_user', lambda: user)
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+    form_inputs = self.get_form_inputs(response.body)
+
+    self.assertEqual(200, response.status_code)
+    self.assert_tool_url_set(response.body)
+    self.assert_oauth1_signature_looks_valid(form_inputs)
+    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
+    self.assert_user_id_equal(self.external_userid, form_inputs)
+
+  def test_get_when_user_unset_renders_signed_form_inputs(self):
+    self.set_lti_tool_config()
+    response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
+    form_inputs = self.get_form_inputs(response.body)
+
+    self.assertEqual(200, response.status_code)
+    self.assert_tool_url_set(response.body)
+    self.assert_oauth1_signature_looks_valid(form_inputs)
+    self.assert_base_oauth_form_inputs_look_valid(form_inputs)
+    self.assert_user_not_set(form_inputs)
+
+
+class LoginHandlerTest(LtiWebappTestBase):
+
+  def setUp(self):
+    super(LoginHandlerTest, self).setUp()
+    self.return_url = 'return_url'
+    self.xsrf_token = lti.LoginHandler._get_xsrf_token()
+    self.params = {
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
+        lti.LoginHandler._XSRF_TOKEN_REQUEST_KEY: self.xsrf_token,
+    }
+
+  def assert_contains_expected_post_url(self, post_url, body):
+    self.assertIn("<form action='%s'" % post_url, body)
+
+  def assert_contains_expected_return_url(self, return_url, body):
+    self.assertIn("top.location = '%s'" % return_url, body)
+
+  def assert_contains_valid_xsrf_token(self, body):
+    token = re.search(
+        r"%s.*value='([^']+)" % lti.LoginHandler._XSRF_TOKEN_REQUEST_KEY,
+    body).groups()[0]
+    self.assertTrue(
+        crypto.XsrfTokenManager.is_xsrf_token_valid(
+            token, lti.LoginHandler._XSRF_TOKEN_NAME))
+
+  def assert_invalid_xsrf_token(self, body):
+    self.assertIn('invalid XSRF token', self.get_log())
+    self.assertEqual('', body)
+
+  def test_get_post_url_joins_segments_correctly(self):
+    self.assertEqual('/lti/login', lti.LoginHandler._get_post_url(''))
+    self.assertEqual('/lti/login', lti.LoginHandler._get_post_url('/'))
+    self.assertEqual(
+        '/course/lti/login', lti.LoginHandler._get_post_url('/course'))
+
+  def test_get_returns_200_with_correct_template_args(self):
+    response = self.testapp.get(lti._LOGIN_URL, params=self.params)
+    self.assertEqual(200, response.status_code)
+    self.assert_contains_expected_post_url('/lti/login', response.body)
+    self.assert_contains_valid_xsrf_token(response.body)
+
+  def test_get_returns_400_if_launch_presentation_return_url_not_set(self):
+    self.params.pop(fields.LAUNCH_PRESENTATION_RETURN_URL)
+    response = self.testapp.get(
+        lti._LOGIN_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_logged_missing_launch_presentation_url()
+
+  def test_post_returns_200_with_correct_return_url(self):
+    response = self.testapp.post(
+        lti._LOGIN_URL, expect_errors=True, params=self.params)
+    self.assertEqual(200, response.status_code)
+    self.assert_contains_expected_return_url(
+        'https://www.google.com/accounts/Login?continue='
+        'http%3A//localhost/return_url', response.body)
+
+  def test_post_returns_400_if_launch_presentation_return_url_not_set(self):
+    self.params.pop(fields.LAUNCH_PRESENTATION_RETURN_URL)
+    response = self.testapp.post(
+        lti._LOGIN_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_logged_missing_launch_presentation_url()
+
+  def test_post_returns_400_if_xsrf_token_invalid(self):
+    self.params[lti.LoginHandler._XSRF_TOKEN_REQUEST_KEY] = 'invalid'
+    response = self.testapp.post(
+        lti._LOGIN_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_invalid_xsrf_token(response.body)
+
+  def test_post_returns_400_if_xsrf_token_missing(self):
+    self.params.pop(lti.LoginHandler._XSRF_TOKEN_REQUEST_KEY)
+    response = self.testapp.post(
+        lti._LOGIN_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_invalid_xsrf_token(response.body)
+
+
 class ValidationHandlerTest(LtiWebappTestBase):
 
   def setUp(self):
     super(ValidationHandlerTest, self).setUp()
     self.params = {r: r + '_value' for r in fields._REQUIRED}
     self.key = self.security_config['key']
-    self.url = 'http://example.com'
+    self.return_url = 'return_url'
+    self.url = 'url'
 
   def set_up_runtime(self):
     self.enable_courses_can_enable_lti_provider()
     self.enable_lti_provider_for_course()
     self.set_lti_security_config()
+
+  def do_successful_post(self, needs_login=True):
+    self.set_up_runtime()
+    self.params.update({
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    signed_params = lti.LaunchHandler._get_signed_launch_parameters(
+        self.key, self.security_config['secret'], self.params, self.url)
+    self.swap(
+        lti.ValidationHandler, '_needs_login',
+        lambda unused_cls, unused_current_user: needs_login)
+    return self.testapp.post(lti._VALIDATION_URL, params=signed_params)
 
   def test_get_expected_signature_returns_unstable_string(self):
     first = lti.ValidationHandler._get_expected_signature(
@@ -587,6 +697,14 @@ class ValidationHandlerTest(LtiWebappTestBase):
         self.key, self.security_config['secret'], {}, self.url)
     self.assertTrue(isinstance(first, str))
     self.assertNotEqual(first, second)
+
+  def test_get_login_redirect_url(self):
+    self.assertEqual(
+        '/lti/login?launch_presentation_return_url=redirect',
+        lti.ValidationHandler._get_login_redirect_url('/', 'redirect'))
+    self.assertEqual(
+        '/base/lti/login?launch_presentation_return_url=redirect',
+        lti.ValidationHandler._get_login_redirect_url('/base', 'redirect'))
 
   def test_get_url_returns_none_if_both_missing(self):
     self.assertIsNone(lti.ValidationHandler._get_url({}))
@@ -614,15 +732,23 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.assertEqual(
         '', lti.ValidationHandler._get_url({fields.LAUNCH_URL: ''}))
 
-  def test_post_returns_200_if_all_validators_pass(self):
-    self.set_up_runtime()
-    self.params[fields.SECURE_LAUNCH_URL] = self.url
-    signed_params = lti.LaunchHandler._get_signed_launch_parameters(
-        self.key, self.security_config['secret'], self.params, self.url)
-    response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400, params=signed_params)
+  def test_get_returns_404(self):
+    response = self.testapp.get(lti._VALIDATION_URL, expect_errors=True)
+    self.assertEqual(404, response.status_code)
+
+  def test_post_returns_200_if_all_validators_pass_and_login_not_needed(self):
+    response = self.do_successful_post(needs_login=False)
     self.assertEqual('', self.get_log())
     self.assertEqual(200, response.status_code)
+
+  def test_post_returns_302s_to_login_with_correct_escaped_redirect_url(self):
+    self.return_url = 'http://example.com?foo=bar&baz=quux'
+    response = self.do_successful_post(needs_login=True)
+    self.assertEqual('', self.get_log())
+    self.assertEqual(302, response.status_code)
+    self.assertEqual(
+        'http://localhost/lti/login?launch_presentation_return_url='
+        'http%3A%2F%2Fexample.com%3Ffoo%3Dbar%26baz%3Dquux', response.location)
 
   def test_post_returns_400_if_key_missing(self):
     self.set_up_runtime()
@@ -634,7 +760,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
   def test_post_returns_400_if_security_config_missing(self):
     self.set_up_runtime()
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400,
+        lti._VALIDATION_URL, expect_errors=True,
         params={lti.ValidationHandler.OAUTH_KEY_FIELD: self.key + '_missing'})
     self.assertEqual(400, response.status_code)
     self.assertIn('no config found for key ' + self.key, self.get_log())
@@ -642,7 +768,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
   def test_post_returns_400_if_launch_url_and_secure_launch_url_missing(self):
     self.set_up_runtime()
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400,
+        lti._VALIDATION_URL, expect_errors=True,
         params={lti.ValidationHandler.OAUTH_KEY_FIELD: self.key})
     self.assertEqual(400, response.status_code)
     self.assertIn(
@@ -650,7 +776,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
             fields.SECURE_LAUNCH_URL, fields.LAUNCH_URL),
         self.get_log())
 
-  def test_post_returns_400_if_missing_other_required_lti_fields(self):
+  def test_post_returns_400_if_launch_presentation_return_url_missing(self):
     self.set_up_runtime()
     removed_field = sorted(fields._REQUIRED)[0]
     self.params.update({
@@ -659,7 +785,21 @@ class ValidationHandlerTest(LtiWebappTestBase):
     })
     self.params.pop(removed_field)
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_logged_missing_launch_presentation_url()
+
+  def test_post_returns_400_if_missing_other_required_lti_fields(self):
+    self.set_up_runtime()
+    removed_field = sorted(fields._REQUIRED)[0]
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    self.params.pop(removed_field)
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
     self.assertEqual(400, response.status_code)
     self.assertIn('missing required fields: ' + removed_field, self.get_log())
 
@@ -667,10 +807,11 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.set_up_runtime()
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
     self.assertEqual(400, response.status_code)
     self.assertIn(
         '%s not specified' % lti.ValidationHandler.OAUTH_SIGNATURE_FIELD,
@@ -687,10 +828,11 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
         lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'signature',
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
     self.assertEqual(400, response.status_code)
     self.assertIn(
         'error calculating signature: ' + error_details, self.get_log())
@@ -700,10 +842,11 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
         lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'mismatch',
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
     response = self.testapp.post(
-        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
     self.assertIn('signature mismatch', self.get_log())
     self.assertEqual(400, response.status_code)
 
@@ -742,3 +885,35 @@ class SerializerTest(actions.TestBase):
     self.assertEqual(
         {valid_field: value},
         fields._Serializer.load(fields._Serializer.dump(yaml_string)))
+
+
+class UrljoinTestCase(actions.TestBase):
+
+  def test_does_not_remove_internal_slashes(self):
+    self.assertEqual('/a//b', lti._urljoin('a//b'))
+
+  def test_ends_with_slash_when_last_arg_ends_with_slash(self):
+    self.assertEqual('/foo', lti._urljoin('foo'))
+    self.assertEqual('/foo/', lti._urljoin('foo/'))
+    self.assertEqual('/foo', lti._urljoin('', 'foo'))
+    self.assertEqual('/foo/', lti._urljoin('', 'foo/'))
+
+  def test_starts_with_one_slash(self):
+    self.assertEqual('/', lti._urljoin(''))
+    self.assertEqual('/', lti._urljoin('/'))
+    self.assertEqual('/foo', lti._urljoin('', 'foo'))
+    self.assertEqual('/foo', lti._urljoin('', '/foo'))
+    self.assertEqual('/foo', lti._urljoin('/', 'foo'))
+    self.assertEqual('/foo', lti._urljoin('/', '/foo'))
+
+  def test_is_variadic_and_delimits_with_single_slash(self):
+    self.assertEqual('/', lti._urljoin(''))
+    self.assertEqual('/a/b/c/d', lti._urljoin('a', 'b', 'c', 'd'))
+
+  def test_when_all_args_empty(self):
+    self.assertEqual('/', lti._urljoin(''))
+    self.assertEqual('/', lti._urljoin('', ''))
+
+  def test_when_all_args_slashes(self):
+    self.assertEqual('/', lti._urljoin('/'))
+    self.assertEqual('/', lti._urljoin('/', '/'))
