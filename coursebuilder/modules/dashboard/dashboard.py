@@ -80,6 +80,7 @@ from modules.data_source_providers import synchronous_providers
 from modules.search.search import SearchDashboardHandler
 from tools import verify
 
+from google.appengine.api import app_identity
 from google.appengine.api import users
 
 RESOURCES_PATH = '/modules/dashboard/resources'
@@ -245,8 +246,12 @@ class DashboardHandler(
                 'a', href=users.create_logout_url(self.request.uri)
             ).add_text('Logout'))
         template_values[
-            'page_footer'] = 'Created on: %s' % datetime.datetime.now()
-
+            'page_footer'] = 'Page created on: %s' % datetime.datetime.now()
+        template_values['coursebuilder_version'] = (
+            os.environ['GCB_PRODUCT_VERSION'])
+        template_values['application_id'] = app_identity.get_application_id()
+        template_values['application_version'] = (
+            os.environ['CURRENT_VERSION_ID'])
         if not template_values.get('sections'):
             template_values['sections'] = []
 
