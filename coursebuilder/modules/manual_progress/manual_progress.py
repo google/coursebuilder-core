@@ -61,6 +61,36 @@ class ProgressRESTBase(utils.BaseRESTHandler):
                                'status': status})
 
 
+class CourseProgressRESTHandler(ProgressRESTBase):
+    URI = '/rest/student/progress/course'
+
+    def _perform_checks(self):
+        progress = None
+        success, key, student, course = (
+            super(CourseProgressRESTHandler, self)._perform_checks())
+        if success:
+            progress = course.get_progress_tracker()
+
+        return success, key, student, progress
+
+    def _send_success_response(self, key, student, progress):
+        super(CourseProgressRESTHandler, self)._send_success_response(
+            key,
+            progress.get_course_status(
+                progress.get_or_create_progress(student)))
+
+    def get(self):
+        success, key, student, progress = self._perform_checks()
+        if success:
+            self._send_success_response(key, student, progress)
+
+    def post(self):
+        success, key, student, progress = self._perform_checks()
+        if success:
+            progress.force_course_completed(student)
+            self._send_success_response(key, student, progress)
+
+
 class UnitProgressRESTHandler(ProgressRESTBase):
     URI = '/rest/student/progress/unit'
 
@@ -148,6 +178,7 @@ class LessonProgressRESTHandler(ProgressRESTBase):
 
 def register_module():
     namespaced_handlers = [
+        (CourseProgressRESTHandler.URI, CourseProgressRESTHandler),
         (UnitProgressRESTHandler.URI, UnitProgressRESTHandler),
         (LessonProgressRESTHandler.URI, LessonProgressRESTHandler),
         ]

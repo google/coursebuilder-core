@@ -78,6 +78,8 @@ class UnitLessonCompletionTracker(object):
     QUESTION = 'question'
 
     EVENT_CODE_MAPPING = {
+        'course': 'r',
+        'course_forced': 'r',
         'unit': 'u',
         'unit_forced': 'u',
         'lesson': 'l',
@@ -88,6 +90,7 @@ class UnitLessonCompletionTracker(object):
         'component': 'c',
     }
     COMPOSITE_ENTITIES = [
+        EVENT_CODE_MAPPING['course'],
         EVENT_CODE_MAPPING['unit'],
         EVENT_CODE_MAPPING['lesson'],
         EVENT_CODE_MAPPING['activity'],
@@ -112,6 +115,11 @@ class UnitLessonCompletionTracker(object):
         activity = verify.evaluate_python_expression_from_text(
             content, root_name, verify.Activity().scope, noverify_text)
         return activity
+
+    def _get_course_key(self):
+        return '%s.0' % (
+            self.EVENT_CODE_MAPPING['course'],
+        )
 
     def _get_unit_key(self, unit_id):
         return '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id)
@@ -480,6 +488,36 @@ class UnitLessonCompletionTracker(object):
                 'Error: %s, data: %s', e, content)
             return {}
 
+    def _update_course(self, progress, student):
+        event_key = self._get_course_key()
+        if self._get_entity_value(progress, event_key) == self.COMPLETED_STATE:
+            return
+
+        self._set_entity_value(progress, event_key, self.IN_PROGRESS_STATE)
+        course = self._get_course()
+        for unit in course.get_track_matching_student(student):
+            if course.get_parent_unit(unit.unit_id):
+                # Completion of an assessment-as-lesson rolls up to its
+                # containing unit; it is not considered for overall course
+                # completion (except insofar as assessment completion
+                # contributes to the completion of its owning unit)
+                pass
+            else:
+                if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                    if not self.is_assessment_completed(progress, unit.unit_id):
+                        return
+                elif unit.type == verify.UNIT_TYPE_UNIT:
+                    unit_state = self.get_unit_status(progress, unit.unit_id)
+                    if unit_state != self.COMPLETED_STATE:
+                        return
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
+
+    def _update_course_forced(self, progress):
+        """Force state of course to completed."""
+
+        event_key = self._get_course_key()
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
+
     def _update_unit(self, progress, event_key):
         """Updates a unit's progress if all its lessons have been completed."""
         split_event_key = event_key.split('.')
@@ -595,6 +633,8 @@ class UnitLessonCompletionTracker(object):
 
     UPDATER_MAPPING = {
         'activity': _update_activity,
+        'course': _update_course,
+        'course_forced': _update_course_forced,
         'html': _update_html,
         'lesson': _update_lesson,
         'unit': _update_unit,
@@ -644,6 +684,10 @@ class UnitLessonCompletionTracker(object):
             },
         ),
     }
+
+    def force_course_completed(self, student):
+        self._put_event(
+            student, 'course_forced', self._get_course_key())
 
     def force_unit_completed(self, student, unit_id):
         """Records that the given student has completed a unit.
@@ -759,13 +803,31 @@ class UnitLessonCompletionTracker(object):
 
         if event_entity in self.DERIVED_EVENTS:
             for derived_event in self.DERIVED_EVENTS[event_entity]:
-                event_key = derived_event['generate_parent_id'](event_key)
-                if event_key:
-                    self._update_event(
-                        student=student,
-                        progress=progress,
-                        event_entity=derived_event['entity'],
-                        event_key=event_key)
+                parent_event_key = derived_event['generate_parent_id'](
+                    event_key)
+                if parent_event_key:
+                    # Event entities may contribute upwards to more than one
+                    # kind of container.  Only pass the notification up to the
+                    # handler that our event_key indicates we actually have.
+                    leaf_type = self.get_entity_type_from_key(parent_event_key)
+                    event_entity = derived_event['entity']
+                    if leaf_type == self.EVENT_CODE_MAPPING[event_entity]:
+                        self._update_event(
+                            student=student,
+                            progress=progress,
+                            event_entity=event_entity,
+                            event_key=parent_event_key)
+                else:
+                    # Only update course status when we are at the top of
+                    # a containment list
+                    self._update_course(progress, student)
+        else:
+            # Or only update course status when we are doing something not
+            # in derived events (Unit, typically).
+            self._update_course(progress, student)
+
+    def get_course_status(self, progress):
+        return self._get_entity_value(progress, self._get_course_key())
 
     def get_unit_status(self, progress, unit_id):
         return self._get_entity_value(progress, self._get_unit_key(unit_id))
@@ -813,6 +875,11 @@ class UnitLessonCompletionTracker(object):
                 student=student, property_name=cls.PROPERTY_KEY)
             progress.put()
         return progress
+
+    def get_course_progress(self, student):
+        """Return [NOT_STARTED|IN_PROGRESS|COMPLETED]_STATE for course."""
+        progress = self.get_or_create_progress(student)
+        return self.get_course_status(progress) or self.NOT_STARTED_STATE
 
     def get_unit_progress(self, student):
         """Returns a dict with the states of each unit."""

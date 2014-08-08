@@ -221,10 +221,12 @@ def is_progress_recorded(handler, student):
 
 def add_course_outline_to_template(handler, student):
     """Adds course outline with all units, lessons, progress to the template."""
+    _tracker = handler.get_progress_tracker()
     if student and not student.is_transient:
         augment_assessment_units(handler.get_course(), student)
+        handler.template_value['course_progress'] = (
+            _tracker.get_course_progress(student))
 
-    _tracker = handler.get_progress_tracker()
     _tuples = []
     units = handler.get_track_matching_student(student)
     units = filter_assessments_used_within_units(units)
@@ -276,6 +278,7 @@ class CourseHandler(BaseHandler):
             self.redirect('/preview')
             return
 
+        tracker = self.get_progress_tracker()
         units = self.get_track_matching_student(student)
         units = filter_assessments_used_within_units(units)
         self.template_value['units'] = units
@@ -283,6 +286,8 @@ class CourseHandler(BaseHandler):
 
         if student and not student.is_transient:
             augment_assessment_units(self.get_course(), student)
+            self.template_value['course_progress'] = (
+                tracker.get_course_progress(student))
         elif user:
             profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
             additional_registration_fields = self.app_context.get_environ(
@@ -293,9 +298,7 @@ class CourseHandler(BaseHandler):
                     XsrfTokenManager.create_xsrf_token('register-post'))
 
         self.template_value['transient_student'] = student.is_transient
-        self.template_value['progress'] = (
-            self.get_progress_tracker().get_unit_progress(student))
-
+        self.template_value['progress'] = tracker.get_unit_progress(student)
         course = self.app_context.get_environ()['course']
         self.template_value['video_exists'] = bool(
             'main_video' in course and

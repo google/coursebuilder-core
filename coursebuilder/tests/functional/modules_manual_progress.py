@@ -17,9 +17,11 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 from common import crypto
+from common import utils as common_utils
 from controllers import utils
 from models import config
 from models import courses
+from models import models
 from models import transforms
 from modules.manual_progress import manual_progress
 from tests.functional import actions
@@ -39,6 +41,9 @@ LESSON_PROGRESS_URL = '/%s%s' % (COURSE_NAME,
                                  manual_progress.LessonProgressRESTHandler.URI)
 UNIT_PROGRESS_URL = '/%s%s' % (COURSE_NAME,
                                manual_progress.UnitProgressRESTHandler.URI)
+COURSE_PROGRESS_URL = '/%s%s' % (COURSE_NAME,
+                                 manual_progress.CourseProgressRESTHandler.URI)
+ASSESSMENT_COMPLETION_URL = '/%s/answer' % COURSE_NAME
 
 
 class ManualProgressTest(actions.TestBase):
@@ -56,6 +61,7 @@ class ManualProgressTest(actions.TestBase):
 
         # Add content to course
         self._course = courses.Course(None, context)
+
         self._unit_one = self._course.add_unit()
         self._unit_one.title = 'Unit Labels: Foo'
         self._unit_one.now_available = True
@@ -67,6 +73,7 @@ class ManualProgressTest(actions.TestBase):
         self._lesson_1_2.title = 'Unit One, Lesson Two'
         self._lesson_1_2.now_available = True
         self._lesson_1_2.manual_progress = True
+
         self._unit_two = self._course.add_unit()
         self._unit_two.title = 'Unit Labels: Foo'
         self._unit_two.now_available = True
@@ -77,7 +84,27 @@ class ManualProgressTest(actions.TestBase):
         self._lesson_2_2 = self._course.add_lesson(self._unit_two)
         self._lesson_2_2.title = 'Unit Two, Lesson Two'
         self._lesson_2_2.now_available = True
+
+        self._sub_assessment = self._course.add_assessment()
+        self._sub_assessment.now_available = True
+
+        self._toplevel_assessment = self._course.add_assessment()
+        self._sub_assessment.now_available = True
+
+        self._unit_three = self._course.add_unit()
+        self._unit_three.pre_assessment = self._sub_assessment.unit_id
+
         self._course.save()
+
+        with common_utils.Namespace(NAMESPACE):
+            self.foo_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Foo',
+                       'descripton': 'foo',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+            self.bar_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Bar',
+                       'descripton': 'bar',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
 
         config.Registry.test_overrides[
             utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
@@ -112,6 +139,9 @@ class ManualProgressTest(actions.TestBase):
                 manual_progress.XSRF_ACTION) +
             '&key=%s' % unit_id)
 
+    def _get_course(self):
+        return self._get(COURSE_PROGRESS_URL, 'course')
+
     def _get_unit(self, unit_id):
         return self._get(UNIT_PROGRESS_URL, unit_id)
 
@@ -126,11 +156,21 @@ class ManualProgressTest(actions.TestBase):
         }
         return self.post(url, params)
 
+    def _post_course(self):
+        return self._post(COURSE_PROGRESS_URL, 'course')
+
     def _post_unit(self, unit_id):
         return self._post(UNIT_PROGRESS_URL, str(unit_id))
 
     def _post_lesson(self, lesson_id):
         return self._post(LESSON_PROGRESS_URL, str(lesson_id))
+
+    def _post_assessment(self, assessment_id):
+        self.post(ASSESSMENT_COMPLETION_URL, {
+            'assessment_type': str(assessment_id),
+            'score': '0',
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post')})
 
     def test_not_logged_in(self):
         actions.logout()
@@ -191,11 +231,17 @@ class ManualProgressTest(actions.TestBase):
         response = self._get_lesson(self._lesson_1_1.lesson_id)
         self._expect_payload(response, None)
 
+    def test_uncompleted_course_status(self):
+        response = self._get_course()
+        self._expect_payload(response, 0)
+
     def test_manual_lesson_progress(self):
         # Complete 1 of 2 lessons; unit should show as partial.
         response = self._post_lesson(self._lesson_1_1.lesson_id)
         self._expect_payload(response, 2)
         response = self._get_unit(self._unit_one.unit_id)
+        self._expect_payload(response, 1)
+        response = self._get_course()
         self._expect_payload(response, 1)
 
         # Complete 2 of 2 lessons; unit should show as fully successful.
@@ -203,6 +249,8 @@ class ManualProgressTest(actions.TestBase):
         self._expect_payload(response, 2)
         response = self._get_unit(self._unit_one.unit_id)
         self._expect_payload(response, 2)
+        response = self._get_course()
+        self._expect_payload(response, 1)
 
     def test_manual_unit_progress(self):
         response = self._post_unit(self._unit_two.unit_id)
@@ -225,6 +273,8 @@ class ManualProgressTest(actions.TestBase):
 
         response = self._get_lesson(self._lesson_2_2.lesson_id)
         self._expect_payload(response, 2)
+        response = self._get_course()
+        self._expect_payload(response, 1)
 
         response = self.get(url)
         self._assert_progress_state(
@@ -287,4 +337,76 @@ class ManualProgressTest(actions.TestBase):
         })
         response = self.post(url, {'request': request})
         response = self._get_lesson(self._lesson_2_2.lesson_id)
+        self._expect_payload(response, 2)
+
+    def test_manual_complete_course(self):
+        response = self._get_course()
+        self._expect_payload(response, 0)
+
+        response = self._post_course()
+        self._expect_payload(response, 2)
+
+    def test_completing_assessment_as_lesson(self):
+        self._post_assessment(self._sub_assessment.unit_id)
+
+        # Assessment is the only content in the unit, so completing it
+        # should also complete its containing unit.
+        response = self._get_unit(self._unit_three.unit_id)
+        self._expect_payload(response, 2)
+
+        response = self._get_course()
+        self._expect_payload(response, 1)
+
+    def test_completing_toplevel_assessment(self):
+        self._post_assessment(self._toplevel_assessment.unit_id)
+
+        response = self._get_course()
+        self._expect_payload(response, 1)
+
+    def test_completing_all_units_completes_course(self):
+        self._post_lesson(self._lesson_1_1.lesson_id)
+        self._post_lesson(self._lesson_1_2.lesson_id)
+        self._post_unit(self._unit_two.unit_id)
+        self._post_assessment(self._sub_assessment.unit_id)
+        self._post_assessment(self._toplevel_assessment.unit_id)
+
+        response = self._get_course()
+        self._expect_payload(response, 2)
+
+    def test_unit_completion_with_labels_looks_complete(self):
+        # Mark all but self._unit_two as in 'bar' track.  Especially note
+        # that here we are *not* marking the sub-assessment in unit 3
+        # as being in that track; this should be skipped when considering
+        # unit-level completeness.
+        self._unit_one.labels = str(self.bar_id)
+        self._unit_three.labels = str(self.bar_id)
+        self._toplevel_assessment.labels = str(self.bar_id)
+        self._course.save()
+
+        # Mark student as being in 'foo' track; student only sees
+        # unit two.
+        self.put(STUDENT_LABELS_URL, {'labels': str(self.foo_id)})
+
+        # Complete unit two, and verify that the course is now complete.
+        self._post_unit(self._unit_two.unit_id)
+        response = self._get_course()
+        self._expect_payload(response, 2)
+
+    def test_assessment_completion_with_labels_looks_complete(self):
+        # Mark all but self._unit_two as in 'bar' track.  Especially note
+        # that here we are *not* marking the sub-assessment in unit 3
+        # as being in that track; this should be skipped when considering
+        # unit-level completeness.
+        self._unit_one.labels = str(self.bar_id)
+        self._unit_two.labels = str(self.bar_id)
+        self._unit_three.labels = str(self.bar_id)
+        self._course.save()
+
+        # Mark student as being in 'foo' track; student only sees
+        # unit two.
+        self.put(STUDENT_LABELS_URL, {'labels': str(self.foo_id)})
+
+        # Complete unit two, and verify that the course is now complete.
+        self._post_assessment(self._toplevel_assessment.unit_id)
+        response = self._get_course()
         self._expect_payload(response, 2)
