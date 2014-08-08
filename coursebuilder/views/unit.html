@@ -9,7 +9,7 @@
         'lesson_id': '{{ lesson.lesson_id }}',
       {% endif %}
       {% if assessment %}
-        'assessment_id': {{ assessment.assessment_id }}
+        'assessment_id': '{{ assessment.unit_id }}',
       {% endif %}
     });
   }
