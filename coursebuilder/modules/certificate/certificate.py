@@ -108,8 +108,8 @@ def _prepare_assessment_criterion(score_list, criterion):
         assert not score['human_graded'], (
             'If pass_percent is provided, '
             'the assessment must be machine graded.')
-        pass_percent = int(pass_percent)
-        assert (pass_percent >= 0) and (pass_percent <= 100), (
+        pass_percent = float(pass_percent)
+        assert (pass_percent >= 0.0) and (pass_percent <= 100.0), (
             'pass_percent must be between 0 and 100.')
     else:
         # Must be peer graded

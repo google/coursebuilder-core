@@ -170,7 +170,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         self.course.save()
 
         self.certificate_criteria.append(
-            {'assessment_id': assessment.unit_id, 'pass_percent': 70})
+            {'assessment_id': assessment.unit_id, 'pass_percent': 70.0})
 
         # Student has not yet completed assessment, expect redirect to home page
         response = self.get('certificate')
@@ -180,7 +180,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         actions.submit_assessment(
             self,
             assessment.unit_id,
-            {'answers': '', 'score': 50,
+            {'answers': '', 'score': 50.0,
              'assessment_type': assessment.unit_id},
             presubmit_checks=False
         )
