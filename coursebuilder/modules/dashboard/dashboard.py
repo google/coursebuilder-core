@@ -926,6 +926,13 @@ class DashboardHandler(
             caption_if_empty='< inherited from /assets/lib/ >',
             merge_local_files=True, all_paths=all_paths))
 
+    def get_assets_html(self, items, tab, all_paths):
+        items.append(self.list_and_format_file_list(
+            'HTML', '/assets/html/', tab.name, links=True,
+            upload=True, edit_url_template=self.filer_url_template(),
+            caption_if_empty='< inherited from /assets/html/ >',
+            merge_local_files=True, all_paths=all_paths))
+
     def get_assets_templates(self, items, tab, all_paths):
         items.append(self.list_and_format_file_list(
             'View Templates', '/views/', tab.name, upload=True,
@@ -1020,6 +1027,8 @@ def register_module():
                            DashboardHandler.get_assets_css)
     tabs.Registry.register('assets', 'js', 'JavaScript',
                            DashboardHandler.get_assets_js)
+    tabs.Registry.register('assets', 'html', 'HTML',
+                           DashboardHandler.get_assets_html)
     tabs.Registry.register('assets', 'templates', 'Templates',
                            DashboardHandler.get_assets_templates)
     tabs.Registry.register('assets', 'contrib', 'Extension Items',

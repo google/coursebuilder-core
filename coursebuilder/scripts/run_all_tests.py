@@ -93,6 +93,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.review_stats.PeerReviewAnalyticsTest': 1,
     'tests.functional.roles.RolesTest': 15,
     'tests.functional.upload_module.TextFileUploadHandlerTestCase': 8,
+    'tests.functional.tags_include.TagsInclude': 8,
     'tests.functional.test_classes.ActivityTest': 2,
     'tests.functional.test_classes.AdminAspectTest': 8,
     'tests.functional.test_classes.AssessmentTest': 2,

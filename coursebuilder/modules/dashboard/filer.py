@@ -47,6 +47,7 @@ ALLOWED_ASSET_BINARY_BASES = frozenset([
 # data into.
 ALLOWED_ASSET_TEXT_BASES = frozenset([
     'assets/css',
+    'assets/html',
     'assets/lib',
     'views'
 ])

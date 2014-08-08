@@ -122,10 +122,10 @@ class AbstractFileSystem(object):
         self._assert_not_readonly()
         self._impl.delete(filename)
 
-    def list(self, dir_name):
+    def list(self, dir_name, include_inherited=False):
         """Lists all files in a directory."""
         self._assert_not_readonly()
-        return self._impl.list(dir_name)
+        return self._impl.list(dir_name, include_inherited)
 
     def get_jinja_environ(self, dir_names, autoescape=True):
         """Configures jinja environment loaders for this file system."""
@@ -190,7 +190,10 @@ class LocalReadOnlyFileSystem(object):
     def delete(self, unused_filename):
         raise Exception('Not implemented.')
 
-    def list(self, root_dir):
+    # Need argument to be named exactly 'include_inherited' to match
+    # keyword-parameter names from derived/related classes.
+    # pylint: disable-msg=unused-argument
+    def list(self, root_dir, include_inherited=False):
         """Lists all files in a directory."""
         files = []
         for dirname, unused_dirnames, filenames in os.walk(
@@ -611,8 +614,10 @@ class DatastoreBackedFileSystem(object):
                 result.add(self._physical_to_logical(filename))
         if include_inherited and self._inherits_from:
             for inheritable_folder in self._inheritable_folders:
+                logical_folder = self._physical_to_logical(inheritable_folder)
                 result.update(set(self._inherits_from.list(
-                    self._physical_to_logical(inheritable_folder))))
+                    logical_folder,
+                    include_inherited)))
         return sorted(list(result))
 
     def get_jinja_environ(self, dir_names, autoescape=True):

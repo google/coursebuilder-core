@@ -16,15 +16,19 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import os
+import re
 import urllib
 import urlparse
 
 import appengine_config
+from common import safe_dom
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
 from xml.etree import cElementTree
+from xml.etree import ElementTree
 
 
 def _escape_url(url, force_https=True):
@@ -337,4 +341,56 @@ class IFrame(tags.BaseTag):
                 optional=True,
                 extra_schema_dict_values={'value': '650'},
                 description=('Width of the iframe')))
+        return reg
+
+
+class Include(tags.BaseTag):
+
+    class RawHtml(safe_dom.Node):
+
+        def __init__(self, raw_text):
+            self._raw_text = raw_text
+
+        @property
+        def sanitized(self):
+            return self._raw_text
+
+    def render(self, node, handler):
+        template_path = re.sub('^/+', '', node.attrib.get('path'))
+        base_path = os.path.dirname(template_path)
+        base_file = os.path.basename(template_path)
+        handler.init_template_values(handler.app_context.get_environ())
+        handler.template_value['base_path'] = base_path
+        html_text = handler.render_template_to_html(
+            handler.template_value, base_file,
+            additional_dirs = [
+                os.path.join(appengine_config.BUNDLE_ROOT, 'views'),
+                appengine_config.BUNDLE_ROOT,
+                os.path.join(appengine_config.BUNDLE_ROOT, base_path),
+            ])
+        return tags.html_string_to_element_tree(html_text)
+
+    def get_icon_url(self):
+        return '/extensions/tags/gcb/resources/include.png'
+
+    def get_schema(self, handler):
+        expected_prefix = os.path.join(appengine_config.BUNDLE_ROOT,
+                                       'assets/html')
+        all_files = handler.app_context.fs.list(expected_prefix,
+                                                include_inherited=True)
+        select_data = []
+        for name in all_files:
+            if name.startswith(expected_prefix):
+                name = name.replace(appengine_config.BUNDLE_ROOT, '')
+                select_data.append((name, name.replace('/assets/html/', '')))
+
+        reg = schema_fields.FieldRegistry(Include.name())
+        reg.add_property(
+            schema_fields.SchemaField(
+                'path', 'File Path', 'string', optional=False,
+                select_data=select_data,
+                description='Select a file from within assets/html.  '
+                'The contents of this file will be inserted verbatim '
+                'at this point.  Note: HTML files for inclusion may '
+                'also be uploaded as assets.'))
         return reg

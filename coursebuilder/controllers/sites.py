@@ -153,6 +153,7 @@ GCB_INHERITABLE_FOLDER_NAMES = [
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'css/'),
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'img/'),
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'lib/'),
+    os.path.join(GCB_ASSETS_FOLDER_NAME, 'html/'),
     GCB_VIEWS_FOLDER_NAME,
     GCB_MODULES_FOLDER_NAME]
 
