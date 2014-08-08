@@ -40,9 +40,19 @@ from google.appengine.api import app_identity
 from google.appengine.api import users
 
 
+_BASE_URL = '/lti'
 _CONFIG_KEY_COURSE = 'course'
 _CONFIG_KEY_LTI1 = 'lti1'
-_LAUNCH_URL = '/lti/launch'
+_CONFIG_KEY_SECURITY = 'security'
+_CONFIG_KEY_TOOLS = 'tools'
+_EMPTY_STRING = ''
+_ERROR_INVALID_VERSION = 'Unsupported version: %s; choices are %s'
+_ERROR_KEY_NOT_UNIQUE = 'Key is not unique: %s'
+_ERROR_NAME_NOT_UNIQUE = 'Name is not unique: %s'
+_ERROR_PARSE_SETTINGS_CONFIG_YAML = 'Cannot parse settings config yaml'
+_ERROR_PARSE_TOOLS_CONFIG_YAML = 'Cannot parse tools config yaml'
+_ERROR_SECRET_NOT_UNIQUE = 'Secret is not unique: %s'
+_LAUNCH_URL = _BASE_URL + '/launch'
 _YAML_ENTRY_DESCRIPTION = 'description'
 _YAML_ENTRY_KEY = 'key'
 _YAML_ENTRY_NAME = 'name'
@@ -63,8 +73,44 @@ VERSIONS = frozenset([
 ])
 
 
-class _Config(object):
-  """DTO for LTI configuration."""
+class Error(Exception):
+  """Base error."""
+
+
+class InvalidVersionError(Exception):
+  """Raised when an invalid LTI version is specified."""
+
+
+def _get_key_secret_manager(app_context):
+  # For tests.
+  return _KeySecretManager(app_context)
+
+
+def _get_launch_runtime(app_context):
+  # For tests.
+  return _LaunchRuntime(app_context)
+
+
+class _Parser(object):
+  """Abstract base for configuration parsers that turn yaml to DTOs."""
+
+  PARSE_ERROR = None
+
+  @classmethod
+  def _load_yaml(cls, raw_value, errors):
+    try:
+      return yaml.safe_load(raw_value)
+    except:  # Deliberately broad. pylint: disable-msg=bare-except
+      errors.append(cls.PARSE_ERROR)
+
+  @classmethod
+  def parse(cls, raw_value, errors):
+    """Returns a map of identifier -> DTO; populates errors list of string."""
+    raise NotImplementedError
+
+
+class _ToolConfig(object):
+  """DTO for LTI tool configuration."""
 
   def __init__(self, description, key, name, secret, url, version):
     self.description = description
@@ -85,61 +131,172 @@ class _Config(object):
 
   def __str__(self):
     return (
-        'LTI Config(%(name)s, LTI %(version)s)' % {
+        'LTI Tool Config(%(name)s, LTI %(version)s)' % {
             'name': self.name, 'version': self.version})
 
 
-class _SettingsParser(object):
-  """Parses LTI course-level settings into Configs."""
+class _ToolsParser(_Parser):
+  """Parses LTI course-level tools settings into _ToolConfigs."""
+
+  PARSE_ERROR = _ERROR_PARSE_TOOLS_CONFIG_YAML
 
   @classmethod
-  def _get_config(cls, yaml_entry):
-    try:
-      return _Config(
-          yaml_entry[_YAML_ENTRY_DESCRIPTION],
-          yaml_entry[_YAML_ENTRY_KEY],
-          yaml_entry[_YAML_ENTRY_NAME],
-          yaml_entry[_YAML_ENTRY_SECRET],
-          yaml_entry[_YAML_ENTRY_URL],
-          cls._get_version(yaml_entry[_YAML_ENTRY_VERSION]))
-    except Exception, e:
-      raise ValueError('LTI config entry malformed; error was "%s"' % str(e))
+  def _get_tool_config(cls, yaml_entry):
+    return _ToolConfig(
+        yaml_entry[_YAML_ENTRY_DESCRIPTION],
+        yaml_entry[_YAML_ENTRY_KEY],
+        yaml_entry[_YAML_ENTRY_NAME],
+        yaml_entry[_YAML_ENTRY_SECRET],
+        yaml_entry[_YAML_ENTRY_URL],
+        cls._get_version(yaml_entry[_YAML_ENTRY_VERSION]))
 
   @classmethod
   def _get_version(cls, version):
     version = str(version)
     if version not in VERSIONS:
-      raise ValueError('Invalid version: ' + version)
+      raise InvalidVersionError('Invalid version: ' + version)
 
     return version
 
   @classmethod
-  def parse(cls, value):
-    configs = {}
-    raw_entries = []
+  def parse(cls, raw_value, errors):
+    """Validator for tools yaml; returns {name_str: _ToolConfig}."""
+    if raw_value == _EMPTY_STRING:
+      return {}
 
-    try:
-      loaded = yaml.safe_load(value)
-      raw_entries = loaded if loaded else []
-    except Exception, e:
-      raise ValueError(
-          'Could not parse LTI configuration; error was: %s' % str(e))
+    loaded = cls._load_yaml(raw_value, errors)
 
-    for raw_entry in raw_entries:
-      if raw_entry:
-        config = cls._get_config(raw_entry)
-        configs[config.name] = config
+    if errors:
+      return
 
-    return configs
+    if not isinstance(loaded, list):
+      errors.append(cls.PARSE_ERROR)
+      return
+
+    name_to_config = {}
+
+    for entry in loaded:
+      if not isinstance(entry, dict):
+        errors.append(cls.PARSE_ERROR)
+        return
+
+      try:
+        config = cls._get_tool_config(entry)
+      except InvalidVersionError:
+        errors.append(
+            _ERROR_INVALID_VERSION % (
+                entry.get('version'), ', '.join(sorted(VERSIONS))))
+        return
+      except:
+        errors.append(cls.PARSE_ERROR)
+        return
+
+      if config.name in name_to_config:
+        errors.append(_ERROR_NAME_NOT_UNIQUE % config.name)
+        return
+
+      name_to_config[config.name] = config
+
+    return name_to_config
 
 
-class _Runtime(object):
-  """Derives LTI runtime configuration state from CB application context."""
+class _SecurityConfig(object):
+  """DTO for LTI security information."""
+
+  def __init__(self, key, secret):
+    self.key = key
+    self.secret = secret
+
+  def __eq__(self, other):
+    return self.key == other.key and self.secret == other.secret
+
+  def __str(self):
+    # No secret to prevent e.g. logging it in a bad place.
+    return 'LTI Security Config(%(key)s)' % self.key
+
+
+class _SecurityParser(_Parser):
+  """Parses security yaml into _SecurityConfigs."""
+
+  PARSE_ERROR = _ERROR_PARSE_SETTINGS_CONFIG_YAML
+
+  @classmethod
+  def parse(cls, raw_value, errors):
+    """Validator for security yaml; returns {key_str: _SecurityConfig}."""
+    if raw_value == _EMPTY_STRING:
+      return {}
+
+    loaded = cls._load_yaml(raw_value, errors)
+
+    if errors:
+      return
+
+    if not isinstance(loaded, list):
+      errors.append(cls.PARSE_ERROR)
+      return
+
+    key_to_config = {}
+    seen_keys = set()
+    seen_secrets = set()
+
+    for entry in loaded:
+      if not (isinstance(entry, dict) and len(entry.keys()) == 1):
+        errors.append(cls.PARSE_ERROR)
+        return
+
+      key = entry.keys()[0]
+      secret = entry.values()[0]
+
+      if key in seen_keys:
+        errors.append(_ERROR_KEY_NOT_UNIQUE % key)
+        return
+
+      if secret in seen_secrets:
+        errors.append(_ERROR_SECRET_NOT_UNIQUE % secret)
+        return
+
+      key_to_config[key] = _SecurityConfig(key, secret)
+      seen_keys.add(key)
+      seen_secrets.add(secret)
+
+    return key_to_config
+
+
+class _KeySecretManager(object):
+  """Manages provider keys and secrets."""
+
+  def __init__(self, app_context):
+    self._app_context = app_context
+    self._cache = None
+    self._environ = self._app_context.get_environ()
+
+  def get(self, key):
+    """Gets the secret for a given key (or None)."""
+    errors = []
+
+    if self._cache is None:
+      raw_value = self._get_raw_config_value()
+      self._cache = _SecurityParser.parse(raw_value, errors)
+      assert not errors
+
+    return self._cache.get(key)
+
+  def _get_raw_config_value(self):
+    return self._environ.get(
+        _CONFIG_KEY_COURSE, {}
+    ).get(
+        _CONFIG_KEY_LTI1, {}
+    ).get(
+        _CONFIG_KEY_SECURITY, _EMPTY_STRING)
+
+
+class _LaunchRuntime(object):
+  """Derives launch runtime configuration state from CB application context."""
 
   def __init__(self, app_context):
     self._app_context = app_context
     self._environ = self._app_context.get_environ()
-    self._configs = self._get_configs()
+    self._configs = self._get_tool_configs()
 
   def get_config(self, name):
     return self._configs.get(name)
@@ -170,18 +327,23 @@ class _Runtime(object):
         str(self._app_context.get_namespace_name()), user.email()
     )
 
-  def _get_configs(self):
+  def _get_tool_configs(self):
+    errors = []
     raw_yaml = self._environ.get(
-        _CONFIG_KEY_COURSE, {}).get(_CONFIG_KEY_LTI1, '')
-    return _SettingsParser.parse(raw_yaml)
+        _CONFIG_KEY_COURSE, {}
+    ).get(
+        _CONFIG_KEY_LTI1, {}
+    ).get(
+        _CONFIG_KEY_TOOLS, _EMPTY_STRING)
+    configs = _ToolsParser.parse(raw_yaml, errors)
+
+    if errors:
+      raise ValueError('Errors processing configs: %s' % errors)
+
+    return configs
 
   def _get_current_user(self):
     return users.get_current_user()
-
-
-def _get_runtime(app_context):
-  # For tests.
-  return _Runtime(app_context)
 
 
 class LTIToolTag(tags.BaseTag):
@@ -207,11 +369,11 @@ class LTIToolTag(tags.BaseTag):
 
     # Treat as module-protected. pylint: disable-msg=protected-access
     try:
-      runtime = _get_runtime(handler.app_context)
+      runtime = _get_launch_runtime(handler.app_context)
       names_and_descriptions = sorted([
         (tool.name, tool.description) for tool in runtime.get_configs().values()
       ])
-    except ValueError:
+    except:  # Broad on purpose. pylint: disable-msg=bare-except
       pass
 
     if not names_and_descriptions:
@@ -250,7 +412,7 @@ class LTIToolTag(tags.BaseTag):
     return reg
 
   def render(self, node, handler):
-    runtime = _get_runtime(handler.app_context)
+    runtime = _get_launch_runtime(handler.app_context)
     height = node.attrib.get('height') or self._DEFAULT_HEIGHT
     width = node.attrib.get('width') or self._DEFAULT_WIDTH
     resource_link_id = node.attrib.get(fields.RESOURCE_LINK_ID)
@@ -276,10 +438,10 @@ class LTIToolTag(tags.BaseTag):
 class LaunchHandler(utils.BaseHandler):
 
   def get(self):
-    runtime = _get_runtime(self.app_context)
-    name = urllib.unquote(self.request.get('name', ''))
+    runtime = _get_launch_runtime(self.app_context)
+    name = urllib.unquote(self.request.get('name', _EMPTY_STRING))
     resource_link_id = urllib.unquote(
-        self.request.get(fields.RESOURCE_LINK_ID, ''))
+        self.request.get(fields.RESOURCE_LINK_ID, _EMPTY_STRING))
     config = runtime.get_config(name)
 
     if not (name and config and resource_link_id):
@@ -359,6 +521,55 @@ class LaunchHandler(utils.BaseHandler):
         else fields.LAUNCH_URL)
 
 
+def _get_security_field(unused_course):
+  security_example = safe_dom.NodeList().append(
+      safe_dom.Element('pre').add_text('''
+- key1: secret1
+- key2: secret2
+'''))
+  security_field_name = '%s:%s:%s' % (
+      _CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1, _CONFIG_KEY_SECURITY)
+  return schema_fields.SchemaField(
+      security_field_name, 'LTI security', 'text', optional=True,
+      description='LTI security. This is a YAML string containing zero or more '
+      'key/secret pairs that allow other systems to make LTI launch requests '
+      'against this course in your Course Builder deployment. They are very '
+      'sensitive and should be treated with care (for example, emailing them '
+      'will compromise the integrity and security of your user data). Each key '
+      'must be unique within a course; it is used to uniquely identify the LTI '
+      'consumer making a launch request. The secret, which must also be unique '
+      'within a course, is used to secure LTI launch requests and ensure that '
+      'the consumer is who they say they are. For example:' +
+      security_example.sanitized,
+      # Treating as module-protected. pylint: disable-msg=protected-access
+      validator=_SecurityParser.parse)
+
+
+def _get_tool_field(unused_course):
+  tool_example = safe_dom.NodeList().append(safe_dom.Element('pre').add_text('''
+- name: my_tool
+  description: My Tool
+  url: http://launch.url
+  key: 1234
+  secret: 5678
+  version: 1.2
+'''))
+  tool_field_name = '%s:%s:%s' % (
+      _CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1, _CONFIG_KEY_TOOLS)
+  return schema_fields.SchemaField(
+      tool_field_name, 'LTI tools', 'text', optional=True,
+      description='LTI tools. This is a YAML string containing zero or more '
+      'configurations. Each configuration needs to have a "name" (which must '
+      'be unique); a "key" and a "secret", both of which come from the LTI '
+      'tool provider you are using; a "description", which is displayed in the '
+      'editor when selecting your LTI tool; a "url", which is the LTI launch '
+      'URL of the tool you are using; and a "version", which is the version of '
+      'the LTI specification the tool uses (we support 1.0 - 1.2). For '
+      'example:' + tool_example.sanitized,
+      # Treating as module-protected. pylint: disable-msg=protected-access
+      validator=_ToolsParser.parse)
+
+
 custom_module = None
 
 
@@ -366,35 +577,17 @@ def register_module():
 
   global custom_module
 
-  def get_criteria_specification_schema(unused_course):
-    example = safe_dom.NodeList().append(safe_dom.Element('pre').add_text('''
-    - name: my_tool
-    description: My Tool
-    url: http://launch.url
-    key: 1234
-    secret: 5678
-    version: 1.2
-    '''))
-    lti_field_name = '%s:%s' % (_CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1)
-    return schema_fields.SchemaField(
-        lti_field_name, 'LTI tools', 'text', optional=True,
-        description='LTI tools. This is a YAML string containing zero or more '
-        'configurations. Each configuration needs to have a "name" (which must '
-        'be unique); a "key" and a "secret", both of which come from the LTI '
-        'tool provider you are using; a "description", which is displayed in '
-        'the editor when selecting your LTI tool; a "url", which is the LTI '
-        'launch URL of the tool you are using; and a "version", which is the '
-        'version of the LTI specification the tool uses '
-        '(we support 1.0 - 1.2). For example:' + example.sanitized)
+  schema_providers = [_get_security_field, _get_tool_field]
 
   def on_module_enabled():
-    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.append(
-        get_criteria_specification_schema)
+    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.extend(
+        schema_providers)
     tags.Registry.add_tag_binding(LTIToolTag.binding_name, LTIToolTag)
 
   def on_module_disabled():
-    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
-         get_criteria_specification_schema)
+    for schema_provider in schema_providers:
+      course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
+          schema_provider)
     tags.Registry.remove_tag_binding(LTIToolTag.binding_name)
 
   global_handlers = []

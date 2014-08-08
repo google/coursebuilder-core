@@ -19,6 +19,7 @@ __author__ = [
 ]
 
 import re
+import yaml
 
 from common import crypto
 from controllers import sites
@@ -98,7 +99,8 @@ class LtiWebappTestBase(actions.TestBase):
     super(LtiWebappTestBase, self).setUp()
     self.app_context = sites.get_all_courses()[0]
     self.environ = dict(self.app_context.get_environ())
-    self.config = {
+    self.security_config = {'key': 'key', 'secret': 'secret'}
+    self.tool_config = {
         'description': 'config_description',
         'key': 'config_key',
         'name': 'config_name',
@@ -107,24 +109,70 @@ class LtiWebappTestBase(actions.TestBase):
         'version': lti.VERSION_1_0,
     }
 
-  def get_config_yaml(self):
+  def get_tool_config_yaml(self):
     return (
         '- description: %(description)s\n'
         '  name: %(name)s\n'
         '  key: %(key)s\n'
         '  secret: %(secret)s\n'
         '  url: %(url)s\n'
-        '  version: %(version)s') % self.config
+        '  version: %(version)s') % self.tool_config
 
-  def set_lti_config(self, config_yaml=None):
+  def get_security_config_yaml(self):
+    return '- %(key)s: %(secret)s' % self.security_config
+
+  def set_lti_security_config(self, config_yaml=None):
     if config_yaml is None:
-      config_yaml = self.get_config_yaml()
+      config_yaml = self.get_security_config_yaml()
 
-    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = config_yaml
+    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = {
+        lti._CONFIG_KEY_SECURITY: config_yaml}
     mock_context = actions.MockAppContext(
         environ=self.environ, namespace=self.app_context.get_namespace_name(),
         slug=self.app_context.get_slug())
-    self.swap(lti, '_get_runtime', lambda _: lti._Runtime(mock_context))
+    self.swap(
+        lti, '_get_key_secret_manager',
+        lambda _: lti._KeySecretManager(mock_context))
+
+  def set_lti_tool_config(self, config_yaml=None):
+    if config_yaml is None:
+      config_yaml = self.get_tool_config_yaml()
+
+    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = {
+        lti._CONFIG_KEY_TOOLS: config_yaml}
+    mock_context = actions.MockAppContext(
+        environ=self.environ, namespace=self.app_context.get_namespace_name(),
+        slug=self.app_context.get_slug())
+    self.swap(
+        lti, '_get_launch_runtime', lambda _: lti._LaunchRuntime(mock_context))
+
+
+class KeySecretManagerTest(LtiWebappTestBase):
+
+  def setUp(self):
+    super(KeySecretManagerTest, self).setUp()
+    self.errors = []
+    self.set_lti_security_config()
+    self.manager = lti._get_key_secret_manager(self.app_context)
+
+  def assert_no_errors(self):
+    self.assertEqual([], self.errors)
+
+  def assert_parse_error(self):
+    self.assertEqual([lti._ERROR_PARSE_CONFIG_YAML], self.errors)
+
+  def test_get_raises_assertion_error_if_parsing_fails(self):
+    self.set_lti_security_config(config_yaml='-invalid-')
+
+    with self.assertRaises(AssertionError):
+      self.manager.get('anything')
+
+  def test_get_returns_existing_config(self):
+    self.assertEqual(
+        lti._SecurityConfig('key', 'secret'), self.manager.get('key'))
+
+  def test_get_returns_none_for_missing_key(self):
+    self.assertIsNone(self.manager.get('missing'))
 
 
 class LaunchHandlerTest(LtiWebappTestBase):
@@ -137,7 +185,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
         str(self.app_context.get_namespace_name()), self.email)
     self.resource_link_id = 'resource_link_id'
     self.params = {
-        'name': self.config['name'],
+        'name': self.tool_config['name'],
         fields.RESOURCE_LINK_ID: self.resource_link_id,
     }
 
@@ -147,14 +195,14 @@ class LaunchHandlerTest(LtiWebappTestBase):
 
   def assert_base_oauth_form_inputs_look_valid(self, form_inputs):
     url_field = (
-        fields.SECURE_LAUNCH_URL if self.config['url'].startswith('https')
+        fields.SECURE_LAUNCH_URL if self.tool_config['url'].startswith('https')
         else fields.LAUNCH_URL)
 
     self.assertEqual('LTI-1p0', form_inputs[fields.LTI_VERSION])
     self.assertEqual(
         'basic-lti-launch-request', form_inputs[fields.LTI_MESSAGE_TYPE])
     self.assertEqual(fields._ROLE_STUDENT, form_inputs[fields.ROLES])
-    self.assertEqual(self.config['url'], form_inputs[url_field])
+    self.assertEqual(self.tool_config['url'], form_inputs[url_field])
     self.assertEqual(
         self.resource_link_id, form_inputs[fields.RESOURCE_LINK_ID])
 
@@ -168,7 +216,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
     self.assertEqual('1.0', form_inputs['oauth_version'])
 
   def assert_tool_url_set(self, body):
-    self.assertIn("action='%s'" % self.config['url'], body)
+    self.assertIn("action='%s'" % self.tool_config['url'], body)
 
   def assert_user_id_equal(self, user_id, form_params):
     self.assertEqual(user_id, form_params[fields.USER_ID])
@@ -181,8 +229,8 @@ class LaunchHandlerTest(LtiWebappTestBase):
       r"input type='hidden' name='(.+)' value='(.+)'", body))
 
   def test_get_can_process_int_secret(self):
-    self.config['secret'] = 2
-    self.set_lti_config()
+    self.tool_config['secret'] = 2
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
 
     self.assertEqual(200, response.status_code)
@@ -194,7 +242,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
     self.assertEqual(400, response.status_code)
 
   def test_get_returns_400_if_name_not_set(self):
-    self.set_lti_config()
+    self.set_lti_tool_config()
     self.params.pop('name')
     response = self.testapp.get(
         lti._LAUNCH_URL, expect_errors=True, params=self.params)
@@ -202,7 +250,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
     self.assertEqual(400, response.status_code)
 
   def test_get_returns_400_if_resource_link_id_not_set(self):
-    self.set_lti_config()
+    self.set_lti_tool_config()
     self.params.pop(fields.RESOURCE_LINK_ID)
     response = self.testapp.get(
         lti._LAUNCH_URL, expect_errors=True, params=self.params)
@@ -217,7 +265,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
         context_label_value)
     self.params.update(
         {'extra_fields': fields._Serializer.dump(extra_fields_yaml)})
-    self.set_lti_config()
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
     form_inputs = self.get_form_inputs(response.body)
 
@@ -230,8 +278,8 @@ class LaunchHandlerTest(LtiWebappTestBase):
 
   def test_get_when_insecure_launch_url_set(self):
     insecure_url = 'http://something'
-    self.config['url'] = insecure_url
-    self.set_lti_config()
+    self.tool_config['url'] = insecure_url
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
     form_inputs = self.get_form_inputs(response.body)
 
@@ -240,8 +288,8 @@ class LaunchHandlerTest(LtiWebappTestBase):
 
   def test_get_when_secure_launch_url_set(self):
     secure_url = 'https://something'
-    self.config['url'] = secure_url
-    self.set_lti_config()
+    self.tool_config['url'] = secure_url
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
     form_inputs = self.get_form_inputs(response.body)
 
@@ -251,7 +299,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
   def test_get_when_user_set_renders_signed_form_inputs(self):
     user = users.User(email=self.email)
     self.swap(users, 'get_current_user', lambda: user)
-    self.set_lti_config()
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
     form_inputs = self.get_form_inputs(response.body)
 
@@ -262,7 +310,7 @@ class LaunchHandlerTest(LtiWebappTestBase):
     self.assert_user_id_equal(self.external_userid, form_inputs)
 
   def test_get_when_user_unset_renders_signed_form_inputs(self):
-    self.set_lti_config()
+    self.set_lti_tool_config()
     response = self.testapp.get(lti._LAUNCH_URL, params=self.params)
     form_inputs = self.get_form_inputs(response.body)
 
@@ -283,7 +331,7 @@ class LTIToolTagTest(LtiWebappTestBase):
     self.assertEqual('unused_id', schema._properties[0].name)
 
   def test_get_schema_returns_populated_schema_when_config_set_and_valid(self):
-    self.set_lti_config()
+    self.set_lti_tool_config()
     handler = oeditor.PopupHandler()
     handler.app_context = self.app_context
     tag = lti.LTIToolTag()
@@ -293,7 +341,7 @@ class LTIToolTagTest(LtiWebappTestBase):
     self.assertEqual(5, len(schema._properties))
 
   def test_get_schema_returns_unavailable_schema_when_config_invalid(self):
-    self.set_lti_config(config_yaml='-invalid-')
+    self.set_lti_tool_config(config_yaml='-invalid-')
     handler = oeditor.PopupHandler()
     handler.app_context = self.app_context
     tag = lti.LTIToolTag()
@@ -301,12 +349,160 @@ class LTIToolTagTest(LtiWebappTestBase):
     self.assert_is_unavailable_schema(tag.get_schema(handler))
 
   def test_get_schema_returns_unavailable_schema_when_config_missing(self):
-    self.set_lti_config(config_yaml='')
+    self.set_lti_tool_config(config_yaml=lti._EMPTY_STRING)
     handler = oeditor.PopupHandler()
     handler.app_context = self.app_context
     tag = lti.LTIToolTag()
 
     self.assert_is_unavailable_schema(tag.get_schema(handler))
+
+
+class ParserTestBase(actions.TestBase):
+
+  PARSER = None
+
+  def setUp(self):
+    super(ParserTestBase, self).setUp()
+    self.errors = []
+
+  def assert_no_errors(self):
+    self.assertEqual([], self.errors)
+
+  def assert_parse_error(self):
+    self.assertEqual([self.PARSER.PARSE_ERROR], self.errors)
+
+
+class SecurityParserTest(ParserTestBase):
+
+  PARSER = lti._SecurityParser
+
+  def assert_nonunique_key_error(self, key):
+    self.assertEqual([lti._ERROR_KEY_NOT_UNIQUE % key], self.errors)
+
+  def assert_nonunique_secret_error(self, secret):
+    self.assertEqual([lti._ERROR_SECRET_NOT_UNIQUE % secret], self.errors)
+
+  def test_empty_string_no_errors_returns_empty_dict(self):
+    self.assertEqual({}, self.PARSER.parse(lti._EMPTY_STRING, self.errors))
+    self.assert_no_errors()
+
+  def test_one_pair_no_errors(self):
+    self.assertEqual(
+        {'key1': lti._SecurityConfig('key1', 'value1')},
+        self.PARSER.parse('- key1: value1', self.errors))
+    self.assert_no_errors()
+
+  def test_multiple_pairs_no_errors(self):
+    expected = {
+        'key1': lti._SecurityConfig('key1', 'value1'),
+        'key2': lti._SecurityConfig('key2', 'value2'),
+    }
+    self.assertEqual(
+      expected,
+      self.PARSER.parse('- key1: value1\n- key2: value2', self.errors))
+    self.assert_no_errors()
+
+  def test_nonunique_key_error(self):
+    self.assertIsNone(
+        self.PARSER.parse('- key: secret1\n- key: secret2', self.errors))
+    self.assert_nonunique_key_error('key')
+
+  def test_nonunique_secret_error(self):
+    self.assertIsNone(
+        self.PARSER.parse('- key1: secret\n- key2: secret', self.errors))
+    self.assert_nonunique_secret_error('secret')
+
+  def test_parse_error_when_not_list(self):
+    self.assertIsNone(self.PARSER.parse('not list', self.errors))
+    self.assert_parse_error()
+
+  def test_parse_error_when_list_contains_non_dict(self):
+    self.assertIsNone(self.PARSER.parse('- 0', self.errors))
+    self.assert_parse_error()
+
+  def test_validate_security_yaml_parse_error_when_safe_load_fails(self):
+    self.assertIsNone(self.PARSER.parse(0, self.errors))
+    self.assert_parse_error()
+
+
+class ToolsParserTest(ParserTestBase):
+
+  PARSER = lti._ToolsParser
+
+  def setUp(self):
+    super(ToolsParserTest, self).setUp()
+    self.values = {
+        'description': 'description_value',
+        'key': 'key_value',
+        'name': 'name_value',
+        'secret': 'secret_value',
+        'url': 'url_value',
+        'version': lti.VERSION_1_2,
+    }
+    self.second_values = {
+        'description': 'second_description',
+        'key': 'second_key',
+        'name': 'second_name',
+        'secret': 'second_secret',
+        'url': 'second_url',
+        'version': lti.VERSION_1_1,
+    }
+    self.config = lti._ToolConfig(
+        self.values['description'],
+        self.values['key'],
+        self.values['name'],
+        self.values['secret'],
+        self.values['url'],
+        self.values['version'])
+    self.second_config = lti._ToolConfig(
+        self.second_values['description'],
+        self.second_values['key'],
+        self.second_values['name'],
+        self.second_values['secret'],
+        self.second_values['url'],
+        self.second_values['version'])
+
+  def assert_nonunique_name_error(self, name):
+    self.assertEqual([lti._ERROR_NAME_NOT_UNIQUE % name], self.errors)
+
+  def test_empty_string_no_errors_returns_empty_dict(self):
+    self.assertEqual({}, self.PARSER.parse(lti._EMPTY_STRING, self.errors))
+
+  def test_one_tool_no_errors(self):
+    self.assertEquals(
+        {self.values['name']: self.config},
+        self.PARSER.parse(yaml.safe_dump([self.values]), self.errors))
+    self.assert_no_errors()
+
+  def test_multiple_pairs_no_errors(self):
+    expected = {
+        self.values['name']: self.config,
+        self.second_values['name']: self.second_config
+    }
+    self.assertEqual(
+        expected,
+        self.PARSER.parse(
+            yaml.safe_dump([self.values, self.second_values]), self.errors))
+    self.assert_no_errors()
+
+  def test_nonunique_name_error(self):
+    self.second_values['name'] = self.values['name']
+    self.assertIsNone(
+        self.PARSER.parse(
+            yaml.safe_dump([self.values, self.second_values]), self.errors))
+    self.assert_nonunique_name_error(self.values['name'])
+
+  def test_parse_error_when_not_list(self):
+    self.assertIsNone(self.PARSER.parse('not list', self.errors))
+    self.assert_parse_error()
+
+  def test_parse_error_when_list_contains_non_dict(self):
+    self.assertIsNone(self.PARSER.parse('- 0', self.errors))
+    self.assert_parse_error()
+
+  def test_validate_security_yaml_parse_error_when_safe_load_fails(self):
+    self.assertIsNone(self.PARSER.parse(0, self.errors))
+    self.assert_parse_error()
 
 
 class SerializerTest(actions.TestBase):

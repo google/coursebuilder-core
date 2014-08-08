@@ -334,3 +334,36 @@ class FieldRegistryTests(BaseFieldTests):
  ]
 """
         self.assert_schema_dict_value(expected, mc_question)
+
+    def test_validate(self):
+
+      def fail(value, errors):
+        errors.append(value)
+
+      registry = schema_fields.FieldRegistry('Test Registry')
+      registry.add_property(schema_fields.SchemaField(
+          'top_level_bad', 'Top Level Bad Item', 'string', optional=True,
+          validator=fail))
+      registry.add_property(schema_fields.SchemaField(
+          'top_level_good', 'Top Level Good Item', 'string', optional=True))
+      sub_registry = registry.add_sub_registry('child', 'Child Registry')
+      sub_registry.add_property(schema_fields.SchemaField(
+          'child:bad', 'Top Level Bad Item', 'string', optional=True,
+          validator=fail))
+      sub_registry.add_property(schema_fields.SchemaField(
+          'child:good', 'Top Level Good Item', 'string', optional=True))
+
+      child_bad_value = 'child_bad_value'
+      top_level_bad_value = 'top_level_bad_value'
+      errors = []
+      payload = {
+          'top_level_bad': top_level_bad_value,
+          'top_level_good': 'top_level_good_value',
+          'child': {
+              'bad': child_bad_value,
+              'good': 'child_good_value',
+          }
+      }
+      registry.validate(payload, errors)
+
+      self.assertEqual([top_level_bad_value, child_bad_value], errors)

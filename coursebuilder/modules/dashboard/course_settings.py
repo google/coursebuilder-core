@@ -423,9 +423,16 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
         return json_payload
 
     def process_put(self, request, payload):
+        errors = []
         request_data = {}
-        create_course_settings_schema(self.get_course()).convert_json_to_entity(
-            payload, request_data)
+        schema = create_course_settings_schema(self.get_course())
+        schema.convert_json_to_entity(payload, request_data)
+        schema.validate(request_data, errors)
+
+        if errors:
+            transforms.send_json_response(
+                self, 400, 'Invalid data: \n' + '\n'.join(errors))
+            return
 
         if 'course' in request_data:
             course_data = request_data['course']

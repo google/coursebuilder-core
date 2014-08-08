@@ -28,13 +28,14 @@ class SchemaField(Property):
     def __init__(
         self, name, label, property_type, select_data=None, description=None,
         optional=False, hidden=False, editable=True,
-        extra_schema_dict_values=None):
+        extra_schema_dict_values=None, validator=None):
         Property.__init__(
             self, name, label, property_type, select_data=select_data,
             description=description, optional=optional,
             extra_schema_dict_values=extra_schema_dict_values)
         self._hidden = hidden
         self._editable = editable
+        self._validator = validator
 
     def get_json_schema_dict(self):
         """Get the JSON schema for this field."""
@@ -74,6 +75,10 @@ class SchemaField(Property):
             schema['description'] = self._description
 
         return [(prefix_key + ['_inputex'], schema)]
+
+    def validate(self, value, errors):
+        if self._validator:
+            self._validator(value, errors)
 
 
 class FieldArray(SchemaField):
@@ -182,6 +187,11 @@ class FieldRegistry(Registry):
                 key_parts.reverse()
                 self._add_entry(key_parts, json_entry[key], entity)
 
+    def _get_field_name_parts(self, field_name):
+        field_name_parts = field_name.split(':')
+        field_name_parts.reverse()
+        return field_name_parts
+
     def _get_field_value(self, key_part_list, entity):
         if len(key_part_list) == 1:
             if entity.has_key(key_part_list[0]):
@@ -195,8 +205,7 @@ class FieldRegistry(Registry):
     def convert_entity_to_json_entity(self, entity, json_entry):
         for schema_field in self._properties:
             field_name = schema_field.name
-            field_name_parts = field_name.split(':')
-            field_name_parts.reverse()
+            field_name_parts = self._get_field_name_parts(field_name)
             value = self._get_field_value(field_name_parts, entity)
             if type(value) != type(None):
                 json_entry[field_name] = value
@@ -205,3 +214,12 @@ class FieldRegistry(Registry):
             json_entry[key] = {}
             self._sub_registories[key].convert_entity_to_json_entity(
                 entity, json_entry[key])
+
+    def validate(self, payload, errors):
+        for schema_field in self._properties:
+            field_name_parts = self._get_field_name_parts(schema_field.name)
+            value = self._get_field_value(field_name_parts, payload)
+            schema_field.validate(value, errors)
+
+        for registry in self._sub_registories.values():
+            registry.validate(payload, errors)
