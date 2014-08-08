@@ -23,14 +23,14 @@
 
     {% if video_exists %}
       {# I18N: Alt text for an embedded YouTube video player. #}
-      <p class="gcb-video-container">
+      <div class="gcb-video-container">
           <iframe class="youtube-player" type="text/html"
               title="{{ gettext('YouTube Video Player') }}"
               src="{{course_info.course.main_video.url}}"
               frameborder="0"
               allowfullscreen="allowfullscreen">
           </iframe>
-      </p>
+      </div>
     {% else%}
       <img height="300"
           alt="{{course_info.course.main_image.alt_text}}"

@@ -14,7 +14,7 @@
 {% endif %}
 
 {% if lesson.video %}
-  <p class="gcb-video-container">
+  <div class="gcb-video-container">
     {# I18N: Alt text for an embedded YouTube video player. #}
     <iframe class="youtube-player"
             title="{{ gettext('YouTube Video Player') }}"
@@ -23,5 +23,5 @@
             allowfullscreen="allowfullscreen"
             src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0">
     </iframe>
-  </p>
+  </div>
 {% endif %}

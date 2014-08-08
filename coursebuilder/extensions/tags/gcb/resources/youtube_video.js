@@ -21,8 +21,9 @@ if (typeof(window['gcb_tag_youtube_videos']) == "undefined"){
     gcb_tag_youtube_uid++;
 
     var div_id = 'gcb-tag-youtube-video-' + instance_id;
-    document.write('<div id="' + div_id + '"></div>');
-
+    document.write('<div class="gcb-video-container">' +
+        '<div id="' + div_id + '" class="youtube-player">' +
+        '</div></div>');
     gcb_tag_youtube_videos.push([instance_id, div_id, video_id]);
 
     gcbTagYoutubeTryEmbedEnqueuedVideos();
