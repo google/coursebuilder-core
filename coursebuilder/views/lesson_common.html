@@ -1,6 +1,6 @@
 {% if lesson.now_available or is_course_admin %}
-  <div class="gcb-cols">
-    <div id="lesson-title" class="gcb-col-7">
+  <div {% if lesson.notes %}class="gcb-cols"{% endif %}>
+    <div id="lesson-title" {% if lesson.notes %}class="gcb-col-7"{% endif %}>
       <h1 class="gcb-lesson-title">
         {{ title }}
         {% if not lesson.now_available and is_course_admin %}
@@ -10,19 +10,18 @@
         {% endif %}
       </h1>
     </div>
+    {% if lesson.notes %}
     <div id="get-text-button" class="gcb-col-3">
       <p style="float:right; margin-top: 0px;">
-        {% if lesson.notes %}
         <a role="button" class="gcb-button" id="lessonNotesLink"
            href="{{ lesson.notes }}" target="_blank">
           {# I18N: Link to a text version of a lesson video. #}
           {{ gettext('Text Version') }}
         </a>
-        {% endif %}
       </p>
     </div>
+    {% endif %}
   </div><!-- /gcb-cols -->
-
 
   {% if activity %}
     {% include 'activity.html' %}
