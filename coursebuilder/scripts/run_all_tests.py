@@ -79,7 +79,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_lti.SerializerTest': 2,
     'tests.functional.modules_lti.ToolsParserTest': 7,
     'tests.functional.modules_lti.UrljoinTestCase': 6,
-    'tests.functional.modules_lti.ValidationHandlerTest': 18,
+    'tests.functional.modules_lti.ValidationHandlerTest': 19,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
     'tests.functional.modules_notifications.CronTest': 9,
     'tests.functional.modules_notifications.DatetimeConversionTest': 1,

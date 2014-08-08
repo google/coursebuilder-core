@@ -122,6 +122,33 @@ def _urljoin(*parts):
   return joined
 
 
+class _Dispatcher(object):
+  """Abstract base class for resource dispatching."""
+
+  @classmethod
+  def dispatch(cls, handler, runtime, resource_id):
+    """Redirects handler to the resource given by resource_id.
+
+    Args:
+      handler: ValidationHandler. The handler to redirect.
+      runtime: _Runtime. Current application state.
+      resource_id: string. The resource to redirect to.
+
+    Returns:
+      None.
+    """
+    raise NotImplementedError
+
+
+class _CourseBuilderDispatcher(_Dispatcher):
+
+  @classmethod
+  def dispatch(cls, handler, runtime, resource_id):
+    # In CB, the resource id is the path component, minus the course slug, that
+    # we want to redirect to.
+    handler.redirect(_urljoin(runtime.get_base_url(), resource_id))
+
+
 class _Parser(object):
   """Abstract base for configuration parsers that turn yaml to DTOs."""
 
@@ -665,6 +692,7 @@ class LoginHandler(_BaseHandler):
 
 class ValidationHandler(_BaseHandler):
 
+  _DISPATCHER = _CourseBuilderDispatcher
   OAUTH_KEY_FIELD = 'oauth_consumer_key'
   OAUTH_SIGNATURE_FIELD = 'oauth_signature'
 
@@ -749,6 +777,14 @@ class ValidationHandler(_BaseHandler):
       self.error(400)
       return
 
+    cb_resource = self.request.POST.get(fields.CUSTOM_CB_RESOURCE)
+    if not cb_resource:
+      _LOG.error(
+          'Unable to process LTI request; %s not specified',
+          fields.CUSTOM_CB_RESOURCE)
+      self.error(400)
+      return
+
     request_signature = self.request.POST.get(self.OAUTH_SIGNATURE_FIELD)
     if not request_signature:
       _LOG.error(
@@ -779,7 +815,7 @@ class ValidationHandler(_BaseHandler):
           self._get_login_redirect_url(runtime.get_base_url(), return_url))
       return
 
-    # TODO(johncox): add support for resource dispatching and rendering.
+    self._DISPATCHER.dispatch(self, runtime, cb_resource)
 
 
 def _get_provider_enabled_field(unused_course):

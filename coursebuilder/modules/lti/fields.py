@@ -25,7 +25,7 @@ __author__ = [
 import base64
 import yaml
 
-
+# Fields in the LTI spec.
 CONTEXT_ID = 'context_id'
 CONTEXT_LABEL = 'context_label'
 CONTEXT_TITLE = 'context_title'
@@ -60,7 +60,7 @@ TOOL_CONSUMER_INSTANCE_URL = 'tool_consumer_instance_url'
 USER_ID = 'user_id'
 USER_IMAGE = 'user_image'
 
-_ALL = frozenset([
+_BASE = frozenset([
     CONTEXT_ID,
     CONTEXT_LABEL,
     CONTEXT_TITLE,
@@ -94,13 +94,25 @@ _ALL = frozenset([
     USER_ID,
     USER_IMAGE,
 ])
+
+_CUSTOM_PREFIX = 'custom_'
+
+# CB extensions.
+CUSTOM_CB_RESOURCE = _CUSTOM_PREFIX + 'cb_resource'
+
+_EXTENSIONS = frozenset([
+    CUSTOM_CB_RESOURCE,
+])
+
+_ALL = sorted(_BASE.union(_EXTENSIONS))
 _ROLE_STUDENT = 'student'
+# Required fields in the LTI spec; does not include fields required by the CB
+# provider.
 _REQUIRED = frozenset([
     LTI_MESSAGE_TYPE,
     LTI_VERSION,
     RESOURCE_LINK_ID,
 ])  # One of LAUNCH_URL, SECURE_LAUNCH_URL must also be set; enforced below.
-_CUSTOM_PREFIX = 'custom_'
 _DEFAULTS = {
     LTI_MESSAGE_TYPE: 'basic-lti-launch-request',
     LTI_VERSION: 'LTI-1p0'

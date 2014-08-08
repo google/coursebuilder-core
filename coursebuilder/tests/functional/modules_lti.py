@@ -667,10 +667,14 @@ class ValidationHandlerTest(LtiWebappTestBase):
 
   def setUp(self):
     super(ValidationHandlerTest, self).setUp()
+    self.cb_resource = '/resource'
     self.params = {r: r + '_value' for r in fields._REQUIRED}
     self.key = self.security_config['key']
     self.return_url = 'return_url'
     self.url = 'url'
+
+  def assert_redirect_to_resource(self, location):
+    self.assertEqual('http://localhost' + self.cb_resource, location)
 
   def set_up_runtime(self):
     self.enable_courses_can_enable_lti_provider()
@@ -680,6 +684,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
   def do_successful_post(self, needs_login=True):
     self.set_up_runtime()
     self.params.update({
+        fields.CUSTOM_CB_RESOURCE: self.cb_resource,
         fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
@@ -736,10 +741,11 @@ class ValidationHandlerTest(LtiWebappTestBase):
     response = self.testapp.get(lti._VALIDATION_URL, expect_errors=True)
     self.assertEqual(404, response.status_code)
 
-  def test_post_returns_200_if_all_validators_pass_and_login_not_needed(self):
+  def test_post_returns_302_to_resource_if_all_pass_and_login_not_needed(self):
     response = self.do_successful_post(needs_login=False)
     self.assertEqual('', self.get_log())
-    self.assertEqual(200, response.status_code)
+    self.assertEqual(302, response.status_code)
+    self.assert_redirect_to_resource(response.location)
 
   def test_post_returns_302s_to_login_with_correct_escaped_redirect_url(self):
     self.return_url = 'http://example.com?foo=bar&baz=quux'
@@ -803,10 +809,24 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.assertEqual(400, response.status_code)
     self.assertIn('missing required fields: ' + removed_field, self.get_log())
 
+  def test_post_returns_400_if_custom_cb_resource_missing(self):
+    self.set_up_runtime()
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assertIn(
+        '%s not specified' % fields.CUSTOM_CB_RESOURCE, self.get_log())
+
   def test_post_returns_400_if_request_signature_missing(self):
     self.set_up_runtime()
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.CUSTOM_CB_RESOURCE: self.cb_resource,
         fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
@@ -828,6 +848,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
         lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'signature',
+        fields.CUSTOM_CB_RESOURCE: self.cb_resource,
         fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
@@ -842,6 +863,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.params.update({
         lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
         lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'mismatch',
+        fields.CUSTOM_CB_RESOURCE: self.cb_resource,
         fields.LAUNCH_PRESENTATION_RETURN_URL: self.return_url,
         fields.SECURE_LAUNCH_URL: self.url,
     })
