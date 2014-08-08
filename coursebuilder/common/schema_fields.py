@@ -194,7 +194,7 @@ class FieldRegistry(Registry):
 
     def _get_field_value(self, key_part_list, entity):
         if len(key_part_list) == 1:
-            if entity.has_key(key_part_list[0]):
+            if type(entity) == dict and entity.has_key(key_part_list[0]):
                 return entity[key_part_list[0]]
             return None
         key = key_part_list.pop()
