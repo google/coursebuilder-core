@@ -592,14 +592,31 @@ def view_assessments(browser):
 
 def submit_assessment(browser, unit_id, args, presubmit_checks=True):
     """Submits an assessment."""
-    response = browser.get('assessment?name=%s' % unit_id)
+    course = None
 
-    if presubmit_checks:
-        assert_contains(
-            '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
-            response.body)
-        js_response = browser.get('assets/js/assessment-%s.js' % unit_id)
-        assert_equals(js_response.status_int, 200)
+    for app_context in sites.get_all_courses():
+        if app_context.get_slug() == browser.base:
+            course = courses.Course(None, app_context=app_context)
+            break
+
+    assert course is not None, 'browser.base must match a course'
+
+    if course.version == courses.COURSE_MODEL_VERSION_1_3:
+        parent = course.get_parent_unit(unit_id)
+        if parent is not None:
+            response = browser.get(
+                'unit?unit=%s&assessment=%s' % (parent.unit_id, unit_id))
+        else:
+            response = browser.get('assessment?name=%s' % unit_id)
+
+    elif course.version == courses.COURSE_MODEL_VERSION_1_2:
+        response = browser.get('assessment?name=%s' % unit_id)
+        if presubmit_checks:
+            assert_contains(
+                '<script src="assets/js/assessment-%s.js"></script>' % unit_id,
+                response.body)
+            js_response = browser.get('assets/js/assessment-%s.js' % unit_id)
+            assert_equals(js_response.status_int, 200)
 
     # Extract XSRF token from the page.
     match = re.search(r'assessmentXsrfToken = [\']([^\']+)', response.body)

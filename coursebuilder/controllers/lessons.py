@@ -653,10 +653,20 @@ class AssessmentHandler(BaseHandler):
 class ReviewDashboardHandler(BaseHandler):
     """Handler for generating the index of reviews that a student has to do."""
 
-    def populate_template(self, unit, review_steps):
+    def _populate_template(self, course, unit, review_steps):
         """Adds variables to the template for the review dashboard."""
         self.template_value['assessment_name'] = unit.title
         self.template_value['unit_id'] = unit.unit_id
+
+        parent_unit = course.get_parent_unit(unit.unit_id)
+
+        if parent_unit is not None:
+            self.template_value['back_link'] = 'unit?unit=%s&assessment=%s' % (
+                parent_unit.unit_id, unit.unit_id)
+        else:
+            self.template_value['back_link'] = (
+                'assessment?name=%s' % unit.unit_id)
+
         self.template_value['event_xsrf_token'] = (
             XsrfTokenManager.create_xsrf_token('event-post'))
         self.template_value['review_dashboard_xsrf_token'] = (
@@ -705,7 +715,7 @@ class ReviewDashboardHandler(BaseHandler):
 
         review_steps = rp.get_review_steps_by(unit.unit_id, student.get_key())
 
-        self.populate_template(unit, review_steps)
+        self._populate_template(course, unit, review_steps)
         required_review_count = unit.workflow.get_review_min_count()
 
         # The student can request a new submission if:
@@ -781,7 +791,7 @@ class ReviewDashboardHandler(BaseHandler):
         except Exception:  # pylint: disable-msg=broad-except
             review_steps = rp.get_review_steps_by(
                 unit.unit_id, student.get_key())
-            self.populate_template(unit, review_steps)
+            self._populate_template(course, unit, review_steps)
             self.render('review_dashboard.html')
 
 

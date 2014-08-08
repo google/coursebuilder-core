@@ -37,7 +37,7 @@ from actions import assert_contains_all_of
 from actions import assert_does_not_contain
 from actions import assert_equals
 from controllers_review import PeerReviewControllerTest
-from controllers_review import PeerReviewDashboardTest
+from controllers_review import PeerReviewDashboardAdminTest
 from review_stats import PeerReviewAnalyticsTest
 from webtest.app import AppError
 
@@ -4352,7 +4352,7 @@ class NamespaceTest(actions.TestBase):
 ALL_COURSE_TESTS = (
     StudentAspectTest, AssessmentTest, CourseAuthorAspectTest,
     StaticHandlerTest, AdminAspectTest, PeerReviewControllerTest,
-    PeerReviewDashboardTest, PeerReviewAnalyticsTest)
+    PeerReviewDashboardAdminTest, PeerReviewAnalyticsTest)
 
 MemcacheTest.__bases__ += (InfrastructureTest,) + ALL_COURSE_TESTS
 CourseUrlRewritingTest.__bases__ += ALL_COURSE_TESTS

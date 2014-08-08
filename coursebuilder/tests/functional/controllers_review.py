@@ -22,6 +22,9 @@ from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
 from controllers import sites
+from controllers import utils
+from models import config
+from models import courses
 from models import transforms
 
 
@@ -592,8 +595,8 @@ class PeerReviewControllerTest(actions.TestBase):
         actions.logout()
 
 
-class PeerReviewDashboardTest(actions.TestBase):
-    """Test peer review from the Admin perspective."""
+class PeerReviewDashboardAdminTest(actions.TestBase):
+    """Test peer review dashboard from the Admin perspective."""
 
     def test_add_reviewer(self):
         """Test that admin can add a reviewer, and cannot re-add reviewers."""
@@ -641,3 +644,70 @@ class PeerReviewDashboardTest(actions.TestBase):
         response = self.get(response.location)
         assert_contains(
             'Error 412: The reviewer is already assigned', response.body)
+
+
+class PeerReviewDashboardStudentTest(actions.TestBase):
+    """Test peer review dashboard from the Student perspective."""
+
+    COURSE_NAME = 'back_button_top_level'
+    STUDENT_EMAIL = 'foo@foo.com'
+
+    def setUp(self):
+        super(PeerReviewDashboardStudentTest, self).setUp()
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, 'admin@foo.com', 'Peer Back Button Child')
+        self.course = courses.Course(None, context)
+
+        self.assessment = self.course.add_assessment()
+        self.assessment.title = 'Assessment'
+        self.assessment.html_content = 'assessment content'
+        self.assessment.workflow_yaml = (
+            '{grader: human,'
+            'matcher: peer,'
+            'review_due_date: \'2034-07-01 12:00\','
+            'review_min_count: 1,'
+            'review_window_mins: 20,'
+            'submission_due_date: \'2034-07-01 12:00\'}')
+        self.assessment.now_available = True
+
+        self.course.save()
+        actions.login(self.STUDENT_EMAIL)
+        actions.register(self, self.STUDENT_EMAIL)
+        config.Registry.test_overrides[
+            utils.CAN_PERSIST_ACTIVITY_EVENTS.name] = True
+
+        actions.submit_assessment(
+            self,
+            self.assessment.unit_id,
+            {'answers': '', 'score': 0,
+             'assessment_type': self.assessment.unit_id},
+            presubmit_checks=False
+        )
+
+    def test_back_button_top_level_assessment(self):
+        response = self.get('reviewdashboard?unit=%s' % str(
+            self.assessment.unit_id))
+
+        back_button = self.parse_html_string(response.body).find(
+            './/*[@href="assessment?name=%s"]' % self.assessment.unit_id)
+
+        self.assertIsNotNone(back_button)
+        self.assertEquals(back_button.text, 'Back to assignment')
+
+    def test_back_button_child_assessment(self):
+        parent_unit = self.course.add_unit()
+        parent_unit.title = 'No Lessons'
+        parent_unit.now_available = True
+        parent_unit.pre_assessment = self.assessment.unit_id
+        self.course.save()
+
+        response = self.get('reviewdashboard?unit=%s' % str(
+            self.assessment.unit_id))
+
+        back_button = self.parse_html_string(response.body).find(
+            './/*[@href="unit?unit=%s&assessment=%s"]' % (
+            parent_unit.unit_id, self.assessment.unit_id))
+
+        self.assertIsNotNone(back_button)
+        self.assertEquals(back_button.text, 'Back to assignment')

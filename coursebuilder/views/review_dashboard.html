@@ -77,6 +77,7 @@
           {# I18N: Button that a student can click to request a new assignment to review. #}
           {{ gettext('Review a new assignment') }}
         </button>
+        <a href="{{ back_link }}" class="gcb-button" >{{ gettext('Back to assignment') }}</a>
       </form>
 
       {% if no_submissions_available is defined and no_submissions_available %}
