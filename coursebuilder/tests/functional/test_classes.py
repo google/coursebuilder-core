@@ -1596,8 +1596,16 @@ class StudentAspectTest(actions.TestBase):
 
         actions.login(email)
 
+        # Verify registration is present on /course to unregistered student.
+        response = self.get('course')
+        self.assertIn('<a href="register">Registration</a>', response.body)
+
         actions.register(self, name1)
         actions.check_profile(self, name1)
+
+        # Verify registration link is gone once registered.
+        response = self.get('course')
+        self.assertNotIn('<a href="register">Registration</a>', response.body)
 
         actions.change_name(self, name2)
         actions.unregister(self)
@@ -1673,6 +1681,10 @@ class StudentAspectTest(actions.TestBase):
             raise e
         except:
             pass
+
+        # Verify registration link not present on /course
+        response = self.get('course')
+        self.assertNotIn('<a href="register">Registration</a>', response.body)
 
         # Clean up app_context.
         sites.ApplicationContext.get_environ = get_environ_old

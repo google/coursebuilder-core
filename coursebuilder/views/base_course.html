@@ -76,7 +76,7 @@
             {# I18N: Navbar tab. #}
             <a href="student/home">{{ gettext('Progress') }}</a>
           </li>
-        {% else %}
+        {% elif can_register %}
           <li {% if navbar.registration %}class='active'{% endif %}>
             {# I18N: Navbar tab. #}
             <a href="register">{{ gettext('Registration') }}</a>
