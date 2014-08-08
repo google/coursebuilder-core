@@ -182,9 +182,12 @@ div#formContainer div.settings-list-item fieldset {
 div#formContainer div.settings-list-item fieldset legend span {
   font-weight: normal;
 }
-.edit-button {
+.icon-button {
   height: 13px;
   margin: 0px 5px;
+}
+.preview-button {
+  cursor: pointer;
 }
 .assets-table-container {
   max-height: 400px;
@@ -216,7 +219,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   background-image: url('/modules/dashboard/resources/images/bullet_arrow_down.png');
   background-position: 100% 80%;
 }
-.assets-table .edit-button {
+.assets-table .icon-button {
   margin: 0px 5px 0px 0px;
   float: left;
 }
@@ -224,4 +227,28 @@ div#formContainer div.settings-list-item fieldset legend span {
   margin: 0px;
   padding: 0px;
   list-style-type: none;
+}
+#modal-window {
+  display: none;
+}
+#modal-window > #background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  opacity: 0.5;
+  filter: alpha(opacity=50);
+  z-index: 1000;
+}
+#modal-window > #content > iframe {
+  position: fixed;
+  top: 50%;
+  margin-top: -250px;
+  left: 50%;
+  width: 780px;
+  margin-left: -350px;
+  z-index: 1010;
+  border-radius: 10px;
 }

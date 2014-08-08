@@ -481,6 +481,31 @@ class AssetsPage(PageObject):
                 continue
         raise AssertionError(description + ' not found')
 
+    def click_question_preview(self):
+        self.find_element_by_css_selector(
+            '#gcb-main-content tbody td .preview-button').click()
+        return self
+
+    def verify_question_preview(self, question_text):
+        """Verifies contents of question preview."""
+        def load_modal_iframe(driver):
+            try:
+                driver.switch_to_frame(
+                    driver.find_element_by_css_selector('#modal-window iframe'))
+            except exceptions.NoSuchFrameException:
+                return False
+            else:
+                return True
+
+        wait.WebDriverWait(self._tester.driver, 15).until(load_modal_iframe)
+        question = self._tester.driver.find_element_by_css_selector(
+            '.qt-question')
+        self._tester.assertEquals(question_text, question.text)
+        self._tester.driver.switch_to_default_content()
+        self._tester.driver.find_element_by_css_selector(
+            'body').send_keys(keys.Keys.ESCAPE)
+        return self
+
     def click_add_label(self):
         self.find_element_by_link_text('Add Label').click()
         return LabelEditorPage(self._tester)

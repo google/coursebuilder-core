@@ -399,6 +399,9 @@ class QuestionsTest(BaseIntegrationTest):
         ).click_close(
         ).verify_question_exists(
             'Multiple choice question'
+        ).click_question_preview(
+        ).verify_question_preview(
+            'What is your favorite color?'
         ).click_outline(
         ).verify_not_publicly_available(
         #---------------------------------------------- Unit

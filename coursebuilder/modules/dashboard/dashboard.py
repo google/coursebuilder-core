@@ -102,7 +102,7 @@ class DashboardHandler(
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
-        'add_label', 'edit_label', 'edit_html_hook']
+        'add_label', 'edit_label', 'edit_html_hook', 'question_preview']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -393,6 +393,14 @@ class DashboardHandler(
                 ul.add_child(self._render_assessment_li(assessment))
                 li.add_child(ul)
         return li
+
+    def get_question_preview(self):
+        template_values = {}
+        template_values['gcb_course_base'] = self.get_base_href(self)
+        template_values['question'] = tags.html_to_safe_dom(
+            '<question quid="%s">' % self.request.get('quid'), self)
+        self.response.write(self.get_template(
+            'question_preview.html', []).render(template_values))
 
     def get_outline(self):
         """Renders course outline view."""
@@ -710,11 +718,8 @@ class DashboardHandler(
                     tab_name, urllib.quote(filename))
                 # show [overridden] + edit button if override exists
                 if (filename in unmerged_files) or (not merge_local_files):
-                    edit_icon = safe_dom.Element(
-                        'img', className='edit-button',
-                        src='/modules/dashboard/resources/images/pencil.png')
                     li.add_text('[Overridden]').add_child(
-                        safe_dom.A(edit_url).add_child(edit_icon))
+                        self._create_edit_button(edit_url))
                 # show an [override] link otherwise
                 else:
                     li.add_child(safe_dom.A(edit_url).add_text('[Override]'))
@@ -779,13 +784,11 @@ class DashboardHandler(
             ul.add_child(safe_dom.Element('li').add_child(item))
         return safe_dom.Element('td').add_child(ul)
 
-    def _create_edit_cell(self, title, edit_url):
+    def _create_edit_button(self, edit_url):
         edit_icon = safe_dom.Element(
-            'img', className='edit-button',
+            'img', className='icon-button edit-button',
             src='/modules/dashboard/resources/images/pencil.png')
-        return safe_dom.Element('td').add_child(
-            safe_dom.Element('a', href=edit_url).add_child(edit_icon)
-        ).add_text(title)
+        return safe_dom.A(href=edit_url).add_child(edit_icon)
 
     def _add_assets_table(self, output, columns):
         """Creates an assets table with the specified columns.
@@ -854,8 +857,15 @@ class DashboardHandler(
         for question in all_questions:
             tr = safe_dom.Element('tr')
             # Add description including edit button
-            edit_url = 'dashboard?action=edit_question&key=%s' % question.id
-            tr.add_child(self._create_edit_cell(question.description, edit_url))
+            td = safe_dom.Element('td')
+            tr.add_child(td)
+            td.add_child(self._create_edit_button(
+                'dashboard?action=edit_question&key=%s' % question.id))
+            td.add_child(safe_dom.Element(
+                'img', className='icon-button preview-button',
+                data_quid=str(question.id),
+                src='/modules/dashboard/resources/images/eye.png'))
+            td.add_text(question.description)
 
             # Add containing question groups
             tr.add_child(self._create_list_cell(
@@ -922,10 +932,12 @@ class DashboardHandler(
         for question_group in all_question_groups:
             tr = safe_dom.Element('tr')
             # Add description including edit button
-            edit_url = 'dashboard?action=edit_question_group&key=%s' % (
-                question_group.id)
-            tr.add_child(self._create_edit_cell(
-                question_group.description, edit_url))
+            td = safe_dom.Element('td')
+            tr.add_child(td)
+            td.add_child(self._create_edit_button(
+                'dashboard?action=edit_question_group&key=%s' % (
+                question_group.id)))
+            td.add_text(question_group.description)
 
             # Add questions
             tr.add_child(self._create_list_cell([
@@ -969,9 +981,6 @@ class DashboardHandler(
         )
         labels = LabelDAO.get_all()
         if labels:
-            edit_icon = safe_dom.Element(
-                'img', className='edit-button',
-                src='/modules/dashboard/resources/images/pencil.png')
             all_labels_ul = safe_dom.Element('ul')
             output.append(all_labels_ul)
             for label_type in sorted(
@@ -990,11 +999,10 @@ class DashboardHandler(
                         li.add_text(
                             label.title
                         ).add_child(
-                            safe_dom.A(
+                            self._create_edit_button(
                                 'dashboard?action=edit_label&key=%s' %
                                 label.id,
-                                id='label_%s' % label.title
-                            ).add_child(edit_icon))
+                            ).add_attribute(id='label_%s' % label.title))
         else:
             output.append(safe_dom.Element('blockquote').add_text('< none >'))
         return output

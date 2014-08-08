@@ -2,6 +2,17 @@
   <link rel="stylesheet" type="text/css" href="{{resources_path}}/questions.css"/>
   <script>
     questionData['{{instanceid}}'] = JSON.parse("{{js_data | js_string}}");
+    var assessmentTagMessages = {};
+
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.correctAnswer = "{{ gettext(' Yes, the answer is correct. ') }}";
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.incorrectAnswer = "{{ gettext(' No, the answer is incorrect. ') }}";
+    {# I18N: Confirmation text for the answer given to a question by a student. #}
+    assessmentTagMessages.partiallyCorrectAnswer = "{{ gettext(' The answer is partially correct. ') }}";
+
+    {# I18N: Text appearing at the bottom of a lesson page after the student asks for it to be graded. #}
+    assessmentTagMessages.yourScoreIs = "{{ gettext(' Your score is: ') }}";
   </script>
   <script src="{{resources_path}}/grading_lib.js"></script>
   <script src="{{resources_path}}/grading.js"></script>

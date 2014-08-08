@@ -63,7 +63,7 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # Create an assessment and add the question to the content
         assessment_one = self.course.add_assessment()
-        assessment_one.title = 'Test Asssessment One'
+        assessment_one.title = 'Test Assessment One'
         assessment_one.html_content = """
             <question quid="%s" weight="1" instanceid="1"></question>
         """ % mc_question_id
@@ -107,9 +107,9 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # Check edit link and description of the first question
         first_row = list(question_rows[0])
-        edit_link = first_row[0].find('a')
-        self.assertEquals(edit_link.tail, mc_question_description)
-        self.assertEquals(edit_link.get('href'), (
+        first_cell = first_row[0]
+        self.assertEquals(first_cell.find('img').tail, mc_question_description)
+        self.assertEquals(first_cell.find('a').get('href'), (
             'dashboard?action=edit_question&key=%s' % mc_question_id))
         # Check if the assessment is listed
         location_link = first_row[2].find('ul/li/a')
@@ -119,8 +119,8 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # Check second question (=row)
         second_row = list(question_rows[1])
-        edit_link = second_row[0].find('a')
-        self.assertEquals(edit_link.tail, sa_question_description)
+        self.assertEquals(
+            second_row[0].find('img').tail, sa_question_description)
         # Check whether the containing Question Group is listed
         self.assertEquals(second_row[1].find('ul/li').text, qg_description)
 
@@ -165,7 +165,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         }))
         asset_tables = self._load_tables()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td/a').tail, description
+            asset_tables[0].find('./tbody/tr/td/img').tail, description
         )
         self.assertEquals(
             asset_tables[1].find('./tbody/tr/td').text,
