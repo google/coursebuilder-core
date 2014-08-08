@@ -180,6 +180,10 @@ div#formContainer div.settings-list-item fieldset {
 div#formContainer div.settings-list-item fieldset legend span {
   font-weight: normal;
 }
+.edit-button {
+  height: 13px;
+  margin: 0px 5px;
+}
 .assets-table-container {
   max-height: 400px;
   overflow: auto;
@@ -211,7 +215,6 @@ div#formContainer div.settings-list-item fieldset legend span {
   background-position: 100% 80%;
 }
 .assets-table .edit-button {
-  height: 13px;
   margin: 0px 5px 0px 0px;
   float: left;
 }

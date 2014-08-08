@@ -665,12 +665,6 @@ class DashboardHandler(
             if prefix and not filename.startswith(prefix):
                 continue
 
-            # show different captions depending if the override exists or not
-            has_override = filename in unmerged_files
-            link_caption = '[Override]'
-            if has_override or not merge_local_files:
-                link_caption = '[Edit]'
-
             # make a <li> item
             li = safe_dom.Element('li')
             if links:
@@ -682,12 +676,20 @@ class DashboardHandler(
             # add actions if available
             if (edit_url_template and
                 self.app_context.fs.impl.is_read_write()):
-                edit_url = edit_url_template % (tab_name,
-                                                urllib.quote(filename))
-                li.add_child(
-                    safe_dom.Entity('&nbsp;')
-                ).add_child(
-                    safe_dom.Element('a', href=edit_url).add_text(link_caption))
+
+                li.add_child(safe_dom.Entity('&nbsp;'))
+                edit_url = edit_url_template % (
+                    tab_name, urllib.quote(filename))
+                # show [overridden] + edit button if override exists
+                if (filename in unmerged_files) or (not merge_local_files):
+                    edit_icon = safe_dom.Element(
+                        'img', className='edit-button',
+                        src='/modules/dashboard/resources/images/pencil.png')
+                    li.add_text('[Overridden]').add_child(
+                        safe_dom.A(edit_url).add_child(edit_icon))
+                # show an [override] link otherwise
+                else:
+                    li.add_child(safe_dom.A(edit_url).add_text('[Override]'))
 
             count += 1
             items.append(li)
@@ -926,7 +928,9 @@ class DashboardHandler(
         )
         labels = LabelDAO.get_all()
         if labels:
-
+            edit_icon = safe_dom.Element(
+                'img', className='edit-button',
+                src='/modules/dashboard/resources/images/pencil.png')
             all_labels_ul = safe_dom.Element('ul')
             output.append(all_labels_ul)
             for label_type in sorted(
@@ -945,13 +949,11 @@ class DashboardHandler(
                         li.add_text(
                             label.title
                         ).add_child(
-                            safe_dom.Entity('&nbsp;')
-                        ).add_child(
                             safe_dom.A(
                                 'dashboard?action=edit_label&key=%s' %
                                 label.id,
                                 id='label_%s' % label.title
-                            ).add_text('[Edit]'))
+                            ).add_child(edit_icon))
         else:
             output.append(safe_dom.Element('blockquote').add_text('< none >'))
         return output

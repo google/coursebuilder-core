@@ -30,6 +30,10 @@ from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
 
+def get_parent_element(web_element):
+    return web_element.find_element_by_xpath('..')
+
+
 class PageObject(object):
     """Superclass to hold shared logic used by page objects."""
 
@@ -434,8 +438,11 @@ class AssetsPage(PageObject):
         return self
 
     def click_edit_image(self, name):
-        self.find_element_by_link_text(
-            name).parent.find_element_by_link_text('[Edit]').click()
+        get_parent_element(
+            get_parent_element(
+                self.find_element_by_link_text(name)
+            ).find_element_by_css_selector('img.edit-button')
+        ).click()
         return ImageEditorPage(self._tester)
 
     def click_add_short_answer(self):
