@@ -811,15 +811,15 @@ class DashboardHandler(
 
         # Create questions table
         tbody = self._add_assets_table(
-            output,
-            [('Description', 35), ('Question Groups', 30), (
-            'Course Locations', 30), ('Type', 5)]
+            output, [
+            ('Description', 25), ('Question Groups', 25),
+            ('Course Locations', 25), ('Last Modified', 20), ('Type', 5)]
         )
         all_questions = QuestionDAO.get_all()
 
         if not all_questions:
             tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
-                'td', colspan='4', style='text-align: center'
+                'td', colspan='5', style='text-align: center'
             ).add_text('No questions available')))
             return output
 
@@ -837,6 +837,13 @@ class DashboardHandler(
             # Add locations
             tr.add_child(self._create_list_cell(
                 self._get_location_links(question, 'question')
+            ))
+
+            # Add last modified timestamp
+            tr.add_child(safe_dom.Element(
+                'td',
+                data_timestamp=str(question.last_modified),
+                className='timestamp'
             ))
 
             # Add question type
@@ -873,15 +880,16 @@ class DashboardHandler(
 
         # Create question groups table
         tbody = self._add_assets_table(
-            output,
-            [('Description', 35), ('Questions', 30), ('Course Locations', 35)]
+            output, [
+            ('Description', 25), ('Questions', 25), ('Course Locations', 25),
+            ('Last Modified', 25)]
         )
         # TODO(jorr): Hook this into the datastore
         all_question_groups = QuestionGroupDAO.get_all()
 
         if not all_question_groups:
             tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
-                'td', colspan='3', style='text-align: center;'
+                'td', colspan='4', style='text-align: center;'
             ).add_text('No question groups available')))
             return output
 
@@ -902,6 +910,13 @@ class DashboardHandler(
             # Add locations
             tr.add_child(self._create_list_cell(
                 self._get_location_links(question_group, 'question-group')
+            ))
+
+            # Add last modified timestamp
+            tr.add_child(safe_dom.Element(
+                'td',
+                data_timestamp=str(question_group.last_modified),
+                className='timestamp'
             ))
 
             tbody.add_child(tr)

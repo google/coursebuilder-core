@@ -149,4 +149,13 @@ describe('asset table sorting', function() {
     expect($('#a').index()).toBe(1);
     expect($('#b').index()).toBe(0);
   });
+  it('sorts the timestamp column in descending order', function() {
+    var column_header = $('#timestamped');
+    sortTable(column_header);
+    sortTable(column_header);
+    expect(column_header.hasClass("sort-desc")).toBe(true);
+    expect($('#a').index()).toBe(2);
+    expect($('#c').index()).toBe(1);
+    expect($('#b').index()).toBe(0);
+  });
 });

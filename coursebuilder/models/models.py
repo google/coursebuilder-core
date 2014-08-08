@@ -20,6 +20,7 @@ import collections
 import logging
 import os
 import sys
+import time
 
 from config import ConfigProperty
 import counters
@@ -867,6 +868,24 @@ class BaseJsonDao(object):
         MemcacheManager.delete(cls._memcache_key(entity.key().id_or_name()))
 
 
+class LastModfiedJsonDao(BaseJsonDao):
+    """Base DAO that updates the last_modified field of entities on every save.
+
+    DTOs managed by this DAO must have a settable field last_modified defined.
+    """
+
+    @classmethod
+    def save(cls, dto):
+        dto.last_modified = time.time()
+        return super(LastModfiedJsonDao, cls).save(dto)
+
+    @classmethod
+    def save_all(cls, dtos):
+        for dto in dtos:
+            dto.last_modified = time.time()
+        return super(LastModfiedJsonDao, cls).save_all(dtos)
+
+
 class QuestionEntity(BaseEntity):
     """An object representing a top-level question."""
     data = db.TextProperty(indexed=False)
@@ -893,8 +912,16 @@ class QuestionDTO(object):
     def description(self):
         return self.dict.get('description') or ''
 
+    @property
+    def last_modified(self):
+        return self.dict.get('last_modified') or ''
 
-class QuestionDAO(BaseJsonDao):
+    @last_modified.setter
+    def last_modified(self, value):
+        self.dict['last_modified'] = value
+
+
+class QuestionDAO(LastModfiedJsonDao):
     DTO = QuestionDTO
     ENTITY = QuestionEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
@@ -949,8 +976,16 @@ class QuestionGroupDTO(object):
     def question_ids(self):
         return [item['question'] for item in self.dict.get('items', [])]
 
+    @property
+    def last_modified(self):
+        return self.dict.get('last_modified') or ''
 
-class QuestionGroupDAO(BaseJsonDao):
+    @last_modified.setter
+    def last_modified(self, value):
+        self.dict['last_modified'] = value
+
+
+class QuestionGroupDAO(LastModfiedJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId

@@ -16,6 +16,8 @@
 
 __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
+import time
+
 import actions
 from models import courses
 from models import models
@@ -177,4 +179,28 @@ class QuestionDashboardTestCase(actions.TestBase):
         )
         self.assertEquals(
             asset_tables[1].find('./tbody/tr/td/a').tail, description
+        )
+
+    def test_last_modified_timestamp(self):
+        begin_time = time.time()
+        question_dto = models.QuestionDTO(1, {})
+        models.QuestionDAO.save(question_dto)
+        self.assertTrue((begin_time <= question_dto.last_modified) and (
+            question_dto.last_modified <= time.time()))
+
+        qg_dto = models.QuestionGroupDTO(1, {})
+        models.QuestionGroupDAO.save(qg_dto)
+        self.assertTrue((begin_time <= qg_dto.last_modified) and (
+            question_dto.last_modified <= time.time()))
+
+        asset_tables = self._load_tables()
+        self.assertEquals(
+            asset_tables[0].find('./tbody/tr/td[@data-timestamp]').get(
+                'data-timestamp', ''),
+            str(question_dto.last_modified)
+        )
+        self.assertEquals(
+            asset_tables[1].find('./tbody/tr/td[@data-timestamp]').get(
+                'data-timestamp', ''),
+            str(qg_dto.last_modified)
         )

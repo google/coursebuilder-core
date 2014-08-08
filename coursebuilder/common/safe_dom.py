@@ -138,6 +138,8 @@ class Element(Node):
         for attr_name, value in sorted(self._attr.items()):
             if attr_name == 'className':
                 attr_name = 'class'
+            elif attr_name.startswith('data_'):
+                attr_name = attr_name.replace('_', '-')
             if value is None:
                 value = ''
             buff += ' %s="%s"' % (
