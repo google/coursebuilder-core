@@ -1,5 +1,3 @@
-<!-- -*- mode: javascript; -*- -->
-
 <div id='question_answers_graphs'></div>
 
 <script>
@@ -15,6 +13,18 @@ function question_answers(data) {
         answer.unit_id + '_' +
         answer.sequence + '_' +
         answer.question_id );
+  }
+
+  function Answer(is_valid, answer) {
+    if (! (this instanceof Answer)) {  // Defend against caller forgetting 'new'
+      return new Answer(is_valid, answer);
+    }
+    this.is_valid = is_valid;
+    this.answer = answer;
+  }
+
+  Answer.prototype.toString = function () {
+    return this.answer;
   }
 
   var display = $('#question_answers_graphs')[0]
@@ -93,26 +103,28 @@ function question_answers(data) {
             // answer itelf, which is just a 0-based index.
             var question = questions[answer.question_id];
             if (question.choices.length > 0) {
-              return question.choices[answer.answer];
+              return new Answer(answer.is_valid,
+                                question.choices[answer.answer]);
             } else {
-              return answer.answer;
+              return new Answer(answer.is_valid, answer.answer);
             }
           });
       var grouping = dimension.group().reduceSum(
           function getCount(answer) {
-            return answer.count;
+            return answer.count
           });
-      console.log('Adding crossfilter for ' + div_id);
       crossfilters[div_id] = xf;
       var chart = dc.rowChart('#' + div_id)
           .width(600)
           .height(200)
           .dimension(dimension)
-          .group(grouping);
+          .group(grouping)
+          .ordering(function(item){
+            return !item.key.is_valid;
+          });
     }
 
     // Add each answer to the crossfilter to which it belongs.
-    console.log('Seeking crossfilter for ' + questionUsageId(answer));
     crossfilters[questionUsageId(answer)].add([answer]);
 
     // If this is the first invalid index (these appear last in the sequence)
