@@ -91,7 +91,7 @@ function need_install_chromedriver() {
 
   # Chromedriver prints its version number on startup (yay!) But that
   # means we need to start it up and then get it shut down (boo!)
-  local tempfile=$( mktemp )
+  local tempfile=$( mktemp /tmp/tmp.XXXXXXXX )
   $package_dir/$package_name > $tempfile 2>&1 &
   sleep 1
   chromedriver_pid=$!
