@@ -16,7 +16,6 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-import collections
 import copy
 import functools
 import re
@@ -212,14 +211,37 @@ class _DbTableContext(base_types._AbstractContextManager):
 
     # Classes defining various versions of source_context used for
     # DbTableRestDataSource.
-    _TableContext1 = collections.namedtuple('_TableContext1', [
-        'version',  # Always 1 to match TableContext1
-        'chunk_size',  # Goal number of items in each page.
-        'filters',  # List of strings of form <field>.<op>.<value>
-        'orderings',  # List of strongs of form <field>.{asc|desc}
-        'cursors',  # List of opaque AppEngine DB cursor strings, one per page
-        'pii_secret',  # Session-specific encryption key for PII data.
-        ])
+    class _TableContext1(object):
+
+        def __init__(self, version, chunk_size, filters, orderings, cursors,
+                     pii_secret):
+            """Set up a context.
+
+            Note: This plain-old-data class is being used in preference over a
+            collections.namedtuple(), because for export to the JS on a page, we
+            want to be able to "just get all the members", which is done using
+            the __dict__ member.  This works fine for namedtuple proper, but
+            when a namedtuple is serialized (pickled) and then unpickled, it
+            appears to come out as some type that acts like a namedtuple
+            w.r.t. the individual elements, but the __dict__ member is not
+            present.  This situation never seems to come up in dev environments,
+            but it does occur in production reliably enough to count as a bug.
+            Thus we make this class by hand, the old fashioned way.
+
+            Args:
+              version: Always 1 to match TableContext1
+              chunk_size: Goal number of items in each page.
+              filters: List of strings of form <field>.<op>.<value>
+              orderings: List of strings of form <field>.{asc|desc}
+              cursors: List of opaque AppEngine DB cursor strings, one per page
+              pii_secret: Session-specific encryption key for PII data.
+            """
+            self.version = version
+            self.chunk_size = chunk_size
+            self.filters = filters
+            self.orderings = orderings
+            self.cursors = cursors
+            self.pii_secret = pii_secret
 
     @classmethod
     def build_from_web_request(cls, params, default_chunk_size):
