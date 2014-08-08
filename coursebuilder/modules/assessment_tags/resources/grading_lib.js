@@ -457,6 +457,19 @@ function submitForm(action, hiddenData) {
   form.submit();
 }
 
+/**
+ * This will move the submit answers button to a div with class
+ * 'qt-assessment-button-bar-location' if the lesson author has included exactly
+ * one.
+ */
+function maybeMoveGradingButton() {
+  var buttonBarDiv = $('div.qt-assessment-button-bar');
+  var buttonBarPreferredLocation = $('div.qt-assessment-button-bar-location');
+  if (buttonBarDiv.length == 1 && buttonBarPreferredLocation.length == 1) {
+    buttonBarDiv.appendTo(buttonBarPreferredLocation);
+  }
+}
+
 function findGcbQuestions() {
   function gcbAssessmentTagAudit(data_dict) {
     gcbTagEventAudit(data_dict, 'assessment');
@@ -517,5 +530,8 @@ function findGcbQuestions() {
             questionData.xsrfToken, questionData.reviewKey);
         });
   }
+
+  maybeMoveGradingButton();
+
   return gcbQuestions;
 }

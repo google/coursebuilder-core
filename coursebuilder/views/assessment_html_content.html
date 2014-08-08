@@ -20,6 +20,7 @@
   <div class="gcb-assessment-body{% if readonly %} assessment-readonly{% endif %}{% if is_review_form %} review-form{% endif %}">
     {{ content | gcb_tags }}
   </div>
+  <div class="qt-assessment-button-bar">
   {% if is_review_form %}
     <div class="qt-review-form-controls">
       <button class="gcb-button qt-save-draft">
@@ -46,4 +47,5 @@
       </div>
     {% endif %}
   {% endif %}
+  </div>
 {% endmacro %}

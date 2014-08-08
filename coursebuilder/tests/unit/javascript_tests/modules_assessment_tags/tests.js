@@ -599,3 +599,38 @@ describe('assessment tags', function() {
     });
   });
 });
+
+describe('maybeMoveGradingButton', function() {
+  beforeEach(function() {
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures(
+        'tests/unit/javascript_tests/modules_assessment_tags/' +
+        'grading_button_fixture.html');
+  });
+
+  it('moves the button', function() {
+    maybeMoveGradingButton();
+    var children = $('.qt-assessment-button-bar-location > div');
+    expect(children.length).toBe(2);
+    expect($(children[0]).attr("id")).toBe("other_div");
+    expect($(children[1]).attr("class")).toBe("qt-assessment-button-bar");
+    expect($('#button_bar_parent > div').length).toBe(0);
+  });
+
+  it('does not move the button when there are multiple targets', function() {
+    $('#parent').append(
+        '<div class="qt-assessment-button-bar-location"></div>');
+    var immediate_children = $('#parent > div');
+    expect(immediate_children.length).toBe(2);
+    maybeMoveGradingButton();
+    expect($('.qt-assessment-button-bar').parent().attr("id"))
+        .toBe("button_bar_parent");
+  });
+
+  it('does not move the button when there are no targets', function() {
+    $('.qt-assessment-button-bar-location').removeClass();
+    maybeMoveGradingButton();
+    expect($('.qt-assessment-button-bar').parent().attr("id"))
+        .toBe("button_bar_parent");
+  });
+});
