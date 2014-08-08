@@ -13,6 +13,16 @@ def escape(strg):
 class Node(object):
     """Base class for the sanitizing module."""
 
+    def __init__(self):
+        self._parent = None
+
+    def _set_parent(self, parent):
+        self._parent = parent
+
+    @property
+    def parent(self):
+        return self._parent
+
     @property
     def sanitized(self):
         raise NotImplementedError()
@@ -27,18 +37,44 @@ class NodeList(object):
 
     def __init__(self):
         self.list = []
+        self._parent = None
 
     def __len__(self):
         return len(self.list)
 
+    def _set_parent(self, parent):
+        assert self != parent
+        self._parent = parent
+
+    @property
+    def parent(self):
+        return self._parent
+
     def append(self, node):
         assert node is not None, 'Cannot add an empty value to the node list'
         self.list.append(node)
+        node._set_parent(self)  # pylint: disable=protected-access
         return self
+
+    @property
+    def children(self):
+        return [] + self.list
+
+    def empty(self):
+        self.list = []
+        return self
+
+    def delete(self, node):
+        _list = []
+        for child in self.list:
+            if child != node:
+                _list.append(child)
+        self.list = _list
 
     def insert(self, index, node):
         assert node is not None, 'Cannot add an empty value to the node list'
         self.list.insert(index, node)
+        node._set_parent(self)  # pylint: disable=protected-access
         return self
 
     @property
@@ -56,6 +92,7 @@ class Text(Node):
     """Holds untrusted text which will be sanitized when accessed."""
 
     def __init__(self, unsafe_string):
+        super(Text, self).__init__()
         self._value = unicode(unsafe_string)
 
     @property
@@ -67,7 +104,11 @@ class Comment(Node):
     """An HTML comment."""
 
     def __init__(self, unsafe_string=''):
+        super(Comment, self).__init__()
         self._value = unicode(unsafe_string)
+
+    def get_value(self):
+        return self._value
 
     @property
     def sanitized(self):
@@ -106,28 +147,57 @@ class Element(Node):
         for attr_name in attr:
             assert Element._ALLOWED_NAME_PATTERN.match(attr_name), (
                 'attribute name %s is not allowed' % attr_name)
-
+        super(Element, self).__init__()
         self._tag_name = tag_name
-        self._attr = attr
         self._children = []
+        self._attr = {}
+        for _name, _value in attr.items():
+            self._attr[_name.lower()] = _value
+
+    def has_attribute(self, name):
+        return name.lower() in self._attr
+
+    def set_attribute(self, name, value):
+        self._attr[name.lower()] = value
+        return self
 
     def add_attribute(self, **attr):
         for attr_name, value in attr.items():
             assert Element._ALLOWED_NAME_PATTERN.match(attr_name), (
                 'attribute name %s is not allowed' % attr_name)
-            self._attr[attr_name] = value
+            self._attr[attr_name.lower()] = value
         return self
 
     def add_child(self, node):
+        node._set_parent(self)  # pylint: disable=protected-access
         self._children.append(node)
         return self
 
+    def append(self, node):
+        return self.add_child(node)
+
     def add_children(self, node_list):
-        self._children += node_list.list
+        for child in node_list.list:
+            self.add_child(child)
+        return self
+
+    def empty(self):
+        self._children = []
         return self
 
     def add_text(self, text):
         return self.add_child(Text(text))
+
+    def can_have_children(self):
+        return True
+
+    @property
+    def children(self):
+        return [] + self._children
+
+    @property
+    def tag_name(self):
+        return self._tag_name
 
     @property
     def sanitized(self):
@@ -136,7 +206,7 @@ class Element(Node):
             'tag name %s is not allowed' % self._tag_name)
         buff = '<' + self._tag_name
         for attr_name, value in sorted(self._attr.items()):
-            if attr_name == 'className':
+            if attr_name == 'classname':
                 attr_name = 'class'
             elif attr_name.startswith('data_'):
                 attr_name = attr_name.replace('_', '-')
@@ -180,10 +250,16 @@ class ScriptElement(Element):
     def __init__(self, **attr):
         super(ScriptElement, self).__init__('script', **attr)
 
+    def can_have_children(self):
+        return False
+
     def add_child(self, unused_node):
         raise ValueError()
 
     def add_children(self, unused_nodes):
+        raise ValueError()
+
+    def empty(self):
         raise ValueError()
 
     def add_text(self, text):
@@ -192,6 +268,7 @@ class ScriptElement(Element):
         class Script(Node):
 
             def __init__(self, script):
+                super(Script, self).__init__()
                 self._script = script
 
             @property
@@ -210,6 +287,7 @@ class Entity(Node):
 
     def __init__(self, entity):
         assert Entity.ENTITY_PATTERN.match(entity)
+        super(Entity, self).__init__()
         self._entity = entity
 
     @property

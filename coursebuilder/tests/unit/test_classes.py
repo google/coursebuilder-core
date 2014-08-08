@@ -20,6 +20,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import sys
 import unittest
 import appengine_config
+from common import xcontent
 from controllers import sites
 from models import config
 from models import content
@@ -155,6 +156,7 @@ class InvokeExistingUnitTest(suite.TestBase):
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
         content.run_all_unit_tests()
+        xcontent.run_all_unit_tests()
 
     def test_string_encoding(self):
         """Test our understanding of Python string encoding aspects.
