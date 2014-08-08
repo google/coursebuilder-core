@@ -58,10 +58,30 @@ class UnitHeaderFooterTest(actions.TestBase):
         lesson.now_available = True
         return lesson
 
-    def test_no_lessons_or_assessments(self):
+    def test_no_lessons_or_assessments_or_header_or_footer(self):
+        self.unit.unit_header = None
+        self.unit.unit_footer = None
+        self.course.save()
+
         response = self.get(self.url)
         self.assertNotIn(UNIT_HEADER_TEXT, response)
         self.assertNotIn(UNIT_FOOTER_TEXT, response)
+        self.assertIn('This unit has no content', response)
+
+    def test_no_lessons_or_assessments(self):
+        response = self.get(self.url)
+        self.assertIn(UNIT_HEADER_TEXT, response)
+        self.assertIn(UNIT_FOOTER_TEXT, response)
+        self.assertNotIn('This unit has no content', response)
+
+    def test_no_lessons_or_assessments_all_on_one_page(self):
+        self.unit.show_contents_on_one_page = True
+        self.course.save()
+
+        response = self.get(self.url)
+        self.assertIn(UNIT_HEADER_TEXT, response)
+        self.assertIn(UNIT_FOOTER_TEXT, response)
+        self.assertNotIn('This unit has no content', response)
 
     def test_only_pre_assessment(self):
         assessment = self._add_assessment('The Assessment')

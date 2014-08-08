@@ -127,8 +127,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.unit_no_lessons.pre_assessment = self.assessment_one.unit_id
         self.course.save()
         response = self._get_unit_page(self.unit_no_lessons)
-        self.assertNotIn('This unit does not contain any lessons',
-                         response.body)
+        self.assertNotIn('This unit has no content', response.body)
         self.assertIn(self.assessment_one.title, response.body)
         self.assertIn(self.assessment_one.html_content, response.body)
         self.assertIn('Submit Answers', response.body)
@@ -140,8 +139,7 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         self.unit_no_lessons.post_assessment = self.assessment_one.unit_id
         self.course.save()
         response = self._get_unit_page(self.unit_no_lessons)
-        self.assertNotIn('This unit does not contain any lessons',
-                         response.body)
+        self.assertNotIn('This unit has no content', response.body)
         self.assertIn(self.assessment_one.title, response.body)
         self.assertIn(self.assessment_one.html_content, response.body)
         self.assertIn('Submit Answers', response.body)

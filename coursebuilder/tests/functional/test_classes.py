@@ -628,8 +628,7 @@ class InfrastructureTest(actions.TestBase):
         response = self.get('unit?unit=%s' % unit_5.unit_id)
         assert_equals(response.status_int, 200)
         assert_does_not_contain('Lesson', response.body)
-        assert_contains(
-            'This unit does not contain any lessons.', response.body)
+        assert_contains('This unit has no content.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
         actions.logout()
@@ -674,8 +673,7 @@ class InfrastructureTest(actions.TestBase):
         response = self.get('unit?unit=%s' % unit_5.unit_id)
         assert_equals(response.status_int, 200)
         assert_does_not_contain('Lesson', response.body)
-        assert_contains(
-            'This unit does not contain any lessons.', response.body)
+        assert_contains('This unit has no content.', response.body)
         assert_does_not_contain(private_tag, response.body)
 
         actions.logout()

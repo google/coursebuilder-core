@@ -379,11 +379,6 @@ class UnitHandler(BaseHandler):
         self.template_value['unit'] = unit
         self.template_value['unit_id'] = unit.unit_id
 
-        # If this unit contains no lessons, return.
-        if not lesson and not assessment:
-            self.render('unit.html')
-            return
-
         # These attributes are needed in order to render questions (with
         # progress indicators) in the lesson body. They are used by the
         # custom component renderers in the assessment_tags module.
@@ -426,8 +421,8 @@ class UnitHandler(BaseHandler):
                                     template_values)
             display_content.append(self.render_template_to_html(
                 template_values, 'lesson_common.html'))
-        del self.lesson_id
-        del self.lesson_is_scored
+            del self.lesson_id
+            del self.lesson_is_scored
 
         if unit.post_assessment:
             display_content.append(self.get_assessment_display_content(
@@ -467,6 +462,13 @@ class UnitHandler(BaseHandler):
             return (assessment and
                     str(assessment.unit_id) == str(unit.post_assessment))
 
+        # If unit has no pre-assessment, no lessons, and no post-assessment,
+        # then we're both at the first and last item.
+        if (not unit.pre_assessment and
+            not unit.post_assessment and
+            not unit_lessons):
+                return True
+
         return False
 
     def _showing_last_element(self, unit, lesson, assessment, is_activity):
@@ -496,6 +498,13 @@ class UnitHandler(BaseHandler):
             return (assessment and
                     str(assessment.unit_id) == str(unit.pre_assessment))
 
+        # If unit has no pre-assessment, no lessons, and no post-assessment,
+        # then we're both at the first and last item.
+        if (not unit.pre_assessment and
+            not unit.post_assessment and
+            not unit_lessons):
+                return True
+
         return False
 
     def _show_single_element(self, student, unit, lesson, assessment):
@@ -511,9 +520,6 @@ class UnitHandler(BaseHandler):
         if (unit.unit_header and
             self._showing_first_element(unit, lesson, assessment, is_activity)):
                 display_content.append(self._apply_gcb_tags(unit.unit_header))
-        if lesson:
-            self.lesson_id = lesson.lesson_id
-            self.lesson_is_scored = lesson.scored
         if assessment:
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
@@ -524,7 +530,9 @@ class UnitHandler(BaseHandler):
                 display_content.append(self.get_assessment_display_content(
                     student, unit, assessment, left_nav_elements,
                     self.template_value))
-        else:
+        elif lesson:
+            self.lesson_id = lesson.lesson_id
+            self.lesson_is_scored = lesson.scored
             if is_activity:
                 self.set_activity_content(student, unit, lesson,
                                           left_nav_elements)
