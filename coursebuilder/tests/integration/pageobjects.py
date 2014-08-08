@@ -545,7 +545,7 @@ class AssetsPage(PageObject):
         self._tester.assertEquals(question_text, question.text)
         self._tester.driver.switch_to_default_content()
         self._tester.driver.find_element_by_css_selector(
-            'body').send_keys(keys.Keys.ESCAPE)
+            '#modal-window .close-button').click()
         return self
 
     def click_add_label(self):

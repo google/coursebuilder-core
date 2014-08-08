@@ -20,8 +20,8 @@ $(function() {
     modal.find("#content").html($("<iframe />").attr(
       {id: "question-preview", src: "dashboard?" + $.param(params)}));
   });
-  // Bind click on background to close window
-  modal.find("#background").on("click", function(e) {
+  // Bind click on background and on close button to close window
+  modal.find("#background, .close-button").on("click", function(e) {
     closeModal(modal);
   });
   // Default: sort ascending on first column

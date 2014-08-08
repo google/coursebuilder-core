@@ -242,13 +242,33 @@ div#formContainer div.settings-list-item fieldset legend span {
   filter: alpha(opacity=50);
   z-index: 1000;
 }
-#modal-window > #content > iframe {
+#modal-window > #container {
+  border: 2px inset;
+  border-radius: 10px;
   position: fixed;
   top: 50%;
   margin-top: -250px;
   left: 50%;
   width: 780px;
-  margin-left: -350px;
+  margin-left: -410px;
   z-index: 1010;
-  border-radius: 10px;
+  background-color: #fff;
+  padding: 20px;
+}
+#modal-window .close-button {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: #888;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+  padding: 5px;
+}
+#modal-window #content > iframe {
+  width: 100%;
+  border: none;
 }
