@@ -66,7 +66,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
     'tests.functional.modules_certificate.CertificateCriteriaTestCase': 5,
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
-    'tests.functional.modules_data_source_providers.StudentScoresTest': 5,
+    'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_lti.FieldsTest': 6,
     'tests.functional.modules_lti.LaunchHandlerTest': 8,
