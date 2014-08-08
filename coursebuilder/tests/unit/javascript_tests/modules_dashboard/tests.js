@@ -108,3 +108,45 @@ describe('normalize scores', function() {
     });
   });
 });
+
+describe('asset table sorting', function() {
+  beforeEach(function() {
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures('tests/unit/javascript_tests/modules_dashboard/' +
+      'assets_table_fixture.html');
+  });
+  it('sorts the first column in ascending order', function() {
+    var column_header = $('#x');
+    sortTable(column_header);
+    expect(column_header.hasClass("sort-asc")).toBe(true);
+    expect($('#b').index()).toBe(0);
+    expect($('#c').index()).toBe(1);
+    expect($('#a').index()).toBe(2);
+  });
+  it('sorts the first column in descending order', function() {
+    var column_header = $('#x');
+    sortTable(column_header);
+    sortTable(column_header);
+    expect(column_header.hasClass("sort-desc")).toBe(true);
+    expect($('#b').index()).toBe(2);
+    expect($('#c').index()).toBe(1);
+    expect($('#a').index()).toBe(0);
+  });
+  it('sorts the second column in ascending order', function() {
+    var column_header = $('#y');
+    sortTable(column_header);
+    expect(column_header.hasClass("sort-asc")).toBe(true);
+    expect($('#c').index()).toBe(0);
+    expect($('#a').index()).toBe(1);
+    expect($('#b').index()).toBe(2);
+  });
+  it('sorts the second column in descending order', function() {
+    var column_header = $('#y');
+    sortTable(column_header);
+    sortTable(column_header);
+    expect(column_header.hasClass("sort-desc")).toBe(true);
+    expect($('#c').index()).toBe(2);
+    expect($('#a').index()).toBe(1);
+    expect($('#b').index()).toBe(0);
+  });
+});

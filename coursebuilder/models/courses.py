@@ -2305,6 +2305,50 @@ class Course(object):
         return self.get_components_with_name(
             unit_id, lesson_id, 'question-group')
 
+    def get_component_locations(self, component_id, component_type):
+        """Returns a dict containing the locations of the supplied component.
+
+        Args:
+            component_id: str. The id of the component of which the locations
+                are requested
+            component_type: 'question' or 'question-group'
+
+        Returns:
+            A dict with the following 2 keys:
+            - assessments: a list of assessments that contain the component
+            - lessons: a list of lessons that contain the component
+        """
+        def _matches(component, component_id, component_type):
+            """Checks whether component matches supplied type and id."""
+            if component_type == 'question':
+                if long(component.get('quid')) == component_id:
+                    return True
+            elif component_type == 'question-group':
+                if long(component.get('qgid')) == component_id:
+                    return True
+            else:
+                raise ValueError(
+                    'component_type must be "question" or'
+                    '"question-group", and not "%s"' % component_type)
+            return False
+
+        assessments = set()
+        lessons = set()
+        for unit in self.get_units():
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                for component in self.get_assessment_components(unit.unit_id):
+                    if (component.get('cpt_name') == component_type) and (
+                            _matches(component, component_id, component_type)):
+                        assessments.add(unit)
+            elif unit.type == verify.UNIT_TYPE_UNIT:
+                for lesson in self.get_lessons(unit.unit_id):
+                    for component in self.get_components_with_name(
+                            unit.unit_id, lesson.lesson_id, component_type):
+                        if _matches(component, component_id, component_type):
+                            lessons.add((lesson, unit))
+
+        return {'assessments': list(assessments), 'lessons': list(lessons)}
+
     def needs_human_grader(self, unit):
         return unit.workflow.get_grader() == HUMAN_GRADER
 

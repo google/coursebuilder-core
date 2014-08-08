@@ -458,12 +458,11 @@ class AssetsPage(PageObject):
 
     def verify_question_exists(self, description):
         """Verifies question description exists on list of question banks."""
-        lis = self._tester.driver.find_elements_by_css_selector(
-            '#gcb-main-content > ol > li')
-        for li in lis:
+        tds = self._tester.driver.find_elements_by_css_selector(
+            '#gcb-main-content tbody td')
+        for td in tds:
             try:
-                self._tester.assertEquals(
-                    description + ' [Edit]', li.text)
+                self._tester.assertEquals(description, td.text)
                 return self
             except AssertionError:
                 continue

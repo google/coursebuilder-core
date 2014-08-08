@@ -57,6 +57,7 @@ import appengine_config
 from common import crypto
 from common import jinja_utils
 from common import safe_dom
+from common import tags
 from controllers import sites
 from controllers import utils
 from controllers.utils import ApplicationHandler
@@ -71,6 +72,7 @@ from models import roles
 from models import vfs
 from models.models import LabelDAO
 from models.models import QuestionDAO
+from models.models import QuestionDTO
 from models.models import QuestionGroupDAO
 from modules.dashboard import tabs
 from modules.data_source_providers import rest_providers
@@ -79,6 +81,8 @@ from modules.search.search import SearchDashboardHandler
 from tools import verify
 
 from google.appengine.api import users
+
+RESOURCES_PATH = '/modules/dashboard/resources'
 
 
 class DashboardHandler(
@@ -723,6 +727,65 @@ class DashboardHandler(
                     safe_dom.Element('blockquote').add_text(caption_if_empty))
         return output
 
+    def _get_location_links(self, component, component_type):
+        locations = courses.Course(self).get_component_locations(
+            component.id, component_type)
+        links = []
+        for assessment in locations['assessments']:
+            url = 'assessment?name=%s' % assessment.unit_id
+            links.append(
+                safe_dom.Element('a', href=url).add_text(assessment.title))
+
+        for (lesson, unit) in locations['lessons']:
+            url = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)
+            links.append(
+                safe_dom.Element('a', href=url).add_text(
+                '%s: %s' % (unit.title, lesson.title)))
+        return links
+
+    def _create_list_cell(self, list_items):
+        ul = safe_dom.Element('ul')
+        for item in list_items:
+            ul.add_child(safe_dom.Element('li').add_child(item))
+        return safe_dom.Element('td').add_child(ul)
+
+    def _create_edit_cell(self, title, edit_url):
+        edit_icon = safe_dom.Element(
+            'img', className='edit-button',
+            src='/modules/dashboard/resources/images/pencil.png')
+        return safe_dom.Element('td').add_child(
+            safe_dom.Element('a', href=edit_url).add_child(edit_icon)
+        ).add_text(title)
+
+    def _add_assets_table(self, output, columns):
+        """Creates an assets table with the specified columns.
+
+        Args:
+            output: safe_dom.NodeList to which the table should be appended.
+            columns: list of tuples that specifies column name and width.
+                For example ("Description", 35) would create a column with a
+                width of 35% and the header would be Description.
+
+        Returns:
+            The tbody safe_dom.Element of the created table.
+        """
+        container = safe_dom.Element('div', className='assets-table-container')
+        output.append(container)
+        table = safe_dom.Element('table', className='assets-table')
+        container.add_child(table)
+        thead = safe_dom.Element('thead')
+        table.add_child(thead)
+        tr = safe_dom.Element('tr')
+        thead.add_child(tr)
+        ths = safe_dom.NodeList()
+        for (title, width) in columns:
+            ths.append(safe_dom.Element(
+                'th', style=('width: %s%%' % width)).add_text(title))
+        tr.add_children(ths)
+        tbody = safe_dom.Element('tbody')
+        table.add_child(tbody)
+        return tbody
+
     def list_questions(self):
         """Prepare a list of the question bank contents."""
         if not self.app_context.is_editable_fs():
@@ -744,23 +807,43 @@ class DashboardHandler(
             safe_dom.Element('h3').add_text('Question Bank')
         )
 
+        # Create questions table
+        tbody = self._add_assets_table(
+            output,
+            [('Description', 35), ('Question Groups', 30), (
+            'Course Locations', 30), ('Type', 5)]
+        )
         all_questions = QuestionDAO.get_all()
-        if all_questions:
-            ol = safe_dom.Element('ol')
-            all_questions.sort(key=lambda q: q.description)
-            for question in all_questions:
-                edit_url = 'dashboard?action=edit_question&key=%s' % question.id
-                li = safe_dom.Element('li')
-                li.add_text(
-                    question.description
-                ).add_child(
-                    safe_dom.Entity('&nbsp;')
-                ).add_child(
-                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
-                ol.add_child(li)
-            output.append(ol)
-        else:
-            output.append(safe_dom.Element('blockquote').add_text('< none >'))
+
+        if not all_questions:
+            tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
+                'td', colspan='4', style='text-align: center'
+            ).add_text('No questions available')))
+            return output
+
+        for question in all_questions:
+            tr = safe_dom.Element('tr')
+            # Add description including edit button
+            edit_url = 'dashboard?action=edit_question&key=%s' % question.id
+            tr.add_child(self._create_edit_cell(question.description, edit_url))
+
+            # Add containing question groups
+            tr.add_child(self._create_list_cell(
+                [safe_dom.Text(qg) for qg in QuestionDAO.used_by(question.id)]
+            ))
+
+            # Add locations
+            tr.add_child(self._create_list_cell(
+                self._get_location_links(question, 'question')
+            ))
+
+            # Add question type
+            tr.add_child(safe_dom.Element('td').add_text(
+                'MC' if question.type == QuestionDTO.MULTIPLE_CHOICE else (
+                    'SA' if question.type == QuestionDTO.SHORT_ANSWER else (
+                    'Unknown Type'))
+            ).add_attribute(style='text-align: center'))
+            tbody.add_child(tr)
 
         return output
 
@@ -786,25 +869,40 @@ class DashboardHandler(
             safe_dom.Element('h3').add_text('Question Groups')
         )
 
+        # Create question groups table
+        tbody = self._add_assets_table(
+            output,
+            [('Description', 35), ('Questions', 30), ('Course Locations', 35)]
+        )
         # TODO(jorr): Hook this into the datastore
         all_question_groups = QuestionGroupDAO.get_all()
-        if all_question_groups:
-            ol = safe_dom.Element('ol')
-            all_question_groups.sort(key=lambda qg: qg.description)
-            for question_group in all_question_groups:
-                edit_url = 'dashboard?action=edit_question_group&key=%s' % (
-                    question_group.id)
-                li = safe_dom.Element('li')
-                li.add_text(
-                    question_group.description
-                ).add_child(
-                    safe_dom.Entity('&nbsp;')
-                ).add_child(
-                    safe_dom.Element('a', href=edit_url).add_text('[Edit]'))
-                ol.add_child(li)
-            output.append(ol)
-        else:
-            output.append(safe_dom.Element('blockquote').add_text('< none >'))
+
+        if not all_question_groups:
+            tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
+                'td', colspan='3', style='text-align: center;'
+            ).add_text('No question groups available')))
+            return output
+
+        for question_group in all_question_groups:
+            tr = safe_dom.Element('tr')
+            # Add description including edit button
+            edit_url = 'dashboard?action=edit_question_group&key=%s' % (
+                question_group.id)
+            tr.add_child(self._create_edit_cell(
+                question_group.description, edit_url))
+
+            # Add questions
+            tr.add_child(self._create_list_cell([
+                safe_dom.Text(QuestionDAO.load(quid).description)
+                for quid in question_group.question_ids
+            ]))
+
+            # Add locations
+            tr.add_child(self._create_list_cell(
+                self._get_location_links(question_group, 'question-group')
+            ))
+
+            tbody.add_child(tr)
 
         return output
 
@@ -1034,6 +1132,9 @@ def register_module():
     tabs.Registry.register('assets', 'contrib', 'Extension Items',
                            DashboardHandler.get_assets_contrib)
 
+    global_routes = [
+        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
+
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),
     ]
@@ -1041,5 +1142,5 @@ def register_module():
     custom_module = custom_modules.Module(
         'Course Dashboard',
         'A set of pages for managing Course Builder course.',
-        [], dashboard_handlers)
+        global_routes, dashboard_handlers)
     return custom_module

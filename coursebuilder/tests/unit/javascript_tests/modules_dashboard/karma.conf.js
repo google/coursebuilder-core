@@ -1,6 +1,7 @@
 basePath = '../../../..';
 
 var YUI_BASE = process.env.YUI_BASE;
+var KARMA_LIB = process.env.KARMA_LIB;
 
 files = [
   JASMINE,
@@ -42,12 +43,23 @@ files = [
   YUI_BASE + '/event-delegate/event-delegate.js',
   YUI_BASE + '/node-event-delegate/node-event-delegate.js',
   YUI_BASE + '/dom-style/dom-style.js',
+  'https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js',
+  KARMA_LIB + '/jasmine-jquery-1.5.2.js',
 
   // Test files
   'tests/unit/javascript_tests/modules_dashboard/*.js',
 
+  // Test resources
+  {
+    pattern: 'tests/unit/javascript_tests/modules_dashboard/*.html',
+    watched: true,
+    included: false,
+    served: true
+  },
+
   // Files to test
   'modules/dashboard/mc_question_editor_lib.js',
+  'modules/dashboard/resources/view.js',
 ];
 
 exclude = [
