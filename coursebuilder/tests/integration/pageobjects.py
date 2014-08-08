@@ -272,6 +272,10 @@ class DashboardPage(PageObject):
         self.find_element_by_link_text('Assets').click()
         return AssetsPage(self._tester)
 
+    def click_settings(self):
+        self.find_element_by_link_text('Settings').click()
+        return SettingsPage(self._tester)
+
     def verify_course_outline_contains_unit(self, unit_title):
         self.find_element_by_link_text(unit_title)
         return self
@@ -413,6 +417,44 @@ class AssessmentConfirmationPage(RootPage):
     def return_to_unit(self):
         self.find_element_by_link_text('Return to Unit').click()
         return LessonPage(self._tester)
+
+
+class SettingsPage(PageObject):
+    """Page object for the dashboard's course settings tab."""
+
+    def __init__(self, tester):
+        super(SettingsPage, self).__init__(tester)
+
+        def successful_load(unused_driver):
+            tab = self.find_element_by_link_text('Settings')
+            print tab, tab.get_attribute('class'), tab.get_attribute('href')
+            return 'selected' == tab.get_attribute('class')
+
+        wait.WebDriverWait(self._tester.driver, 15).until(successful_load)
+
+    def click_course_options(self):
+        self.find_element_by_css_selector(
+            '#edit_basic_course_settings_course > button').click()
+        return CourseOptionsEditorPage(self._tester)
+
+
+class CourseOptionsEditorPage(EditorPageObject):
+    """Page object for the dashboard's course ioptions sub tab."""
+
+    def click_close(self):
+        return self._close_and_return_to(SettingsPage)
+
+    def click_close_and_confirm(self):
+        self.find_element_by_link_text('Close').click()
+        self._tester.driver.switch_to_alert().accept()
+        time.sleep(0.2)
+        return SettingsPage(self._tester)
+
+    def set_course_name(self, name):
+        course_title_input = self.find_element_by_name('course:title')
+        course_title_input.clear()
+        course_title_input.send_keys(name)
+        return self
 
 
 class AssetsPage(PageObject):

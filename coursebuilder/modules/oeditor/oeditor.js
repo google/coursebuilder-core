@@ -623,11 +623,7 @@ TopLevelEditorControls.prototype = {
     // cb_global.lastSavedFormValue in TopLevelEditorControls rather than
     // global scope
     this._env.original = payload;
-    this._env.lastSavedFormValue = payload;
-
-    // it is better to set lastSavedFormValue to a cb_global.form.getValue(),
-    // but it does not work for rich edit control as it has delayed loading
-    // and may not be ready when this line above is executed
+    this._env.lastSavedFormValue = this._env.form.getValue();
 
     // update ui state
     document.getElementById("formContainer").style.display = "block";

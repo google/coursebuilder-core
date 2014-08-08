@@ -239,6 +239,16 @@ class AdminTests(BaseIntegrationTest):
         ).click_close(
         ).verify_selected_tab('Assets')
 
+        # Confirm that changes to the course name get alert, but no changes
+        # get no alert.
+        self.load_dashboard(name).click_settings(
+        ).click_course_options(
+        ).set_course_name(
+            ''
+        ).click_close_and_confirm(
+        ).click_course_options(
+        ).click_close()
+
     def test_upload_and_delete_image(self):
         """Admin should be able to upload an image and then delete it."""
         image_file = os.path.join(
