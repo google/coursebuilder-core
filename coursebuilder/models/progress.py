@@ -79,6 +79,7 @@ class UnitLessonCompletionTracker(object):
 
     EVENT_CODE_MAPPING = {
         'unit': 'u',
+        'unit_forced': 'u',
         'lesson': 'l',
         'activity': 'a',
         'html': 'h',
@@ -513,6 +514,12 @@ class UnitLessonCompletionTracker(object):
         # Record that all lessons in this unit have been completed.
         self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
+    def _update_unit_forced(self, progress, event_key):
+        """Force-mark a unit as completed, ignoring normal criteria."""
+
+        # Record that all lessons in this unit have been completed.
+        self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
+
     def _update_lesson(self, progress, event_key):
         """Updates a lesson's progress based on the progress of its children."""
         split_event_key = event_key.split('.')
@@ -590,7 +597,8 @@ class UnitLessonCompletionTracker(object):
         'activity': _update_activity,
         'html': _update_html,
         'lesson': _update_lesson,
-        'unit': _update_unit
+        'unit': _update_unit,
+        'unit_forced': _update_unit_forced,
     }
 
     # Dependencies for recording derived events. The key is the current
@@ -636,6 +644,23 @@ class UnitLessonCompletionTracker(object):
             },
         ),
     }
+
+    def force_unit_completed(self, student, unit_id):
+        """Records that the given student has completed a unit.
+
+        NOTE: This should not generally be used directly.  The definition
+        of completing a unit is generally taken to be completion of all
+        parts of all components of a unit (assessments, lessons,
+        activities in lessons, etc.  Directly marking a unit as complete
+        is provided only for manual marking where the student feels "done",
+        but has not taken a fully completionist approach to the material.
+
+        Args:
+          student: A logged-in, registered student object.
+          unit_id: The ID of the unit to be marked as complete.
+        """
+        self._put_event(
+            student, 'unit_forced', self._get_unit_key(unit_id))
 
     def put_activity_completed(self, student, unit_id, lesson_id):
         """Records that the given student has completed an activity."""

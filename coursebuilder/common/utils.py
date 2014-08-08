@@ -71,3 +71,22 @@ class Namespace(object):
     def __exit__(self, *unused_exception_info):
         namespace_manager.set_namespace(self.old_namespace)
         return False  # Don't suppress exceptions
+
+
+def find(predicate, iterable):
+    """Find the first matching item in a list, or None if not found.
+
+    This is as a more-usable alternative to filter(), in that it does
+    not raise an exception if the item is not found.
+
+    Args:
+      predicate: A function taking one argument: an item from the iterable.
+      iterable: A list or generator providing items passed to "predicate".
+    Returns:
+      The first item in "iterable" where "predicate" returns True, or
+      None if no item matches.
+    """
+    for item in iterable:
+        if predicate(item):
+            return item
+    return None

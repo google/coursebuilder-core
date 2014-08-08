@@ -365,6 +365,10 @@ class Unit12(object):
     def show_contents_on_one_page(self):
         return False
 
+    @property
+    def manual_progress(self):
+        return False
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -398,6 +402,10 @@ class Lesson12(object):
     def has_activity(self):
         # pylint: disable-msg=g-explicit-bool-comparison
         return self.activity != ''
+
+    @property
+    def manual_progress(self):
+        return False
 
 
 class CachedCourse12(AbstractCachedObject):
@@ -609,6 +617,13 @@ class Unit13(object):
         # page, or display assessments/lessons/activities on separate pages.
         self.show_contents_on_one_page = False
 
+        # When manual_progress is set, the user may manually mark a Unit
+        # as completed.  This does not apply to assessments or links.
+        # Units marked for manual completion are also marked as complete
+        # when all of their contained content is marked complete (either
+        # manually or normally).
+        self.manual_progress = False
+
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
@@ -645,6 +660,11 @@ class Lesson13(object):
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
         self._index = None
+
+        # When manual_progress is set, the user must take an affirmative UI
+        # action to mark the lesson as completed.  If not set, a lesson is
+        # consdered completed the first time it is shown to the student.
+        self.manual_progress = False
 
     @property
     def index(self):
@@ -704,6 +724,7 @@ class PersistentCourse13(object):
                     'pre_assessment': None,
                     'post_assessment': None,
                     'show_contents_on_one_page': False,
+                    'manual_progress': False,
                     }
                 transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
                 self.units.append(unit)
@@ -716,7 +737,9 @@ class PersistentCourse13(object):
                 defaults = {
                     'activity_listed': True,
                     'scored': False,
-                    'properties': {}}
+                    'properties': {},
+                    'manual_progress': False,
+                }
                 transforms.dict_to_instance(
                     lesson_dict, lesson, defaults=defaults)
                 self.lessons.append(lesson)
@@ -1152,6 +1175,7 @@ class CourseModel13(object):
         existing_unit.pre_assessment = unit.pre_assessment
         existing_unit.post_assessment = unit.post_assessment
         existing_unit.show_contents_on_one_page = unit.show_contents_on_one_page
+        existing_unit.manual_progress = unit.manual_progress
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href
@@ -1178,6 +1202,7 @@ class CourseModel13(object):
         existing_lesson.video = lesson.video
         existing_lesson.notes = lesson.notes
         existing_lesson.activity_title = lesson.activity_title
+        existing_lesson.manual_progress = lesson.manual_progress
 
         self._index()
 

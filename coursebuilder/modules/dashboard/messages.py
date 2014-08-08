@@ -130,6 +130,12 @@ LESSON_ACTIVITY_TITLE_DESCRIPTION = """
 This appears above your activity.
 """
 
+LESSON_MANUAL_PROGRESS_DESCRIPTION = """
+When set, the manual progress REST API permits
+users to manually mark a unit or lesson as complete,
+overriding the automatic progress tracking.
+"""
+
 LESSON_OBJECTIVES_DESCRIPTION = """
 The lesson body is displayed to students above the video in the default
 template.

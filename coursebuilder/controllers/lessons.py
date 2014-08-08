@@ -202,6 +202,22 @@ def augment_assessment_units(course, student):
                     unit.unit_id, student.get_key())
 
 
+def is_progress_recorded(handler, student):
+    if student.is_transient:
+        return False
+    if CAN_PERSIST_ACTIVITY_EVENTS:
+        return True
+    course = handler.get_course()
+    units = handler.get_track_matching_student(student)
+    for unit in units:
+        if unit.manual_progress:
+            return True
+        for lesson in course.get_lessons(unit.unit_id):
+            if lesson.manual_progress:
+                return True
+    return False
+
+
 def add_course_outline_to_template(handler, student):
     """Adds course outline with all units, lessons, progress to the template."""
     if student and not student.is_transient:
@@ -211,10 +227,11 @@ def add_course_outline_to_template(handler, student):
     _tuples = []
     units = handler.get_track_matching_student(student)
     units = filter_assessments_used_within_units(units)
+    progress_recorded = is_progress_recorded(handler, student)
     for _unit in units:
         _lessons = handler.get_lessons(_unit.unit_id)
         _lesson_progress = None
-        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+        if progress_recorded:
             _lesson_progress = _tracker.get_lesson_progress(
                 student, _unit.unit_id)
         pre_assessment = None
@@ -288,8 +305,8 @@ class CourseHandler(BaseHandler):
             'url' in course['main_image'] and
             course['main_image']['url'])
 
-        self.template_value['is_progress_recorded'] = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value)
+        self.template_value['is_progress_recorded'] = is_progress_recorded(
+            self, student)
         self.template_value['navbar'] = {'course': True}
         self.render('course.html')
 
@@ -373,8 +390,8 @@ class UnitHandler(BaseHandler):
         self.unit_id = unit_id
 
         add_course_outline_to_template(self, student)
-        self.template_value['is_progress_recorded'] = (
-            CAN_PERSIST_ACTIVITY_EVENTS.value and not student.is_transient)
+        self.template_value['is_progress_recorded'] = is_progress_recorded(
+            self, student)
 
         if (unit.show_contents_on_one_page and
             'confirmation' not in self.request.params):
@@ -495,7 +512,7 @@ class UnitHandler(BaseHandler):
         self.template_value['page_type'] = 'activity'
         self.template_value['title'] = lesson.activity_title
 
-        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+        if is_progress_recorded(self, student):
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -514,7 +531,7 @@ class UnitHandler(BaseHandler):
         template_values['page_type'] = 'unit'
         template_values['title'] = lesson.title
 
-        if CAN_PERSIST_ACTIVITY_EVENTS.value:
+        if not lesson.manual_progress and is_progress_recorded(self, student):
             # Mark this page as accessed. This is done after setting the
             # student progress template value, so that the mark only shows up
             # after the student visits the page for the first time.
@@ -1108,6 +1125,11 @@ class EventsRESTHandler(BaseRESTHandler):
             # Records progress for scored lessons.
             unit_id, lesson_id = get_unit_and_lesson_id_from_url(
                 self, source_url)
-            if unit_id is not None and lesson_id is not None:
+            course = self.get_course()
+            unit = course.find_unit_by_id(unit_id)
+            lesson = course.find_lesson_by_id(unit, lesson_id)
+            if (unit_id is not None and
+                lesson_id is not None and
+                not lesson.manual_progress):
                 self.get_course().get_progress_tracker().put_html_completed(
                     student, unit_id, lesson_id)

@@ -497,6 +497,11 @@ def generate_unit_schema():
         optional=True,
         description='Whether to show all assessments, lessons, and activities '
         'in a Unit on one page, or to show each on its own page.'))
+    schema.add_property(SchemaField(
+        'manual_progress', 'Manual Progress', 'boolean', optional=True,
+        description='When set, the manual progress REST API permits '
+        'users to manually mark a unit or lesson as complete, '
+        'overriding the automatic progress tracking.'))
     return schema
 
 
@@ -557,6 +562,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         ret['post_assessment'] = unit.post_assessment or -1
         ret['show_contents_on_one_page'] = (
             unit.show_contents_on_one_page or False)
+        ret['manual_progress'] = unit.manual_progress or False
         return ret
 
     def _is_assessment_unused(self, course, unit, assessment, errors):
@@ -599,6 +605,7 @@ class UnitRESTHandler(CommonUnitRESTHandler):
         self.apply_updates_common(course, unit, updated_unit_dict, errors)
         unit.pre_assessment = None
         unit.post_assessment = None
+        unit.manual_progress = updated_unit_dict['manual_progress']
 
         pre_assessment_id = updated_unit_dict['pre_assessment']
         if pre_assessment_id >= 0:
@@ -1113,6 +1120,7 @@ class LessonRESTHandler(BaseRESTHandler):
             "activity_title" : {"type": "string", "optional": true},
             "activity_listed" : {"type": "boolean", "optional": true},
             "activity": {"type": "string", "format": "text", "optional": true},
+            "manual_progress" : {"type": "boolean", "optional": true},
             "is_draft": {"type": "boolean"}
             }
     }
@@ -1174,6 +1182,10 @@ class LessonRESTHandler(BaseRESTHandler):
                 'label': 'Activity',
                 'description': str(messages.LESSON_ACTIVITY_DESCRIPTION),
                 'className': 'inputEx-Field activityHolder'}),
+            (['properties', 'manual_progress', '_inputex'], {
+                'label': 'Manual Progress', '_type:': 'boolean',
+                'description': str(
+                    messages.LESSON_MANUAL_PROGRESS_DESCRIPTION)}),
             STATUS_ANNOTATION]
 
     def get(self):
@@ -1207,6 +1219,7 @@ class LessonRESTHandler(BaseRESTHandler):
             'activity_title': lesson.activity_title,
             'activity_listed': lesson.activity_listed,
             'activity': activity,
+            'manual_progress': lesson.manual_progress or False,
             'is_draft': not lesson.now_available
             }
 
@@ -1252,6 +1265,7 @@ class LessonRESTHandler(BaseRESTHandler):
         lesson.notes = updates_dict['notes']
         lesson.activity_title = updates_dict['activity_title']
         lesson.activity_listed = updates_dict['activity_listed']
+        lesson.manual_progress = updates_dict['manual_progress']
         lesson.now_available = not updates_dict['is_draft']
 
         activity = updates_dict.get('activity', '').strip()

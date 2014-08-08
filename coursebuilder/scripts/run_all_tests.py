@@ -71,6 +71,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_lti.LaunchHandlerTest': 8,
     'tests.functional.modules_lti.LTIToolTagTest': 3,
     'tests.functional.modules_lti.SerializerTest': 2,
+    'tests.functional.modules_manual_progress.ManualProgressTest': 17,
     'tests.functional.modules_notifications.CronTest': 9,
     'tests.functional.modules_notifications.DatetimeConversionTest': 1,
     'tests.functional.modules_notifications.ManagerTest': 31,
