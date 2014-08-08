@@ -458,12 +458,15 @@ class VisualizationsTest(BaseIntegrationTest):
         self.assertFalse(page.buttons_present('exams'))
 
         self._force_response_log_critical('exams')
-        page = self.load_dashboard(self._name).click_analytics('Exams')
+        page = self.load_dashboard(self._name).click_analytics(
+            'Exams').wait_until_logs_not_empty('exams')
         self.assertEquals('critical: Error for testing',
                           page.get_data_source_logs('exams'))
 
         self._force_response_exception('exams')
-        page = self.load_dashboard(self._name).click_analytics('Exams')
+        page = self.load_dashboard(self._name).click_analytics(
+            'Exams').wait_until_logs_not_empty('exams')
+
         self.assertRegexpMatches(
             page.get_data_source_logs('exams'),
             'critical: Fetching results data: ValueError: Error for testing')

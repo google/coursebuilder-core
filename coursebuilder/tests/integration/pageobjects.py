@@ -760,6 +760,14 @@ class AddCourseEditorPage(EditorPageObject):
 class AnalyticsPage(PageObject):
     """Page object for analytics sub-tab."""
 
+    def wait_until_logs_not_empty(self, data_source):
+        def data_source_logs_not_empty(unused_driver):
+            return self.get_data_source_logs(data_source)
+
+        wait.WebDriverWait(self._tester.driver, 15).until(
+            data_source_logs_not_empty)
+        return self
+
     def get_data_page_number(self, data_source):
         # When there is a chart on the page, the chart-drawing animation
         # takes ~1 sec to complete, which blocks the JS to unpack and paint
