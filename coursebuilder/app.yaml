@@ -12,7 +12,7 @@ env_variables:
     modules.admin.admin
     modules.announcements.announcements
     modules.assessment_tags.questions
-    modules.certificate.certificate=disabled
+    modules.certificate.certificate
     modules.course_explorer.course_explorer
     modules.courses.courses
     modules.data_source_providers.data_source_providers

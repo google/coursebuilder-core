@@ -20,7 +20,6 @@ __author__ = 'John Orr (jorr@google.com)'
 import actions
 from controllers import sites
 from models import courses
-from models import custom_modules
 from models import models
 from models import student_work
 from modules.certificate import certificate
@@ -39,12 +38,6 @@ class CertificateHandlerTestCase(actions.TestBase):
     def setUp(self):
         super(CertificateHandlerTestCase, self).setUp()
 
-        # Enable the certificate module, which is disabled by default
-        self.assertFalse(certificate.custom_module.enabled)
-        certificate.custom_module.enable()
-        _, namespaced_routes = custom_modules.Registry.get_all_routes()
-        sites.ApplicationRequestHandler.bind(namespaced_routes)
-
         # Mock the module's student_is_qualified method
         self.is_qualified = True
         self.original_student_is_qualified = certificate.student_is_qualified
@@ -53,9 +46,6 @@ class CertificateHandlerTestCase(actions.TestBase):
 
     def tearDown(self):
         certificate.student_is_qualified = self.original_student_is_qualified
-        certificate.custom_module.disable()
-        _, namespaced_routes = custom_modules.Registry.get_all_routes()
-        sites.ApplicationRequestHandler.bind(namespaced_routes)
         super(CertificateHandlerTestCase, self).tearDown()
 
     def test_student_must_be_enrolled(self):
@@ -131,12 +121,6 @@ class CertificateCriteriaTestCase(actions.TestBase):
     def setUp(self):
         super(CertificateCriteriaTestCase, self).setUp()
 
-        # Enable the certificate module, which is disabled by default
-        self.assertFalse(certificate.custom_module.enabled)
-        certificate.custom_module.enable()
-        _, namespaced_routes = custom_modules.Registry.get_all_routes()
-        sites.ApplicationRequestHandler.bind(namespaced_routes)
-
         self.base = '/' + self.COURSE_NAME
         context = actions.simple_add_course(
             self.COURSE_NAME, 'admin@foo.com', 'Certificate Criteria')
@@ -166,11 +150,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
     def tearDown(self):
         # Clean up app_context.
         sites.ApplicationContext.get_environ = self.get_environ_old
-
         namespace_manager.set_namespace(self.old_namespace)
-        certificate.custom_module.disable()
-        _, namespaced_routes = custom_modules.Registry.get_all_routes()
-        sites.ApplicationRequestHandler.bind(namespaced_routes)
         super(CertificateCriteriaTestCase, self).tearDown()
 
     def _assert_redirect_to_course_landing_page(self, response):

@@ -15,17 +15,18 @@
 """Classes and methods to create and manage Certificates.
 
 Course creators will need to customize both the appearance of the certificate,
-and also the logic to used determine when it has been earned by a student. To
-customize the qualification logic, edit the method
-    ShowCertificateHandler.student_is_qualified
-below.
+and also the logic used to determine when it has been earned by a student.
+The qualification logic can be customized by:
+  * using the designated user interface in course settings
+  * editing the course.yaml file
+  * adding Python code to custom_criteria.py
 
 The appearance of the certificate can be customized either system-wide, or else
 on a course-by-course basis. To customize the certificate appearance
 system-wide, edit the file templates/certificate.html in this module.
 
 To make a course-specific certificate, upload a file named "certificate.html"
-into the View Teplates section of the Dashboard > Assets tab. Images and
+into the View Templates section of the Dashboard > Assets tab. Images and
 resources used by this file should also be uploaded in Dashboard > Assets.
 """
 
@@ -42,6 +43,7 @@ from common import safe_dom
 from common import schema_fields
 from common import tags
 from controllers import utils
+from models import courses
 from models import custom_modules
 from modules.certificate import custom_criteria
 from modules.dashboard import course_settings
@@ -66,7 +68,11 @@ class ShowCertificateHandler(utils.BaseHandler):
         templates_dir = os.path.join(
             appengine_config.BUNDLE_ROOT, 'modules', 'certificate', 'templates')
         template = self.get_template('certificate.html', [templates_dir])
-        self.response.out.write(template.render({'student': student}))
+        self.response.out.write(template.render({
+            'student': student,
+            'course': courses.Course.get_environ(
+                self.app_context)['course']['title']
+        }))
 
 
 def _get_score_by_id(score_list, assessment_id):
