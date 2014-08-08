@@ -441,74 +441,66 @@ class InfrastructureTest(actions.TestBase):
         course.save()
 
         # Make the course available.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({'course': {'now_available': True}}):
+            # Test public/private assessment.
+            assessment_url = (
+                '/test/' + course.get_assessment_filename(assessment.unit_id))
+            assert not assessment.now_available
+            response = self.get(assessment_url, expect_errors=True)
+            assert_equals(response.status_int, 403)
+            assessment = course.find_unit_by_id(assessment.unit_id)
+            assessment.now_available = True
+            course.update_unit(assessment)
+            course.save()
+            response = self.get(assessment_url)
+            assert_equals(response.status_int, 200)
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['now_available'] = True
-            return environ
+            # Check delayed assessment deletion.
+            course.delete_unit(assessment)
+            response = self.get(assessment_url)  # note: file is still available
+            assert_equals(response.status_int, 200)
+            course.save()
+            response = self.get(assessment_url, expect_errors=True)
+            assert_equals(response.status_int, 404)
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            # Test public/private activity.
+            lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
+            lesson_a.now_available = False
+            lesson_a.has_activity = True
+            course.update_lesson(lesson_a)
+            errors = []
+            course.set_activity_content(lesson_a, u'var activity = []', errors)
+            assert not errors
+            activity_url = (
+                '/test/' + course.get_activity_filename(
+                    None, lesson_a.lesson_id))
+            response = self.get(activity_url, expect_errors=True)
+            assert_equals(response.status_int, 403)
+            lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
+            lesson_a.now_available = True
+            course.update_lesson(lesson_a)
+            course.save()
+            response = self.get(activity_url)
+            assert_equals(response.status_int, 200)
 
-        # Test public/private assessment.
-        assessment_url = (
-            '/test/' + course.get_assessment_filename(assessment.unit_id))
-        assert not assessment.now_available
-        response = self.get(assessment_url, expect_errors=True)
-        assert_equals(response.status_int, 403)
-        assessment = course.find_unit_by_id(assessment.unit_id)
-        assessment.now_available = True
-        course.update_unit(assessment)
-        course.save()
-        response = self.get(assessment_url)
-        assert_equals(response.status_int, 200)
+            # Check delayed activity.
+            course.delete_lesson(lesson_a)
+            response = self.get(activity_url)  # note: file is still available
+            assert_equals(response.status_int, 200)
+            course.save()
+            response = self.get(activity_url, expect_errors=True)
+            assert_equals(response.status_int, 404)
 
-        # Check delayed assessment deletion.
-        course.delete_unit(assessment)
-        response = self.get(assessment_url)  # note: file is still available
-        assert_equals(response.status_int, 200)
-        course.save()
-        response = self.get(assessment_url, expect_errors=True)
-        assert_equals(response.status_int, 404)
-
-        # Test public/private activity.
-        lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
-        lesson_a.now_available = False
-        lesson_a.has_activity = True
-        course.update_lesson(lesson_a)
-        errors = []
-        course.set_activity_content(lesson_a, u'var activity = []', errors)
-        assert not errors
-        activity_url = (
-            '/test/' + course.get_activity_filename(None, lesson_a.lesson_id))
-        response = self.get(activity_url, expect_errors=True)
-        assert_equals(response.status_int, 403)
-        lesson_a = course.find_lesson_by_id(None, lesson_a.lesson_id)
-        lesson_a.now_available = True
-        course.update_lesson(lesson_a)
-        course.save()
-        response = self.get(activity_url)
-        assert_equals(response.status_int, 200)
-
-        # Check delayed activity.
-        course.delete_lesson(lesson_a)
-        response = self.get(activity_url)  # note: file is still available
-        assert_equals(response.status_int, 200)
-        course.save()
-        response = self.get(activity_url, expect_errors=True)
-        assert_equals(response.status_int, 404)
-
-        # Test deletes removes all child objects.
-        course.delete_unit(link)
-        course.delete_unit(unit)
-        assert not course.delete_unit(assessment)
-        course.save()
-        assert not course.get_units()
-        assert not course.app_context.fs.list(os.path.join(
-            course.app_context.get_home(), 'assets/js/'))
+            # Test deletes removes all child objects.
+            course.delete_unit(link)
+            course.delete_unit(unit)
+            assert not course.delete_unit(assessment)
+            course.save()
+            assert not course.get_units()
+            assert not course.app_context.fs.list(os.path.join(
+                course.app_context.get_home(), 'assets/js/'))
 
         # Clean up.
-        sites.ApplicationContext.get_environ = get_environ_old
         sites.reset_courses()
 
     # pylint: disable-msg=too-many-statements
@@ -569,118 +561,115 @@ class InfrastructureTest(actions.TestBase):
         assert [lesson_3_1] == course.get_lessons(unit_3.unit_id)
 
         # Make the course available.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({
+                'course': {
+                    'now_available': True,
+                    'browsable': False}}):
+            private_tag = 'id="lesson-title-private"'
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['now_available'] = True
-            environ['course']['browsable'] = False
-            return environ
+            # Confirm private units are suppressed for user out of session
+            response = self.get('preview')
+            assert_equals(response.status_int, 200)
+            assert_does_not_contain('Unit 1 - New Unit', response.body)
+            assert_contains('Unit 2 - New Unit', response.body)
+            assert_contains('Unit 3 - New Unit', response.body)
+            assert_contains('Unit 4 - New Unit', response.body)
+            assert_contains('Unit 5 - New Unit', response.body)
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            # Simulate a student traversing the course.
+            email = 'test_unit_lesson_not_available@example.com'
+            name = 'Test Unit Lesson Not Available'
 
-        private_tag = 'id="lesson-title-private"'
+            actions.login(email, is_admin=False)
+            actions.register(self, name)
 
-        # Confirm private units are suppressed for user out of session
-        response = self.get('preview')
-        assert_equals(response.status_int, 200)
-        assert_does_not_contain('Unit 1 - New Unit', response.body)
-        assert_contains('Unit 2 - New Unit', response.body)
-        assert_contains('Unit 3 - New Unit', response.body)
-        assert_contains('Unit 4 - New Unit', response.body)
-        assert_contains('Unit 5 - New Unit', response.body)
+            # Accessing a unit that is not available redirects to the main page.
+            response = self.get('unit?unit=%s' % unit_1.unit_id)
+            assert_equals(response.status_int, 302)
 
-        # Simulate a student traversing the course.
-        email = 'test_unit_lesson_not_available@example.com'
-        name = 'Test Unit Lesson Not Available'
+            response = self.get('unit?unit=%s' % unit_2.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 2.1', response.body)
+            assert_contains('This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        actions.login(email, is_admin=False)
-        actions.register(self, name)
+            response = self.get('unit?unit=%s&lesson=%s' % (
+                unit_2.unit_id, lesson_2_2.lesson_id))
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 2.2', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        # Accessing a unit that is not available redirects to the main page.
-        response = self.get('unit?unit=%s' % unit_1.unit_id)
-        assert_equals(response.status_int, 302)
+            response = self.get('unit?unit=%s' % unit_3.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 3.1', response.body)
+            assert_contains('This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('unit?unit=%s' % unit_2.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 2.1', response.body)
-        assert_contains('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            response = self.get('unit?unit=%s' % unit_4.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 4.1', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('unit?unit=%s&lesson=%s' % (
-            unit_2.unit_id, lesson_2_2.lesson_id))
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 2.2', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            response = self.get('unit?unit=%s' % unit_5.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_does_not_contain('Lesson', response.body)
+            assert_contains('This unit has no content.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('unit?unit=%s' % unit_3.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 3.1', response.body)
-        assert_contains('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            actions.logout()
 
-        response = self.get('unit?unit=%s' % unit_4.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 4.1', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            # Simulate an admin traversing the course.
+            email = 'test_unit_lesson_not_available@example.com_admin'
+            name = 'Test Unit Lesson Not Available Admin'
 
-        response = self.get('unit?unit=%s' % unit_5.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_does_not_contain('Lesson', response.body)
-        assert_contains('This unit has no content.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            actions.login(email, is_admin=True)
+            actions.register(self, name)
 
-        actions.logout()
+            # The course admin can access a unit that is not available.
+            response = self.get('unit?unit=%s' % unit_1.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 1.1', response.body)
 
-        # Simulate an admin traversing the course.
-        email = 'test_unit_lesson_not_available@example.com_admin'
-        name = 'Test Unit Lesson Not Available Admin'
+            response = self.get('unit?unit=%s' % unit_2.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 2.1', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_contains(private_tag, response.body)
 
-        actions.login(email, is_admin=True)
-        actions.register(self, name)
+            response = self.get('unit?unit=%s&lesson=%s' % (
+                unit_2.unit_id, lesson_2_2.lesson_id))
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 2.2', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        # The course admin can access a unit that is not available.
-        response = self.get('unit?unit=%s' % unit_1.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 1.1', response.body)
+            response = self.get('unit?unit=%s' % unit_3.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 3.1', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_contains(private_tag, response.body)
 
-        response = self.get('unit?unit=%s' % unit_2.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 2.1', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_contains(private_tag, response.body)
+            response = self.get('unit?unit=%s' % unit_4.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_contains('Lesson 4.1', response.body)
+            assert_does_not_contain(
+                'This lesson is not available.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('unit?unit=%s&lesson=%s' % (
-            unit_2.unit_id, lesson_2_2.lesson_id))
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 2.2', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
+            response = self.get('unit?unit=%s' % unit_5.unit_id)
+            assert_equals(response.status_int, 200)
+            assert_does_not_contain('Lesson', response.body)
+            assert_contains('This unit has no content.', response.body)
+            assert_does_not_contain(private_tag, response.body)
 
-        response = self.get('unit?unit=%s' % unit_3.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 3.1', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_contains(private_tag, response.body)
-
-        response = self.get('unit?unit=%s' % unit_4.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_contains('Lesson 4.1', response.body)
-        assert_does_not_contain('This lesson is not available.', response.body)
-        assert_does_not_contain(private_tag, response.body)
-
-        response = self.get('unit?unit=%s' % unit_5.unit_id)
-        assert_equals(response.status_int, 200)
-        assert_does_not_contain('Lesson', response.body)
-        assert_contains('This unit has no content.', response.body)
-        assert_does_not_contain(private_tag, response.body)
-
-        actions.logout()
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            actions.logout()
 
     # pylint: disable-msg=too-many-statements
     def test_custom_assessments(self):
@@ -712,124 +701,117 @@ class InfrastructureTest(actions.TestBase):
         assert 2 == len(course.get_units())
 
         # Make the course available.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({'course': {'now_available': True}}):
+            first = {'score': '1.00', 'assessment_type': assessment_1.unit_id}
+            second = {'score': '3.00', 'assessment_type': assessment_2.unit_id}
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['now_available'] = True
-            return environ
+            # Update assessment 1.
+            assessment_1_content = open(os.path.join(
+                appengine_config.BUNDLE_ROOT,
+                'assets/js/assessment-Pre.js'), 'rb').readlines()
+            assessment_1_content = u''.join(assessment_1_content)
+            errors = []
+            course.set_assessment_content(
+                assessment_1, assessment_1_content, errors)
+            course.save()
+            assert not errors
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            # Update assessment 2.
+            assessment_2_content = open(os.path.join(
+                appengine_config.BUNDLE_ROOT,
+                'assets/js/assessment-Mid.js'), 'rb').readlines()
+            assessment_2_content = u''.join(assessment_2_content)
+            errors = []
+            course.set_assessment_content(
+                assessment_2, assessment_2_content, errors)
+            course.save()
+            assert not errors
 
-        first = {'score': '1.00', 'assessment_type': assessment_1.unit_id}
-        second = {'score': '3.00', 'assessment_type': assessment_2.unit_id}
+            # Register.
+            actions.login(email)
+            actions.register(self, name)
 
-        # Update assessment 1.
-        assessment_1_content = open(os.path.join(
-            appengine_config.BUNDLE_ROOT,
-            'assets/js/assessment-Pre.js'), 'rb').readlines()
-        assessment_1_content = u''.join(assessment_1_content)
-        errors = []
-        course.set_assessment_content(
-            assessment_1, assessment_1_content, errors)
-        course.save()
-        assert not errors
+            # Submit assessment 1.
+            actions.submit_assessment(self, assessment_1.unit_id, first)
+            student = (
+                models.StudentProfileDAO.get_enrolled_student_by_email_for(
+                    email, app_context))
+            student_scores = course.get_all_scores(student)
 
-        # Update assessment 2.
-        assessment_2_content = open(os.path.join(
-            appengine_config.BUNDLE_ROOT,
-            'assets/js/assessment-Mid.js'), 'rb').readlines()
-        assessment_2_content = u''.join(assessment_2_content)
-        errors = []
-        course.set_assessment_content(
-            assessment_2, assessment_2_content, errors)
-        course.save()
-        assert not errors
+            assert len(student_scores) == 2
 
-        # Register.
-        actions.login(email)
-        actions.register(self, name)
+            assert student_scores[0]['id'] == str(assessment_1.unit_id)
+            assert student_scores[0]['score'] == 1
+            assert student_scores[0]['title'] == 'first'
+            assert student_scores[0]['weight'] == 0
 
-        # Submit assessment 1.
-        actions.submit_assessment(self, assessment_1.unit_id, first)
-        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
-            email, app_context)
-        student_scores = course.get_all_scores(student)
+            assert student_scores[1]['id'] == str(assessment_2.unit_id)
+            assert student_scores[1]['score'] == 0
+            assert student_scores[1]['title'] == 'second'
+            assert student_scores[1]['weight'] == 0
 
-        assert len(student_scores) == 2
+            # The overall score is None if there are no weights assigned to any
+            # of the assessments.
+            overall_score = course.get_overall_score(student)
+            assert overall_score is None
 
-        assert student_scores[0]['id'] == str(assessment_1.unit_id)
-        assert student_scores[0]['score'] == 1
-        assert student_scores[0]['title'] == 'first'
-        assert student_scores[0]['weight'] == 0
+            # View the student profile page.
+            response = self.get('student/home')
+            assert_does_not_contain('Overall course score', response.body)
 
-        assert student_scores[1]['id'] == str(assessment_2.unit_id)
-        assert student_scores[1]['score'] == 0
-        assert student_scores[1]['title'] == 'second'
-        assert student_scores[1]['weight'] == 0
+            # Add a weight to the first assessment.
+            assessment_1.weight = 10
+            overall_score = course.get_overall_score(student)
+            assert overall_score == 1
 
-        # The overall score is None if there are no weights assigned to any of
-        # the assessments.
-        overall_score = course.get_overall_score(student)
-        assert overall_score is None
+            # Submit assessment 2.
+            actions.submit_assessment(self, assessment_2.unit_id, second)
+            # We need to reload the student instance, because its properties
+            # have changed.
+            student = (
+                models.StudentProfileDAO.get_enrolled_student_by_email_for(
+                    email, app_context))
+            student_scores = course.get_all_scores(student)
 
-        # View the student profile page.
-        response = self.get('student/home')
-        assert_does_not_contain('Overall course score', response.body)
+            assert len(student_scores) == 2
+            assert student_scores[1]['score'] == 3
+            overall_score = course.get_overall_score(student)
+            assert overall_score == 1
 
-        # Add a weight to the first assessment.
-        assessment_1.weight = 10
-        overall_score = course.get_overall_score(student)
-        assert overall_score == 1
+            # Change the weight of assessment 2.
+            assessment_2.weight = 30
+            overall_score = course.get_overall_score(student)
+            assert overall_score == int((1 * 10 + 3 * 30) / 40)
 
-        # Submit assessment 2.
-        actions.submit_assessment(self, assessment_2.unit_id, second)
-        # We need to reload the student instance, because its properties have
-        # changed.
-        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
-            email, app_context)
-        student_scores = course.get_all_scores(student)
+            # Save all changes.
+            course.save()
 
-        assert len(student_scores) == 2
-        assert student_scores[1]['score'] == 3
-        overall_score = course.get_overall_score(student)
-        assert overall_score == 1
+            # View the student profile page.
+            response = self.get('student/home')
+            assert_contains('assessment-score-first">1</span>', response.body)
+            assert_contains('assessment-score-second">3</span>', response.body)
+            assert_contains('Overall course score', response.body)
+            assert_contains('assessment-score-overall">2</span>', response.body)
 
-        # Change the weight of assessment 2.
-        assessment_2.weight = 30
-        overall_score = course.get_overall_score(student)
-        assert overall_score == int((1 * 10 + 3 * 30) / 40)
+            # Submitting a lower score for any assessment does not change any of
+            # the scores, since the system records the maximum score that has
+            # ever been achieved on any assessment.
+            first_retry = {
+                'score': '0', 'assessment_type': assessment_1.unit_id}
+            actions.submit_assessment(self, assessment_1.unit_id, first_retry)
+            student = (
+                models.StudentProfileDAO.get_enrolled_student_by_email_for(
+                    email, app_context))
+            student_scores = course.get_all_scores(student)
 
-        # Save all changes.
-        course.save()
+            assert len(student_scores) == 2
+            assert student_scores[0]['id'] == str(assessment_1.unit_id)
+            assert student_scores[0]['score'] == 1
 
-        # View the student profile page.
-        response = self.get('student/home')
-        assert_contains('assessment-score-first">1</span>', response.body)
-        assert_contains('assessment-score-second">3</span>', response.body)
-        assert_contains('Overall course score', response.body)
-        assert_contains('assessment-score-overall">2</span>', response.body)
+            overall_score = course.get_overall_score(student)
+            assert overall_score == int((1 * 10 + 3 * 30) / 40)
 
-        # Submitting a lower score for any assessment does not change any of
-        # the scores, since the system records the maximum score that has ever
-        # been achieved on any assessment.
-        first_retry = {'score': '0', 'assessment_type': assessment_1.unit_id}
-        actions.submit_assessment(self, assessment_1.unit_id, first_retry)
-        student = models.StudentProfileDAO.get_enrolled_student_by_email_for(
-            email, app_context)
-        student_scores = course.get_all_scores(student)
-
-        assert len(student_scores) == 2
-        assert student_scores[0]['id'] == str(assessment_1.unit_id)
-        assert student_scores[0]['score'] == 1
-
-        overall_score = course.get_overall_score(student)
-        assert overall_score == int((1 * 10 + 3 * 30) / 40)
-
-        actions.logout()
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            actions.logout()
 
     def test_datastore_backed_file_system(self):
         """Tests datastore-backed file system operations."""
@@ -1629,30 +1611,20 @@ class StudentAspectTest(actions.TestBase):
         assert_equals(response.status_int, 200)
 
         # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment(
+                {'course': {'now_available': False}}):
+            # Check preview and static resources are not available to Student.
+            response = self.get('course', expect_errors=True)
+            assert_equals(response.status_int, 404)
+            response = self.get('assets/js/activity-1.3.js', expect_errors=True)
+            assert_equals(response.status_int, 404)
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['now_available'] = False
-            return environ
-
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # Check preview and static resources are not available to Student.
-        response = self.get('course', expect_errors=True)
-        assert_equals(response.status_int, 404)
-        response = self.get('assets/js/activity-1.3.js', expect_errors=True)
-        assert_equals(response.status_int, 404)
-
-        # Check preview and static resources are still available to author.
-        actions.login(email, is_admin=True)
-        response = self.get('course')
-        assert_equals(response.status_int, 200)
-        response = self.get('assets/js/activity-1.3.js')
-        assert_equals(response.status_int, 200)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # Check preview and static resources are still available to author.
+            actions.login(email, is_admin=True)
+            response = self.get('course')
+            assert_equals(response.status_int, 200)
+            response = self.get('assets/js/activity-1.3.js')
+            assert_equals(response.status_int, 200)
 
     def test_registration_closed(self):
         """Test student registration when course is full."""
@@ -1660,34 +1632,25 @@ class StudentAspectTest(actions.TestBase):
         email = 'test_registration_closed@example.com'
         name = 'Test Registration Closed'
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment(
+                {'reg_form': {'can_register': False}}):
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['reg_form']['can_register'] = False
-            return environ
+            # Try to login and register.
+            actions.login(email)
+            try:
+                actions.register(self, name)
+                raise actions.ShouldHaveFailedByNow(
+                    'Expected to fail: new registrations should not be allowed '
+                    'when registration is closed.')
+            except actions.ShouldHaveFailedByNow as e:
+                raise e
+            except:
+                pass
 
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # Try to login and register.
-        actions.login(email)
-        try:
-            actions.register(self, name)
-            raise actions.ShouldHaveFailedByNow(
-                'Expected to fail: new registrations should not be allowed '
-                'when registration is closed.')
-        except actions.ShouldHaveFailedByNow as e:
-            raise e
-        except:
-            pass
-
-        # Verify registration link not present on /course
-        response = self.get('course')
-        self.assertNotIn('<a href="register">Registration</a>', response.body)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # Verify registration link not present on /course
+            response = self.get('course')
+            self.assertNotIn(
+                '<a href="register">Registration</a>', response.body)
 
     def test_registration_with_additional_fields(self):
         """Registers a new student with customized registration form."""
@@ -1697,45 +1660,40 @@ class StudentAspectTest(actions.TestBase):
         zipcode = '94043'
         score = '99'
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        environ = {
+            'course': {'browsable': False},
+            'reg_form': {
+                'additional_registration_fields': (
+                    '\'<!-- reg_form.additional_registration_fields -->'
+                    '<li>'
+                    '<label class="form-label" for="form02"> '
+                    'What is your zipcode?'
+                    '</label><input name="form02" type="text"></li>'
+                    '<li>'
+                    '<label class="form-label" for="form03"> '
+                    'What is your score?'
+                    '</label> <input name="form03" type="text"></li>\'')
+            }
+        }
+        with actions.OverriddenEnvironment(environ):
+            # Login and register.
+            actions.login(email)
+            actions.register_with_additional_fields(self, name, zipcode, score)
 
-        def get_environ_new(self):
-            """Insert additional fields into course.yaml."""
-            environ = get_environ_old(self)
-            environ['course']['browsable'] = False
-            environ['reg_form']['additional_registration_fields'] = (
-                '\'<!-- reg_form.additional_registration_fields -->'
-                '<li>'
-                '<label class="form-label" for="form02"> What is your zipcode?'
-                '</label><input name="form02" type="text"></li>'
-                '<li>'
-                '<label class="form-label" for="form03"> What is your score?'
-                '</label> <input name="form03" type="text"></li>\''
-                )
-            return environ
+            # Verify that registration results in capturing additional
+            # registration questions.
+            old_namespace = namespace_manager.get_namespace()
+            namespace_manager.set_namespace(self.namespace)
+            student = models.Student.get_enrolled_student_by_email(email)
 
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # Login and register.
-        actions.login(email)
-        actions.register_with_additional_fields(self, name, zipcode, score)
-
-        # Verify that registration results in capturing additional registration
-        # questions.
-        old_namespace = namespace_manager.get_namespace()
-        namespace_manager.set_namespace(self.namespace)
-        student = models.Student.get_enrolled_student_by_email(email)
-
-        # Check that two registration additional fields are populated
-        # with correct values.
-        if student.additional_fields:
-            json_dict = transforms.loads(student.additional_fields)
-            assert zipcode == json_dict[2][1]
-            assert score == json_dict[3][1]
+            # Check that two registration additional fields are populated
+            # with correct values.
+            if student.additional_fields:
+                json_dict = transforms.loads(student.additional_fields)
+                assert zipcode == json_dict[2][1]
+                assert score == json_dict[3][1]
 
         # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
         namespace_manager.set_namespace(old_namespace)
 
     def test_permissions(self):
@@ -1743,54 +1701,31 @@ class StudentAspectTest(actions.TestBase):
         email = 'test_permissions@example.com'
         name = 'Test Permissions'
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({'course': {'browsable': False}}):
+            actions.login(email)
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['browsable'] = False
-            return environ
+            actions.register(self, name)
+            actions.Permissions.assert_enrolled(self)
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            actions.unregister(self)
+            actions.Permissions.assert_unenrolled(self)
 
-        actions.login(email)
-
-        actions.register(self, name)
-        actions.Permissions.assert_enrolled(self)
-
-        actions.unregister(self)
-        actions.Permissions.assert_unenrolled(self)
-
-        actions.register(self, name)
-        actions.Permissions.assert_enrolled(self)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            actions.register(self, name)
+            actions.Permissions.assert_enrolled(self)
 
     def test_login_and_logout(self):
         """Test if login and logout behave as expected."""
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['browsable'] = False
-            return environ
+        with actions.OverriddenEnvironment({'course': {'browsable': False}}):
+            email = 'test_login_logout@example.com'
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            actions.Permissions.assert_logged_out(self)
+            actions.login(email)
 
-        email = 'test_login_logout@example.com'
+            actions.Permissions.assert_unenrolled(self)
 
-        actions.Permissions.assert_logged_out(self)
-        actions.login(email)
-
-        actions.Permissions.assert_unenrolled(self)
-
-        actions.logout()
-        actions.Permissions.assert_logged_out(self)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            actions.logout()
+            actions.Permissions.assert_logged_out(self)
 
     def test_locale_settings(self):
         extra_environ = {
@@ -1911,23 +1846,13 @@ class StudentAspectTest(actions.TestBase):
         for item in text_to_check:
             assert_contains(item, response.body)
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment(
+                {'unit': {'show_unit_links_in_leftnav': False}}):
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['unit']['show_unit_links_in_leftnav'] = False
-            return environ
-
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # Check that now we don't have links to other units and lessons.
-        response = self.get('unit?unit=2')
-        for item in text_to_check:
-            assert_does_not_contain(item, response.body)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # Check that now we don't have links to other units and lessons.
+            response = self.get('unit?unit=2')
+            for item in text_to_check:
+                assert_does_not_contain(item, response.body)
 
     def test_show_hide_lesson_navigation(self):
         """Test display of lesson navigation buttons."""
@@ -1942,23 +1867,15 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('<div class="gcb-prev-button">', response.body)
         assert_contains('<div class="gcb-next-button">', response.body)
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment(
+                {'unit': {'hide_lesson_navigation_buttons': True}}):
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['unit']['hide_lesson_navigation_buttons'] = True
-            return environ
-
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # The lesson navigation buttons should now be hidden.
-        response = self.get('unit?unit=2&lesson=3')
-        assert_does_not_contain('<div class="gcb-prev-button">', response.body)
-        assert_does_not_contain('<div class="gcb-next-button">', response.body)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # The lesson navigation buttons should now be hidden.
+            response = self.get('unit?unit=2&lesson=3')
+            assert_does_not_contain(
+                '<div class="gcb-prev-button">', response.body)
+            assert_does_not_contain(
+                '<div class="gcb-next-button">', response.body)
 
     def test_attempt_activity_event(self):
         """Test activity attempt generates event."""
@@ -2091,24 +2008,12 @@ class StudentAspectTest(actions.TestBase):
 
         actions.Permissions.assert_can_browse(self)
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({'course': {'browsable': False}}):
+            actions.Permissions.assert_logged_out(self)
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['browsable'] = False
-            return environ
-
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        actions.Permissions.assert_logged_out(self)
-
-        # Check course page redirects.
-        response = self.get('course', expect_errors=True)
-        assert_equals(response.status_int, 302)
-
-        # Clean up app_context.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # Check course page redirects.
+            response = self.get('course', expect_errors=True)
+            assert_equals(response.status_int, 302)
 
 
 class StudentUnifiedProfileTest(StudentAspectTest):
@@ -2721,68 +2626,56 @@ class MultipleCoursesTestBase(actions.TestBase):
         self, course, first_time=True, is_admin=False, logout=True):
         """Visit a course as a Student would."""
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({'course': {'browsable': False}}):
+            # Check normal user has no access.
+            actions.login(course.email, is_admin=is_admin)
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['browsable'] = False
-            return environ
-
-        sites.ApplicationContext.get_environ = get_environ_new
-
-        # Check normal user has no access.
-        actions.login(course.email, is_admin=is_admin)
-
-        # Test schedule.
-        if first_time:
-            response = self.testapp.get('/courses/%s/preview' % course.path)
-        else:
-            response = self.testapp.get('/courses/%s/course' % course.path)
-        assert_contains(course.title, response.body)
-        assert_contains(course.unit_title, response.body)
-        assert_contains(course.head, response.body)
-
-        # Tests static resource.
-        response = self.testapp.get(
-            '/courses/%s/assets/css/main.css' % course.path)
-        assert_contains(course.css, response.body)
-
-        if first_time:
-            # Test registration.
-            response = self.get('/courses/%s/register' % course.path)
+            # Test schedule.
+            if first_time:
+                response = self.testapp.get('/courses/%s/preview' % course.path)
+            else:
+                response = self.testapp.get('/courses/%s/course' % course.path)
             assert_contains(course.title, response.body)
+            assert_contains(course.unit_title, response.body)
             assert_contains(course.head, response.body)
 
-            register_form = actions.get_form_by_action(response, 'register')
-            register_form.set('form01', course.name)
-            register_form.action = '/courses/%s/register' % course.path
-            response = self.submit(register_form)
+            # Tests static resource.
+            response = self.testapp.get(
+                '/courses/%s/assets/css/main.css' % course.path)
+            assert_contains(course.css, response.body)
 
-            assert_equals(response.status_int, 302)
-            assert_contains(
-                'course#registration_confirmation', response.headers[
-                    'location'])
+            if first_time:
+                # Test registration.
+                response = self.get('/courses/%s/register' % course.path)
+                assert_contains(course.title, response.body)
+                assert_contains(course.head, response.body)
 
-        # Check lesson page.
-        response = self.testapp.get(
-            '/courses/%s/unit?unit=1&lesson=5' % course.path)
-        assert_contains(course.title, response.body)
-        assert_contains(course.lesson_title, response.body)
-        assert_contains(course.head, response.body)
+                register_form = actions.get_form_by_action(response, 'register')
+                register_form.set('form01', course.name)
+                register_form.action = '/courses/%s/register' % course.path
+                response = self.submit(register_form)
 
-        # Check activity page.
-        response = self.testapp.get(
-            '/courses/%s/activity?unit=1&lesson=5' % course.path)
-        assert_contains(course.title, response.body)
-        assert_contains(course.lesson_title, response.body)
-        assert_contains(course.head, response.body)
+                assert_equals(response.status_int, 302)
+                assert_contains(
+                    'course#registration_confirmation', response.headers[
+                        'location'])
 
-        if logout:
-            actions.logout()
+            # Check lesson page.
+            response = self.testapp.get(
+                '/courses/%s/unit?unit=1&lesson=5' % course.path)
+            assert_contains(course.title, response.body)
+            assert_contains(course.lesson_title, response.body)
+            assert_contains(course.head, response.body)
 
-        # Clean up.
-        sites.ApplicationContext.get_environ = get_environ_old
+            # Check activity page.
+            response = self.testapp.get(
+                '/courses/%s/activity?unit=1&lesson=5' % course.path)
+            assert_contains(course.title, response.body)
+            assert_contains(course.lesson_title, response.body)
+            assert_contains(course.head, response.body)
+
+            if logout:
+                actions.logout()
 
 
 class MultipleCoursesTest(MultipleCoursesTestBase):
@@ -3242,66 +3135,60 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         config.Registry.test_overrides[
             models.CAN_USE_MEMCACHE.name] = True
 
-        # Override course.yaml settings by patching app_context.
-        get_environ_old = sites.ApplicationContext.get_environ
+        with actions.OverriddenEnvironment({
+                'course': {
+                    'now_available': True,
+                    'browsable': False}}):
 
-        def get_environ_new(self):
-            environ = get_environ_old(self)
-            environ['course']['now_available'] = True
-            environ['course']['browsable'] = False
-            return environ
+            def custom_inc(unused_increment=1, context=None):
+                """A custom inc() function for cache miss counter."""
+                self.keys.append(context)
+                self.count += 1
 
-        sites.ApplicationContext.get_environ = get_environ_new
+            def assert_cached(url, assert_text, cache_miss_allowed=0):
+                """Checks that specific URL supports caching."""
+                memcache.flush_all()
 
-        def custom_inc(unused_increment=1, context=None):
-            """A custom inc() function for cache miss counter."""
-            self.keys.append(context)
-            self.count += 1
+                self.keys = []
+                self.count = 0
 
-        def assert_cached(url, assert_text, cache_miss_allowed=0):
-            """Checks that specific URL supports caching."""
-            memcache.flush_all()
+                # Expect cache misses first time we load page.
+                cache_miss_before = self.count
+                response = self.get(url)
+                assert_contains(assert_text, response.body)
+                assert cache_miss_before != self.count
 
-            self.keys = []
-            self.count = 0
+                # Expect no cache misses first time we load page.
+                self.keys = []
+                cache_miss_before = self.count
+                response = self.get(url)
+                assert_contains(assert_text, response.body)
+                cache_miss_actual = self.count - cache_miss_before
+                if cache_miss_actual != cache_miss_allowed:
+                    raise Exception(
+                        'Expected %s cache misses, got %s. Keys are:\n%s' % (
+                            cache_miss_allowed, cache_miss_actual,
+                            '\n'.join(self.keys)))
 
-            # Expect cache misses first time we load page.
-            cache_miss_before = self.count
-            response = self.get(url)
-            assert_contains(assert_text, response.body)
-            assert cache_miss_before != self.count
+            old_inc = models.CACHE_MISS.inc
+            models.CACHE_MISS.inc = custom_inc
 
-            # Expect no cache misses first time we load page.
-            self.keys = []
-            cache_miss_before = self.count
-            response = self.get(url)
-            assert_contains(assert_text, response.body)
-            cache_miss_actual = self.count - cache_miss_before
-            if cache_miss_actual != cache_miss_allowed:
-                raise Exception(
-                    'Expected %s cache misses, got %s. Keys are:\n%s' % (
-                        cache_miss_allowed, cache_miss_actual,
-                        '\n'.join(self.keys)))
+            # Walk the site.
+            email = 'test_units_lessons@google.com'
+            name = 'Test Units Lessons'
 
-        old_inc = models.CACHE_MISS.inc
-        models.CACHE_MISS.inc = custom_inc
-
-        # Walk the site.
-        email = 'test_units_lessons@google.com'
-        name = 'Test Units Lessons'
-
-        assert_cached('preview', 'Putting it all together')
-        actions.login(email, is_admin=True)
-        assert_cached('preview', 'Putting it all together')
-        actions.register(self, name)
-        assert_cached(
-            'unit?unit=9', 'When search results suggest something new')
-        assert_cached(
-            'unit?unit=9&lesson=12', 'Understand options for different media')
+            assert_cached('preview', 'Putting it all together')
+            actions.login(email, is_admin=True)
+            assert_cached('preview', 'Putting it all together')
+            actions.register(self, name)
+            assert_cached(
+                'unit?unit=9', 'When search results suggest something new')
+            assert_cached(
+                'unit?unit=9&lesson=12',
+                'Understand options for different media')
 
         # Clean up.
         models.CACHE_MISS.inc = old_inc
-        sites.ApplicationContext.get_environ = get_environ_old
         config.Registry.test_overrides = {}
         sites.reset_courses()
 
