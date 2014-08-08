@@ -195,6 +195,10 @@ class ResourcesHandler(webapp2.RequestHandler):
         """Override this method to rebase the path to a different root."""
         return path
 
+    def transform_resource(self, resource_str):
+        """Override this method to apply a transforation to the resource."""
+        return resource_str
+
     def get(self):
         """Respond to HTTP GET methods."""
         path = self.rebase_path(self.request.path)
@@ -215,9 +219,16 @@ class ResourcesHandler(webapp2.RequestHandler):
             self.response.cache_control.public = 'public'
             self.response.cache_control.max_age = 600
             stream = open(resource_file)
-            self.response.write(stream.read())
+            self.response.write(self.transform_resource(stream.read()))
         except IOError:
             self.error(404)
+
+
+class JQueryHandler(ResourcesHandler):
+    """A content handler which serves jQuery scripts wrapped in $.ready()."""
+
+    def transform_resource(self, resource_str):
+        return '$(function() {%s});' % resource_str
 
 
 class EditorBlacklists(object):

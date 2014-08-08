@@ -1,0 +1,36 @@
+<link rel="stylesheet" type="text/css" href="/modules/i18n_dashboard/resources/css/i18n_dashboard.css">
+<script src="/modules/i18n_dashboard/resources/js/i18n_dashboard.js"></script>
+<table class="i18n-progress-table"
+    data-is-translatable-xsrf-token="{{is_translatable_xsrf_token}}">
+  <thead>
+    <tr>
+      <th>Asset</th>
+      <th>{{ main_locale }} (Base locale)</th>
+      {% for locale in extra_locales %}
+        <th>{{ locale }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr class="{{row.class_name}}" data-resource-key="{{row.resource_key}}">
+        {% if row.spans_all_columns %}
+          <td colspan="{{ num_columns }}">{{ row.name }}</td>
+        {% else %}
+          <td>{{ row.name }}</td>
+          <td>
+            <label>
+              <input class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
+              Translatable
+            </label>
+          </td>
+          {% for locale in extra_locales %}
+            <td class="resource-locale-entry {{row.status_class(locale)}}">
+              {{ row.status(locale) }}
+            </td>
+          {% endfor %}
+        {% endif %}
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
