@@ -98,6 +98,15 @@ _BASE = frozenset([
 _CUSTOM_PREFIX = 'custom_'
 
 # CB extensions.
+
+# Whether or not to force login when a course is operating as an LTI provider
+# and the course is browsable. To avoid bad UX, this does *not* force a login if
+# the user already has credentials with the course.
+CUSTOM_CB_FORCE_LOGIN = _CUSTOM_PREFIX + 'cb_force_login'
+# The course resource to redirect to for a course that is an LTI provider once
+# validation has been passed successfully. Required on incoming launch requests
+# handled by CB providers. Resource is relative to the course slug (for example,
+# 'foo' in 'http://example.com/my_course/foo').
 CUSTOM_CB_RESOURCE = _CUSTOM_PREFIX + 'cb_resource'
 
 _EXTENSIONS = frozenset([
@@ -151,6 +160,16 @@ def _get_missing_base(from_dict):
     empty.
   """
   return sorted(set(_REQUIRED) - set(from_dict.keys()))
+
+
+def get_custom_cb_force_login(request_dict):
+  """Gets CUSTOM_CB_FORCE_LOGIN from request_dict and casts to Python value."""
+  value = request_dict.get(CUSTOM_CB_FORCE_LOGIN)
+
+  if value is None:
+    return False
+
+  return True if value.lower() == 'true' else False
 
 
 def make(from_dict):

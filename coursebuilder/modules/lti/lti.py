@@ -14,8 +14,96 @@
 
 """LTI module that supports LTI 1.0 - 1.2.
 
-Note that URLs used in this system are restricted to US-ASCII (see
-https://www.ietf.org/rfc/rfc1738.txt).
+LTI is an open standard for re-using online education tools. IMS Global is the
+member organization that owns the standard.
+
+The LTI module enables a Course Builder course to act either as an LTI consumer
+(that is, it can use LTI content from other systems) as an LTI provider (that
+is, it can make its content available to other systems via LTI), or both.
+
+The LTI standards are available at http://www.imsglobal.org/lti/.
+
+The LTI module is enabled by default. LTI configuration is done on a course-by-
+course basis in the Course Options page of the Course Builder admin site. Let's
+look at both the consumer and producer feature sets in turn.
+
+To use the consumer feature set, you must populate the 'LTI tools' section of
+the Course Options page. This is a YAML text entry field in which you enter tool
+definitions. Each tool definition contains a unique name, a description, the LTI
+launch URL of the tool's endpoint on the web, a security key, a security secret,
+and the LTI version the tool supports. The Launch URL, key, and secret are all
+given to you by the LTI tool provider you want to use.
+
+Once you have entered your tool, you can put it in a Course Builder lesson via
+the rich text editor. In it, click on the toolbox. Select 'gcb: LTI Tool' from
+the dropdown. Then, select the LTI tool you defined earlier to insert it into
+your lesson.
+
+On the resulting popup, you can configure the LTI tool. LTI tools are entered
+into Course Builder as iframes; here you can set their width and height. You can
+also set two specific LTI fields:
+
+  1. Resource Link ID. This uniquely identifies the embed to the tool provider.
+     By default we set this to your course's slug; you can override this value
+     if your tool provider requires something different.
+  2. Extra Fields. This is a YAML text entry field where you can put key-value
+     pairs. Each key is a field in the LTI spec; each value is the string you
+     wish to transmit for that field. Some providers require fields that are
+     optional in the spec or custom to their tool; you can enter those values
+     here.
+
+     Course Builder LTI providers require some custom fields. See the provider
+     section below for details. This is where you enter those items.
+
+Next, the provider feature set. Each Course Builder course can make its contents
+available to other sites on the web via the LTI protocol. To do this, you must
+enable the LTI provider for your course. This is a course-level setting;
+however, the admin for your Course Builder deployment must enable per-course LTI
+provider configuration ('gcb_courses_can_enable_lti_provider' must be True and
+active in the admin settings page) in order for your configuration to take
+effect.
+
+To configure your course as an LTI provider, go to the Course Options page.
+Check the 'Enable LTI Provider' check box. Next, in 'LTI security' you must
+enter a key and secret for each consumer you want to be able to use your tool.
+Each key and secret must be unique within a course. They are also *extremely
+sensitive values* and you must take great care that you never transmit them or
+otherwise expose them in ways that could let anyone but your consumer get them.
+Otherwise, anybody can impersonate your consumer, which allows them to both
+access and mutate your course and student data. You have been warned.
+
+Users of the Course Builder LTI provider must transmit the required fields from
+the LTI spec. They must also transmit either 'launch_url', 'secure_launch_url',
+or both (in which case 'secure_launch_url' will be used and 'launch_url' will be
+ignored). The request must be signed per the LTI spec (meaning HMACed OAuth 1).
+
+Additionally, they must transmit a field named 'custom_cb_resource'. The value
+of this field is a string that gives the slug-relative URL of the Course Builder
+resource that will be rendered by Course Builder once the LTI launch process is
+complete, with the query parameter 'hide-controls=true' appended.
+
+For example, if you want to render
+http://example.com/my_course/unit?unit=1&lesson=2, this value is
+'unit?unit=1&lesson=2&hide-controls=true'. This will cause unit 1 lesson 2 to
+render with no Course Builder chrome, suitable for iframing.
+
+User authentication with LTI is somewhat complicated. If you enable LTI but your
+course is not enabled, all LTI requests will fail with HTTP status code 404. If
+you enable the course, the LTI endpoints are exposed. If your course is
+browsable, users do not need to authenticate in order to see content. If the
+course is not browsable, users do need to authenticate. The course pages you
+embed are responsible for enforcing enrollment status; the LTI machinery does
+not do this for you.
+
+You can force authentication for users who have not yet signed in by passing
+'custom_cb_force_login' with a value of 'true' (case insensitive) in your LTI
+launch request. This will not force login if the user already has credentials
+with that CB course, which avoids the bad UX experience of asking users to
+authenticate extra times.
+
+Note that URLs used LTI launch requetss in this system are restricted to
+US-ASCII (see https://www.ietf.org/rfc/rfc1738.txt). Unicode URLs are not
+supported.
 """
 
 __author__ = [
@@ -46,6 +134,7 @@ from google.appengine.api import users
 
 
 _BASE_URL = '/lti'
+_CONFIG_KEY_BROWSABLE = 'browsable'
 _CONFIG_KEY_COURSE = 'course'
 _CONFIG_KEY_LOCALE = 'locale'
 _CONFIG_KEY_LTI1 = 'lti1'
@@ -349,6 +438,10 @@ class _Runtime(object):
 
   def get_base_url(self):
     return self._app_context.get_slug()
+
+  def get_course_browsable(self):
+    return self._environ.get(
+        _CONFIG_KEY_COURSE, {}).get(_CONFIG_KEY_BROWSABLE, False)
 
   def get_current_user(self):
     return users.get_current_user()
@@ -736,9 +829,13 @@ class ValidationHandler(_BaseHandler):
         post.get(fields.LAUNCH_URL))
 
   @classmethod
-  def _needs_login(cls, current_user):
-    # TODO(johncox): add support for forcing login, handling anonymous users.
-    return not bool(current_user)
+  def _needs_login(cls, course_browsable, current_user, force_login):
+    already_authenticated = bool(current_user)
+
+    if already_authenticated or (course_browsable and not force_login):
+      return False
+
+    return True
 
   def _get_launch_user_id(self):
     return self.request.POST.get(fields.USER_ID)
@@ -831,7 +928,9 @@ class ValidationHandler(_BaseHandler):
       self.error(400)
       return
 
-    if self._needs_login(runtime.get_current_user()):
+    if self._needs_login(
+        runtime.get_course_browsable(), runtime.get_current_user(),
+        fields.get_custom_cb_force_login(self.request.POST)):
       self.redirect(
           self._get_login_redirect_url(runtime.get_base_url(), return_url))
       return

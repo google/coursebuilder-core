@@ -44,6 +44,22 @@ class FieldsTest(actions.TestBase):
     self.base = dict(fields._DEFAULTS)
     self.base.update({fields.LAUNCH_URL: fields.LAUNCH_URL + '_value'})
 
+  def test_get_custom_cb_force_login_returns_false_for_other_values(self):
+    self.assertFalse(
+        fields.get_custom_cb_force_login(
+            {fields.CUSTOM_CB_FORCE_LOGIN: 'other'}))
+
+  def test_get_custom_cb_force_login_returns_false_if_missing(self):
+    self.assertFalse(fields.get_custom_cb_force_login({}))
+
+  def test_get_custom_cb_force_login_returns_true_and_is_case_insensitive(self):
+    self.assertTrue(
+        fields.get_custom_cb_force_login({
+            fields.CUSTOM_CB_FORCE_LOGIN: 'true'}))
+    self.assertTrue(
+        fields.get_custom_cb_force_login({
+            fields.CUSTOM_CB_FORCE_LOGIN: 'TrUe'}))
+
   def test_make_overrides_defaults_from_from_dict(self):
     expected = dict(self.base)
     from_dict = {
@@ -704,6 +720,12 @@ class ValidationHandlerTest(LtiWebappTestBase):
     self.set_lti_security_config()
 
   def do_successful_post(self, needs_login=True):
+
+    def _needs_login(
+        unused_class, unused_course_browsable, unused_current_user,
+        unused_force_login):
+      return needs_login
+
     self.set_up_runtime()
     self.params.update({
         fields.CUSTOM_CB_RESOURCE: self.cb_resource,
@@ -712,9 +734,7 @@ class ValidationHandlerTest(LtiWebappTestBase):
     })
     signed_params = lti.LaunchHandler._get_signed_launch_parameters(
         self.key, self.security_config['secret'], self.params, self.url)
-    self.swap(
-        lti.ValidationHandler, '_needs_login',
-        lambda unused_cls, unused_current_user: needs_login)
+    self.swap(lti.ValidationHandler, '_needs_login', _needs_login)
     return self.testapp.post(lti._VALIDATION_URL, params=signed_params)
 
   def test_get_expected_signature_returns_unstable_string(self):
@@ -762,6 +782,24 @@ class ValidationHandlerTest(LtiWebappTestBase):
   def test_get_returns_404(self):
     response = self.testapp.get(lti._VALIDATION_URL, expect_errors=True)
     self.assertEqual(404, response.status_code)
+
+  def test_needs_login(self):
+    self.assertEqual(
+        True, lti.ValidationHandler._needs_login(False, False, False))
+    self.assertEqual(
+        False, lti.ValidationHandler._needs_login(True, False, False))
+    self.assertEqual(
+        False, lti.ValidationHandler._needs_login(False, True, False))
+    self.assertEqual(
+        True, lti.ValidationHandler._needs_login(False, False, True))
+    self.assertEqual(
+        False, lti.ValidationHandler._needs_login(True, True, False))
+    self.assertEqual(
+        False, lti.ValidationHandler._needs_login(False, True, True))
+    self.assertEqual(
+        True, lti.ValidationHandler._needs_login(True, False, True))
+    self.assertEqual(
+        False, lti.ValidationHandler._needs_login(True, True, True))
 
   def test_post_returns_302_to_resource_if_all_pass_and_login_not_needed(self):
     response = self.do_successful_post(needs_login=False)
