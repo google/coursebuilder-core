@@ -124,6 +124,23 @@ def _is_valid(name):
   return name in _ALL or name.startswith(_CUSTOM_PREFIX)
 
 
+def _get_missing_base(from_dict):
+  """Gets the missing base required LTI fields from the given dict.
+
+  Base fields are statically enumerated and do not include fields like
+  LAUNCH_URL or SECURE_LAUNCH_URL, which must be checked dynamically since one
+  or the other is required.
+
+  Args:
+    from_dict: dict of filed name string to value. The fields to process.
+
+  Returns:
+    List of string. The missing field names in lexicographical order. May be
+    empty.
+  """
+  return sorted(set(_REQUIRED) - set(from_dict.keys()))
+
+
 def make(from_dict):
   """Makes a dict of LTI post payload data from the given dict.
 

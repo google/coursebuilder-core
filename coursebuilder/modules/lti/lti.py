@@ -32,6 +32,7 @@ from common import safe_dom
 from common import schema_fields
 from common import tags
 from controllers import utils
+from models import config
 from models import custom_modules
 from modules.dashboard import course_settings
 from modules.lti import fields
@@ -43,6 +44,7 @@ from google.appengine.api import users
 _BASE_URL = '/lti'
 _CONFIG_KEY_COURSE = 'course'
 _CONFIG_KEY_LTI1 = 'lti1'
+_CONFIG_KEY_PROVIDER_ENABLED = 'provider_enabled'
 _CONFIG_KEY_SECURITY = 'security'
 _CONFIG_KEY_TOOLS = 'tools'
 _EMPTY_STRING = ''
@@ -52,7 +54,9 @@ _ERROR_NAME_NOT_UNIQUE = 'Name is not unique: %s'
 _ERROR_PARSE_SETTINGS_CONFIG_YAML = 'Cannot parse settings config yaml'
 _ERROR_PARSE_TOOLS_CONFIG_YAML = 'Cannot parse tools config yaml'
 _ERROR_SECRET_NOT_UNIQUE = 'Secret is not unique: %s'
+_POST = 'POST'
 _LAUNCH_URL = _BASE_URL + '/launch'
+_VALIDATION_URL = _BASE_URL
 _YAML_ENTRY_DESCRIPTION = 'description'
 _YAML_ENTRY_KEY = 'key'
 _YAML_ENTRY_NAME = 'name'
@@ -73,6 +77,15 @@ VERSIONS = frozenset([
 ])
 
 
+COURSES_CAN_ENABLE_LTI_PROVIDER = config.ConfigProperty(
+    'gcb_courses_can_enable_lti_provider', bool,
+    ('Whether or not to allow courses to enable the LTI provider for their '
+     'content. If True, courses can enable a setting to allow outside parties '
+     'to embed their content via the LTI protocol. If False, the control on '
+     'the course page to enable the LTI provider will be present, but it will '
+     'have no effect.'), default_value=False)
+
+
 class Error(Exception):
   """Base error."""
 
@@ -81,14 +94,17 @@ class InvalidVersionError(Exception):
   """Raised when an invalid LTI version is specified."""
 
 
-def _get_key_secret_manager(app_context):
+def _get_runtime(app_context):
   # For tests.
-  return _KeySecretManager(app_context)
+  return _Runtime(app_context)
 
 
-def _get_launch_runtime(app_context):
-  # For tests.
-  return _LaunchRuntime(app_context)
+def _get_signed_oauth_request(key, secret, parameters, url):
+  consumer = oauth.OAuthConsumer(key, secret)
+  request = oauth.OAuthRequest.from_consumer_and_token(
+      consumer, http_method=_POST, http_url=url, parameters=parameters)
+  request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), consumer, None)
+  return request
 
 
 class _Parser(object):
@@ -122,6 +138,7 @@ class _ToolConfig(object):
 
   def __eq__(self, other):
     return (
+        isinstance(other, _ToolConfig) and
         self.description == other.description and
         self.key == other.key and
         self.name == other.name and
@@ -181,7 +198,7 @@ class _ToolsParser(_Parser):
         return
 
       try:
-        config = cls._get_tool_config(entry)
+        tool_config = cls._get_tool_config(entry)
       except InvalidVersionError:
         errors.append(
             _ERROR_INVALID_VERSION % (
@@ -191,11 +208,11 @@ class _ToolsParser(_Parser):
         errors.append(cls.PARSE_ERROR)
         return
 
-      if config.name in name_to_config:
-        errors.append(_ERROR_NAME_NOT_UNIQUE % config.name)
+      if tool_config.name in name_to_config:
+        errors.append(_ERROR_NAME_NOT_UNIQUE % tool_config.name)
         return
 
-      name_to_config[config.name] = config
+      name_to_config[tool_config.name] = tool_config
 
     return name_to_config
 
@@ -208,11 +225,13 @@ class _SecurityConfig(object):
     self.secret = secret
 
   def __eq__(self, other):
-    return self.key == other.key and self.secret == other.secret
+    return (
+        isinstance(other, _SecurityConfig) and
+        self.key == other.key and self.secret == other.secret)
 
-  def __str(self):
+  def __str__(self):
     # No secret to prevent e.g. logging it in a bad place.
-    return 'LTI Security Config(%(key)s)' % self.key
+    return 'LTI Security Config(%s)' % self.key
 
 
 class _SecurityParser(_Parser):
@@ -222,7 +241,7 @@ class _SecurityParser(_Parser):
 
   @classmethod
   def parse(cls, raw_value, errors):
-    """Validator for security yaml; returns {key_str: _SecurityConfig}."""
+    """Validator for security yaml; returns {key_unicode: _SecurityConfig}."""
     if raw_value == _EMPTY_STRING:
       return {}
 
@@ -255,54 +274,26 @@ class _SecurityParser(_Parser):
         errors.append(_ERROR_SECRET_NOT_UNIQUE % secret)
         return
 
-      key_to_config[key] = _SecurityConfig(key, secret)
+      # Cast key to unicode because later comparisons are done against POSTed
+      # data (strings). Do not cast the value in the config.
+      key_to_config[unicode(key)] = _SecurityConfig(key, secret)
       seen_keys.add(key)
       seen_secrets.add(secret)
 
     return key_to_config
 
 
-class _KeySecretManager(object):
-  """Manages provider keys and secrets."""
-
-  def __init__(self, app_context):
-    self._app_context = app_context
-    self._cache = None
-    self._environ = self._app_context.get_environ()
-
-  def get(self, key):
-    """Gets the secret for a given key (or None)."""
-    errors = []
-
-    if self._cache is None:
-      raw_value = self._get_raw_config_value()
-      self._cache = _SecurityParser.parse(raw_value, errors)
-      assert not errors
-
-    return self._cache.get(key)
-
-  def _get_raw_config_value(self):
-    return self._environ.get(
-        _CONFIG_KEY_COURSE, {}
-    ).get(
-        _CONFIG_KEY_LTI1, {}
-    ).get(
-        _CONFIG_KEY_SECURITY, _EMPTY_STRING)
-
-
-class _LaunchRuntime(object):
-  """Derives launch runtime configuration state from CB application context."""
+class _Runtime(object):
+  """Derives runtime configuration state from CB application context."""
 
   def __init__(self, app_context):
     self._app_context = app_context
     self._environ = self._app_context.get_environ()
-    self._configs = self._get_tool_configs()
+    self._security_configs = self._get_security_configs()
+    self._tool_configs = self._get_tool_configs()
 
-  def get_config(self, name):
-    return self._configs.get(name)
-
-  def get_configs(self):
-    return self._configs
+  def get_default_resource_link_id(self):
+    return self._app_context.get_slug().strip('/')
 
   def get_launch_url(self, name, resource_link_id, extra_fields=None):
     query = {'name': name, fields.RESOURCE_LINK_ID: resource_link_id}
@@ -313,8 +304,14 @@ class _LaunchRuntime(object):
     return '%s%s?%s' % (
         self._app_context.get_slug(), _LAUNCH_URL, urllib.urlencode(query))
 
-  def get_default_resource_link_id(self):
-    return self._app_context.get_slug().strip('/')
+  def get_tool_config(self, name):
+    return self._tool_configs.get(name)
+
+  def get_tool_configs(self):
+    return self._tool_configs
+
+  def get_security_config(self, key):
+    return self._security_configs.get(key)
 
   def get_user_id(self):
     user = users.get_current_user()
@@ -327,23 +324,44 @@ class _LaunchRuntime(object):
         str(self._app_context.get_namespace_name()), user.email()
     )
 
-  def _get_tool_configs(self):
+  def get_provider_enabled(self):
+    return (
+        COURSES_CAN_ENABLE_LTI_PROVIDER.value and
+        self._get_lti_provider_enabled_for_course())
+
+  def _get_lti_provider_enabled_for_course(self):
+    return bool(self._get_yaml_value(_CONFIG_KEY_PROVIDER_ENABLED))
+
+  def _get_current_user(self):
+    return users.get_current_user()
+
+  def _get_configs(self, config_key, parser):
+    # This may crash if users have edited config.yaml by hand. Bad config.yaml
+    # edits can cause all manner of insanity; we allow errors to percolate up
+    # rather than trying to recover so admins discover them fast. The only case
+    # we'll handle specially is if the value is sane but fails validation.
     errors = []
-    raw_yaml = self._environ.get(
+    raw_yaml = self._get_yaml_value(config_key)
+    configs = parser.parse(raw_yaml, errors)
+
+    if errors:
+      raise ValueError('Errors in %s.parse: %s' % (parser.__name__, errors))
+
+    return configs
+
+  def _get_yaml_value(self, config_key):
+    return self._environ.get(
         _CONFIG_KEY_COURSE, {}
     ).get(
         _CONFIG_KEY_LTI1, {}
     ).get(
-        _CONFIG_KEY_TOOLS, _EMPTY_STRING)
-    configs = _ToolsParser.parse(raw_yaml, errors)
+        config_key, _EMPTY_STRING)
 
-    if errors:
-      raise ValueError('Errors processing configs: %s' % errors)
+  def _get_security_configs(self):
+    return self._get_configs(_CONFIG_KEY_SECURITY, _SecurityParser)
 
-    return configs
-
-  def _get_current_user(self):
-    return users.get_current_user()
+  def _get_tool_configs(self):
+    return self._get_configs(_CONFIG_KEY_TOOLS, _ToolsParser)
 
 
 class LTIToolTag(tags.BaseTag):
@@ -369,9 +387,10 @@ class LTIToolTag(tags.BaseTag):
 
     # Treat as module-protected. pylint: disable-msg=protected-access
     try:
-      runtime = _get_launch_runtime(handler.app_context)
+      runtime = _get_runtime(handler.app_context)
+      tool_configs = runtime.get_tool_configs()
       names_and_descriptions = sorted([
-        (tool.name, tool.description) for tool in runtime.get_configs().values()
+        (tool.name, tool.description) for tool in tool_configs.values()
       ])
     except:  # Broad on purpose. pylint: disable-msg=bare-except
       pass
@@ -412,7 +431,7 @@ class LTIToolTag(tags.BaseTag):
     return reg
 
   def render(self, node, handler):
-    runtime = _get_launch_runtime(handler.app_context)
+    runtime = _get_runtime(handler.app_context)
     height = node.attrib.get('height') or self._DEFAULT_HEIGHT
     width = node.attrib.get('width') or self._DEFAULT_WIDTH
     resource_link_id = node.attrib.get(fields.RESOURCE_LINK_ID)
@@ -437,18 +456,23 @@ class LTIToolTag(tags.BaseTag):
 
 class LaunchHandler(utils.BaseHandler):
 
+  @classmethod
+  def _get_signed_launch_parameters(cls, key, secret, parameters, url):
+    request = _get_signed_oauth_request(key, secret, parameters, url)
+    return request.parameters
+
   def get(self):
-    runtime = _get_launch_runtime(self.app_context)
+    runtime = _get_runtime(self.app_context)
     name = urllib.unquote(self.request.get('name', _EMPTY_STRING))
     resource_link_id = urllib.unquote(
         self.request.get(fields.RESOURCE_LINK_ID, _EMPTY_STRING))
-    config = runtime.get_config(name)
+    tool_config = runtime.get_tool_config(name)
 
-    if not (name and config and resource_link_id):
+    if not (name and tool_config and resource_link_id):
       _LOG.error(
           'Unable to attempt LTI launch; invalid parameters: name: "%(name)s", '
           'config: "%(config)s", resource_link_id: "%(resource_link_id)s"', {
-              'name': name, 'config': config,
+              'name': name, 'config': tool_config,
               fields.RESOURCE_LINK_ID: resource_link_id})
       self.error(400)
       return
@@ -465,21 +489,15 @@ class LaunchHandler(utils.BaseHandler):
     # passed on an as-needed basis via the tag UI. If you need dynamic values,
     # you can override _get_custom_unsigned_launch_parameters below.
     unsigned_parameters = self._get_unsigned_launch_parameters(
-        extra_fields, name, resource_link_id, config.url, runtime.get_user_id())
+        extra_fields, name, resource_link_id, tool_config.url,
+        runtime.get_user_id())
     signed_parameters = self._get_signed_launch_parameters(
-        config.key, str(config.secret), unsigned_parameters, config.url)
+        tool_config.key, str(tool_config.secret), unsigned_parameters,
+        tool_config.url)
     self.response.out.write(template.render({
       'signed_parameters': signed_parameters,
-      'tool_url': config.url,
+      'tool_url': tool_config.url,
     }))
-
-  def _get_signed_launch_parameters(self, key, secret, parameters, url):
-    consumer = oauth.OAuthConsumer(key, secret)
-    request = oauth.OAuthRequest.from_consumer_and_token(
-        consumer, http_method='POST', http_url=url,
-        parameters=parameters)
-    request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), consumer, None)
-    return request.parameters
 
   def get_custom_unsigned_launch_parameters(self, from_dict, name):
     """Hook for client customization.
@@ -521,6 +539,111 @@ class LaunchHandler(utils.BaseHandler):
         else fields.LAUNCH_URL)
 
 
+class ValidationHandler(utils.BaseHandler):
+
+  OAUTH_KEY_FIELD = 'oauth_consumer_key'
+  OAUTH_SIGNATURE_FIELD = 'oauth_signature'
+
+  @classmethod
+  def _get_expected_signature(cls, key, secret, parameters, url):
+    request = _get_signed_oauth_request(key, secret, parameters, url)
+    return request.get_parameter(cls.OAUTH_SIGNATURE_FIELD)
+
+  @classmethod
+  def _get_url(cls, post):
+    secure_launch_url = post.get(fields.SECURE_LAUNCH_URL)
+    return (
+        secure_launch_url if secure_launch_url is not None else
+        post.get(fields.LAUNCH_URL))
+
+  def post(self):
+    runtime = None
+
+    try:
+      runtime = _get_runtime(self.app_context)
+    except Exception, e:  # On purpose. pylint: disable-msg=broad-except
+      _LOG.error('Unable to get runtime; error was %s', e)
+      self.error(500)
+      return
+
+    if not runtime.get_provider_enabled():
+      _LOG.error(
+          'Unable to process LTI request; provider is not enabled')
+      self.error(404)
+      return
+
+    key = self.request.POST.get(self.OAUTH_KEY_FIELD)
+    if not key:
+      _LOG.error(
+          'Unable to process LTI request; %s missing', self.OAUTH_KEY_FIELD)
+      self.error(400)
+      return
+
+    security_config = runtime.get_security_config(key)
+    if not security_config:
+      _LOG.error(
+          'Unable to process LTI request; no config found for key %s', key)
+      self.error(400)
+      return
+
+    launch_url = self._get_url(self.request.POST)
+    if not launch_url:
+      _LOG.error(
+          'Unable to process LTI request; neither %s nor %s specified',
+          fields.SECURE_LAUNCH_URL, fields.LAUNCH_URL)
+      self.error(400)
+      return
+
+    # Treat as module-protected. pylint: disable-msg=protected-access
+    missing = fields._get_missing_base(self.request.POST)
+    if missing:
+      _LOG.error(
+          'Unable to process LTI request; missing required fields: %s',
+          ', '.join(missing))
+      self.error(400)
+      return
+
+    request_signature = self.request.POST.get(self.OAUTH_SIGNATURE_FIELD)
+    if not request_signature:
+      _LOG.error(
+          'Unable to process LTI request; %s not specified',
+          self.OAUTH_SIGNATURE_FIELD)
+      self.error(400)
+      return
+
+    try:
+      expected_signature = self._get_expected_signature(
+          security_config.key, security_config.secret, self.request.POST,
+          launch_url)
+    except Exception, e:  # Deliberately broad. pylint: disable-msg=broad-except
+      _LOG.error(
+          'Unable to process LTI request; error calculating signature: %s', e)
+      self.error(400)
+      return
+
+    if expected_signature != request_signature:
+      _LOG.error(
+          'Unable to process LTI request; signature mismatch. Ours: %s; '
+          'theirs: %s', expected_signature, request_signature)
+      self.error(400)
+      return
+
+    # TODO(johncox): user signing if requested; resource dispatching.
+
+
+def _get_provider_enabled_field(unused_course):
+  provider_enabled_name = '%s:%s:%s' % (
+      _CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1, _CONFIG_KEY_PROVIDER_ENABLED)
+  return schema_fields.SchemaField(
+      provider_enabled_name, 'Enable LTI Provider', 'boolean',
+      description='Whether or not to allow LTI consumers to embed content for '
+      'this course. Note that the admin for this Course Builder deployment '
+      'must have enabled %s for this setting to take effect, and you will also '
+      'need to create a key and secret for each consumer who you want to allow '
+      'to embed content from this course (see "LTI security").' % (
+          COURSES_CAN_ENABLE_LTI_PROVIDER.name))
+
+
 def _get_security_field(unused_course):
   security_example = safe_dom.NodeList().append(
       safe_dom.Element('pre').add_text('''
@@ -531,15 +654,15 @@ def _get_security_field(unused_course):
       _CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1, _CONFIG_KEY_SECURITY)
   return schema_fields.SchemaField(
       security_field_name, 'LTI security', 'text', optional=True,
-      description='LTI security. This is a YAML string containing zero or more '
-      'key/secret pairs that allow other systems to make LTI launch requests '
-      'against this course in your Course Builder deployment. They are very '
-      'sensitive and should be treated with care (for example, emailing them '
-      'will compromise the integrity and security of your user data). Each key '
-      'must be unique within a course; it is used to uniquely identify the LTI '
-      'consumer making a launch request. The secret, which must also be unique '
-      'within a course, is used to secure LTI launch requests and ensure that '
-      'the consumer is who they say they are. For example:' +
+      description='This is a YAML string containing zero or more key/secret '
+      'pairs that allow other systems to make LTI launch requests against this '
+      'course in your Course Builder deployment. They are very sensitive and '
+      'should be treated with care (for example, emailing them will compromise '
+      'the integrity and security of your user data). Each key must be unique '
+      'within a course; it is used to uniquely identify the LTI consumer '
+      'making a launch request. The secret, which must also be unique within a '
+      'course, is used to secure LTI launch requests and ensure that the '
+      'consumer is who they say they are. For example:' +
       security_example.sanitized,
       # Treating as module-protected. pylint: disable-msg=protected-access
       validator=_SecurityParser.parse)
@@ -558,7 +681,7 @@ def _get_tool_field(unused_course):
       _CONFIG_KEY_COURSE, _CONFIG_KEY_LTI1, _CONFIG_KEY_TOOLS)
   return schema_fields.SchemaField(
       tool_field_name, 'LTI tools', 'text', optional=True,
-      description='LTI tools. This is a YAML string containing zero or more '
+      description='This is a YAML string containing zero or more '
       'configurations. Each configuration needs to have a "name" (which must '
       'be unique); a "key" and a "secret", both of which come from the LTI '
       'tool provider you are using; a "description", which is displayed in the '
@@ -577,7 +700,8 @@ def register_module():
 
   global custom_module
 
-  schema_providers = [_get_security_field, _get_tool_field]
+  schema_providers = [
+      _get_provider_enabled_field, _get_security_field, _get_tool_field]
 
   def on_module_enabled():
     course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.extend(
@@ -592,7 +716,8 @@ def register_module():
 
   global_handlers = []
   namespaced_handlers = [
-      (_LAUNCH_URL, LaunchHandler)]
+      (_LAUNCH_URL, LaunchHandler),
+      (_VALIDATION_URL, ValidationHandler)]
   custom_module = custom_modules.Module(
       'LTI', 'LTI module', global_handlers, namespaced_handlers,
       notify_module_disabled=on_module_disabled,

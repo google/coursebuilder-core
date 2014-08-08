@@ -18,11 +18,14 @@ __author__ = [
     'johncox@google.com (John Cox)'
 ]
 
+import cStringIO
+import logging
 import re
 import yaml
 
 from common import crypto
 from controllers import sites
+from models import config
 from modules.lti import fields
 from modules.lti import lti
 from modules.oeditor import oeditor
@@ -97,6 +100,13 @@ class LtiWebappTestBase(actions.TestBase):
 
   def setUp(self):
     super(LtiWebappTestBase, self).setUp()
+
+    # Make logging observable.
+    self.stream = cStringIO.StringIO()
+    self.handler = logging.StreamHandler(self.stream)
+    self.old_handlers = list(lti._LOG.handlers)
+    lti._LOG.handlers = [self.handler]
+
     self.app_context = sites.get_all_courses()[0]
     self.environ = dict(self.app_context.get_environ())
     self.security_config = {'key': 'key', 'secret': 'secret'}
@@ -108,6 +118,32 @@ class LtiWebappTestBase(actions.TestBase):
         'url': 'http://config_url',
         'version': lti.VERSION_1_0,
     }
+    self.swap(
+        lti, '_get_runtime', lambda _: self.get_runtime())
+
+  def tearDown(self):
+    config.Registry.test_overrides = {}
+    lti._LOG.handlers = self.old_handlers
+    super(LtiWebappTestBase, self).tearDown()
+
+  def enable_courses_can_enable_lti_provider(self):
+    config.Registry.test_overrides[
+        lti.COURSES_CAN_ENABLE_LTI_PROVIDER.name] = True
+
+  def enable_lti_provider_for_course(self):
+    self.init_lti_config()
+    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1][
+        lti._CONFIG_KEY_PROVIDER_ENABLED] = True
+
+  def get_runtime(self):
+    mock_context = actions.MockAppContext(
+        environ=self.environ, namespace=self.app_context.get_namespace_name(),
+        slug=self.app_context.get_slug())
+    return lti._Runtime(mock_context)
+
+  def get_log(self):
+    self.stream.flush()
+    return self.stream.getvalue()
 
   def get_tool_config_yaml(self):
     return (
@@ -121,39 +157,34 @@ class LtiWebappTestBase(actions.TestBase):
   def get_security_config_yaml(self):
     return '- %(key)s: %(secret)s' % self.security_config
 
+  def init_lti_config(self):
+    if not self.environ[lti._CONFIG_KEY_COURSE].has_key(lti._CONFIG_KEY_LTI1):
+      self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = {}
+
   def set_lti_security_config(self, config_yaml=None):
+    self.init_lti_config()
+
     if config_yaml is None:
       config_yaml = self.get_security_config_yaml()
 
-    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = {
-        lti._CONFIG_KEY_SECURITY: config_yaml}
-    mock_context = actions.MockAppContext(
-        environ=self.environ, namespace=self.app_context.get_namespace_name(),
-        slug=self.app_context.get_slug())
-    self.swap(
-        lti, '_get_key_secret_manager',
-        lambda _: lti._KeySecretManager(mock_context))
+    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1][
+        lti._CONFIG_KEY_SECURITY] = config_yaml
 
   def set_lti_tool_config(self, config_yaml=None):
+    self.init_lti_config()
+
     if config_yaml is None:
       config_yaml = self.get_tool_config_yaml()
 
-    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1] = {
-        lti._CONFIG_KEY_TOOLS: config_yaml}
-    mock_context = actions.MockAppContext(
-        environ=self.environ, namespace=self.app_context.get_namespace_name(),
-        slug=self.app_context.get_slug())
-    self.swap(
-        lti, '_get_launch_runtime', lambda _: lti._LaunchRuntime(mock_context))
+    self.environ[lti._CONFIG_KEY_COURSE][lti._CONFIG_KEY_LTI1][
+        lti._CONFIG_KEY_TOOLS] = config_yaml
 
 
-class KeySecretManagerTest(LtiWebappTestBase):
+class RuntimeTest(LtiWebappTestBase):
 
   def setUp(self):
-    super(KeySecretManagerTest, self).setUp()
+    super(RuntimeTest, self).setUp()
     self.errors = []
-    self.set_lti_security_config()
-    self.manager = lti._get_key_secret_manager(self.app_context)
 
   def assert_no_errors(self):
     self.assertEqual([], self.errors)
@@ -161,18 +192,43 @@ class KeySecretManagerTest(LtiWebappTestBase):
   def assert_parse_error(self):
     self.assertEqual([lti._ERROR_PARSE_CONFIG_YAML], self.errors)
 
-  def test_get_raises_assertion_error_if_parsing_fails(self):
+  def test_constructor_raises_value_error_on_parse_error(self):
     self.set_lti_security_config(config_yaml='-invalid-')
 
-    with self.assertRaises(AssertionError):
-      self.manager.get('anything')
+    with self.assertRaises(ValueError):
+      lti._get_runtime(self.app_context)
 
-  def test_get_returns_existing_config(self):
+  def test_get_provider_enabled_false_if_not_enabled_for_course(self):
+    self.enable_courses_can_enable_lti_provider()
+    runtime = lti._get_runtime(self.app_context)
+    self.assertFalse(runtime.get_provider_enabled())
+
+  def test_get_provider_enabled_false_if_not_enabled_for_deployment(self):
+    self.enable_lti_provider_for_course()
+    runtime = lti._get_runtime(self.app_context)
+    self.assertFalse(runtime.get_provider_enabled())
+
+  def test_get_provider_enabled_true_if_enabled_for_deployment_and_course(self):
+    self.enable_courses_can_enable_lti_provider()
+    self.enable_lti_provider_for_course()
+    runtime = lti._get_runtime(self.app_context)
+    self.assertTrue(runtime.get_provider_enabled())
+
+  def test_get_security_config_returns_existing_config(self):
+    self.set_lti_security_config()
+    runtime = lti._get_runtime(self.app_context)
     self.assertEqual(
-        lti._SecurityConfig('key', 'secret'), self.manager.get('key'))
+        lti._SecurityConfig('key', 'secret'),
+        runtime.get_security_config('key'))
 
-  def test_get_returns_none_for_missing_key(self):
-    self.assertIsNone(self.manager.get('missing'))
+  def test_get_security_config_returns_none_if_lti_key_missing(self):
+    runtime = lti._get_runtime(self.app_context)
+    self.assertIsNone(runtime.get_security_config('any'))
+
+  def test_get_security_config_returns_none_for_missing_key(self):
+    self.set_lti_security_config()
+    runtime = lti._get_runtime(self.app_context)
+    self.assertIsNone(runtime.get_security_config('missing'))
 
 
 class LaunchHandlerTest(LtiWebappTestBase):
@@ -382,6 +438,12 @@ class SecurityParserTest(ParserTestBase):
   def assert_nonunique_secret_error(self, secret):
     self.assertEqual([lti._ERROR_SECRET_NOT_UNIQUE % secret], self.errors)
 
+  def test_casts_key_to_unicode_in_returned_map_but_not_in_config(self):
+    self.assertEqual(
+        {u'1': lti._SecurityConfig(1, 'secret')},
+        self.PARSER.parse('- 1: secret', self.errors))
+    self.assert_no_errors()
+
   def test_empty_string_no_errors_returns_empty_dict(self):
     self.assertEqual({}, self.PARSER.parse(lti._EMPTY_STRING, self.errors))
     self.assert_no_errors()
@@ -503,6 +565,166 @@ class ToolsParserTest(ParserTestBase):
   def test_validate_security_yaml_parse_error_when_safe_load_fails(self):
     self.assertIsNone(self.PARSER.parse(0, self.errors))
     self.assert_parse_error()
+
+
+class ValidationHandlerTest(LtiWebappTestBase):
+
+  def setUp(self):
+    super(ValidationHandlerTest, self).setUp()
+    self.params = {r: r + '_value' for r in fields._REQUIRED}
+    self.key = self.security_config['key']
+    self.url = 'http://example.com'
+
+  def set_up_runtime(self):
+    self.enable_courses_can_enable_lti_provider()
+    self.enable_lti_provider_for_course()
+    self.set_lti_security_config()
+
+  def test_get_expected_signature_returns_unstable_string(self):
+    first = lti.ValidationHandler._get_expected_signature(
+        self.key, self.security_config['secret'], {}, self.url)
+    second = lti.ValidationHandler._get_expected_signature(
+        self.key, self.security_config['secret'], {}, self.url)
+    self.assertTrue(isinstance(first, str))
+    self.assertNotEqual(first, second)
+
+  def test_get_url_returns_none_if_both_missing(self):
+    self.assertIsNone(lti.ValidationHandler._get_url({}))
+
+  def test_get_url_returns_launch_url_if_secure_launch_url_missing(self):
+    launch = 'launch'
+    self.assertEqual(
+        launch, lti.ValidationHandler._get_url({fields.LAUNCH_URL: launch}))
+
+  def test_get_url_returns_secure_launch_url_if_both_present(self):
+    secure = 'secure'
+    post = {
+        fields.SECURE_LAUNCH_URL: secure,
+        fields.LAUNCH_URL: 'launch'
+    }
+    self.assertEqual(secure, lti.ValidationHandler._get_url(post))
+
+  def test_get_url_returns_values_even_if_falsy(self):
+    secure = ''
+    post = {
+        fields.SECURE_LAUNCH_URL: secure,
+        fields.LAUNCH_URL: 'launch'
+    }
+    self.assertEqual(secure, lti.ValidationHandler._get_url(post))
+    self.assertEqual(
+        '', lti.ValidationHandler._get_url({fields.LAUNCH_URL: ''}))
+
+  def test_post_returns_200_if_all_validators_pass(self):
+    self.set_up_runtime()
+    self.params[fields.SECURE_LAUNCH_URL] = self.url
+    signed_params = lti.LaunchHandler._get_signed_launch_parameters(
+        self.key, self.security_config['secret'], self.params, self.url)
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400, params=signed_params)
+    self.assertEqual('', self.get_log())
+    self.assertEqual(200, response.status_code)
+
+  def test_post_returns_400_if_key_missing(self):
+    self.set_up_runtime()
+    response = self.testapp.post(lti._VALIDATION_URL, expect_errors=True)
+    self.assertEqual(400, response.status_code)
+    self.assertIn(
+        lti.ValidationHandler.OAUTH_KEY_FIELD + ' missing', self.get_log())
+
+  def test_post_returns_400_if_security_config_missing(self):
+    self.set_up_runtime()
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400,
+        params={lti.ValidationHandler.OAUTH_KEY_FIELD: self.key + '_missing'})
+    self.assertEqual(400, response.status_code)
+    self.assertIn('no config found for key ' + self.key, self.get_log())
+
+  def test_post_returns_400_if_launch_url_and_secure_launch_url_missing(self):
+    self.set_up_runtime()
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400,
+        params={lti.ValidationHandler.OAUTH_KEY_FIELD: self.key})
+    self.assertEqual(400, response.status_code)
+    self.assertIn(
+        'neither %s nor %s specified' % (
+            fields.SECURE_LAUNCH_URL, fields.LAUNCH_URL),
+        self.get_log())
+
+  def test_post_returns_400_if_missing_other_required_lti_fields(self):
+    self.set_up_runtime()
+    removed_field = sorted(fields._REQUIRED)[0]
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    self.params.pop(removed_field)
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assertIn('missing required fields: ' + removed_field, self.get_log())
+
+  def test_post_returns_400_if_request_signature_missing(self):
+    self.set_up_runtime()
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assertIn(
+        '%s not specified' % lti.ValidationHandler.OAUTH_SIGNATURE_FIELD,
+        self.get_log())
+
+  def test_post_returns_400_if_get_expected_signature_throws(self):
+    error_details = 'error_details'
+
+    def throw(unused_key, unused_secret, unused_parameters, unused_url):
+       raise Exception(error_details)
+
+    self.swap(lti, '_get_signed_oauth_request', throw)
+    self.set_up_runtime()
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'signature',
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assertIn(
+        'error calculating signature: ' + error_details, self.get_log())
+
+  def test_post_returns_400_if_signature_mismatch(self):
+    self.set_up_runtime()
+    self.params.update({
+        lti.ValidationHandler.OAUTH_KEY_FIELD: self.key,
+        lti.ValidationHandler.OAUTH_SIGNATURE_FIELD: 'mismatch',
+        fields.SECURE_LAUNCH_URL: self.url,
+    })
+    response = self.testapp.post(
+        lti._VALIDATION_URL, expect_errors=400, params=self.params)
+    self.assertIn('signature mismatch', self.get_log())
+    self.assertEqual(400, response.status_code)
+
+  def test_post_returns_404_if_provider_not_enabled(self):
+    response = self.testapp.post(lti._VALIDATION_URL, expect_errors=True)
+    self.assertEqual(404, response.status_code)
+    self.assertIn('provider is not enabled', self.get_log())
+
+
+class GetMissingBaseTest(actions.TestBase):
+
+  def test_returns_empty_list_if_all_required_fields_present(self):
+    self.assertEqual(
+        [],
+        fields._get_missing_base({name: 'value' for name in fields._REQUIRED}))
+
+  def test_returns_sorted_missing_fields(self):
+    self.assertEqual(
+        [fields.LTI_MESSAGE_TYPE, fields.LTI_VERSION],
+        fields._get_missing_base(
+            {'other': 'value', fields.RESOURCE_LINK_ID: 'value'}))
 
 
 class SerializerTest(actions.TestBase):
