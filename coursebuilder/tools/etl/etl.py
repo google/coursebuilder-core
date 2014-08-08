@@ -147,6 +147,18 @@ _COURSE_JSON_PATH_SUFFIX = 'data/course.json'
 _COURSE_YAML_PATH_SUFFIX = 'course.yaml'
 # String. Message the user must type to confirm datastore deletion.
 _DELETE_DATASTORE_CONFIRMATION_INPUT = 'YES, DELETE'
+# List of types which are not to be downloaded.  These are types which
+# are either known to be transient, disposable state classes (e.g.,
+# map/reduce's "_AE_... classes), or legacy types no longer required.
+_EXCLUDE_TYPES = set([
+    # Map/reduce internal types:
+    '_AE_MR_MapreduceState',
+    '_AE_MR_ShardState',
+    '_AE_Pipeline_Barrier',
+    '_AE_Pipeline_Record',
+    '_AE_Pipeline_Slot',
+    '_AE_Pipeline_Status',
+    ])
 # Function that takes one arg and returns it.
 _IDENTITY_TRANSFORM = lambda x: x
 # Regex. Format of __internal_names__ used by datastore kinds.
@@ -608,6 +620,10 @@ def _download_datastore(
 def _download_type(
     archive, manifest, model_class, batch_size, privacy_transform_fn):
     """Downloads a set of files and adds them to the archive."""
+    if model_class in _EXCLUDE_TYPES:
+        _LOG.info('Skipping download of excluded type "%s"' % model_class)
+        return
+
     json_path = os.path.join(
         os.path.dirname(archive.path), '%s.json' % model_class)
 
