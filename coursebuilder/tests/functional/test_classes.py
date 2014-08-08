@@ -573,11 +573,21 @@ class InfrastructureTest(actions.TestBase):
         def get_environ_new(self):
             environ = get_environ_old(self)
             environ['course']['now_available'] = True
+            environ['course']['browsable'] = False
             return environ
 
         sites.ApplicationContext.get_environ = get_environ_new
 
         private_tag = 'id="lesson-title-private"'
+
+        # Confirm private units are suppressed for user out of session
+        response = self.get('preview')
+        assert_equals(response.status_int, 200)
+        assert_does_not_contain('Unit 1 - New Unit', response.body)
+        assert_contains('Unit 2 - New Unit', response.body)
+        assert_contains('Unit 3 - New Unit', response.body)
+        assert_contains('Unit 4 - New Unit', response.body)
+        assert_contains('Unit 5 - New Unit', response.body)
 
         # Simulate a student traversing the course.
         email = 'test_unit_lesson_not_available@example.com'

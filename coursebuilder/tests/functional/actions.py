@@ -465,8 +465,10 @@ def view_preview(browser):
     response = browser.get('preview')
     assert_contains(' the stakes are high.', response.body)
     assert_contains(
-        '<li><p class="gcb-top-content">Pre-course assessment</p></li>',
-        response.body)
+        '<li class=\'\'><p class="gcb-top-content"> '
+        '<span class="gcb-progress-none"></span> '
+        'Pre-course assessment </p> </li>',
+        response.body, collapse_whitespace=True)
 
     assert_contains_none_of(UNIT_HOOK_POINTS, response.body)
     assert_contains_all_of(PREVIEW_HOOK_POINTS, response.body)

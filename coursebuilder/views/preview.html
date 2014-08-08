@@ -20,6 +20,7 @@
 {% endblock %}
 
 {% block main_content %}
+  {% import 'macros.html' as macros %}
   <div style="margin-top: 20px;" class="gcb-cols">
     <div class="gcb-col-1">
     </div>
@@ -34,19 +35,15 @@
         <div class="gcb-nav gcb-nav-full" id="gcb-nav-y">
           <ul>
             {% for unit in units %}
-              {% if unit.type == 'A' %}
-                <li><p class="gcb-top-content">{{ unit.title }}</p></li>
-              {% elif unit.type == 'U' %}
-                <li><p class="gcb-top-content">
-                  {{ display_unit_title(unit) }}
-                </p></li>
-              {% elif unit.type == 'O' %}
-                <li><p class="gcb-top-content"> {{ unit.title }} </p></li>
-              {% else %}
-                <li><p class="gcb-top-content">
-                  Error: unit type not recognized.
-                </p></li>
-              {% endif %}
+              {{ macros.render_unit_title(
+                  unit,
+                  progress=None,
+                  is_progress_recorded=False,
+                  transient_student=True,
+                  is_course_admin=False,
+                  include_link=False,
+                  css_class='',
+                  target_url=None) }}
             {% endfor %}
           </ul>
         </div>
