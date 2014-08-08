@@ -250,6 +250,55 @@ class UnitLessonEditor(ApplicationHandler):
             'edit_assessment', key=assessment.unit_id,
             extra_args={'is_newly_created': 1}))
 
+    def post_set_draft_status(self):
+        """Sets the draft status of a course component.
+
+        Only works with CourseModel13 courses, but the REST handler
+        is only called with this type of courses.
+        """
+        key = self.request.get('key')
+        if not CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        course = courses.Course(self)
+        component_type = self.request.get('type')
+        if component_type == 'unit':
+            course_component = course.find_unit_by_id(key)
+        elif component_type == 'lesson':
+            course_component = course.find_lesson_by_id(None, key)
+        else:
+            transforms.send_json_response(
+                self, 401, 'Invalid key.', {'key': key})
+            return
+
+        set_draft = self.request.get('set_draft')
+        if set_draft == '1':
+            set_draft = True
+        elif set_draft == '0':
+            set_draft = False
+        else:
+            transforms.send_json_response(
+                self, 401, 'Invalid set_draft value, expected 0 or 1.',
+                {'set_draft': set_draft}
+            )
+            return
+
+        course_component.now_available = not set_draft
+        course.save()
+
+        transforms.send_json_response(
+            self,
+            200,
+            'Draft status set to %s.' % (
+                DRAFT_TEXT if set_draft else PUBLISHED_TEXT
+            ), {
+                'is_draft': set_draft
+            }
+        )
+        return
+
     def _render_edit_form_for(
         self, rest_handler_cls, title, annotations_dict=None,
         delete_xsrf_token='delete-unit', page_description=None,

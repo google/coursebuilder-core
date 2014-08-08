@@ -61,6 +61,9 @@ div#gcb-main-content {
   padding: 32px;
   text-align: left;
 }
+div#gcb-main-content li {
+  margin: 1px 0px;
+}
 div#gcb-footer {
   text-align: center;
   font-size: smaller;
@@ -182,12 +185,30 @@ div#formContainer div.settings-list-item fieldset {
 div#formContainer div.settings-list-item fieldset legend span {
   font-weight: normal;
 }
-.icon-button {
-  height: 13px;
-  margin: 0px 5px;
+.icon {
+  height: 16px;
+  width: 16px;
+  margin: 0px 0px 0px 5px;
+  background-repeat: no-repeat;
+  display: inline-block;
+  vertical-align: bottom;
 }
-.preview-button {
+.icon-edit {
+  background-image: url('/modules/dashboard/resources/images/pencil.png');
+}
+.icon-preview {
+  background-image: url('/modules/dashboard/resources/images/eye.png');
   cursor: pointer;
+}
+.icon-draft-status.active {
+  cursor: pointer;
+}
+.icon-locked, .icon-unlocked {
+  background-image: url('/modules/dashboard/resources/images/lock.png');
+  background-repeat: no-repeat;
+}
+.icon-unlocked {
+  background-position: -16px 0;
 }
 .assets-table-container {
   max-height: 400px;
@@ -208,6 +229,12 @@ div#formContainer div.settings-list-item fieldset legend span {
   cursor: pointer;
   background-repeat: no-repeat;
 }
+.assets-table li {
+  margin: 0px;
+}
+.assets-table .icon {
+  margin: 0px 5px 0px 0px;
+}
 .assets-table .sort-desc, .assets-table .sort-asc {
   background-color: #e5e5e5;
 }
@@ -218,10 +245,6 @@ div#formContainer div.settings-list-item fieldset legend span {
 .assets-table .sort-desc {
   background-image: url('/modules/dashboard/resources/images/bullet_arrow_down.png');
   background-position: 100% 80%;
-}
-.assets-table .icon-button {
-  margin: 0px 5px 0px 0px;
-  float: left;
 }
 .assets-table ul {
   margin: 0px;

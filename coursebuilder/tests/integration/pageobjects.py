@@ -487,10 +487,8 @@ class AssetsPage(PageObject):
 
     def click_edit_image(self, name):
         get_parent_element(
-            get_parent_element(
-                self.find_element_by_link_text(name)
-            ).find_element_by_css_selector('img.edit-button')
-        ).click()
+            self.find_element_by_link_text(name)
+        ).find_element_by_css_selector('a.icon-edit').click()
         return ImageEditorPage(self._tester)
 
     def click_add_short_answer(self):
@@ -525,7 +523,7 @@ class AssetsPage(PageObject):
 
     def click_question_preview(self):
         self.find_element_by_css_selector(
-            '#gcb-main-content tbody td .preview-button').click()
+            '#gcb-main-content tbody td .icon-preview').click()
         return self
 
     def verify_question_preview(self, question_text):

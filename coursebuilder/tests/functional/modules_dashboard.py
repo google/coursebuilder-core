@@ -21,6 +21,7 @@ import time
 
 import actions
 from common import crypto
+from controllers import utils
 from models import courses
 from models import models
 from models import transforms
@@ -242,3 +243,122 @@ class QuestionDashboardTestCase(actions.TestBase):
                 'data-timestamp', ''),
             str(qg_dto.last_modified)
         )
+
+
+class CourseOutlineTestCase(actions.TestBase):
+    """Tests the Course Outline."""
+    COURSE_NAME = 'outline'
+    ADMIN_EMAIL = 'admin@foo.com'
+    URL = 'dashboard'
+
+    def setUp(self):
+        super(CourseOutlineTestCase, self).setUp()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Outline Testing')
+
+        self.course = courses.Course(None, context)
+
+    def _set_draft_status(self, key, component_type, xsrf_token, set_draft):
+        return self.post(self.URL, {
+            'action': 'set_draft_status',
+            'key': key,
+            'type': component_type,
+            'xsrf_token': xsrf_token,
+            'set_draft': set_draft
+        }, True)
+
+    def _check_list_item(self, li, href, title, ctype, key, lock_class):
+        a = li.find('a')
+        self.assertEquals(a.get('href', ''), href)
+        self.assertEquals(a.text, title)
+        padlock = li.find('div')
+        self.assertEquals(padlock.get('data-component-type', ''), ctype)
+        self.assertEquals(padlock.get('data-key', ''), str(key))
+        self.assertIn(lock_class, padlock.get('class', ''))
+
+    def test_action_icons(self):
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.now_available = True
+        link = self.course.add_link()
+        link.title = 'Test Link'
+        link.now_available = False
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        unit.now_available = True
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Test Lesson'
+        lesson.now_available = False
+        self.course.save()
+
+        dom = self.parse_html_string(self.get(self.URL).body)
+        course_outline = dom.find('.//ul[@id="course-outline"]')
+        xsrf_token = course_outline.get('data-status-xsrf-token', '')
+        lis = course_outline.findall('li')
+        self.assertEquals(len(lis), 3)
+
+        # Test Assessment
+        self._check_list_item(
+            lis[0], 'assessment?name=%s' % assessment.unit_id,
+            assessment.title, 'unit', assessment.unit_id, 'icon-unlocked'
+        )
+
+        # Test Link
+        self._check_list_item(
+            lis[1], '', link.title, 'unit', link.unit_id, 'icon-locked')
+
+        # Test Unit
+        unit_li = lis[2]
+        self._check_list_item(
+            unit_li, 'unit?unit=%s' % unit.unit_id,
+            utils.display_unit_title(unit, {'course': {}}), 'unit',
+            unit.unit_id, 'icon-unlocked'
+        )
+
+        # Test Lesson
+        self._check_list_item(
+            unit_li.find('ol/li'),
+            'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id),
+            lesson.title, 'lesson', lesson.lesson_id, 'icon-locked'
+        )
+
+        # Send POST without xsrf token, should give 403
+        response = self._set_draft_status(
+            assessment.unit_id, 'unit', 'xyz', '1')
+        self.assertEquals(response.status_int, 403)
+
+        # Set assessment to private
+        response = self._set_draft_status(
+            assessment.unit_id, 'unit', xsrf_token, '1')
+        self.assertEquals(response.status_int, 200)
+        payload = transforms.loads(transforms.loads(response.body)['payload'])
+        self.assertEquals(payload['is_draft'], True)
+
+        # Set lesson to public
+        response = self._set_draft_status(
+            lesson.lesson_id, 'lesson', xsrf_token, '0')
+        self.assertEquals(response.status_int, 200)
+        payload = transforms.loads(transforms.loads(response.body)['payload'])
+        self.assertEquals(payload['is_draft'], False)
+
+        # Refresh page, check results
+        lis = self.parse_html_string(
+            self.get(self.URL).body).findall('.//ul[@id="course-outline"]/li')
+        self.assertIn('icon-locked', lis[0].find('div').get('class', ''))
+        self.assertIn(
+            'icon-unlocked', lis[2].find('ol/li/div').get('class', ''))
+
+        # Repeat but set assessment to public and lesson to private
+        response = self._set_draft_status(
+            assessment.unit_id, 'unit', xsrf_token, '0')
+        response = self._set_draft_status(
+            lesson.lesson_id, 'lesson', xsrf_token, '1')
+
+        # Refresh page, check results
+        lis = self.parse_html_string(
+            self.get(self.URL).body).findall('.//ul[@id="course-outline"]/li')
+        self.assertIn('icon-unlocked', lis[0].find('div').get('class', ''))
+        self.assertIn('icon-locked', lis[2].find('ol/li/div').get('class', ''))

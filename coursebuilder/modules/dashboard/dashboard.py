@@ -109,7 +109,7 @@ class DashboardHandler(
         'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_basic_course_settings', 'add_reviewer',
-        'delete_reviewer', 'edit_admin_preferences']
+        'delete_reviewer', 'edit_admin_preferences', 'set_draft_status']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -281,33 +281,15 @@ class DashboardHandler(
         ret.append(safe_dom.Text(' %s' % text))
         return ret
 
-    def _get_edit_link(self, url):
-        return safe_dom.NodeList().append(
-            safe_dom.Text(' ')
-        ).append(
-            safe_dom.Element('a', href=url).add_text('Edit')
-        )
-
-    def _get_availability(self, resource):
-        if not hasattr(resource, 'now_available'):
-            return safe_dom.Text('')
-        if resource.now_available:
-            return safe_dom.Text('')
-        else:
-            return safe_dom.NodeList().append(
-                safe_dom.Text(' ')
-            ).append(
-                safe_dom.Element(
-                    'span', className='draft-label'
-                ).add_text('(%s)' % unit_lesson_editor.DRAFT_TEXT)
-            )
-
     def render_course_outline_to_html(self):
         """Renders course outline to HTML."""
         course = courses.Course(self)
         if not course.get_units():
             return []
-        lines = safe_dom.Element('ul', style='list-style: none;')
+        lines = safe_dom.Element(
+            'ul', style='list-style: none;', id='course-outline',
+            data_status_xsrf_token=self.create_xsrf_token('set_draft_status')
+        )
         for unit in course.get_units():
             if course.get_parent_unit(unit.unit_id):
                 continue  # Will be rendered as part of containing element.
@@ -321,19 +303,42 @@ class DashboardHandler(
                 raise Exception('Unknown unit type: %s.' % unit.type)
         return lines
 
+    def _render_status_icon(self, dom_element, resource, key, component_type):
+        if not hasattr(resource, 'now_available'):
+            return
+        icon = safe_dom.Element(
+            'div', data_key=str(key), data_component_type=component_type)
+        common_classes = 'icon icon-draft-status'
+        if self.app_context.is_editable_fs():
+            common_classes += ' active'
+        if resource.now_available:
+            icon.add_attribute(
+                alt=unit_lesson_editor.PUBLISHED_TEXT,
+                title=unit_lesson_editor.PUBLISHED_TEXT,
+                className=common_classes + ' icon-unlocked',
+            )
+        else:
+            icon.add_attribute(
+                alt=unit_lesson_editor.DRAFT_TEXT,
+                title=unit_lesson_editor.DRAFT_TEXT,
+                className=common_classes + ' icon-locked'
+            )
+        dom_element.add_child(icon)
+
     def _render_assessment_li(self, unit):
         li = safe_dom.Element('li').add_child(
             safe_dom.Element(
                 'a', href='assessment?name=%s' % unit.unit_id,
                 className='strong'
             ).add_text(unit.title)
-        ).add_child(self._get_availability(unit))
+        )
+        self._render_status_icon(li, unit, unit.unit_id, 'unit')
         if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_assessment',
                     'key': unit.unit_id})
-            li.add_child(self._get_edit_link(url))
+            li.add_child(self._create_edit_button(url))
         return li
 
     def _render_link_li(self, unit):
@@ -341,13 +346,14 @@ class DashboardHandler(
             safe_dom.Element(
                 'a', href=unit.href, className='strong'
             ).add_text(unit.title)
-        ).add_child(self._get_availability(unit))
+        )
+        self._render_status_icon(li, unit, unit.unit_id, 'unit')
         if self.app_context.is_editable_fs():
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_link',
                     'key': unit.unit_id})
-            li.add_child(self._get_edit_link(url))
+            li.add_child(self._create_edit_button(url))
         return li
 
     def _render_unit_li(self, course, unit):
@@ -357,13 +363,14 @@ class DashboardHandler(
                 'a', href='unit?unit=%s' % unit.unit_id,
                 className='strong').add_text(
                     utils.display_unit_title(unit))
-        ).add_child(self._get_availability(unit))
+        )
+        self._render_status_icon(li, unit, unit.unit_id, 'unit')
         if is_editable:
             url = self.canonicalize_url(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_unit',
                     'key': unit.unit_id})
-            li.add_child(self._get_edit_link(url))
+            li.add_child(self._create_edit_button(url))
 
         if unit.pre_assessment:
             assessment = course.find_unit_by_id(unit.pre_assessment)
@@ -379,11 +386,12 @@ class DashboardHandler(
                     href='unit?unit=%s&lesson=%s' % (
                         unit.unit_id, lesson.lesson_id),
                 ).add_text(lesson.title)
-            ).add_child(self._get_availability(lesson))
+            )
+            self._render_status_icon(li2, lesson, lesson.lesson_id, 'lesson')
             if is_editable:
                 url = self.get_action_url(
                     'edit_lesson', key=lesson.lesson_id)
-                li2.add_child(self._get_edit_link(url))
+                li2.add_child(self._create_edit_button(url))
             ol.add_child(li2)
         li.add_child(ol)
         if unit.post_assessment:
@@ -785,10 +793,21 @@ class DashboardHandler(
         return safe_dom.Element('td').add_child(ul)
 
     def _create_edit_button(self, edit_url):
-        edit_icon = safe_dom.Element(
-            'img', className='icon-button edit-button',
-            src='/modules/dashboard/resources/images/pencil.png')
-        return safe_dom.A(href=edit_url).add_child(edit_icon)
+        return safe_dom.A(
+            href=edit_url,
+            className='icon icon-edit',
+            title='Edit',
+            alt='Edit',
+        )
+
+    def _create_preview_button(self, **arg):
+        return safe_dom.Element(
+            'div',
+            className='icon icon-preview',
+            title='Preview',
+            alt='Preview',
+            **arg
+        )
 
     def _add_assets_table(self, output, columns):
         """Creates an assets table with the specified columns.
@@ -861,10 +880,8 @@ class DashboardHandler(
             tr.add_child(td)
             td.add_child(self._create_edit_button(
                 'dashboard?action=edit_question&key=%s' % question.id))
-            td.add_child(safe_dom.Element(
-                'img', className='icon-button preview-button',
-                data_quid=str(question.id),
-                src='/modules/dashboard/resources/images/eye.png'))
+            td.add_child(
+                self._create_preview_button(data_quid=str(question.id)))
             td.add_text(question.description)
 
             # Add containing question groups
@@ -1184,6 +1201,7 @@ def register_module():
                            DashboardHandler.get_assets_contrib)
 
     global_routes = [
+        (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     dashboard_handlers = [

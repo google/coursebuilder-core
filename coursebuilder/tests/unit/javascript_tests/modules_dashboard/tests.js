@@ -159,3 +159,33 @@ describe('asset table sorting', function() {
     expect($('#b').index()).toBe(0);
   });
 });
+
+describe('draft status toggling', function() {
+  beforeEach(function() {
+    cbShowAlert = jasmine.createSpy("cbShowAlert");
+    cbShowMsg = jasmine.createSpy("cbShowMsg");
+    cbHideMsg = jasmine.createSpy("cbHideMsg");
+  });
+  it('simulates a toggle from public to draft', function() {
+    var padlock = $("<div class='icon icon-unlocked'>");
+    setDraftStatusCallback(
+      '{"status": 200, "payload":"{\\"is_draft\\":true}"}', padlock);
+    expect(padlock.hasClass("icon-unlocked")).toBe(false);
+    expect(padlock.hasClass("icon-locked")).toBe(true);
+    expect(cbShowMsg).toHaveBeenCalled();
+  });
+  it('simulates a toggle from draft to public', function() {
+    var padlock = $("<div class='icon icon-locked'>")
+    setDraftStatusCallback(
+      '{"status": 200, "payload":"{\\"is_draft\\":false}"}', padlock);
+    expect(padlock.hasClass("icon-locked")).toBe(false);
+    expect(padlock.hasClass("icon-unlocked")).toBe(true);
+    expect(cbShowMsg).toHaveBeenCalled();
+  });
+  it('simulates an access denied', function() {
+    var padlock = $("<div class='icon icon-locked'>")
+    setDraftStatusCallback('{"status": 401}', padlock);
+    expect(padlock.hasClass("icon-locked")).toBe(true);
+    expect(cbShowAlert).toHaveBeenCalled();
+  });
+});
