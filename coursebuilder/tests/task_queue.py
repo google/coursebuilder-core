@@ -23,6 +23,7 @@ import re
 
 import appengine_config  # pylint: disable=unused-import
 
+from common import utils as common_utils
 from modules.mapreduce import mapreduce_module
 
 from google.appengine.ext import deferred
@@ -97,12 +98,16 @@ class MapReduceTaskQueueItemHandler(TaskQueueItemHandler):
         return match is not None
 
     def run(self, task):
+        namespace = dict(task['headers']).get(
+            'X-AppEngine-Current-Namespace', '')
+
         data = base64.b64decode(task['body'])
         # Work around unicode/string non-conversion bug in old versions.
         headers = {key: str(val) for key, val in task['headers']}
         headers['Content-Length'] = str(len(data))
-        response = self._testapp.post(
-            url=str(task['url']), params=data, headers=headers)
+        with common_utils.Namespace(namespace):
+            response = self._testapp.post(
+                url=str(task['url']), params=data, headers=headers)
         if response.status_code != 200:
             raise RuntimeError(
                 'Failed calling map/reduce task for url %s; response was %s' % (

@@ -47,6 +47,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,
     'tests.functional.controllers_review.PeerReviewDashboardStudentTest': 2,
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
+    'tests.functional.model_analytics.CronCleanupTest': 14,
     'tests.functional.model_analytics.ProgressAnalyticsTest': 8,
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,
     'tests.functional.model_data_sources.PaginatedTableTest': 17,

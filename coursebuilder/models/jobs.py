@@ -256,7 +256,7 @@ class MapReduceJob(DurableJobBase):
                                   'xsrf_token': xsrf_token}))
 
     @staticmethod
-    def _get_root_pipeline_id(job):
+    def get_root_pipeline_id(job):
         if not job or not job.output:
             return None
         content = transforms.loads(job.output)
@@ -412,14 +412,34 @@ class MapReduceJob(DurableJobBase):
         return sequence_num
 
     def _cancel_queued_work(self, job, message):
-        root_pipeline_id = MapReduceJob._get_root_pipeline_id(job)
+        root_pipeline_id = MapReduceJob.get_root_pipeline_id(job)
         if root_pipeline_id:
-            pipeline.Pipeline.from_id(root_pipeline_id).abort(message)
+            p = pipeline.Pipeline.from_id(root_pipeline_id)
+            if p:
+                p.abort(message)
 
     def _mark_job_canceled(self, job, message, duration):
         DurableJobEntity._fail_job(
             self._job_name, job.sequence_num,
             MapReduceJob.build_output(None, None, message), duration)
+
+    def mark_cleaned_up(self):
+        job = self.load()
+
+        # If the job has already finished, then the cleanup is a
+        # no-op; we are just reclaiming transient state.  However, if
+        # our DurableJobEntity still thinks the job is running and it
+        # is actually not, then mark the status message to indicate
+        # the cleanup.
+        if job and not job.has_finished:
+            duration = int((datetime.datetime.utcnow() - job.updated_on)
+                           .total_seconds())
+            with Namespace(self._namespace):
+                return db.run_in_transaction(
+                    self._mark_job_canceled, job,
+                    'Job has not completed; assumed to have failed after %s' %
+                    str(datetime.timedelta(seconds=duration)), duration)
+        return job
 
 
 class AbstractCountingMapReduceJob(MapReduceJob):

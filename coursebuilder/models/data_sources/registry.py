@@ -16,6 +16,7 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+from models import jobs
 from models.data_sources import base_types
 
 
@@ -44,3 +45,12 @@ class _Registry(object):
     @classmethod
     def is_registered(cls, clazz):
         return clazz in cls._data_source_classes
+
+    @classmethod
+    def get_generator_classes(cls):
+        ret = set()
+        for c in cls._data_source_classes:
+            for g in c.required_generators():
+                if issubclass(g, jobs.DurableJobBase):
+                    ret.add(g)
+        return ret

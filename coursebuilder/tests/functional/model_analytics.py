@@ -17,22 +17,28 @@
 
 __author__ = 'Julia Oh(juliaoh@google.com)'
 
+import datetime
 import os
+import time
 
 import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
+from mapreduce.lib.pipeline import pipeline
 
 import appengine_config
+from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from models import jobs
 from models import models
 from models import transforms
 from models.progress import ProgressStats
 from models.progress import UnitLessonCompletionTracker
+from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
 from modules.mapreduce import mapreduce_module
 
@@ -605,3 +611,195 @@ class QuestionAnalyticsTest(actions.TestBase):
                 }
             }
         )
+
+
+COURSE_ONE = 'course_one'
+COURSE_TWO = 'course_two'
+
+
+class CronCleanupTest(actions.TestBase):
+    # pylint: disable-msg=protected-access
+
+    def setUp(self):
+        super(CronCleanupTest, self).setUp()
+        admin_email = 'admin@foo.com'
+        self.course_one = actions.simple_add_course(
+            COURSE_ONE, admin_email, 'Course One')
+        self.course_two = actions.simple_add_course(
+            COURSE_TWO, admin_email, 'Course Two')
+
+        actions.login(admin_email, True)
+        actions.register(self, admin_email, COURSE_ONE)
+        actions.register(self, admin_email, COURSE_TWO)
+
+        self.save_tz = os.environ.get('TZ')
+        os.environ['TZ'] = 'GMT'
+        time.tzset()
+
+    def tearDown(self):
+        if self.save_tz:
+            os.environ['TZ'] = self.save_tz
+        else:
+            del os.environ['TZ']
+        time.tzset()
+
+    def _clean_jobs(self, max_age):
+        return mapreduce_module.CronMapreduceCleanupHandler._clean_mapreduce(
+            max_age)
+
+    def _get_num_root_jobs(self, course_name):
+        with common_utils.Namespace('ns_' + course_name):
+            return len(pipeline.get_root_list()['pipelines'])
+
+    def _force_finalize(self, job):
+        # For reasons that I do not grok, running the deferred task list
+        # until it empties out in test mode does not wind up marking the
+        # root job as 'done'.  (Whereas when running the actual service,
+        # the job does get marked 'done'.)  This has already cost me most
+        # of two hours of debugging, and I'm no closer to figuring out why,
+        # much less having a monkey-patch into the Map/Reduce or Pipeline
+        # libraries that would correct this.  Cleaner to just transition
+        # the job into a completed state manually.
+        root_pipeline_id = jobs.MapReduceJob.get_root_pipeline_id(job.load())
+        with common_utils.Namespace(job._namespace):
+            p = pipeline.Pipeline.from_id(root_pipeline_id)
+            context = pipeline._PipelineContext('', 'default', '')
+            context.transition_complete(p._pipeline_key)
+
+    def test_non_admin_cannot_cleanup(self):
+        actions.login('joe_user@foo.com')
+        response = self.get('/cron/mapreduce/cleanup', expect_errors=True)
+        self.assertEquals(400, response.status_int)
+
+    def test_admin_cleanup_gets_200_ok(self):
+        response = self.get('/cron/mapreduce/cleanup', expect_errors=True)
+        self.assertEquals(200, response.status_int)
+
+    def test_no_jobs_no_cleanup(self):
+        self.assertEquals(0, self._clean_jobs(datetime.timedelta(seconds=0)))
+
+    def test_unstarted_job_not_cleaned(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(0, self._clean_jobs(datetime.timedelta(minutes=1)))
+
+    def test_active_job_not_cleaned(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks(iteration_limit=1)
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(0, self._clean_jobs(datetime.timedelta(minutes=1)))
+
+    def test_completed_job_is_not_cleaned(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks()
+        self._force_finalize(mapper)
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(0, self._clean_jobs(datetime.timedelta(minutes=1)))
+
+    def test_terminated_job_with_no_start_time_is_cleaned(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        mapper.cancel()
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(1, self._clean_jobs(datetime.timedelta(minutes=1)))
+
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+
+    def test_incomplete_job_cleaned_if_time_expired(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks(iteration_limit=1)
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
+
+        self.execute_all_deferred_tasks()  # Run deferred deletion task.
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+
+    def test_completed_job_cleaned_if_time_expired(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
+
+        self.execute_all_deferred_tasks()  # Run deferred deletion task.
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+
+    def test_multiple_runs_cleaned(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        for _ in range(0, 3):
+            mapper.submit()
+            self.execute_all_deferred_tasks()
+
+        self.assertEquals(3, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(3, self._clean_jobs(datetime.timedelta(seconds=0)))
+
+        self.execute_all_deferred_tasks()  # Run deferred deletion task.
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+
+    def test_cleanup_modifies_incomplete_status(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks(iteration_limit=1)
+
+        self.assertEquals(jobs.STATUS_CODE_STARTED, mapper.load().status_code)
+
+        self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
+        self.assertEquals(jobs.STATUS_CODE_FAILED, mapper.load().status_code)
+        self.assertIn('assumed to have failed', mapper.load().output)
+
+    def test_cleanup_does_not_modify_completed_status(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(jobs.STATUS_CODE_COMPLETED, mapper.load().status_code)
+
+        self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
+        self.assertEquals(jobs.STATUS_CODE_COMPLETED, mapper.load().status_code)
+
+    def test_cleanup_in_multiple_namespaces(self):
+        mapper_one = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper_two = rest_providers.LabelsOnStudentsGenerator(self.course_two)
+        for _ in range(0, 2):
+            mapper_one.submit()
+            mapper_two.submit()
+            self.execute_all_deferred_tasks()
+
+        self.assertEquals(2, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(2, self._get_num_root_jobs(COURSE_TWO))
+        self.assertEquals(4, self._clean_jobs(datetime.timedelta(seconds=0)))
+
+        self.execute_all_deferred_tasks()  # Run deferred deletion task.
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_TWO))
+
+    def test_cleanup_handler(self):
+        mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
+        mapper.submit()
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        mapper.cancel()
+        self.execute_all_deferred_tasks()
+
+        self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
+
+        # Check that hitting the cron handler via GET works as well.
+        # Note that since the actual handler uses a max time limit of
+        # a few days, we need to set up a canceled job which, having
+        # no defined start-time will be cleaned up immediately.
+        self.get('/cron/mapreduce/cleanup')
+
+        self.execute_all_deferred_tasks(iteration_limit=1)
+        self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))

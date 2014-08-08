@@ -16,15 +16,21 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import datetime
 import urllib
 
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
+from mapreduce.lib.pipeline import pipeline
 
 from common import safe_dom
 from common.utils import Namespace
+from controllers import sites
 from controllers import utils
 from models import custom_modules
+from models import data_sources
+from models import jobs
+from models import roles
 from models.config import ConfigProperty
 
 from google.appengine.api import users
@@ -33,6 +39,7 @@ from google.appengine.api import users
 custom_module = None
 MODULE_NAME = 'Map/Reduce'
 XSRF_ACTION_NAME = 'view-mapreduce-ui'
+MAX_MAPREDUCE_METADATA_RETENTION_DAYS = 3
 
 GCB_ENABLE_MAPREDUCE_DETAIL_ACCESS = ConfigProperty(
     'gcb_enable_mapreduce_detail_access', bool,
@@ -120,10 +127,101 @@ def ui_access_wrapper(self, *args, **kwargs):
         self.response.set_status(403)
 
 
+class CronMapreduceCleanupHandler(utils.BaseHandler):
+
+    def get(self):
+        """Clean up intermediate data items for completed or failed M/R jobs.
+
+        Map/reduce runs leave around a large number of rows in several
+        tables.  This data is useful to have around for a while:
+        - it helps diagnose any problems with jobs that may be occurring
+        - it shows where resource usage is occurring
+        However, after a few days, this information is less relevant, and
+        should be cleaned up.
+
+        The algorithm here is: for each namespace, find all the expired
+        map/reduce jobs and clean them up.  If this happens to be touching
+        the M/R job that a MapReduceJob instance is pointing at, buff up
+        the description of that job to reflect the cleanup.  However, since
+        DurableJobBase-derived things don't keep track of all runs, we
+        cannot simply use the data_sources.Registry to list MapReduceJobs
+        and iterate that way; we must iterate over the actual elements
+        listed in the database.
+        """
+
+        # Belt and suspenders.  The app.yaml settings should ensure that
+        # only admins can use this URL, but check anyhow.
+        if not roles.Roles.is_direct_super_admin():
+            self.error(400)
+            return
+
+        self._clean_mapreduce(
+            datetime.timedelta(days=MAX_MAPREDUCE_METADATA_RETENTION_DAYS))
+
+    @classmethod
+    def _clean_mapreduce(cls, max_age):
+        """Separated as internal function to permit tests to pass max_age."""
+        num_cleaned = 0
+
+        # If job has a start time before this, it has been running too long.
+        min_start_time_datetime = datetime.datetime.utcnow() - max_age
+        min_start_time_millis = int(
+            (min_start_time_datetime - datetime.datetime(1970, 1, 1))
+            .total_seconds() * 1000)
+
+        # Iterate over all namespaces in the installation
+        for course_context in sites.get_all_courses():
+            with Namespace(course_context.get_namespace_name()):
+
+                # Index map/reduce jobs in this namespace by pipeline ID.
+                jobs_by_pipeline_id = {}
+                for job_class in data_sources.Registry.get_generator_classes():
+                    if issubclass(job_class, jobs.MapReduceJob):
+                        job = job_class(course_context)
+                        pipe_id = jobs.MapReduceJob.get_root_pipeline_id(
+                            job.load())
+                        jobs_by_pipeline_id[pipe_id] = job
+
+                # Clean up pipelines
+                for state in pipeline.get_root_list()['pipelines']:
+                    pipeline_id = state['pipelineId']
+                    job_definitely_terminated = (
+                        state['status'] == 'done' or
+                        state['status'] == 'aborted' or
+                        state['currentAttempt'] > state['maxAttempts'])
+                    have_start_time = 'startTimeMs' in state
+                    job_started_too_long_ago = (
+                        have_start_time and
+                        state['startTimeMs'] < min_start_time_millis)
+
+                    if (job_started_too_long_ago or
+                        (not have_start_time and job_definitely_terminated)):
+                        # At this point, the map/reduce pipeline is
+                        # either in a terminal state, or has taken so long
+                        # that there's no realistic possibility that there
+                        # might be a race condition between this and the
+                        # job actually completing.
+                        if pipeline_id in jobs_by_pipeline_id:
+                            jobs_by_pipeline_id[pipeline_id].mark_cleaned_up()
+
+                        # This only enqueues a deferred cleanup item, so
+                        # transactionality with marking the job cleaned is
+                        # not terribly important.
+                        p = pipeline.Pipeline.from_id(pipeline_id)
+                        if p:
+                          p.cleanup()
+
+                        num_cleaned += 1
+        return num_cleaned
+
+
 def register_module():
     """Registers this module in the registry."""
 
-    global_handlers = []
+    global_handlers = [
+        ('/cron/mapreduce/cleanup', CronMapreduceCleanupHandler),
+    ]
+
     for path, handler_class in mapreduce_main.create_handlers_map():
         # The mapreduce and pipeline libraries are pretty casual about
         # mixing up their UI support in with their functional paths.

@@ -8,3 +8,6 @@ cron:
 - description: indexes all courses
   url: /cron/search/index_courses
   schedule: every day 06:00
+- description: clean up resources from map/reduce jobs.
+  url: /cron/mapreduce/cleanup
+  schedule: every day 03:45
