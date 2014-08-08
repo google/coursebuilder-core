@@ -16,11 +16,15 @@
 
 __author__ = 'Glenn De Jonghe (gdejonghe@google.com)'
 
+import cgi
 import time
 
 import actions
+from common import crypto
 from models import courses
 from models import models
+from models import transforms
+from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
 
 from google.appengine.api import namespace_manager
 
@@ -177,6 +181,40 @@ class QuestionDashboardTestCase(actions.TestBase):
         self.assertEquals(
             asset_tables[0].find('./tbody/tr/td').text, 'No questions available'
         )
+        self.assertEquals(
+            asset_tables[1].find('./tbody/tr/td/a').tail, description
+        )
+
+    def test_if_buttons_are_present(self):
+        """Tests if all buttons are present.
+
+            In the past it wasn't allowed to add a question group when there
+            were no questions yet.
+        """
+        body = self.get(self.URL).body
+        self.assertIn('Add Short Answer', body)
+        self.assertIn('Add Multiple Choice', body)
+        self.assertIn('Add Question Group', body)
+
+    def test_adding_empty_question_group(self):
+        QG_URL = '/%s%s' % (self.COURSE_NAME, QuestionGroupRESTHandler.URI)
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            QuestionGroupRESTHandler.XSRF_TOKEN)
+        description = 'Question Group'
+        payload = {
+            'description': description,
+            'version': QuestionGroupRESTHandler.SCHEMA_VERSIONS[0],
+            'introduction': '',
+            'items': []
+        }
+        response = self.put(QG_URL, {'request': transforms.dumps({
+            'xsrf_token': cgi.escape(xsrf_token),
+            'payload': transforms.dumps(payload)})})
+        self.assertEquals(response.status_int, 200)
+        payload = transforms.loads(response.body)
+        self.assertEquals(payload['status'], 200)
+        self.assertEquals(payload['message'], 'Saved.')
+        asset_tables = self._load_tables()
         self.assertEquals(
             asset_tables[1].find('./tbody/tr/td/a').tail, description
         )

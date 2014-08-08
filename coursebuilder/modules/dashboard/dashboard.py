@@ -861,19 +861,17 @@ class DashboardHandler(
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
 
-        all_questions = QuestionDAO.get_all()
         output = safe_dom.NodeList()
-        if all_questions:
-            output.append(
-                safe_dom.Element(
-                    'a', className='gcb-button gcb-pull-right',
-                    href='dashboard?action=add_question_group'
-                ).add_text('Add Question Group')
-            ).append(
-                safe_dom.Element(
-                    'div', style='clear: both; padding-top: 2px;'
-                )
+        output.append(
+            safe_dom.Element(
+                'a', className='gcb-button gcb-pull-right',
+                href='dashboard?action=add_question_group'
+            ).add_text('Add Question Group')
+        ).append(
+            safe_dom.Element(
+                'div', style='clear: both; padding-top: 2px;'
             )
+        )
         output.append(
             safe_dom.Element('h3').add_text('Question Groups')
         )

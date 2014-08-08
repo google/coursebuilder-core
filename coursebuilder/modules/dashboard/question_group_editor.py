@@ -91,17 +91,15 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
             extra_schema_dict_values={
                 'className': 'question-group-items',
                 'sortable': 'true',
-                'listAddLabel': 'Add an item',
-                'listRemoveLabel': 'Delete item'})
+                'listAddLabel': 'Add a question',
+                'listRemoveLabel': 'Remove'})
 
         question_group.add_property(item_array)
 
         return question_group
 
     def get_default_content(self):
-        return {
-            'version': self.SCHEMA_VERSIONS[0],
-            'items': [{'weight': ''}, {'weight': ''}, {'weight': ''}]}
+        return {'version': self.SCHEMA_VERSIONS[0]}
 
     def validate(self, question_group_dict, key, schema_version, errors):
         """Validate the question group data sent from the form."""
@@ -115,10 +113,6 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
         if question_group_dict['description'] in descriptions:
             errors.append('The description must be different '
                           'from existing question groups.')
-
-        if not question_group_dict['items']:
-            errors.append(
-                'The question group must contain at least one question.')
 
         items = question_group_dict['items']
         for index in range(0, len(items)):
