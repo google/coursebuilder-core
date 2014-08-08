@@ -1,5 +1,14 @@
 {% extends 'base_course.html' %}
 
+{% block assets %}
+  {{ super() }}
+  <style type="text/css">
+    form[action='register'] fieldset {
+      margin-bottom: 10px;
+    }
+  </style>
+{% endblock %}
+
 {% block gcb_page_info %}
   if ('gcbSetPageInfo' in window) {
     gcbSetPageInfo({
