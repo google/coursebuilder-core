@@ -624,6 +624,10 @@ a.gcb-button-action, button.gcb-button-action {
 }
 
 /* Styles for elements on a unit/lesson page. */
+#gcb-main-article {
+  padding-bottom: 20px;
+}
+
 .gcb-unit-header {
   border-bottom:2px dotted #e0e0e0;
   font-size: 30px;
@@ -877,4 +881,58 @@ div#base-before-navbar-ends {
 
 .gcb-last-location {
   background-color: #DEF;
+}
+
+/*
+ * Extra CSS for views/unit.html in order to suppress everything (all navigation
+ * etc) except the Lesson title and body. Intended for lessons which are
+ * embedded using LTI.
+*/
+
+html.hide-controls {
+  padding: 0;
+}
+
+html.hide-controls,
+html.hide-controls body,
+html.hide-controls body > .is-wrapper,
+html.hide-controls body > .is-wrapper > .gcb-aux,
+html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main,
+html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main > #gcb-main-article,
+html.hide-controls body > .is-wrapper > .gcb-aux > #gcb-main > #gcb-main-article > .gcb-aside {
+  height: 100%;
+  width: 100%;
+}
+
+html.hide-controls .gcb-aux {
+  max-width: none;
+}
+
+html.hide-controls .gcb-aside {
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: auto;
+}
+
+html.hide-controls #gcb-main-article {
+  padding-bottom: 0;
+}
+
+html.hide-controls #base-after-body-tag-begins,
+html.hide-controls #gcb-header,
+html.hide-controls #gcb-nav-x,
+html.hide-controls #gcb-nav-y,
+html.hide-controls #base-after-top-content-ends,
+html.hide-controls #gcb-breadcrumb,
+html.hide-controls #gcb-edit-unit-button,
+html.hide-controls #gcb-unit-header,
+html.hide-controls #gcb-nav-button-box,
+html.hide-controls #gcb-edit-lesson-button,
+html.hide-controls #base-after-main-content-ends,
+html.hide-controls #gcb-signature,
+html.hide-controls #gcb-footer,
+html.hide-controls #base-before-body-tag-ends,
+html.hide-lesson-title #lesson-title {
+  display: none;
 }

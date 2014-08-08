@@ -405,7 +405,27 @@ class UnitHandler(BaseHandler):
             self._show_all_contents(student, unit)
         else:
             self._show_single_element(student, unit, lesson, assessment)
+
+        self._set_gcb_html_element_class()
+
         self.render('unit.html')
+
+    def _set_gcb_html_element_class(self):
+        """Select conditional CSS to hide parts of the unit page."""
+
+        # TODO(jorr): Add an integration test for this once, LTI producer and
+        # consumer code is completely checked in.
+
+        gcb_html_element_class = []
+
+        if self.request.get('hide-controls') == 'true':
+            gcb_html_element_class.append('hide-controls')
+
+        if self.request.get('hide-lesson-title') == 'true':
+            gcb_html_element_class.append('hide-lesson-title')
+
+        self.template_value['gcb_html_element_class'] = (
+            ' '.join(gcb_html_element_class))
 
     def _apply_gcb_tags(self, text):
         return jinja_utils.get_gcb_tags_filter(self)(text)

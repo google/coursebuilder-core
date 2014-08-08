@@ -54,7 +54,7 @@
     });
   </script>
 
-  <ul class="gcb-breadcrumb">
+  <ul id="gcb-breadcrumb" class="gcb-breadcrumb">
     {# I18N: Navigation breadcrumb. #}
     <li><a href="course">{{ gettext('Course') }}</a></li>
     <li><a href="unit?unit={{ unit.unit_id }}">
@@ -73,11 +73,11 @@
   </ul>
 
   {% if is_read_write_course and is_course_admin %}
-    <a href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
+    <a id="gcb-edit-unit-button" href="dashboard?action=edit_unit&key={{ unit.unit_id }}"
        class="gcb-button gcb-button-action">Edit unit</a>
   {% endif %}
 
-  <div>
+  <div id="gcb-unit-header">
     <h1 class="gcb-unit-header">
       {{ display_unit_title(unit) }}
     </h1>
@@ -87,50 +87,46 @@
     {% include 'lesson_navbar.html' %}
   {% endif %}
 
-  <div class="gcb-article tab-content" role="main">
+  <div id="gcb-main-article" class="gcb-article tab-content" role="main">
     {{course_info.unit.after_content_begins | safe}}
 
     {% if not display_content %}
-      <div style="padding-bottom: 20px;">
-        <div class="gcb-aside gcb-button-box">
-          {# I18N: Text shown for a unit that contains no assessments, lessons, header or footer. #}
-          {{ gettext('This unit has no content.') }}
-        </div>
+      <div class="gcb-aside gcb-button-box">
+        {# I18N: Text shown for a unit that contains no assessments, lessons, header or footer. #}
+        {{ gettext('This unit has no content.') }}
       </div>
     {% else %}
 
-      <div style="padding-bottom: 20px;">
-        {% for item in display_content %}
-          <div class="gcb-aside gcb-button-box">
-            {{ item }}
-          </div><!-- /gcb-aside -->
-        {% endfor %}
+      {% for item in display_content %}
+        <div class="gcb-aside gcb-button-box">
+          {{ item }}
+        </div><!-- /gcb-aside -->
+      {% endfor %}
 
-        <div class="gcb-button-box">
-          {% if unit.show_contents_on_one_page or
-                (lesson and
-                 course_info.unit.hide_lesson_navigation_buttons) or
-                (assessment and
-                 not is_confirmation and
-                 course_info.unit.hide_assessment_navigation_buttons) %}
-          {% else %}
-          <div class="gcb-prev-button">
-            {% if back_button_url %}
-              {# I18N: Text on the navigation button at the end of a lesson page. #}
-              <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
-            {% endif %}
-          </div>
-          <div class="gcb-next-button">
-            {% if next_button_url %}
-              {# I18N: Text on the navigation button at the end of a lesson page. #}
-              <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>
-            {% else %}
-              {# I18N: Text on the navigation button at the end of a lesson. It signals that the student has completed a unit (which is a series of lessons). #}
-              <a href="course"> {{ gettext('End') }} </a>
-            {% endif %}
-          </div>
+      <div id="gcb-nav-button-box" class="gcb-button-box">
+        {% if unit.show_contents_on_one_page or
+              (lesson and
+               course_info.unit.hide_lesson_navigation_buttons) or
+              (assessment and
+               not is_confirmation and
+               course_info.unit.hide_assessment_navigation_buttons) %}
+        {% else %}
+        <div class="gcb-prev-button">
+          {% if back_button_url %}
+            {# I18N: Text on the navigation button at the end of a lesson page. #}
+            <a href="{{ back_button_url }}"> {{ gettext('Previous Page') }} </a>
           {% endif %}
         </div>
+        <div class="gcb-next-button">
+          {% if next_button_url %}
+            {# I18N: Text on the navigation button at the end of a lesson page. #}
+            <a href="{{ next_button_url }}"> {{ gettext('Next Page') }} </a>
+          {% else %}
+            {# I18N: Text on the navigation button at the end of a lesson. It signals that the student has completed a unit (which is a series of lessons). #}
+            <a href="course"> {{ gettext('End') }} </a>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
     {% endif %}
     {{course_info.unit.before_content_ends | safe}}
