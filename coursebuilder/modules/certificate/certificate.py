@@ -246,7 +246,7 @@ def register_module():
     def on_module_enabled():
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
             'inputex-list')
-        course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.append(
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS.append(
             get_criteria_editor_schema)
         course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             os.path.dirname(__file__))
@@ -260,7 +260,7 @@ def register_module():
     def on_module_disabled():
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.remove(
             'inputex-list')
-        course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS.remove(
             get_criteria_editor_schema)
         course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
             os.path.dirname(__file__))

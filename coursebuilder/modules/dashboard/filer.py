@@ -420,10 +420,11 @@ class FilesItemRESTHandler(BaseRESTHandler):
                 return True
         return False
 
-    @classmethod
-    def validate_content(cls, filename, content):
+    def validate_content(self, filename, content):
         # TODO(psimakov): handle more file types here
-        if filename.endswith('.yaml'):
+        if filename == '/course.yaml':
+            courses.Course.validate_course_yaml(content, self.get_course())
+        elif filename.endswith('.yaml'):
             yaml.safe_load(content)
 
     def get(self):

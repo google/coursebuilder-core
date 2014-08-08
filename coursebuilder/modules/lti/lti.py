@@ -33,8 +33,8 @@ from common import schema_fields
 from common import tags
 from controllers import utils
 from models import config
+from models import courses
 from models import custom_modules
-from modules.dashboard import course_settings
 from modules.lti import fields
 
 from google.appengine.api import app_identity
@@ -113,6 +113,10 @@ class _Parser(object):
   PARSE_ERROR = None
 
   @classmethod
+  def _is_valid_empty_value(cls, raw_value):
+    return raw_value is None or raw_value == _EMPTY_STRING
+
+  @classmethod
   def _load_yaml(cls, raw_value, errors):
     try:
       return yaml.safe_load(raw_value)
@@ -178,12 +182,14 @@ class _ToolsParser(_Parser):
   @classmethod
   def parse(cls, raw_value, errors):
     """Validator for tools yaml; returns {name_str: _ToolConfig}."""
-    if raw_value == _EMPTY_STRING:
+    if cls._is_valid_empty_value(raw_value):
       return {}
 
-    loaded = cls._load_yaml(raw_value, errors)
+    load_errors = []
+    loaded = cls._load_yaml(raw_value, load_errors)
 
-    if errors:
+    if load_errors:
+      errors.extend(load_errors)
       return
 
     if not isinstance(loaded, list):
@@ -242,12 +248,14 @@ class _SecurityParser(_Parser):
   @classmethod
   def parse(cls, raw_value, errors):
     """Validator for security yaml; returns {key_unicode: _SecurityConfig}."""
-    if raw_value == _EMPTY_STRING:
+    if cls._is_valid_empty_value(raw_value):
       return {}
 
-    loaded = cls._load_yaml(raw_value, errors)
+    load_errors = []
+    loaded = cls._load_yaml(raw_value, load_errors)
 
-    if errors:
+    if load_errors:
+      errors.extend(load_errors)
       return
 
     if not isinstance(loaded, list):
@@ -704,14 +712,12 @@ def register_module():
       _get_provider_enabled_field, _get_security_field, _get_tool_field]
 
   def on_module_enabled():
-    course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.extend(
-        schema_providers)
+    courses.Course.OPTIONS_SCHEMA_PROVIDERS.extend(schema_providers)
     tags.Registry.add_tag_binding(LTIToolTag.binding_name, LTIToolTag)
 
   def on_module_disabled():
     for schema_provider in schema_providers:
-      course_settings.EXTRA_COURSE_OPTIONS_SCHEMA_PROVIDERS.remove(
-          schema_provider)
+      courses.Course.OPTIONS_SCHEMA_PROVIDERS.remove(schema_provider)
     tags.Registry.remove_tag_binding(LTIToolTag.binding_name)
 
   global_handlers = []
