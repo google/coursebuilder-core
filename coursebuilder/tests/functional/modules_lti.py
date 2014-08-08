@@ -638,8 +638,9 @@ class LoginHandlerTest(LtiWebappTestBase):
         lti._LOGIN_URL, expect_errors=True, params=self.params)
     self.assertEqual(200, response.status_code)
     self.assert_contains_expected_return_url(
-        'https://www.google.com/accounts/Login?continue='
-        'http%3A//localhost/return_url', response.body)
+        'https://www.google.com/accounts/Login?continue=http'
+        '%3A//localhost/lti/redirect%3Flaunch_presentation_return_url%3D'
+        'return_url', response.body)
 
   def test_post_returns_400_if_launch_presentation_return_url_not_set(self):
     self.params.pop(fields.LAUNCH_PRESENTATION_RETURN_URL)
@@ -661,6 +662,27 @@ class LoginHandlerTest(LtiWebappTestBase):
         lti._LOGIN_URL, expect_errors=True, params=self.params)
     self.assertEqual(400, response.status_code)
     self.assert_invalid_xsrf_token(response.body)
+
+
+class RedirectHandlerTest(LtiWebappTestBase):
+
+  def setUp(self):
+    super(RedirectHandlerTest, self).setUp()
+    self.url = 'http://example.com?a=b&c=d'
+    self.params = {fields.LAUNCH_PRESENTATION_RETURN_URL: self.url}
+
+  def test_get_returns_302_to_launch_presentation_url(self):
+    response = self.testapp.get(
+        lti._REDIRECT_URL, expect_errors=True, params=self.params)
+    self.assertEqual(302, response.status_code)
+    self.assertEqual(self.url, response.location)
+
+  def test_get_returns_400_if_launch_presentation_url_not_set(self):
+    self.params.pop(fields.LAUNCH_PRESENTATION_RETURN_URL)
+    response = self.testapp.get(
+        lti._REDIRECT_URL, expect_errors=True, params=self.params)
+    self.assertEqual(400, response.status_code)
+    self.assert_logged_missing_launch_presentation_url()
 
 
 class ValidationHandlerTest(LtiWebappTestBase):

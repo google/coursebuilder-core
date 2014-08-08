@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""LTI module that supports LTI 1.0 - 1.2."""
+"""LTI module that supports LTI 1.0 - 1.2.
+
+Note that URLs used in this system are restricted to US-ASCII (see
+https://www.ietf.org/rfc/rfc1738.txt).
+"""
 
 __author__ = [
     'johncox@google.com (John Cox)',
@@ -57,6 +61,7 @@ _ERROR_PARSE_TOOLS_CONFIG_YAML = 'Cannot parse tools config yaml'
 _ERROR_SECRET_NOT_UNIQUE = 'Secret is not unique: %s'
 _LAUNCH_URL = _BASE_URL + '/launch'
 _LOGIN_URL = _BASE_URL + '/login'
+_REDIRECT_URL = _BASE_URL + '/redirect'
 _POST = 'POST'
 _VALIDATION_URL = _BASE_URL
 _YAML_ENTRY_DESCRIPTION = 'description'
@@ -368,6 +373,11 @@ class _Runtime(object):
   def get_locale(self):
     return self._environ.get(_CONFIG_KEY_COURSE, {}).get(_CONFIG_KEY_LOCALE)
 
+  def get_login_url(self, return_url):
+    query = {fields.LAUNCH_PRESENTATION_RETURN_URL: return_url}
+    return users.create_login_url(dest_url='%s?%s' % (
+        _urljoin(self.get_base_url(), _REDIRECT_URL), urllib.urlencode(query)))
+
   def get_tool_config(self, name):
     return self._tool_configs.get(name)
 
@@ -532,7 +542,7 @@ class _BaseHandler(utils.BaseHandler):
           fields.LAUNCH_PRESENTATION_RETURN_URL)
       self.error(400)
 
-    return return_url
+    return str(return_url)  # Cast from unicode so it can be used in redirects.
 
 
 class LaunchHandler(_BaseHandler):
@@ -656,8 +666,8 @@ class LoginHandler(_BaseHandler):
         'redirect.html', self._get_post_context,
         validation_fn=self._validate_xsrf_token_or_error)
 
-  def _get_post_context(self, return_url, unused_runtime):
-    return {'login_url': users.create_login_url(dest_url=return_url)}
+  def _get_post_context(self, return_url, runtime):
+    return {'login_url': runtime.get_login_url(return_url)}
 
   def _get_template(self, name, locale):
     return jinja_utils.get_template(
@@ -688,6 +698,17 @@ class LoginHandler(_BaseHandler):
       return
 
     return token
+
+
+class RedirectHandler(_BaseHandler):
+
+  def get(self):
+    return_url = self._get_launch_presentation_return_url_or_error(self.request)
+
+    if not return_url:
+      return
+
+    self.redirect(return_url)
 
 
 class ValidationHandler(_BaseHandler):
@@ -903,6 +924,7 @@ def register_module():
   namespaced_handlers = [
       (_LAUNCH_URL, LaunchHandler),
       (_LOGIN_URL, LoginHandler),
+      (_REDIRECT_URL, RedirectHandler),
       (_VALIDATION_URL, ValidationHandler)]
   custom_module = custom_modules.Module(
       'LTI', 'LTI module', global_handlers, namespaced_handlers,

@@ -74,6 +74,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_lti.LaunchHandlerTest': 10,
     'tests.functional.modules_lti.LoginHandlerTest': 7,
     'tests.functional.modules_lti.LTIToolTagTest': 3,
+    'tests.functional.modules_lti.RedirectHandlerTest': 2,
     'tests.functional.modules_lti.RuntimeTest': 7,
     'tests.functional.modules_lti.SecurityParserTest': 9,
     'tests.functional.modules_lti.SerializerTest': 2,
