@@ -136,7 +136,6 @@
             encodeURIComponent(key));
       }
     </script>
-
     {{ course_info.base.before_head_tag_ends | safe}}
   </head>
 
@@ -278,5 +277,13 @@
       </div>
     </div>
     {{ html_hooks.insert('base:before_body_tag_ends') }}
+
+    {% if context %}
+      <div class="gcb-jinja-context">
+      {% for key, value in context() | dictsort %}
+          <p>{{ key }}: {{ value | forceescape }}<p>
+      {% endfor %}
+      </div>
+    {% endif %}
  </body>
 </html>

@@ -1095,6 +1095,15 @@ class StudentPreferencesDTO(object):
     def show_hooks(self, value):
         self.dict['show_hooks'] = value
 
+    @property
+    def show_jinja_context(self):
+        """Do/don't show dump of Jinja context on bottom of pages."""
+        return self.dict.get('show_jinja_context', False)
+
+    @show_jinja_context.setter
+    def show_jinja_context(self, value):
+        self.dict['show_jinja_context'] = value
+
 
 class StudentPreferencesDAO(BaseJsonDao):
     DTO = StudentPreferencesDTO
@@ -1114,6 +1123,7 @@ class StudentPreferencesDAO(BaseJsonDao):
                 user_id, {
                     'version': cls.CURRENT_VERSION,
                     'show_hooks': True,
+                    'show_jinja_context': False
                 })
             cls.save(prefs)
         return prefs

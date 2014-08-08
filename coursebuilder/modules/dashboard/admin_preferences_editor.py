@@ -73,6 +73,12 @@ class AdminPreferencesRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'the page.  Turn this setting off to see the course as the '
             'student would see it, and on to enable the edit controls.',
             optional=True, hidden=False))
+        ret.add_property(schema_fields.SchemaField(
+            'show_jinja_context', 'Show Jinja Context', 'boolean',
+            description='Whether to show a dump of Jinja context contents '
+            'at the bottom of course pages (Only for admins, and only '
+            'available on development server.)',
+            optional=True, hidden=False))
         return ret
 
     def get_default_content(self):

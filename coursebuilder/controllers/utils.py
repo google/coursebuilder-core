@@ -25,6 +25,7 @@ import jinja2
 import sites
 import webapp2
 
+import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
@@ -265,8 +266,7 @@ class HtmlHooks(object):
         # Do we want page markup to permit course admins to edit hooks?
         show_admin_content = False
         prefs = models.StudentPreferencesDAO.load_or_create()
-        if (prefs and
-            prefs.show_hooks and
+        if (prefs and prefs.show_hooks and
             Roles.is_course_admin(self.app_context)):
             show_admin_content = True
         course = courses.Course(None, self.app_context)
@@ -333,6 +333,15 @@ class ApplicationHandler(webapp2.RequestHandler):
             'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
+
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if (Roles.is_course_admin(self.app_context) and
+            not appengine_config.PRODUCTION_MODE and
+            prefs and prefs.show_jinja_context):
+                @jinja2.contextfunction
+                def get_context(context):
+                    return context
+                self.template_value['context'] = get_context
 
     def get_template(self, template_file, additional_dirs=None):
         """Computes location of template files for the current namespace."""

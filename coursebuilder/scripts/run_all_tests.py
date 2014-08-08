@@ -32,6 +32,8 @@ import threading
 # all test classes with a total count of tests in each
 ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 2,
+    'tests.functional.admin_settings.HtmlHookTest': 11,
+    'tests.functional.admin_settings.JinjaContextTest': 2,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
     'tests.functional.common_crypto.PiiObfuscationHmac': 2,
@@ -43,7 +45,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,
     'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,
     'tests.functional.controllers_review.PeerReviewDashboardStudentTest': 2,
-    'tests.functional.html_hook.HtmlHookTest': 11,
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
     'tests.functional.model_analytics.ProgressAnalyticsTest': 8,
     'tests.functional.model_analytics.QuestionAnalyticsTest': 3,

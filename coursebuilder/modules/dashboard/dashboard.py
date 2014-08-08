@@ -480,9 +480,10 @@ class DashboardHandler(
             'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
         admin_prefs_info = []
         admin_prefs = models.StudentPreferencesDAO.load_or_create()
-        if admin_prefs:
-            admin_prefs_info.append('Show hook edit buttons: %s' %
-                                    admin_prefs.show_hooks)
+        admin_prefs_info.append('Show hook edit buttons: %s' %
+                                admin_prefs.show_hooks)
+        admin_prefs_info.append('Show jinja context: %s' %
+                                admin_prefs.show_jinja_context)
 
         # Basic course info.
         course_info = [

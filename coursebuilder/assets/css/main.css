@@ -861,3 +861,10 @@ ul .gcb-html-hook-edit {
 div#base-before-navbar-ends {
   float: right
 }
+
+.gcb-jinja-context {
+  background-color: #EEE;
+  padding: 10px;
+  font-family: monospace;
+  font-size: xx-small;
+}
