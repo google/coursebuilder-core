@@ -85,10 +85,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertEqual(response.status_code, 404)
 
         response = self.get('dashboard?action=search')
-        self.assertIn(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Search' %
-                self.canonicalize('dashboard'),
-            response.body)
+        self.assertIn('Google &gt; Dashboard &gt; Search', response.body)
         self.assertNotIn('Index Course', response.body)
         self.assertNotIn('Clear Index', response.body)
 
@@ -103,10 +100,7 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertEqual(response.status_code, 200)
 
         response = self.get('dashboard?action=search')
-        self.assertIn(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Search' %
-                self.canonicalize('dashboard'),
-            response.body)
+        self.assertIn('Google &gt; Dashboard &gt; Search', response.body)
         self.assertIn('Index Course', response.body)
         self.assertIn('Clear Index', response.body)
 

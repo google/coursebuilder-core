@@ -116,8 +116,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics&tab=students')
         assert_contains(
-            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
-            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
+            'Google &gt; Dashboard &gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
         response = response.forms[
@@ -167,8 +166,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics&tab=students')
         assert_contains(
-            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
-            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
+            'Google &gt; Dashboard &gt; Analytics &gt; Students', response.body)
         assert_contains('have not been calculated yet', response.body)
 
         response = response.forms[

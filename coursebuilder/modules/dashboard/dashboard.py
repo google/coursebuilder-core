@@ -258,25 +258,17 @@ class DashboardHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
-    def format_title(self, text, as_link=False):
+    def format_title(self, text):
         """Formats standard title."""
         title = self.app_context.get_environ()['course']['title']
         ret = safe_dom.NodeList()
         cb_text = 'Course Builder '
-        if as_link:
-            ret.append(safe_dom.A('/admin').add_text(cb_text))
-        else:
-            ret.append(safe_dom.Text(cb_text))
+        ret.append(safe_dom.Text(cb_text))
         ret.append(safe_dom.Entity('&gt;'))
         ret.append(safe_dom.Text(' %s ' % title))
         ret.append(safe_dom.Entity('&gt;'))
         dashboard_text = ' Dashboard '
-        if as_link:
-            ret.append(
-                safe_dom.A(self.canonicalize_url('/dashboard')).
-                add_text(dashboard_text))
-        else:
-            ret.append(safe_dom.Text(dashboard_text))
+        ret.append(safe_dom.Text(dashboard_text))
         ret.append(safe_dom.Entity('&gt;'))
         ret.append(safe_dom.Text(' %s' % text))
         return ret
@@ -498,7 +490,6 @@ class DashboardHandler(
 
         template_values = {
             'page_title': self.format_title('Outline'),
-            'page_title_linked': self.format_title('Outline', as_link=True),
             'alerts': self._get_alerts(),
             'sections': sections,
             }
@@ -622,7 +613,6 @@ class DashboardHandler(
         # Prepare template values.
         template_values = {
             'page_title': self.format_title('Settings'),
-            'page_title_linked': self.format_title('Settings', as_link=True),
             'page_description': messages.SETTINGS_DESCRIPTION,
         }
         template_values['sections'] = [
@@ -1036,7 +1026,6 @@ class DashboardHandler(
         title_text = 'Assets > %s' % tab.title
         template_values = {
             'page_title': self.format_title(title_text),
-            'page_title_linked': self.format_title(title_text, as_link=True),
             'page_description': messages.ASSETS_DESCRIPTION,
             'main_content': items,
         }
@@ -1113,7 +1102,6 @@ class DashboardHandler(
         title_text = 'Analytics > %s' % tab.title
         template_values = {
             'page_title': self.format_title(title_text),
-            'page_title_linked': self.format_title(title_text, as_link=True),
             'main_content': analytics.generate_display_html(
                 self, crypto.XsrfTokenManager, tab.contents),
             }

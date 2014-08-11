@@ -1320,11 +1320,8 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
-        # Verify body does have linked breadcrumb trail.
-        assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Outline' %
-                self.canonicalize('dashboard'),
-            response.body)
+        # Verify body has breadcrumb trail.
+        assert_contains('Google &gt; Dashboard &gt; Outline', response.body)
 
         # Tests outline view.
         response = self.get('dashboard')
@@ -1343,11 +1340,9 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
-        # Verify body does have linked breadcrumb trail.
+        # Verify body has breadcrumb trail.
         assert_contains(
-            'Google &gt;<a href="%s">' % self.canonicalize('dashboard') +
-            ' Dashboard </a>&gt; Assets &gt; CSS',
-            response.body)
+            'Google &gt; Dashboard &gt; Assets &gt; CSS', response.body)
         assert_contains('assets/css/main.css', response.body)
         response = self.get('dashboard?action=assets&tab=images')
         assert_contains('assets/img/Image1.5.png', response.body)
@@ -1360,11 +1355,8 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
-        # Verify body does have linked breadcrumb trail.
-        assert_contains(
-            'Google &gt;<a href="%s"> Dashboard </a>&gt; Settings' %
-                self.canonicalize('dashboard'),
-            response.body)
+        # Verify body has breadcrumb trail.
+        assert_contains('Google &gt; Dashboard &gt; Settings', response.body)
         assert_contains('course.yaml', response.body)
         assert_contains(
             'title: &#39;Power Searching with Google&#39;', response.body)
@@ -1382,10 +1374,10 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
             response.body)
-        # Verify body does have linked breadcrumb trail.
+        # Verify body has breadcrumb trail.
         assert_contains(
-            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
-            'Dashboard </a>&gt; Analytics &gt; Students', response.body)
+            'Google &gt; Dashboard &gt; Analytics &gt; Students',
+            response.body)
         assert_contains('have not been calculated yet', response.body)
 
         response = response.forms[

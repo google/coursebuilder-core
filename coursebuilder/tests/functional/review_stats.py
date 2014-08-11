@@ -56,8 +56,8 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics&tab=peer_review')
         assert_contains(
-            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
-            'Dashboard </a>&gt; Analytics &gt; Peer Review', response.body)
+            'Google &gt; Dashboard &gt; Analytics &gt; Peer Review',
+            response.body)
         assert_contains('have not been calculated yet', response.body)
 
         response = response.forms[
@@ -93,8 +93,8 @@ class PeerReviewAnalyticsTest(actions.TestBase):
         actions.login(email, is_admin=True)
         response = self.get('dashboard?action=analytics&tab=peer_review')
         assert_contains(
-            'Google &gt;<a href="%s"> ' % self.canonicalize('dashboard') +
-            'Dashboard </a>&gt; Analytics &gt; Peer Review', response.body)
+            'Google &gt; Dashboard &gt; Analytics &gt; Peer Review',
+            response.body)
 
         response = response.forms[
             'gcb-generate-analytics-data'].submit().follow()

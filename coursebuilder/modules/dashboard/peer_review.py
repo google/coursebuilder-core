@@ -145,8 +145,6 @@ class AssignmentManager(ApplicationHandler):
 
         template_values = {}
         template_values['page_title'] = self.format_title(page_title)
-        template_values['page_title_linked'] = self.format_title(
-            page_title, as_link=True)
         template_values['page_description'] = (
             messages.ASSIGNMENTS_MENU_DESCRIPTION)
 
