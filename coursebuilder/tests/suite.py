@@ -69,10 +69,13 @@ _PARSER.add_argument(
     '--integration_server_start_cmd',
     help='script to start an external CB server', type=str)
 
-
 # Base filesystem location for test data.
-TEST_DATA_BASE = os.path.join(
-    os.environ['COURSEBUILDER_RESOURCES'], 'test-data/')
+if 'COURSEBUILDER_RESOURCES' in os.environ:
+    TEST_DATA_BASE = os.path.join(
+        os.environ['COURSEBUILDER_RESOURCES'], 'test-data/')
+else:
+    TEST_DATA_BASE = os.path.join(
+        os.environ['HOME'], 'coursebuilder_resources/test-data/')
 
 
 def empty_environ():

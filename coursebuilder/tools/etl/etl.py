@@ -734,8 +734,9 @@ def _set_env_vars_from_app_yaml():
 
     # pylint: disable-msg=g-import-not-at-top
     from google.appengine.api import appinfo_includes
+    import appengine_config  # pylint: disable-msg=redefined-outer-name
     cb_home = os.environ.get(
-        'COURSEBUILDER_HOME', 'experimental/coursebuilder')
+        'COURSEBUILDER_HOME', appengine_config.BUNDLE_ROOT)
     app_yaml = appinfo_includes.Parse(
         open(os.path.join(cb_home, 'app.yaml')), open)
     for name, value in app_yaml.env_variables.items():
