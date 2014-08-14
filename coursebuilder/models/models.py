@@ -17,6 +17,7 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import collections
+import copy
 import logging
 import os
 import sys
@@ -867,6 +868,10 @@ class BaseJsonDao(object):
         entity.delete()
         MemcacheManager.delete(cls._memcache_key(entity.key().id_or_name()))
 
+    @classmethod
+    def clone(cls, dto):
+        return cls.DTO(None, copy.deepcopy(dto.dict))
+
 
 class LastModfiedJsonDao(BaseJsonDao):
     """Base DAO that updates the last_modified field of entities on every save.
@@ -911,6 +916,10 @@ class QuestionDTO(object):
     @property
     def description(self):
         return self.dict.get('description') or ''
+
+    @description.setter
+    def description(self, value):
+        self.dict['description'] = value
 
     @property
     def last_modified(self):

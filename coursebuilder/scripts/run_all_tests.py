@@ -68,6 +68,8 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_utils.QueryMapperTest': 4,
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
     'tests.functional.modules_certificate.CertificateCriteriaTestCase': 5,
+    'tests.functional.modules_dashboard.QuestionDashboardTestCase': 8,
+    'tests.functional.modules_dashboard.CourseOutlineTestCase': 1,
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,

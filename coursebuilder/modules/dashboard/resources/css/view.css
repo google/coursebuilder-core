@@ -200,6 +200,9 @@ div#formContainer div.settings-list-item fieldset legend span {
   background-image: url('/modules/dashboard/resources/images/eye.png');
   cursor: pointer;
 }
+.icon-clone {
+  background-image: url('/modules/dashboard/resources/images/page_copy.png');
+}
 .icon-draft-status.active {
   cursor: pointer;
 }

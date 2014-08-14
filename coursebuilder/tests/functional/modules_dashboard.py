@@ -109,7 +109,8 @@ class QuestionDashboardTestCase(actions.TestBase):
         # Check edit link and description of the first question
         first_row = list(question_rows[0])
         first_cell = first_row[0]
-        self.assertEquals(first_cell.find('img').tail, mc_question_description)
+        self.assertEquals(first_cell.findall('a')[1].tail,
+                          mc_question_description)
         self.assertEquals(first_cell.find('a').get('href'), (
             'dashboard?action=edit_question&key=%s' % mc_question_id))
         # Check if the assessment is listed
@@ -121,7 +122,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         # Check second question (=row)
         second_row = list(question_rows[1])
         self.assertEquals(
-            second_row[0].find('img').tail, sa_question_description)
+            second_row[0].findall('a')[1].tail, sa_question_description)
         # Check whether the containing Question Group is listed
         self.assertEquals(second_row[1].find('ul/li').text, qg_description)
 
@@ -166,7 +167,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         }))
         asset_tables = self._load_tables()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td/img').tail, description
+            asset_tables[0].findall('./tbody/tr/td/a')[1].tail, description
         )
         self.assertEquals(
             asset_tables[1].find('./tbody/tr/td').text,
@@ -243,6 +244,24 @@ class QuestionDashboardTestCase(actions.TestBase):
                 'data-timestamp', ''),
             str(qg_dto.last_modified)
         )
+
+    def test_question_clone(self):
+        # Add a question by just nailing it in to the datastore.
+        mc_question_id = 1
+        mc_question_description = 'Test MC Question'
+        mc_question_dto = models.QuestionDTO(mc_question_id, {
+            'description': mc_question_description,
+            'question': 'What is the airspeed velocity of an unladen swallow?',
+            'type': 0  # MC
+        })
+        models.QuestionDAO.save(mc_question_dto)
+
+        # On the assets -> questions page, clone the question.
+        response = self.get(self.URL)
+        dom = self.parse_html_string(self.get(self.URL).body)
+        clone_link = dom.find('.//a[@class="icon icon-clone"]')
+        response = self.get(clone_link.get('href'), response).follow()
+        self.assertIn('Test MC Question (clone)', response.body)
 
 
 class CourseOutlineTestCase(actions.TestBase):

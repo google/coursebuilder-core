@@ -266,12 +266,13 @@ class TestBase(suite.AppEngineTestBase):
     def click(self, response, name, expect_errors=False):
         links = self.parse_html_string(response.body).findall('.//a')
         for link in links:
-            if link.text.strip() == name:
+            if link.text and link.text.strip() == name:
                 return self.get(link.get('href'), response,
                                 expect_errors=expect_errors)
         complaint = 'No link with text "%s" found on page.\n' % name
         for link in links:
-            complaint += 'Possible link text: "%s"\n' % link.text.strip()
+            if link.text:
+                complaint += 'Possible link text: "%s"\n' % link.text.strip()
         raise ValueError(complaint)
 
     def submit(self, form, previous_response=None):

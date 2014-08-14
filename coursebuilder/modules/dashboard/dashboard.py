@@ -102,7 +102,8 @@ class DashboardHandler(
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
-        'add_label', 'edit_label', 'edit_html_hook', 'question_preview']
+        'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
+        'clone_question']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -799,6 +800,14 @@ class DashboardHandler(
             **arg
         )
 
+    def _create_clone_button(self, clone_url):
+        return safe_dom.A(
+            href=clone_url,
+            className='icon icon-clone',
+            title='Clone',
+            alt='Clone',
+        )
+
     def _add_assets_table(self, output, columns):
         """Creates an assets table with the specified columns.
 
@@ -872,6 +881,9 @@ class DashboardHandler(
                 'dashboard?action=edit_question&key=%s' % question.id))
             td.add_child(
                 self._create_preview_button(data_quid=str(question.id)))
+            td.add_child(self._create_clone_button(
+                'dashboard?action=clone_question&key=%s' % question.id))
+
             td.add_text(question.description)
 
             # Add containing question groups
