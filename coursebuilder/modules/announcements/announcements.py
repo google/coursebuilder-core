@@ -245,8 +245,8 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             (['properties', 'key', '_inputex'], {
                 'label': 'ID', '_type': 'uneditable'}),
             (['properties', 'date', '_inputex'], {
-                'label': 'Date', '_type': 'date', 'dateFormat': 'Y/m/d',
-                'valueFormat': 'Y/m/d'}),
+                'label': 'Date', '_type': 'date', 'dateFormat': 'Y-m-d',
+                'valueFormat': 'Y-m-d'}),
             (['properties', 'title', '_inputex'], {'label': 'Title'}),
             (['properties', 'html', '_inputex'], {
                 'label': 'Body', '_type': 'html',

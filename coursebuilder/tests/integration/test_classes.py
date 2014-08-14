@@ -141,7 +141,8 @@ class SampleCourseTests(BaseIntegrationTest):
         ).click_announcements(
         ).click_add_new(
         ).enter_fields(
-            title=title, date='2013/03/01',
+            title=title,
+            date='2013-03-01',
             body='The new announcement'
         ).click_save(
         ).click_close(
