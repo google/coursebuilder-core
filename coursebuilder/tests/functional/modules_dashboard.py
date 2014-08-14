@@ -247,11 +247,9 @@ class QuestionDashboardTestCase(actions.TestBase):
 
     def test_question_clone(self):
         # Add a question by just nailing it in to the datastore.
-        mc_question_id = 1
         mc_question_description = 'Test MC Question'
-        mc_question_dto = models.QuestionDTO(mc_question_id, {
+        mc_question_dto = models.QuestionDTO(None, {
             'description': mc_question_description,
-            'question': 'What is the airspeed velocity of an unladen swallow?',
             'type': 0  # MC
         })
         models.QuestionDAO.save(mc_question_dto)
@@ -261,7 +259,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         dom = self.parse_html_string(self.get(self.URL).body)
         clone_link = dom.find('.//a[@class="icon icon-clone"]')
         response = self.get(clone_link.get('href'), response).follow()
-        self.assertIn('Test MC Question (clone)', response.body)
+        self.assertIn(mc_question_description + ' (clone)', response.body)
 
 
 class CourseOutlineTestCase(actions.TestBase):
