@@ -16,6 +16,8 @@ shopt -s nullglob
 # Set shell variables common to CB scripts.
 . "$(dirname "$0")/config.sh"
 
+CHROMEDRIVER_VERSION=2.10
+CHROMEDRIVER_DIR=$RUNTIME_HOME/chromedriver-$CHROMEDRIVER_VERSION
 if [[ $OSTYPE == linux* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.10.1-linux-x64
   CHROMEDRIVER_ZIP=chromedriver_linux64.zip
@@ -43,7 +45,7 @@ fi
 
 # Configures the runtime environment.
 PYTHONPATH=$SOURCE_DIR:$GOOGLE_APP_ENGINE_HOME:$RUNTIME_HOME/oauth2client
-PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$RUNTIME_HOME/chromedriver:$PATH
+PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$CHROMEDRIVER_DIR:$PATH
 export YUI_BASE=$RUNTIME_HOME/yui/build
 export KARMA_LIB=$RUNTIME_HOME/karma_lib
 
@@ -91,39 +93,6 @@ function need_install() {
   return 1
 }
 
-function need_install_chromedriver() {
-  expected_version=$1 && shift
-  local package_name=chromedriver
-  local package_dir=$RUNTIME_HOME/chromedriver
-  if [ ! -d $package_dir ] ; then
-    echo "No directory found for $package_name; installing."
-    return 0
-  fi
-
-  # Chromedriver prints its version number on startup (yay!) But that
-  # means we need to start it up and then get it shut down (boo!)
-  local tempfile=$( mktemp /tmp/tmp.XXXXXXXX )
-  $package_dir/$package_name > $tempfile 2>&1 &
-  sleep 1
-  chromedriver_pid=$!
-  kill -9 $chromedriver_pid > /dev/null 2>&1
-  wait $! > /dev/null 2>&1
-
-  # Only care about major.minor version, not 3rd-level version.
-  local version=$( cat $tempfile \
-    | head -1 \
-    | sed -e 's/.*(v//' -e 's/\([0-9]*\.[0-9]*\).*/\1/' )
-  rm -f $tempfile
-
-  if [ "$version" != "$expected_version" ] ; then
-    echo "Expected version '$expected_version' for $package_name, but" \
-      "instead had '$version'.  Removing and reinstalling."
-    rm -rf $package_dir
-    return 0
-  fi
-  return 1
-}
-
 if need_install webtest PKG-INFO Version: 2.0.14 ; then
   wget https://pypi.python.org/packages/source/W/WebTest/WebTest-2.0.14.zip -O webtest-download.zip
   unzip webtest-download.zip -d $RUNTIME_HOME
@@ -155,11 +124,11 @@ if need_install selenium PKG-INFO Version: 2.35.0 ; then
   mv $RUNTIME_HOME/selenium-2.35.0 $RUNTIME_HOME/selenium
 fi
 
-if need_install_chromedriver 2.8 ; then
+if [ ! -x $CHROMEDRIVER_DIR/chromedriver ] ; then
   echo Installing Chromedriver
-  wget http://chromedriver.storage.googleapis.com/2.8/$CHROMEDRIVER_ZIP -O chromedriver-download.zip
-  unzip chromedriver-download.zip -d $RUNTIME_HOME/chromedriver
-  chmod a+x $RUNTIME_HOME/chromedriver/chromedriver
+  wget http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/$CHROMEDRIVER_ZIP -O chromedriver-download.zip
+  unzip chromedriver-download.zip -d $CHROMEDRIVER_DIR
+  chmod a+x $CHROMEDRIVER_DIR/chromedriver
   rm chromedriver-download.zip
 fi
 
