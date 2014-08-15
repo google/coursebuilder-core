@@ -78,8 +78,8 @@ class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):
             'weight', 'Weight', 'string', optional=True,
             extra_schema_dict_values={'className': 'question-group-weight'}))
 
-        question_select_data = [
-            (q.id, q.description) for q in QuestionDAO.get_all()]
+        question_select_data = [(q.id, q.description) for q in sorted(
+            QuestionDAO.get_all(), key=lambda x: x.description)]
 
         item_type.add_property(schema_fields.SchemaField(
             'question', 'Question', 'string', optional=True,
