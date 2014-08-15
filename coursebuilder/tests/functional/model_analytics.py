@@ -444,7 +444,6 @@ class QuestionAnalyticsTest(actions.TestBase):
         assessment_peer.title = 'Peer review assessment'
 
         # Create a multiple choice question.
-        mcq_new_id = 1
         mcq_new_dict = {
             'description': 'mcq_new',
             'type': 0,  # Multiple choice question.
@@ -454,10 +453,10 @@ class QuestionAnalyticsTest(actions.TestBase):
             }],
             'version': '1.5'
         }
-        mcq_new_dto = models.QuestionDTO(mcq_new_id, mcq_new_dict)
+        mcq_new_dto = models.QuestionDTO(None, mcq_new_dict)
+        mcq_new_id = models.QuestionDAO.save(mcq_new_dto)
 
         # Create a short answer question.
-        frq_new_id = 2
         frq_new_dict = {
             'defaultFeedback': '',
             'rows': 1,
@@ -474,13 +473,10 @@ class QuestionAnalyticsTest(actions.TestBase):
             'type': 1,  # Short answer question.
             'columns': 100
         }
-        frq_new_dto = models.QuestionDTO(frq_new_id, frq_new_dict)
-
-        # Save these questions to datastore.
-        models.QuestionDAO.save_all([mcq_new_dto, frq_new_dto])
+        frq_new_dto = models.QuestionDTO(None, frq_new_dict)
+        frq_new_id = models.QuestionDAO.save(frq_new_dto)
 
         # Create a question group.
-        question_group_id = 3
         question_group_dict = {
             'description': 'question_group',
             'items': [
@@ -491,31 +487,28 @@ class QuestionAnalyticsTest(actions.TestBase):
             'version': '1.5',
             'introduction': ''
         }
-        question_group_dto = models.QuestionGroupDTO(
-            question_group_id, question_group_dict)
-
-        # Save the question group to datastore.
-        models.QuestionGroupDAO.save_all([question_group_dto])
+        question_group_dto = models.QuestionGroupDTO(None, question_group_dict)
+        question_group_id = models.QuestionGroupDAO.save(question_group_dto)
 
         # Add a MC question and a question group to leesson1.
         lesson1.objectives = """
-            <question quid="1" weight="1" instanceid="QN"></question>
+            <question quid="%s" weight="1" instanceid="QN"></question>
             random_text
             <gcb-youtube videoid="Kdg2drcUjYI" instanceid="VD"></gcb-youtube>
             more_random_text
-            <question-group qgid="3" instanceid="QG"></question-group>
-        """
+            <question-group qgid="%s" instanceid="QG"></question-group>
+        """ % (mcq_new_id, question_group_id)
 
         # Add a MC question, a short answer question, and a question group to
         # new style assessment.
         assessment_new.html_content = """
-            <question quid="1" weight="1" instanceid="QN2"></question>
-            <question quid="2" weight="1" instanceid="FRQ2"></question>
+            <question quid="%s" weight="1" instanceid="QN2"></question>
+            <question quid="%s" weight="1" instanceid="FRQ2"></question>
             random_text
             <gcb-youtube videoid="Kdg2drcUjYI" instanceid="VD"></gcb-youtube>
             more_random_text
-            <question-group qgid="3" instanceid="QG2"></question-group>
-        """
+            <question-group qgid="%s" instanceid="QG2"></question-group>
+        """ % (mcq_new_id, frq_new_id, question_group_id)
 
         return course
 

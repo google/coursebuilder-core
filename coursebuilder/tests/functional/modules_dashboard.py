@@ -54,13 +54,12 @@ class QuestionDashboardTestCase(actions.TestBase):
 
     def test_table_entries(self):
         # Create a question
-        mc_question_id = 1
         mc_question_description = 'Test MC Question'
-        mc_question_dto = models.QuestionDTO(mc_question_id, {
+        mc_question_dto = models.QuestionDTO(None, {
             'description': mc_question_description,
             'type': 0  # MC
         })
-        models.QuestionDAO.save(mc_question_dto)
+        mc_question_id = models.QuestionDAO.save(mc_question_dto)
 
         # Create an assessment and add the question to the content
         assessment_one = self.course.add_assessment()
@@ -70,22 +69,20 @@ class QuestionDashboardTestCase(actions.TestBase):
         """ % mc_question_id
 
         # Create a second question
-        sa_question_id = 2
         sa_question_description = 'Test SA Question'
-        sa_question_dto = models.QuestionDTO(sa_question_id, {
+        sa_question_dto = models.QuestionDTO(None, {
             'description': sa_question_description,
             'type': 1  # SA
         })
-        models.QuestionDAO.save(sa_question_dto)
+        sa_question_id = models.QuestionDAO.save(sa_question_dto)
 
         # Create a question group and add the second question
-        qg_id = 3
         qg_description = 'Question Group'
-        qg_dto = models.QuestionGroupDTO(qg_id, {
+        qg_dto = models.QuestionGroupDTO(None, {
               'description': qg_description,
              'items': [{'question': str(sa_question_id)}]
         })
-        models.QuestionGroupDAO.save(qg_dto)
+        qg_id = models.QuestionGroupDAO.save(qg_dto)
 
         # Create a second assessment and add the question group to the content
         assessment_two = self.course.add_assessment()
@@ -162,7 +159,7 @@ class QuestionDashboardTestCase(actions.TestBase):
 
     def test_no_question_groups(self):
         description = 'Question description'
-        models.QuestionDAO.save(models.QuestionDTO(1, {
+        models.QuestionDAO.save(models.QuestionDTO(None, {
             'description': description
         }))
         asset_tables = self._load_tables()
@@ -176,7 +173,7 @@ class QuestionDashboardTestCase(actions.TestBase):
 
     def test_no_questions(self):
         description = 'Group description'
-        models.QuestionGroupDAO.save(models.QuestionGroupDTO(1, {
+        models.QuestionGroupDAO.save(models.QuestionGroupDTO(None, {
                     'description': description
         }))
         asset_tables = self._load_tables()
@@ -223,12 +220,12 @@ class QuestionDashboardTestCase(actions.TestBase):
 
     def test_last_modified_timestamp(self):
         begin_time = time.time()
-        question_dto = models.QuestionDTO(1, {})
+        question_dto = models.QuestionDTO(None, {})
         models.QuestionDAO.save(question_dto)
         self.assertTrue((begin_time <= question_dto.last_modified) and (
             question_dto.last_modified <= time.time()))
 
-        qg_dto = models.QuestionGroupDTO(1, {})
+        qg_dto = models.QuestionGroupDTO(None, {})
         models.QuestionGroupDAO.save(qg_dto)
         self.assertTrue((begin_time <= qg_dto.last_modified) and (
             question_dto.last_modified <= time.time()))
