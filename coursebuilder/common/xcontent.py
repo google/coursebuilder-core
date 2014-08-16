@@ -101,6 +101,11 @@ Resource String Disambiguation
 
 Open Issues:
 
+    - P0: complete map_source_to_target() for allow_list_reorder=True
+    - P0: move all schemas out of dashboard into models; leave UX specific
+      inputEx annotations of those schemas in dashboard
+    - P0: clean up and streamline Registry/SchemaFields
+    - P0: update about herein with details of object bind/map/diff
     - P0: get rid of minidom, use cElementTree to reduce parser dependency
     - P0: drop '#' and allow <a> and <b> while no disambiguation is required
     - P0: how shall safedom handle custom tag nodes that are not yet ready to
@@ -113,6 +118,7 @@ Good luck!
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
+import difflib
 import re
 import StringIO
 import sys
@@ -795,6 +801,199 @@ class ContentTransformer(object):
             errors[-1].reraise()
 
 
+class SourceToTargetMapping(object):
+    """Class that maps source to target."""
+
+    def __init__(self, name, type_name, source_value, target_value):
+        self._name = name
+        self._type = type_name
+        self._source = source_value
+        self._target = target_value
+
+    def __str__(self):
+        return '%s (%s): %s == %s'% (
+            self._name, self._type, self._source, self._target)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def source_value(self):
+        return self._source
+
+    @property
+    def target_value(self):
+        return self._target
+
+    @property
+    def type(self):
+        return self._type
+
+    @classmethod
+    def find_mapping(cls, mappings, name):
+        for mapping in mappings:
+            if name == mapping.name:
+                return mapping
+        return None
+
+
+class SourceToTargetDiffMapping(SourceToTargetMapping):
+    """Class that maps source to target with diff."""
+
+    VERB_NEW = 1  # new source value added, no mapping to target exists
+    VERB_CHANGED = 2  # source value changed, mapping to target likely invalid
+    VERB_CURRENT = 3  # source value is mapped to valid target value
+    ALLOWED_VERBS = [VERB_NEW, VERB_CHANGED, VERB_CURRENT]
+
+    SIMILARITY_CUTOFF = 0.5
+
+    def __init__(self, name, source_value, target_value, type_name, verb):
+        assert verb in self.ALLOWED_VERBS
+        super(SourceToTargetDiffMapping, self).__init__(
+            name, source_value, target_value, type_name)
+        self._verb = verb
+
+    def __str__(self):
+        return '%s (%s, %s): %s | %s'% (
+            self._name, self._type, self._verb, self._source, self._target)
+
+    @property
+    def verb(self):
+        return self._verb
+
+    @classmethod
+    def _create_value_mapping(
+        cls, field_value, source_value, target_value, verb):
+        _name = None
+        _type = None
+        if field_value is not None:
+            _name = field_value.name
+            _type = field_value.field.type
+        return SourceToTargetDiffMapping(
+            _name, _type,
+            source_value, target_value, verb)
+
+    @classmethod
+    def map_lists_source_to_target(cls, a, b, allow_reorder=False):
+        """Maps items from the source list to a target list."""
+        return cls._map_lists_source_to_target_with_reorder(a, b) if (
+            allow_reorder) else cls._map_lists_source_to_target_no_reorder(a, b)
+
+    @classmethod
+    def _map_lists_source_to_target_no_reorder(cls, a, b):
+        mappings = []
+        matcher = difflib.SequenceMatcher(None, a, b)
+        for optcode in matcher.get_opcodes():
+            tag, i1, i2, j1, j2 = optcode
+            if 'insert' == tag:
+                continue
+            for index in range(i1, i2):
+                entry = None
+                if 'equal' == tag:
+                    assert (i2 - i1) == (j2 - j1)
+                    entry = cls._create_value_mapping(
+                        None, a[index], b[j1 + (index - i1)], cls.VERB_CURRENT)
+                elif 'replace' == tag:
+                    assert (i2 - i1) == (j2 - j1)
+                    entry = cls._create_value_mapping(
+                        None, a[index], b[j1 + (index - i1)], cls.VERB_CHANGED)
+                elif 'delete' == tag:
+                    entry = cls._create_value_mapping(
+                        None, a[index], None, cls.VERB_NEW)
+                else:
+                    raise KeyError()
+                assert entry is not None
+                mappings.append(entry)
+        return mappings
+
+    @classmethod
+    def _map_lists_source_to_target_with_reorder(cls, a, b):
+        mappings = []
+        for new_index, _new in enumerate(a):
+            best_match_index = None
+            best_score = -1
+            entry = None
+            for old_index, _old in enumerate(b):
+                if _new == _old:
+                    entry = cls._create_value_mapping(
+                        None,
+                        a[new_index], b[old_index], cls.VERB_CURRENT)
+                    break
+                score = difflib.SequenceMatcher(None, _new, _old).quick_ratio()
+                if score > best_score:
+                    best_score = score
+                    best_match_index = old_index
+            if entry:
+                mappings.append(entry)
+                continue
+            if best_score > cls.SIMILARITY_CUTOFF:
+                entry = cls._create_value_mapping(
+                    None, a[new_index], b[best_match_index], cls.VERB_CHANGED)
+            else:
+                entry = cls._create_value_mapping(
+                    None, a[new_index], None, cls.VERB_NEW)
+            assert entry is not None
+            mappings.append(entry)
+        return mappings
+
+    @classmethod
+    def map_source_to_target(
+        cls, binding,
+        existing_mappings=None, allowed_names=None, allow_list_reorder=False,
+        errors=None):
+        """Maps binding field value to the existing SourceToTargetMapping.
+
+        Args:
+            binding: an instance of ValueToTypeBinding object
+            existing_mappings: an array of SourceToTargetMapping holding
+              existing translations
+            allowed_names: field names that are subject to mapping
+            allow_list_reorder: controls whether list items can be reordered
+              while looking for better matching
+            errors: an array to receive errors found during mapping process
+        Returns:
+            an array of SourceToTargetDiffMapping objects, one per each field
+            value in the binding passed in
+        """
+        name_to_mapping = {}
+        if existing_mappings is not None:
+            for mapping in existing_mappings:
+                name_to_mapping[mapping.name] = mapping
+        mapping = []
+        if allow_list_reorder:
+            raise NotImplementedError()
+        for index, field_value in enumerate(binding.value_list):
+            if allowed_names is not None and (
+                field_value.name not in allowed_names):
+                continue
+            target_value = None
+            verb = cls.VERB_NEW
+            translation = name_to_mapping.get(field_value.name)
+            if translation:
+                if translation.type != field_value.field.type:
+                    _error = AssertionError(
+                        'Source and target types don\'t match: %s, %s.' % (
+                            field_value.field.type, translation.type))
+                    if errors is not None:
+                        _error = ResourceBundleItemError(
+                            sys.exc_info(), _error, index)
+                        errors.append(_error)
+                        continue
+                    else:
+                        raise _error
+                target_value = translation.target_value
+                if translation.source_value != field_value.value:
+                    verb = cls.VERB_CHANGED
+                else:
+                    verb = cls.VERB_CURRENT
+            source_value = field_value.value
+            entry = cls._create_value_mapping(
+                field_value, source_value, target_value, verb)
+            mapping.append(entry)
+        return mapping
+
+
 def extract_resource_bundle_from(
     tree=None, html=None, context=None, config=None):
     """Extracts resource bundle from the HTML string of tree.
@@ -839,6 +1038,144 @@ def merge_resource_bundle_into(
         tree=tree, html=html, context=context, config=config)
     transformer.recompose(context, resource_bundle, errors=errors)
     return context, transformer
+
+
+class ListsDifflibTests(unittest.TestCase):
+    """Tests our understanding of difflib as applied to ordered lists."""
+
+    def test_diff_two_string_lists_works(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'was', 'blue', '!']
+        matcher = difflib.SequenceMatcher(None, newest, oldest)
+        expected_verbs = ['equal', 'replace', 'equal']
+        for index, optcode in enumerate(matcher.get_opcodes()):
+            tag, _, _, _, _ = optcode
+            self.assertEqual(expected_verbs[index], tag)
+
+    def test_diff_two_string_lists_no_reorder(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'is', 'sky', 'blue', '!']
+        matcher = difflib.SequenceMatcher(None, newest, oldest)
+        expected_verbs = ['equal', 'insert', 'equal', 'delete', 'equal']
+        for index, optcode in enumerate(matcher.get_opcodes()):
+            tag, _, _, _, _ = optcode
+            self.assertEqual(expected_verbs[index], tag)
+
+    def test_map_lists_source_to_target_identity(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'is', 'blue', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+    def test_map_lists_source_to_target_no_reorder_but_changed(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'was', 'blue', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', 'was', SourceToTargetDiffMapping.VERB_CHANGED),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+    def test_map_lists_source_to_target_no_reorder_and_remove_insert(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'is', 'sky', 'blue', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', None, SourceToTargetDiffMapping.VERB_NEW),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+    def test_map_lists_source_to_target_no_reorder_and_new(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'blue', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', None, SourceToTargetDiffMapping.VERB_NEW),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+
+class SetsDifflibUtils(unittest.TestCase):
+    """Tests our understanding of difflib as applied to lists and sets."""
+
+    def test_diff_two_string_lists_with_reorder(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'is', 'sky', 'blue', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest, allow_reorder=True)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+    def test_diff_two_string_lists_with_reorder_over_cutoff(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'is', 'blUe', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest, allow_reorder=True)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('blue', 'blUe', SourceToTargetDiffMapping.VERB_CHANGED),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
+
+    def test_diff_two_string_lists_with_reorder_under_cutoff(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'is', 'BLUE', '!']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest, allow_reorder=True)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
+            ('blue', None, SourceToTargetDiffMapping.VERB_NEW),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb) for mapping in mappings])
 
 
 class TestCasesForIO(unittest.TestCase):
@@ -1471,6 +1808,7 @@ def run_all_unit_tests():
     """Runs all unit tests in this module."""
     suites_list = []
     for test_class in [
+        ListsDifflibTests, SetsDifflibUtils,
         TestCasesForIO,
         TestCasesForContentDecompose, TestCasesForContentRecompose]:
         suite = unittest.TestLoader().loadTestsFromTestCase(test_class)

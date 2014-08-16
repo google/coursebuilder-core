@@ -1776,7 +1776,8 @@ class Course(object):
             'and terms of service'))
         base_opts.add_property(schema_fields.SchemaField(
             'base:locale', 'Locale', 'string',
-            optional=True, description='Locale for internationalization '
+            optional=True, i18n=False,
+            description='Locale for internationalization '
             'of explorer pages. See modules/i18n/resources/locale for '
             'available locales.'))
 
@@ -1796,10 +1797,20 @@ class Course(object):
             description='Email for the forum, e.g. '
             '\'My-Course@googlegroups.com\'.'))
         course_opts.add_property(schema_fields.SchemaField(
+            'course:forum_embed_url', 'Forum URL for embedding', 'string',
+            optional=True, description='URL for the forum <iframe>.'))
+        course_opts.add_property(schema_fields.SchemaField(
+            'course:forum_url', 'Forum URL', 'string', optional=True,
+            description='URL for the forum.'))
+        course_opts.add_property(schema_fields.SchemaField(
             'course:announcement_list_email', 'Announcement List Email',
             'string', optional=True, description='Email for the mailing list '
             'where students can register to receive course announcements, e.g. '
             '\'My-Course-Announce@googlegroups.com\''))
+        course_opts.add_property(schema_fields.SchemaField(
+            'course:announcement_list_url', 'Announcement List URL',
+            'string', optional=True, description='URL for the mailing list '
+            'where students can register to receive course announcements.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:whitelist', 'Whitelisted Students', 'text', optional=True,
             description='List of email addresses of students who may register.'
@@ -1812,7 +1823,7 @@ class Course(object):
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
         course_opts.add_property(schema_fields.SchemaField(
-            'course:locale', 'Base Locale', 'string',
+            'course:locale', 'Base Locale', 'string', i18n=False,
             select_data=locale_data_for_select))
 
         locale_type = schema_fields.FieldRegistry(
@@ -1820,7 +1831,7 @@ class Course(object):
             extra_schema_dict_values={'className': 'settings-list-item'})
 
         locale_type.add_property(schema_fields.SchemaField(
-            'locale', 'Locale', 'string', optional=True,
+            'locale', 'Locale', 'string', optional=True, i18n=False,
             select_data=locale_data_for_select))
 
         select_data = [

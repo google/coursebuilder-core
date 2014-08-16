@@ -151,7 +151,7 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'Choice',
             extra_schema_dict_values={'className': 'mc-choice'})
         choice_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True,
+            'score', 'Score', 'string', optional=True, i18n=False,
             extra_schema_dict_values={
                 'className': 'mc-choice-score', 'value': '0'}))
         choice_type.add_property(schema_fields.SchemaField(
