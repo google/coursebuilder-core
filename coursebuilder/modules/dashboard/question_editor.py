@@ -86,7 +86,7 @@ class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
 
         used_by = QuestionDAO.used_by(question.id)
         if used_by:
-            group_names = ['"%s"' % x for x in used_by]
+            group_names = sorted(['"%s"' % x.description for x in used_by])
             transforms.send_json_response(
                 self, 403,
                 ('Question in use by question groups:\n%s.\nPlease delete it '

@@ -937,23 +937,23 @@ class QuestionDAO(LastModfiedJsonDao):
 
     @classmethod
     def used_by(cls, question_dto_id):
-        """Returns descriptions of the question groups using a question.
+        """Returns the question groups using a question.
 
         Args:
             question_dto_id: int. Identifier of the question we're testing.
 
         Returns:
-            List of unicode. The lexicographically-sorted list of the
-            descriptions of all question groups that use the given question.
+            List of question groups. The list of all question groups that use
+            the given question.
         """
         # O(num_question_groups), but deserialization of 1 large group takes
         # ~1ms so practically speaking latency is OK for the admin console.
         matches = []
         for group in QuestionGroupDAO.get_all():
             if long(question_dto_id) in [long(x) for x in group.question_ids]:
-                matches.append(group.description)
+                matches.append(group)
 
-        return sorted(matches)
+        return matches
 
 
 class SaQuestionConstants(object):

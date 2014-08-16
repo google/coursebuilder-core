@@ -30,7 +30,7 @@ function setDraftStatusCallback(data, padlock) {
 /**
  * Toggle draft status on click on padlock icon.
  */
-function setupDraftStatus() {
+function setUpDraftStatus() {
   $(".icon-draft-status.active").on("click", function(e) {
     var padlock = $(this);
     var setDraft = $(this).hasClass("icon-unlocked");
@@ -83,7 +83,7 @@ function closeModal(modal) {
 /**
  * Sets up handlers for modal window.
  */
-function setupModalWindow() {
+function setUpModalWindow() {
   var modal = $("#modal-window");
   // Bind preview button to show question preview
   $(".icon-preview").on("click", function(e) {
@@ -138,7 +138,7 @@ function sortTable(clickedHeader) {
 /**
  * Sets up table sorting and default sorting order.
  */
-function setupTableSorting() {
+function setUpTableSorting() {
   // Sort table on header click
   $(".assets-table th").on("click", function(e) {
     sortTable($(this));
@@ -149,11 +149,225 @@ function setupTableSorting() {
   });
 }
 
+function setUpFiltering() {
+
+  function showFilter(filterPopup) {
+    filterPopup.show(200);
+    // Handler: close filter on clicking outside filter
+    $(document).on("click.filter", function(e) {
+      if($(e.target).closest(filterPopup).length == 0) {
+        closeFilter(filterPopup);
+      }
+    });
+  }
+
+  function closeFilter(filterPopup) {
+    filterPopup.hide(200);
+    $(document).off("click.filter");
+  }
+
+  /**
+   * Adds <option>s to a <select>.
+   *
+   * @param {JQuery object} select the <select> element to add to.
+   * @param {array} data an array of arrays, where the first element defines
+   * the value of the <select> and the second the text.
+   */
+  function appendOptions(select, data) {
+    $.each(data, function() {
+      select.append($("<option/>").val(this[0]).text(this[1]))
+    });
+  }
+
+  function setDefaultOption(select) {
+    select.empty().append($("<option/>").val("").text("All"));
+  }
+
+  function fillSelect(select, data) {
+    setDefaultOption(select);
+    appendOptions(select, data);
+  }
+
+  function fillLessonsSelect(lessonsSelect, lessonsMap) {
+    setDefaultOption(lessonsSelect);
+    for (var key in lessonsMap) {
+      if (lessonsMap.hasOwnProperty(key)) {
+        appendOptions(lessonsSelect, lessonsMap[key]);
+      }
+    }
+  }
+
+  function resetForm(form, lessonsMap) {
+    form[0].reset();
+    onUnitFieldChange(form, lessonsMap);
+  }
+
+  function filterQuestions(form) {
+    // Get values from filter form
+    var descriptionFilter = form.find(".description").val().toLowerCase();
+    var typeFilter = form.find(".type").val();
+    var unitFilter = parseInt(form.find(".unit").val());
+    var lessonFilter = parseInt(form.find(".lesson").val());
+    var groupFilter = parseInt(form.find(".group").val());
+    var isUnusedFilter = form.find(".unused").prop("checked");
+    $("#question-table tbody tr").each(function() {
+      // Get filter data for row
+      var rowData = $(this).data("filter");
+      // Make sure the row is first visible (unless it's the empty row)
+      if (rowData) {
+        $(this).show();
+      } else {
+        $(this).hide();
+        return true;
+      }
+      // Filter checkbox unused
+      if (isUnusedFilter && rowData.unused != 1) {
+        $(this).hide();
+        return true;
+      }
+      // Filter question type
+      if (typeFilter != "" && typeFilter != rowData.type) {
+        $(this).hide();
+        return true;
+      }
+      // Filter unit/assessment
+      if (!isNaN(unitFilter) && $.inArray(unitFilter, rowData.units) == -1) {
+        $(this).hide();
+        return true;
+      }
+      // Filter lesson
+      if ((!isNaN(lessonFilter)) && (
+          $.inArray(lessonFilter, rowData.lessons) == -1)) {
+        $(this).hide();
+        return true;
+      }
+      // Filter question group
+      if ((!isNaN(groupFilter)) && (
+          $.inArray(groupFilter, rowData.groups) == -1)) {
+        $(this).hide();
+        return true;
+      }
+      // Filter description
+      if (rowData.description.toLowerCase().indexOf(descriptionFilter) == -1) {
+        $(this).hide();
+        return true;
+      }
+    });
+    if ($("#question-table tbody tr:visible").size() == 0) {
+      $("#question-table tbody tr.empty").show();
+    }
+  }
+
+  function setUpQuestionFilterForm(filterData) {
+    var questionFilterPopup = $("#question-filter-popup");
+    var form = questionFilterPopup.find("form");
+
+    // Position question-filter popup next to the question-filter button
+    $("#question-filter").append(questionFilterPopup);
+
+    // Fill in the filter with course specific filter information
+    fillSelect(form.find(".type"), filterData.types);
+    fillSelect(form.find(".unit"), filterData.units);
+    fillSelect(form.find(".group"), filterData.groups);
+    fillLessonsSelect(form.find(".lesson"), filterData.lessonsMap);
+    return form;
+  }
+
+  function onUnitFieldChange(form, lessonsMap) {
+    var lessonField = form.find(".lesson");
+    lessonField.prop("disabled", false);
+    var unit = parseInt(form.find(".unit").val());
+    if (isNaN(unit)) {
+      fillLessonsSelect(lessonField, lessonsMap);
+    } else {
+      form.find(".unused").prop("checked", false);
+      if (lessonsMap.hasOwnProperty(unit) && lessonsMap[unit].length != 0) {
+        fillSelect(lessonField, lessonsMap[unit]);
+      } else {
+        setDefaultOption(lessonField);
+        lessonField.prop("disabled", true);
+      }
+    }
+  }
+
+  function setUpQuestionFilter() {
+    //Only setUp question filter when container is present.
+    if ($("#question-filter").size() == 0) {
+      return;
+    }
+
+    var filterData = $("#question-table").data();
+    var form = setUpQuestionFilterForm(filterData);
+    var lessonsMap = filterData.lessonsMap;
+
+    // Bind reset
+    form.find(".reset").on("click", function(e) {
+      resetForm(form, lessonsMap);
+      filterQuestions(form);
+    });
+
+    // Adapt lesson dropdown when selecting a unit and uncheck unused checkbox
+    var unitField = form.find(".unit");
+    unitField.on("change", function(e) {
+      onUnitFieldChange(form, lessonsMap);
+    });
+
+    // Uncheck unused checkbox if the lesson field has a value
+    var unusedCheckbox = form.find(".unused");
+    form.find(".lesson").on("change", function(e) {
+      if (form.find(".lesson").val() != "") {
+        unusedCheckbox.prop("checked", false);
+      }
+    });
+
+    // Reset unit and lesson field when unused is checked
+    unusedCheckbox.on("change", function(e) {
+      unitField.val("");
+      onUnitFieldChange(form, lessonsMap);
+    });
+
+    form.find("select, input[type='checkbox']").on("change", function(e) {
+      filterQuestions(form);
+    });
+
+    form.find("input[type='text']").on("keyup", function(e) {
+      filterQuestions(form);
+    });
+
+    form.on("submit", function(e) {
+      e.preventDefault();
+    });
+  }
+
+  function setUpFilterBindings() {
+    // Bind click on a filter button to open/close its matching filter popup
+    $(".filter-button").on("click", function(e) {
+      e.stopPropagation();
+      var filterPopup = $(this).next(".filter-popup");
+      if (filterPopup.is(":visible")) {
+        closeFilter(filterPopup);
+      } else {
+        showFilter(filterPopup);
+        filterPopup.find("input:first").focus();
+      }
+    });
+
+    // Bind click on a close button to close its matching filter popup
+    $(".filter-popup .close-button").on("click", function(e) {
+      closeFilter($(this).closest(".filter-popup"));
+    });
+  }
+
+  setUpQuestionFilter();
+  setUpFilterBindings();
+}
+
 function init() {
-  setupDraftStatus();
+  setUpDraftStatus();
   setLocalTimes();
-  setupModalWindow();
-  setupTableSorting();
+  setUpModalWindow();
+  setUpTableSorting();
+  setUpFiltering();
 };
 
 init();

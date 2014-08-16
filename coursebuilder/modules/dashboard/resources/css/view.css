@@ -121,6 +121,8 @@ div#formContainer {
   color: #FFFFFF;
   text-decoration: none;
   border: none;
+  cursor: pointer;
+  outline: none;
 }
 .gcb-pull-right {
   float: right;
@@ -281,7 +283,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   background-color: #fff;
   padding: 20px;
 }
-#modal-window .close-button {
+.close-button {
   position: absolute;
   top: 0px;
   right: 0px;
@@ -297,4 +299,44 @@ div#formContainer div.settings-list-item fieldset legend span {
 #modal-window #content > iframe {
   width: 100%;
   border: none;
+}
+.filter-container {
+  position: relative;
+  overlfow: auto;
+}
+.filter-popup {
+  display: none;
+  position: absolute;
+  right: 100%;
+  width: 470px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border: 1px solid rgba(0,0,0,0.2);
+  padding: 10px;
+  -mozkit-box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  -webkit-box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+.filter-popup label span {
+  display: inline-block;
+  width  : 120px;
+  text-align: right;
+  margin-right: 5px;
+}
+.filter-popup input[type="text"] {
+  width: 216px;
+  margin: 0px;
+}
+.filter-popup input[type="checkbox"] {
+  margin: 3px 0px;
+}
+.filter-popup select {
+  width: 220px;
+  margin: 0px;
+}
+.filter-popup .buttons {
+  margin-left: 121px;
+}
+.filter-popup .buttons .gcb-button {
+  display: inline-block;
 }

@@ -100,7 +100,7 @@ class QuestionDashboardTestCase(actions.TestBase):
 
         # First check Question Bank table
         questions_table = asset_tables[0]
-        question_rows = questions_table.findall('./tbody/tr')
+        question_rows = questions_table.findall('./tbody/tr[@data-filter]')
         self.assertEquals(len(question_rows), 2)
 
         # Check edit link and description of the first question

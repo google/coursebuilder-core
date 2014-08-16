@@ -189,3 +189,136 @@ describe('draft status toggling', function() {
     expect(cbShowAlert).toHaveBeenCalled();
   });
 });
+
+describe('question table filtering', function() {
+  function verifySingleRow(table, expectedId) {
+    var visibleRows = table.find("tr:visible");
+    expect(visibleRows.size()).toBe(1);
+    expect(visibleRows.attr("id")).toBe(expectedId);
+  }
+  beforeEach(function() {
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
+        + 'filtering_fixture.html');
+    setUpFiltering();
+    this.form = $("#question-filter-popup form");
+    this.descriptionField = this.form.find(".description");
+    this.typeField = this.form.find(".type");
+    this.unitField = this.form.find(".unit");
+    this.lessonField = this.form.find(".lesson");
+    this.groupField = this.form.find(".group");
+    this.unusedField = this.form.find(".unused");
+  });
+  it('moves the popup into the question filter div', function() {
+    expect(this.form.closest("#question-filter").size()).toBe(1);
+  });
+  it('initializes dropdowns using data-filter attribute',function() {
+    var typeOptions = this.typeField.find("option");
+    expect(typeOptions.size()).toBe(3);
+    expect(typeOptions.eq(0).val()).toBe("");
+    expect(typeOptions.eq(1).val()).toBe("0");
+    expect(typeOptions.eq(2).val()).toBe("1");
+
+    var unitOptions = this.unitField.find("option");
+    expect(unitOptions.size()).toBe(4);
+    expect(unitOptions.eq(0).val()).toBe("");
+    expect(unitOptions.eq(1).val()).toBe("1");
+    expect(unitOptions.eq(2).val()).toBe("4");
+    expect(unitOptions.eq(3).val()).toBe("6");
+
+    var lessonOptions = this.lessonField.find("option");
+    expect(lessonOptions.size()).toBe(4);
+    expect(lessonOptions.eq(0).val()).toBe("");
+    expect(lessonOptions.eq(1).val()).toBe("2");
+    expect(lessonOptions.eq(2).val()).toBe("3");
+    expect(lessonOptions.eq(3).val()).toBe("5");
+
+    var groupOptions = this.groupField.find("option");
+    expect(groupOptions.size()).toBe(3);
+    expect(groupOptions.eq(0).val()).toBe("");
+    expect(groupOptions.eq(1).val()).toBe("1");
+    expect(groupOptions.eq(2).val()).toBe("2");
+  });
+  it('adapts the lesson field to the selected unit', function() {
+    this.unitField.val("1").trigger("change");
+    var lessonOptions = this.lessonField.find("option");
+    expect(lessonOptions.size()).toBe(3);
+    expect(lessonOptions.eq(0).val()).toBe("");
+    expect(lessonOptions.eq(1).val()).toBe("2");
+    expect(lessonOptions.eq(2).val()).toBe("3");
+
+    this.unitField.val("4").trigger("change");
+    lessonOptions = this.lessonField.find("option");
+    expect(lessonOptions.size()).toBe(2);
+    expect(lessonOptions.eq(0).val()).toBe("");
+    expect(lessonOptions.eq(1).val()).toBe("5");
+
+    this.unitField.val("6").trigger("change");
+    expect(this.lessonField.prop("disabled")).toBe(true);
+    lessonOptions = this.lessonField.find("option");
+    expect(lessonOptions.size()).toBe(1);
+    expect(lessonOptions.eq(0).val()).toBe("");
+
+    this.unitField.val("").trigger("change");
+    expect(this.lessonField.prop("disabled")).toBe(false);
+    expect(this.lessonField.find("option").size()).toBe(4);
+    expect(this.lessonField.val()).toBe("");
+  });
+  it('unchecks the unused checkbox when a unit is selected', function() {
+    this.unusedField.prop("checked", true);
+    this.unitField.val("1").trigger("change");
+    expect(this.unusedField.prop("checked")).toBe(false);
+  });
+  it('unchecks the unused checkbox when a lesson is selected', function() {
+    this.unusedField.prop("checked", true);
+    this.lessonField.val("2").trigger("change");
+    expect(this.unusedField.prop("checked")).toBe(false);
+  });
+  it('resets the unit field when the unused checkbox is checked', function() {
+    this.unitField.val("1");
+    this.unusedField.prop("checked", true).trigger("change");
+    expect(this.unitField.val()).toBe("");
+  });
+  it('resets the lesson field when the unused checkbox is checked', function() {
+    this.unitField.val("1").trigger("change");
+    this.lessonField.val("2");
+    this.unusedField.prop("checked", true).trigger("change");
+    expect(this.lessonField.prop("disabled")).toBe(false);
+    expect(this.lessonField.find("option").size()).toBe(4);
+    expect(this.lessonField.val()).toBe("");
+  });
+  it('filters the questions using the filter form data', function() {
+    var resetButton = this.form.find(".reset");
+    var table = $("#question-table");
+
+    this.unitField.val("1");
+    this.lessonField.val("2").trigger("change");
+    verifySingleRow(table, "a");
+    resetButton.trigger("click");
+
+    this.groupField.val("2").trigger("change");
+    verifySingleRow(table, "b");
+
+    this.groupField.val("1");
+    this.typeField.val("1").trigger("change");
+    verifySingleRow(table, "c");
+    resetButton.trigger("click");
+
+    this.descriptionField.val("-x-").trigger("keyup");
+    expect(table.find("tr:visible").size()).toBe(2);
+    this.unitField.val("6").trigger("change");
+    verifySingleRow(table, "d");
+    resetButton.trigger("click");
+
+    this.unusedField.prop("checked", true);
+    this.typeField.val("0").trigger("change");
+    verifySingleRow(table, "e");
+
+    this.typeField.val("1").trigger("change");
+    verifySingleRow(table, "f");
+
+    this.groupField.val("1").trigger("change");
+    expect(table.find("tr:visible").size()).toBe(1);
+    expect(table.find("tr:visible").hasClass("empty")).toBe(true);
+  });
+});

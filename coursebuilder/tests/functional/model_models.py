@@ -68,59 +68,55 @@ class QuestionDAOTestCase(actions.TestBase):
     def setUp(self):
         """Sets up datastore contents."""
         super(QuestionDAOTestCase, self).setUp()
-        self.used_twice_question_id = 1
-        self.used_twice_question_dto = models.QuestionDTO(
-            self.used_twice_question_id, {})
 
-        self.used_once_question_id = 2
-        self.used_once_question_dto = models.QuestionDTO(
-            self.used_once_question_id, {})
+        self.used_twice_question_dto = models.QuestionDTO(None, {})
+        self.used_twice_question_id = models.QuestionDAO.save(
+            self.used_twice_question_dto)
 
-        self.unused_question_id = 3
-        self.unused_question_dto = models.QuestionDTO(
-            self.unused_question_id, {})
-        models.QuestionDAO.save_all([
-            self.used_twice_question_dto, self.used_once_question_dto,
-            self.unused_question_dto])
+        self.used_once_question_dto = models.QuestionDTO(None, {})
+        self.used_once_question_id = models.QuestionDAO.save(
+            self.used_once_question_dto)
+
+        self.unused_question_dto = models.QuestionDTO(None, {})
+        self.unused_question_id = models.QuestionDAO.save(
+            self.unused_question_dto)
 
         # Handcoding the dicts. This is dangerous because they're handcoded
         # elsewhere, the implementations could fall out of sync, and these tests
         # may then pass erroneously.
         self.first_question_group_description = 'first_question_group'
-        self.first_question_group_id = 4
         self.first_question_group_dto = models.QuestionGroupDTO(
-            self.first_question_group_id,
+            None,
             {'description': self.first_question_group_description,
              'items': [{'question': str(self.used_once_question_id)}]})
+        self.first_question_group_id = models.QuestionGroupDAO.save(
+            self.first_question_group_dto)
 
         self.second_question_group_description = 'second_question_group'
-        self.second_question_group_id = 5
         self.second_question_group_dto = models.QuestionGroupDTO(
-            self.second_question_group_id,
+            None,
             {'description': self.second_question_group_description,
              'items': [{'question': str(self.used_twice_question_id)}]})
+        self.second_question_group_id = models.QuestionGroupDAO.save(
+            self.second_question_group_dto)
 
         self.third_question_group_description = 'third_question_group'
-        self.third_question_group_id = 6
         self.third_question_group_dto = models.QuestionGroupDTO(
-            self.third_question_group_id,
+            None,
             {'description': self.third_question_group_description,
              'items': [{'question': str(self.used_twice_question_id)}]})
+        self.third_question_group_id = models.QuestionGroupDAO.save(
+            self.third_question_group_dto)
 
-        models.QuestionGroupDAO.save_all([
-            self.first_question_group_dto, self.second_question_group_dto,
-            self.third_question_group_dto])
-
-    def test_used_by_returns_description_of_single_question_group(self):
+    def test_used_by_returns_single_question_group(self):
         self.assertEqual(
-            [self.first_question_group_description],
-            models.QuestionDAO.used_by(self.used_once_question_id))
+            long(self.first_question_group_id),
+            models.QuestionDAO.used_by(self.used_once_question_id)[0].id)
 
-    def test_used_by_returns_descriptions_of_multiple_question_groups(self):
-        self.assertEqual(
-            [self.second_question_group_description,
-             self.third_question_group_description],
-            models.QuestionDAO.used_by(self.used_twice_question_id))
+    def test_used_by_returns_multiple_question_groups(self):
+        used_by = models.QuestionDAO.used_by(self.used_twice_question_id)
+        self.assertEqual(long(self.second_question_group_id), used_by[0].id)
+        self.assertEqual(long(self.third_question_group_id), used_by[1].id)
 
     def test_used_by_returns_empty_list_for_unused_question(self):
         not_found_id = 7

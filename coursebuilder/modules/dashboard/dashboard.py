@@ -69,6 +69,7 @@ from models import custom_modules
 from models import data_sources
 from models import models
 from models import roles
+from models import transforms
 from models import vfs
 from models.models import LabelDAO
 from models.models import QuestionDAO
@@ -761,9 +762,32 @@ class DashboardHandler(
                     safe_dom.Element('blockquote').add_text(caption_if_empty))
         return output
 
-    def _get_location_links(self, component, component_type):
-        locations = courses.Course(self).get_component_locations(
-            component.id, component_type)
+    def _attach_filter_data(self, element):
+        course = courses.Course(self)
+        unit_list = []
+        assessment_list = []
+        for unit in self.get_units():
+            if verify.UNIT_TYPE_UNIT == unit.type:
+                unit_list.append((unit.unit_id, unit.title))
+            if verify.UNIT_TYPE_ASSESSMENT == unit.type:
+                assessment_list.append((unit.unit_id, unit.title))
+
+        lessons_map = {}
+        for (unit_id, unused_title) in unit_list:
+            lessons_map[unit_id] = [
+                (l.lesson_id, l.title) for l in course.get_lessons(unit_id)]
+
+        element.add_attribute(
+            data_units=transforms.dumps(unit_list + assessment_list),
+            data_lessons_map=transforms.dumps(lessons_map),
+            data_groups=transforms.dumps(
+                [(g.id, g.description) for g in QuestionGroupDAO.get_all()]),
+            data_types=transforms.dumps([
+                (QuestionDTO.MULTIPLE_CHOICE, 'Multiple Choice'),
+                (QuestionDTO.SHORT_ANSWER, 'Short Answer')])
+        )
+
+    def _create_location_links(self, locations):
         links = []
         for assessment in locations['assessments']:
             url = 'assessment?name=%s' % assessment.unit_id
@@ -808,21 +832,22 @@ class DashboardHandler(
             alt='Clone',
         )
 
-    def _add_assets_table(self, output, columns):
+    def _add_assets_table(self, output, table_id, columns):
         """Creates an assets table with the specified columns.
 
         Args:
             output: safe_dom.NodeList to which the table should be appended.
+            table_id: string specifying the id for the table
             columns: list of tuples that specifies column name and width.
                 For example ("Description", 35) would create a column with a
                 width of 35% and the header would be Description.
 
         Returns:
-            The tbody safe_dom.Element of the created table.
+            The table safe_dom.Element of the created table.
         """
         container = safe_dom.Element('div', className='assets-table-container')
         output.append(container)
-        table = safe_dom.Element('table', className='assets-table')
+        table = safe_dom.Element('table', className='assets-table', id=table_id)
         container.add_child(table)
         thead = safe_dom.Element('thead')
         table.add_child(thead)
@@ -833,9 +858,17 @@ class DashboardHandler(
             ths.append(safe_dom.Element(
                 'th', style=('width: %s%%' % width)).add_text(title))
         tr.add_children(ths)
-        tbody = safe_dom.Element('tbody')
-        table.add_child(tbody)
-        return tbody
+        return table
+
+    def _create_filter(self):
+        return safe_dom.Element(
+            'div', className='gcb-pull-right filter-container',
+            id='question-filter'
+        ).add_child(
+            safe_dom.Element(
+                'button', className='gcb-button gcb-pull-right filter-button'
+            ).add_text('Filter')
+        )
 
     def list_questions(self):
         """Prepare a list of the question bank contents."""
@@ -852,25 +885,31 @@ class DashboardHandler(
                 'a', className='gcb-button gcb-pull-right',
                 href='dashboard?action=add_sa_question'
             ).add_text('Add Short Answer')
-        ).append(
+        ).append(self._create_filter()).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
         ).append(
             safe_dom.Element('h3').add_text('Question Bank')
         )
 
         # Create questions table
-        tbody = self._add_assets_table(
-            output, [
+        table = self._add_assets_table(
+            output, 'question-table', [
             ('Description', 25), ('Question Groups', 25),
             ('Course Locations', 25), ('Last Modified', 20), ('Type', 5)]
         )
+        self._attach_filter_data(table)
+        tbody = safe_dom.Element('tbody')
+        table.add_child(tbody)
+
         all_questions = QuestionDAO.get_all()
 
-        if not all_questions:
-            tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
-                'td', colspan='5', style='text-align: center'
-            ).add_text('No questions available')))
-            return output
+        # Add row that is visible when table is empty
+        empty_tr = safe_dom.Element('tr', className='empty')
+        if all_questions:
+            empty_tr.add_attribute(style='display: none')
+        tbody.add_child(empty_tr.add_child(safe_dom.Element(
+            'td', colspan='5', style='text-align: center'
+        ).add_text('No questions available')))
 
         for question in all_questions:
             tr = safe_dom.Element('tr')
@@ -887,14 +926,17 @@ class DashboardHandler(
             td.add_text(question.description)
 
             # Add containing question groups
+            groups = QuestionDAO.used_by(question.id)
             tr.add_child(self._create_list_cell(
-                [safe_dom.Text(qg) for qg in QuestionDAO.used_by(question.id)]
+                [safe_dom.Text(group.description) for group in sorted(
+                    groups, key=lambda g: g.description)]
             ))
 
             # Add locations
-            tr.add_child(self._create_list_cell(
-                self._get_location_links(question, 'question')
-            ))
+            locations = courses.Course(self).get_component_locations(
+                 question.id, 'question')
+            location_links = self._create_location_links(locations)
+            tr.add_child(self._create_list_cell(location_links))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
@@ -909,6 +951,21 @@ class DashboardHandler(
                     'SA' if question.type == QuestionDTO.SHORT_ANSWER else (
                     'Unknown Type'))
             ).add_attribute(style='text-align: center'))
+
+            # Add filter information
+            filter_info = {}
+            filter_info['description'] = question.description
+            filter_info['type'] = question.type
+            filter_info['lessons'] = []
+            unit_ids = set()
+            for (lesson, unit) in locations['lessons']:
+                unit_ids.add(unit.unit_id)
+                filter_info['lessons'].append(lesson.lesson_id)
+            filter_info['units'] = list(unit_ids) + [
+                a.unit_id for a in locations['assessments']]
+            filter_info['groups'] = [qg.id for qg in groups]
+            filter_info['unused'] = 0 if location_links else 1
+            tr.add_attribute(data_filter=transforms.dumps(filter_info))
             tbody.add_child(tr)
 
         return output
@@ -934,11 +991,14 @@ class DashboardHandler(
         )
 
         # Create question groups table
-        tbody = self._add_assets_table(
-            output, [
+        table = self._add_assets_table(
+            output, 'question-group-table', [
             ('Description', 25), ('Questions', 25), ('Course Locations', 25),
             ('Last Modified', 25)]
         )
+        tbody = safe_dom.Element('tbody')
+        table.add_child(tbody)
+
         # TODO(jorr): Hook this into the datastore
         all_question_groups = QuestionGroupDAO.get_all()
 
@@ -965,9 +1025,10 @@ class DashboardHandler(
             ]))
 
             # Add locations
-            tr.add_child(self._create_list_cell(
-                self._get_location_links(question_group, 'question-group')
-            ))
+            locations = courses.Course(self).get_component_locations(
+                 question_group.id, 'question-group')
+            tr.add_child(
+                self._create_list_cell(self._create_location_links(locations)))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
