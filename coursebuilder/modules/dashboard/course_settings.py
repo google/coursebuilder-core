@@ -27,7 +27,6 @@ from controllers.utils import XsrfTokenManager
 from models import courses
 from models import roles
 from models import transforms
-from models import vfs
 from modules.dashboard import filer
 from modules.dashboard import messages
 from modules.oeditor import oeditor

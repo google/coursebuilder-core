@@ -596,6 +596,7 @@ class CourseModel12(object):
             optional=True, description='Whether the student fails.'))
         return registry
 
+
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
 
