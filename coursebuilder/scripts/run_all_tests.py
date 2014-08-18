@@ -148,6 +148,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.models_transforms.JsonParsingTests': 3,
     'tests.unit.models_transforms.StringValueConversionTests': 2,
     'tests.unit.modules_search.ParserTests': 10,
+    'tests.unit.test_classes.DeepDictionaryMergeTest': 5,
     'tests.unit.test_classes.EtlRetryTest': 3,
     'tests.unit.test_classes.InvokeExistingUnitTest': 3,
     'tests.unit.test_classes.ReviewModuleDomainTests': 1,

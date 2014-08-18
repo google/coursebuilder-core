@@ -48,6 +48,41 @@ def assert_fails(function):
         pass
 
 
+class DeepDictionaryMergeTest(suite.TestBase):
+
+    def test_both_empty_merge(self):
+        tgt = {}
+        src = {}
+        r = courses.deep_dict_merge(tgt, src)
+        self.assertEqual({}, r)
+
+    def test_src_empty_merge(self):
+        tgt = {'a': {'b': 2}, 'c': None}
+        src = {}
+        r = courses.deep_dict_merge(tgt, src)
+        self.assertEqual(tgt, r)
+
+    def test_tgt_empty_merge(self):
+        tgt = {}
+        src = {'a': 1}
+        r = courses.deep_dict_merge(tgt, src)
+        self.assertEqual(src, r)
+
+    def test_non_recursive_merge(self):
+        tgt = {'a': 1, 'b': 2, 'd': 4}
+        src = {'a': 1, 'b': 22, 'c': 3}
+        r = courses.deep_dict_merge(tgt, src)
+        e = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
+        self.assertEqual(e, r)
+
+    def test_recursive_merge(self):
+        tgt = {'a': {'b': 1}}
+        src = {'a': 1, 'c': {'d': 4}}
+        r = courses.deep_dict_merge(tgt, src)
+        e = {'a': {'b': 1}, 'c': {'d': 4}}
+        self.assertEqual(e, r)
+
+
 class EtlRetryTest(suite.TestBase):
 
     def setUp(self):

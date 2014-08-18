@@ -18,7 +18,6 @@ __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
 import cgi
 import urllib
-import yaml
 
 from common import schema_fields
 from controllers.utils import ApplicationHandler
@@ -81,7 +80,7 @@ class CourseSettingsHandler(BaseHandler):
         # entire sub-registries, or a single item.  E.g., "course" selects all
         # items under the 'course' sub-registry, while
         # "base:before_head_tag_ends" selects just that one field.
-        registry = courses.Course.create_settings_schema(self.get_course())
+        registry = self.get_course().create_settings_schema()
 
         section_names = self.request.get('section_names')
         if section_names:
@@ -105,9 +104,6 @@ class CourseSettingsHandler(BaseHandler):
 
 class CourseYamlRESTHandler(BaseRESTHandler):
     """Common base for REST handlers in this file."""
-
-    def validate_content(self, content):
-        yaml.safe_load(content)
 
     def get_course_dict(self):
         return self.get_course().get_environ(self.app_context)
@@ -141,21 +137,6 @@ class CourseYamlRESTHandler(BaseRESTHandler):
             self, 200, 'Success.',
             payload_dict=json_payload,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_ACTION))
-
-    def _save_content(self, content):
-        try:
-            self.validate_content(content)
-            content_stream = vfs.string_to_stream(unicode(content))
-        except Exception as e:  # pylint: disable=W0703
-            transforms.send_json_response(self, 412, 'Validation error: %s' % e)
-            return False
-
-        # Store new file content.
-        fs = self.app_context.fs.impl
-        filename = fs.physical_to_logical('/course.yaml')
-        fs.put(filename, content_stream)
-
-        return True
 
     def put(self):
         """Handles REST PUT verb with JSON payload."""
@@ -198,11 +179,11 @@ class CourseYamlRESTHandler(BaseRESTHandler):
 
         request_data = self.process_put(request, payload)
         if request_data:
-            entity = courses.deep_dict_merge(
+            course_settings = courses.deep_dict_merge(
                 request_data, self.get_course_dict())
-            content = yaml.safe_dump(entity)
-            if self._save_content(content):
-                transforms.send_json_response(self, 200, 'Saved.')
+            if not self.get_course().save_settings(course_settings):
+                transforms.send_json_response(self, 412, 'Validation error.')
+            transforms.send_json_response(self, 200, 'Saved.')
 
     def delete(self):
         """Handles REST DELETE verb with JSON payload."""
@@ -220,8 +201,7 @@ class CourseYamlRESTHandler(BaseRESTHandler):
             return
 
         entity = self.process_delete()
-        content = yaml.safe_dump(entity)
-        if self._save_content(content):
+        if self.get_course().save_settings(entity):
             transforms.send_json_response(self, 200, 'Deleted.')
 
 
@@ -255,7 +235,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
     def process_get(self):
         entity = {}
-        schema = courses.Course.create_settings_schema(self.get_course())
+        schema = self.get_course().create_settings_schema()
         schema.convert_entity_to_json_entity(
             self.get_course_dict(), entity)
 
@@ -267,7 +247,7 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
     def process_put(self, request, payload):
         errors = []
         request_data = {}
-        schema = courses.Course.create_settings_schema(self.get_course())
+        schema = self.get_course().create_settings_schema()
         schema.convert_json_to_entity(payload, request_data)
         schema.validate(request_data, errors)
 

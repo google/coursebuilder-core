@@ -225,6 +225,17 @@ class InfrastructureTest(actions.TestBase):
         dst_course_b = courses.Course(None, app_context=dst_app_context_b)
         src_course = courses.Course(None, app_context=src_app_context)
 
+        new_course_keys = [
+            'admin_user_emails', 'announcement_list_email',
+            'announcement_list_url', 'blurb', 'forum_email',
+            'forum_embed_url', 'forum_url',
+            'google_analytics_id', 'google_tag_manager_id',
+            'instructor_details', 'main_video', 'start_date']
+        init_settings = dst_course_a.app_context.get_environ()
+        assert 'assessment_confirmations' not in init_settings
+        for key in new_course_keys:
+            assert key not in init_settings['course']
+
         assert not dst_course_a.get_units()
         assert not dst_course_b.get_units()
         assert 12 == len(src_course.get_units())
@@ -239,6 +250,16 @@ class InfrastructureTest(actions.TestBase):
             src_course.get_units()) == len(src_course_out.get_units())
         assert len(
             src_course_out.get_units()) == len(dst_course_out_a.get_units())
+
+        final_settings = dst_course_a.app_context.get_environ()
+        assert 'assessment_confirmations' in final_settings
+        final_course_settings = set(
+            init_settings['course'].keys()).intersection(
+            set(final_settings['course'].keys()))
+        self.assertEqual(
+            set(init_settings['course'].keys()), final_course_settings)
+        for key in new_course_keys:
+            assert key in final_settings['course']
 
         # add dependent entities so we can check they make it through the import
         dependents = []

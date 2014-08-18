@@ -585,6 +585,16 @@ class CourseModel12(object):
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
 
+    def extend_settings_schema(self, registry):
+        assessment_opts = registry.add_sub_registry(
+            'assessment_confirmations', 'Assessment Confirmations')
+        assessment_opts.add_property(schema_fields.SchemaField(
+            'assessment_confirmations:result_text:pass', 'Pass', 'string',
+            optional=True, description='Whether the student passes.'))
+        assessment_opts.add_property(schema_fields.SchemaField(
+            'assessment_confirmations:result_text:fail', 'Fail', 'string',
+            optional=True, description='Whether the student fails.'))
+        return registry
 
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
@@ -980,6 +990,27 @@ class CourseModel13(object):
             self._units = units
             self._lessons = lessons
             self._unit_id_to_lesson_ids = unit_id_to_lesson_ids
+
+    def _validate_settings_content(self, content):
+        yaml.safe_load(content)
+
+    def save_settings(self, course_settings):
+        content = yaml.safe_dump(course_settings)
+        try:
+            self._validate_settings_content(content)
+        except yaml.YAMLError as e:  # pylint: disable=W0703
+            logging.error('Failed to validate course settings: %s.', str(e))
+            return False
+        content_stream = vfs.string_to_stream(unicode(content))
+
+        # Store settings.
+        fs = self.app_context.fs.impl
+        filename = fs.physical_to_logical('/course.yaml')
+        fs.put(filename, content_stream)
+        return True
+
+    def extend_settings_schema(self, registry):
+        return registry
 
     def _update_dirty_objects(self):
         """Update files owned by course."""
@@ -1540,6 +1571,14 @@ class CourseModel13(object):
                 'Target course %s must be empty.' % self.app_context.raw)
             return None, None
 
+        # import course settings
+        dst_settings = self.app_context.get_environ()
+        src_settings = src_course.app_context.get_environ()
+        dst_settings = deep_dict_merge(dst_settings, src_settings)
+        if not self.save_settings(dst_settings):
+            errors.append('Failed to import course settings.')
+            return None, None
+
         # iterate over course structure and assets and import each item
         for unit in src_course.get_units():
             # import unit
@@ -1755,7 +1794,7 @@ class Course(object):
                                COURSE_TEMPLATE_DICT)
 
     @classmethod
-    def create_settings_schema(cls, course):
+    def create_common_settings_schema(cls, course):
         """Create the registry for course properties."""
 
         reg = schema_fields.FieldRegistry('Basic Course Settings',
@@ -2010,6 +2049,13 @@ class Course(object):
 
     def to_json(self):
         return self._model.to_json()
+
+    def create_settings_schema(self):
+        registry = Course.create_common_settings_schema(self)
+        return self._model.extend_settings_schema(registry)
+
+    def save_settings(self, course_settings):
+        return self._model.save_settings(course_settings)
 
     def get_progress_tracker(self):
         if not self._tracker:
