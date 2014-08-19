@@ -757,6 +757,10 @@ class StudentProfileHandler(BaseHandler):
         self.template_value['track_labels'] = track_labels
         self.template_value['student_labels'] = student_labels
         self.template_value['units'] = units
+        self.template_value['track_env'] = transforms.dumps({
+            'label_ids': [label.id for label in track_labels],
+            'units': units
+            })
 
         # Append any extra data which is provided by modules
         extra_student_data = {}

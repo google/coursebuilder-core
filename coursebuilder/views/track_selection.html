@@ -12,7 +12,11 @@
   {# I18N: Title shown on the student profile page #}
   {{ gettext('Course Tracks') }}
 </h2>
-<form action="student/settracks" method="post" id='student_set_tracks'>
+<form
+   action="student/settracks"
+   method="post"
+   id="student_set_tracks"
+   data-track-env="{{ track_env }}">
   <input type="hidden"
          name="xsrf_token"
          value="{{ student_edit_xsrf_token|escape }}"
@@ -82,19 +86,11 @@
 
 <script type="text/javascript">
 function gcb_track_highlight() {
-  var units = [];
-  {% for unit in units %}
-  units.push({
-    'unit_id': {{ unit.unit_id }},
-    'labels': {{ unit.labels }},
-  });
-  {% endfor %}
-  var label_ids = [];
-  {% for label in track_labels %}
-  label_ids.push({{ label.id }});
-  {% endfor %}
-
+  var track_env = $('#student_set_tracks').data('track-env');
+  var units = track_env.units;
+  var label_ids = track_env.label_ids;
   var all_labels_unchecked = true;
+
   for (var i = 0; i < label_ids.length; i++) {
     if ($('#label_id_' + label_ids[i])[0].checked) {
       all_labels_unchecked = false;
