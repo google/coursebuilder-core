@@ -24,4 +24,21 @@ describe('ButterBar', function() {
     butterBar.hide();
     expect(popup.className).not.toContain('shown');
   });
+  it('hides automatically when called with cbShowMsgAutoHide', function() {
+    window.clearTimeout = jasmine.createSpy('window.clearTimeout');
+    window.setTimeout = jasmine.createSpy('window.setTimeout').andCallFake(
+      cbHideMsg);
+    cbShowMsgAutoHide('Hello, World!');
+    expect(window.clearTimeout).not.toHaveBeenCalled();
+    expect(window.setTimeout).toHaveBeenCalledWith(cbHideMsg, 5000);
+    expect(popup.className).not.toContain('shown');
+  });
+  it('restarts timeout when cbShowMsgAutoHide is called twice', function() {
+    window.clearTimeout = jasmine.createSpy('window.clearTimeout');
+    window.setTimeout = jasmine.createSpy('window.setTimeout').andReturn(101);
+    cbShowMsgAutoHide('Hello, World!');
+    cbShowMsgAutoHide('Hello, World!');
+    expect(window.clearTimeout).toHaveBeenCalledWith(101);
+    expect(window.setTimeout.calls.length).toBe(2);
+  });
 });

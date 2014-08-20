@@ -163,8 +163,7 @@ describe('asset table sorting', function() {
 describe('draft status toggling', function() {
   beforeEach(function() {
     cbShowAlert = jasmine.createSpy("cbShowAlert");
-    cbShowMsg = jasmine.createSpy("cbShowMsg");
-    cbHideMsg = jasmine.createSpy("cbHideMsg");
+    cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
   });
   it('simulates a toggle from public to draft', function() {
     var padlock = $("<div class='icon icon-unlocked'>");
@@ -172,7 +171,7 @@ describe('draft status toggling', function() {
       '{"status": 200, "payload":"{\\"is_draft\\":true}"}', padlock);
     expect(padlock.hasClass("icon-unlocked")).toBe(false);
     expect(padlock.hasClass("icon-locked")).toBe(true);
-    expect(cbShowMsg).toHaveBeenCalled();
+    expect(cbShowMsgAutoHide).toHaveBeenCalled();
   });
   it('simulates a toggle from draft to public', function() {
     var padlock = $("<div class='icon icon-locked'>")
@@ -180,7 +179,7 @@ describe('draft status toggling', function() {
       '{"status": 200, "payload":"{\\"is_draft\\":false}"}', padlock);
     expect(padlock.hasClass("icon-locked")).toBe(false);
     expect(padlock.hasClass("icon-unlocked")).toBe(true);
-    expect(cbShowMsg).toHaveBeenCalled();
+    expect(cbShowMsgAutoHide).toHaveBeenCalled();
   });
   it('simulates an access denied', function() {
     var padlock = $("<div class='icon icon-locked'>")

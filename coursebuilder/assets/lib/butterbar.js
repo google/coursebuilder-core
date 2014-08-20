@@ -31,12 +31,28 @@ ButterBar.getButterBar = function() {
     document.getElementById("gcb-butterbar-message"),
     document.getElementById("gcb-butterbar-close"));
 };
+ButterBar.setAutoHide = function() {
+  ButterBar.cancelAutoHide();
+  ButterBar.hideTimeoutID = window.setTimeout(cbHideMsg, 5000);
+}
+ButterBar.cancelAutoHide = function() {
+  if(typeof ButterBar.hideTimeoutID == "number") {
+    window.clearTimeout(ButterBar.hideTimeoutID);
+    delete ButterBar.hideTimeoutID;
+  }
+}
 function cbShowMsg(text) {
+  ButterBar.cancelAutoHide();
   var butterBar = ButterBar.getButterBar();
   butterBar.setCloseButtonVisible(true);
   butterBar.showMessage(text);
 }
+function cbShowMsgAutoHide(text) {
+  cbShowMsg(text);
+  ButterBar.setAutoHide();
+}
 function cbShowAlert(text) {
+  ButterBar.cancelAutoHide();
   // An alert should not be closed; hide the close button
   var butterBar = ButterBar.getButterBar();
   butterBar.setCloseButtonVisible(false);
@@ -44,6 +60,7 @@ function cbShowAlert(text) {
 }
 function cbHideMsg() {
   ButterBar.getButterBar().hide();
+  ButterBar.cancelAutoHide();
 }
 ButterBar.keepInView = function() {
   var popup = ButterBar.getButterBar().popup;

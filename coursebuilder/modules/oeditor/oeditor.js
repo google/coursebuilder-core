@@ -466,16 +466,14 @@ TopLevelEditorControls.prototype = {
     }
 
     // update UI
-    cbShowMsg(message);
     if (this._env.auto_return) {
+      cbShowMsg(message);
       var exit_url = this._env.exit_url;
       setTimeout(function() {
         window.location = exit_url;
       }, 750);
     } else {
-      setTimeout(function() {
-        cbHideMsg();
-      }, 5000);
+      cbShowMsgAutoHide(message);
     }
 
     // Allow custom code to register a post-save handler.
@@ -629,8 +627,7 @@ TopLevelEditorControls.prototype = {
     document.getElementById("formContainer").style.display = "block";
 
     if (json.message) {
-      cbShowMsg(json.message);
-      setTimeout(function(){ cbHideMsg(); }, 5000);
+      cbShowMsgAutoHide(json.message);
     } else {
       cbHideMsg();
     }

@@ -23,8 +23,7 @@ function setDraftStatusCallback(data, padlock) {
     padlock.removeClass("icon-locked");
     padlock.addClass("icon-unlocked");
   }
-  cbShowMsg(response.message);
-  setTimeout(cbHideMsg, 5000);
+  cbShowMsgAutoHide(response.message);
 }
 
 /**
