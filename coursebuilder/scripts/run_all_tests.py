@@ -74,6 +74,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
+    'tests.functional.modules_math.MathTagTests': 3,
     'tests.functional.modules_notifications.CronTest': 9,
     'tests.functional.modules_notifications.DatetimeConversionTest': 1,
     'tests.functional.modules_notifications.ManagerTest': 31,

@@ -199,3 +199,20 @@ fi
 
 echo Deleting old *.pyc files
 find "$SOURCE_DIR" -iname "*.pyc" -exec rm -f {} \;
+
+# current version of MathJaX that we use is 2.3.0
+MATHJAX_GIT_SHA1="f3aaf3a2a3e964df2770dc4aaaa9c87ce5f47e2c"
+MATHJAX_ZIP_URI=$DISTRIBUTED_LIBS_DIR/MathJax.zip
+MATHJAX_FONTS_ZIP_URI=$DISTRIBUTED_LIBS_DIR/MathJax-fonts.zip
+if [ ! -e $MATHJAX_ZIP_URI ] && [ ! -e $MATHJAX_FONTS_ZIP_URI ]; then
+  pushd $DISTRIBUTED_LIBS_DIR
+  git clone https://github.com/mathjax/MathJax.git
+  cd MathJax
+  git checkout $MATHJAX_GIT_SHA1
+  rm -rf .git
+  zip -r $MATHJAX_FONTS_ZIP_URI ./fonts
+  zip -r $MATHJAX_ZIP_URI . -x fonts/\*
+  cd ..
+  rm -rf MathJax
+  popd
+fi

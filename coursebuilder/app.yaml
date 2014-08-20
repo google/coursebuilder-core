@@ -20,6 +20,7 @@ env_variables:
     modules.i18n_dashboard.i18n_dashboard=disabled
     modules.manual_progress.manual_progress
     modules.mapreduce.mapreduce_module
+    modules.math.math
     modules.notifications.notifications
     modules.oeditor.oeditor
     modules.review.review
