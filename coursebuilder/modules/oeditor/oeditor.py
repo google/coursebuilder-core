@@ -41,6 +41,8 @@ ALL_MODULES = [
     'inputex-url', 'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
     'inputex-file', 'io-upload-iframe']
 
+RESOURCES_PATH = '/modules/oeditor/resources'
+
 
 class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
@@ -265,10 +267,12 @@ def register_module():
                 '/static/2in3/'))]
 
     oeditor_handlers = [('/oeditorpopup', PopupHandler)]
+    global_routes = yui_handlers + [
+        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     global custom_module
     custom_module = custom_modules.Module(
         'Object Editor',
         'A visual editor for editing various types of objects.',
-        yui_handlers, oeditor_handlers)
+        global_routes, oeditor_handlers)
     return custom_module
