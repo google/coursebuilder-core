@@ -1838,7 +1838,7 @@ class Course(object):
             '\'My-Course@googlegroups.com\'.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:forum_embed_url', 'Forum URL for embedding', 'string',
-            optional=True, description='URL for the forum <iframe>.'))
+            optional=True, description='URL for the forum &lt;iframe&gt;.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:forum_url', 'Forum URL', 'string', optional=True,
             description='URL for the forum.'))
