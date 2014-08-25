@@ -30,6 +30,9 @@ from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
 
+DEFAULT_TIMEOUT = 15
+
+
 def get_parent_element(web_element):
     return web_element.find_element_by_xpath('..')
 
@@ -39,6 +42,11 @@ class PageObject(object):
 
     def __init__(self, tester):
         self._tester = tester
+
+    def wait(self, timeout=None):
+        if timeout is None:
+            timeout = DEFAULT_TIMEOUT
+        return wait.WebDriverWait(self._tester.driver, timeout)
 
     def find_element_by_css_selector(self, selector, index=None):
         if index is None:
@@ -60,12 +68,12 @@ class PageObject(object):
         return self._tester.driver.find_element_by_name(name)
 
     def expect_status_message_to_be(self, value):
-        wait.WebDriverWait(self._tester.driver, 15).until(
+        self.wait().until(
             ec.text_to_be_present_in_element(
                 (by.By.ID, 'gcb-butterbar-message'), value))
 
     def wait_until_status_message_hidden(self):
-        wait.WebDriverWait(self._tester.driver, 15).until(
+        self.wait().until(
             ec.invisibility_of_element_located(
                 (by.By.ID, 'gcb-butterbar-message')))
         return self
@@ -83,7 +91,7 @@ class EditorPageObject(PageObject):
             return 'Success' in butter_bar_message.text or (
                 not butter_bar_message.is_displayed())
 
-        wait.WebDriverWait(self._tester.driver, 15).until(successful_butter_bar)
+        self.wait().until(successful_butter_bar)
 
     def set_status(self, status):
         select.Select(self.find_element_by_name(
@@ -391,8 +399,7 @@ class LessonPage(CourseContentPage):
                 'return document.getElementById("%s").%s' % (
                     instanceid, attribute))
             return state == desired_state
-        wait.WebDriverWait(self._tester.driver, max_patience).until(
-            in_desired_state)
+        self.wait(timeout=max_patience).until(in_desired_state)
         return self
 
 
@@ -430,7 +437,7 @@ class SettingsPage(PageObject):
             print tab, tab.get_attribute('class'), tab.get_attribute('href')
             return 'selected' == tab.get_attribute('class')
 
-        wait.WebDriverWait(self._tester.driver, 15).until(successful_load)
+        self.wait().until(successful_load)
 
     def click_course_options(self):
         self.find_element_by_css_selector(
@@ -473,11 +480,8 @@ class AssetsPage(PageObject):
         return self
 
     def verify_no_image_file_by_name(self, name):
-        wait.WebDriverWait(
-            self._tester.driver, 5.0, 1.0).until(
-                ec.visibility_of_element_located(
-                    (by.By.XPATH,
-                     '//h3[starts-with(.,\'Images & Documents\')]')))
+        self.wait().until(ec.visibility_of_element_located((
+            by.By.XPATH, '//h3[starts-with(.,\'Images & Documents\')]')))
         try:
             self.find_element_by_link_text(name)  # throw exception if not found
             raise AssertionError('Found file %s which should be absent' % name)
@@ -537,7 +541,7 @@ class AssetsPage(PageObject):
             else:
                 return True
 
-        wait.WebDriverWait(self._tester.driver, 15).until(load_modal_iframe)
+        self.wait().until(load_modal_iframe)
         question = self._tester.driver.find_element_by_css_selector(
             '.qt-question')
         self._tester.assertEquals(question_text, question.text)
@@ -583,8 +587,7 @@ class AssetsEditorPage(DashboardEditor):
         self.expect_status_message_to_be('Saved.')
 
         # Page automatically redirects after successful save.
-        wait.WebDriverWait(self._tester.driver, 15).until(
-            ec.title_contains('Assets'))
+        self.wait().until(ec.title_contains('Assets'))
 
         return AssetsPage(self._tester)
 
@@ -737,9 +740,8 @@ class CourseContentElement(DashboardEditor):
         el = self.find_element_by_css_selector('div.rte-control', index)
         self._tester.assertEqual('Rich Text', el.text)
         el.click()
-        wait.WebDriverWait(self._tester.driver, 15).until(
-            ec.element_to_be_clickable(
-                (by.By.ID, CourseContentElement.RTE_EDITOR_FORMAT % index)))
+        self.wait().until(ec.element_to_be_clickable(
+            (by.By.ID, CourseContentElement.RTE_EDITOR_FORMAT % index)))
         return self
 
     def click_plain_text(self, index=None):
@@ -763,17 +765,16 @@ class CourseContentElement(DashboardEditor):
                 break
         else:
             self._tester.fail('No option "%s" found' % option_text)
-        wait.WebDriverWait(self._tester.driver, 15).until(
-            ec.element_to_be_clickable(
+        self.wait().until(ec.element_to_be_clickable(
                 (by.By.PARTIAL_LINK_TEXT, 'Close')))
         self._tester.driver.switch_to_default_content()
         return self
 
     def _ensure_rte_iframe_ready_and_switch_to_it(self):
-        wait.WebDriverWait(self._tester.driver, 15).until(
+        self.wait().until(
             ec.frame_to_be_available_and_switch_to_it('modal-editor-iframe'))
         # Ensure inputEx has initialized too
-        wait.WebDriverWait(self._tester.driver, 15).until(
+        self.wait().until(
             ec.element_to_be_clickable(
                 (by.By.PARTIAL_LINK_TEXT, 'Close')))
 
@@ -1017,8 +1018,7 @@ class AnalyticsPage(PageObject):
         def data_source_logs_not_empty(unused_driver):
             return self.get_data_source_logs(data_source)
 
-        wait.WebDriverWait(self._tester.driver, 15).until(
-            data_source_logs_not_empty)
+        self.wait().until(data_source_logs_not_empty)
         return self
 
     def get_data_page_number(self, data_source):
