@@ -18,7 +18,7 @@ do
     case $option
     in
         f)  CLEAR_DATASTORE='false';;
-        h)  usage; exit 1;;
+        h)  usage; exit 0;;
         *)  usage; exit 1;;
     esac
 done
