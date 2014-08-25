@@ -18,6 +18,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import base64
 import datetime
+
 import entities
 import transforms_constants
 
@@ -26,6 +27,9 @@ from common import schema_fields
 from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
+# TODO(johncox): Regularize the simple and complex types named both here
+# and in transforms.json_to_dict() so that we have a well-defined consistent
+# set of types for which we can do conversions and generate schemas.
 PYTHON_TYPE_TO_JSON_TYPE = {
     basestring: 'string',
     datetime.date: 'date',
@@ -59,9 +63,16 @@ def _get_schema_field(property_type):
             description=property_type.verbose_name,
             item_type=item_type)
     else:
+        type_name = PYTHON_TYPE_TO_JSON_TYPE.get(property_type.data_type)
+        if not type_name:
+            if issubclass(property_type.data_type, entities.BaseEntity):
+                type_name = 'string'
+            else:
+                raise ValueError('Unsupported entity type for schema: %s' %
+                                 str(property_type.data_type))
         ret = schema_fields.SchemaField(
             name=name, label=name,
-            property_type=PYTHON_TYPE_TO_JSON_TYPE[property_type.data_type],
+            property_type=type_name,
             description=property_type.verbose_name,
             optional=not property_type.required)
     return ret
@@ -77,6 +88,12 @@ def get_schema_for_entity(clazz):
         if property_type.name not in suppressed:
             registry.add_property(_get_schema_field(property_type))
     return registry
+
+
+def string_to_key(s):
+    """Reify key from serialized version, discarding namespace and appid."""
+    key_with_namespace_and_appid = db.Key(encoded=s)
+    return db.Key.from_path(*key_with_namespace_and_appid.to_path())
 
 
 def entity_to_dict(entity, force_utf_8_encoding=False):
@@ -105,7 +122,8 @@ def entity_to_dict(entity, force_utf_8_encoding=False):
                         'type': 'binary',
                         'encoding': 'base64',
                         'content': base64.urlsafe_b64encode(value)}
-
+        elif isinstance(prop, db.ReferenceProperty):
+            output[key] = str(value.key())
         else:
             raise ValueError('Failed to encode: %s' % prop)
 
@@ -120,11 +138,34 @@ def entity_to_dict(entity, force_utf_8_encoding=False):
 
 def dict_to_entity(entity, source_dict):
     """Sets model object attributes from a Python dictionary."""
+
+    properties = entity.properties()
     for key, value in source_dict.items():
-        if (value is None
-            or isinstance(value, transforms_constants.SIMPLE_TYPES)
-            or isinstance(value, SUPPORTED_TYPES)):
+        if (value and key in properties and
+            isinstance(properties[key], db.ReferenceProperty)):
+                setattr(entity, key, string_to_key(value))
+        elif (value is None
+              or isinstance(value, transforms_constants.SIMPLE_TYPES)
+              or isinstance(value, SUPPORTED_TYPES)):
             setattr(entity, key, value)
         else:
-            raise ValueError('Failed to encode: %s' % value)
+            raise ValueError('Failed to set value "%s" for %s' % (value, key))
     return entity
+
+
+def json_dict_to_entity_initialization_dict(entity_class, source_dict):
+    """Sets model object attributes from a Python dictionary."""
+
+    properties = entity_class.properties()
+    ret = {}
+    for key, value in source_dict.items():
+        if (value and key in properties and
+            isinstance(properties[key], db.ReferenceProperty)):
+            ret[key] = string_to_key(value)
+        elif (value is None
+              or isinstance(value, transforms_constants.SIMPLE_TYPES)
+              or isinstance(value, SUPPORTED_TYPES)):
+            ret[key] = value
+        else:
+            raise ValueError('Failed to set value "%s" for %s' % (value, key))
+    return ret

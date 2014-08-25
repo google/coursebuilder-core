@@ -19,6 +19,9 @@ __author__ = [
 ]
 
 import argparse
+import datetime
+import time
+
 from controllers import sites
 
 
@@ -132,3 +135,67 @@ class Job(object):
         """Executes the job; called for you by etl.py."""
         self._parse_args()
         self.main()
+
+
+class _ProgressReporter(object):
+    """Provide intermittent reports on progress of a long-running operation."""
+
+    def __init__(self, logger, verb, noun, chunk_size, total, num_history=10):
+        self._logger = logger
+        self._verb = verb
+        self._noun = noun
+        self._chunk_size = chunk_size
+        self._total = total
+        self._num_history = num_history
+        self._rate_history = []
+        self._start_time = self._chunk_start_time = time.time()
+        self._total_count = 0
+        self._chunk_count = 0
+
+    def count(self, quantity=1):
+        self._total_count += quantity
+        self._chunk_count += quantity
+        while self._chunk_count >= self._chunk_size:
+            now = time.time()
+            self._chunk_count -= self._chunk_size
+            self._rate_history.append(now - self._chunk_start_time)
+            self._chunk_start_time = now
+            while len(self._rate_history) > self._num_history:
+                del self._rate_history[0]
+            self.report()
+
+    def get_count(self):
+        return self._total_count
+
+    def report(self):
+        now = time.time()
+        total_time = datetime.timedelta(
+            days=0, seconds=int(now - self._start_time))
+
+        if not sum(self._rate_history):
+            rate = 0
+            time_left = 0
+            expected_total = 0
+        else:
+            rate = ((len(self._rate_history) * self._chunk_size) /
+                    sum(self._rate_history))
+            time_left = datetime.timedelta(
+                days=0,
+                seconds=int((self._total - self._total_count) / rate))
+            expected_total = datetime.timedelta(
+                days=0, seconds=int(self._total / rate))
+        self._logger.info(
+            '%(verb)s %(total_count)9d of %(total)d %(noun)s '
+            'in %(total_time)s.  Recent rate is %(rate)d/sec; '
+            '%(time_left)s seconds to go '
+            '(%(expected_total)s total) at this rate.' %
+            {
+                'verb': self._verb,
+                'total_count': self._total_count,
+                'total': self._total,
+                'noun': self._noun,
+                'total_time': total_time,
+                'rate': rate,
+                'time_left': time_left,
+                'expected_total': expected_total
+            })

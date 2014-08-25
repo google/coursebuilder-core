@@ -53,6 +53,7 @@ from models import courses
 from models import entities
 from models import jobs
 from models import models
+from models import student_work
 from models import transforms
 from models import vfs
 from models.courses import Course
@@ -3432,6 +3433,26 @@ class FakeEnvironment(object):
         pass
 
 
+class EtlTestEntityPii(entities.BaseEntity):
+    name = db.StringProperty(indexed=False)
+    score = db.IntegerProperty(indexed=False)
+
+    _PROPERTY_EXPORT_BLACKLIST = [name]
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+
+class EtlTestEntityPiiReference(entities.BaseEntity):
+    pii = db.ReferenceProperty(EtlTestEntityPii)
+
+
+class EtlTestEntityIllegal(entities.BaseEntity):
+    score = db.IntegerProperty(indexed=False)
+    thingy = student_work.KeyProperty()
+
+
 class EtlMainTestCase(DatastoreBackedCourseTest):
     """Tests tools/etl/etl.py's main()."""
 
@@ -3446,7 +3467,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.archive_path = os.path.join(self.test_tempdir, 'archive.zip')
         self.new_course_title = 'New Course Title'
         self.url_prefix = '/test'
-        self.raw = 'course:%s::ns_test' % self.url_prefix
+        self.namespace = 'ns_test'
+        self.raw = 'course:%s::%s' % (self.url_prefix, self.namespace)
         self.swap(os, 'environ', self.test_environ)
         self.common_args = [
             self.url_prefix, 'myapp', 'localhost:8080']
@@ -3464,9 +3486,19 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         # Set up courses: version 1.3, version 1.2.
         sites.setup_courses(self.raw + ', course:/:/')
 
+        self.log_stream = cStringIO.StringIO()
+        self.old_log_handlers = list(etl._LOG.handlers)
+        etl._LOG.handlers = [logging.StreamHandler(self.log_stream)]
+        self.make_items_distinct_counter = 0
+
     def tearDown(self):
         sites.reset_courses()
+        etl._LOG.handlers = self.old_log_handlers
         super(EtlMainTestCase, self).tearDown()
+
+    def get_log(self):
+        self.log_stream.flush()
+        return self.log_stream.getvalue()
 
     def create_app_yaml(self, context, title=None):
         yaml = copy.deepcopy(courses.DEFAULT_COURSE_YAML_DICT)
@@ -3806,7 +3838,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         finally:
             sys.stdout = old_stdout
 
-        expected = examples.PrintMemcacheStats._STATS_TEMPLATE % {
+        expected0 = examples.PrintMemcacheStats._STATS_TEMPLATE % {
             'byte_hits': 1,
             'bytes': 1,
             'hits': 1,
@@ -3814,7 +3846,16 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             'misses': 1,
             'oldest_item_age': 0,
         }
-        self.assertTrue(expected in stdout.getvalue())
+        expected1 = examples.PrintMemcacheStats._STATS_TEMPLATE % {
+            'byte_hits': 1,
+            'bytes': 1,
+            'hits': 1,
+            'items': 1,
+            'misses': 1,
+            'oldest_item_age': 1,
+        }
+        actual = stdout.getvalue()
+        self.assertTrue(expected0 in actual or expected1 in actual)
 
     def test_run_skips_remote_env_setup_when_disable_remote_passed(self):
         args = etl.PARSER.parse_args(
@@ -3922,16 +3963,24 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         self.assertNotEqual(self.new_course_title, context.get_title())
 
+        all_files_before_upload = set(
+            etl._filter_filesystem_files(etl._list_all(
+                context, include_inherited=True)))
         etl.main(self.upload_course_args, environment_class=FakeEnvironment)
 
         # check archive content
         archive = etl._Archive(self.archive_path)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
-        filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
+
+        vfs_files_after_upload = set(context.fs.impl.list(
+            appengine_config.BUNDLE_ROOT))
+
         self.assertEqual(
-            len(archive.manifest.entities),
-            len(filesystem_contents) + len(COURSE_CONTENT_ENTITY_FILES))
+            len(archive.manifest.entities)
+            - len(all_files_before_upload)  # less already-present files
+            - len(COURSE_CONTENT_ENTITY_FILES),  # less entity files
+            len(vfs_files_after_upload - all_files_before_upload))
 
         # check course structure
         self.assertEqual(self.new_course_title, context.get_title())
@@ -3950,7 +3999,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
                 appengine_config.BUNDLE_ROOT,
                 etl._Archive.get_external_path(entity.path))
             stream = context.fs.impl.get(full_path)
-            self.assertEqual(entity.is_draft, stream.metadata.is_draft)
+            self.assertEqual(entity.is_draft, context.fs.is_draft(stream))
 
         # check uploaded question matches original
         _assert_identical_data_entity_exists(
@@ -3989,13 +4038,223 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             stream = context.fs.impl.get(full_path)
             self.assertEqual(entity.is_draft, stream.metadata.is_draft)
 
-    def test_upload_datastore_fails(self):
-        upload_datastore_args = etl.PARSER.parse_args(
-            [etl._MODE_UPLOAD] + self.common_datastore_args +
-            ['--datastore_types', 'doesnt_matter'])
-        self.assertRaises(
-            NotImplementedError, etl.main, upload_datastore_args,
-            environment_class=FakeEnvironment)
+    def test_upload_valid_encoded_string_reference(self):
+        with Namespace(self.namespace):
+            string_key = db.Key.from_path('EtlTestEntityPii', '334-44-1234')
+        self._test_upload_valid_reference(
+            string_key, ['--privacy', '--privacy_secret', 'super_seekrit'])
+
+    def test_upload_valid_encoded_numeric_reference(self):
+        with Namespace(self.namespace):
+            numeric_key = db.Key.from_path('EtlTestEntityPii', 334441234)
+        self._test_upload_valid_reference(
+            numeric_key, ['--privacy', '--privacy_secret', 'super_seekrit'])
+
+    def test_upload_valid_plaintext_string_reference(self):
+        with Namespace(self.namespace):
+            string_key = db.Key.from_path('EtlTestEntityPii', '334-44-1234')
+        self._test_upload_valid_reference(string_key, [])
+
+    def test_upload_valid_plaintext_numeric_reference(self):
+        with Namespace(self.namespace):
+            numeric_key = db.Key.from_path('EtlTestEntityPii', 334441234)
+        self._test_upload_valid_reference(numeric_key, [])
+
+    def _download_archive(self, extra_args=None):
+        extra_args = extra_args or []
+        etl.main(etl.PARSER.parse_args([etl._MODE_DOWNLOAD] +
+                                       self.common_datastore_args +
+                                       extra_args),
+                 environment_class=FakeEnvironment)
+
+    def _clear_datastore(self):
+        self.swap(
+            etl, '_raw_input',
+            lambda x: etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
+        etl.main(etl.PARSER.parse_args([etl._MODE_DELETE] +
+                                       self.common_datastore_args),
+                 environment_class=FakeEnvironment)
+
+    def _upload_archive(self, extra_args=None):
+        extra_args = extra_args or []
+        etl.main(etl.PARSER.parse_args([etl._MODE_UPLOAD] +
+                                       self.common_datastore_args +
+                                       extra_args),
+                 environment_class=FakeEnvironment)
+
+    def _test_upload_valid_reference(self, pii_key, download_args):
+        # Make ETL archive of item with PII in key using encoding.
+        sites.setup_courses(self.raw)
+        joes_score = 12345
+        with Namespace(self.namespace):
+            pii = EtlTestEntityPii(key=pii_key, name='Joe', score=joes_score)
+            pii.put()
+            ref = EtlTestEntityPiiReference(pii=pii)
+            ref.put()
+
+        self._download_archive(download_args)
+        self._clear_datastore()
+        self._upload_archive()
+
+        # Upload data.
+
+        with Namespace(self.namespace):
+            piis = EtlTestEntityPii.all().fetch(100)
+            refs = EtlTestEntityPiiReference.all().fetch(100)
+            self.assertEquals(1, len(piis))
+            self.assertEquals(1, len(refs))
+            self.assertEquals(joes_score, piis[0].score)
+            self.assertEquals(None, piis[0].name,
+                              'Blacklisted field should be None')
+            self.assertEquals(
+                joes_score, refs[0].pii.score,
+                'Reference by key using explicit name where key is PII')
+
+    def test_upload_null_encoded_reference(self):
+        self._test_upload_null_reference(['--privacy',
+                                          '--privacy_secret', 'super_seekrit'])
+
+    def test_upload_null_plaintext_reference(self):
+        self._test_upload_null_reference([])
+
+    def _test_upload_null_reference(self, download_args):
+        # Make ETL archive of item with PII in key using encoding.
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            ref = EtlTestEntityPiiReference(pii=None)
+            ref.put()
+
+        self._download_archive(download_args)
+        self._clear_datastore()
+        self._upload_archive()
+
+        with Namespace(self.namespace):
+            refs = EtlTestEntityPiiReference.all().fetch(100)
+            self.assertEquals(1, len(refs))
+            self.assertEquals(None, refs[0].pii)
+
+    def test_upload_unsupported_type_fails(self):
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            EtlTestEntityIllegal(score=123).put()
+        etl.main(etl.PARSER.parse_args([etl._MODE_DOWNLOAD] +
+                                       self.common_datastore_args),
+                 environment_class=FakeEnvironment)
+
+        with self.assertRaises(SystemExit):
+            etl.main(etl.PARSER.parse_args([etl._MODE_UPLOAD] +
+                                           self.common_datastore_args),
+                     environment_class=FakeEnvironment)
+
+    def test_upload_with_pre_existing_data(self):
+        # make archive file with one element.
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            EtlTestEntityPii(name='Fred').put()
+
+        self._download_archive()
+        # Upload that file - should fail since item still exists.
+        with self.assertRaises(SystemExit):
+            self._upload_archive()
+
+        # Upload with --force_overwrite should succeed where previous failed.
+        self._upload_archive(['--force_overwrite'])
+
+    def test_upload_empty_archive_fails(self):
+        sites.setup_courses(self.raw)
+        self._download_archive()
+        with self.assertRaises(SystemExit):
+            self._upload_archive()
+
+    def test_upload_with_no_classes_allowed_fails(self):
+        # make archive file with one element.
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            pii = EtlTestEntityPii(name='Fred')
+            pii.put()
+
+        self._download_archive()
+        self._clear_datastore()
+
+        # Upload should fail since --datastore_types does not mention
+        # only type in archive.
+        with self.assertRaises(SystemExit):
+            self._upload_archive(['--datastore_types=FooBar'])
+
+        # Upload should fail since --exclude_types names the
+        # only type in archive.
+        with self.assertRaises(SystemExit):
+            self._upload_archive(['--exclude_types=EtlTestEntityPii'])
+
+    def _build_entity_batch(self):
+        ret = []
+        for _ in xrange(etl.PARSER.get_default('batch_size')):
+            ret.append(EtlTestEntityPii(score=self.make_items_distinct_counter))
+            self.make_items_distinct_counter += 1
+        return ret
+
+    def test_upload_resumption_with_trivial_quantity(self):
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            thing_one = EtlTestEntityPii(name='Thing One')
+            thing_one.put()
+            thing_two = EtlTestEntityPii(name='Thing Two')
+            thing_two.put()
+        self._download_archive()
+        self._clear_datastore()
+
+        # Simulate 1st upload having partially succeeded.
+        with Namespace(self.namespace):
+            thing_one.put()
+
+        # Should not barf.
+        self._upload_archive(['--resume'])
+        self.assertIn('Resuming upload at item number 0 of 2.',
+                      self.get_log())
+
+        # Upload again; everything should be seen to be present.
+        self._upload_archive(['--resume'])
+        self.assertIn('All 2 entities already uploaded; skipping',
+                      self.get_log())
+
+    def test_upload_resumption_with_batch_quantity(self):
+        sites.setup_courses(self.raw)
+        with Namespace(self.namespace):
+            batch_one = self._build_entity_batch()
+            batch_two = self._build_entity_batch()
+            db.put(batch_one)
+            db.put(batch_two)
+        self._download_archive()
+
+        # Simulate 1st batch having partially succeeded, 2nd batch not at all.
+        self._clear_datastore()
+        with Namespace(self.namespace):
+            db.put([x for x in batch_one if x.score % 2])
+        self._upload_archive(['--resume'])
+        self.assertIn('Resuming upload at item number 0 of 40.',
+                      self.get_log())
+
+        # Simulate 1st batch having fully succeeded, 2nd batch not at all.
+        self._clear_datastore()
+        with Namespace(self.namespace):
+            db.put(batch_one)
+        self._upload_archive(['--resume'])
+        self.assertIn('Resuming upload at item number 20 of 40.',
+                      self.get_log())
+
+        # Simulate 1st batch having fully succeeded, 2nd batch partial
+        self._clear_datastore()
+        with Namespace(self.namespace):
+            db.put(batch_one)
+            db.put([x for x in batch_one if x.score % 2])
+        self._upload_archive(['--resume'])
+        self.assertIn('Resuming upload at item number 20 of 40.',
+                      self.get_log())
+
+        # Upload again; everything should be seen to be present.
+        self._upload_archive(['--resume'])
+        self.assertIn('All 40 entities already uploaded; skipping',
+                      self.get_log())
 
     def test_is_identity_transform_when_privacy_false(self):
         self.assertEqual(

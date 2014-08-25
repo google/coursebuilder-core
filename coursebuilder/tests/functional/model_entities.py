@@ -18,7 +18,10 @@ __author__ = [
     'johncox@google.com (John Cox)',
 ]
 
+import datetime
+
 from models import entities
+from models import entity_transforms
 from models import transforms
 from tests.functional import actions
 from google.appengine.ext import db
@@ -122,3 +125,156 @@ class ExportEntityTestCase(actions.TestBase):
 
     def test_put_raises_not_implemented_error(self):
         self.assertRaises(NotImplementedError, self.entity.put)
+
+
+class TestEntity(entities.BaseEntity):
+    prop_int = db.IntegerProperty()
+    prop_float = db.FloatProperty(required=True)
+    prop_bool = db.BooleanProperty()
+    prop_string = db.StringProperty()
+    prop_text = db.TextProperty()
+    prop_date = db.DateProperty()
+    prop_datetime = db.DateTimeProperty()
+    prop_intlist = db.ListProperty(int)
+    prop_stringlist = db.StringListProperty()
+    prop_ref = db.SelfReferenceProperty()
+
+
+class DefaultConstructableEntity(entities.BaseEntity):
+    prop_int = db.IntegerProperty()
+    prop_float = db.FloatProperty()
+    prop_bool = db.BooleanProperty()
+    prop_string = db.StringProperty()
+    prop_text = db.TextProperty()
+    prop_date = db.DateProperty()
+    prop_datetime = db.DateTimeProperty()
+    prop_intlist = db.ListProperty(int)
+    prop_stringlist = db.StringListProperty()
+    prop_ref = db.SelfReferenceProperty()
+
+
+class EntityTransformsTest(actions.TestBase):
+
+    def test_class_schema(self):
+        registry = entity_transforms.get_schema_for_entity(TestEntity)
+        schema = registry.get_json_schema_dict()
+        self.assertEquals(schema['type'], 'object')
+        self.assertEquals(schema['id'], 'TestEntity')
+        props = schema['properties']
+
+        self.assertTrue(props['prop_int']['optional'])
+        self.assertEquals(props['prop_int']['type'], 'integer')
+
+        self.assertNotIn('optional', props['prop_float'])
+        self.assertEquals(props['prop_float']['type'], 'number')
+
+        self.assertTrue(props['prop_bool']['optional'])
+        self.assertEquals(props['prop_bool']['type'], 'boolean')
+
+        self.assertTrue(props['prop_string']['optional'])
+        self.assertEquals(props['prop_string']['type'], 'string')
+
+        self.assertTrue(props['prop_text']['optional'])
+        self.assertEquals(props['prop_text']['type'], 'text')
+
+        self.assertTrue(props['prop_date']['optional'])
+        self.assertEquals(props['prop_date']['type'], 'date')
+
+        self.assertTrue(props['prop_datetime']['optional'])
+        self.assertEquals(props['prop_datetime']['type'], 'datetime')
+
+        self.assertEquals(props['prop_intlist']['type'], 'array')
+        self.assertTrue(props['prop_intlist']['items']['optional'])
+        self.assertEquals(props['prop_intlist']['items']['type'], 'integer')
+
+        self.assertEquals(props['prop_stringlist']['type'], 'array')
+        self.assertTrue(props['prop_stringlist']['items']['optional'])
+        self.assertEquals(props['prop_stringlist']['items']['type'], 'string')
+
+        self.assertTrue(props['prop_ref']['optional'])
+        self.assertEquals(props['prop_ref']['type'], 'string')
+
+    def _verify_contents_equal(self, recovered_entity, test_entity):
+        self.assertEquals(recovered_entity.prop_int, test_entity.prop_int)
+        self.assertEquals(recovered_entity.prop_float, test_entity.prop_float)
+        self.assertEquals(recovered_entity.prop_bool, test_entity.prop_bool)
+        self.assertEquals(recovered_entity.prop_string, test_entity.prop_string)
+        self.assertEquals(recovered_entity.prop_text, test_entity.prop_text)
+        self.assertEquals(recovered_entity.prop_date, test_entity.prop_date)
+        self.assertEquals(recovered_entity.prop_datetime,
+                          test_entity.prop_datetime)
+        self.assertEquals(recovered_entity.prop_intlist,
+                          test_entity.prop_intlist)
+        self.assertEquals(recovered_entity.prop_stringlist,
+                          test_entity.prop_stringlist)
+        if test_entity.prop_ref is None:
+            self.assertIsNone(recovered_entity.prop_ref)
+        else:
+            self.assertEquals(recovered_entity.prop_ref.key(),
+                              test_entity.prop_ref.key())
+
+    def test_roundtrip_conversion_all_members_set(self):
+        referent = TestEntity(key_name='that_one_over_there', prop_float=2.71)
+        referent.put()
+        test_entity = TestEntity(
+            prop_int=123,
+            prop_float=3.14,
+            prop_bool=True,
+            prop_string='Mary had a little lamb',
+            prop_text='She fed it beans and buns',
+            prop_date=datetime.date.today(),
+            prop_datetime=datetime.datetime.now(),
+            prop_intlist=[4, 3, 2, 1],
+            prop_stringlist=['Flopsy', 'Mopsy', 'Cottontail'],
+            prop_ref=referent
+            )
+        test_entity.put()
+
+        converted = entity_transforms.entity_to_dict(test_entity)
+        init_dict = entity_transforms.json_dict_to_entity_initialization_dict(
+            TestEntity, converted)
+        recovered_entity = TestEntity(**init_dict)
+        self._verify_contents_equal(recovered_entity, test_entity)
+
+    def test_roundtrip_conversion_optional_members_none(self):
+        test_entity = TestEntity(
+            prop_int=None,
+            prop_float=2.31,
+            prop_bool=None,
+            prop_string=None,
+            prop_text=None,
+            prop_date=None,
+            prop_datetime=None,
+            prop_intlist=[],
+            prop_stringlist=[],
+            prop_ref=None
+            )
+        test_entity.put()
+
+        converted = entity_transforms.entity_to_dict(test_entity)
+        init_dict = entity_transforms.json_dict_to_entity_initialization_dict(
+            TestEntity, converted)
+        recovered_entity = TestEntity(**init_dict)
+        self._verify_contents_equal(recovered_entity, test_entity)
+
+    def test_roundtrip_conversion_default_constructable(self):
+        referent = DefaultConstructableEntity(key_name='that_one_over_there')
+        referent.put()
+        test_entity = DefaultConstructableEntity(
+            prop_int=123,
+            prop_float=3.14,
+            prop_bool=True,
+            prop_string='Mary had a little lamb',
+            prop_text='She fed it beans and buns',
+            prop_date=datetime.date.today(),
+            prop_datetime=datetime.datetime.now(),
+            prop_intlist=[4, 3, 2, 1],
+            prop_stringlist=['Flopsy', 'Mopsy', 'Cottontail'],
+            prop_ref=referent
+            )
+        test_entity.put()
+
+        converted = entity_transforms.entity_to_dict(test_entity)
+        recovered_entity = DefaultConstructableEntity()
+        entity_transforms.dict_to_entity(recovered_entity, converted)
+        self._verify_contents_equal(recovered_entity, test_entity)

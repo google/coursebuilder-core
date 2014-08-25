@@ -19,7 +19,9 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import itertools
 import json
+import types
 from xml.etree import ElementTree
+
 import transforms_constants
 import yaml
 
@@ -165,11 +167,13 @@ def _json_to_datetime(value, date_only=False):
     raise exception
 
 
-def json_to_dict(source_dict, schema):
+def json_to_dict(source_dict, schema, permit_none_values=False):
     """Converts JSON dictionary into Python dictionary using schema."""
 
     def convert_bool(value, key):
-        if isinstance(value, bool):
+        if isinstance(value, types.NoneType):
+            return False
+        elif isinstance(value, bool):
             return value
         elif isinstance(value, basestring):
             value = value.lower()
@@ -182,9 +186,18 @@ def json_to_dict(source_dict, schema):
     output = {}
     for key, attr in schema['properties'].items():
         # Skip schema elements that don't exist in source.
+
         if key not in source_dict:
-            if 'true' != attr.get('optional'):
+            is_optional = convert_bool(attr.get('optional'), 'optional')
+            if not is_optional:
                 raise ValueError('Missing required attribute: %s' % key)
+            continue
+
+        # Reifying from database may provide "null", which translates to
+        # None.  As long as the field is optional (checked above), set
+        # value to None directly (skipping conversions below).
+        if permit_none_values and source_dict[key] is None:
+            output[key] = None
             continue
 
         attr_type = attr['type']

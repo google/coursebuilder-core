@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import datetime
 import unittest
+
 from models import transforms
 
 
@@ -171,6 +172,15 @@ class JsonToDictTests(unittest.TestCase):
                 str(e),
                 'time data \'cat\' does not match format \'%s\'' %
                 transforms.ISO_8601_DATETIME_FORMAT)
+
+    def test_nulls(self):
+        for type_name in transforms.JSON_TYPES:
+            schema = wrap_properties({'field': {'type': type_name}})
+            source = {'field': None}
+            ret = transforms.json_to_dict(source, schema,
+                                          permit_none_values=True)
+            self.assertIn('field', ret)
+            self.assertIsNone(ret['field'])
 
 
 class StringValueConversionTests(unittest.TestCase):

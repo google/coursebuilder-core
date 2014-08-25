@@ -27,13 +27,12 @@ contain assets and data files from the course along with a manifest.json
 enumerating them. The format of archive.zip will change and should not be relied
 upon.
 
-For upload,
+For upload of course and related data
 
 $ python etl.py upload course /cs101 myapp server.appspot.com \
     --archive_path archive.zip
 
-2. Download of datastore entities. This feature is experimental and upload is
-   not supported:
+2. Download of datastore entities. This feature is experimental.
 
 $ python etl.py download datastore /cs101 myapp server.appspot.com \
     --archive_path archive.zip --datastore_types model1,model2
@@ -43,7 +42,59 @@ and model2 instances found in the specified course, identified as above. The
 archive will contain serialized data along with a manifest. The format of
 archive.zip will change and should not be relied upon.
 
-3. Deletion of all datastore entities in a single course. Delete of the course
+By default, all data types are downloaded.  You can specifically select or
+skip specific types using the --datastore_types and --exclude_types flags,
+respectively.
+
+3. Upload of datastore entities.  This feature is experimental.
+
+$ python etl.py upload datastore /cs101 myapp server.apppot.com \
+    --archive_path archive.zip
+
+Uploads should ideally be (but are not required to be) done to courses that
+are not available to students and which are not actively being edited by
+admins.  To upload to a course, it must first exist.  You can create a blank
+new course using the administrator UI.  Note that keys and fields that use PII
+are obscured during download if --privacy_secret is used, and not obscured if
+not.  Uploading of multiple downloads to the same course is supported, but
+for encoded references to work, all uploads must have been created with
+the same --privacy_secret (or all with no secret).
+
+Other flags for uploading are recommended:
+    --resume:  Use this flag to permit an upload to resume where it left off.
+    --force_overwrite:  Unless this flag is specified, every entity to be
+      uploaded is checked to see whether an entity with this key already
+      exists in the datastore.  This takes substantial additional time.
+      If you are sure that there will not be any overlap between existing data
+      and uploaded data, use of this flag is strongly recommended.
+    --batch_size=<NNN>:  Set this to larger values to group uploaded entities
+      together for efficiency.  Higher values help, but give diminishing
+      returns.  Start at around 100.
+    --datastore_types:  and/or --exclude_types   By default, all types in the
+      specified .zip file are uploaded.  You may select or ignore specific types
+      with these flags, respectively.
+
+      Data extracted from courses running an older version of CourseBuilder
+      may contain entities of types that no longer exist in the code base of a
+      more-recent CourseBuilder installation.  Depending on the nature of the
+      change, this extra data may simply be no longer needed.  Conversely, the
+      data may be crucial to the correct operation of an older, un-upgraded
+      installation, and will simply not work with a newer version of code.
+      Using a specific set of types can permit upload of the entities that are
+      still recognized.  Operation of CourseBuilder with the partial data may
+      well be compromised for some or all functionality; it is safest to
+      upload the data to a blank course and experiment before uploading
+      incomplete data to a production instance.
+
+For example, you may wish to upload to a local instance to test things out
+before uploading to a production installation:
+
+./scripts/etl.sh --force_overwrite --batch_size=100 --resume \
+  --exclude_types=RootUsageEntity,KeyValueEntity,DefinitionEntity,UsageEntity \
+  --archive_path my_archive_file.zip \
+  upload datastore /new_course mycourse localhost:8081
+
+4. Deletion of all datastore entities in a single course. Delete of the course
    itself not supported. To run:
 
 $ python etl.py delete datastore /cs101 myapp server.appspot.com
@@ -62,7 +113,7 @@ will not be processed.
 Deleting a course flushes caches. Because memcache does not support namespaced
 flush all operations, all caches for all courses will be flushed.
 
-4. Execution of custom jobs.
+5. Execution of custom jobs.
 
 $ python etl.py run path.to.my.Job /cs101 myapp server.appspot.com \
     --job_args='more_args --delegated_to my.Job'
@@ -116,6 +167,7 @@ import os
 import random
 import re
 import sys
+import time
 import traceback
 import zipfile
 import yaml
@@ -124,14 +176,15 @@ import yaml
 # Placeholders for modules we'll import after setting up sys.path. This allows
 # us to avoid lint suppressions at every callsite.
 appengine_config = None
+common_utils = None
 config = None
 courses = None
 crypto = None
 db = None
+entity_transforms = None
 etl_lib = None
 memcache = None
 metadata = None
-namespace_manager = None
 remote = None
 transforms = None
 vfs = None
@@ -163,6 +216,8 @@ _EXCLUDE_TYPES = set([
 _IDENTITY_TRANSFORM = lambda x: x
 # Regex. Format of __internal_names__ used by datastore kinds.
 _INTERNAL_DATASTORE_KIND_REGEX = re.compile(r'^__.*__$')
+# Names of fields in row which should be ignored when importing datastore.
+_KEY_FIELDS = set(['key.id', 'key.name', 'key'])
 # Path prefix strings from local disk that will be included in the archive.
 _LOCAL_WHITELIST = frozenset([_COURSE_YAML_PATH_SUFFIX, 'assets', 'data'])
 # Path prefix strings that are subdirectories of the whitelist that we actually
@@ -191,6 +246,8 @@ _RETRIES = 3
 _TYPE_COURSE = 'course'
 # String. Identifier for type corresponding to datastore entities.
 _TYPE_DATASTORE = 'datastore'
+# Number of items upon which to emit upload rate statistics.
+_UPLOAD_CHUNK_SIZE = 1000
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
@@ -229,10 +286,16 @@ PARSER.add_argument(
     help='Number of results to attempt to retrieve per batch',
     default=20, type=int)
 PARSER.add_argument(
-    '--datastore_types',
+    '--datastore_types', default=[],
     help=(
-        "When type is '%s', comma-separated list of datastore model types to "
+        'When type is "%s", comma-separated list of datastore model types to '
         'process; all models are processed by default' % _TYPE_DATASTORE),
+    type=lambda s: s.split(','))
+PARSER.add_argument(
+    '--exclude_types', default=[],
+    help=(
+        'When type is "%s", comma-separated list of datastore model types to '
+        'exclude from processing' % _TYPE_DATASTORE),
     type=lambda s: s.split(','))
 PARSER.add_argument(
     '--disable_remote', action='store_true',
@@ -243,9 +306,19 @@ PARSER.add_argument(
 PARSER.add_argument(
     '--force_overwrite', action='store_true',
     help=(
-        'If mode is download and type is course, forces overwrite of entities '
+        'If mode is download, overwriting of local .zip files is permitted.'
+        'If mode is upload,  forces overwrite of entities '
         'on the target system that are also present in the archive. Note that '
-        'this operation is dangerous and may result in data loss'))
+        'this operation is dangerous and may result in data loss.'))
+PARSER.add_argument(
+    '--resume', action='store_true',
+    help=(
+        'On upload, setting this flag indicates that you are starting or '
+        'resuming an upload.  Only use this flag when you are uploading '
+        'to a course that had no data prior to starting this upload.  This '
+        'flag assumes that the only data present is that provided by the '
+        'upload.  This permits significant time savings if an upload is '
+        'interrupted or otherwise needs to be performed in multiple stages.'))
 PARSER.add_argument(
     '--job_args', default=[],
     help=(
@@ -267,6 +340,9 @@ PARSER.add_argument(
         "When mode is '%s', type is '%s', and --privacy is passed,  pass this "
         "secret to have user ids transformed with it rather than with random "
         "bits") % (_MODE_DOWNLOAD, _TYPE_DATASTORE), type=str)
+PARSER.add_argument(
+    '--verbose', action='store_true',
+    help='Tell about each item uploaded/downloaded.')
 
 
 class _Archive(object):
@@ -475,19 +551,14 @@ def _confirm_delete_datastore_or_die(kind_names, namespace, title):
         _die('Delete not confirmed. Aborting')
 
 
-def _delete(course_url_prefix, delete_type, batch_size):
+def _delete(params):
     """Deletes desired object."""
-    context = _get_context_or_die(course_url_prefix)
-
-    old_namespace = namespace_manager.get_namespace()
-    try:
-        namespace_manager.set_namespace(context.get_namespace_name())
-        if delete_type == _TYPE_COURSE:
+    context = _get_context_or_die(params.course_url_prefix)
+    with common_utils.Namespace(context.get_namespace_name()):
+        if params.type == _TYPE_COURSE:
             _delete_course()
-        elif delete_type == _TYPE_DATASTORE:
-            _delete_datastore(context, batch_size)
-    finally:
-        namespace_manager.set_namespace(old_namespace)
+        elif params.type == _TYPE_DATASTORE:
+            _delete_datastore(context, params.batch_size)
 
 
 def _delete_course():
@@ -526,29 +597,19 @@ def _die(message, with_trace=False):
     sys.exit(1)
 
 
-def _download(
-    download_type, archive_path, course_url_prefix, datastore_types,
-    batch_size, privacy_transform_fn):
+def _download(params):
     """Validates and dispatches to a specific download method."""
-    archive_path = os.path.abspath(archive_path)
-    context = _get_context_or_die(course_url_prefix)
+    archive_path = os.path.abspath(params.archive_path)
+    context = _get_context_or_die(params.course_url_prefix)
     course = _get_course_from(context)
-    old_namespace = namespace_manager.get_namespace()
-    try:
-        namespace_manager.set_namespace(context.get_namespace_name())
-        if download_type == _TYPE_COURSE:
-            _download_course(
-                context, course, archive_path, course_url_prefix, batch_size)
-        elif download_type == _TYPE_DATASTORE:
-            _download_datastore(
-                context, course, archive_path, datastore_types, batch_size,
-                privacy_transform_fn)
-    finally:
-        namespace_manager.set_namespace(old_namespace)
+    with common_utils.Namespace(context.get_namespace_name()):
+        if params.type == _TYPE_COURSE:
+            _download_course(context, course, archive_path, params)
+        elif params.type == _TYPE_DATASTORE:
+            _download_datastore(context, course, archive_path, params)
 
 
-def _download_course(
-    context, course, archive_path, course_url_prefix, batch_size):
+def _download_course(context, course, archive_path, params):
     """Downloads course content."""
     if course.version < courses.COURSE_MODEL_VERSION_1_3:
         _die(
@@ -558,7 +619,7 @@ def _download_course(
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
 
-    _LOG.info('Processing course with URL prefix ' + course_url_prefix)
+    _LOG.info('Processing course with URL prefix ' + params.course_url_prefix)
     datastore_files = set(_list_all(context))
     all_files = set(_filter_filesystem_files(_list_all(
         context, include_inherited=True)))
@@ -567,7 +628,8 @@ def _download_course(
     _LOG.info('Adding files from datastore')
     for external_path in datastore_files:
         internal_path = _Archive.get_internal_path(external_path)
-        _LOG.info('Adding ' + internal_path)
+        if params.verbose:
+            _LOG.info('Adding ' + internal_path)
         stream = _get_stream(context, external_path)
         is_draft = False
         if stream.metadata and hasattr(stream.metadata, 'is_draft'):
@@ -580,49 +642,52 @@ def _download_course(
     for external_path in filesystem_files:
         with open(external_path) as f:
             internal_path = _Archive.get_internal_path(external_path)
-            _LOG.info('Adding ' + internal_path)
+            if params.verbose:
+                _LOG.info('Adding ' + internal_path)
             archive.add(internal_path, f.read())
             manifest.add(_ManifestEntity(internal_path, False))
 
     _LOG.info('Adding dependencies from datastore')
     for found_type in courses.COURSE_CONTENT_ENTITIES:
         _download_type(
-            archive, manifest, found_type.__name__, batch_size,
+            archive, manifest, found_type.__name__, params.batch_size,
             _IDENTITY_TRANSFORM)
 
     _finalize_download(archive, manifest)
 
 
-def _download_datastore(
-    context, course, archive_path, datastore_types, batch_size,
-    privacy_transform_fn):
+def _download_datastore(context, course, archive_path, params):
     """Downloads datastore content."""
     available_types = set(_get_datastore_kinds())
-    if not datastore_types:
-        datastore_types = available_types
-    requested_types = set(datastore_types)
+    type_names = params.datastore_types
+    if not type_names:
+        type_names = available_types
+    requested_types = (
+        set(type_names) - set(params.exclude_types) - set(_EXCLUDE_TYPES))
     missing_types = requested_types - available_types
     if missing_types:
         _die(
             'Requested types not found: %s%sAvailable types are: %s' % (
                 ', '.join(missing_types), os.linesep,
                 ', '.join(available_types)))
+
+    privacy_secret = _get_privacy_secret(params.privacy_secret)
+    privacy_transform_fn = _get_privacy_transform_fn(
+        params.privacy, privacy_secret)
+
     found_types = requested_types & available_types
     archive = _Archive(archive_path)
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
     for found_type in found_types:
-        _download_type(
-            archive, manifest, found_type, batch_size, privacy_transform_fn)
+        _download_type(archive, manifest, found_type, params.batch_size,
+                       privacy_transform_fn)
     _finalize_download(archive, manifest)
 
 
 def _download_type(
     archive, manifest, model_class, batch_size, privacy_transform_fn):
     """Downloads a set of files and adds them to the archive."""
-    if model_class in _EXCLUDE_TYPES:
-        _LOG.info('Skipping download of excluded type "%s"', model_class)
-        return
 
     json_path = os.path.join(
         os.path.dirname(archive.path), '%s.json' % model_class)
@@ -767,9 +832,11 @@ def _import_modules_into_global_scope():
     # pylint: disable-msg=redefined-outer-name,unused-variable
     global appengine_config
     global memcache
-    global namespace_manager
     global db
+    global entities
+    global entity_transforms
     global metadata
+    global common_utils
     global config
     global courses
     global crypto
@@ -781,12 +848,14 @@ def _import_modules_into_global_scope():
     try:
         import appengine_config
         from google.appengine.api import memcache
-        from google.appengine.api import namespace_manager
         from google.appengine.ext import db
         from google.appengine.ext.db import metadata
         from common import crypto
+        from common import utils as common_utils
         from models import config
         from models import courses
+        from models import entities
+        from models import entity_transforms
         from models import models
         from models import transforms
         from models import vfs
@@ -833,6 +902,7 @@ def _retry(message=None, times=_RETRIES):
                         _LOG.info(message)
                     failures += 1
                     if failures == times:
+                        traceback.print_exc()  # Show origin of failure
                         raise e
 
         return wrapped
@@ -931,16 +1001,26 @@ def _get_entity_dict(model, privacy_transform_fn):
 
 
 @_retry(message='Upload failed; retrying')
-def _put(context, content, path, is_draft, force_overwrite):
+def _put(context, content, path, is_draft, force_overwrite, verbose):
     path = os.path.join(appengine_config.BUNDLE_ROOT, path)
-    if force_overwrite and context.fs.impl.isfile(path):
-        _LOG.info('Overriding file %s', _remove_bundle_root(path))
-        context.fs.impl.delete(path)
+    description = _remove_bundle_root(path)
+    do_put = False
+    if context.fs.impl.isfile(path) and not path.endswith('/course.yaml'):
+        if force_overwrite:
+            _LOG.info('Overriding file %s', description)
+            context.fs.impl.delete(path)
+            do_put = True
+        elif verbose:
+            _LOG.info('Not replacing existing file %s', description)
     else:
-        _LOG.info('Uploading file %s', _remove_bundle_root(path))
-    context.fs.impl.non_transactional_put(
-        os.path.join(appengine_config.BUNDLE_ROOT, path), content,
-        is_draft=is_draft)
+        do_put = True
+        if verbose:
+            _LOG.info('Uploading file %s', description)
+
+    if do_put:
+        context.fs.impl.non_transactional_put(
+            os.path.join(appengine_config.BUNDLE_ROOT, path), content,
+            is_draft=is_draft)
 
 
 def _raw_input(message):
@@ -964,21 +1044,17 @@ def _run_custom(parsed_args):
     job.run()
 
 
-def _upload(upload_type, archive_path, course_url_prefix, force_overwrite):
-    _LOG.info(
-        'Processing course with URL prefix %s from archive path %s',
-        course_url_prefix, archive_path)
-    context = _get_context_or_die(course_url_prefix)
-    old_namespace = namespace_manager.get_namespace()
-    try:
-        namespace_manager.set_namespace(context.get_namespace_name())
-        if upload_type == _TYPE_COURSE:
-            _upload_course(
-                context, archive_path, course_url_prefix, force_overwrite)
-        elif upload_type == _TYPE_DATASTORE:
-            _upload_datastore()
-    finally:
-        namespace_manager.set_namespace(old_namespace)
+def _upload(params):
+    _LOG.info('Processing course with URL prefix %s from archive path %s',
+              params.course_url_prefix, params.archive_path)
+    context = _get_context_or_die(params.course_url_prefix)
+    with common_utils.Namespace(context.get_namespace_name()):
+        if params.type == _TYPE_COURSE:
+            _upload_course(context, params)
+            type_names = [x.__name__ for x in courses.COURSE_CONTENT_ENTITIES]
+            _upload_datastore(params, type_names)
+        elif params.type == _TYPE_DATASTORE:
+            _upload_datastore(params, params.datastore_types)
 
 
 def _can_upload_entity_to_course(entity):
@@ -989,18 +1065,18 @@ def _can_upload_entity_to_course(entity):
     return head != _ARCHIVE_PATH_PREFIX_MODELS
 
 
-def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
+def _upload_course(context, params):
     """Uploads course data."""
-    if not _context_is_for_empty_course(context) and not force_overwrite:
-        _die(
-            'Cannot upload to non-empty course with course_url_prefix %s' % (
-                course_url_prefix))
+    if not _context_is_for_empty_course(context) and not params.force_overwrite:
+        _die('Cannot upload to non-empty course with course_url_prefix %s.  '
+             'You can override this behavior via the --force_overwrite flag.' %
+             params.course_url_prefix)
 
-    archive = _Archive(archive_path)
+    archive = _Archive(params.archive_path)
     try:
         archive.open('r')
     except IOError:
-        _die('Cannot open archive_path ' + archive_path)
+        _die('Cannot open archive_path ' + params.archive_path)
     course_json = archive.get(
         _Archive.get_internal_path(_COURSE_JSON_PATH_SUFFIX))
 
@@ -1010,7 +1086,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         except (AttributeError, ValueError):
             _die((
                 'Cannot upload archive at %s containing malformed '
-                'course.json') % archive_path)
+                'course.json') % params.archive_path)
 
     course_yaml = archive.get(
         _Archive.get_internal_path(_COURSE_YAML_PATH_SUFFIX))
@@ -1020,7 +1096,7 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         except Exception:  # pylint: disable-msg=broad-except
             _die((
                 'Cannot upload archive at %s containing malformed '
-                'course.yaml') % archive_path)
+                'course.yaml') % params.archive_path)
 
     _LOG.info('Uploading files')
     count = 0
@@ -1031,48 +1107,242 @@ def _upload_course(context, archive_path, course_url_prefix, force_overwrite):
         external_path = _Archive.get_external_path(entity.path)
         _put(
             context, _ReadWrapper(archive.get(entity.path)), external_path,
-            entity.is_draft, force_overwrite)
+            entity.is_draft, params.force_overwrite, params.verbose)
         count += 1
+    _LOG.info('Uploaded %d files.', count)
 
-    _LOG.info('Uploading entities')
-    for entity_class in courses.COURSE_CONTENT_ENTITIES:
+
+def _get_classes_for_type_names(type_names):
+    entity_classes = []
+    any_problems = False
+    for type_name in type_names:
+        # TODO(johncox): Add class-method to troublesome types so they can be
+        # regenerated from serialized ETL data.
+        if type_name in ('Submission', 'Review'):
+            any_problems = True
+            _LOG.critical(
+                'Cannot upload entities of type "%s". '
+                'This type has a nontrivial constructor, and simply '
+                'setting properties into the DB base object type is '
+                'insufficient to correctly construct this type.', type_name)
+            continue
+
+        try:
+            entity_class = db.class_for_kind(type_name)
+            entity_classes.append(entity_class)
+        except db.KindError:
+            any_problems = True
+            _LOG.critical(
+                'Cannot upload entities of type "%s". '
+                'The corresponding Python class for this entity type '
+                'was not found in CourseBuilder.  This indicates a '
+                'substantial incompatiblity in versions; some or all '
+                'functionality may be affected.  Use the --exclude_types '
+                'flag to skip entities of this type.', type_name)
+    if any_problems:
+        _die('Cannot proceed with upload in the face of these problems.')
+    return entity_classes
+
+
+def _determine_type_names(params, included_type_names, archive):
+    included_type_names = set(included_type_names)
+    excluded_type_names = set(params.exclude_types)
+    zipfile_type_names = set()
+    for entity in archive.manifest.entities:
+        head, tail = os.path.split(entity.path)
+        if head == _ARCHIVE_PATH_PREFIX_MODELS:
+            zipfile_type_names.add(tail.replace('.json', ''))
+    if not zipfile_type_names:
+        _die('No entity types to upload found in archive file "%s"' %
+             params.archive_path)
+    if not included_type_names:
+        included_type_names = zipfile_type_names
+
+    for type_name in included_type_names - zipfile_type_names:
+        _die('Included type "%s" not found in archive.' % type_name)
+    included_type_names &= zipfile_type_names
+    for type_name in excluded_type_names - zipfile_type_names:
+        _LOG.warning('Excluded type "%s" not found in archive.', type_name)
+    excluded_type_names &= zipfile_type_names
+    for type_name in excluded_type_names - included_type_names:
+        _LOG.info('Redundant exclusion of type "%s" by mention in '
+                  '--excluded_types and non-mention in '
+                  'the --datastore_types list.', type_name)
+    for type_name in included_type_names & excluded_type_names:
+        _LOG.info('Excluding type "%s" from upload.', type_name)
+    ret = included_type_names - excluded_type_names
+    if not ret:
+        _die('Command line flags specify that no entity types are '
+             'eligible to be uploaded.  Available types are: %s' %
+             ' '.join(sorted(zipfile_type_names)))
+    return ret
+
+
+def _upload_datastore(params, included_type_names):
+    archive = _Archive(params.archive_path)
+    try:
+        archive.open('r')
+    except IOError:
+        _die('Cannot open archive path ' + params.archive_path)
+
+    type_names = _determine_type_names(params, included_type_names, archive)
+    entity_classes = _get_classes_for_type_names(type_names)
+    total_count = 0
+    total_start = time.time()
+    for entity_class in entity_classes:
+        _LOG.info('-------------------------------------------------------')
+        _LOG.info('Adding entities of type %s', entity_class.__name__)
+
+        # Get JSON contents from .zip file
         json_path = _Archive.get_internal_path(
             '%s.json' % entity_class.__name__,
             prefix=_ARCHIVE_PATH_PREFIX_MODELS)
+        _LOG.info('Fetching data from .zip archive')
         json_text = archive.get(json_path)
         if not json_text:
             _LOG.info(
                 'Unable to find data file %s for entity %s; skipping',
                 json_path, entity_class.__name__)
             continue
-        _LOG.info('Uploading entity ' + entity_class.__name__)
+        _LOG.info('Parsing data into JSON')
         json_object = transforms.loads(json_text)
-        for row in json_object['rows']:
-            _id_or_name = row['key.id'] or row['key.name']
-            _key = db.Key.from_path(entity_class.__name__, _id_or_name)
-
-            if db.get(_key):
-                if not force_overwrite:
-                    _die('Object of class %s with key %s already exists.' % (
-                        entity_class.__name__, _id_or_name))
-                _LOG.info('Replacing existing object with key %s', _id_or_name)
-            else:
-                _LOG.info('Adding new object with key %s', _id_or_name)
-
-            new_instance = entity_class(key=_key)
-            new_instance.data = row['data']
-            new_instance.put()
-
+        schema = (entity_transforms
+                  .get_schema_for_entity(entity_class)
+                  .get_json_schema_dict())
+        total_count += _upload_entities_for_class(
+            entity_class, schema, json_object['rows'], params)
     _LOG.info('Flushing all caches')
     memcache.flush_all()
+    total_end = time.time()
 
     _LOG.info(
-        'Done; %s entit%s uploaded', count, 'y' if count == 1 else 'ies')
+        'Done; %s entit%s uploaded in %d seconds', total_count,
+        'y' if total_count == 1 else 'ies', int(total_end - total_start))
 
 
-def _upload_datastore():
-    """Stub for possible future datastore entity uploader."""
-    raise NotImplementedError
+def _upload_entities_for_class(entity_class, schema, entities, params):
+    num_entities = len(entities)
+    i = 0
+    is_first_batch_after_resume = False
+
+    # Binary search to find first un-uploaded entity.
+    if params.resume:
+        _LOG.info('Resuming upload; searching for first non-uploaded entry.')
+        start = 0
+        end = num_entities
+        while start < end:
+            guess = (start + end) / 2
+            if params.verbose:
+                _LOG.info('Checking whether instance %d exists', guess)
+            key, _ = _get_entity_key(entity_class, entities[guess])
+            if db.get(key):
+                start = guess + 1
+            else:
+                end = guess
+        i = start
+
+        # If we are doing things in batches, it is possible that the previous
+        # batch only partially completed.  Experiments on a dev instance show
+        # that partial writes do not proceed in the order the items are
+        # supplied.  I see no reason to trust that production will be any
+        # friendlier.  Check that there are no missed entities up to one
+        # chunk back from where we are planning on restarting the upload.
+        if params.batch_size > 1 and i > 0:
+            start = max(0, i - params.batch_size)
+            end = min(start + params.batch_size, len(entities))
+            is_first_batch_after_resume = True
+            existing = _find_existing_items(entity_class, entities, start, end)
+            if None in existing:
+                if start > 0:
+                    _LOG.info('Previous chunk only partially completed; '
+                              'backing up from found location by one full '
+                              'chunk just in case.')
+                i = start
+
+        if i < num_entities:
+            _LOG.info('Resuming upload at item number %d of %d.', i,
+                      num_entities)
+        else:
+            _LOG.info('All %d entities already uploaded; skipping.',
+                      num_entities)
+
+    # Proceed to end of entities (starting from 0 if not resuming)
+    # pylint: disable-msg=protected-access
+    progress = etl_lib._ProgressReporter(
+        _LOG, 'Uploaded', entity_class.__name__, _UPLOAD_CHUNK_SIZE,
+        len(entities) - i)
+    if i < num_entities:
+        _LOG.info('Starting upload of entities')
+        while i < num_entities:
+            quantity = _upload_batch(entity_class, schema, entities, i,
+                                     is_first_batch_after_resume, params)
+            progress.count(quantity)
+            i += quantity
+            is_first_batch_after_resume = False
+
+        progress.report()
+        _LOG.info('Upload of %s complete', entity_class.__name__)
+    return progress.get_count()
+
+
+def _find_existing_items(entity_class, entities, start, end):
+    keys = []
+    for i in xrange(start, end):
+        key, _ = _get_entity_key(entity_class, entities[i])
+        keys.append(key)
+    return db.get(keys)
+
+
+@_retry(message='Uploading batch of entities failed; retrying')
+def _upload_batch(entity_class, schema, entities, start,
+                  is_first_batch_after_resume, params):
+    end = min(start + params.batch_size, len(entities))
+
+    # See what elements we want to upload already exist in the datastore.
+    if params.force_overwrite:
+        existing = []
+    else:
+        existing = _find_existing_items(entity_class, entities, start, end)
+
+    # Build up array of things to batch-put to DB.
+    to_put = []
+    for i in xrange(start, end):
+        key, id_or_name = _get_entity_key(entity_class, entities[i])
+        if params.force_overwrite:
+            if params.verbose:
+                _LOG.info('Forcing write of object #%d with key %s',
+                          i, id_or_name)
+        elif existing[i - start]:
+            if is_first_batch_after_resume:
+                if params.verbose:
+                    _LOG.info('Not overwriting object #%d with key %s '
+                              'written in previous batch which we are '
+                              'now recovering.', i, id_or_name)
+                continue
+            else:
+                _die('Object #%d of class %s with key %s already exists.' % (
+                    i, entity_class.__name__, id_or_name))
+        else:
+            if params.verbose:
+                _LOG.info('Adding new object #%d with key %s', i, id_or_name)
+        to_put.append(_build_entity(entity_class, schema, entities[i], key))
+    if params.verbose:
+        _LOG.info('Sending batch of %d objects to DB', end - start)
+    db.put(to_put)
+    return end - start
+
+
+def _get_entity_key(entity_class, entity):
+    id_or_name = entity['key.id'] or entity['key.name']
+    return db.Key.from_path(entity_class.__name__, id_or_name), id_or_name
+
+
+def _build_entity(entity_class, schema, entity, key):
+    new_instance = entity_class(key=key)
+    typed_dict = transforms.json_to_dict(
+        entity, schema, permit_none_values=True)
+    entity_transforms.dict_to_entity(new_instance, typed_dict)
+    return new_instance
 
 
 def _validate_arguments(parsed_args):
@@ -1090,7 +1360,7 @@ def _validate_arguments(parsed_args):
     if parsed_args.disable_remote and parsed_args.mode != _MODE_RUN:
         _die('--disable_remote supported only if mode is ' + _MODE_RUN)
     if parsed_args.force_overwrite and not (
-            parsed_args.mode == _MODE_UPLOAD and
+            parsed_args.mode == _MODE_UPLOAD or
             parsed_args.type == _TYPE_COURSE):
         _die(
             '--force_overwrite supported only if mode is %s and type is %s' % (
@@ -1107,6 +1377,8 @@ def _validate_arguments(parsed_args):
         _die(
             '--privacy_secret supported only if mode is %s, type is %s, and '
             '--privacy is passed' % (_MODE_DOWNLOAD, _TYPE_DATASTORE))
+    if parsed_args.resume and parsed_args.mode != _MODE_UPLOAD:
+        _die('--resume flag is only supported for uploading.')
 
 
 def _write_model_to_json_file(json_file, privacy_transform_fn, model):
@@ -1131,38 +1403,24 @@ def main(parsed_args, environment_class=None):
 
     if not environment_class:
         environment_class = remote.Environment
-
-    privacy_secret = _get_privacy_secret(parsed_args.privacy_secret)
-    privacy_transform_fn = _get_privacy_transform_fn(
-        parsed_args.privacy, privacy_secret)
-
     _LOG.info('Mode is %s', parsed_args.mode)
     _LOG.info(
         'Target is url %s from application_id %s on server %s',
         parsed_args.course_url_prefix, parsed_args.application_id,
         parsed_args.server)
-
     if not parsed_args.disable_remote:
         environment_class(
             parsed_args.application_id, parsed_args.server).establish()
-
     _force_config_reload()
 
     if parsed_args.mode == _MODE_DELETE:
-        _delete(
-            parsed_args.course_url_prefix, parsed_args.type,
-            parsed_args.batch_size)
+        _delete(parsed_args)
     elif parsed_args.mode == _MODE_DOWNLOAD:
-        _download(
-            parsed_args.type, parsed_args.archive_path,
-            parsed_args.course_url_prefix, parsed_args.datastore_types,
-            parsed_args.batch_size, privacy_transform_fn)
+        _download(parsed_args)
     elif parsed_args.mode == _MODE_RUN:
         _run_custom(parsed_args)
     elif parsed_args.mode == _MODE_UPLOAD:
-        _upload(
-            parsed_args.type, parsed_args.archive_path,
-            parsed_args.course_url_prefix, parsed_args.force_overwrite)
+        _upload(parsed_args)
 
 
 if __name__ == '__main__':

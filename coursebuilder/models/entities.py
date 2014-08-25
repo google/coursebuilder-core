@@ -210,8 +210,15 @@ class BaseEntity(db.Model):
         assert SAFE_KEY_NAME not in self.properties().iterkeys()
         properties[SAFE_KEY_NAME] = self.safe_key(self.key(), transform_fn)
 
-        for name in self.properties():
-            properties[name] = getattr(self, name)
+        for name, prop in self.properties().items():
+            if isinstance(prop, db.ReferenceProperty):
+                referent = getattr(self, name)
+                if referent:
+                    unsafe_key = referent.key()
+                    safe_key = referent.safe_key(unsafe_key, transform_fn)
+                    properties[name] = str(safe_key)
+            else:
+                properties[name] = getattr(self, name)
 
         # Blacklist may contain db.Property, or names as strings.  If string,
         # the name may be a dotted list of containers.  This is useful for
