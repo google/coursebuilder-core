@@ -17,11 +17,9 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 
-import inspect
 import logging
 import mimetypes
 import os
-import pkgutil
 from xml.etree import cElementTree
 
 import html5lib
@@ -30,7 +28,6 @@ import webapp2
 
 import appengine_config
 from common import schema_fields
-from extensions import tags
 from models import config
 
 
@@ -270,28 +267,7 @@ class Registry(object):
 
 
 def get_tag_bindings():
-    """Return the bindings of tag names to implementing classes.
-
-    Tag bindings work by looking for classes which extend BaseTag and which
-    belong to packages inside extensions/tags. The tag name is then composed
-    from the package name and the class name, after lower-casing and separated
-    with a dash. E.g., the class
-        extensions.tags.gcb.YouTube
-    is bound to the tag name gcb-youtube.
-
-    Returns:
-        the bindings of tag names to implementing classes.
-    """
-
-    bindings = {}
-    for loader, name, ispkg in pkgutil.walk_packages(tags.__path__):
-        if ispkg:
-            mod = loader.find_module(name).load_module(name)
-            for name, clazz in inspect.getmembers(mod, inspect.isclass):
-                if issubclass(clazz, BaseTag):
-                    tag_name = ('%s-%s' % (mod.__name__, name)).lower()
-                    bindings[tag_name] = clazz
-    return dict(bindings.items() + Registry.get_all_tags().items())
+    return dict(Registry.get_all_tags().items())
 
 
 def html_string_to_element_tree(html_string):

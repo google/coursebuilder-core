@@ -1,4 +1,4 @@
-# Copyright 2013 Google Inc. All Rights Reserved.
+# Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GCB-provided custom tags."""
+"""Core custom tags."""
 
 __author__ = 'John Orr (jorr@google.com)'
 
@@ -20,15 +20,17 @@ import os
 import re
 import urllib
 import urlparse
+from xml.etree import cElementTree
 
 import appengine_config
-from common import safe_dom
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
-from xml.etree import cElementTree
-from xml.etree import ElementTree
+from models import custom_modules
+
+
+RESOURCE_FOLDER = '/modules/core_tags/resources/'
 
 
 def _escape_url(url, force_https=True):
@@ -43,11 +45,24 @@ def _escape_url(url, force_https=True):
 
 def _replace_url_query(url, new_query):
     """Replaces the query part of a URL with a new one."""
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+    scheme, netloc, path, _, fragment = urlparse.urlsplit(url)
     return urlparse.urlunsplit((scheme, netloc, path, new_query, fragment))
 
 
-class GoogleDoc(tags.BaseTag):
+class CoreTag(tags.BaseTag):
+    """All core custom tags derive from this class."""
+
+    @classmethod
+    def vendor(cls):
+        return 'gcb'
+
+    @classmethod
+    def create_icon_url(cls, name):
+        """Creates a URL for an icon with a specific name."""
+        return os.path.join(RESOURCE_FOLDER, name)
+
+
+class GoogleDoc(CoreTag):
     """Custom tag for a Google Doc."""
 
     @classmethod
@@ -66,7 +81,7 @@ class GoogleDoc(tags.BaseTag):
         return iframe
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/docs.png'
+        return self.create_icon_url('docs.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(GoogleDoc.name())
@@ -90,7 +105,7 @@ class GoogleDoc(tags.BaseTag):
         return reg
 
 
-class GoogleSpreadsheet(tags.BaseTag):
+class GoogleSpreadsheet(CoreTag):
     """Custom tag for a Google Spreadsheet."""
 
     @classmethod
@@ -110,7 +125,7 @@ class GoogleSpreadsheet(tags.BaseTag):
         return iframe
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/spreadsheets.png'
+        return self.create_icon_url('spreadsheets.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(GoogleSpreadsheet.name())
@@ -134,7 +149,7 @@ class GoogleSpreadsheet(tags.BaseTag):
         return reg
 
 
-class YouTube(tags.BaseTag):
+class YouTube(CoreTag):
 
     @classmethod
     def name(cls):
@@ -166,25 +181,26 @@ class YouTube(tags.BaseTag):
         video_id = jinja_utils.js_string_raw(video_id)
         return cElementTree.XML("""
 <p>
-    <script src='/extensions/tags/gcb/resources/youtube_video.js'></script>
+    <script src='""" + os.path.join(
+            RESOURCE_FOLDER, 'youtube_video.js') + """'></script>
     <script>
       gcbTagYoutubeEnqueueVideo('""" + video_id + """');
     </script>
 </p>""")
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/youtube.png'
+        return self.create_icon_url('youtube.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(YouTube.name())
-        reg.add_property(
-            schema_fields.SchemaField('videoid', 'Video Id', 'string',
+        reg.add_property(schema_fields.SchemaField(
+            'videoid', 'Video Id', 'string',
             optional=True,
             description='Provide YouTube video ID (e.g. Kdg2drcUjYI)'))
         return reg
 
 
-class Html5Video(tags.BaseTag):
+class Html5Video(CoreTag):
 
     @classmethod
     def name(cls):
@@ -193,7 +209,8 @@ class Html5Video(tags.BaseTag):
     def render(self, node, unused_handler):
         if utils.CAN_PERSIST_TAG_EVENTS.value:
             tracking_text = (
-                '<script src="/extensions/tags/gcb/resources/html5_video.js">' +
+                '<script src="' + os.path.join(
+                    RESOURCE_FOLDER, 'html5_video.js') + '">' +
                 '</script>' +
                 '<script>' +
                 '  gcbTagHtml5TrackVideo("%s");' % (
@@ -217,7 +234,7 @@ class Html5Video(tags.BaseTag):
         return video
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/html5-badge-h-solo.png'
+        return self.create_icon_url('html5-badge-h-solo.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(Html5Video.name())
@@ -229,18 +246,18 @@ class Html5Video(tags.BaseTag):
                 'from Google Docs is supported; add "&export=download".  E.g.,'
                 'https://docs.google.com/a/google.com/uc?authuser=0'
                 '&id=0B82t9jeypLokMERMQ1g5Q3NFU1E&export=download'))
-        reg.add_property(
-            schema_fields.SchemaField('width', 'Width', 'integer',
+        reg.add_property(schema_fields.SchemaField(
+            'width', 'Width', 'integer',
             optional=True,
             description='Width, in pixels.'))
-        reg.add_property(
-            schema_fields.SchemaField('height', 'Height', 'integer',
+        reg.add_property(schema_fields.SchemaField(
+            'height', 'Height', 'integer',
             optional=True,
             description='Height, in pixels.'))
         return reg
 
 
-class GoogleGroup(tags.BaseTag):
+class GoogleGroup(CoreTag):
 
     @classmethod
     def name(cls):
@@ -278,22 +295,20 @@ class GoogleGroup(tags.BaseTag):
         return iframe
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/forumembed.png'
+        return self.create_icon_url('forumembed.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(GoogleGroup.name())
-        reg.add_property(
-            schema_fields.SchemaField(
-              'group', 'Group Name', 'string', optional=True,
-              description='Name of the Google Group (e.g. mapping-with-google)'))
-        reg.add_property(
-            schema_fields.SchemaField(
-              'category', 'Category Name', 'string', optional=True,
-              description='Name of the Category (e.g. unit5-2-annotation)'))
+        reg.add_property(schema_fields.SchemaField(
+            'group', 'Group Name', 'string', optional=True,
+            description='Name of the Google Group (e.g. mapping-with-google)'))
+        reg.add_property(schema_fields.SchemaField(
+            'category', 'Category Name', 'string', optional=True,
+            description='Name of the Category (e.g. unit5-2-annotation)'))
         return reg
 
 
-class IFrame(tags.BaseTag):
+class IFrame(CoreTag):
 
     def render(self, node, unused_handler):
         src = node.attrib.get('src')
@@ -312,39 +327,32 @@ class IFrame(tags.BaseTag):
         return iframe
 
     def get_icon_url(self):
-        """Return the URL for the icon to be displayed in the rich text editor.
-
-        Images should be placed in a folder called 'resources' inside the main
-        package for the tag definitions."""
-
-        return '/extensions/tags/gcb/resources/iframe.png'
+        return self.create_icon_url('iframe.png')
 
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(IFrame.name())
-        reg.add_property(
-            schema_fields.SchemaField('src', 'Source URL', 'string',
+        reg.add_property(schema_fields.SchemaField(
+            'src', 'Source URL', 'string',
             optional=True,
             description='Provide source URL for iframe (including http/https)'))
-        reg.add_property(
-            schema_fields.SchemaField('title', 'Title', 'string',
+        reg.add_property(schema_fields.SchemaField(
+            'title', 'Title', 'string',
             optional=True,
             description='Provide title of iframe'))
-        reg.add_property(
-            schema_fields.SchemaField(
-                'height', 'Height', 'string',
-                optional=True,
-                extra_schema_dict_values={'value': '400'},
-                description=('Height of the iframe')))
-        reg.add_property(
-            schema_fields.SchemaField(
-                'width', 'Width', 'string',
-                optional=True,
-                extra_schema_dict_values={'value': '650'},
-                description=('Width of the iframe')))
+        reg.add_property(schema_fields.SchemaField(
+            'height', 'Height', 'string',
+            optional=True,
+            extra_schema_dict_values={'value': '400'},
+            description=('Height of the iframe')))
+        reg.add_property(schema_fields.SchemaField(
+            'width', 'Width', 'string',
+            optional=True,
+            extra_schema_dict_values={'value': '650'},
+            description=('Width of the iframe')))
         return reg
 
 
-class Include(tags.BaseTag):
+class Include(CoreTag):
 
     def render(self, node, handler):
         template_path = re.sub('^/+', '', node.attrib.get('path'))
@@ -362,7 +370,7 @@ class Include(tags.BaseTag):
         return tags.html_string_to_element_tree(html_text)
 
     def get_icon_url(self):
-        return '/extensions/tags/gcb/resources/include.png'
+        return self.create_icon_url('include.png')
 
     def get_schema(self, handler):
         expected_prefix = os.path.join(appengine_config.BUNDLE_ROOT,
@@ -376,12 +384,47 @@ class Include(tags.BaseTag):
                 select_data.append((name, name.replace('/assets/html/', '')))
 
         reg = schema_fields.FieldRegistry(Include.name())
-        reg.add_property(
-            schema_fields.SchemaField(
-                'path', 'File Path', 'string', optional=False,
-                select_data=select_data,
-                description='Select a file from within assets/html.  '
-                'The contents of this file will be inserted verbatim '
-                'at this point.  Note: HTML files for inclusion may '
-                'also be uploaded as assets.'))
+        reg.add_property(schema_fields.SchemaField(
+            'path', 'File Path', 'string', optional=False,
+            select_data=select_data,
+            description='Select a file from within assets/html.  '
+            'The contents of this file will be inserted verbatim '
+            'at this point.  Note: HTML files for inclusion may '
+            'also be uploaded as assets.'))
         return reg
+
+
+custom_module = None
+
+
+def register_module():
+    """Registers this module in the registry."""
+
+    custom_tags = [
+        GoogleDoc, GoogleSpreadsheet, YouTube, Html5Video, GoogleGroup,
+        IFrame, Include]
+
+    def make_binding_name(custom_tag):
+        return 'gcb-%s' % custom_tag.__name__.lower()
+
+    def on_module_disable():
+        for custom_tag in custom_tags:
+            tags.Registry.remove_tag_binding(make_binding_name(custom_tag))
+
+    def on_module_enable():
+        for custom_tag in custom_tags:
+            tags.Registry.add_tag_binding(
+                make_binding_name(custom_tag), custom_tag)
+
+    global custom_module
+
+    global_routes = [(
+        os.path.join(RESOURCE_FOLDER, '.*'), tags.ResourcesHandler)]
+
+    custom_module = custom_modules.Module(
+        'Core Custom Tags Module',
+        'A module that provides core custom tags.',
+        global_routes, [],
+        notify_module_enabled=on_module_enable,
+        notify_module_disabled=on_module_disable)
+    return custom_module

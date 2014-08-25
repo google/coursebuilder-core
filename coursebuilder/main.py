@@ -23,7 +23,6 @@ import webapp2
 # The following import is needed in order to add third-party libraries.
 import appengine_config  # pylint: disable-msg=unused-import
 
-from common import tags
 from controllers import sites
 from models import analytics
 from models import custom_modules
@@ -58,16 +57,12 @@ if appengine_config.gcb_appstats_enabled():
         assert '.*' == path[:2]
         appstats_routes.append(('/admin/stats/%s' % path[3:], handler))
 
-# tag extension resource routes
-extensions_routes = [(
-    '/extensions/tags/.*/resources/.*', tags.ResourcesHandler)]
-
 # i18n configuration for jinja2
 webapp2_i18n_config = {'translations_path': os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')}
 
 # init application
 app = webapp2.WSGIApplication(
-    global_routes + extensions_routes + appstats_routes + app_routes,
+    global_routes + appstats_routes + app_routes,
     config={'webapp2_extras.i18n': webapp2_i18n_config},
     debug=not appengine_config.PRODUCTION_MODE)
