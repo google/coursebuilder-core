@@ -54,10 +54,10 @@ class MathTagTests(actions.TestBase):
         math_lesson = self.course.add_lesson(math_unit)
         math_lesson.title = 'First lesson with mathematical formula'
         math_lesson.objectives = r"""
-<gcb_math
+<gcb-math
     input_type="TeX" choose_mode="Inline"
     formula="x^2+2x+1" instanceid="X99HibNGBIX4">
-</gcb_math><br>
+</gcb-math><br>
 """
         self.course.save()
 

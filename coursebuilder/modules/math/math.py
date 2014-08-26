@@ -34,7 +34,7 @@ MATHJAX_URI = MATH_MODULE_URI + '/MathJax'
 class MathTag(tags.ContextAwareTag):
     """Custom tag for mathematical notation using MathJax."""
 
-    binding_name = 'gcb_math'
+    binding_name = 'gcb-math'
 
     @classmethod
     def name(cls):
@@ -99,9 +99,9 @@ def register_module():
     global_routes = [
         (RESOURCES_URI + '/.*', tags.ResourcesHandler),
         (MATHJAX_URI + '/(fonts/.*)', sites.make_zip_handler(os.path.join(
-            appengine_config.BUNDLE_ROOT, 'lib', 'MathJax-fonts.zip'))),
+            appengine_config.BUNDLE_ROOT, 'lib', 'mathjax-fonts-2.3.0.zip'))),
         (MATHJAX_URI + '/(.*)', sites.make_zip_handler(os.path.join(
-            appengine_config.BUNDLE_ROOT, 'lib', 'MathJax.zip')))]
+            appengine_config.BUNDLE_ROOT, 'lib', 'mathjax-2.3.0.zip')))]
     namespaced_routes = []
 
     global custom_module
