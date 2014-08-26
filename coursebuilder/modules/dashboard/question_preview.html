@@ -20,7 +20,7 @@
     <script>
       $(function() {
         function resizeModal() {
-          containerIframe.height($(document).height());
+          containerIframe.height(document.body.clientHeight);
         }
         var containerIframe = $(window.parent.document).find(
           "#modal-window iframe");
