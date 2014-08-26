@@ -902,6 +902,9 @@ class DashboardHandler(
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
 
+        all_questions = QuestionDAO.get_all()
+        all_question_groups = QuestionGroupDAO.get_all()
+
         output = safe_dom.NodeList().append(
             safe_dom.Element(
                 'a', className='gcb-button gcb-pull-right',
@@ -914,9 +917,9 @@ class DashboardHandler(
             ).add_text('Add Short Answer')
         ).append(self._create_filter()).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
-        ).append(
-            safe_dom.Element('h3').add_text('Question Bank')
-        )
+        ).append(safe_dom.Element('h3').add_text(
+            'Questions (%s)' % len(all_questions)
+        ))
 
         # Create questions table
         table = self._add_assets_table(
@@ -929,9 +932,6 @@ class DashboardHandler(
             data_qg_xsrf_token=self.create_xsrf_token('add_to_question_group'))
         tbody = safe_dom.Element('tbody')
         table.add_child(tbody)
-
-        all_questions = QuestionDAO.get_all()
-        all_question_groups = QuestionGroupDAO.get_all()
 
         table.add_child(self._create_empty_footer(
             'No questions available', 5, all_questions))
@@ -1003,6 +1003,9 @@ class DashboardHandler(
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
 
+        # TODO(jorr): Hook this into the datastore
+        all_question_groups = QuestionGroupDAO.get_all()
+
         output = safe_dom.NodeList()
         output.append(
             safe_dom.Element(
@@ -1014,9 +1017,9 @@ class DashboardHandler(
                 'div', style='clear: both; padding-top: 2px;'
             )
         )
-        output.append(
-            safe_dom.Element('h3').add_text('Question Groups')
-        )
+        output.append(safe_dom.Element('h3').add_text(
+            'Question Groups (%s)' % len(all_question_groups)
+        ))
 
         # Create question groups table
         table = self._add_assets_table(
@@ -1026,9 +1029,6 @@ class DashboardHandler(
         )
         tbody = safe_dom.Element('tbody')
         table.add_child(tbody)
-
-        # TODO(jorr): Hook this into the datastore
-        all_question_groups = QuestionGroupDAO.get_all()
 
         if not all_question_groups:
             table.add_child(self._create_empty_footer(
