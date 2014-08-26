@@ -94,10 +94,11 @@
     </div>
     {% endif %}
     <div id='modal-window'>
-      <div id='background'></div>
-      <div id="container">
+      <div id='modal-background'></div>
+      <div id="modal-container">
         <button class="close-button">X</button>
-        <div id='content'></div>
+        <div id='question-preview'></div>
+        <div id="add-to-group">{% include 'add_to_group.html' %}</div>
       </div>
     </div>
     {% include 'question_filter.html' %}

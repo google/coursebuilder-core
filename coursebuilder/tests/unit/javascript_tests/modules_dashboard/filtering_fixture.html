@@ -4,7 +4,6 @@
 <table class="assets-table" id="question-table" data-groups='[[1,"Test Group 1"], [2, "Test Group 2"]]' data-lessons-map='{"1": [[2, "First lesson"], [3, "Second lesson"]], "4": [[5, "Third lesson"]]}' data-types='[[0, "Multiple Choice"], [1, "Short Answer"]]' data-units='[[1, "Unit One"], [4, "Unit Two"], [6, "Unit Three"]]'>
   <thead></thead>
   <tbody>
-    <tr class="empty" style="display: none"></tr>
     <tr id="a" data-filter='{"groups": [1], "type": 0, "description": "one", "units": [1], "lessons": [2], "unused": 0}'></tr>
     <tr id="b" data-filter='{"groups": [2], "type": 0, "description": "two", "units": [4], "lessons": [5], "unused": 0}'></tr>
     <tr id="c" data-filter='{"groups": [1], "type": 1, "description": "three", "units": [1], "lessons": [3], "unused": 0}'></tr>
@@ -12,6 +11,9 @@
     <tr id="e" data-filter='{"groups": [], "type": 0, "description": "five", "units": [], "lessons": [], "unused": 1}'></tr>
     <tr id="f" data-filter='{"groups": [], "type": 1, "description": "six-x-", "units": [], "lessons": [], "unused": 1}'></tr>
   </tbody>
+  <tfoot style="display: none">
+    <tr></tr>
+  </tfoot>
 </table>
 <div id="question-filter-popup" class="filter-popup">
   <button class="close-button"></button>

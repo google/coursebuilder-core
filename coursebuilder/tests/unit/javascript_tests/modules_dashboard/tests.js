@@ -117,7 +117,7 @@ describe('asset table sorting', function() {
   });
   it('sorts the first column in ascending order', function() {
     var column_header = $('#x');
-    sortTable(column_header);
+    sortTable(column_header, true);
     expect(column_header.hasClass("sort-asc")).toBe(true);
     expect($('#b').index()).toBe(0);
     expect($('#c').index()).toBe(1);
@@ -125,8 +125,7 @@ describe('asset table sorting', function() {
   });
   it('sorts the first column in descending order', function() {
     var column_header = $('#x');
-    sortTable(column_header);
-    sortTable(column_header);
+    sortTable(column_header, false);
     expect(column_header.hasClass("sort-desc")).toBe(true);
     expect($('#b').index()).toBe(2);
     expect($('#c').index()).toBe(1);
@@ -134,7 +133,7 @@ describe('asset table sorting', function() {
   });
   it('sorts the second column in ascending order', function() {
     var column_header = $('#y');
-    sortTable(column_header);
+    sortTableByClick.call(column_header);
     expect(column_header.hasClass("sort-asc")).toBe(true);
     expect($('#c').index()).toBe(0);
     expect($('#a').index()).toBe(1);
@@ -142,8 +141,8 @@ describe('asset table sorting', function() {
   });
   it('sorts the second column in descending order', function() {
     var column_header = $('#y');
-    sortTable(column_header);
-    sortTable(column_header);
+    sortTableByClick.call(column_header);
+    sortTableByClick.call(column_header);
     expect(column_header.hasClass("sort-desc")).toBe(true);
     expect($('#c').index()).toBe(2);
     expect($('#a').index()).toBe(1);
@@ -151,8 +150,7 @@ describe('asset table sorting', function() {
   });
   it('sorts the timestamp column in descending order', function() {
     var column_header = $('#timestamped');
-    sortTable(column_header);
-    sortTable(column_header);
+    sortTable(column_header, false);
     expect(column_header.hasClass("sort-desc")).toBe(true);
     expect($('#a').index()).toBe(2);
     expect($('#c').index()).toBe(1);
@@ -318,6 +316,29 @@ describe('question table filtering', function() {
 
     this.groupField.val("1").trigger("change");
     expect(table.find("tr:visible").size()).toBe(1);
-    expect(table.find("tr:visible").hasClass("empty")).toBe(true);
+    expect(table.find("tfoot tr").is(":visible")).toBe(true);
+  });
+});
+
+describe('adding a question to a question group', function() {
+  beforeEach(function() {
+    cbShowAlert = jasmine.createSpy("cbShowAlert");
+    cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
+    closeModal = jasmine.createSpy("closeModal");
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
+        + 'add_to_group_fixture.html');
+  });
+  it('receives a successful response to add_to_question_group', function() {
+    addToGroupCallback(
+      '{"status": 200, "payload":"{\\"question-id\\": 2, \\"group-id\\": 3}"}');
+    expect($("#question-table td.groups ul:nth-child(1) li").size()).toBe(1);
+    expect(
+      $("#question-group-table td.questions ul:first-child li").size()).toBe(1);
+    expect(cbShowMsgAutoHide).toHaveBeenCalled();
+  });
+  it('receives an unsuccessful response to add_to_question_group', function() {
+    addToGroupCallback('{"status": 500, "message": "error"}');
+    expect(cbShowAlert).toHaveBeenCalledWith("Error: error");
   });
 });

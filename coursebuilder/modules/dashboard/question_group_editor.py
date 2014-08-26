@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 from common import schema_fields
+from models import transforms
 from models.models import QuestionDAO
 from models.models import QuestionGroupDAO
 from modules.dashboard import dto_editor
@@ -40,6 +41,56 @@ class QuestionGroupManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     def get_edit_question_group(self):
         self.render_page(self.qgmae_prepare_template(self.request.get('key')),
                          'assets', 'questions')
+
+    def post_add_to_question_group(self):
+        try:
+            question_id = long(self.request.get('question_id'))
+            question_dto = QuestionDAO.load(question_id)
+            if question_dto is None:
+                raise ValueError()
+        except ValueError:
+            transforms.send_json_response(
+                self, 500, 'Invalid question id.',
+                {'question-id': self.request.get('question_id')}
+            )
+            return
+
+        try:
+            group_id = long(self.request.get('group_id'))
+            group_dto = QuestionGroupDAO.load(group_id)
+            if group_dto is None:
+                raise ValueError()
+        except ValueError:
+            transforms.send_json_response(
+                self, 500, 'Invalid question group id.',
+                {'group-id': self.request.get('group_id')}
+            )
+            return
+
+        weight = self.request.get('weight')
+        try:
+            float(weight)
+        except ValueError:
+            transforms.send_json_response(
+                self, 500, 'Invalid weight. Must be a numeric value.', {
+                    'weight': weight})
+            return
+
+        group_dto.add_question(question_id, weight)
+        QuestionGroupDAO.save(group_dto)
+
+        transforms.send_json_response(
+            self,
+            200,
+            '%s added to %s.' % (
+                question_dto.description, group_dto.description
+            ),
+            {
+                'group-id': group_dto.id,
+                'question-id': question_dto.id
+            }
+        )
+        return
 
 
 class QuestionGroupRESTHandler(dto_editor.BaseDatastoreRestHandler):

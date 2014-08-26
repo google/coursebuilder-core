@@ -194,19 +194,22 @@ div#formContainer div.settings-list-item fieldset legend span {
   background-repeat: no-repeat;
   display: inline-block;
   vertical-align: bottom;
+  cursor: pointer;
 }
 .icon-edit {
   background-image: url('/modules/dashboard/resources/images/pencil.png');
 }
 .icon-preview {
   background-image: url('/modules/dashboard/resources/images/eye.png');
-  cursor: pointer;
+}
+.icon-add {
+  background-image: url('/modules/dashboard/resources/images/add.png');
 }
 .icon-clone {
   background-image: url('/modules/dashboard/resources/images/page_copy.png');
 }
-.icon-draft-status.active {
-  cursor: pointer;
+.icon.inactive {
+  cursor: auto;
 }
 .icon-locked, .icon-unlocked {
   background-image: url('/modules/dashboard/resources/images/lock.png');
@@ -228,6 +231,7 @@ div#formContainer div.settings-list-item fieldset legend span {
 }
 .assets-table td {
   padding: 5px 10px;
+  vertical-align: top
 }
 .assets-table th {
   padding: 5px 15px;
@@ -237,7 +241,7 @@ div#formContainer div.settings-list-item fieldset legend span {
 .assets-table li {
   margin: 0px;
 }
-.assets-table .icon {
+.assets-table td:first-child .icon {
   margin: 0px 5px 0px 0px;
 }
 .assets-table .sort-desc, .assets-table .sort-asc {
@@ -259,7 +263,7 @@ div#formContainer div.settings-list-item fieldset legend span {
 #modal-window {
   display: none;
 }
-#modal-window > #background {
+#modal-background {
   position: fixed;
   top: 0;
   left: 0;
@@ -270,7 +274,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   filter: alpha(opacity=50);
   z-index: 1000;
 }
-#modal-window > #container {
+#modal-container {
   border: 2px inset;
   border-radius: 10px;
   position: fixed;
@@ -296,13 +300,17 @@ div#formContainer div.settings-list-item fieldset legend span {
   outline: none;
   padding: 5px;
 }
-#modal-window #content > iframe {
+#modal-container > div > iframe {
   width: 100%;
   border: none;
 }
 .filter-container {
   position: relative;
   overlfow: auto;
+}
+#add-to-group form div {
+  display: inline-block;
+  text-align: left;
 }
 .filter-popup {
   display: none;
@@ -317,26 +325,35 @@ div#formContainer div.settings-list-item fieldset legend span {
   -webkit-box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
   box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
-.filter-popup label span {
+.form-popup label span {
   display: inline-block;
   width  : 120px;
   text-align: right;
   margin-right: 5px;
 }
-.filter-popup input[type="text"] {
+.form-popup input[type="text"] {
   width: 216px;
   margin: 0px;
 }
-.filter-popup input[type="checkbox"] {
+.form-popup input[type="checkbox"] {
   margin: 3px 0px;
 }
-.filter-popup select {
+.form-popup select {
   width: 220px;
   margin: 0px;
 }
-.filter-popup .buttons {
+.form-popup .buttons {
   margin-left: 121px;
 }
-.filter-popup .buttons .gcb-button {
+.form-popup .buttons .gcb-button {
   display: inline-block;
+}
+.form-popup > fieldset {
+  border:none;
+  border-top: solid 1px #999999;
+}
+.form-popup legend {
+  color: #505050;
+  font-weight: bold;
+  text-align: left;
 }

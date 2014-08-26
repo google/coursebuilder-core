@@ -26,92 +26,83 @@ function setDraftStatusCallback(data, padlock) {
   cbShowMsgAutoHide(response.message);
 }
 
-/**
- * Toggle draft status on click on padlock icon.
- */
-function setUpDraftStatus() {
-  $(".icon-draft-status.active").on("click", function(e) {
-    var padlock = $(this);
-    var setDraft = $(this).hasClass("icon-unlocked");
-    $.post(
-      "dashboard",
-      {
-        action: "set_draft_status",
-        key: $(this).data("key"),
-        type: $(this).data("component-type"),
-        set_draft: setDraft ? 1 : 0,
-        xsrf_token: $(this).parents("#course-outline").data(
-          "status-xsrf-token")
-      },
-      function(data) {
-        setDraftStatusCallback(data, padlock);
-      },
-      "text"
-    );
-  });
-}
-
-/**
- * Fills in local times using data-timestamp attribute.
- */
-function setLocalTimes() {
-  $(".assets-table tbody .timestamp").each(function() {
-    if ($(this).data("timestamp")) {
-      $(this).html((new Date(
-        parseFloat($(this).data("timestamp"))*1000)).toLocaleString());
-    }
-  });
-}
-function openModal(modal) {
+function openModal() {
   // Bind Esc press to close window
   $(document).on("keyup.modal", function(e) {
     if (e.keyCode == ESC_KEY) {
-        closeModal(modal);
+        closeModal();
     }
   });
-  modal.show();
+  $("#modal-window").show();
 }
 
-function closeModal(modal) {
-  modal.hide();
+function closeModal() {
+  $("#modal-window, #modal-container > div").hide();
   //Remove Esc binding
   $(document).off("keyup.modal");
-  modal.find("#content").empty();
+}
+
+function insertSorted(parentElement, newChild) {
+  var inserted = false;
+  parentElement.children().each(function() {
+    if($(this).text() > newChild.text()) {
+      newChild.insertBefore($(this));
+      inserted = true;
+      return false;
+    }
+  });
+  if (!inserted) {
+    parentElement.append(newChild);
+  }
+}
+
+function addToGroupCallback(data) {
+  var response = parseJson(data);
+  if (response.status != 200) {
+    cbShowAlert("Error: " + response.message);
+  } else {
+    cbShowMsgAutoHide(response.message);
+    var payload = parseJson(response.payload);
+    var questionRow = $(
+      "#question-table tr[data-quid='" + payload["question-id"] + "']");
+    var groupRow = $(
+      "#question-group-table tr[data-qgid='" + payload["group-id"] + "']");
+    // Add group description to question's list of groups
+    insertSorted(
+      questionRow.find("td.groups ul"),
+      $("<li/>").text(groupRow.find("td.description").text())
+    );
+    updateSortTable($("#question-table th").eq(1));
+    // Add question description to group's list of questions
+    insertSorted(
+      groupRow.find("td.questions ul"),
+      $("<li/>").text(questionRow.find("td.description").text())
+    );
+    updateSortTable($("#question-group-table th").eq(1));
+  }
+  closeModal();
+  $("#add-to-group .submit").prop("disabled", false);
 }
 
 /**
- * Sets up handlers for modal window.
+ * Click handler that sorts a column based on the clicked column header.
  */
-function setUpModalWindow() {
-  var modal = $("#modal-window");
-  // Bind preview button to show question preview
-  $(".icon-preview").on("click", function(e) {
-    openModal(modal);
-    var params = {action: "question_preview", quid: $(this).data("quid")};
-    modal.find("#content").html($("<iframe />").attr(
-      {id: "question-preview", src: "dashboard?" + $.param(params)}));
-  });
-  // Bind click on background and on close button to close window
-  modal.find("#background, .close-button").on("click", function(e) {
-    closeModal(modal);
-  });
-}
-
-/**
- * Sorts a column based on the clicked header cell.
- */
-function sortTable(clickedHeader) {
-  var columnIndex = clickedHeader.index();
-  var tableBody = clickedHeader.closest(".assets-table").find("tbody");
+function sortTableByClick() {
   var sortAscending = true;
   // On click always sort ascending, unless it's already sorted ascending
-  if (clickedHeader.hasClass("sort-asc")) {
+  if ($(this).hasClass("sort-asc")) {
     sortAscending = false;
   }
+  sortTable($(this), sortAscending)
+}
+
+function sortTable(columnHeader, sortAscending) {
+  var tableBody = columnHeader.closest(".assets-table").find("tbody");
+  var columnIndex = columnHeader.index();
   // Remove any sorting classes from any column
-  clickedHeader.parent().children().removeClass("sort-desc sort-asc");
+  columnHeader.parent().children().removeClass("sort-desc sort-asc");
   // Attach relevant sorting class
-  clickedHeader.addClass(sortAscending ? "sort-asc" : "sort-desc");
+  columnHeader.addClass(sortAscending ? "sort-asc" : "sort-desc");
   // Do the actual sorting
   tableBody.find("tr").sort(function(rowA, rowB) {
     var tdA = $(rowA).find("td").eq(columnIndex);
@@ -135,16 +126,140 @@ function sortTable(clickedHeader) {
 }
 
 /**
+ * Resorts a table according to the sorting class of the supplied column header.
+ */
+function updateSortTable(columnHeader) {
+  if (columnHeader.hasClass("sort-asc")) {
+    sortTable(columnHeader, true);
+  } else if (columnHeader.hasClass("sort-desc")) {
+    sortTable(columnHeader, false);
+  }
+}
+
+/**
+ * Adds <option>s to a <select>.
+ *
+ * @param {JQuery object} select the <select> element to add to.
+ * @param {array} data an array of arrays, where the first element defines
+ * the value of the <select> and the second the text.
+ */
+function appendOptions(select, data) {
+  $.each(data, function() {
+    select.append($("<option/>").val(this[0]).text(this[1]))
+  });
+}
+
+/**
+ * Toggle draft status on click on padlock icon.
+ */
+function setUpDraftStatus() {
+  $(".icon-draft-status:not(.inactive)").on("click", function(e) {
+    var padlock = $(this);
+    var setDraft = $(this).hasClass("icon-unlocked");
+    $.post(
+      "dashboard",
+      {
+        action: "set_draft_status",
+        key: $(this).data("key"),
+        type: $(this).data("component-type"),
+        set_draft: setDraft ? 1 : 0,
+        xsrf_token: $(this).parents("#course-outline").data(
+          "status-xsrf-token")
+      },
+      function(data) {
+        setDraftStatusCallback(data, padlock);
+      },
+      "text"
+    );
+  });
+}
+
+/**
+ * Fills in local times using data-timestamp attribute.
+ */
+function setUpLocalTimes() {
+  $(".assets-table tbody .timestamp").each(function() {
+    if ($(this).data("timestamp")) {
+      $(this).html((new Date(
+        parseFloat($(this).data("timestamp"))*1000)).toLocaleString());
+    }
+  });
+}
+
+/**
+ * Sets up handlers for modal window.
+ */
+function setUpModalWindow() {
+  // Bind click on background and on close button to close window
+  $("#modal-background, #modal-window .close-button").on("click", function(e) {
+    closeModal();
+  });
+  $("#modal-container > div").hide();
+}
+
+function setUpQuestionPreview() {
+  // Bind preview button to show question preview
+  $(".icon-preview").on("click", function(e) {
+    openModal();
+    var params = {
+        action: "question_preview",
+        quid: $(this).closest("tr").data("quid")
+    };
+    $("#question-preview").html($("<iframe />").attr(
+      {id: "question-preview", src: "dashboard?" + $.param(params)})).show();
+  });
+}
+
+function setUpAddToGroup() {
+
+  function addBindings() {
+    $(".icon-add").on("click", function(e) {
+      openModal();
+      var popup = $("#add-to-group");
+      popup.find(".question").val($(this).closest("tr").data("quid"));
+      popup.show();
+    });
+
+    $("#add-to-group .submit").on("click", function(e) {
+      e.preventDefault();
+      $("#add-to-group .submit").prop("disabled", true);
+      $.post(
+        "dashboard",
+        {
+          action: "add_to_question_group",
+          group_id: $("#add-to-group .group").val(),
+          weight: $("#add-to-group .weight").val(),
+          question_id: $("#add-to-group .question").val(),
+          xsrf_token: $("#question-table").data("qg-xsrf-token")
+        },
+        addToGroupCallback,
+        "text"
+      );
+    });
+  }
+
+  function populateDropdowns() {
+    appendOptions(
+      $("#add-to-group .group"), $("#question-table").data("groups"));
+    appendOptions(
+      $("#add-to-group .question"), $("#question-table").data("questions"));
+  }
+
+  if($("#question-table").size() == 1) {
+    populateDropdowns();
+    addBindings();
+  }
+};
+
+/**
  * Sets up table sorting and default sorting order.
  */
 function setUpTableSorting() {
   // Sort table on header click
-  $(".assets-table th").on("click", function(e) {
-    sortTable($(this));
-  });
+  $(".assets-table th").on("click", sortTableByClick);
   // Default: sort ascending on first column
   $(".assets-table th:first-child").each(function() {
-    sortTable($(this));
+    sortTable($(this), true);
   });
 }
 
@@ -163,19 +278,6 @@ function setUpFiltering() {
   function closeFilter(filterPopup) {
     filterPopup.hide(200);
     $(document).off("click.filter");
-  }
-
-  /**
-   * Adds <option>s to a <select>.
-   *
-   * @param {JQuery object} select the <select> element to add to.
-   * @param {array} data an array of arrays, where the first element defines
-   * the value of the <select> and the second the text.
-   */
-  function appendOptions(select, data) {
-    $.each(data, function() {
-      select.append($("<option/>").val(this[0]).text(this[1]))
-    });
   }
 
   function setDefaultOption(select) {
@@ -212,13 +314,8 @@ function setUpFiltering() {
     $("#question-table tbody tr").each(function() {
       // Get filter data for row
       var rowData = $(this).data("filter");
-      // Make sure the row is first visible (unless it's the empty row)
-      if (rowData) {
-        $(this).show();
-      } else {
-        $(this).hide();
-        return true;
-      }
+      // Make sure the row is first visible
+      $(this).show();
       // Filter checkbox unused
       if (isUnusedFilter && rowData.unused != 1) {
         $(this).hide();
@@ -253,7 +350,9 @@ function setUpFiltering() {
       }
     });
     if ($("#question-table tbody tr:visible").size() == 0) {
-      $("#question-table tbody tr.empty").show();
+      $("#question-table tfoot").show();
+    } else {
+      $("#question-table tfoot").hide();
     }
   }
 
@@ -363,8 +462,10 @@ function setUpFiltering() {
 
 function init() {
   setUpDraftStatus();
-  setLocalTimes();
+  setUpLocalTimes();
   setUpModalWindow();
+  setUpQuestionPreview();
+  setUpAddToGroup();
   setUpTableSorting();
   setUpFiltering();
 };

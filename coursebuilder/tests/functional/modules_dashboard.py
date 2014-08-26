@@ -150,10 +150,10 @@ class QuestionDashboardTestCase(actions.TestBase):
     def test_no_questions_and_question_groups(self):
         asset_tables = self._load_tables()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td').text, 'No questions available'
+            asset_tables[0].find('./tfoot/tr/td').text, 'No questions available'
         )
         self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td').text,
+            asset_tables[1].find('./tfoot/tr/td').text,
             'No question groups available'
         )
 
@@ -167,7 +167,7 @@ class QuestionDashboardTestCase(actions.TestBase):
             asset_tables[0].findall('./tbody/tr/td/a')[1].tail, description
         )
         self.assertEquals(
-            asset_tables[1].find('./tbody/tr/td').text,
+            asset_tables[1].find('./tfoot/tr/td').text,
             'No question groups available'
         )
 
@@ -178,7 +178,7 @@ class QuestionDashboardTestCase(actions.TestBase):
         }))
         asset_tables = self._load_tables()
         self.assertEquals(
-            asset_tables[0].find('./tbody/tr/td').text, 'No questions available'
+            asset_tables[0].find('./tfoot/tr/td').text, 'No questions available'
         )
         self.assertEquals(
             asset_tables[1].find('./tbody/tr/td/a').tail, description
@@ -257,6 +257,77 @@ class QuestionDashboardTestCase(actions.TestBase):
         clone_link = dom.find('.//a[@class="icon icon-clone"]')
         response = self.get(clone_link.get('href'), response).follow()
         self.assertIn(mc_question_description + ' (clone)', response.body)
+
+    def _call_add_to_question_group(self, qu_id, qg_id, weight, xsrf_token):
+        return self.post('dashboard', {
+            'action': 'add_to_question_group',
+            'question_id': qu_id,
+            'group_id': qg_id,
+            'weight': weight,
+            'xsrf_token': xsrf_token,
+        }, True)
+
+    def test_add_to_question_group(self):
+        # Create a question
+        question_description = 'Question'
+        question_dto = models.QuestionDTO(None, {
+            'description': question_description,
+            'type': 0  # MC
+        })
+        question_id = models.QuestionDAO.save(question_dto)
+
+        # No groups are present so no add_to_group icon should be present
+        self.assertIsNone(self._load_tables()[0].find('./tbody/tr/td[ul]div'))
+
+        # Create a group
+        qg_description = 'Question Group'
+        qg_dto = models.QuestionGroupDTO(None, {
+            'description': qg_description,
+            'items': []
+        })
+        qg_id = models.QuestionGroupDAO.save(qg_dto)
+
+        # Since we now have a group, the add_to_group icon should be visible
+        self.assertIsNotNone(
+            self._load_tables()[0].find('./tbody/tr/td[ul]/div'))
+
+        # Add Question to Question Group via post_add_to_question_group
+        asset_tables = self._load_tables()
+        xsrf_token = asset_tables[0].get('data-qg-xsrf-token', '')
+        response = self._call_add_to_question_group(
+            question_id, qg_id, 1, xsrf_token)
+
+        # Check if operation was successful
+        self.assertEquals(response.status_int, 200)
+        asset_tables = self._load_tables()
+        self.assertEquals(
+            asset_tables[0].find('./tbody/tr/td/ul/li').text,
+            qg_description
+        )
+        self.assertEquals(
+            asset_tables[1].find('./tbody/tr/td/ul/li').text,
+            question_description
+        )
+
+        # Check a bunch of calls that should fail
+        response = self._call_add_to_question_group(question_id, qg_id, 1, 'a')
+        self.assertEquals(response.status_int, 403)
+
+        response = transforms.loads(self._call_add_to_question_group(
+            -1, qg_id, 1, xsrf_token).body)
+        self.assertEquals(response['status'], 500)
+
+        response = transforms.loads(self._call_add_to_question_group(
+            question_id, -1, 1, xsrf_token).body)
+        self.assertEquals(response['status'], 500)
+
+        response = transforms.loads(self._call_add_to_question_group(
+            'a', qg_id, 1, xsrf_token).body)
+        self.assertEquals(response['status'], 500)
+
+        response = transforms.loads(self._call_add_to_question_group(
+            question_id, qg_id, 'a', xsrf_token).body)
+        self.assertEquals(response['status'], 500)
 
 
 class CourseOutlineTestCase(actions.TestBase):

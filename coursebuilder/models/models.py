@@ -936,11 +936,11 @@ class QuestionDAO(LastModfiedJsonDao):
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
 
     @classmethod
-    def used_by(cls, question_dto_id):
+    def used_by(cls, question_id):
         """Returns the question groups using a question.
 
         Args:
-            question_dto_id: int. Identifier of the question we're testing.
+            question_id: int. Identifier of the question we're testing.
 
         Returns:
             List of question groups. The list of all question groups that use
@@ -950,8 +950,10 @@ class QuestionDAO(LastModfiedJsonDao):
         # ~1ms so practically speaking latency is OK for the admin console.
         matches = []
         for group in QuestionGroupDAO.get_all():
-            if long(question_dto_id) in [long(x) for x in group.question_ids]:
-                matches.append(group)
+            # Add the group the same amount of times as it contains the question
+            matches.extend([group] * (
+                [long(x) for x in group.question_ids].count(long(question_id))
+            ))
 
         return matches
 
@@ -984,6 +986,9 @@ class QuestionGroupDTO(object):
     @property
     def question_ids(self):
         return [item['question'] for item in self.dict.get('items', [])]
+
+    def add_question(self, question_id, weight):
+        self.dict['items'].append({'question': question_id, 'weight': weight})
 
     @property
     def last_modified(self):

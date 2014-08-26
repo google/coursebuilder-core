@@ -111,7 +111,8 @@ class DashboardHandler(
         'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_basic_course_settings', 'add_reviewer',
-        'delete_reviewer', 'edit_admin_preferences', 'set_draft_status']
+        'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
+        'add_to_question_group']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -303,8 +304,8 @@ class DashboardHandler(
         icon = safe_dom.Element(
             'div', data_key=str(key), data_component_type=component_type)
         common_classes = 'icon icon-draft-status'
-        if self.app_context.is_editable_fs():
-            common_classes += ' active'
+        if not self.app_context.is_editable_fs():
+            common_classes += ' inactive'
         if resource.now_available:
             icon.add_attribute(
                 alt=unit_lesson_editor.PUBLISHED_TEXT,
@@ -780,8 +781,14 @@ class DashboardHandler(
         element.add_attribute(
             data_units=transforms.dumps(unit_list + assessment_list),
             data_lessons_map=transforms.dumps(lessons_map),
+            data_questions=transforms.dumps(
+                [(question.id, question.description) for question in sorted(
+                    QuestionDAO.get_all(), key=lambda q: q.description)]
+            ),
             data_groups=transforms.dumps(
-                [(g.id, g.description) for g in QuestionGroupDAO.get_all()]),
+                [(group.id, group.description) for group in sorted(
+                    QuestionGroupDAO.get_all(), key=lambda g: g.description)]
+            ),
             data_types=transforms.dumps([
                 (QuestionDTO.MULTIPLE_CHOICE, 'Multiple Choice'),
                 (QuestionDTO.SHORT_ANSWER, 'Short Answer')])
@@ -801,11 +808,14 @@ class DashboardHandler(
                 '%s: %s' % (unit.title, lesson.title)))
         return links
 
-    def _create_list_cell(self, list_items):
+    def _create_list(self, list_items):
         ul = safe_dom.Element('ul')
         for item in list_items:
             ul.add_child(safe_dom.Element('li').add_child(item))
-        return safe_dom.Element('td').add_child(ul)
+        return ul
+
+    def _create_list_cell(self, list_items):
+        return safe_dom.Element('td').add_child(self._create_list(list_items))
 
     def _create_edit_button(self, edit_url):
         return safe_dom.A(
@@ -815,13 +825,20 @@ class DashboardHandler(
             alt='Edit',
         )
 
-    def _create_preview_button(self, **arg):
+    def _create_add_to_group_button(self):
+        return safe_dom.Element(
+            'div',
+            className='icon icon-add gcb-pull-right',
+            title='Add to question group',
+            alt='Add to question group'
+        )
+
+    def _create_preview_button(self):
         return safe_dom.Element(
             'div',
             className='icon icon-preview',
             title='Preview',
-            alt='Preview',
-            **arg
+            alt='Preview'
         )
 
     def _create_clone_button(self, clone_url):
@@ -870,6 +887,16 @@ class DashboardHandler(
             ).add_text('Filter')
         )
 
+    def _create_empty_footer(self, text, colspan, set_hidden=False):
+        """Creates a <tfoot> that will be visible when the table is empty."""
+        tfoot = safe_dom.Element('tfoot')
+        if set_hidden:
+            tfoot.add_attribute(style='display: none')
+        empty_tr = safe_dom.Element('tr')
+        return tfoot.add_child(empty_tr.add_child(safe_dom.Element(
+            'td', colspan=str(colspan), style='text-align: center'
+        ).add_text(text)))
+
     def list_questions(self):
         """Prepare a list of the question bank contents."""
         if not self.app_context.is_editable_fs():
@@ -898,39 +925,40 @@ class DashboardHandler(
             ('Course Locations', 25), ('Last Modified', 20), ('Type', 5)]
         )
         self._attach_filter_data(table)
+        table.add_attribute(
+            data_qg_xsrf_token=self.create_xsrf_token('add_to_question_group'))
         tbody = safe_dom.Element('tbody')
         table.add_child(tbody)
 
         all_questions = QuestionDAO.get_all()
+        all_question_groups = QuestionGroupDAO.get_all()
 
-        # Add row that is visible when table is empty
-        empty_tr = safe_dom.Element('tr', className='empty')
-        if all_questions:
-            empty_tr.add_attribute(style='display: none')
-        tbody.add_child(empty_tr.add_child(safe_dom.Element(
-            'td', colspan='5', style='text-align: center'
-        ).add_text('No questions available')))
+        table.add_child(self._create_empty_footer(
+            'No questions available', 5, all_questions))
 
         for question in all_questions:
-            tr = safe_dom.Element('tr')
-            # Add description including edit button
-            td = safe_dom.Element('td')
+            tr = safe_dom.Element('tr', data_quid=str(question.id))
+            # Add description including action icons
+            td = safe_dom.Element('td', className='description')
             tr.add_child(td)
             td.add_child(self._create_edit_button(
                 'dashboard?action=edit_question&key=%s' % question.id))
-            td.add_child(
-                self._create_preview_button(data_quid=str(question.id)))
+            td.add_child(self._create_preview_button())
             td.add_child(self._create_clone_button(
                 'dashboard?action=clone_question&key=%s' % question.id))
 
             td.add_text(question.description)
 
             # Add containing question groups
-            groups = QuestionDAO.used_by(question.id)
-            tr.add_child(self._create_list_cell(
+            used_by_groups = QuestionDAO.used_by(question.id)
+            cell = safe_dom.Element('td', className='groups')
+            if all_question_groups:
+                cell.add_child(self._create_add_to_group_button())
+            cell.add_child(self._create_list(
                 [safe_dom.Text(group.description) for group in sorted(
-                    groups, key=lambda g: g.description)]
+                    used_by_groups, key=lambda g: g.description)]
             ))
+            tr.add_child(cell)
 
             # Add locations
             locations = courses.Course(self).get_component_locations(
@@ -963,7 +991,7 @@ class DashboardHandler(
                 filter_info['lessons'].append(lesson.lesson_id)
             filter_info['units'] = list(unit_ids) + [
                 a.unit_id for a in locations['assessments']]
-            filter_info['groups'] = [qg.id for qg in groups]
+            filter_info['groups'] = [qg.id for qg in used_by_groups]
             filter_info['unused'] = 0 if location_links else 1
             tr.add_attribute(data_filter=transforms.dumps(filter_info))
             tbody.add_child(tr)
@@ -1003,15 +1031,13 @@ class DashboardHandler(
         all_question_groups = QuestionGroupDAO.get_all()
 
         if not all_question_groups:
-            tbody.add_child(safe_dom.Element('tr').add_child(safe_dom.Element(
-                'td', colspan='4', style='text-align: center;'
-            ).add_text('No question groups available')))
-            return output
+            table.add_child(self._create_empty_footer(
+                'No question groups available', 4))
 
         for question_group in all_question_groups:
-            tr = safe_dom.Element('tr')
-            # Add description including edit button
-            td = safe_dom.Element('td')
+            tr = safe_dom.Element('tr', data_qgid=str(question_group.id))
+            # Add description including action icons
+            td = safe_dom.Element('td', className='description')
             tr.add_child(td)
             td.add_child(self._create_edit_button(
                 'dashboard?action=edit_question_group&key=%s' % (
@@ -1020,9 +1046,10 @@ class DashboardHandler(
 
             # Add questions
             tr.add_child(self._create_list_cell([
-                safe_dom.Text(QuestionDAO.load(quid).description)
-                for quid in question_group.question_ids
-            ]))
+                safe_dom.Text(descr) for descr in sorted([
+                    QuestionDAO.load(quid).description
+                    for quid in question_group.question_ids])
+            ]).add_attribute(className='questions'))
 
             # Add locations
             locations = courses.Course(self).get_component_locations(
