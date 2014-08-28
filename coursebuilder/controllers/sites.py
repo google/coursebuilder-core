@@ -934,7 +934,7 @@ Note: this value cannot be changed after the course is created."""))
             'For example, consider the following two course entries:')
     ).append(safe_dom.Element('br')).append(
         safe_dom.Element('blockquote').add_text(
-            'course:/cs101::/ns_cs101'
+            'course:/cs101::ns_cs101'
         ).add_child(
             safe_dom.Element('br')
         ).add_text('course:/:/')
