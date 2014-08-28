@@ -28,6 +28,7 @@ import re
 import shutil
 import sys
 import time
+import types
 import urllib
 import zipfile
 
@@ -1887,6 +1888,57 @@ class StudentAspectTest(actions.TestBase):
         assert_contains('Previous Page', response.body)
         assert_does_not_contain('Next Page', response.body)
         assert_contains('End', response.body)
+
+    def test_unit_title_without_index(self):
+        """Tests display of unit/lesson titles when unit index is not shown."""
+        email = 'test_unit_title_without_index@example.com'
+        name = 'test_unit_title_without_index'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = self.get('unit?unit=2&lesson=2')
+        assert_contains('Unit 2 - Interpreting results', response.body)
+
+        with actions.OverriddenEnvironment(
+                {'course': {'display_unit_title_without_index': True}}):
+            response = self.get('unit?unit=2&lesson=2')
+            assert_does_not_contain(
+                'Unit 2 - Interpreting results', response.body)
+            assert_contains('Interpreting results', response.body)
+
+    def test_lesson_title_without_auto_index(self):
+        """Tests display of lesson title when auto indexing is disabled."""
+        email = 'test_lesson_title_without_auto_index@example.com'
+        name = 'test_lesson_title_without_auto_index'
+
+        actions.login(email)
+        actions.register(self, name)
+
+        response = self.get('unit?unit=2&lesson=2')
+        assert_contains('2.1 When search results', response.body)
+        assert_contains('2.2 Thinking more', response.body)
+        assert_contains('2.3 Understand options', response.body)
+
+        old_load = courses.CourseModel12.load
+
+        def new_load(unused_cls, app_context):
+            """Modify auto indexing setting for one lesson."""
+            course = old_load(app_context)
+            lesson = course.get_lessons(2)[1]
+            lesson._auto_index = False  # pylint: disable=protected-access
+            return course
+
+        courses.CourseModel12.load = types.MethodType(
+            new_load, courses.CourseModel12)
+
+        response = self.get('unit?unit=2&lesson=2')
+        assert_contains('2.1 When search results', response.body)
+        assert_does_not_contain('2.2 Thinking more', response.body)
+        assert_contains('Thinking more', response.body)
+        assert_contains('2.3 Understand options', response.body)
+
+        courses.CourseModel12.load = old_load
 
     def test_show_hide_unit_links_on_sidebar(self):
         """Test display of unit links in side bar."""

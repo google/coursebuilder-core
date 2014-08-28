@@ -314,14 +314,23 @@
 
   {% else %}
     <li>
+      {% if is_progress_recorded %}
+        <div class="gcb-progress-icon-holder">
+          <img src="assets/lib/not_started.png"
+             alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+             title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+             class="gcb-progress-icon"
+             id="progress-notstarted-{{lesson.lesson_id}}">
+        </div>
+      {% endif %}
+
       {% if page_type == 'unit' and is_active %}
         <span class="gcb-grayed-active">
       {% else %}
         <span class="gcb-grayed">
       {% endif %}
-
-        {{ lesson.index }} {{ lesson.title }}
-      </span>
+          {{ display_lesson_title(unit, lesson) }}
+        </span>
 
       {% if lesson.activity %}
         <ul>
@@ -333,13 +342,32 @@
               <span class="gcb-grayed">
             {% endif %}
 
-              {# I18N: Menu item. #}
-              {{ gettext('Activity') }}
+            {% if is_progress_recorded %}
+              <div class="gcb-progress-icon-holder">
+                <img src="assets/lib/not_started.png"
+                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet started') }}"
+                   class="gcb-progress-icon"
+                   id="progress-notstarted-{{lesson.lesson_id}}">
+              </div>
+            {% endif %}
+
+              <div
+                {% if is_progress_recorded %}
+                  class="gcb-activity-title-with-progress"
+                {% else %}
+                  class="gcb-activity-title-no-progress"
+                {% endif %}
+              >
+                {# I18N: Menu item. #}
+                {{ gettext('Activity') }}
+              </div>
 
             </span>
           </li>
         </ul>
       {% endif %}
+
     </li>
   {% endif %}
 {%- endmacro %}

@@ -1182,6 +1182,7 @@ class LessonRESTHandler(BaseRESTHandler):
             "objectives" : {
                 "type": "string", "format": "html", "optional": true},
             "notes" : {"type": "string", "optional": true},
+            "auto_index": {"type": "boolean"},
             "activity_title" : {"type": "string", "optional": true},
             "activity_listed" : {"type": "boolean", "optional": true},
             "activity": {"type": "string", "format": "text", "optional": true},
@@ -1237,6 +1238,9 @@ class LessonRESTHandler(BaseRESTHandler):
             (['properties', 'notes', '_inputex'], {
                 'label': 'Notes',
                 'description': messages.LESSON_NOTES_DESCRIPTION}),
+            (['properties', 'auto_index', '_inputex'], {
+                'label': 'Auto Number',
+                'description': messages.LESSON_AUTO_INDEX_DESCRIPTION}),
             (['properties', 'activity_title', '_inputex'], {
                 'label': 'Activity Title',
                 'description': messages.LESSON_ACTIVITY_TITLE_DESCRIPTION}),
@@ -1281,6 +1285,7 @@ class LessonRESTHandler(BaseRESTHandler):
             'objectives': lesson.objectives,
             'video': lesson.video,
             'notes': lesson.notes,
+            'auto_index': lesson.auto_index,
             'activity_title': lesson.activity_title,
             'activity_listed': lesson.activity_listed,
             'activity': activity,
@@ -1328,6 +1333,7 @@ class LessonRESTHandler(BaseRESTHandler):
         lesson.objectives = updates_dict['objectives']
         lesson.video = updates_dict['video']
         lesson.notes = updates_dict['notes']
+        lesson.auto_index = updates_dict['auto_index']
         lesson.activity_title = updates_dict['activity_title']
         lesson.activity_listed = updates_dict['activity_listed']
         lesson.manual_progress = updates_dict['manual_progress']

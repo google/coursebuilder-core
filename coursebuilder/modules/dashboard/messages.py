@@ -131,6 +131,10 @@ Create an activity by entering the correct syntax above.
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
       '#Writing_activities'))
 
+LESSON_AUTO_INDEX_DESCRIPTION = """
+Assign a sequential number to this lesson automatically.
+"""
+
 LESSON_ACTIVITY_LISTED_DESCRIPTION = """
 Whether the activity should be viewable as a stand-alone item in the unit index.
 """

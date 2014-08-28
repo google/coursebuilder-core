@@ -711,6 +711,12 @@ table.gcb-student-data-table {
 .gcb-activity-title-no-progress {
   margin-left: 17px;
 }
+.gcb-lesson-title-with-progress .no-index {
+  margin-left: 14px;
+}
+.gcb-lesson-title-no-progress .no-index {
+  margin-left: 14px;
+}
 
 /* Styles for unit names in in the left menu. */
 #gcb-nav-y.left-menu {

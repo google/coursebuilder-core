@@ -235,9 +235,10 @@ def index_units_and_lessons(course):
 
             lesson_index = 1
             for lesson in course.get_lessons(unit.unit_id):
-                lesson._index = (  # pylint: disable-msg=protected-access
-                    lesson_index)
-                lesson_index += 1
+                if lesson.auto_index:
+                    lesson._index = (  # pylint: disable-msg=protected-access
+                        lesson_index)
+                    lesson_index += 1
 
 
 class AbstractCachedObject(object):
@@ -402,11 +403,16 @@ class Lesson12(object):
 
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
+        self._auto_index = True
         self._index = None
 
     @property
     def now_available(self):
         return True
+
+    @property
+    def auto_index(self):
+        return self._auto_index
 
     @property
     def index(self):
@@ -600,6 +606,22 @@ class CourseModel12(object):
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
 
+    DEFAULT_VALUES = {
+        'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW,
+        'html_content': '',
+        'html_check_answers': False,
+        'html_review_form': '',
+        'properties': {},
+        'labels': '',
+        'pre_assessment': None,
+        'post_assessment': None,
+        'show_contents_on_one_page': False,
+        'manual_progress': False,
+        'description': None,
+        'unit_header': None,
+        'unit_footer': None,
+        }
+
     def __init__(self):
         self.unit_id = 0  # primary key
         self.type = ''
@@ -679,6 +701,13 @@ class Unit13(object):
 class Lesson13(object):
     """An object to represent a Lesson (version 1.3)."""
 
+    DEFAULT_VALUES = {
+        'activity_listed': True,
+        'scored': False,
+        'properties': {},
+        'auto_index': True,
+        'manual_progress': False}
+
     def __init__(self):
         self.lesson_id = 0  # primary key
         self.unit_id = 0  # unit.unit_id of parent
@@ -698,11 +727,12 @@ class Lesson13(object):
 
         # Lessons have 1-based index inside the unit they belong to. An index
         # is automatically computed.
+        self.auto_index = True
         self._index = None
 
         # When manual_progress is set, the user must take an affirmative UI
         # action to mark the lesson as completed.  If not set, a lesson is
-        # consdered completed the first time it is shown to the student.
+        # considered completed the first time it is shown to the student.
         self.manual_progress = False
 
     @property
@@ -753,22 +783,8 @@ class PersistentCourse13(object):
         if unit_dicts:
             for unit_dict in unit_dicts:
                 unit = Unit13()
-                defaults = {
-                    'workflow_yaml': DEFAULT_AUTO_GRADER_WORKFLOW,
-                    'html_content': '',
-                    'html_check_answers': False,
-                    'html_review_form': '',
-                    'properties': {},
-                    'labels': '',
-                    'pre_assessment': None,
-                    'post_assessment': None,
-                    'show_contents_on_one_page': False,
-                    'manual_progress': False,
-                    'description': None,
-                    'unit_header': None,
-                    'unit_footer': None,
-                    }
-                transforms.dict_to_instance(unit_dict, unit, defaults=defaults)
+                transforms.dict_to_instance(
+                    unit_dict, unit, defaults=Unit13.DEFAULT_VALUES)
                 self.units.append(unit)
 
         self.lessons = []
@@ -776,14 +792,8 @@ class PersistentCourse13(object):
         if lesson_dicts:
             for lesson_dict in lesson_dicts:
                 lesson = Lesson13()
-                defaults = {
-                    'activity_listed': True,
-                    'scored': False,
-                    'properties': {},
-                    'manual_progress': False,
-                }
                 transforms.dict_to_instance(
-                    lesson_dict, lesson, defaults=defaults)
+                    lesson_dict, lesson, defaults=Lesson13.DEFAULT_VALUES)
                 self.lessons.append(lesson)
 
     @classmethod

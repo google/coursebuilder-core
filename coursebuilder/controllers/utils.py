@@ -218,10 +218,25 @@ def display_lesson_title(unit, lesson, course_properties=None):
     """Prepare an internationalized display for the unit title."""
     if not course_properties:
         course_properties = _get_course_properties()
-    if course_properties['course'].get('display_unit_title_without_index'):
-        return '%s %s' % (lesson.index, lesson.title)
+
+    content = safe_dom.NodeList()
+    span = safe_dom.Element('span')
+    content.append(span)
+
+    if lesson.auto_index:
+        prefix = ''
+        if course_properties['course'].get('display_unit_title_without_index'):
+            prefix = '%s ' % lesson.index
+        else:
+            prefix = '%s.%s ' % (unit.index, lesson.index)
+        span.add_text(prefix)
+        _class = ''
     else:
-        return '%s.%s %s' % (unit.index, lesson.index, lesson.title)
+        _class = 'no-index'
+
+    span.add_text(lesson.title)
+    span.set_attribute('className', _class)
+    return content
 
 
 class HtmlHooks(object):
