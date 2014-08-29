@@ -1,7 +1,14 @@
-var isPeerAssessmentTable = cb_global.schema.properties.course.properties
-    .certificate_criteria._inputex.is_peer_assessment_table;
+var isPeerAssessmentTable;
 
 $(function() {
+  if (cb_global.schema.properties.course) {
+    // Only activate this functionality on the Settings > Course view
+    init();
+  }
+});
+
+
+function init() {
   var criterionDivs = $(".settings-list-item");
 
   //Initial setup
@@ -23,7 +30,10 @@ $(function() {
     onCustomCriteriaDropdownChanged($(this));
   });
   cb_global.onSaveClick = onCourseSettingsSave;
-});
+
+  isPeerAssessmentTable = cb_global.schema.properties.course.properties
+      .certificate_criteria._inputex.is_peer_assessment_table;
+}
 
 /**
  * Update the form for a individual criterion when the assessment chooser
