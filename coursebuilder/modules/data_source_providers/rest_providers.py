@@ -167,14 +167,6 @@ class LessonsDataSource(data_sources.AbstractSmallRestDataSource):
         return ret, 0
 
 
-# TODO(mgainer): Provide a REST service to list the locations from which
-# questions/question groups are referenced within unit/assessment/lesson
-# HTML contents.  Do this when we decide how to handle question answer
-# entities (which use IDs referencing the point-of-use of questions or
-# question groups in unit/assessment/lesson, rather than the question ID
-# itself.
-
-
 class StudentAssessmentScoresDataSource(
     data_sources.AbstractDbTableRestDataSource):
     """Unpack student assessment scores from student record.

@@ -1,0 +1,404 @@
+<br>
+<style>
+#gcb-gradebook {
+  width: initial;
+  border-collapse: collapse;
+}
+
+#gcb-gradebook .rotate {
+  transform-origin: 0 0;
+  transform: translateY(100px) rotate(-90deg);
+  height: 100px;
+}
+
+#gcb-gradebook .clip {
+  max-width: 1em;
+  overflow: hidden;
+}
+
+#gcb-gradebook .td-total, #gcb-gradebook .td-answers, #gcb-gradebook .td-score
+{
+  vertical-align: bottom;
+}
+
+#gcb-gradebook div.response {
+  max-width: 5em;
+  max-height: 1.2em;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#gcb-gradebook .blank-cell {
+  border-left: 1px dotted #DDD;
+}
+
+#gcb-gradebook-controls {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+#gcb-gradebook .answer-block {
+  position: absolute;
+  max-width: 20em;
+  background: white;
+  z-index: 100;
+  border: 1px solid black;
+  padding: 5px;
+  max-width: initial;
+  max-height: initial;
+  display: none;
+  top: 10px;
+  left: 10px;
+}
+
+#gcb-gradebook .td-answers {
+  position: relative;
+}
+
+#gcb-gradebook .answers:hover .answer-block {
+  display: block;
+}
+
+#gcb-gradebook .col-total {
+  background: #F5F5F5
+}
+
+</style>
+
+<div id="gcb-gradebook-controls">
+  <form action="">
+    <input
+       type="radio"
+       name="responses"
+       id="show_first_response">
+      Show first response<br>
+    <input
+       type="radio"
+       name="responses"
+       id="show_all_responses">
+      Show all responses<br>
+    <input
+       type="radio"
+       name="responses"
+       id="show_latest_response"
+       checked="true">
+      Show latest response<br>
+    <!-- TODO(mgainer): Controls for showing only score, not answers as well.
+         Getting this right means fiddling lots of colspan values in the header,
+         and that's more work than it's worth right now. -->
+  </form>
+</div>
+
+<table
+   id="gcb-gradebook"
+   data-js-vars="{{ gradebook_js_vars }}"
+   >
+  <colgroup>
+    <col span="1"></col> <!-- students -->
+    {% for unit in units %}
+      {% for item in unit.contents %}
+        {% for question in item.questions %}
+          {% if item.tallied %}
+            <col span="1" class="col-answer"></col>
+            <col span="1" class="col-score"></col>
+          {% else %}
+            <col span="1" class="col-answer col-not-tallied"></col>
+            <col span="1" class="col-score col-not-tallied"></col>
+          {% endif %}
+        {% endfor %}
+        {% if unit.contents | length > 1 and item.tallied %}
+          <col span="1" class="col-total"></col>
+        {% endif %}
+      {% endfor %}
+      <col span="1" class="col-total"></col>
+    {% endfor %}
+    <col span="1" class="col-total"></col>
+  </colgroup>
+  <thead>
+    <tr> <!-- Row for top-level unit titles -->
+      <th rowspan="3">
+        Students
+      </th>
+      {% for unit in units %}
+        <th colspan="{{ unit.colspan }}">
+          <a href="{{ unit.href }}">{{ unit.title }}</a>
+        </th>
+      {% endfor %}
+      <th style="border-bottom: none;"></th>
+    </tr>
+
+    <tr> <!-- Row for sub-components of units (lessons, pre/post assmts.) -->
+      {% for unit in units %}
+        {% for item in unit.contents %}
+          <th class="lesson-title" colspan="{{ item.colspan }}">
+            {% if item.title %}
+              <a href="{{ item.href }}">{{ item.title }}</a>
+            {% endif %}
+          </th>
+        {% endfor %}
+        <th rowspan="2">
+          <div class="clip">
+            <div class="rotate">
+              Total
+            </div>
+          </div>
+        </th>
+      {% endfor %}
+      <th style="border-top: none; border-bottom: none;"></th>
+    </tr>
+
+    <tr> <!-- Row for question names -->
+      {% for unit in units %}
+        {% for item in unit.contents %}
+          {% for question in item.questions %}
+            <th colspan="2">
+              <div class="clip">
+                <div class="rotate">
+                  <a href="{{ question.href }}">{{ question.description }}</a>
+                </div>
+              </div>
+            </th>
+          {% endfor %}
+          {% if unit.contents | length > 1 and item.tallied %}
+            <th class="subtotal-title">
+              <div class="clip">
+                <div class="rotate">
+                  Subtotal
+                </div>
+              </div>
+            </th>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      <th style="border-top: none;">
+        <div class="clip">
+          <div class="rotate">
+            Course&nbsp;Total
+          </div>
+        </div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<script>
+//----------------------------------------------------------------------
+// Register controls for show/hide of first/latest/all responses.
+$(document).ready(function(){
+  $('#show_first_response').click(displayResponses);
+  $('#show_all_responses').click(displayResponses);
+  $('#show_latest_response').click(displayResponses);
+});
+
+function displayResponses(){
+  if($('#show_first_response')[0].checked){
+    $('.first-response').css('display', '');
+    $('.nonfirst-response').css('display', 'none');
+  } else if($('#show_latest_response')[0].checked){
+    $('.latest-response').css('display', '');
+    $('.nonlatest-response').css('display', 'none');
+  } else {
+    $('.first-response').css('display', '');
+    $('.nonfirst-response').css('display', '');
+  }
+}
+
+//----------------------------------------------------------------------
+// Build a list of student objects, sorted by student name.  Within
+// each student object, we have a map of answers, keyed on a string of
+// <unit id>.<lesson id>.<question id>.  Keys point to an array of
+// answer objects.  Answers are given in sorted order by timestamp.
+//
+// Having this structure lets us loop by student, and then within
+// that student on the ordered list of unit.lesson.question IDs, looking
+// up the student's answer for that question (if any).
+//
+function buildStudents(){
+  var students = [];
+  var studentsById = {};
+  jQuery.each(gradebookData, function(index, value){
+    if (!(value.user_id in studentsById)){
+      var student = {
+        'name': value.user_name,
+        'answers': {}
+      };
+      students.push(student);
+      studentsById[value.user_id] = student;
+    }
+
+    var student = studentsById[value.user_id];
+    var key = value.unit_id + '.' + value.lesson_id + '.' + value.question_id;
+    if (!(key in student.answers)){
+      student.answers[key] = [];
+    }
+    student.answers[key].push({
+      'timestamp': value.timestamp,
+      'answers': value.answers,
+      'score': value.score,
+      'tallied': value.tallied
+    });
+  });
+  students.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  students.forEach(function(student){
+    jQuery.each(student.answers, function(i, tries){
+      tries.sort(function(a,b){ return a.timestamp - b.timestamp;});
+    });
+  });
+  return students;
+}
+
+//----------------------------------------------------------------------
+// Emit a <td> for a lesson total, unit total, or course total score.
+//
+function emitTotalTd(tr, value){
+  var totalTd = document.createElement('td');
+  tr.appendChild(totalTd);
+  totalTd.className = 'td-total';
+  var div = document.createElement('div');
+  totalTd.appendChild(div);
+  if (!isNaN(value)) {
+    div.appendChild(document.createTextNode(value));
+  } else {
+    totalTd.className += ' blank-cell';
+  }
+}
+
+//----------------------------------------------------------------------
+// Emit a <td> with <div>s for each answer the student has provided for
+// a given question, in order by timestamp, oldest to latest.
+//
+function emitAnswersTd(tr, answerList){
+  // Cell for actual answers to this question
+  var answersTd = document.createElement('td');
+  tr.appendChild(answersTd);
+  answersTd.className = 'td-answers';
+  answerList.forEach(function(answer, index){
+    var div = document.createElement('div');
+    div.className = 'answers response';
+    if (index == 0){
+      div.className += ' first-response';
+    } else {
+        div.className += ' nonfirst-response';
+    }
+    if (index == answerList.length-1){
+      div.className += ' latest-response';
+    } else {
+      div.className += ' nonlatest-response';
+    }
+    div.appendChild(document.createTextNode(answer.answers));
+    answersTd.appendChild(div);
+
+    var hoverSpan = document.createElement('span');
+    hoverSpan.className = 'answer-block';
+    hoverSpan.appendChild(document.createTextNode(answer.answers));
+    div.appendChild(hoverSpan);
+  });
+}
+
+//----------------------------------------------------------------------
+// Emit a <td> with <div>s for each score the student has earned for
+// a given question, in order by timestamp, oldest to latest.
+// Return the total score earned.
+function emitScoreTd(tr, answerList){
+  // Cell for score for this question.
+  var score = 0;
+  var scoreTd = document.createElement('td');
+  tr.appendChild(scoreTd);
+  scoreTd.className = 'td-score';
+  answerList.forEach(function(answer, index){
+    var div = document.createElement('div');
+    div.className = 'response';
+    if (index == 0){
+        div.className += ' first-response';
+    } else {
+        div.className += ' nonfirst-response';
+    }
+    if (index == answerList.length-1){
+      div.className += ' latest-response';
+      if (answer.tallied){
+        score = answer.score;
+      } else {
+        score = 0;
+      }
+    } else {
+      div.className += ' nonlatest-response';
+    }
+    div.appendChild(document.createTextNode(answer.score));
+    scoreTd.appendChild(div);
+  });
+  return score;
+}
+
+//----------------------------------------------------------------------
+// Repaint the gradebook table.
+// This function is called from the analytics framework when each new page
+// of data is made available (in response to user interactions with controls
+// to navigate among pages)
+//
+function gradebook(data){
+  var gradebookJsVars = $('#gcb-gradebook').data('js-vars');
+  questionKeys = gradebookJsVars.question_keys;
+  gradebookData = data.raw_student_answers.data;
+  var students = buildStudents(gradebookData);
+
+  // For each student, paint a row.  Table cells are emitted in the order
+  // given by questionKeys.  These keys are looked up in the student's
+  // answers map.
+  var tbody = $('#gcb-gradebook > tbody');
+  tbody.empty();
+  var prevCellBlank = false;
+  students.forEach(function(student){
+    var tr = document.createElement('tr');
+    tbody[0].appendChild(tr);
+    var name = document.createElement('td');
+    name.appendChild(document.createTextNode(student.name));
+    tr.appendChild(name);
+
+    var courseTotal = NaN;  // use NaN to distinguish beween 0 and no score.
+    var unitTotal = NaN;
+    var subTotal = NaN;
+    questionKeys.forEach(function(key){
+      if (key == 'subtotal'){
+        emitTotalTd(tr, subTotal);
+        prevCellBlank = isNaN(subTotal);
+        subTotal = NaN;
+      } else if (key == 'total'){
+        emitTotalTd(tr, unitTotal);
+        prevCellBlank = isNaN(unitTotal);
+        unitTotal = NaN;
+        subTotal = NaN;
+      } else {
+        var answerList = student.answers[key];
+        if (answerList) {
+          emitAnswersTd(tr, answerList);
+          var score = emitScoreTd(tr, answerList);
+
+          // Accumulate score for totals columns, replacing NaN with a number.
+          subTotal = (subTotal || 0) + score;
+          unitTotal = (unitTotal || 0) + score;
+          courseTotal = (courseTotal || 0) + score;
+          prevCellBlank = false;
+        } else {
+          // Blank answer and score when student has not answered a question.
+          blankTd = document.createElement('td');
+          tr.appendChild(blankTd);
+          blankTd.className = 'td-answers';
+          if (prevCellBlank){
+            blankTd.className += ' blank-cell';
+          }
+          blankTd = document.createElement('td');
+          tr.appendChild(blankTd);
+          blankTd.className = 'td-score blank-cell';
+          prevCellBlank = true;
+        }
+      }
+    });
+    emitTotalTd(tr, courseTotal);
+  });
+  displayResponses();
+}
+</script>

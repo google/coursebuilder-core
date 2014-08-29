@@ -17,18 +17,375 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import ast
+import datetime
+
 from mapreduce import context
 
 from common import schema_fields
 from common import tags
 from models import courses
 from models import data_sources
+from models import entities
+from models import event_transforms
 from models import jobs
 from models import models
 from models import transforms
 from tools import verify
 
+from google.appengine.ext import db
+
 MAX_INCORRECT_REPORT = 5
+
+
+class QuestionAnswersEntity(entities.BaseEntity):
+    """Student answers to individual questions."""
+
+    data = db.TextProperty(indexed=False)
+
+    @classmethod
+    def safe_key(cls, db_key, transform_fn):
+        return db.Key.from_path(cls.kind(), transform_fn(db_key.id_or_name()))
+
+
+class RawAnswersGenerator(jobs.MapReduceJob):
+    """Extract answers from all event types into QuestionAnswersEntity table."""
+
+    @staticmethod
+    def get_description():
+        return 'question answers'
+
+    @staticmethod
+    def entity_class():
+        return models.EventEntity
+
+    def build_additional_mapper_params(self, app_context):
+        return {
+            'questions_by_usage_id': (
+                event_transforms.get_questions_by_usage_id(app_context)),
+            'group_to_questions': (
+                event_transforms.get_group_to_questions())
+            }
+
+    @staticmethod
+    def map(event):
+        """Extract question responses from all event types providing them."""
+
+        if event.source not in (
+            'submit-assessment',
+            'attempt-lesson',
+            'tag-assessment'):
+            return
+
+        # Fetch global params set up in build_additional_mapper_params(), above.
+        params = context.get().mapreduce_spec.mapper.params
+        questions_info = params['questions_by_usage_id']
+        group_to_questions = params['group_to_questions']
+
+        timestamp = int(
+            (event.recorded_on - datetime.datetime(1970, 1, 1)).total_seconds())
+        content = transforms.loads(event.data)
+
+        if event.source == 'submit-assessment':
+            answer_data = content.get('values', {})
+            version = answer_data.get('version')
+            if version == '1.5':
+                answers = event_transforms.unpack_student_answer_1_5(
+                    questions_info, answer_data, timestamp)
+
+        elif event.source == 'attempt-lesson':
+            # Very odd that the version should be in the answers map....
+            version = content.get('answers', {}).get('version')
+            if version == '1.5':
+                answers = event_transforms.unpack_student_answer_1_5(
+                    questions_info, content, timestamp)
+
+        elif event.source == 'tag-assessment':
+            answers = event_transforms.unpack_check_answers(
+                content, questions_info, group_to_questions, timestamp)
+
+        yield (event.user_id, [list(answer) for answer in answers])
+
+    @staticmethod
+    def reduce(key, answers_lists):
+        """Does not produce output to Job.  Instead, stores values to DB."""
+
+        answers = []
+        for data in answers_lists:
+            answers += ast.literal_eval(data)
+        data = transforms.dumps(answers)
+        QuestionAnswersEntity(key_name=key, data=data).put()
+
+
+class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
+    """Make raw answers from QuestionAnswersEntity available via REST."""
+
+    @staticmethod
+    def required_generators():
+        return [RawAnswersGenerator]
+
+    @classmethod
+    def get_entity_class(cls):
+        return QuestionAnswersEntity
+
+    @classmethod
+    def get_name(cls):
+        return 'raw_student_answers'
+
+    @classmethod
+    def get_title(cls):
+        return 'Raw Student Answers'
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 100
+
+    @classmethod
+    def get_schema(cls, unused_app_context, unused_catch_and_log):
+        reg = schema_fields.FieldRegistry(
+            'Raw Student Answers',
+            description='Raw data of answers to all uses of all graded '
+            'questions (excludes self-check non-graded questions in lessons) '
+            'in the course.')
+        reg.add_property(schema_fields.SchemaField(
+            'user_name', 'User ID', 'string',
+            description='Name of the student for this question.'))
+        reg.add_property(schema_fields.SchemaField(
+            'unit_id', 'Unit ID', 'string',
+            description='ID of unit or assessment for this score.'))
+        reg.add_property(schema_fields.SchemaField(
+            'lesson_id', 'Lesson ID', 'string', optional=True,
+            description='ID of lesson for this score.'))
+        reg.add_property(schema_fields.SchemaField(
+            'sequence', 'Sequence', 'integer',
+            description='0-based order within containing assessment/lesson.'))
+        reg.add_property(schema_fields.SchemaField(
+            'question_id', 'Question ID', 'string',
+            description='ID of question.  Key to models.QuestionDAO'))
+        reg.add_property(schema_fields.SchemaField(
+            'question_type', 'Question Type', 'string',
+            description='Kind of question.  E.g., "SaQuestion" or "McQuestion" '
+            'for single-answer and multiple-choice, respectively.'))
+        reg.add_property(schema_fields.SchemaField(
+            'timestamp', 'Question ID', 'integer',
+            description='Seconds since 1970-01-01 in GMT when answer given.'))
+        reg.add_property(schema_fields.SchemaField(
+            'answers', 'Answers', 'string',
+            description='The answer from the student.  Note that '
+            'this may be an array for questions permitting multiple answers.'))
+        reg.add_property(schema_fields.SchemaField(
+            'score', 'Score', 'integer',
+            description='Value from the Question indicating the score for '
+            'this answer or set of answers.'))
+        reg.add_property(schema_fields.SchemaField(
+            'tallied', 'Tallied', 'boolean',
+            description='Whether the score counts towards the overall grade.  '
+            'Lessons by default do not contribute to course score, but may '
+            'be marked as graded.'))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def _postprocess_rows(cls, app_context, source_context, schema, log,
+                          page_number, rows):
+        """Unpack all responses from single student into separate rows."""
+
+        # Fill in responses with actual student name, not just ID.
+        student_ids = []
+        for entity in rows:
+            student_ids.append(entity.key().id_or_name())
+        students = (models.Student
+                    .all()
+                    .filter('user_id in', student_ids)
+                    .fetch(len(student_ids)))
+
+        # Prepare to convert multiple-choice question indices to answer strings.
+        mc_choices = {}
+        for question in models.QuestionDAO.get_all():
+            if 'choices' in question.dict:
+                mc_choices[str(question.id)] = [
+                    choice['text'] for choice in question.dict['choices']]
+
+        ret = []
+        for entity, student in zip(rows, students):
+            raw_answers = transforms.loads(entity.data)
+            answers = [event_transforms.QuestionAnswerInfo(*parts)
+                       for parts in raw_answers]
+            for answer in answers:
+                if answer.question_id in mc_choices:
+                    choices = mc_choices[answer.question_id]
+                    given_answers = [choices[i] for i in answer.answers]
+                else:
+                    given_answers = answer.answers
+                ret.append({
+                    'user_id': student.user_id,
+                    'user_name': student.name,
+                    'unit_id': answer.unit_id,
+                    'lesson_id': answer.lesson_id,
+                    'sequence': answer.sequence,
+                    'question_id': answer.question_id,
+                    'question_type': answer.question_type,
+                    'timestamp': answer.timestamp,
+                    'answers': given_answers,
+                    'score': answer.score,
+                    'tallied': answer.tallied,
+                    })
+        for thing in ret:
+            print thing
+        return ret
+
+
+class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
+    """Simple "analytic" giving names of each question, in course order.
+
+    This class cooperates with the Jinja template in gradebook.html to
+    generate the header for the Gradebook analytics sub-tab.  It also
+    generates the expected list of questions, in course order.  This
+    set of questions sets the order for the question responses
+    provided by RawAnswersDataSource (above).
+
+    """
+
+    @staticmethod
+    def fill_values(app_context, template_values):
+        """Sets values into the dict used to fill out the Jinja template."""
+
+        def _find_q_ids(html, groups):
+            """Returns the list of question IDs referenced from rich HTML."""
+            question_ids = []
+            for component in tags.get_components_from_html(html):
+                if component['cpt_name'] == 'question':
+                    question_ids.append(int(component['quid']))
+                elif component['cpt_name'] == 'question-group':
+                    for question_id in groups[int(component['qgid'])]:
+                        question_ids.append(question_id)
+            return question_ids
+
+        def _look_up_questions(questions, question_ids):
+            ret = []
+            for qid in question_ids:
+                ret.append({
+                    'id': qid,
+                    'description': questions[qid],
+                    'href': 'dashboard?action=edit_question&key=%s' % qid,
+                })
+            return ret
+
+        def _q_key(unit_id, lesson_id, question_id):
+            return '%s.%s.%s' % (unit_id, lesson_id or 'null', question_id)
+
+        def _add_assessment(unit):
+            q_ids = _find_q_ids(unit.html_content, groups)
+            return (
+                [_q_key(unit.unit_id, None, q_id) for q_id in q_ids],
+                {
+                    'unit_id': None,
+                    'title': None,
+                    'questions': _look_up_questions(questions, q_ids)
+                })
+
+        def _add_sub_assessment(unit, assessment):
+            q_ids = _find_q_ids(assessment.html_content, groups)
+            return (
+                [_q_key(assessment.unit_id, None, q_id) for q_id in q_ids],
+                {
+                    'href': 'unit?unit=%s&assessment=%s' % (
+                        unit.unit_id, assessment.unit_id),
+                    'unit_id': assessment.unit_id,
+                    'title': assessment.title,
+                    'questions': _look_up_questions(questions, q_ids),
+                    'tallied': True,
+                })
+
+        def _add_lesson(unit, lesson):
+            q_ids = _find_q_ids(lesson.objectives, groups)
+            return (
+                [_q_key(unit.unit_id, lesson.lesson_id, qid) for qid in q_ids],
+                {
+                    'href': 'unit?unit=%s&lesson=%s' % (
+                        unit.unit_id, lesson.lesson_id),
+                    'lesson_id': lesson.lesson_id,
+                    'title': lesson.title,
+                    'questions': _look_up_questions(questions, q_ids),
+                    'tallied': lesson.scored,
+                })
+
+        def _count_colspans(units):
+            for unit in units:
+                unit_colspan = 0
+                for item in unit['contents']:
+                    # answer/score for each question, plus subtotal for section.
+                    item['colspan'] = len(item['questions']) * 2
+                    unit_colspan += item['colspan']
+
+                # If a unit contains more than one sub-unit, we need a subtotal
+                # column.
+                if len(unit['contents']) > 1:
+                    for item in unit['contents']:
+                        if item['tallied']:
+                            item['colspan'] += 1
+                            unit_colspan += 1
+                # +1 for unit total column
+                unit['colspan'] = unit_colspan + 1
+
+        course = courses.Course(None, app_context)
+        questions = {q.id: q.description for q in models.QuestionDAO.get_all()}
+        groups = {
+            g.id: g.question_ids for g in models.QuestionGroupDAO.get_all()}
+        units = []
+        question_keys = []
+        for unit in course.get_units():
+
+            # Skip contained pre/post assessments; these will be done in their
+            # containing unit.
+            if course.get_parent_unit(unit.unit_id):
+                continue
+            # Only deal with known unit types
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                href = 'assessment?name=%s' % unit.unit_id
+            elif unit.type == verify.UNIT_TYPE_UNIT:
+                href = 'unit?unit=%s' % unit.unit_id,
+            else:
+                continue
+
+            unit_contents = []
+            units.append({
+                'href': href,
+                'unit_id': unit.unit_id,
+                'title': unit.title,
+                'contents': unit_contents,
+                })
+            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+                q_keys, contents = _add_assessment(unit)
+                question_keys += q_keys + ['subtotal']
+                unit_contents.append(contents)
+            if unit.pre_assessment:
+                assessment = course.find_unit_by_id(unit.pre_assessment)
+                if assessment:
+                    q_keys, contents = _add_sub_assessment(unit, assessment)
+                    question_keys += q_keys + ['subtotal']
+                    unit_contents.append(contents)
+            for lesson in course.get_lessons(unit.unit_id):
+                q_keys, contents = _add_lesson(unit, lesson,)
+                question_keys += q_keys
+                if lesson.scored:
+                    question_keys += ['subtotal']
+                unit_contents.append(contents)
+            if unit.post_assessment:
+                assessment = course.find_unit_by_id(unit.post_assessment)
+                if assessment:
+                    q_keys, contents = _add_sub_assessment(unit, assessment)
+                    question_keys += q_keys + ['subtotal']
+                    unit_contents.append(contents)
+
+            # If there is only one sub-component within the unit, pop off
+            # the 'subtotal' column.
+            if len(unit_contents) == 1:
+                question_keys.pop()
+            question_keys.append('total')
+
+        _count_colspans(units)
+        template_values['units'] = units
+        template_values['gradebook_js_vars'] = transforms.dumps(
+            {'question_keys': question_keys})
 
 
 class StudentAnswersStatsGenerator(jobs.MapReduceJob):
@@ -42,53 +399,10 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         return models.StudentAnswersEntity
 
     def build_additional_mapper_params(self, app_context):
-        """Build map: question-usage-ID to {question ID, unit ID, sequence}.
-
-        When a question or question-group is mentioned on a CourseBuilder
-        HTML page, it is identified by a unique opaque ID which indicates
-        *that usage* of a particular question.
-
-        Args:
-          app_context: Normal context object giving namespace, etc.
-        Returns:
-          A map of precalculated facts to be made available to mapper
-          workerbee instances.
-        """
-
-        questions_by_usage_id = {}
-        # To know a question's sequence number within an assessment, we need
-        # to know how many questions a question group contains.
-        question_group_lengths = {}
-        for group in models.QuestionGroupDAO.get_all():
-            question_group_lengths[str(group.id)] = (
-                len(group.question_ids))
-
-        # Run through course.  For each assessment, parse the HTML content
-        # looking for questions and question groups.  For each of those,
-        # record the unit ID, use-of-item-on-page-instance-ID (a string
-        # like 'RK3q5H2dS7So'), and the sequence on the page.  Questions
-        # count as one position.  Question groups increase the sequence
-        # count by the number of questions they contain.
-        course = courses.Course(None, app_context)
-        for unit in course.get_units_of_type(verify.UNIT_TYPE_ASSESSMENT):
-            sequence_counter = 0
-            for component in tags.get_components_from_html(unit.html_content):
-                if component['cpt_name'] == 'question':
-                    questions_by_usage_id[component['instanceid']] = {
-                        'unit': unit.unit_id,
-                        'sequence': sequence_counter,
-                        'id': component['quid'],
-                        }
-                    sequence_counter += 1
-                elif component['cpt_name'] == 'question-group':
-                    questions_by_usage_id[component['instanceid']] = {
-                        'unit': unit.unit_id,
-                        'sequence': sequence_counter,
-                        'id': component['qgid'],
-                        }
-                    sequence_counter += (
-                        question_group_lengths[component['qgid']])
-        return {'questions_by_usage_id': questions_by_usage_id}
+        return {
+            'questions_by_usage_id': (
+                event_transforms.get_questions_by_usage_id(app_context))
+            }
 
     @staticmethod
     def build_key(unit, sequence, question_id, question_type):
@@ -100,53 +414,6 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         return unit, int(sequence), question_id, question_type
 
     @staticmethod
-    def map_handle_cb_1_5(questions_info, unit_id, unit_responses):
-        ret = []
-        contained_types = unit_responses['containedTypes']
-
-        for usage_id, answers in unit_responses['answers'].items():
-            if usage_id not in questions_info:
-                continue  # Skip items from no-longer-present questions.
-
-            # Note: The variable names here are in plural, but for single
-            # questions, 'types', 'scores' and 'answers' contain just one
-            # item.  (whereas for question groups, these are all arrays)
-            info = questions_info[usage_id]
-            types = contained_types[usage_id]
-            scores = unit_responses['individualScores'][usage_id]
-
-            # Single question - give its answer.
-            if types == 'McQuestion' or types == 'SaQuestion':
-                ret.append(
-                    (StudentAnswersStatsGenerator.build_key(
-                        unit_id, info['sequence'], info['id'], types),
-                     (answers, scores)))
-
-            # Question group. Fetch IDs of sub-questions, which are packed as
-            # <group-usage-id>.<sequence>.<question-id>.
-            # Order by <sequence>, which is 0-based within question-group.
-            elif isinstance(types, list):
-
-                # Sort IDs by sequence-within-group number.  Need these in
-                # order so that we can simply zip() IDs together with other
-                # items.
-                packed_ids = unit_responses[usage_id].keys()
-                packed_ids.sort(key=lambda packed: int(packed.split('.')[1]))
-
-                for packed_id, answer, q_type, score in zip(
-                    packed_ids, answers, types, scores):
-
-                    _, seq, q_id = packed_id.split('.')
-                    ret.append(
-                        (StudentAnswersStatsGenerator.build_key(
-                            unit_id, info['sequence'] + int(seq), q_id, q_type),
-                         (answer, score)))
-
-            # TODO(mgainer): Emit warning counter here if we don't grok
-            # the 'types' value.
-        return ret
-
-    @staticmethod
     def map(student_answers):
         params = context.get().mapreduce_spec.mapper.params
         questions_by_usage_id = params['questions_by_usage_id']
@@ -156,15 +423,17 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
             # Is this a CourseBuilder Question/QuestionGroup set of answers?
             if ('containedTypes' in unit_responses and
                 unit_responses['version'] == '1.5'):
-                for answer in StudentAnswersStatsGenerator.map_handle_cb_1_5(
-                    questions_by_usage_id, unit_id, unit_responses):
-                    yield answer
+                for answer in event_transforms.unpack_student_answer_1_5(
+                    questions_by_usage_id, unit_responses, timestamp=0):
+                    yield (StudentAnswersStatsGenerator.build_key(
+                        unit_id, answer.sequence, answer.question_id,
+                        answer.question_type), (answer.answers, answer.score))
             # TODO(mgainer): Emit warning counter here if we don't grok
             # the response type.  We will need to cope with Oppia and
             # XBlocks responses.  Do that in a follow-on CL.
 
     @staticmethod
-    def reduce(key, answers_and_scores_list):
+    def reduce(key, answers_and_score_list):
         correct_answers = {}
         incorrect_answers = {}
         unit_id, sequence, question_id, question_type = (
@@ -172,7 +441,7 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         unit_id = int(unit_id)
         question_id = long(question_id)
 
-        for packed_data in answers_and_scores_list:
+        for packed_data in answers_and_score_list:
             answers, score = ast.literal_eval(packed_data)
             if question_type == 'SaQuestion':
                 if score > 0:

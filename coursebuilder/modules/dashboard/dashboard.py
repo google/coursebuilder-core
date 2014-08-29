@@ -1220,6 +1220,10 @@ def register_module():
         student_answers_analytics.CourseQuestionsDataSource)
     data_sources.Registry.register(
         student_answers_analytics.CourseUnitsDataSource)
+    data_sources.Registry.register(
+        student_answers_analytics.RawAnswersDataSource)
+    data_sources.Registry.register(
+        student_answers_analytics.OrderedQuestionsDataSource)
 
     multiple_choice_question = analytics.Visualization(
         'multiple_choice_question',
@@ -1258,6 +1262,14 @@ def register_module():
             student_answers_analytics.QuestionAnswersDataSource,
             student_answers_analytics.CourseQuestionsDataSource,
             student_answers_analytics.CourseUnitsDataSource])
+    gradebook = analytics.Visualization(
+        'gradebook',
+        'Gradebook',
+        'gradebook.html',
+        data_source_classes=[
+            student_answers_analytics.RawAnswersDataSource,
+            student_answers_analytics.OrderedQuestionsDataSource,
+            ])
 
     tabs.Registry.register('analytics', 'students', 'Students',
                            [labels_on_students,
@@ -1267,6 +1279,9 @@ def register_module():
                            [multiple_choice_question, question_answers])
     tabs.Registry.register('analytics', 'assessments', 'Assessments',
                            [assessment_difficulty])
+    tabs.Registry.register('analytics', 'gradebook', 'Gradebook',
+                           [gradebook])
+
     tabs.Registry.register('assets', 'questions', 'Questions',
                            DashboardHandler.get_assets_questions)
     tabs.Registry.register('assets', 'labels', 'Labels',

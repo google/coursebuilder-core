@@ -57,7 +57,7 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
 
     @classmethod
     def fetch_values(cls, app_context, source_context, schema, log,
-                     sought_page_number):
+                     sought_page_number, *unused_jobs):
         with Namespace(app_context.get_namespace_name()):
             stopped_early = False
             while len(source_context.cursors) < sought_page_number:
