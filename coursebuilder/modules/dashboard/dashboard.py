@@ -45,7 +45,6 @@ import student_answers_analytics
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
 from unit_lesson_editor import ExportAssessmentRESTHandler
-from unit_lesson_editor import ImportActivityRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
 from unit_lesson_editor import LinkRESTHandler
@@ -129,7 +128,6 @@ class DashboardHandler(
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
             (AssetItemRESTHandler.URI, AssetItemRESTHandler),
             (AssetUriRESTHandler.URI, AssetUriRESTHandler),
-            (ImportActivityRESTHandler.URI, ImportActivityRESTHandler),
             (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
             (LabelRestHandler.URI, LabelRestHandler),
             (LessonRESTHandler.URI, LessonRESTHandler),

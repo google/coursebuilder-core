@@ -40,7 +40,6 @@ from actions import assert_equals
 from controllers_review import PeerReviewControllerTest
 from controllers_review import PeerReviewDashboardAdminTest
 from review_stats import PeerReviewAnalyticsTest
-from webtest.app import AppError
 
 import appengine_config
 from common import crypto
@@ -61,6 +60,7 @@ from models.courses import Course
 import modules.admin.admin
 from modules.announcements.announcements import AnnouncementEntity
 import modules.oeditor.oeditor
+from tools import verify
 from tools.etl import etl
 from tools.etl import etl_lib
 from tools.etl import examples
@@ -3072,18 +3072,19 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_contains('Filter image results by color', response.body)
 
         # Check assessment is copied.
-        response = self.get('assets/js/assessment-21.js')
+        response = self.get('assets/js/assessment-35.js')
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
         # Check activity is copied.
-        response = self.get('assets/js/activity-37.js')
+        response = self.get('unit?unit=57&lesson=63')
         assert_equals(200, response.status_int)
-        assert_contains('explore ways to keep yourself updated', response.body)
+        assert_contains(
+        'explore ways to keep yourself updated', response.body)
 
         unit_2_title = 'Unit 2 - Interpreting results'
-        lesson_2_1_title = '2.1 When search results suggest something new'
-        lesson_2_2_title = '2.2 Thinking more deeply about your search'
+        lesson_2_1_title = 'When search results suggest something new'
+        lesson_2_2_title = 'Thinking more deeply about your search'
 
         # Check units and lessons are indexed correctly.
         response = actions.register(self, name)
@@ -3095,7 +3096,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_contains(unit_2_title, response.body)
 
         # Unit page.
-        response = self.get('unit?unit=9')
+        response = self.get('unit?unit=14')
         # A unit title.
         assert_contains(
             unit_2_title, response.body)
@@ -3110,13 +3111,13 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             ['Unit 2</a></li>', 'Lesson 1</li>'], response.body)
 
         # Unit page.
-        response = self.get('activity?unit=9&lesson=10')
+        response = self.get('unit?unit=14&lesson=16')
         # A unit title.
         assert_contains(
             unit_2_title, response.body)
         # An activity title.
         assert_contains(
-            'Lesson 2.1 Activity', response.body)
+            'Activity', response.body)
         # First child lesson without link.
         assert_contains(
             lesson_2_1_title, response.body)
@@ -3125,7 +3126,10 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             lesson_2_2_title, response.body)
         # Breadcrumbs.
         assert_contains_all_of(
-            ['Unit 2</a></li>', 'Lesson 1</a></li>'], response.body)
+            ['Unit 2</a></li>',
+             '<a href="unit?unit=14&lesson=15">',
+             '<a href="unit?unit=14&lesson=17">'], response.body)
+        assert '<a href="unit?unit=14&lesson=16">' not in response.body
 
         # Clean up.
         sites.reset_courses()
@@ -3230,12 +3234,36 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             src_app_context, errors)
         if errors:
             raise Exception(errors)
-        assert len(
-            src_course_out.get_units()) == len(dst_course_out.get_units())
+        u1, l1, a1 = self.calc_course_stats(src_course_out)
+        u2, l2, _ = self.calc_course_stats(dst_course_out)
+        self.assertEqual(12, u1)
+        self.assertEqual(29, l1)
+        self.assertEqual(26, a1)
+        self.assertEqual(12, u2)
+        self.assertEqual(55, l2)
+        self.assertEqual(u1, u2)
+        self.assertEqual(l1 + a1, l2)
+        with Namespace('ns_test'):
+            self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
+            self.assertEqual(48, len(models.QuestionDAO.get_all()))
+        with Namespace(''):
+            self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
+            self.assertEqual(48, len(models.QuestionDAO.get_all()))
+
         dst_course_out.save()
 
         # Clean up.
         sites.reset_courses()
+
+    def calc_course_stats(self, course):
+        units_count = len(course.get_units())
+        activities_count = 0
+        lessons_count = 0
+        for uid in [x.unit_id for x in course.get_units()]:
+            unit_lessons = course.get_lessons(uid)
+            lessons_count += len(unit_lessons)
+            activities_count += sum(x.activity for x in unit_lessons)
+        return units_count, lessons_count, activities_count
 
     def test_imported_course_performance(self):
         """Tests various pages of the imported course."""
@@ -3297,9 +3325,9 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             assert_cached('preview', 'Putting it all together')
             actions.register(self, name)
             assert_cached(
-                'unit?unit=9', 'When search results suggest something new')
+                'unit?unit=14', 'When search results suggest something new')
             assert_cached(
-                'unit?unit=9&lesson=12',
+                'unit?unit=14&lesson=19',
                 'Understand options for different media')
 
         # Clean up.
@@ -3335,27 +3363,25 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         actions.view_announcements(self)
 
         # Check unit page without lesson specified.
-        response = self.get('unit?unit=9')
+        response = self.get('unit?unit=14')
         assert_contains('Interpreting results', response.body)
         assert_contains(
             'When search results suggest something new', response.body)
 
         # Check unit page with a lessons.
-        response = self.get('unit?unit=9&lesson=12')
+        response = self.get('unit?unit=14&lesson=19')
         assert_contains('Interpreting results', response.body)
         assert_contains(
             'Understand options for different media', response.body)
 
         # Check assesment page.
-        response = self.get('assessment?name=21')
+        response = self.get('assessment?name=35')
         assert_contains(
-            '<script src="assets/js/assessment-21.js"></script>', response.body)
+            '<script src="assets/js/assessment-35.js"></script>', response.body)
 
         # Check activity page.
-        response = self.get('activity?unit=9&lesson=13')
-        assert_contains(
-            '<script src="assets/js/activity-13.js"></script>',
-            response.body)
+        response = self.get('unit?unit=14&lesson=16')
+        assert_contains('Activity', response.body)
 
         # Clean up.
         sites.reset_courses()
@@ -3583,6 +3609,9 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         context = etl_lib.get_context(self.url_prefix)
         course = etl._get_course_from(etl_lib.get_context(self.url_prefix))
         course.delete_all()
+        # delete all other entities from data store
+        with Namespace(self.namespace):
+            db.delete(db.Query(keys_only=True))
         self.create_app_yaml(context)
 
     def import_sample_course(self):
@@ -3699,9 +3728,11 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         question_json = transforms.loads(
             zip_archive.open('models/QuestionEntity.json').read())
         self.assertEqual(
-            question.key().id(), question_json['rows'][0]['key.id'])
+            question.key().id(), question_json['rows'][-1]['key.id'])
         self.assertEqual(
-            'test question', question_json['rows'][0]['data'])
+            'test question', question_json['rows'][-1]['data'])
+        # 48 from the import plus the one we created in the test
+        self.assertEqual(49, len(question_json['rows']))
 
     def test_download_course_errors_if_archive_path_exists_on_disk(self):
         self.upload_all_sample_course_files([])
@@ -4037,7 +4068,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         # check course structure
         self.assertEqual(self.new_course_title, context.get_title())
         units = etl._get_course_from(context).get_units()
-        spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
+        spot_check_single_unit = [u for u in units if u.unit_id == 14][0]
         self.assertEqual('Interpreting results', spot_check_single_unit.title)
         for unit in units:
             self.assertTrue(unit.title)
@@ -4076,7 +4107,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             len(filesystem_contents) + len(COURSE_CONTENT_ENTITY_FILES))
         self.assertEqual(self.new_course_title, context.get_title())
         units = etl._get_course_from(context).get_units()
-        spot_check_single_unit = [u for u in units if u.unit_id == 9][0]
+        spot_check_single_unit = [u for u in units if u.unit_id == 14][0]
         self.assertEqual('Interpreting results', spot_check_single_unit.title)
         for unit in units:
             self.assertTrue(unit.title)
@@ -4459,8 +4490,6 @@ class TransformsJsonFileTestCase(actions.TestBase):
 class ImportActivityTests(DatastoreBackedCourseTest):
     """Functional tests for importing legacy activities into lessons."""
 
-    URI = '/rest/course/lesson/activity'
-
     FREETEXT_QUESTION = """
 var activity = [
   { questionType: 'freetext',
@@ -4506,55 +4535,81 @@ var activity = [
 
     def setUp(self):
         super(ImportActivityTests, self).setUp()
-        course = courses.Course(None, app_context=self.app_context)
-        self.unit = course.add_unit()
-        self.lesson = course.add_lesson(self.unit)
-        course.update_lesson(self.lesson)
-        course.save()
+        self.course = courses.Course(None, app_context=self.app_context)
+        self.unit = self.course.add_unit()
+        self.lesson = self.course.add_lesson(self.unit)
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(self.app_context.get_namespace_name())
 
-        email = 'test_admin@google.com'
-        actions.login(email, is_admin=True)
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(ImportActivityTests, self).tearDown()
 
-    def load_dto(self, dao, entity_id):
-        old_namespace = namespace_manager.get_namespace()
-        new_namespace = self.app_context.get_namespace_name()
-        try:
-            namespace_manager.set_namespace(new_namespace)
-            return dao.load(entity_id)
-        finally:
-            namespace_manager.set_namespace(old_namespace)
+    def test_import_free_text_activity(self):
+        text = self.FREETEXT_QUESTION
+        content, noverify_text = verify.convert_javascript_to_python(
+            text, 'activity')
+        activity = verify.evaluate_python_expression_from_text(
+            content, 'activity', verify.Activity().scope, noverify_text)
 
-    def get_response_dict(self, activity_text):
-        request = {
-            'xsrf_token': XsrfTokenManager.create_xsrf_token('lesson-edit'),
-            'key': self.lesson.lesson_id,
-            'text': activity_text
-        }
-        response = self.testapp.put(
-            self.URI, params={'request': transforms.dumps(request)})
-        return transforms.loads(response.body)
+        qid, instance_id = models.QuestionImporter.import_question(
+            activity['activity'][0], self.unit, self.lesson.title, 1, ['task'])
+        assert qid and isinstance(qid, (int, long))
+        assert re.match(r'^[a-zA-Z0-9]{12}$', instance_id)
 
-    def get_content_from_service(self, activity_text):
-        response_dict = self.get_response_dict(activity_text)
-        self.assertEqual(response_dict['status'], 200)
-        return transforms.loads(response_dict['payload'])['content']
+        question = models.QuestionDAO.load(qid)
+        self.assertEqual(question.type, models.QuestionDTO.SHORT_ANSWER)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+        self.assertEqual(question.dict['question'], 'task')
+        self.assertEqual(question.dict['hint'], 'A hint.')
+        self.assertEqual(question.dict['defaultFeedback'], 'Try again.')
+        self.assertEqual(len(question.dict['graders']), 1)
 
-    def test_import_multiple_choice(self):
-        """Should be able to import a single multiple choice question."""
-        content = self.get_content_from_service(self.MULTPLE_CHOICE_QUESTION)
-        m = re.match((
-            r'^<question quid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
-            r'</question>$'), content)
-        assert m
+        grader = question.dict['graders'][0]
+        self.assertEqual(grader['score'], 1.0)
+        self.assertEqual(grader['matcher'], 'regex')
+        self.assertEqual(grader['response'], '/abc/i')
+        self.assertEqual(grader['feedback'], 'Correct.')
 
-        quid = m.group(1)
-        question = self.load_dto(models.QuestionDAO, quid)
+    def test_activity_import_unique_constraint(self):
+        text = self.FREETEXT_QUESTION
+        content, noverify_text = verify.convert_javascript_to_python(
+            text, 'activity')
+        activity = verify.evaluate_python_expression_from_text(
+            content, 'activity', verify.Activity().scope, noverify_text)
+
+        qid, _ = models.QuestionImporter.import_question(
+            activity['activity'][0], self.unit, self.lesson.title, 1, ['task'])
+        assert qid and isinstance(qid, (int, long))
+
+        self.assertRaises(models.CollisionError,
+                          models.QuestionImporter.import_question,
+                          activity['activity'][0], self.unit,
+                          self.lesson.title, 1, ['task'])
+
+    def test_import_multiple_choice_activity(self):
+        text = self.MULTPLE_CHOICE_QUESTION
+        content, noverify_text = verify.convert_javascript_to_python(
+            text, 'activity')
+        activity = verify.evaluate_python_expression_from_text(
+            content, 'activity', verify.Activity().scope, noverify_text)
+
+        verify.Verifier().verify_activity_instance(activity, 'none')
+        qid, instance_id = models.QuestionImporter.import_question(
+            activity['activity'][0], self.unit, self.lesson.title, 1, ['task'])
+        assert qid and isinstance(qid, (int, long))
+        assert re.match(r'^[a-zA-Z0-9]{12}$', instance_id)
+
+        question = models.QuestionDAO.load(qid)
         self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
             question.dict['description'],
             'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
-        self.assertEqual(question.dict['question'], '')
+        self.assertEqual(question.dict['question'], 'task')
         self.assertEqual(question.dict['multiple_selections'], False)
         self.assertEqual(len(question.dict['choices']), 4)
 
@@ -4567,18 +4622,20 @@ var activity = [
             self.assertEqual(choice['score'], choices_data[i][1])
             self.assertEqual(choice['feedback'], choices_data[i][2])
 
-    def test_import_multiple_choice_group(self):
-        """Should be able to import a single 'multiple choice group'."""
-        content = self.get_content_from_service(
-            self.MULTPLE_CHOICE_GROUP_QUESTION)
-        # The tag links to a question group which embeds two questions
-        m = re.match((
-            r'^<question-group qgid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
-            r'</question-group>$'), content)
-        assert m
+    def test_import_multiple_choice_group_activity(self):
+        text = self.MULTPLE_CHOICE_GROUP_QUESTION
+        content, noverify_text = verify.convert_javascript_to_python(
+            text, 'activity')
+        activity = verify.evaluate_python_expression_from_text(
+            content, 'activity', verify.Activity().scope, noverify_text)
+        verify.Verifier().verify_activity_instance(activity, 'none')
 
-        quid = m.group(1)
-        question_group = self.load_dto(models.QuestionGroupDAO, quid)
+        qid, instance_id = models.QuestionImporter.import_question(
+            activity['activity'][0], self.unit, self.lesson.title, 1, ['task'])
+        assert qid and isinstance(qid, (int, long))
+        assert re.match(r'^[a-zA-Z0-9]{12}$', instance_id)
+
+        question_group = models.QuestionGroupDAO.load(qid)
         self.assertEqual(question_group.dict['version'], '1.5')
         self.assertEqual(
             question_group.dict['description'],
@@ -4590,8 +4647,8 @@ var activity = [
         self.assertEqual(items[1]['weight'], 1.0)
 
         # The first question is multiple choice with single selection
-        quid = items[0]['question']
-        question = self.load_dto(models.QuestionDAO, quid)
+        qid = items[0]['question']
+        question = models.QuestionDAO.load(qid)
         self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
@@ -4610,8 +4667,8 @@ var activity = [
         self.assertEqual(choices[1]['score'], 0.0)
 
         # The second question is multiple choice with multiple selection
-        quid = items[1]['question']
-        question = self.load_dto(models.QuestionDAO, quid)
+        qid = items[1]['question']
+        question = models.QuestionDAO.load(qid)
         self.assertEqual(question.type, models.QuestionDTO.MULTIPLE_CHOICE)
         self.assertEqual(question.dict['version'], '1.5')
         self.assertEqual(
@@ -4630,58 +4687,6 @@ var activity = [
         self.assertEqual(choices[1]['score'], 0.5)
         self.assertEqual(choices[1]['text'], 'bb')
         self.assertEqual(choices[1]['score'], 0.5)
-
-    def test_import_freetext(self):
-        """Should be able to import a single feettext question."""
-        content = self.get_content_from_service(self.FREETEXT_QUESTION)
-        m = re.match((
-            r'^<question quid="(\d+)" instanceid="[a-zA-Z0-9]{12}">'
-            r'</question>$'), content)
-        assert m
-
-        quid = m.group(1)
-        question = self.load_dto(models.QuestionDAO, quid)
-        self.assertEqual(question.type, models.QuestionDTO.SHORT_ANSWER)
-        self.assertEqual(question.dict['version'], '1.5')
-        self.assertEqual(
-            question.dict['description'],
-            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
-        self.assertEqual(question.dict['question'], '')
-        self.assertEqual(question.dict['hint'], 'A hint.')
-        self.assertEqual(question.dict['defaultFeedback'], 'Try again.')
-        self.assertEqual(len(question.dict['graders']), 1)
-
-        grader = question.dict['graders'][0]
-        self.assertEqual(grader['score'], 1.0)
-        self.assertEqual(grader['matcher'], 'regex')
-        self.assertEqual(grader['response'], '/abc/i')
-        self.assertEqual(grader['feedback'], 'Correct.')
-
-    def test_repeated_imports_are_rejected(self):
-        response_dict = self.get_response_dict(self.FREETEXT_QUESTION)
-        self.assertEqual(response_dict['status'], 200)
-        response_dict = self.get_response_dict(self.FREETEXT_QUESTION)
-        self.assertEqual(response_dict['status'], 412)
-        self.assertTrue(response_dict['message'].startswith(
-            'This activity has already been imported.'))
-
-    def test_user_must_be_logged_in(self):
-        actions.logout()
-        try:
-            self.get_response_dict(self.FREETEXT_QUESTION)
-            self.fail('Expected 404')
-        except AppError:
-            pass
-
-    def test_user_must_have_valid_xsrf_token(self):
-        request = {
-            'key': self.lesson.lesson_id,
-            'text': self.FREETEXT_QUESTION
-        }
-        response = self.testapp.put(
-            self.URI, params={'request': transforms.dumps(request)})
-        response_dict = transforms.loads(response.body)
-        self.assertEqual(response_dict['status'], 403)
 
 
 class NamespaceTest(actions.TestBase):

@@ -876,7 +876,10 @@ $(document).ready(function() {
   // render the activity specified in the 'var activity' top-level variable
   // (if it exists)
   if (typeof activity != 'undefined') {
-    renderActivity(activity, $('#activityContents'));
+    var domRoot = $('#activityContents');
+    if (domRoot.length) {
+      renderActivity(activity, domRoot);
+    }
   }
   // or render the assessment specified in the 'var assessment' top-level
   // variable (if it exists)

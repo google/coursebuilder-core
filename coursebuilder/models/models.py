@@ -187,6 +187,14 @@ CAN_SHARE_STUDENT_PROFILE = ConfigProperty(
     False)
 
 
+class CollisionError(Exception):
+    """Exception raised to show that a collision in a namespace has occurred."""
+
+
+class ValidationError(Exception):
+    """Exception raised to show that a validation failed."""
+
+
 class PersonalProfile(BaseEntity):
     """Personal information not specific to any course instance."""
 
@@ -931,6 +939,7 @@ class QuestionDTO(object):
 
 
 class QuestionDAO(LastModfiedJsonDao):
+    VERSION = '1.5'
     DTO = QuestionDTO
     ENTITY = QuestionEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
@@ -956,6 +965,150 @@ class QuestionDAO(LastModfiedJsonDao):
             ))
 
         return matches
+
+    @classmethod
+    def create_question(cls, question_dict, question_type):
+        question = cls.DTO(None, question_dict)
+        question.type = question_type
+        return cls.save(question)
+
+    @classmethod
+    def get_questions_descriptions(cls):
+        return set([q.description for q in cls.get_all()])
+
+    @classmethod
+    def validate_unique_description(cls, description):
+        if description in cls.get_questions_descriptions():
+            raise CollisionError(
+                'Non-unique question description: %s' % description)
+        return None
+
+
+class QuestionImporter(object):
+    """Helper class for converting ver. 1.2 questoins to ver. 1.3 ones."""
+
+    @classmethod
+    def _gen_description(cls, unit, lesson_title, question_number):
+        return (
+            'Imported from unit "%s", lesson "%s" (question #%s)' % (
+                unit.title, lesson_title, question_number))
+
+    @classmethod
+    def import_freetext(cls, question, description, task):
+        QuestionDAO.validate_unique_description(description)
+        try:
+            response = question.get('correctAnswerRegex')
+            response = response.value if response else None
+            return {
+                'version': QuestionDAO.VERSION,
+                'description': description,
+                'question': task,
+                'hint': question['showAnswerOutput'],
+                'graders': [{
+                    'score': 1.0,
+                    'matcher': 'regex',
+                    'response': response,
+                    'feedback': question.get('correctAnswerOutput')
+                }],
+                'defaultFeedback': question.get('incorrectAnswerOutput')}
+        except KeyError as e:
+            raise ValidationError('Invalid question: %s, %s' % (description, e))
+
+    @classmethod
+    def import_question(
+            cls, question, unit, lesson_title, question_number, task):
+        question_type = question['questionType']
+        task = ''.join(task)
+        description = cls._gen_description(unit, lesson_title, question_number)
+        if question_type == 'multiple choice':
+            question_dict = cls.import_multiple_choice(
+                question, description, task)
+            qid = QuestionDAO.create_question(
+                question_dict, QuestionDAO.DTO.MULTIPLE_CHOICE)
+        elif question_type == 'freetext':
+            question_dict = cls.import_freetext(question, description, task)
+            qid = QuestionDAO.create_question(
+                question_dict, QuestionDTO.SHORT_ANSWER)
+        elif question_type == 'multiple choice group':
+            question_group_dict = cls.import_multiple_choice_group(
+                question, description, unit, lesson_title, question_number,
+                task)
+            qid = QuestionGroupDAO.create_question_group(question_group_dict)
+        else:
+            raise ValueError('Unknown question type: %s' % question_type)
+        return (qid, common_utils.generate_instance_id())
+
+    @classmethod
+    def import_multiple_choice(cls, question, description, task):
+        QuestionDAO.validate_unique_description(description)
+        task = ''.join(task) if task else ''
+        return {
+            'version': QuestionDAO.VERSION,
+            'description': description,
+            'question': task,
+            'multiple_selections': False,
+            'choices': [
+                {
+                    'text': choice[0],
+                    'score': 1.0 if choice[1].value else 0.0,
+                    'feedback': choice[2]
+                } for choice in question['choices']]}
+
+    @classmethod
+    def import_multiple_choice_group(
+            cls, group, description, unit, lesson_title, question_number, task):
+        """Import a 'multiple choice group' as a question group."""
+
+        QuestionGroupDAO.validate_unique_description(description)
+
+        question_group_dict = {
+            'version': QuestionDAO.VERSION,
+            'description': description,
+            'introduction': task}
+
+        question_list = []
+        for index, question in enumerate(group['questionsList']):
+            description = (
+                'Imported from unit "%s", lesson "%s" (question #%s, part #%s)'
+                % (unit.title, lesson_title, question_number, index + 1))
+            question_dict = cls.import_multiple_choice_group_question(
+                question, description)
+            question = QuestionDTO(None, question_dict)
+            question.type = QuestionDTO.MULTIPLE_CHOICE
+            question_list.append(question)
+        qid_list = QuestionDAO.save_all(question_list)
+        question_group_dict['items'] = [{
+            'question': str(quid),
+            'weight': 1.0} for quid in qid_list]
+
+        return question_group_dict
+
+    @classmethod
+    def import_multiple_choice_group_question(cls, orig_question, description):
+        """Import the questions from a group as individual questions."""
+
+        QuestionDAO.validate_unique_description(description)
+        # TODO(jorr): Handle allCorrectOutput and someCorrectOutput
+        correct_index = orig_question['correctIndex']
+        multiple_selections = not isinstance(correct_index, int)
+        if multiple_selections:
+            partial = 1.0 / len(correct_index)
+            choices = [{
+                'text': text,
+                'score': partial if i in correct_index else -1.0
+            } for i, text in enumerate(orig_question['choices'])]
+        else:
+            choices = [{
+                'text': text,
+                'score': 1.0 if i == correct_index else 0.0
+            } for i, text in enumerate(orig_question['choices'])]
+
+        return {
+            'version': QuestionDAO.VERSION,
+            'description': description,
+            'question': orig_question.get('questionHTML') or '',
+            'multiple_selections': multiple_selections,
+            'choices': choices}
 
 
 class SaQuestionConstants(object):
@@ -1003,6 +1156,21 @@ class QuestionGroupDAO(LastModfiedJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
+
+    @classmethod
+    def get_question_groups_descriptions(cls):
+        return set([g.description for g in cls.get_all()])
+
+    @classmethod
+    def create_question_group(cls, question_group_dict):
+        question_group = QuestionGroupDTO(None, question_group_dict)
+        return cls.save(question_group)
+
+    @classmethod
+    def validate_unique_description(cls, description):
+        if description in cls.get_question_groups_descriptions():
+            raise CollisionError(
+                'Non-unique question group description: %s' % description)
 
 
 class LabelEntity(BaseEntity):

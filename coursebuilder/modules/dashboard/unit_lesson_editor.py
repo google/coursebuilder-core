@@ -18,7 +18,6 @@ __author__ = 'John Orr (jorr@google.com)'
 
 import cgi
 import logging
-import random
 import urllib
 
 import messages
@@ -371,7 +370,7 @@ class UnitLessonEditor(ApplicationHandler):
             schema=LessonRESTHandler.get_schema(
                 courses.Course(self).get_units()),
             delete_xsrf_token='delete-lesson',
-            extra_js_files=LessonRESTHandler.EXTRA_JS_FILES)
+            extra_js_files=None)
 
 
 class UnitTools(object):
@@ -1188,7 +1187,6 @@ class LessonRESTHandler(BaseRESTHandler):
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
         'inputex-uneditable', 'inputex-checkbox']
-    EXTRA_JS_FILES = ['lesson_editor_lib.js', 'lesson_editor.js']
 
     @classmethod
     def get_schema(cls, units):
@@ -1384,217 +1382,11 @@ class LessonRESTHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Deleted.')
 
 
-def generate_instanceid():
-    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    length = 12
-    return ''.join([random.choice(chars) for unused_i in xrange(length)])
+generate_instanceid = common_utils.generate_instance_id
 
 
 class CollisionError(Exception):
     """Exception raised to show that a collision in a namespace has occurred."""
-
-
-class ImportActivityRESTHandler(BaseRESTHandler):
-    """REST handler for requests to import an activity into the lesson body."""
-
-    URI = '/rest/course/lesson/activity'
-
-    VERSION = '1.5'
-
-    def put(self):
-        """Handle REST PUT instruction to import an assignment."""
-        request = transforms.loads(self.request.get('request'))
-        key = request.get('key')
-
-        if not self.assert_xsrf_token_or_fail(request, 'lesson-edit', {}):
-            return
-
-        if not CourseOutlineRights.can_edit(self):
-            transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
-            return
-
-        text = request.get('text')
-
-        try:
-            content, noverify_text = verify.convert_javascript_to_python(
-                text, 'activity')
-            activity = verify.evaluate_python_expression_from_text(
-                content, 'activity', verify.Activity().scope, noverify_text)
-        except Exception:  # pylint: disable-msg=broad-except
-            transforms.send_json_response(
-                self, 412, 'Unable to parse activity.')
-            return
-
-        try:
-            verify.Verifier().verify_activity_instance(activity, 'none')
-        except verify.SchemaException:
-            transforms.send_json_response(
-                self, 412, 'Unable to validate activity.')
-            return
-
-        self.course = courses.Course(self)
-        self.lesson = self.course.find_lesson_by_id(None, key)
-        self.unit = self.course.find_unit_by_id(self.lesson.unit_id)
-        self.question_number = 0
-        self.question_descriptions = set(
-            [q.description for q in m_models.QuestionDAO.get_all()])
-        self.question_group_descriptions = set(
-            [qg.description for qg in m_models.QuestionGroupDAO.get_all()])
-
-        lesson_content = []
-        try:
-            for item in activity['activity']:
-                if isinstance(item, basestring):
-                    lesson_content.append(item)
-                else:
-                    question_tag = self.import_question(item)
-                    lesson_content.append(question_tag)
-                    self.question_number += 1
-        except CollisionError:
-            transforms.send_json_response(
-                self, 412, (
-                    'This activity has already been imported. Remove duplicate '
-                    'imported questions from the question bank in order to '
-                    're-import.'))
-            return
-        except Exception as ex:
-            transforms.send_json_response(
-                self, 412, 'Unable to convert: %s' % ex)
-            return
-
-        transforms.send_json_response(self, 200, 'OK.', payload_dict={
-            'content': '\n'.join(lesson_content)
-        })
-
-    def _get_question_description(self):
-        return (
-            'Imported from unit "%s", lesson "%s" (question #%s)' % (
-                self.unit.title, self.lesson.title, self.question_number + 1))
-
-    def _insert_question(self, question_dict, question_type):
-        question = m_models.QuestionDTO(None, question_dict)
-        question.type = question_type
-        return m_models.QuestionDAO.save(question)
-
-    def _insert_question_group(self, question_group_dict):
-        question_group = m_models.QuestionGroupDTO(None, question_group_dict)
-        return m_models.QuestionGroupDAO.save(question_group)
-
-    def import_question(self, item):
-        question_type = item['questionType']
-        if question_type == 'multiple choice':
-            question_dict = self.import_multiple_choice(item)
-            quid = self._insert_question(
-                question_dict, m_models.QuestionDTO.MULTIPLE_CHOICE)
-            return '<question quid="%s" instanceid="%s"></question>' % (
-                quid, generate_instanceid())
-        elif question_type == 'multiple choice group':
-            question_group_dict = self.import_multiple_choice_group(item)
-            qgid = self._insert_question_group(question_group_dict)
-            return (
-                '<question-group qgid="%s" instanceid="%s">'
-                '</question-group>') % (
-                    qgid, generate_instanceid())
-        elif question_type == 'freetext':
-            question_dict = self.import_freetext(item)
-            quid = self._insert_question(
-                question_dict, m_models.QuestionDTO.SHORT_ANSWER)
-            return '<question quid="%s" instanceid="%s"></question>' % (
-                quid, generate_instanceid())
-        else:
-            raise ValueError('Unknown question type: %s' % question_type)
-
-    def import_multiple_choice(self, orig_question):
-        description = self._get_question_description()
-        if description in self.question_descriptions:
-            raise CollisionError()
-
-        return {
-            'version': self.VERSION,
-            'description': description,
-            'question': '',
-            'multiple_selections': False,
-            'choices': [
-                {
-                    'text': choice[0],
-                    'score': 1.0 if choice[1].value else 0.0,
-                    'feedback': choice[2]
-                } for choice in orig_question['choices']]}
-
-    def import_multiple_choice_group(self, mc_choice_group):
-        """Import a 'multiple choice group' as a question group."""
-        description = self._get_question_description()
-        if description in self.question_group_descriptions:
-            raise CollisionError()
-
-        question_group_dict = {
-            'version': self.VERSION,
-            'description': description}
-
-        question_list = []
-        for index, question in enumerate(mc_choice_group['questionsList']):
-            question_dict = self.import_multiple_choice_group_question(
-                question, index)
-            question = m_models.QuestionDTO(None, question_dict)
-            question.type = m_models.QuestionDTO.MULTIPLE_CHOICE
-            question_list.append(question)
-
-        quid_list = m_models.QuestionDAO.save_all(question_list)
-        question_group_dict['items'] = [{
-            'question': str(quid),
-            'weight': 1.0} for quid in quid_list]
-
-        return question_group_dict
-
-    def import_multiple_choice_group_question(self, orig_question, index):
-        """Import the questions from a group as individual questions."""
-        # TODO(jorr): Handle allCorrectOutput and someCorrectOutput
-        description = (
-            'Imported from unit "%s", lesson "%s" (question #%s, part #%s)' % (
-                self.unit.title, self.lesson.title, self.question_number + 1,
-                index + 1))
-        if description in self.question_descriptions:
-            raise CollisionError()
-
-        correct_index = orig_question['correctIndex']
-        multiple_selections = not isinstance(correct_index, int)
-        if multiple_selections:
-            partial = 1.0 / len(correct_index)
-            choices = [{
-                'text': text,
-                'score': partial if i in correct_index else -1.0
-            } for i, text in enumerate(orig_question['choices'])]
-        else:
-            choices = [{
-                'text': text,
-                'score': 1.0 if i == correct_index else 0.0
-            } for i, text in enumerate(orig_question['choices'])]
-
-        return {
-            'version': self.VERSION,
-            'description': description,
-            'question': orig_question.get('questionHTML') or '',
-            'multiple_selections': multiple_selections,
-            'choices': choices}
-
-    def import_freetext(self, orig_question):
-        description = self._get_question_description()
-        if description in self.question_descriptions:
-            raise CollisionError()
-
-        return {
-            'version': self.VERSION,
-            'description': description,
-            'question': '',
-            'hint': orig_question['showAnswerOutput'],
-            'graders': [{
-                'score': 1.0,
-                'matcher': 'regex',
-                'response': orig_question['correctAnswerRegex'].value,
-                'feedback': orig_question.get('correctAnswerOutput')
-            }],
-            'defaultFeedback': orig_question.get('incorrectAnswerOutput')}
 
 
 class ExportAssessmentRESTHandler(BaseRESTHandler):

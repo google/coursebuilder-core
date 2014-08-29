@@ -16,12 +16,15 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import random
 import re
+import string
 
 from google.appengine.api import namespace_manager
 
 BACKWARD_COMPATIBLE_SPLITTER = re.compile(r'[\[\] ,\t\n]+', flags=re.M)
 SPLITTER = re.compile(r'[ ,\t\n]+', flags=re.M)
+ALPHANUM = string.ascii_letters + string.digits
 
 
 def text_to_list(text, splitter=SPLITTER):
@@ -34,6 +37,11 @@ def list_to_text(items):
     if not items:
         return ''
     return ' '.join([unicode(item) for item in items])
+
+
+def generate_instance_id():
+    length = 12
+    return ''.join([random.choice(ALPHANUM) for _ in xrange(length)])
 
 
 class Namespace(object):

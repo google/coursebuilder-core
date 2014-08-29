@@ -37,6 +37,7 @@ from common import utils as common_utils
 import common.tags
 import models
 from models import MemcacheManager
+from models import QuestionImporter
 from tools import verify
 
 from google.appengine.api import namespace_manager
@@ -1496,9 +1497,101 @@ class CourseModel13(object):
                 dst_unit.html_check_answers = src_unit.html_check_answers
                 dst_unit.html_review_form = src_unit.html_review_form
 
+        def import_lesson12_activities(
+                text, unit, lesson_w_activity, lesson_title, errors):
+            try:
+                content, noverify_text = verify.convert_javascript_to_python(
+                    text, 'activity')
+                activity = verify.evaluate_python_expression_from_text(
+                    content, 'activity', verify.Activity().scope, noverify_text)
+                if noverify_text:
+                    lesson_w_activity.objectives = (
+                        ('<script>\n// This script is inserted by 1.2 to 1.3 '
+                         'import function\n%s\n</script>\n') % noverify_text)
+            except Exception:  # pylint: disable-msg=broad-except
+                errors.append('Unable to parse activity.')
+                return False
+
+            try:
+                verify.Verifier().verify_activity_instance(activity, 'none')
+            except verify.SchemaException:
+                errors.append('Unable to validate activity.')
+                return False
+
+            question_number = 1
+            task = []
+            try:
+                for item in activity['activity']:
+                    if isinstance(item, basestring):
+                        item = item.decode('string-escape')
+                        task.append(item)
+                    else:
+                        qid, instance_id = QuestionImporter.import_question(
+                            item, unit, lesson_title, question_number,
+                            task)
+                        task = []
+                        if item['questionType'] == 'multiple choice group':
+                            question_tag = (
+                                '<question-group qgid="%s" instanceid="%s">'
+                                '</question-group>') % (qid, instance_id)
+                        elif item['questionType'] == 'freetext':
+                            question_tag = (
+                                '<question quid="%s" instanceid="%s">'
+                                '</question>') % (qid, instance_id)
+                        elif item['questionType'] == 'multiple choice':
+                            question_tag = (
+                                '<question quid="%s" instanceid="%s">'
+                                '</question>') % (qid, instance_id)
+                        else:
+                            raise ValueError(
+                                'Unknown question type: %s' %
+                                item['questionType'])
+                        lesson_w_activity.objectives += question_tag
+                        question_number += 1
+                if task:
+                    lesson_w_activity.objectives += ''.join(task)
+            except models.CollisionError:
+                errors.append('Duplicate activity: %s' % task)
+                return False
+            except models.ValidationError as e:
+                errors.append(str(e))
+                return False
+            except Exception as e:
+                errors.append('Unable to convert: %s, Error: %s' % (task, e))
+                return False
+            return True
+
         def copy_lesson12_into_lesson13(
-            src_unit, src_lesson, unused_dst_unit, dst_lesson):
+            src_unit, src_lesson, dst_unit, dst_lesson, errors):
             """Copies lessons object attributes between versions."""
+            dst_lesson.objectives = src_lesson.objectives
+            dst_lesson.video = src_lesson.video
+            dst_lesson.notes = src_lesson.notes
+            dst_lesson.duration = src_lesson.duration
+            dst_lesson.activity_listed = False
+
+            # Old model does not have this flag, but all lessons are available.
+            dst_lesson.now_available = True
+
+            # Copy over the activity. Note that we copy files directly and
+            # avoid all logical validations of their content. This is done for a
+            # purpose - at this layer we don't care what is in those files.
+            if src_lesson.activity:
+                # create a lesson with activity
+                lesson_w_activity = self.add_lesson(dst_unit, 'Activity')
+                lesson_w_activity.activity_title = src_lesson.activity_title
+                src_filename = os.path.join(
+                    src_course.app_context.get_home(),
+                    src_course.get_activity_filename(
+                        src_unit.unit_id, src_lesson.lesson_id))
+                if src_course.app_context.fs.isfile(src_filename):
+                    text = src_course.app_context.fs.get(src_filename)
+                    import_lesson12_activities(
+                        text, dst_unit, lesson_w_activity, src_lesson.title,
+                        errors)
+
+        def copy_lesson13_into_lesson13(
+                src_unit, src_lesson, unused_dst_unit, dst_lesson):
             dst_lesson.objectives = src_lesson.objectives
             dst_lesson.video = src_lesson.video
             dst_lesson.notes = src_lesson.notes
@@ -1506,9 +1599,6 @@ class CourseModel13(object):
             dst_lesson.has_activity = src_lesson.activity
             dst_lesson.activity_title = src_lesson.activity_title
             dst_lesson.activity_listed = src_lesson.activity_listed
-
-            # Old model does not have this flag, but all lessons are available.
-            dst_lesson.now_available = True
 
             # Copy over the activity. Note that we copy files directly and
             # avoid all logical validations of their content. This is done for a
@@ -1526,11 +1616,6 @@ class CourseModel13(object):
                             self.get_activity_filename(
                                 None, dst_lesson.lesson_id))
                         self.app_context.fs.put(dst_filename, astream)
-
-        def copy_lesson13_into_lesson13(
-            src_unit, src_lesson, unused_dst_unit, dst_lesson):
-            copy_lesson12_into_lesson13(
-                src_unit, src_lesson, unused_dst_unit, dst_lesson)
 
             dst_lesson.now_available = src_lesson.now_available
             dst_lesson.scored = src_lesson.scored
@@ -1610,7 +1695,7 @@ class CourseModel13(object):
                         unit, lesson, new_unit, new_lesson)
                 elif src_course.version == CourseModel12.VERSION:
                     copy_lesson12_into_lesson13(
-                        unit, lesson, new_unit, new_lesson)
+                        unit, lesson, new_unit, new_lesson, errors)
                 else:
                     raise Exception(
                         'Unsupported course version: %s', src_course.version)
@@ -2526,3 +2611,4 @@ course:
 
         fs.put(course_yaml, vfs.string_to_stream(course_yaml_text))
         return True
+
