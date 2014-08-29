@@ -12,22 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module to support users unsubscribing from notifications."""
+"""Module to support internationalization (i18n) workflow."""
 
 __author__ = 'John Orr (jorr@google.com)'
 
 import os
+import urllib
 
 import jinja2
+from webapp2_extras import i18n
 
 import appengine_config
 from common import crypto
+from common import schema_fields
 from common import tags
+from common import xcontent
 from controllers import utils
+from models import courses
 from models import custom_modules
 from models import models
+from models import roles
 from models import transforms
 from modules.dashboard import dashboard
+from modules.dashboard import question_editor
+from modules.dashboard import question_group_editor
+from modules.dashboard import unit_lesson_editor
+from modules.oeditor import oeditor
 from tools import verify
 
 from google.appengine.ext import db
@@ -37,6 +47,11 @@ RESOURCES_PATH = '/modules/i18n_dashboard/resources'
 
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'i18n_dashboard', 'templates')
+
+VERB_NEW = xcontent.SourceToTargetDiffMapping.VERB_NEW
+VERB_CHANGED = xcontent.SourceToTargetDiffMapping.VERB_CHANGED
+VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
+
 
 custom_module = None
 
@@ -51,6 +66,7 @@ class ResourceKey(object):
 
     ASSESSMENT_TYPE = 'assessment'
     ASSET_IMG_TYPE = 'asset_img'
+    COURSE_SETTINGS_TYPE = 'course_settings'
     LESSON_TYPE = 'lesson'
     LINK_TYPE = 'link'
     QUESTION_GROUP_TYPE = 'question_group'
@@ -58,8 +74,8 @@ class ResourceKey(object):
     UNIT_TYPE = 'unit'
 
     RESOURCE_TYPES = [
-        ASSESSMENT_TYPE, ASSET_IMG_TYPE, LESSON_TYPE, LINK_TYPE,
-        QUESTION_GROUP_TYPE, QUESTION_TYPE, UNIT_TYPE]
+        ASSESSMENT_TYPE, ASSET_IMG_TYPE, COURSE_SETTINGS_TYPE, LESSON_TYPE,
+        LINK_TYPE, QUESTION_GROUP_TYPE, QUESTION_TYPE, UNIT_TYPE]
 
     def __init__(self, type_str, key):
         self._type = type_str
@@ -70,10 +86,197 @@ class ResourceKey(object):
     def __str__(self):
         return '%s:%s' % (self._type, self._key)
 
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def key(self):
+        return self._key
+
     @classmethod
     def fromstring(cls, key_str):
-        index = key_str.index('s')
+        index = key_str.index(':')
         return ResourceKey(key_str[:index], key_str[index + 1:])
+
+    def get_schema_data_for_resource(self, app_context):
+        course = courses.Course(None, app_context=app_context)
+        if self.type == ResourceKey.ASSESSMENT_TYPE:
+            schema = unit_lesson_editor.AssessmentRESTHandler.SCHEMA
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return (schema, unit_dict)
+        elif self.type == ResourceKey.LINK_TYPE:
+            schema = unit_lesson_editor.LinkRESTHandler.SCHEMA
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return (schema, unit_dict)
+        elif self.type == ResourceKey.UNIT_TYPE:
+            schema = unit_lesson_editor.UnitRESTHandler.SCHEMA
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return (schema, unit_dict)
+        elif self.type == ResourceKey.LESSON_TYPE:
+            units = course.get_units()
+            lesson = course.find_lesson_by_id(None, self.key)
+            return (
+                unit_lesson_editor.LessonRESTHandler.get_schema(units),
+                unit_lesson_editor.LessonRESTHandler.get_lesson_dict(
+                    app_context, lesson))
+        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
+            schema = course.create_settings_schema().clone_only_items_named(
+                [self.key])
+            json_entity = {}
+            schema.convert_entity_to_json_entity(
+                course.get_environ(app_context), json_entity)
+            return (schema, json_entity[self.key])
+        elif self.type == ResourceKey.QUESTION_TYPE:
+            question = models.QuestionDAO.load(int(self.key))
+            if question.type == models.QuestionDTO.MULTIPLE_CHOICE:
+                return (
+                    question_editor.McQuestionRESTHandler.get_schema(),
+                    question.dict)
+            elif question.type == models.QuestionDTO.SHORT_ANSWER:
+                return (
+                    question_editor.SaQuestionRESTHandler.get_schema(),
+                    question.dict)
+            else:
+                raise ValueError('Unknown question type: %s' % question.type)
+        elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
+            question_group = models.QuestionGroupDAO.load(int(self.key))
+            return (
+                question_group_editor.QuestionGroupRESTHandler.get_schema(),
+                question_group.dict)
+        else:
+            raise ValueError('Unknown content type: %s' % self.type)
+
+
+class ResourceBundleKey(object):
+    """Manages a key for a resource bundle."""
+
+    def __init__(self, type_str, key, locale):
+        self._locale = locale
+        self._type = type_str
+        self._key = key
+
+    def __str__(self):
+        return '%s:%s:%s' % (self._type, self._key, self._locale)
+
+    @property
+    def locale(self):
+        return self._locale
+
+    @property
+    def resource_key(self):
+        return ResourceKey(self._type, self._key)
+
+    @classmethod
+    def fromstring(cls, key_str):
+        type_str, key, locale = key_str.split(':', 2)
+        return ResourceBundleKey(type_str, key, locale)
+
+
+class NamedJsonDAO(models.BaseJsonDao):
+    """Base class for DAOs of entities with named keys."""
+
+    ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
+
+    @classmethod
+    def load_or_create(cls, resource_key):
+        dto = cls.load(str(resource_key))
+        if not dto:
+            dto = cls.DTO(str(resource_key), {})
+            cls.save(dto)
+        return dto
+
+
+class I18nProgressEntity(models.BaseEntity):
+    """The base entity for storing i18n workflow information.
+
+    Each entity represents one resource in the course.
+    """
+
+    data = db.TextProperty(indexed=False)
+
+
+class I18nProgressDTO(object):
+    """The lightweight data object for the i18n workflow data."""
+
+    NOT_STARTED = 0
+    IN_PROGRESS = 1
+    DONE = 2
+
+    IS_I18N_KEY = 'is_i18n'
+    PROGRESS_KEY = 'progress'
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+    @property
+    def is_translatable(self):
+        return self.dict.get(self.IS_I18N_KEY, True)
+
+    @is_translatable.setter
+    def is_translatable(self, value):
+        assert type(value) == bool
+        self.dict[self.IS_I18N_KEY] = value
+
+    def get_progress(self, locale):
+        return self.dict.get(self.PROGRESS_KEY, {}).get(
+            locale, self.NOT_STARTED)
+
+    def set_progress(self, locale, value):
+        progress_dict = self.dict.setdefault(self.PROGRESS_KEY, {})
+        progress_dict[locale] = value
+
+
+class I18nProgressDAO(NamedJsonDAO):
+    """Access object for the i18n workflow data."""
+
+    DTO = I18nProgressDTO
+    ENTITY = I18nProgressEntity
+
+
+class ResourceBundleEntity(models.BaseEntity):
+    """The base entity for storing i18n resource bundles."""
+
+    data = db.TextProperty(indexed=False)
+
+
+class ResourceBundleDTO(object):
+    """The lightweight data transfer object for resource bundles.
+
+    Resource bundles are keyed by (resource_type, resource_key, locale). The
+    data stored in the dict follows the following pattern:
+
+    {
+      field_name_1: {
+        type: <the value type for the field>,
+        source_value: <only used for html type: the undecomposed source_value>,
+        data: [
+          # A list of source/target pairs. The list is a singleton for plain
+          # string data, and is a list of decomposed chunks for html data
+          {
+            source_value: <the original untranslated string>,
+            target_value: <the translated string>,
+          }
+        ]
+      },
+      field_name_2: ...
+    }
+    """
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+
+class ResourceBundleDAO(NamedJsonDAO):
+    """Data access object for resource bundle information."""
+
+    DTO = ResourceBundleDTO
+    ENTITY = ResourceBundleEntity
 
 
 class TableRow(object):
@@ -101,13 +304,16 @@ class ResourceRow(TableRow):
     IN_PROGRESS_STRING = 'In progress'
     NOT_STARTED_CLASS = 'not-started'
     NOT_STARTED_STRING = 'Not started'
+    NOT_TRANSLATABLE_CLASS = 'not-translatable'
 
-    def __init__(self, course, resource, type_str, key, is_translatable=True):
+    def __init__(
+            self, course, resource, type_str, key,
+            i18n_progress_dto=None):
         self._course = course
         self._resource = resource
         self._type = type_str
         self._key = key
-        self._is_translatable = is_translatable
+        self._i18n_progress_dto = i18n_progress_dto
 
     @property
     def name(self):
@@ -117,11 +323,11 @@ class ResourceRow(TableRow):
             return utils.display_lesson_title(
                 self._course.find_unit_by_id(self._resource.unit_id),
                 self._resource)
-        elif self._type in [
-                ResourceKey.ASSESSMENT_TYPE, ResourceKey.LESSON_TYPE,
-                ResourceKey.LINK_TYPE]:
+        elif self._type in [ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE]:
             return self._resource.title
         elif self._type == ResourceKey.ASSET_IMG_TYPE:
+            return self._key
+        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
             return self._key
         elif self._type in [
                 ResourceKey.QUESTION_GROUP_TYPE, ResourceKey.QUESTION_TYPE]:
@@ -131,7 +337,10 @@ class ResourceRow(TableRow):
 
     @property
     def class_name(self):
-        return '' if self._is_translatable else 'not-translatable'
+        if self._i18n_progress_dto.is_translatable:
+            return ''
+        else:
+            return self.NOT_TRANSLATABLE_CLASS
 
     @property
     def resource_key(self):
@@ -139,28 +348,47 @@ class ResourceRow(TableRow):
 
     @property
     def is_translatable(self):
-        return self._is_translatable
-
-    def _mock_status_data(self, locale):
-        #######################################################################
-        # DEMO CODE ONLY
-        #
-        if locale == 'ru' and self._type in [
-                ResourceKey.LESSON_TYPE, ResourceKey.UNIT_TYPE,
-                ResourceKey.QUESTION_TYPE]:
-            return (self.DONE_STRING, self.DONE_CLASS)
-        elif locale == 'el' and self._type == ResourceKey.LESSON_TYPE:
-            return (self.IN_PROGRESS_STRING, self.IN_PROGRESS_CLASS)
-        else:
-            return (self.NOT_STARTED_STRING, self.NOT_STARTED_CLASS)
-        #
-        #######################################################################
+        return self._i18n_progress_dto.is_translatable
 
     def status(self, locale):
-        return self._mock_status_data(locale)[0]
+        progress = self._i18n_progress_dto.get_progress(locale)
+        if progress == I18nProgressDTO.NOT_STARTED:
+            return self.NOT_STARTED_STRING
+        elif progress == I18nProgressDTO.IN_PROGRESS:
+            return self.IN_PROGRESS_STRING
+        else:
+            return self.DONE_STRING
 
     def status_class(self, locale):
-        return self._mock_status_data(locale)[1]
+        progress = self._i18n_progress_dto.get_progress(locale)
+        if progress == I18nProgressDTO.NOT_STARTED:
+            return self.NOT_STARTED_CLASS
+        elif progress == I18nProgressDTO.IN_PROGRESS:
+            return self.IN_PROGRESS_CLASS
+        else:
+            return self.DONE_CLASS
+
+    def view_url(self, unused_locale):
+        if self._type == ResourceKey.UNIT_TYPE:
+            return 'unit?unit=%s' % self._key
+        elif self._type == ResourceKey.LESSON_TYPE:
+            return 'unit?unit=%s&lesson=%s' % (
+                self._resource.unit_id, self._key)
+        elif self._type == ResourceKey.ASSESSMENT_TYPE:
+            return 'assessment?name=%s' % self._key
+        elif self._type == ResourceKey.ASSET_IMG_TYPE:
+            return self._key
+        elif self._type in [
+                ResourceKey.COURSE_SETTINGS_TYPE, ResourceKey.LINK_TYPE,
+                ResourceKey.QUESTION_GROUP_TYPE, ResourceKey.QUESTION_TYPE]:
+            return 'javascript:void(0)'
+
+        raise ValueError('Unknown type %s' % self._type)
+
+    def edit_url(self, locale):
+        return 'dashboard?%s' % urllib.urlencode({
+            'action': TranslationConsole.ACTION,
+            'key': ResourceBundleKey(self._type, self._key, locale)})
 
 
 class SectionRow(TableRow):
@@ -193,47 +421,6 @@ class EmptyRow(SectionRow):
         return 'empty-section'
 
 
-class I18nProgressEntity(models.BaseEntity):
-    """The base entity for storing i18n workflow information.
-
-    Each entity represents one resource in the course.
-    """
-
-    data = db.TextProperty(indexed=False)
-
-
-class I18nProgressDTO(object):
-    """The lightweight data object for the i18n workflow data."""
-
-    IS_TRANSLATABLE_KEY = 'is_translatable'
-
-    def __init__(self, the_id, the_dict):
-        self.id = the_id
-        self.dict = the_dict
-
-    def is_translatable(self, default):
-        return self.dict.get(self.IS_TRANSLATABLE_KEY, default)
-
-    def set_translatable(self, value):
-        self.dict[self.IS_TRANSLATABLE_KEY] = value
-
-
-class I18nProgressDAO(models.BaseJsonDao):
-    """Access object for the i18n workflow data."""
-
-    DTO = I18nProgressDTO
-    ENTITY = I18nProgressEntity
-    ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
-
-    @classmethod
-    def load_or_create(cls, resource_key):
-        i18n_progress_dto = cls.load(str(resource_key))
-        if not i18n_progress_dto:
-            i18n_progress_dto = I18nProgressDTO(str(resource_key), {})
-            cls.save(i18n_progress_dto)
-        return i18n_progress_dto
-
-
 class IsTranslatableRestHandler(utils.BaseRESTHandler):
     """REST handler to respond to setting a resource as (non-)translatable."""
 
@@ -246,17 +433,35 @@ class IsTranslatableRestHandler(utils.BaseRESTHandler):
                 request, self.XSRF_TOKEN_NAME, {}):
             return
 
+        if not unit_lesson_editor.CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(self, 401, 'Access denied.', {})
+            return
+
         payload = request.get('payload')
         i18n_progress_dto = I18nProgressDAO.load_or_create(
             payload['resource_key'])
-        i18n_progress_dto.set_translatable(payload['value'])
+        i18n_progress_dto.is_translatable = payload['value']
         I18nProgressDAO.save(i18n_progress_dto)
 
         transforms.send_json_response(self, 200, 'OK', {}, None)
 
 
-class I18nDashboardHandler(object):
-    """Provides the logic for rendering the i18n workflow dashboard."""
+class BaseDashboardExtension(object):
+    ACTION = None
+
+    @classmethod
+    def register(cls):
+        def get_action(handler):
+            cls(handler).render()
+
+        dashboard.DashboardHandler.get_actions.append(cls.ACTION)
+        setattr(
+            dashboard.DashboardHandler, 'get_%s' % cls.ACTION, get_action)
+
+    @classmethod
+    def unregister(cls):
+        dashboard.DashboardHandler.get_actions.remove(cls.ACTION)
+        setattr(dashboard.DashboardHandler, 'get_%s' % cls.ACTION, None)
 
     def __init__(self, handler):
         """Initialize the class with a request handler.
@@ -266,19 +471,27 @@ class I18nDashboardHandler(object):
                 which will do the rendering.
         """
         self.handler = handler
+
+
+class I18nDashboardHandler(BaseDashboardExtension):
+    """Provides the logic for rendering the i18n workflow dashboard."""
+
+    ACTION = 'i18n_dashboard'
+
+    def __init__(self, handler):
+        super(I18nDashboardHandler, self).__init__(handler)
         self.course = handler.get_course()
         self.environ = self.handler.app_context.get_environ()
         self.main_locale = self.environ['course']['locale']
         self.extra_locales = [
             loc['locale'] for loc in self.environ.get('extra_locales', [])]
 
-    def get_resource_row(self, resource, type_str, key):
+    def _get_resource_row(self, resource, type_str, key):
         i18n_progress_dto = I18nProgressDAO.load_or_create(
             ResourceKey(type_str, key))
-        is_translatable = i18n_progress_dto.is_translatable(True)
         return ResourceRow(
             self.course, resource, type_str, key,
-            is_translatable=is_translatable)
+            i18n_progress_dto=i18n_progress_dto)
 
     def _make_table_section(self, data_rows, section_title):
         rows = []
@@ -292,20 +505,28 @@ class I18nDashboardHandler(object):
     def render(self):
         rows = []
 
+        # Course settings
+        data_rows = []
+
+        for section in ['base', 'course', 'reg_form', 'homepage', 'unit']:
+            data_rows.append(self._get_resource_row(
+                None, ResourceKey.COURSE_SETTINGS_TYPE, section))
+        rows += self._make_table_section(data_rows, 'Course Settings')
+
         # Run over units and lessons
         data_rows = []
         for unit in self.course.get_units():
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                data_rows.append(self.get_resource_row(
+                data_rows.append(self._get_resource_row(
                     unit, ResourceKey.ASSESSMENT_TYPE, unit.unit_id))
             elif unit.type == verify.UNIT_TYPE_LINK:
-                data_rows.append(self.get_resource_row(
+                data_rows.append(self._get_resource_row(
                     unit, ResourceKey.LINK_TYPE, unit.unit_id))
             elif unit.type == verify.UNIT_TYPE_UNIT:
-                data_rows.append(self.get_resource_row(
+                data_rows.append(self._get_resource_row(
                     unit, ResourceKey.UNIT_TYPE, unit.unit_id))
                 for lesson in self.course.get_lessons(unit.unit_id):
-                    data_rows.append(self.get_resource_row(
+                    data_rows.append(self._get_resource_row(
                         lesson, ResourceKey.LESSON_TYPE, lesson.lesson_id))
             else:
                 raise Exception('Unknown unit type: %s.' % unit.type)
@@ -313,18 +534,18 @@ class I18nDashboardHandler(object):
 
         # Run over file assets
         data_rows = [
-            self.get_resource_row(None, ResourceKey.ASSET_IMG_TYPE, path)
+            self._get_resource_row(None, ResourceKey.ASSET_IMG_TYPE, path)
             for path in self.handler.list_files('/assets/img')]
         rows += self._make_table_section(data_rows, 'Images and Documents')
 
         # Run over questions and question groups
         data_rows = [
-            self.get_resource_row(qu, ResourceKey.QUESTION_TYPE, qu.id)
+            self._get_resource_row(qu, ResourceKey.QUESTION_TYPE, qu.id)
             for qu in models.QuestionDAO.get_all()]
         rows += self._make_table_section(data_rows, 'Questions')
 
         data_rows = [
-            self.get_resource_row(qg, ResourceKey.QUESTION_GROUP_TYPE, qg.id)
+            self._get_resource_row(qg, ResourceKey.QUESTION_GROUP_TYPE, qg.id)
             for qg in models.QuestionGroupDAO.get_all()]
         rows += self._make_table_section(data_rows, 'Question Groups')
 
@@ -343,38 +564,302 @@ class I18nDashboardHandler(object):
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
 
+        title_text = 'I18n Workflow'
+
         self.handler.render_page({
-            'page_title': 'I18n Workflow',
+            'page_title': self.handler.format_title(title_text),
+            'page_title_linked': self.handler.format_title(title_text),
             'main_content': jinja2.utils.Markup(main_content)})
 
 
-def get_i18n_dashboard(handler):
-    """A request handler method which will be bound toDashboardHandler."""
+class TranslationConsole(BaseDashboardExtension):
+    ACTION = 'i18_console'
 
-    I18nDashboardHandler(handler).render()
+    def render(self):
+        main_content = oeditor.ObjectEditor.get_html_for(
+            self.handler,
+            TranslationConsoleRestHandler.SCHEMA.get_json_schema(),
+            TranslationConsoleRestHandler.SCHEMA.get_schema_dict(),
+            self.handler.request.get('key'),
+            self.handler.canonicalize_url(TranslationConsoleRestHandler.URL),
+            self.handler.get_action_url(I18nDashboardHandler.ACTION),
+            auto_return=False,
+            required_modules=TranslationConsoleRestHandler.REQUIRED_MODULES,
+            extra_css_files=['translation_console.css'],
+            extra_js_files=['translation_console.js'],
+            additional_dirs=[TEMPLATES_DIR])
+
+        self.handler.render_page({
+            'page_title': 'I18n Workflow',
+            'main_content': main_content})
+
+
+def tc_generate_schema():
+    schema = schema_fields.FieldRegistry(
+        'Translation Console', extra_schema_dict_values={
+            'className': 'inputEx-Group translation-console'})
+    schema.add_property(schema_fields.SchemaField(
+        'key', 'ID', 'string', hidden=True))
+    schema.add_property(schema_fields.SchemaField(
+        'source_locale', 'Source Locale', 'string', hidden=True))
+    schema.add_property(schema_fields.SchemaField(
+        'target_locale', 'Target Locale', 'string', hidden=True))
+
+    section = schema_fields.FieldRegistry(
+        None, 'section', extra_schema_dict_values={
+            'className': 'inputEx-Group translation-item'})
+    section.add_property(schema_fields.SchemaField(
+        'name', 'Name', 'string', editable=False))
+    section.add_property(schema_fields.SchemaField(
+        'type', 'Type', 'string', editable=False, optional=True))
+    section.add_property(schema_fields.SchemaField(
+        'source_value', 'source_value', 'string', hidden=True, optional=True))
+
+    item = schema_fields.FieldRegistry(None, 'item')
+    item.add_property(schema_fields.SchemaField(
+        'source_value', 'Original', 'string', optional=True,
+        extra_schema_dict_values={'_type': 'text', 'className': 'disabled'}))
+    item.add_property(schema_fields.SchemaField(
+        'target_value', 'Translated', 'string', optional=True,
+        extra_schema_dict_values={'_type': 'text', 'className': 'active'}))
+    item.add_property(schema_fields.SchemaField(
+        'verb', 'Verb', 'string', hidden=True, optional=True))
+    item.add_property(schema_fields.SchemaField(
+        'old_source_value', 'Old Source Value', 'string', hidden=True,
+        optional=True))
+    item.add_property(schema_fields.SchemaField(
+        'changed', 'Changed', 'boolean', hidden=True, optional=True))
+
+    section.add_property(schema_fields.FieldArray(
+        'data', 'Data', item_type=item,
+        extra_schema_dict_values={}))
+
+    schema.add_property(schema_fields.FieldArray(
+        'sections', 'Sections', item_type=section))
+
+    return schema
+
+
+class TranslationConsoleRestHandler(utils.BaseRESTHandler):
+    URL = '/rest/modules/i18n_dashboard/translation_console'
+    XSRF_TOKEN_NAME = 'translation-console'
+
+    SCHEMA = tc_generate_schema()
+
+    REQUIRED_MODULES = [
+        'inputex-hidden', 'inputex-list', 'inputex-string', 'inputex-textarea',
+        'inputex-uneditable']
+
+    def _filter_translatable(self, binding):
+        """Filter only translatable strings."""
+        return schema_fields.ValueToTypeBinding.filter_on_criteria(
+            binding,
+            type_names=['string', 'html', 'url'],
+            hidden_values=[False],
+            i18n_values=[None, True],
+            editable_values=[True])
+
+    def _add_known_translations_as_defaults(self, locale, sections):
+        translations = i18n.get_store().get_translations(locale)
+        for section in sections:
+            for item in section['data']:
+                if item['verb'] == VERB_NEW:
+                    source_value = item['source_value']
+                    target_value = translations.gettext(source_value)
+                    if source_value and target_value != source_value:
+                        item['target_value'] = target_value
+                        item['verb'] = VERB_CURRENT
+
+    def get(self):
+        key = ResourceBundleKey.fromstring(self.request.get('key'))
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': str(key)})
+            return
+
+        schema, values = key.resource_key.get_schema_data_for_resource(
+            self.app_context)
+
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            values, schema)
+
+        allowed_names = self._filter_translatable(binding)
+
+        existing_mappings = []
+        resource_bundle_dto = ResourceBundleDAO.load(str(key))
+        if resource_bundle_dto:
+            for name, value in resource_bundle_dto.dict.items():
+                if value['type'] == 'html':
+                    source_value = value['source_value']
+                    target_value = ''
+                else:
+                    source_value = value['data'][0]['source_value']
+                    target_value = value['data'][0]['target_value']
+
+                existing_mappings.append(xcontent.SourceToTargetMapping(
+                    name, value['type'], source_value, target_value))
+
+        mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
+            binding, allowed_names=allowed_names,
+            existing_mappings=existing_mappings)
+
+        map_lists_source_to_target = (
+            xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
+        sections = []
+        for mapping in mappings:
+            if mapping.type == 'html':
+                existing_mappings = []
+                if resource_bundle_dto:
+                    field_dict = resource_bundle_dto.dict.get(mapping.name)
+                    if field_dict:
+                        existing_mappings = field_dict['data']
+                transformer = xcontent.ContentTransformer()
+                context = xcontent.Context(
+                    xcontent.ContentIO.fromstring(mapping.source_value))
+                transformer.decompose(context)
+
+                html_mappings = map_lists_source_to_target(
+                    context.resource_bundle,
+                    [m['source_value'] for m in existing_mappings])
+                source_value = mapping.source_value
+                data = []
+                for html_mapping in html_mappings:
+                    if html_mapping.target_value_index is not None:
+                        target_value = existing_mappings[
+                            html_mapping.target_value_index]['target_value']
+                    else:
+                        target_value = ''
+                    data.append({
+                        'source_value': html_mapping.source_value,
+                        'old_source_value': html_mapping.target_value,
+                        'target_value': target_value,
+                        'verb': html_mapping.verb,
+                        'changed': False})
+            else:
+                source_value = ''
+                data = [{
+                    'source_value': mapping.source_value,
+                    'target_value': mapping.target_value,
+                    'verb': mapping.verb,
+                    'changed': False}]
+
+            sections.append({
+                'name': mapping.name,
+                'type': mapping.type,
+                'source_value': source_value,
+                'data': data
+            })
+
+        self._add_known_translations_as_defaults(key.locale, sections)
+
+        payload_dict = {
+            'key': str(key),
+            'source_locale': self.app_context.get_environ()['course']['locale'],
+            'target_locale': key.locale,
+            'sections': sorted(sections, key=lambda section: section['name'])
+        }
+
+        transforms.send_json_response(
+            self, 200, 'success',
+            payload_dict=payload_dict,
+            xsrf_token=utils.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN_NAME))
+
+    def put(self):
+        request = transforms.loads(self.request.get('request'))
+        key = request['key']
+        resource_bundle_key = ResourceBundleKey.fromstring(key)
+
+        if not self.assert_xsrf_token_or_fail(
+                request, self.XSRF_TOKEN_NAME, {'key': key}):
+            return
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        payload = transforms.loads(request['payload'])
+        payload_dict = transforms.json_to_dict(
+            payload, self.SCHEMA.get_json_schema_dict())
+
+        # Update the resource bundle
+        resource_bundle_dto = ResourceBundleDAO.load(key)
+        if not resource_bundle_dto:
+            resource_bundle_dto = ResourceBundleDTO(key, {})
+
+        for section in payload_dict['sections']:
+            changed = False
+            data = []
+            for item in section['data']:
+                if item['changed']:
+                    changed = True
+                    data.append({
+                        'source_value': item['source_value'],
+                        'target_value': item['target_value']})
+                elif item['verb'] == VERB_CHANGED:
+                    data.append({
+                        'source_value': item['old_source_value'],
+                        'target_value': item['target_value']})
+                elif item['verb'] == VERB_CURRENT:
+                    data.append({
+                        'source_value': item['source_value'],
+                        'target_value': item['target_value']})
+                else:  # when it is VERB_NEW
+                    pass
+
+            if changed:
+                source_value = None
+                if section['type'] == 'html':
+                    source_value = section['source_value']
+
+                resource_bundle_dto.dict[section['name']] = {
+                    'type': section['type'],
+                    'source_value': source_value,
+                    'data': data,
+                }
+        ResourceBundleDAO.save(resource_bundle_dto)
+
+        # Update the progress
+        is_done = True
+        for section in payload_dict['sections']:
+            for item in section['data']:
+                if item['verb'] != VERB_CURRENT and not item['changed']:
+                    is_done = False
+
+        i18_progress_dto = I18nProgressDAO.load_or_create(
+            resource_bundle_key.resource_key)
+        i18_progress_dto.set_progress(
+            resource_bundle_key.locale,
+            I18nProgressDTO.DONE if is_done else I18nProgressDTO.IN_PROGRESS)
+        I18nProgressDAO.save(i18_progress_dto)
+
+        transforms.send_json_response(self, 200, 'Saved.')
 
 
 def notify_module_enabled():
-    dashboard.DashboardHandler.nav_mappings.append(['i18n_dashboard', 'i18n'])
-    dashboard.DashboardHandler.get_actions.append('i18n_dashboard')
-    dashboard.DashboardHandler.get_i18n_dashboard = get_i18n_dashboard
+    dashboard.DashboardHandler.nav_mappings.append(
+        [I18nDashboardHandler.ACTION, 'i18n'])
+    I18nDashboardHandler.register()
+    TranslationConsole.register()
 
 
 def notify_module_disabled():
-    dashboard.DashboardHandler.nav_mappings.remove(['i18n_dashboard', 'i18n'])
-    dashboard.DashboardHandler.get_actions.remove('i18n_dashboard')
-    dashboard.DashboardHandler.get_i18n_dashboard = None
+    dashboard.DashboardHandler.nav_mappings.remove(
+        [I18nDashboardHandler.ACTION, 'i18n'])
+    I18nDashboardHandler.unregister()
+    TranslationConsole.unregister()
 
 
 def register_module():
     """Registers this module in the registry."""
 
-    global_routes = []
-
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
     namespaced_routes = [
+        (TranslationConsoleRestHandler.URL, TranslationConsoleRestHandler),
         (IsTranslatableRestHandler.URL, IsTranslatableRestHandler)]
 
     global custom_module

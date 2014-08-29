@@ -273,14 +273,14 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             description=messages.INCORRECT_ANSWER_FEEDBACK))
 
         sa_question.add_property(schema_fields.SchemaField(
-            'rows', 'Rows', 'string', optional=True,
+            'rows', 'Rows', 'string', optional=True, i18n=False,
             extra_schema_dict_values={
                 'className': 'sa-rows',
                 'value': SaQuestionConstants.DEFAULT_HEIGHT_ROWS
             },
             description=messages.INPUT_FIELD_HEIGHT_DESCRIPTION))
         sa_question.add_property(schema_fields.SchemaField(
-            'columns', 'Columns', 'string', optional=True,
+            'columns', 'Columns', 'string', optional=True, i18n=False,
             extra_schema_dict_values={
                 'className': 'sa-columns',
                 'value': SaQuestionConstants.DEFAULT_WIDTH_COLUMNS
@@ -291,10 +291,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             'Answer',
             extra_schema_dict_values={'className': 'sa-grader'})
         grader_type.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'string', optional=True,
+            'score', 'Score', 'string', optional=True, i18n=False,
             extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(
-            'matcher', 'Grading', 'string', optional=True,
+            'matcher', 'Grading', 'string', optional=True, i18n=False,
             select_data=cls.GRADER_TYPES,
             extra_schema_dict_values={'className': 'sa-grader-score'}))
         grader_type.add_property(schema_fields.SchemaField(

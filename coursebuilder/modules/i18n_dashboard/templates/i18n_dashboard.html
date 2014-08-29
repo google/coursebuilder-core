@@ -26,6 +26,8 @@
           </td>
           {% for locale in extra_locales %}
             <td class="resource-locale-entry {{row.status_class(locale)}}">
+              <a href="{{ row.view_url(locale) }}"><img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
+              <a href="{{ row.edit_url(locale) }}"><img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
               {{ row.status(locale) }}
             </td>
           {% endfor %}

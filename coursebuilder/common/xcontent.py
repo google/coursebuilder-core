@@ -811,7 +811,7 @@ class SourceToTargetMapping(object):
         self._target = target_value
 
     def __str__(self):
-        return '%s (%s): %s == %s'% (
+        return '%s (%s): %s == %s' % (
             self._name, self._type, self._source, self._target)
 
     @property
@@ -848,23 +848,36 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
 
     SIMILARITY_CUTOFF = 0.5
 
-    def __init__(self, name, source_value, target_value, type_name, verb):
+    def __init__(
+            self, name, source_value, target_value, type_name, verb,
+            source_value_index, target_value_index):
         assert verb in self.ALLOWED_VERBS
         super(SourceToTargetDiffMapping, self).__init__(
             name, source_value, target_value, type_name)
         self._verb = verb
+        self._source_value_index = source_value_index
+        self._target_value_index = target_value_index
 
     def __str__(self):
-        return '%s (%s, %s): %s | %s'% (
+        return '%s (%s, %s): %s | %s' % (
             self._name, self._type, self._verb, self._source, self._target)
 
     @property
     def verb(self):
         return self._verb
 
+    @property
+    def source_value_index(self):
+        return self._source_value_index
+
+    @property
+    def target_value_index(self):
+        return self._target_value_index
+
     @classmethod
     def _create_value_mapping(
-        cls, field_value, source_value, target_value, verb):
+            cls, field_value, source_value, target_value, verb,
+            source_value_index, target_value_index):
         _name = None
         _type = None
         if field_value is not None:
@@ -872,7 +885,8 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
             _type = field_value.field.type
         return SourceToTargetDiffMapping(
             _name, _type,
-            source_value, target_value, verb)
+            source_value, target_value, verb,
+            source_value_index, target_value_index)
 
     @classmethod
     def map_lists_source_to_target(cls, a, b, allow_reorder=False):
@@ -888,19 +902,29 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
             tag, i1, i2, j1, j2 = optcode
             if 'insert' == tag:
                 continue
+            if 'replace' == tag:
+                changed_len = min(i2 - i1, j2 - j1)
+                for index in range(i1, i1 + changed_len):
+                    entry = cls._create_value_mapping(
+                        None, a[index], b[j1 + (index - i1)], cls.VERB_CHANGED,
+                        index, j1 + (index - i1))
+                    mappings.append(entry)
+                for index in range(i1 + changed_len, i2):
+                    entry = cls._create_value_mapping(
+                        None, a[index], None, cls.VERB_NEW, index, None)
+                    mappings.append(entry)
+                continue
             for index in range(i1, i2):
                 entry = None
                 if 'equal' == tag:
                     assert (i2 - i1) == (j2 - j1)
                     entry = cls._create_value_mapping(
-                        None, a[index], b[j1 + (index - i1)], cls.VERB_CURRENT)
-                elif 'replace' == tag:
-                    assert (i2 - i1) == (j2 - j1)
-                    entry = cls._create_value_mapping(
-                        None, a[index], b[j1 + (index - i1)], cls.VERB_CHANGED)
+                        None, a[index], b[j1 + (index - i1)], cls.VERB_CURRENT,
+                        index, j1 + (index - i1))
                 elif 'delete' == tag:
                     entry = cls._create_value_mapping(
-                        None, a[index], None, cls.VERB_NEW)
+                        None, a[index], None, cls.VERB_NEW,
+                        index, None)
                 else:
                     raise KeyError()
                 assert entry is not None
@@ -918,7 +942,8 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
                 if _new == _old:
                     entry = cls._create_value_mapping(
                         None,
-                        a[new_index], b[old_index], cls.VERB_CURRENT)
+                        a[new_index], b[old_index], cls.VERB_CURRENT,
+                        new_index, old_index)
                     break
                 score = difflib.SequenceMatcher(None, _new, _old).quick_ratio()
                 if score > best_score:
@@ -929,10 +954,12 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
                 continue
             if best_score > cls.SIMILARITY_CUTOFF:
                 entry = cls._create_value_mapping(
-                    None, a[new_index], b[best_match_index], cls.VERB_CHANGED)
+                    None, a[new_index], b[best_match_index], cls.VERB_CHANGED,
+                    new_index, best_match_index)
             else:
                 entry = cls._create_value_mapping(
-                    None, a[new_index], None, cls.VERB_NEW)
+                    None, a[new_index], None, cls.VERB_NEW,
+                    new_index, None)
             assert entry is not None
             mappings.append(entry)
         return mappings
@@ -989,7 +1016,7 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
                     verb = cls.VERB_CURRENT
             source_value = field_value.value
             entry = cls._create_value_mapping(
-                field_value, source_value, target_value, verb)
+                field_value, source_value, target_value, verb, None, None)
             mapping.append(entry)
         return mapping
 
@@ -1067,15 +1094,17 @@ class ListsDifflibTests(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT, 2, 2),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT, 3, 3),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
     def test_map_lists_source_to_target_no_reorder_but_changed(self):
         newest = ['The', 'sky', 'is', 'blue', '!']
@@ -1083,15 +1112,17 @@ class ListsDifflibTests(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', 'was', SourceToTargetDiffMapping.VERB_CHANGED),
-            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', 'was', SourceToTargetDiffMapping.VERB_CHANGED, 2, 2),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT, 3, 3),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
     def test_map_lists_source_to_target_no_reorder_and_remove_insert(self):
         newest = ['The', 'sky', 'is', 'blue', '!']
@@ -1099,15 +1130,17 @@ class ListsDifflibTests(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', None, SourceToTargetDiffMapping.VERB_NEW),
-            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 2),
+            ('is', None, SourceToTargetDiffMapping.VERB_NEW, 2, None),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT, 3, 3),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
     def test_map_lists_source_to_target_no_reorder_and_new(self):
         newest = ['The', 'sky', 'is', 'blue', '!']
@@ -1115,15 +1148,35 @@ class ListsDifflibTests(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', None, SourceToTargetDiffMapping.VERB_NEW),
-            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', None, SourceToTargetDiffMapping.VERB_NEW, 2, None),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT, 3, 2),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 3)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
+
+    def test_map_lists_source_to_target_no_reorder_change_and_new(self):
+        newest = ['The', 'sky', 'is', 'blue', '!']
+        oldest = ['The', 'sky', 'is', 'BLUE']
+        mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
+            newest, oldest)
+        expected_mappings = [
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT, 2, 2),
+            ('blue', 'BLUE', SourceToTargetDiffMapping.VERB_CHANGED, 3, 3),
+            ('!', None, SourceToTargetDiffMapping.VERB_NEW, 4, None)]
+        self.assertEqual(
+            expected_mappings, [(
+                mapping.source_value, mapping.target_value,
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
 
 class SetsDifflibUtils(unittest.TestCase):
@@ -1135,15 +1188,17 @@ class SetsDifflibUtils(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest, allow_reorder=True)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 2),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT, 2, 1),
+            ('blue', 'blue', SourceToTargetDiffMapping.VERB_CURRENT, 3, 3),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
     def test_diff_two_string_lists_with_reorder_over_cutoff(self):
         newest = ['The', 'sky', 'is', 'blue', '!']
@@ -1151,15 +1206,17 @@ class SetsDifflibUtils(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest, allow_reorder=True)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('blue', 'blUe', SourceToTargetDiffMapping.VERB_CHANGED),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT, 2, 2),
+            ('blue', 'blUe', SourceToTargetDiffMapping.VERB_CHANGED, 3, 3),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
     def test_diff_two_string_lists_with_reorder_under_cutoff(self):
         newest = ['The', 'sky', 'is', 'blue', '!']
@@ -1167,15 +1224,17 @@ class SetsDifflibUtils(unittest.TestCase):
         mappings = SourceToTargetDiffMapping.map_lists_source_to_target(
             newest, oldest, allow_reorder=True)
         expected_mappings = [
-            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT),
-            ('blue', None, SourceToTargetDiffMapping.VERB_NEW),
-            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT)]
+            ('The', 'The', SourceToTargetDiffMapping.VERB_CURRENT, 0, 0),
+            ('sky', 'sky', SourceToTargetDiffMapping.VERB_CURRENT, 1, 1),
+            ('is', 'is', SourceToTargetDiffMapping.VERB_CURRENT, 2, 2),
+            ('blue', None, SourceToTargetDiffMapping.VERB_NEW, 3, None),
+            ('!', '!', SourceToTargetDiffMapping.VERB_CURRENT, 4, 4)]
         self.assertEqual(
             expected_mappings, [(
                 mapping.source_value, mapping.target_value,
-                mapping.verb) for mapping in mappings])
+                mapping.verb,
+                mapping.source_value_index, mapping.target_value_index
+            ) for mapping in mappings])
 
 
 class TestCasesForIO(unittest.TestCase):

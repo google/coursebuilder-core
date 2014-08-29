@@ -1837,6 +1837,7 @@ class Course(object):
             'course:title', 'Course Name', 'string'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:admin_user_emails', 'Course Admin Emails', 'string',
+            i18n=False,
             description='A list of email addresses of course administrators.  '
             'Syntax: Entries may be separated with any combination of '
             'tabs, spaces, commas, or newlines.  Existing values using "[" and '
@@ -1863,6 +1864,7 @@ class Course(object):
             'where students can register to receive course announcements.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:whitelist', 'Whitelisted Students', 'text', optional=True,
+            i18n=False,
             description='List of email addresses of students who may register.'
             'Syntax: Entries may be separated with any combination of '
             'tabs, spaces, commas, or newlines.  Existing values using "[" and '
@@ -1902,7 +1904,8 @@ class Course(object):
                 'listRemoveLabel': 'Delete locale'}))
 
         course_opts.add_property(schema_fields.SchemaField(
-            'course:start_date', 'Course Start Date', 'string', optional=True))
+            'course:start_date', 'Course Start Date', 'string', optional=True,
+            i18n=False))
         course_opts.add_property(schema_fields.SchemaField(
             'course:now_available', 'Make Course Available', 'boolean'))
         course_opts.add_property(schema_fields.SchemaField(
@@ -1915,13 +1918,15 @@ class Course(object):
 
         course_opts.add_property(schema_fields.SchemaField(
             'course:google_analytics_id', 'ID for Google Analytics', 'string',
-            optional=True, description='This ID tells Google Analytics who is '
+            optional=True, i18n=False,
+            description='This ID tells Google Analytics who is '
             'calling, and allows it to string together routes that visitors '
             'take through pages.  Obtain this ID by signing up at '
             'http://www.google.com/analytics'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:google_tag_manager_id', 'ID for Google Tag Manager',
-            'string', optional=True, description='This ID tells Google Tag '
+            'string', optional=True, i18n=False,
+            description='This ID tells Google Tag '
             'Manager who is calling.  This allows the Tag Manager to notify '
             'other site use tracking services what users are doing on the '
             'site.  Obtain this ID by signing up at '
@@ -1939,6 +1944,7 @@ class Course(object):
         course_opts.add_property(schema_fields.SchemaField(
             'course:welcome_notifications_sender',
             'Welcome notifications sender', 'string', optional=True,
+            i18n=False,
             description='The "From:" email address used on outgoing '
             'notifications. If "Send welcome notifications" is enabled, you '
             'must set this to a valid value for App Engine email or outgoing '

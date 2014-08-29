@@ -1,0 +1,153 @@
+/* Hide the "Add" and "Remove" buttons for InputEx lists. */
+.translation-console a.inputEx-List-link {
+  display: none;
+}
+
+/* Remove extra vertical padding put in by InputEx lists. */
+.inputEx-ListField > span:first-child {
+  display: none;
+}
+
+.translation-header {
+  margin: 20px 0 10px 0;
+  background-color: #f0f0f0;
+  border-top: solid #ccc 1px;
+  border-bottom: solid #ccc 1px;
+  font-weight: bold;
+  color: #333;
+}
+.translation-header > div {
+  width: 330px;
+  padding: 5px 0;
+  padding-left: 20px;
+  display: inline-block;
+}
+
+.translation-console .inputEx-label {
+  float: none;
+  text-align: left;
+  width: auto;
+}
+
+/* Hide the section title. */
+.translation-console > fieldset > div:last-child > div:first-child {
+  display: none;
+}
+
+.translation-console .inputEx-Field {
+  width: auto;
+}
+
+.translation-console .inputEx-Field textarea {
+  border: solid 1px #999999;
+  width: 325px;
+  height: 75px;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: normal;
+  resize:vertical;
+}
+.translation-console .inputEx-Field textarea:disabled {
+  background-color: #f8f8f8;
+  color: #008;
+}
+
+/* Set the styling for the verb states. */
+.translation-item fieldset fieldset {
+  position: relative;
+}
+.translation-item .status {
+  position: absolute;
+  left: -100px;
+  top: 20px;
+  font-size: 12px;
+  width: 70px;
+  height: 30px;
+  line-height: 30px;
+  vertical-align: middle;
+  text-align: center;
+  border-radius: 15px;
+  border: solid #ccc 1px;
+  -webkit-transition: all 0.30s ease-in-out;
+  -moz-transition: all 0.30s ease-in-out;
+  -ms-transition: all 0.30s ease-in-out;
+  -o-transition: all 0.30s ease-in-out;
+}
+.verb-new .status {
+  background-color: #cfc;
+}
+.verb-new .status:before {
+  content: 'New';'
+}
+.verb-changed .status {
+  background-color: #fcf;
+}
+.verb-changed .status:before {
+  content: 'Changed';'
+}
+.verb-current .status {
+  background-color: #fff;
+}
+.verb-current .status:before {
+  content: 'Current';'
+}
+.edited .status {
+  background-color: #ffffb7;
+  box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+  
+}
+.edited .status:before {
+  content: 'Edited';'
+}
+
+div#formContainer .translation-item > fieldset {
+  border-top: solid #ccc 1px;
+  padding: 10px 0;
+  margin: 0;
+  width: 700px;
+}
+div#formContainer div:first-child > .translation-item > fieldset {
+  border-top: none;
+}
+
+.translation-item > fieldset fieldset {
+  width: 700px;
+}
+
+/* Align name and Type labels on a line with their text. */
+.translation-console > fieldset > legend + div > .inputEx-label,
+.translation-item > fieldset > div:first-child > .inputEx-label,
+.translation-item > fieldset > div:first-child + div > .inputEx-label {
+  float: left;
+  width: 3em;
+}
+
+.translation-item > fieldset > div > div.inputEx-label > label {
+  font-weight: bold;
+}
+
+/* Hide the label on the item list */ 
+.translation-item > fieldset > div:first-child + div + div + div > div:first-child {
+  display: none;
+}
+
+/* Style the item list fieldset. */
+div#formContainer fieldset > div:first-child + div + div + div fieldset {
+  border-top: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Align the Original and Translated textareas on a single line. */ 
+.translation-item > fieldset fieldset > div:first-child {
+  display: inline-block;
+  float: left;
+}
+.translation-item > fieldset fieldset > div:first-child + div {
+  display: inline-block;
+  float: right;
+}
+.translation-item > fieldset fieldset > div:first-child label,
+.translation-item > fieldset fieldset > div:first-child + div label {
+  display: none;
+}
