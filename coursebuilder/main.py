@@ -32,14 +32,17 @@ from models import student_labels
 # Import, register, & enable modules named in app.yaml's GCB_REGISTERED_MODULES.
 appengine_config.import_and_enable_modules()
 
+# Core "module" is always present and registered.
+custom_modules.Module(
+    'Core REST services', 'A module to host core REST services',
+    analytics.get_global_handlers(),
+    analytics.get_namespaced_handlers() +
+    data_sources.get_namespaced_handlers() +
+    student_labels.get_namespaced_handlers()
+    ).enable()
+
 # Collect routes (URL-matching regexes -> handler classes) for modules.
 global_routes, namespaced_routes = custom_modules.Registry.get_all_routes()
-
-# Collect routes from core components; these are always present.
-global_routes.extend(analytics.get_global_handlers())
-namespaced_routes.extend(analytics.get_namespaced_handlers())
-namespaced_routes.extend(data_sources.get_namespaced_handlers())
-namespaced_routes.extend(student_labels.get_namespaced_handlers())
 
 # Configure routes available at '/%namespace%/' context paths
 sites.ApplicationRequestHandler.bind(namespaced_routes)

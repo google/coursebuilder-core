@@ -297,7 +297,7 @@ class AdminHandler(
         # modules
         module_content = safe_dom.NodeList()
         module_content.append(
-            safe_dom.Element('h3').add_text('Custom Modules'))
+            safe_dom.Element('h3').add_text('Modules'))
         ol = safe_dom.Element('ol')
         module_content.append(ol)
         for name in sorted(custom_modules.Registry.registered_modules.keys()):
