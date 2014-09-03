@@ -35,6 +35,7 @@ from common import locales
 from common import schema_fields
 from common import utils as common_utils
 import common.tags
+from common.utils import Namespace
 import models
 from models import MemcacheManager
 from models import QuestionImporter
@@ -48,8 +49,14 @@ COURSE_MODEL_VERSION_1_3 = '1.3'
 
 DEFAULT_FETCH_LIMIT = 100
 
-COURSE_CONTENT_ENTITIES = [
-    models.QuestionEntity, models.QuestionGroupEntity]
+# all entities of these types are copies from source to target during course
+# import
+COURSE_CONTENT_ENTITIES = frozenset([
+    models.QuestionEntity, models.QuestionGroupEntity, models.LabelEntity])
+
+# add your custom entities here during module registration; they will also be
+# copied from source to target during course import
+ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT = set()
 
 # 1.4 assessments are JavaScript files
 ASSESSMENT_MODEL_VERSION_1_4 = '1.4'
@@ -1578,8 +1585,13 @@ class CourseModel13(object):
             # purpose - at this layer we don't care what is in those files.
             if src_lesson.activity:
                 # create a lesson with activity
-                lesson_w_activity = self.add_lesson(dst_unit, 'Activity')
-                lesson_w_activity.activity_title = src_lesson.activity_title
+                if src_lesson.activity_title:
+                    title = src_lesson.activity_title
+                else:
+                    title = 'Activity'
+                lesson_w_activity = self.add_lesson(dst_unit, title)
+                lesson_w_activity.auto_index = False
+                lesson_w_activity.activity_listed = False
                 src_filename = os.path.join(
                     src_course.app_context.get_home(),
                     src_course.get_activity_filename(
@@ -1676,33 +1688,36 @@ class CourseModel13(object):
             return None, None
 
         # iterate over course structure and assets and import each item
-        for unit in src_course.get_units():
-            # import unit
-            new_unit = self.add_unit(unit.type, unit.title)
-            if src_course.version == CourseModel13.VERSION:
-                copy_unit13_into_unit13(unit, new_unit)
-            elif src_course.version == CourseModel12.VERSION:
-                copy_unit12_into_unit13(unit, new_unit)
-            else:
-                raise Exception(
-                    'Unsupported course version: %s', src_course.version)
-
-            # import contained lessons
-            for lesson in src_course.get_lessons(unit.unit_id):
-                new_lesson = self.add_lesson(new_unit, lesson.title)
+        with Namespace(self.app_context.get_namespace_name()):
+            for unit in src_course.get_units():
+                # import unit
+                new_unit = self.add_unit(unit.type, unit.title)
                 if src_course.version == CourseModel13.VERSION:
-                    copy_lesson13_into_lesson13(
-                        unit, lesson, new_unit, new_lesson)
+                    copy_unit13_into_unit13(unit, new_unit)
                 elif src_course.version == CourseModel12.VERSION:
-                    copy_lesson12_into_lesson13(
-                        unit, lesson, new_unit, new_lesson, errors)
+                    copy_unit12_into_unit13(unit, new_unit)
                 else:
                     raise Exception(
                         'Unsupported course version: %s', src_course.version)
 
+                # import contained lessons
+                for lesson in src_course.get_lessons(unit.unit_id):
+                    new_lesson = self.add_lesson(new_unit, lesson.title)
+                    if src_course.version == CourseModel13.VERSION:
+                        copy_lesson13_into_lesson13(
+                            unit, lesson, new_unit, new_lesson)
+                    elif src_course.version == CourseModel12.VERSION:
+                        copy_lesson12_into_lesson13(
+                            unit, lesson, new_unit, new_lesson, errors)
+                    else:
+                        raise Exception(
+                            'Unsupported course version: '
+                            '%s', src_course.version)
+
         # import course dependencies from the datastore
         _copy_entities_between_namespaces(
-            COURSE_CONTENT_ENTITIES,
+            list(COURSE_CONTENT_ENTITIES) + list(
+                ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT),
             src_course.app_context.get_namespace_name(),
             self.app_context.get_namespace_name())
 

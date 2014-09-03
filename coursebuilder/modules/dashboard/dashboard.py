@@ -372,6 +372,7 @@ class DashboardHandler(
                 ul.add_child(self._render_assessment_li(assessment))
                 li.add_child(ul)
         ol = safe_dom.Element('ol')
+        li_index = 1
         for lesson in course.get_lessons(unit.unit_id):
             li2 = safe_dom.Element('li').add_child(
                 safe_dom.Element(
@@ -380,6 +381,11 @@ class DashboardHandler(
                         unit.unit_id, lesson.lesson_id),
                 ).add_text(lesson.title)
             )
+            if lesson.auto_index:
+                li2.set_attribute('value', str(li_index))
+                li_index += 1
+            else:
+                li2.set_attribute('class', 'activity-item')
             self._render_status_icon(li2, lesson, lesson.lesson_id, 'lesson')
             if is_editable:
                 url = self.get_action_url(

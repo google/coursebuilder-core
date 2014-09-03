@@ -357,3 +357,6 @@ div#formContainer div.settings-list-item fieldset legend span {
   font-weight: bold;
   text-align: left;
 }
+li.activity-item {
+  list-style-type: square;
+}
