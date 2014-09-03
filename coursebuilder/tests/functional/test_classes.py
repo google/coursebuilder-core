@@ -76,7 +76,7 @@ COURSE_FILE_COUNT = 70
 
 # Datastore entities that hold parts of course content. Delay-loaded.
 COURSE_CONTENT_ENTITY_FILES = [
-    'QuestionEntity.json', 'QuestionGroupEntity.json']
+    'QuestionEntity.json', 'QuestionGroupEntity.json', 'LabelEntity.json']
 
 
 # There is an expectation in our tests of automatic import of data/*.csv files,
@@ -3221,10 +3221,19 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
     def import_sample_course(self):
         """Imports a sample course."""
-        # Setup courses.
+        # setup courses
         sites.setup_courses('course:/test::ns_test, course:/:/')
 
-        # Import sample course.
+        # check we have no questions or question gourps in neither source nor
+        # destination course
+        with Namespace(''):
+            self.assertEqual(0, len(models.QuestionGroupDAO.get_all()))
+            self.assertEqual(0, len(models.QuestionDAO.get_all()))
+        with Namespace('ns_test'):
+            self.assertEqual(0, len(models.QuestionGroupDAO.get_all()))
+            self.assertEqual(0, len(models.QuestionDAO.get_all()))
+
+        # import sample course
         dst_app_context = sites.get_all_courses()[0]
         src_app_context = sites.get_all_courses()[1]
         dst_course = courses.Course(None, app_context=dst_app_context)
@@ -3234,25 +3243,36 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             src_app_context, errors)
         if errors:
             raise Exception(errors)
+        dst_course_out.save()
+
         u1, l1, a1 = self.calc_course_stats(src_course_out)
         u2, l2, _ = self.calc_course_stats(dst_course_out)
+
+        # the old and the new course have same number of units each
         self.assertEqual(12, u1)
+        self.assertEqual(12, u2)
+
+        # old course had lessons and activities
         self.assertEqual(29, l1)
         self.assertEqual(26, a1)
-        self.assertEqual(12, u2)
+
+        # new course has the same number of lessons as the old one, plus one
+        # new lesson instead of each old activity
         self.assertEqual(55, l2)
-        self.assertEqual(u1, u2)
         self.assertEqual(l1 + a1, l2)
+
+        # old course does not have any questions or question groups
+        with Namespace(''):
+            self.assertEqual(0, len(models.QuestionGroupDAO.get_all()))
+            self.assertEqual(0, len(models.QuestionDAO.get_all()))
+
+        # new course has new questions and question groups that used to be old
+        # style activities
         with Namespace('ns_test'):
             self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
             self.assertEqual(48, len(models.QuestionDAO.get_all()))
-        with Namespace(''):
-            self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
-            self.assertEqual(48, len(models.QuestionDAO.get_all()))
 
-        dst_course_out.save()
-
-        # Clean up.
+        # clean up
         sites.reset_courses()
 
     def calc_course_stats(self, course):
