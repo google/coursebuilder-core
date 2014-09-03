@@ -1,0 +1,34 @@
+.entry-pane {
+  width: 30em;
+  margin: 0 auto;
+}
+.entry-pane textarea {
+  width: 100%;
+}
+.entry-pane .instructions {
+  margin: 0;
+  font-style: italic;
+  font-size: 80%;
+  color: #888;
+}
+.button-pane {
+  width: 30em;
+  margin: 0 auto;
+  margin-top: 0.25em;
+  text-align: right;
+}
+.email-text {
+  width: 80%;
+  margin: 0 auto;
+  margin-top: 1em;
+  padding: 1em 2em;
+  border-radius: 0.5em;
+  border: solid 1px #ccc;
+  background-color: #eee;
+}
+.subject-line {
+  margin-bottom: 1em;
+}
+.email-body {
+  white-space: pre-wrap;
+}

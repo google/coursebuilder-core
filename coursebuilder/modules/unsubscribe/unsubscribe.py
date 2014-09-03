@@ -54,6 +54,27 @@ def get_unsubscribe_url(handler, email):
     return '%s?%s' % (abs_url, query)
 
 
+def get_resubscribe_url(handler, email):
+    """Create an individualized resubscribe link for a user.
+
+    Args:
+      handler: controllers.utils.ApplicationHandler. The current request
+          handler.
+      email: string. The email address of the users for whom the resubscribe
+          link is being generated.
+
+    Returns:
+      string. A URL for the users to resubscribe to notifications.
+    """
+    abs_url = urlparse.urljoin(
+        handler.get_base_href(handler), UnsubscribeHandler.URL[1:])
+    query = urllib.urlencode({
+        'email': email,
+        's': _get_signature(handler, email),
+        'action': UnsubscribeHandler.RESUBSCRIBE_ACTION})
+    return '%s?%s' % (abs_url, query)
+
+
 def has_unsubscribed(email):
     """Check whether the user has requested to be unsubscribed.
 
@@ -109,21 +130,13 @@ class UnsubscribeHandler(utils.BaseHandler):
             set_subscribed(email, False)
             template_file = 'unsubscribe.html'
             self.template_value[
-                'resubscribe_url'] = self.get_resubscribe_url(email)
+                'resubscribe_url'] = get_resubscribe_url(self, email)
 
         self.template_value['navbar'] = {}
         self.template_value['email'] = email
 
         template = self.get_template(template_file, [TEMPLATES_DIR])
         self.response.out.write(template.render(self.template_value))
-
-    def get_resubscribe_url(self, email):
-        abs_url = urlparse.urljoin(self.get_base_href(self), self.URL[1:])
-        query = urllib.urlencode({
-            'email': email,
-            's': _get_signature(self, email),
-            'action': self.RESUBSCRIBE_ACTION})
-        return '%s?%s' % (abs_url, query)
 
 
 def _get_signature(handler, email):

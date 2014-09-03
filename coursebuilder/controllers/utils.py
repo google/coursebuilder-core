@@ -729,6 +729,10 @@ class ForumHandler(BaseHandler):
 class StudentProfileHandler(BaseHandler):
     """Handles the click to 'Progress' link in the nav bar."""
 
+    # A list of functions which will provide extra rows in the Student Progress
+    # table. Each function will be passed the current handler, student,  and
+    # course object and should return a pair of strings; the first being the
+    # title of the data and the second the value to display.
     EXTRA_STUDENT_DATA_PROVIDERS = []
 
     def get(self):
@@ -778,9 +782,9 @@ class StudentProfileHandler(BaseHandler):
             })
 
         # Append any extra data which is provided by modules
-        extra_student_data = {}
+        extra_student_data = []
         for data_provider in self.EXTRA_STUDENT_DATA_PROVIDERS:
-            extra_student_data.update(data_provider(student, course))
+            extra_student_data.append(data_provider(self, student, course))
         self.template_value['extra_student_data'] = extra_student_data
 
         self.render('student_profile.html')

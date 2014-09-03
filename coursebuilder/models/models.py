@@ -745,7 +745,7 @@ class StudentPropertyEntity(BaseEntity):
 
     @classmethod
     def create(cls, student, property_name):
-        return StudentPropertyEntity(
+        return cls(
             key_name=cls.create_key(student.user_id, property_name),
             name=property_name)
 

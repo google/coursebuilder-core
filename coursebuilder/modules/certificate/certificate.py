@@ -168,7 +168,7 @@ def student_is_qualified(student, course):
     return True
 
 
-def get_certificate_table_entry(student, course):
+def get_certificate_table_entry(unused_handler, student, course):
     title = gettext.gettext('Certificate')
 
     if student_is_qualified(student, course):
@@ -176,11 +176,13 @@ def get_certificate_table_entry(student, course):
             CERTIFICATE_HANDLER_PATH
         ).add_text(
             gettext.gettext('Click for certificate'))
-        return {title: link}
+        return (title, link)
     else:
-        return {title: gettext.gettext(
-            'You have not yet met the course requirements for a certificate of '
-            'completion.')}
+        return (
+            title,
+            gettext.gettext(
+                'You have not yet met the course requirements for a '
+                'certificate of completion.'))
 
 
 def get_criteria_editor_schema(course):

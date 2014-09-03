@@ -99,17 +99,21 @@ class CertificateHandlerTestCase(actions.TestBase):
 
         # If the student is qualified, a link is shown
         self.is_qualified = True
-        table_entry = certificate.get_certificate_table_entry(student, course)
-        link = str(table_entry['Certificate'])
+        mock_handler = object()
+        table_entry = certificate.get_certificate_table_entry(
+            mock_handler, student, course)
+        self.assertEquals('Certificate', table_entry[0])
+        link = str(table_entry[1])
         self.assertEquals(
             '<a href="certificate">Click for certificate</a>', link)
 
         # If the student is not qualified, a message is shown
         self.is_qualified = False
-        table_entry = certificate.get_certificate_table_entry(student, course)
+        table_entry = certificate.get_certificate_table_entry(
+            mock_handler, student, course)
+        self.assertEquals('Certificate', table_entry[0])
         self.assertIn(
-            'You have not yet met the course requirements',
-            table_entry['Certificate'])
+            'You have not yet met the course requirements', table_entry[1])
 
 
 class CertificateCriteriaTestCase(actions.TestBase):
