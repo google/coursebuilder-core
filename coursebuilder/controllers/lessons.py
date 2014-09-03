@@ -724,6 +724,8 @@ class AssessmentHandler(BaseHandler):
 
         readonly_view = False
         due_date_exceeded = False
+        submission_contents = None
+        review_steps_for = []
 
         submission_due_date = unit.workflow.get_submission_due_date()
         if submission_due_date:
@@ -750,8 +752,9 @@ class AssessmentHandler(BaseHandler):
                     rp.get_submission_and_review_steps(
                         unit.unit_id, student.get_key()))
 
-                submission_contents = submission_and_review_steps[0]
-                review_steps_for = submission_and_review_steps[1]
+                if submission_and_review_steps:
+                    submission_contents = submission_and_review_steps[0]
+                    review_steps_for = submission_and_review_steps[1]
 
                 review_keys_for_student = []
                 for review_step in review_steps_for:
@@ -779,7 +782,6 @@ class AssessmentHandler(BaseHandler):
                 configure_readonly_view(unit, submission_contents)
 
         if not readonly_view:
-            submission_contents = None
             if not student.is_transient:
                 submission_contents = student_work.Submission.get_contents(
                     unit.unit_id, student.get_key())
