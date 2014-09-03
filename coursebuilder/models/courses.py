@@ -1516,13 +1516,15 @@ class CourseModel13(object):
                         ('<script>\n// This script is inserted by 1.2 to 1.3 '
                          'import function\n%s\n</script>\n') % noverify_text)
             except Exception:  # pylint: disable-msg=broad-except
-                errors.append('Unable to parse activity.')
+                errors.append(
+                    'Unable to parse activity: %s.' % lesson_title)
                 return False
 
             try:
                 verify.Verifier().verify_activity_instance(activity, 'none')
             except verify.SchemaException:
-                errors.append('Unable to validate activity.')
+                errors.append(
+                    'Unable to validate activity: %s.' % lesson_title)
                 return False
 
             question_number = 1
@@ -1568,17 +1570,13 @@ class CourseModel13(object):
                 return False
             return True
 
-        def copy_lesson12_into_lesson13(
-            src_unit, src_lesson, dst_unit, dst_lesson, errors):
-            """Copies lessons object attributes between versions."""
+        def copy_to_lesson_13(
+                src_unit, src_lesson, dst_unit, dst_lesson, errors):
             dst_lesson.objectives = src_lesson.objectives
             dst_lesson.video = src_lesson.video
             dst_lesson.notes = src_lesson.notes
             dst_lesson.duration = src_lesson.duration
             dst_lesson.activity_listed = False
-
-            # Old model does not have this flag, but all lessons are available.
-            dst_lesson.now_available = True
 
             # Copy over the activity. Note that we copy files directly and
             # avoid all logical validations of their content. This is done for a
@@ -1602,33 +1600,17 @@ class CourseModel13(object):
                         text, dst_unit, lesson_w_activity, src_lesson.title,
                         errors)
 
+        def copy_lesson12_into_lesson13(
+                src_unit, src_lesson, dst_unit, dst_lesson, errors):
+            copy_to_lesson_13(
+                src_unit, src_lesson, dst_unit, dst_lesson, errors)
+            # Old model does not have this flag, but all lessons are available.
+            dst_lesson.now_available = True
+
         def copy_lesson13_into_lesson13(
-                src_unit, src_lesson, unused_dst_unit, dst_lesson):
-            dst_lesson.objectives = src_lesson.objectives
-            dst_lesson.video = src_lesson.video
-            dst_lesson.notes = src_lesson.notes
-            dst_lesson.duration = src_lesson.duration
-            dst_lesson.has_activity = src_lesson.activity
-            dst_lesson.activity_title = src_lesson.activity_title
-            dst_lesson.activity_listed = src_lesson.activity_listed
-
-            # Copy over the activity. Note that we copy files directly and
-            # avoid all logical validations of their content. This is done for a
-            # purpose - at this layer we don't care what is in those files.
-            if src_lesson.activity:
-                src_filename = os.path.join(
-                    src_course.app_context.get_home(),
-                    src_course.get_activity_filename(
-                        src_unit.unit_id, src_lesson.lesson_id))
-                if src_course.app_context.fs.isfile(src_filename):
-                    astream = src_course.app_context.fs.open(src_filename)
-                    if astream:
-                        dst_filename = os.path.join(
-                            self.app_context.get_home(),
-                            self.get_activity_filename(
-                                None, dst_lesson.lesson_id))
-                        self.app_context.fs.put(dst_filename, astream)
-
+                src_unit, src_lesson, dst_unit, dst_lesson, errors):
+            copy_to_lesson_13(
+                src_unit, src_lesson, dst_unit, dst_lesson, errors)
             dst_lesson.now_available = src_lesson.now_available
             dst_lesson.scored = src_lesson.scored
             dst_lesson.properties = src_lesson.properties
@@ -1705,7 +1687,7 @@ class CourseModel13(object):
                     new_lesson = self.add_lesson(new_unit, lesson.title)
                     if src_course.version == CourseModel13.VERSION:
                         copy_lesson13_into_lesson13(
-                            unit, lesson, new_unit, new_lesson)
+                            unit, lesson, new_unit, new_lesson, errors)
                     elif src_course.version == CourseModel12.VERSION:
                         copy_lesson12_into_lesson13(
                             unit, lesson, new_unit, new_lesson, errors)
@@ -2574,14 +2556,9 @@ class Course(object):
         if errors is None:
             errors = []
 
-        # Import 1.2 -> 1.3
-        if (src_course.version == CourseModel12.VERSION and
-            self.version == CourseModel13.VERSION):
-            return self._model.import_from(src_course, errors)
-
-        # import 1.3 -> 1.3
-        if (src_course.version == CourseModel13.VERSION and
-            self.version == CourseModel13.VERSION):
+        # Import 1.2 or 1.3 -> 1.3
+        if (src_course.version in [
+            CourseModel12.VERSION, CourseModel13.VERSION]):
             return self._model.import_from(src_course, errors)
 
         errors.append(

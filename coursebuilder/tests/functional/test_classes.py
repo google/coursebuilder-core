@@ -366,7 +366,15 @@ class InfrastructureTest(actions.TestBase):
         dst_unit = dst_course.find_unit_by_id(src_unit.unit_id)
         dst_lesson = dst_course.find_lesson_by_id(
             dst_unit, src_lesson.lesson_id)
-        self.assertEqual(src_lesson.__dict__, dst_lesson.__dict__)
+        assert not dst_lesson.has_activity
+        assert not dst_lesson.activity_title
+        src_dict = copy.deepcopy(src_lesson.__dict__)
+        dst_dict = copy.deepcopy(dst_lesson.__dict__)
+        del src_dict['has_activity']
+        del src_dict['activity_title']
+        del dst_dict['has_activity']
+        del dst_dict['activity_title']
+        self.assertEqual(src_dict, dst_dict)
 
     def test_create_new_course(self):
         """Tests creating a new course."""
@@ -3020,6 +3028,16 @@ class DatastoreBackedCourseTest(actions.TestBase):
         self.app_context.fs.put(course_yaml, open(course_yaml, 'rb'))
         files_added.append(course_yaml)
 
+    def calc_course_stats(self, course):
+        units_count = len(course.get_units())
+        activities_count = 0
+        lessons_count = 0
+        for uid in [x.unit_id for x in course.get_units()]:
+            unit_lessons = course.get_lessons(uid)
+            lessons_count += len(unit_lessons)
+            activities_count += sum(x.activity for x in unit_lessons)
+        return units_count, lessons_count, activities_count
+
 
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
     """Prepares a sample course running on datastore-backed file system."""
@@ -3274,16 +3292,6 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # clean up
         sites.reset_courses()
-
-    def calc_course_stats(self, course):
-        units_count = len(course.get_units())
-        activities_count = 0
-        lessons_count = 0
-        for uid in [x.unit_id for x in course.get_units()]:
-            unit_lessons = course.get_lessons(uid)
-            lessons_count += len(unit_lessons)
-            activities_count += sum(x.activity for x in unit_lessons)
-        return units_count, lessons_count, activities_count
 
     def test_imported_course_performance(self):
         """Tests various pages of the imported course."""
@@ -4564,6 +4572,52 @@ var activity = [
     def tearDown(self):
         namespace_manager.set_namespace(self.old_namespace)
         super(ImportActivityTests, self).tearDown()
+
+    def test_import_lesson13_w_activity12_to_lesson13(self):
+
+        # Setup the src and destination courses.
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b')
+        src_ctx = sites.get_all_courses()[0]
+        src_course = courses.Course(None, app_context=src_ctx)
+        dst_course = courses.Course(
+            None, app_context=sites.get_all_courses()[1])
+
+        # Add a unit & a lesson
+        title = 'activity title'
+        src_unit = src_course.add_unit()
+        src_lesson = src_course.add_lesson(src_unit)
+        src_lesson.title = 'Test Lesson'
+        src_lesson.scored = True
+        src_lesson.objectives = 'objectives'
+        src_lesson.video = 'video'
+        src_lesson.notes = 'notes'
+        src_lesson.duration = 'duration'
+        src_lesson.now_available = True
+        src_lesson.has_activity = True
+        src_lesson.activity_title = title
+        src_lesson.activity_listed = True
+        src_lesson.properties = {'key': 'value'}
+        src_course.save()
+
+        # Add an old style activity to the src lesson
+        activity = unicode(self.FREETEXT_QUESTION)
+        errors = []
+        src_course.set_activity_content(src_lesson, activity, errors)
+        assert not errors
+
+        # Import course and verify activities
+        errors = []
+        dst_course.import_from(src_ctx, errors)
+        self.assertEqual(0, len(errors))
+        u1, l1, a1 = self.calc_course_stats(src_course)
+        u2, l2, _ = self.calc_course_stats(dst_course)
+        self.assertEqual(1, l1)
+        self.assertEqual(2, l2)
+        self.assertEqual(u1, u2)
+        self.assertEqual(l1 + a1, l2)
+        new_lesson = dst_course.get_lessons('1')[1]
+        assert 'quid=' in new_lesson.objectives
+        self.assertEqual(title, new_lesson.title)
 
     def test_import_free_text_activity(self):
         text = self.FREETEXT_QUESTION
