@@ -60,7 +60,7 @@ echo Checking if GAE is installed in $GOOGLE_APP_ENGINE_HOME
 if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
   echo Installing GAE
   mkdir -p $RUNTIME_HOME
-  wget https://storage.googleapis.com/appengine-sdks/featured/google_appengine_1.9.8.zip -O google_appengine_1.9.8.zip
+  wget https://storage.googleapis.com/appengine-sdks/deprecated/198/google_appengine_1.9.8.zip -O google_appengine_1.9.8.zip
   unzip google_appengine_1.9.8.zip -d $RUNTIME_HOME/
   mv $RUNTIME_HOME/google_appengine $GOOGLE_APP_ENGINE_HOME
   rm google_appengine_1.9.8.zip
