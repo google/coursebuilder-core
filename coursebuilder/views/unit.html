@@ -33,8 +33,14 @@
 <div id="gcb-main">
   <div id="gcb-left-nav-toggle">
     <a href="" class="gcb-button">
-      <span class='show'>{{ gettext('Show Schedule') }}</span>
-      <span class='hide'>{{ gettext('Hide Schedule') }}</span>
+      <span class='show'>
+        {# I18N: Label on a control to show a class schedule. #}
+        {{ gettext('Show Schedule') }}
+      </span>
+      <span class='hide'>
+        {# I18N: Label on a control to hide a class schedule. #}
+        {{ gettext('Hide Schedule') }}
+      </span>
     </a>
   </div>
   <script>

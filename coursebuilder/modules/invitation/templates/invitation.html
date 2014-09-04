@@ -26,8 +26,10 @@
 <div id="gcb-main">
   <div class="gcb-article tab-content">
     <div id="invitation-div" data-xsrf-token="{{ xsrf_token}}">
+      {# I18N: title on page requesting user to invite friends to a course.  #}
       <h1>{{ gettext('Invite friends or family members to join the course') }}</h1>
       <p>
+        {# I18N: Block of text inviting users to invite friends to a course. #}
         {{ gettext(
             'Do you know other people who might want to join this course? '
             'Enter their email addresses below and click “Send”. They will '
@@ -37,6 +39,7 @@
       <div class="entry-pane">
         <div class="text"><textarea id="email-list"></textarea></div>
         <p class="instructions">
+          {# I18N: Instructions on how to fill out email addresses in a form. #}
           {{ gettext(
               'Enter recipients\' email addresses separated by commas. '
               'E.g., alice@gmail.com, ben@gmail.com'
@@ -45,12 +48,15 @@
       </div>
       <div class="button-pane">
         <a id="send-button" class="gcb-button" href="javascript:void(0)" role="button">
+          {# I18N: Label on control submitting a form with email addresses #}
           {{ gettext('Send') }}
         </a>
       </div>
       <div class="email-text">
+        {# I18N: Section title indicating an example of an email. #}
         <h2>{{ gettext('Sample Email') }}</h2>
         <div class="subject-line">
+          {# I18N: Example subject line of an email to be sent.  #}
           <strong>{{ gettext('Subject:') }}</strong>
           {{ subject}}
         </div>

@@ -342,7 +342,7 @@ class ProfileViewInvitationTests(BaseInvitationTests):
         subscribe_row = self._find_row(dom, 'Subscribe/Unsubscribe')
         td = subscribe_row.find('td')
         self.assertEquals(
-            'You are currently unsubscribed from invitations. ', td.text)
+            'You are currently unsubscribed from invitations.', td.text)
         link = td[0]
         self.assertEquals(
             'Click here to re-subscribe.', link.text)

@@ -21,6 +21,7 @@
 {% block main_content %}
 <div id="unsubscribe-message">
   <p>
+    {# I18N: Indicates that a user will no longer recieve email about a course #}
     {{ gettext(
         'The following email address has been unsubscribed from '
         'emails for this course:') }}
@@ -29,6 +30,7 @@
     {{ email }}
   </div>
   <p>
+    {# I18N: After a user has unsubscribed from email notifications, indicate that re-subscribing is possible using a control lower on the page. #}
     {{ gettext(
         'If you prefer to continue receiving notifications, please click below '
         'to resubscribe.') }}
