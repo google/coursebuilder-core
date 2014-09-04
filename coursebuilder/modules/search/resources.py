@@ -41,8 +41,8 @@ from google.appengine.api import urlfetch
 
 PROTOCOL_PREFIX = 'http://'
 
-YOUTUBE_DATA_URL = 'http://gdata.youtube.com/feeds/api/videos/'
-YOUTUBE_TIMED_TEXT_URL = 'http://youtube.com/api/timedtext'
+YOUTUBE_DATA_URL = 'https://gdata.youtube.com/feeds/api/videos/'
+YOUTUBE_TIMED_TEXT_URL = 'https://youtube.com/api/timedtext'
 
 # The limit (in seconds) for the time that elapses before a new transcript
 # fragment should be started. A lower value results in more fine-grain indexing
