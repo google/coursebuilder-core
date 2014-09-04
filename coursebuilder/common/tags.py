@@ -60,6 +60,29 @@ class BaseTag(object):
         """Lists the inputEx modules required by the editor."""
         return []
 
+    @classmethod
+    def extra_js_files(cls):
+        """Returns a list of JS files to be loaded in the editor lightbox."""
+        return []
+
+    @classmethod
+    def extra_css_files(cls):
+        """Returns a list of CSS files to be loaded in the editor lightbox."""
+        return []
+
+    @classmethod
+    def additional_dirs(cls):
+        """Returns a list of directories searched for files used by the editor.
+
+        These folders will be searched for files to be loaded as Jinja
+        templates by the editor, e.g., the files referenced by extra_js_files
+        and extra_css_files.
+
+        Returns:
+            List of strings.
+        """
+        return []
+
     def render(self, node, handler):  # pylint: disable=W0613
         """Receive a node and return a node.
 

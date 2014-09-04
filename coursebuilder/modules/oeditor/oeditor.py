@@ -178,7 +178,11 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         template_values = {}
         template_values['form_html'] = ObjectEditor.get_html_for(
             self, schema.get_json_schema(), schema.get_schema_dict(), None,
-            None, None)
+            None, None,
+            required_modules=tag_class.required_modules(),
+            extra_js_files=tag_class.extra_js_files(),
+            extra_css_files=tag_class.extra_css_files(),
+            additional_dirs=tag_class.additional_dirs())
         self.response.out.write(
             self.get_template('popup.html', []).render(template_values))
 
@@ -212,8 +216,11 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         template_values = {}
         template_values['form_html'] = ObjectEditor.get_html_for(
             self, schema.get_json_schema(), schema.get_schema_dict(), None,
-            None, None, required_modules=tag_class.required_modules(),
-            extra_js_files=['add_custom_tag.js'])
+            None, None,
+            required_modules=tag_class.required_modules(),
+            extra_js_files=['add_custom_tag.js'] + tag_class.extra_js_files(),
+            extra_css_files=tag_class.extra_css_files(),
+            additional_dirs=tag_class.additional_dirs())
         self.response.out.write(
             self.get_template('popup.html', []).render(template_values))
 
