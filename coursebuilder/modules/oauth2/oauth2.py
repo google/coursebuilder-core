@@ -76,6 +76,7 @@ from apiclient import discovery
 from oauth2client import appengine
 import webapp2
 
+from common import jinja_utils
 from common import safe_dom
 from models import custom_modules
 
@@ -83,6 +84,7 @@ from models import custom_modules
 # message pointing people to https://code.google.com/apis/console.
 _CLIENTSECRETS_JSON_PATH = os.path.join(
     os.path.dirname(__file__), 'client_secrets.json')
+_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), 'templates')
 
 
 class _ErrorDecorator(object):
@@ -150,25 +152,35 @@ class ServiceHandler(webapp2.RequestHandler):
         return discovery.build(name, version, http=http)
 
 
-class GoogleDriveHandler(ServiceHandler):
+class _ExampleHandler(ServiceHandler):
+
+    def _write_result(self, service_name, result):
+        template = jinja_utils.get_template('result.html', [_TEMPLATES_DIR])
+        self.response.out.write(template.render({
+            'service_name': service_name,
+            'result': result,
+        }))
+
+
+class GoogleDriveHandler(_ExampleHandler):
 
     @_DECORATOR.oauth_required
     def get(self):
         drive = self.build_service(_DECORATOR, 'drive', 'v2')
         about = drive.about().get().execute()
-        self.response.write('Drive sees you as ' + about['user']['displayName'])
+        self._write_result('Drive', about['user']['displayName'])
 
 
-class GoogleOauth2Handler(ServiceHandler):
+class GoogleOauth2Handler(_ExampleHandler):
 
     @_DECORATOR.oauth_required
     def get(self):
         oauth2 = self.build_service(_DECORATOR, 'oauth2', 'v2')
         userinfo = oauth2.userinfo().get().execute()
-        self.response.write('Oauth2 sees you as ' + userinfo['name'])
+        self._write_result('Oauth2', userinfo['name'])
 
 
-class GooglePlusHandler(ServiceHandler):
+class GooglePlusHandler(_ExampleHandler):
 
     @_DECORATOR.oauth_required
     def get(self):
@@ -177,7 +189,7 @@ class GooglePlusHandler(ServiceHandler):
         # profile will not be fetchable. Log in as @gmail.com and you'll be
         # fine.
         me = plus.people().get(userId='me').execute()
-        self.response.write('Plus sees you as ' + me['displayName'])
+        self._write_result('Plus', me['displayName'])
 
 
 # None or custom_modules.Module. Placeholder for the module created by
