@@ -30,8 +30,8 @@ class EncryptionManagerTests(actions.TestBase):
 
     def test_hmac_is_consistent(self):
         message = 'Mary had a little lamb.  Her doctors were astounded'
-        h1 = crypto.EncryptionManager.hmac(message)
-        h2 = crypto.EncryptionManager.hmac(message)
+        h1 = crypto.EncryptionManager.hmac([message])
+        h2 = crypto.EncryptionManager.hmac([message])
         self.assertEquals(h1, h2)
         self.assertNotEquals(h1, message)
 
