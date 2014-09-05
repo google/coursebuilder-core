@@ -360,3 +360,12 @@ div#formContainer div.settings-list-item fieldset legend span {
 li.activity-item {
   list-style-type: square;
 }
+#gcb-course-picker, #gcb-course-picker option {
+  vertical-align: text-bottom;
+  font-family: arial, sans-serif;
+  font-size: 14px;
+  margin: 0px 4px 0px 4px;
+  font-weight: bold;
+  background-color: #f5f5f5;
+  border: solid 1px #C0C0C0;
+}

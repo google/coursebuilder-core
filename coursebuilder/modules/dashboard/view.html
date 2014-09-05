@@ -4,7 +4,7 @@
     <base href="{{ gcb_course_base }}" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>{{ page_title }}</title>
+    <title>{{ header_title }}</title>
     <link rel="icon" href="" />
 
     <!-- import jQuery -->
@@ -28,7 +28,7 @@
   <div id='gcb-user-bar'>
     {{ user_nav }}
   </div>
-  <h2>{{ page_title }}</h2>
+  <h2>{{ breadcrumbs }}</h2>
   {% for nav in top_nav %}
     <div class='gcb-nav-bar gcb-nav-bar-level-{{ loop.index }}'>
       {{ nav }}

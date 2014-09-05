@@ -470,4 +470,15 @@ function init() {
   setUpFiltering();
 };
 
+// bind change event to course picker select
+$(function(){
+  $('#gcb-course-picker').bind('change', function () {
+      var url = $(this).val();
+      if (url) {
+          window.location = url;
+      }
+      return false;
+  });
+});
+
 init();

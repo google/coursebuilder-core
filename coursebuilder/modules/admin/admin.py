@@ -562,7 +562,8 @@ class AdminHandler(
         )
         courses = sites.get_all_courses()
         count = 0
-        for course in courses:
+        for course in sorted(
+            courses, key=lambda course: course.get_title().lower()):
             count += 1
             error = safe_dom.Text('')
             slug = course.get_slug()

@@ -242,6 +242,9 @@ class DashboardHandler(
 
     def render_page(self, template_values, in_action=None, in_tab=None):
         """Renders a page using provided template values."""
+        page_title_builder = template_values['page_title']
+        template_values['header_title'] = page_title_builder(False)
+        template_values['breadcrumbs'] = page_title_builder(True)
 
         template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
         template_values['gcb_course_base'] = self.get_base_href(self)
@@ -264,14 +267,53 @@ class DashboardHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
+    def get_course_picker(self):
+        destination = 'dashboard'
+        action = self.request.get('action')
+        tab = self.request.get('tab')
+        if action in self.get_actions:
+            tab_group = tabs.Registry.get_tab_group(action)
+            if tab_group and tab in tab_group:
+                tab = '&tab=%s' % tab
+            else:
+                tab = ''
+            destination = 'dashboard?action=%s%s' % (action, tab)
+
+        current_course = sites.get_course_for_current_request()
+        options = []
+        for course in sorted(sites.get_all_courses()):
+            if roles.Roles.is_course_admin(course):
+                url = '%s/%s' % (
+                    '' if course.get_slug() == '/' else course.get_slug(),
+                    destination)
+                title = '%s (%s)' % (course.get_title(), course.get_slug())
+                option = safe_dom.Element(
+                    'option', value=url).add_text(title)
+                if current_course == course:
+                    option.set_attribute('selected', '')
+                options.append((course.get_title(), option))
+
+        picker = safe_dom.Element('select', id='gcb-course-picker')
+        for title, option in sorted(
+            options, key=lambda item: item[0].lower()):
+            picker.append(option)
+        return picker
+
     def format_title(self, text):
-        """Formats standard title."""
+        """Makes a closure of a title, allowing flexible rendering later."""
+        return lambda picker: self.format_title_ex(text, picker=picker)
+
+    def format_title_ex(self, text, picker=False):
+        """Formats standard title with or without course picker."""
         title = self.app_context.get_environ()['course']['title']
         ret = safe_dom.NodeList()
         cb_text = 'Course Builder '
         ret.append(safe_dom.Text(cb_text))
         ret.append(safe_dom.Entity('&gt;'))
-        ret.append(safe_dom.Text(' %s ' % title))
+        if picker:
+            ret.append(self.get_course_picker())
+        else:
+            ret.append(safe_dom.Text(' %s ' % title))
         ret.append(safe_dom.Entity('&gt;'))
         dashboard_text = ' Dashboard '
         ret.append(safe_dom.Text(dashboard_text))
@@ -417,23 +459,10 @@ class DashboardHandler(
     def get_outline(self):
         """Renders course outline view."""
 
-        administered_courses_actions = [
+        pages_info_actions = [
             {'id': 'add_course',
              'caption': 'Add Course',
              'href': '/admin?action=add_course'}]
-        administered_courses_items = []
-        all_courses = sites.get_all_courses()
-        for course in sorted(all_courses, key=lambda c: c.get_title()):
-            if roles.Roles.is_course_admin(course):
-                slug = course.get_slug()
-                content = safe_dom.NodeList()
-                administered_courses_items.append(content)
-                title = course.get_title()
-                content.append(safe_dom.A(slug).add_text(title))
-                content.append(safe_dom.Text('  %s  ' % slug))
-                content.append(
-                    safe_dom.A('%s/dashboard' % ('' if slug == '/' else slug))
-                    .add_text('Dashboard'))
 
         pages_info = [
             safe_dom.Element(
@@ -482,13 +511,9 @@ class DashboardHandler(
 
         sections = [
             {
-                'title': 'Administered Courses',
-                'description': messages.ADMINISTERED_COURSES_DESCRIPTION,
-                'actions': administered_courses_actions,
-                'children': administered_courses_items},
-            {
                 'title': 'Pages',
                 'description': messages.PAGES_DESCRIPTION,
+                'actions': pages_info_actions,
                 'children': pages_info},
             {
                 'title': 'Course Outline',

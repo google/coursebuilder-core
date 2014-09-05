@@ -845,9 +845,11 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
                 continue
             if acourse == sites.get_course_for_current_request():
                 continue
+
+            atitle = '%s (%s)' % (acourse.get_title(), acourse.get_slug())
+
             course_list.append({
-                'value': acourse.raw,
-                'label': cgi.escape(acourse.get_title())})
+                'value': acourse.raw, 'label': cgi.escape(atitle)})
         return course_list
 
     @classmethod
