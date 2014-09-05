@@ -842,6 +842,11 @@ class BaseJsonDao(object):
             return None
 
     @classmethod
+    def bulk_load(cls, obj_id_list):
+        # TODO(jorr): Write bulk loading code for BaseJsonDAO
+        return [cls.load(obj_id) for obj_id in obj_id_list]
+
+    @classmethod
     def _create_if_necessary(cls, dto):
         entity = cls._load_entity(dto.id)
         if not entity:

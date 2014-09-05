@@ -118,7 +118,9 @@ import webapp2
 from webapp2_extras import i18n
 
 import appengine_config
+from common import locales
 from common import safe_dom
+from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -173,6 +175,9 @@ DEBUG_INFO = False
 
 # thread local storage for current request PATH_INFO
 PATH_INFO_THREAD_LOCAL = threading.local()
+
+# thread local storage for current locale
+LOCALE_THREAD_LOCAL = threading.local()
 
 # performance counters
 STATIC_HANDLER_COUNT = PerfCounter(
@@ -271,6 +276,45 @@ def unset_path_info():
 
     del PATH_INFO_THREAD_LOCAL.old_namespace
     del PATH_INFO_THREAD_LOCAL.path
+
+
+def set_accept_language(accept_language):
+    """Store the request's Accept-Language header in thread local scope."""
+    LOCALE_THREAD_LOCAL.accept_language = accept_language
+
+
+def override_locale(locale_str):
+    """Set a locale to override user settings in this session."""
+    LOCALE_THREAD_LOCAL.overridden_locale = locale_str
+
+
+def unset_locale_info():
+    if hasattr(LOCALE_THREAD_LOCAL, 'accept_language'):
+        del LOCALE_THREAD_LOCAL.accept_language
+    if hasattr(LOCALE_THREAD_LOCAL, 'overridden_locale'):
+        del LOCALE_THREAD_LOCAL.overridden_locale
+
+
+def get_current_locale(app_context):
+    if hasattr(LOCALE_THREAD_LOCAL, 'overridden_locale'):
+        return LOCALE_THREAD_LOCAL.overridden_locale
+
+    prefs = models.StudentPreferencesDAO.load_or_create()
+    if prefs is not None and prefs.locale is not None:
+        return prefs.locale
+
+    accept_lang_list = []
+    if hasattr(LOCALE_THREAD_LOCAL, 'accept_language'):
+        accept_lang_list = locales.parse_accept_language(
+            LOCALE_THREAD_LOCAL.accept_language)
+    available_locales = app_context.get_available_locales()
+
+    for lang, _ in accept_lang_list:
+        for supported_lang in available_locales:
+            if lang.lower() == supported_lang.lower():
+                return supported_lang
+
+    return Course.get_environ(app_context)['course']['locale']
 
 
 def debug(message):
@@ -1099,9 +1143,13 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         NO_HANDLER_COUNT.inc()
         return None
 
+    def _set_accept_language(self):
+        set_accept_language(self.request.headers.get('Accept-Language'))
+
     def get(self, path):
         try:
             set_path_info(path)
+            self._set_accept_language()
             handler = self.get_handler()
             if not handler:
                 if not users.get_current_user():
@@ -1114,10 +1162,12 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
+            unset_locale_info()
 
     def post(self, path):
         try:
             set_path_info(path)
+            self._set_accept_language()
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -1127,10 +1177,12 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
+            unset_locale_info()
 
     def put(self, path):
         try:
             set_path_info(path)
+            self._set_accept_language()
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -1140,10 +1192,12 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
+            unset_locale_info()
 
     def delete(self, path):
         try:
             set_path_info(path)
+            self._set_accept_language()
             handler = self.get_handler()
             if not handler:
                 self.error(404)
@@ -1153,6 +1207,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
+            unset_locale_info()
 
 
 def assert_mapped(src, dest):

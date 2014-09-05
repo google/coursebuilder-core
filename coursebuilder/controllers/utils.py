@@ -340,22 +340,6 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).__init__(*args, **kwargs)
         self.template_value = {}
 
-    def get_locale(self):
-        prefs = models.StudentPreferencesDAO.load_or_create()
-        if prefs is not None and prefs.locale is not None:
-            return prefs.locale
-
-        accept_lang_list = locales.parse_accept_language(
-            self.request.headers.get('Accept-Language'))
-        available_locales = self.app_context.get_available_locales()
-
-        for lang, _ in accept_lang_list:
-            for supported_lang in available_locales:
-                if lang.lower() == supported_lang.lower():
-                    return supported_lang
-
-        return self.template_value[COURSE_INFO_KEY]['course']['locale']
-
     def init_template_values(self, environ):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
@@ -395,7 +379,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         _p = self.app_context.get_environ()
         self.init_template_values(_p)
         template_environ = self.app_context.get_template_environ(
-            self.get_locale(), additional_dirs)
+            sites.get_current_locale(self.app_context), additional_dirs)
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         template_environ.globals.update({

@@ -62,8 +62,7 @@ def js_string(data):
 def get_gcb_tags_filter(handler):
     def gcb_tags(data):
         """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
-        if not isinstance(data, basestring):
-            return data
+        data = unicode(data)
         if tags.CAN_USE_DYNAMIC_TAGS.value:
             return jinja2.utils.Markup(tags.html_to_safe_dom(data, handler))
         else:

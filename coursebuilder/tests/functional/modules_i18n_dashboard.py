@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import unittest
 
 from common import crypto
+from controllers import sites
 from models import courses
 from models import transforms
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
@@ -479,3 +480,114 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
 
         self.assertEquals(VERB_NEW, sections[0]['data'][0]['verb'])
         self.assertEquals(0, len(sections[2]['data']))
+
+
+class CourseContentTranslationTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'i18n_course'
+
+    def setUp(self):
+        super(CourseContentTranslationTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'I18N Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, app_context)
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.unit.unit_header = '<p>a</p><p>b</p>'
+
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'Test Lesson'
+        self.lesson.objectives = '<p>c</p><p>d</p>'
+
+        self.course.save()
+
+        self.unit_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Test Unit', 'target_value': 'TEST UNIT'}]
+            },
+            'unit_header': {
+                'type': 'html',
+                'source_value': '<p>a</p><p>b</p>',
+                'data': [
+                    {'source_value': 'a', 'target_value': 'A'},
+                    {'source_value': 'b', 'target_value': 'B'}]
+            }
+        }
+
+        self.lesson_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                        'source_value': 'Test Lesson',
+                        'target_value': 'TEST LESSON'}]
+            },
+            'objectives': {
+                'type': 'html',
+                'source_value': '<p>c</p><p>d</p>',
+                'data': [
+                    {'source_value': 'c', 'target_value': 'C'},
+                    {'source_value': 'd', 'target_value': 'D'}]
+            }
+        }
+
+        self.unit_key_el = ResourceBundleKey(
+            ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        self.lesson_key_el = ResourceBundleKey(
+            ResourceKey.LESSON_TYPE, self.lesson.lesson_id, 'el')
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+        sites.override_locale('el')
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(CourseContentTranslationTests, self).tearDown()
+
+    def _store_resource_bundle(self):
+        ResourceBundleDAO.save_all([
+            ResourceBundleDTO(str(self.unit_key_el), self.unit_bundle),
+            ResourceBundleDTO(str(self.lesson_key_el), self.lesson_bundle)])
+
+    def test_lesson_and_unit_translated(self):
+        self._store_resource_bundle()
+
+        page_html = self.get('unit?unit=1').body
+
+        self.assertIn('TEST UNIT', page_html)
+        self.assertIn('<p>A</p><p>B</p>', page_html)
+        self.assertIn('TEST LESSON', page_html)
+        self.assertIn('<p>C</p><p>D</p>', page_html)
+
+    def test_fallback_to_default_when_translation_missing(self):
+        del self.lesson_bundle['objectives']
+        self._store_resource_bundle()
+
+        page_html = self.get('unit?unit=1').body
+
+        self.assertIn('TEST UNIT', page_html)
+        self.assertIn('<p>A</p><p>B</p>', page_html)
+        self.assertIn('TEST LESSON', page_html)
+        self.assertNotIn('<p>C</p><p>D</p>', page_html)
+        self.assertIn('<p>c</p><p>d</p>', page_html)
+
+    def test_fallback_to_default_when_partial_translation_found(self):
+        del self.lesson_bundle['objectives']['data'][1]
+        self._store_resource_bundle()
+
+        page_html = self.get('unit?unit=1').body
+
+        self.assertIn('TEST UNIT', page_html)
+        self.assertIn('<p>A</p><p>B</p>', page_html)
+        self.assertIn('TEST LESSON', page_html)
+        self.assertNotIn('<p>C</p><p>D</p>', page_html)
+        self.assertIn('<p>c</p><p>d</p>', page_html)

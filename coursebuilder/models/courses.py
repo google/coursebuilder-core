@@ -1859,6 +1859,12 @@ class Course(object):
     # course options. See create_settings_schema().
     OPTIONS_SCHEMA_PROVIDERS = []
 
+    # Holds callback functions which are passed the course object after it it
+    # loaded, to perform any further processing on loaded course data. An
+    # instance of the newly created course is passed into each of the hook
+    # methods in the order they were added to the list.
+    POST_LOAD_HOOKS = []
+
     @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
@@ -2141,6 +2147,12 @@ class Course(object):
         self._model = self._load(self._app_context)
         self._tracker = None
         self._reviews_processor = None
+
+        for hook in self.POST_LOAD_HOOKS:
+            try:
+                hook(self)
+            except Exception:  # pylint: disable-msg=broad-except
+                logging.exception('Error in post-load hook')
 
     @property
     def app_context(self):

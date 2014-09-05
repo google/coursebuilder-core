@@ -167,6 +167,11 @@ class DashboardHandler(
             return
         # Force reload of properties. It is expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
+
+        # Do not localize content in the Dashboard
+        sites.override_locale(
+            courses.Course.get_environ(self.app_context)['course']['locale'])
+
         return super(DashboardHandler, self).get()
 
     def post(self):

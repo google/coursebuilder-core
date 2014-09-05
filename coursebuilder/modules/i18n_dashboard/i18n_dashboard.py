@@ -16,6 +16,7 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import logging
 import os
 import urllib
 
@@ -27,6 +28,7 @@ from common import crypto
 from common import schema_fields
 from common import tags
 from common import xcontent
+from controllers import sites
 from controllers import utils
 from models import courses
 from models import custom_modules
@@ -51,6 +53,10 @@ TEMPLATES_DIR = os.path.join(
 VERB_NEW = xcontent.SourceToTargetDiffMapping.VERB_NEW
 VERB_CHANGED = xcontent.SourceToTargetDiffMapping.VERB_CHANGED
 VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
+
+TYPE_HTML = 'html'
+TYPE_STRING = 'string'
+TYPE_URL = 'url'
 
 
 custom_module = None
@@ -654,7 +660,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         """Filter only translatable strings."""
         return schema_fields.ValueToTypeBinding.filter_on_criteria(
             binding,
-            type_names=['string', 'html', 'url'],
+            type_names=[TYPE_HTML, TYPE_STRING, TYPE_URL],
             hidden_values=[False],
             i18n_values=[None, True],
             editable_values=[True])
@@ -690,7 +696,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         resource_bundle_dto = ResourceBundleDAO.load(str(key))
         if resource_bundle_dto:
             for name, value in resource_bundle_dto.dict.items():
-                if value['type'] == 'html':
+                if value['type'] == TYPE_HTML:
                     source_value = value['source_value']
                     target_value = ''
                 else:
@@ -708,7 +714,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
         sections = []
         for mapping in mappings:
-            if mapping.type == 'html':
+            if mapping.type == TYPE_HTML:
                 existing_mappings = []
                 if resource_bundle_dto:
                     field_dict = resource_bundle_dto.dict.get(mapping.name)
@@ -811,7 +817,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
             if changed:
                 source_value = None
-                if section['type'] == 'html':
+                if section['type'] == TYPE_HTML:
                     source_value = section['source_value']
 
                 resource_bundle_dto.dict[section['name']] = {
@@ -838,11 +844,87 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Saved.')
 
 
+class LazyTranslator(object):
+
+    def __init__(self, source_value, translation_dict):
+        self.source_value = source_value
+        self.target_value = None
+        self.translation_dict = translation_dict
+
+    def __str__(self):
+        if self.target_value is not None:
+            return self.target_value
+
+        if self.translation_dict['type'] == TYPE_HTML:
+            self.target_value = self._translate_html()
+        else:
+            self.target_value = self.translation_dict['data'][0]['target_value']
+
+        return self.target_value
+
+    def __len__(self):
+        return len(unicode(self))
+
+    def _translate_html(self):
+        if self.translation_dict['source_value'] != self.source_value:
+            return self.source_value
+
+        try:
+            context = xcontent.Context(xcontent.ContentIO.fromstring(
+                self.source_value))
+            transformer = xcontent.ContentTransformer()
+            transformer.decompose(context)
+
+            resource_bundle = [
+                data['target_value'] for data in self.translation_dict['data']]
+            errors = []
+
+            transformer.recompose(context, resource_bundle, errors)
+            return xcontent.ContentIO.tostring(context.tree)
+        except Exception:  # pylint: disable-msg=broad-except
+            logging.exception('Unable to translate: %s', self.source_value)
+            return self.source_value
+
+
+def set_attribute(thing, attribute_name, translation_dict):
+    # TODO(jorr): Need to be able to deal with hierarchical names from the
+    # schema, not just top-level names.
+    assert hasattr(thing, attribute_name)
+
+    source_value = getattr(thing, attribute_name)
+    setattr(thing, attribute_name, LazyTranslator(
+        source_value, translation_dict))
+
+
+def translate_list(thing_list, translations):
+    for thing, bundle in zip(thing_list, translations):
+        if bundle is not None:
+            for flattened_name, translation_dict in bundle.dict.items():
+                set_attribute(thing, flattened_name, translation_dict)
+
+
+def translate_course(course):
+    locale = sites.get_current_locale(course.app_context)
+    units = course.get_units()
+    lessons = course.get_lessons_for_all_units()
+
+    keys = [
+        str(ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, locale))
+        for unit in units]
+    keys += [
+        str(ResourceBundleKey(
+            ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
+        for lesson in lessons]
+
+    translate_list(units + lessons, ResourceBundleDAO.bulk_load(keys))
+
+
 def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
         [I18nDashboardHandler.ACTION, 'i18n'])
     I18nDashboardHandler.register()
     TranslationConsole.register()
+    courses.Course.POST_LOAD_HOOKS.append(translate_course)
 
 
 def notify_module_disabled():
@@ -850,6 +932,7 @@ def notify_module_disabled():
         [I18nDashboardHandler.ACTION, 'i18n'])
     I18nDashboardHandler.unregister()
     TranslationConsole.unregister()
+    courses.Course.POST_LOAD_HOOKS.remove(translate_course)
 
 
 def register_module():
