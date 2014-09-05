@@ -17,10 +17,12 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import datetime
+import re
 import urllib
 
 from mapreduce import main as mapreduce_main
 from mapreduce import parameters as mapreduce_parameters
+from mapreduce.lib.pipeline import models as pipeline_models
 from mapreduce.lib.pipeline import pipeline
 
 from common import safe_dom
@@ -31,9 +33,12 @@ from models import custom_modules
 from models import data_sources
 from models import jobs
 from models import roles
+from models import transforms
 from models.config import ConfigProperty
 
+from google.appengine.api import files
 from google.appengine.api import users
+from google.appengine.ext import db
 
 # Module registration
 custom_module = None
@@ -159,6 +164,38 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
             datetime.timedelta(days=MAX_MAPREDUCE_METADATA_RETENTION_DAYS))
 
     @classmethod
+    def _collect_blobstore_paths(cls, root_key):
+        paths = set()
+        # pylint: disable-msg=protected-access
+        for model, field_name in ((pipeline_models._SlotRecord, 'value'),
+                                  (pipeline_models._PipelineRecord, 'params')):
+            prev_cursor = None
+            any_records = True
+            while any_records:
+                any_records = False
+                query = (model
+                         .all()
+                         .filter('root_pipeline =', root_key)
+                         .with_cursor(prev_cursor))
+                for record in query.run():
+                    any_records = True
+                    # The data parameters in SlotRecord and PipelineRecord
+                    # vary widely, but all are provided via this interface as
+                    # some combination of Python scalar, list, tuple, and
+                    # dict.  Rather than depend on specifics of the map/reduce
+                    # internals, crush the object to a string and parse that.
+                    try:
+                        data_object = getattr(record, field_name)
+                    except TypeError:
+                        data_object = None
+                    if data_object:
+                        text = transforms.dumps(data_object)
+                        for path in re.findall(r'"(/blobstore/[^"]+)"', text):
+                            paths.add(path)
+                prev_cursor = query.cursor()
+        return paths
+
+    @classmethod
     def _clean_mapreduce(cls, max_age):
         """Separated as internal function to permit tests to pass max_age."""
         num_cleaned = 0
@@ -204,13 +241,22 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
                         if pipeline_id in jobs_by_pipeline_id:
                             jobs_by_pipeline_id[pipeline_id].mark_cleaned_up()
 
-                        # This only enqueues a deferred cleanup item, so
-                        # transactionality with marking the job cleaned is
-                        # not terribly important.
                         p = pipeline.Pipeline.from_id(pipeline_id)
                         if p:
-                          p.cleanup()
+                            # Pipeline cleanup, oddly, does not go clean up
+                            # relevant blobstore items.  They have a TODO,
+                            # but it has not been addressed as of Sep 2014.
+                            # pylint: disable-msg=protected-access
+                            root_key = db.Key.from_path(
+                                pipeline_models._PipelineRecord.kind(),
+                                pipeline_id)
+                            for path in cls._collect_blobstore_paths(root_key):
+                                files.delete(path)
 
+                            # This only enqueues a deferred cleanup item, so
+                            # transactionality with marking the job cleaned is
+                            # not terribly important.
+                            p.cleanup()
                         num_cleaned += 1
         return num_cleaned
 

@@ -25,6 +25,7 @@ import actions
 from actions import assert_contains
 from actions import assert_does_not_contain
 from actions import assert_equals
+from mapreduce.lib.pipeline import models as pipeline_models
 from mapreduce.lib.pipeline import pipeline
 
 import appengine_config
@@ -41,6 +42,9 @@ from models.progress import UnitLessonCompletionTracker
 from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
 from modules.mapreduce import mapreduce_module
+
+from google.appengine.api import files
+from google.appengine.ext import db
 
 
 class AnalyticsTabsWithNoJobs(actions.TestBase):
@@ -642,6 +646,23 @@ class CronCleanupTest(actions.TestBase):
         with common_utils.Namespace('ns_' + course_name):
             return len(pipeline.get_root_list()['pipelines'])
 
+    def _get_blobstore_paths(self, course_name):
+        ret = set()
+        with common_utils.Namespace('ns_' + course_name):
+            for state in pipeline.get_root_list()['pipelines']:
+                root_key = db.Key.from_path(
+                    pipeline_models._PipelineRecord.kind(), state['pipelineId'])
+                paths = (mapreduce_module.CronMapreduceCleanupHandler
+                         ._collect_blobstore_paths(root_key))
+                ret = ret.union(paths)
+        return ret
+
+    def _assert_blobstore_paths_removed(self, course_name, paths):
+        with common_utils.Namespace('ns_' + course_name):
+            for path in paths:
+                with self.assertRaises(files.FinalizationError):
+                    files.open(path)
+
     def _force_finalize(self, job):
         # For reasons that I do not grok, running the deferred task list
         # until it empties out in test mode does not wind up marking the
@@ -724,9 +745,12 @@ class CronCleanupTest(actions.TestBase):
 
         self.assertEquals(1, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(1, self._clean_jobs(datetime.timedelta(seconds=0)))
+        paths = self._get_blobstore_paths(COURSE_ONE)
+        self.assertEquals(8, len(paths))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+        self._assert_blobstore_paths_removed(COURSE_ONE, paths)
 
     def test_multiple_runs_cleaned(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
@@ -736,9 +760,12 @@ class CronCleanupTest(actions.TestBase):
 
         self.assertEquals(3, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(3, self._clean_jobs(datetime.timedelta(seconds=0)))
+        paths = self._get_blobstore_paths(COURSE_ONE)
+        self.assertEquals(24, len(paths))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+        self._assert_blobstore_paths_removed(COURSE_ONE, paths)
 
     def test_cleanup_modifies_incomplete_status(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
@@ -770,12 +797,19 @@ class CronCleanupTest(actions.TestBase):
             self.execute_all_deferred_tasks()
 
         self.assertEquals(2, self._get_num_root_jobs(COURSE_ONE))
+        course_one_paths = self._get_blobstore_paths(COURSE_ONE)
+        self.assertEquals(16, len(course_one_paths))
         self.assertEquals(2, self._get_num_root_jobs(COURSE_TWO))
+        course_two_paths = self._get_blobstore_paths(COURSE_TWO)
+        self.assertEquals(16, len(course_two_paths))
+
         self.assertEquals(4, self._clean_jobs(datetime.timedelta(seconds=0)))
 
         self.execute_all_deferred_tasks()  # Run deferred deletion task.
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
         self.assertEquals(0, self._get_num_root_jobs(COURSE_TWO))
+        self._assert_blobstore_paths_removed(COURSE_ONE, course_one_paths)
+        self._assert_blobstore_paths_removed(COURSE_TWO, course_two_paths)
 
     def test_cleanup_handler(self):
         mapper = rest_providers.LabelsOnStudentsGenerator(self.course_one)
