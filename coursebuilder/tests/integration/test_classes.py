@@ -35,6 +35,9 @@ from models import transforms
 from tests import suite
 from tests.integration import fake_visualizations
 
+BROWSER_WIDTH = 1000
+BROWSER_HEIGHT = 1000
+
 
 class BaseIntegrationTest(suite.TestBase):
     """Base class for all integration tests."""
@@ -68,6 +71,10 @@ class BaseIntegrationTest(suite.TestBase):
                         tries)
                 else:
                     raise ex
+
+        # Set a large enough window size independent of screen size so that all
+        # click actions can be performed correctly.
+        self.driver.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
 
     def tearDown(self):  # pylint: disable=g-bad-name
         time.sleep(1)  # avoid broken sockets on the server
