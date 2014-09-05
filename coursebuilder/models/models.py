@@ -195,6 +195,148 @@ class ValidationError(Exception):
     """Exception raised to show that a validation failed."""
 
 
+class HTMLChunkEntity(BaseEntity):
+    """Defines storage for HtmlChunk, a blob of HTML for display."""
+
+    _PROPERTY_EXPORT_BLACKLIST = []  # No PII in HTMLChunks.
+
+    # UTC last modification timestamp.
+    last_modified = db.DateTimeProperty(auto_now=True, required=True)
+    # Whether or not the chunk supports custom tags. If True, the renderer may
+    # be extended to parse and render those tags at display time (this is a stub
+    # for future functionality that does not exist yet). If False, the contents
+    # of the chunk will be rendered verbatim.
+    supports_custom_tags = db.BooleanProperty(default=False)
+    # Optional URL that the HTML was sourced from. Max size is 500B, enforced by
+    # datastore.
+    url = db.StringProperty(indexed=True)
+
+    # Payload of the HTML chunk. Max size is 1MB, enforced by datastore.
+    contents = db.TextProperty()
+
+
+class HTMLChunkDAO(object):
+    """Data access object for HTMLChunks."""
+
+    @classmethod
+    def delete(cls, entity_id):
+        """Deletes HTMLChunkEntity for given datastore id int; returns None."""
+        memcache_key = cls._get_memcache_key(entity_id)
+        entity = HTMLChunkEntity.get_by_id(entity_id)
+
+        if entity:
+            db.delete(entity)
+
+        MemcacheManager.delete(memcache_key)
+
+    @classmethod
+    def get(cls, entity_id):
+        """Gets HTMLEntityDTO or None from HTMLChunkEntity datastore id int."""
+        if entity_id is None:
+            return
+
+        memcache_key = cls._get_memcache_key(entity_id)
+        found = MemcacheManager.get(memcache_key)
+
+        if found is NO_OBJECT:
+            return None
+        elif found:
+            return found
+        else:
+            result = None
+            cache_value = NO_OBJECT
+
+            entity = HTMLChunkEntity.get_by_id(entity_id)
+            if entity:
+                result = cls._make_dto(entity)
+                cache_value = result
+
+            MemcacheManager.set(memcache_key, cache_value)
+            return result
+
+    @classmethod
+    def get_by_url(cls, url):
+        """Gets list of DTOs for all entities matching the given url string."""
+        results = HTMLChunkEntity.all().filter(
+            HTMLChunkEntity.url.name, url
+        ).fetch(1000)
+        return sorted(
+            [cls._make_dto(result) for result in results],
+            key=lambda dto: dto.id)
+
+    @classmethod
+    def save(cls, dto):
+        """Saves contents of a DTO and returns the key of the saved entity.
+
+        Handles both creating new and updating existing entities. If the id of
+        the passed DTO is found, the entity will be updated.
+
+        Note that this method does not refetch the saved entity from the
+        datastore after put since this is impossible in a transaction. This
+        means the last_modified date we put in the cache skews from the actual
+        saved value by however long put took. This is expected datastore
+        behavior; we do not at present have a use case for perfect accuracy in
+        this value for our getters.
+
+        Args:
+            dto: HTMLChunkDTO. last_modified will be ignored.
+
+        Returns:
+            db.Key of saved HTMLEntity.
+        """
+        if dto.id is None:
+            entity = HTMLChunkEntity()
+        else:
+            entity = HTMLChunkEntity.get_by_id(dto.id)
+
+            if entity is None:
+                entity = HTMLChunkEntity()
+
+        entity.contents = dto.contents
+        entity.supports_custom_tags = dto.supports_custom_tags
+        entity.url = dto.url
+        entity.put()
+        MemcacheManager.set(
+            cls._get_memcache_key(entity.key().id()), cls._make_dto(entity))
+
+        return entity.key()
+
+    @classmethod
+    def _get_memcache_key(cls, entity_id):
+        assert entity_id is not None
+        return '(%s:%s)' % (HTMLChunkEntity.kind(), entity_id)
+
+    @classmethod
+    def _make_dto(cls, entity):
+        return HTMLChunkDTO({
+            'contents': entity.contents,
+            'id': entity.key().id(),
+            'last_modified': entity.last_modified,
+            'supports_custom_tags': entity.supports_custom_tags,
+            'url': entity.url,
+        })
+
+
+class HTMLChunkDTO(object):
+    """Data transfer object for HTMLChunks."""
+
+    def __init__(self, entity_dict):
+        self.contents = entity_dict.get('contents')
+        self.id = entity_dict.get('id')
+        self.last_modified = entity_dict.get('last_modified')
+        self.supports_custom_tags = entity_dict.get('supports_custom_tags')
+        self.url = entity_dict.get('url')
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, HTMLChunkDTO) and
+            self.contents == other.contents and
+            self.id == other.id and
+            self.last_modified == other.last_modified and
+            self.supports_custom_tags == other.supports_custom_tags and
+            self.url == other.url)
+
+
 class PersonalProfile(BaseEntity):
     """Personal information not specific to any course instance."""
 

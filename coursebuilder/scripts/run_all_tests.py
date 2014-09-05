@@ -57,6 +57,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_entities.EntityTransformsTest': 4,
     'tests.functional.model_jobs.JobOperationsTest': 15,
     'tests.functional.model_models.EventEntityTestCase': 1,
+    'tests.functional.model_models.HTMLChunkTestCase': 11,
     'tests.functional.model_models.PersonalProfileTestCase': 1,
     'tests.functional.model_models.QuestionDAOTestCase': 3,
     'tests.functional.model_models.StudentTestCase': 3,

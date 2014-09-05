@@ -20,10 +20,13 @@ __author__ = [
 
 import datetime
 
+from models import config
 from models import models
 from models import services
 from modules.notifications import notifications
 from tests.functional import actions
+
+from google.appengine.ext import db
 
 # Disable complaints about docstrings for self-documenting tests.
 # pylint: disable-msg=g-missing-docstring
@@ -40,6 +43,175 @@ class EventEntityTestCase(actions.ExportTestBase):
         self.assertEqual('source', event.source)
         self.assertEqual('transformed_1', exported.user_id)
         self.assertEqual(key, models.EventEntity.safe_key(key, self.transform))
+
+
+class HTMLChunkTestCase(actions.ExportTestBase):
+    """Tests HTMLChunkEntity|DAO|DTO."""
+
+    # Allow access to protected members under test.
+    # pylint: disable-msg=protected-access
+
+    def setUp(self):
+        super(HTMLChunkTestCase, self).setUp()
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        self.contents = 'contents'
+        self.id = 1
+        self.memcache_key = models.HTMLChunkDAO._get_memcache_key(self.id)
+        self.supports_custom_tags = True
+        self.url = 'http://example.com/url'
+
+    def tearDown(self):
+        config.Registry.test_overrides = {}
+        super(HTMLChunkTestCase, self).tearDown()
+
+    def assert_fuzzy_equal(self, first, second):
+        """Assert doesn't check last_modified, allowing clock skew."""
+        self.assertTrue(isinstance(first, models.HTMLChunkDTO))
+        self.assertTrue(isinstance(second, models.HTMLChunkDTO))
+        self.assertEqual(first.contents, second.contents)
+        self.assertEqual(first.id, second.id)
+        self.assertEqual(
+            first.supports_custom_tags, second.supports_custom_tags)
+        self.assertEqual(first.url, second.url)
+
+    def assert_list_fuzzy_equal(self, first, second):
+        self.assertEqual(len(first), len(second))
+
+        for f, s in zip(first, second):
+            self.assert_fuzzy_equal(f, s)
+
+    def test_dao_delete_deletes_entity_and_cached_dto(self):
+        key = models.HTMLChunkDAO.save(models.HTMLChunkDTO({
+            'contents': self.contents,
+            'id': self.id,
+            'supports_custom_tags': self.supports_custom_tags,
+            'url': self.url,
+        }))
+        entity = db.get(key)
+        dto = models.HTMLChunkDAO.get(key.id())
+
+        self.assertIsNotNone(entity)
+        self.assertIsNotNone(dto)
+
+        models.HTMLChunkDAO.delete(key.id())
+        entity = db.get(key)
+        dto = models.HTMLChunkDAO.get(key.id())
+
+        self.assertIsNone(entity)
+        self.assertIsNone(dto)
+
+    def test_dao_delete_runs_successfully_when_no_entity_present(self):
+        self.assertIsNone(models.HTMLChunkDAO.delete(self.id))
+
+    def test_dao_get_returns_cached_entity(self):
+        key = models.HTMLChunkDAO.save(models.HTMLChunkDTO({
+            'contents': self.contents,
+            'supports_custom_tags': self.supports_custom_tags,
+            'url': self.url,
+        }))
+        entity = db.get(key)
+        entity.contents = 'patched'
+        patched_dto = models.HTMLChunkDAO._make_dto(entity)
+        models.MemcacheManager.set(self.memcache_key, patched_dto)
+        from_datastore = models.HTMLChunkEntity.get_by_id(self.id)
+        from_cache = models.MemcacheManager.get(self.memcache_key)
+
+        self.assert_fuzzy_equal(patched_dto, from_cache)
+        self.assertNotEqual(patched_dto.contents, from_datastore.contents)
+
+    def test_dao_get_returns_datastore_entity_and_populates_cache(self):
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+
+        key = models.HTMLChunkDAO.save(models.HTMLChunkDTO({
+            'contents': self.contents,
+            'supports_custom_tags': self.supports_custom_tags,
+            'url': self.url,
+        }))
+        expected_dto = models.HTMLChunkDAO._make_dto(db.get(key))
+        from_datastore = models.HTMLChunkEntity.get_by_id(self.id)
+        from_cache = models.MemcacheManager.get(self.memcache_key)
+
+        self.assert_fuzzy_equal(
+            expected_dto, models.HTMLChunkDAO._make_dto(from_datastore))
+        self.assert_fuzzy_equal(expected_dto, from_cache)
+
+    def test_dao_get_returns_none_when_entity_id_none(self):
+        self.assertIsNone(models.HTMLChunkDAO.get(None))
+
+    def test_dao_get_returns_none_when_no_entity_in_datastore(self):
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+        self.assertIsNone(models.HTMLChunkDAO.get(self.id))
+        self.assertEqual(
+            models.NO_OBJECT, models.MemcacheManager.get(self.memcache_key))
+
+    def test_dao_get_by_url_returns_empty_list_if_no_matches(self):
+        self.assertEqual([], models.HTMLChunkDAO.get_by_url(self.url))
+
+    def test_dao_get_by_url_returns_matching_dtos_sorted_by_id(self):
+        first_key = models.HTMLChunkEntity(
+            contents=self.contents,
+            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
+        second_key = models.HTMLChunkEntity(
+            contents=self.contents + '2',
+            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
+        unused_different_url_key = models.HTMLChunkEntity(
+            contents=self.contents,
+            supports_custom_tags=self.supports_custom_tags,
+            url=self.url + 'not').put()
+        expected_dtos = [
+            models.HTMLChunkDAO.get(first_key.id()),
+            models.HTMLChunkDAO.get(second_key.id())]
+        actual_dtos = models.HTMLChunkDAO.get_by_url(self.url)
+
+        self.assert_list_fuzzy_equal(expected_dtos, actual_dtos)
+
+    def test_dao_make_dto(self):
+        key = models.HTMLChunkEntity(
+            contents=self.contents,
+            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
+        entity = db.get(key)  # Refetch to avoid timestamp skew.
+        dto = models.HTMLChunkDAO._make_dto(entity)
+
+        self.assertEqual(entity.contents, dto.contents)
+        self.assertEqual(entity.key().id(), dto.id)
+        self.assertEqual(entity.last_modified, dto.last_modified)
+        self.assertEqual(entity.supports_custom_tags, dto.supports_custom_tags)
+        self.assertEqual(entity.url, dto.url)
+
+    def test_dao_save_creates_new_object_and_populates_cache(self):
+        self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
+
+        key = models.HTMLChunkDAO.save(models.HTMLChunkDTO({
+            'contents': self.contents,
+            'id': self.id,
+            'supports_custom_tags': self.supports_custom_tags,
+            'url': self.url,
+        }))
+        expected_dto = models.HTMLChunkDAO._make_dto(db.get(key))
+
+        self.assert_fuzzy_equal(
+            expected_dto, models.MemcacheManager.get(self.memcache_key))
+
+    def test_dao_save_updates_existing_object_and_populates_cache(self):
+        key = models.HTMLChunkDAO.save(models.HTMLChunkDTO({
+            'contents': self.contents,
+            'id': self.id,
+            'supports_custom_tags': self.supports_custom_tags,
+            'url': self.url,
+        }))
+        original_dto = models.HTMLChunkDAO._make_dto(db.get(key))
+
+        self.assert_fuzzy_equal(
+            original_dto, models.MemcacheManager.get(self.memcache_key))
+
+        original_dto.contents = 'new_contets'
+        original_dto.supports_custom_tags = True
+        original_dto.url = 'http://example.com/new'
+        models.HTMLChunkDAO.save(original_dto)
+        expected_dto = models.HTMLChunkDAO._make_dto(db.get(key))
+
+        self.assert_fuzzy_equal(
+            expected_dto, models.MemcacheManager.get(self.memcache_key))
 
 
 class PersonalProfileTestCase(actions.ExportTestBase):
