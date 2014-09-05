@@ -47,7 +47,8 @@ NO_OBJECT = {}
 DEFAULT_CACHE_TTL_SECS = 60 * 5
 
 # https://developers.google.com/appengine/docs/python/memcache/#Python_Limits
-MEMCACHE_MAX = (1000000 - (96 * 2))
+MEMCACHE_MAX = (1024 * 1024 - 96 - 250)
+MEMCACHE_MULTI_MAX = 32 * 1024 * 1024
 
 # Global memcache controls.
 CAN_USE_MEMCACHE = ConfigProperty(
@@ -107,12 +108,28 @@ class MemcacheManager(object):
         # We store some objects in memcache that don't evaluate to True, but are
         # real objects, '{}' for example. Count a cache miss only in a case when
         # an object is None.
-        if value != None:  # pylint: disable-msg=g-equals-none
+        if value is not None:
             CACHE_HIT.inc()
         else:
             logging.info('Cache miss, key: %s. %s', key, Exception())
             CACHE_MISS.inc(context=key)
         return value
+
+    @classmethod
+    def get_multi(cls, keys, namespace=None):
+        """Gets a set of items from memcache if memcache is enabled."""
+        if not CAN_USE_MEMCACHE.value:
+            return {}
+        values = memcache.get_multi(
+            keys, namespace=cls._get_namespace(namespace))
+
+        for key, value in values.items():
+            if value is not None:
+                CACHE_HIT.inc()
+            else:
+                logging.info('Cache miss, key: %s. %s', key, Exception())
+                CACHE_MISS.inc(context=key)
+        return values
 
     @classmethod
     def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
@@ -125,6 +142,20 @@ class MemcacheManager(object):
                 CACHE_PUT.inc()
                 memcache.set(
                     key, value, ttl, namespace=cls._get_namespace(namespace))
+
+    @classmethod
+    def set_multi(cls, mapping, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
+        """Sets a dict of items in memcache if memcache is enabled."""
+        if CAN_USE_MEMCACHE.value:
+            size = sum([
+                sys.getsizeof(key) + sys.getsizeof(value)
+                for key, value in mapping.items()])
+            if size > MEMCACHE_MULTI_MAX:
+                CACHE_PUT_TOO_BIG.inc()
+            else:
+                CACHE_PUT.inc()
+                memcache.set_multi(
+                    mapping, time=ttl, namespace=cls._get_namespace(namespace))
 
     @classmethod
     def delete(cls, key, namespace=None):
@@ -985,8 +1016,38 @@ class BaseJsonDao(object):
 
     @classmethod
     def bulk_load(cls, obj_id_list):
-        # TODO(jorr): Write bulk loading code for BaseJsonDAO
-        return [cls.load(obj_id) for obj_id in obj_id_list]
+        memcache_keys = [cls._memcache_key(obj_id) for obj_id in obj_id_list]
+        memcache_entities = MemcacheManager.get_multi(memcache_keys)
+
+        both_keys = zip(obj_id_list, memcache_keys)
+
+        datastore_keys = [
+            obj_id for obj_id, memcache_key in both_keys
+            if memcache_key not in memcache_entities]
+        datastore_entities_list = db.get([
+            db.Key.from_path(cls.ENTITY.kind(), obj_id)
+            for obj_id in datastore_keys])
+        datastore_entities = dict(zip(datastore_keys, datastore_entities_list))
+
+        # weave the results together
+        ret = []
+        memcache_update = {}
+        for obj_id, memcache_key in both_keys:
+            entity = datastore_entities.get(obj_id)
+            if entity is not None:
+                ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
+                memcache_update[memcache_key] = entity
+            elif memcache_key not in memcache_entities:
+                ret.append(None)
+                memcache_update[memcache_key] = NO_OBJECT
+            else:
+                entity = memcache_entities[memcache_key]
+                if NO_OBJECT == entity:
+                    ret.append(None)
+                else:
+                    ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
+        MemcacheManager.set_multi(memcache_update)
+        return ret
 
     @classmethod
     def _create_if_necessary(cls, dto):

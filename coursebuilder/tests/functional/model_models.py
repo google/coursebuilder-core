@@ -21,6 +21,7 @@ __author__ = [
 import datetime
 
 from models import config
+from models import entities
 from models import models
 from models import services
 from modules.notifications import notifications
@@ -231,6 +232,124 @@ class PersonalProfileTestCase(actions.ExportTestBase):
         self.assert_blacklisted_properties_removed(profile, exported)
         self.assertEqual(
             self.transform(user_id), exported.safe_key.name())
+
+
+class MemcacheManagerTestCase(actions.TestBase):
+
+    def setUp(self):
+        super(MemcacheManagerTestCase, self).setUp()
+        config.Registry.test_overrides = {models.CAN_USE_MEMCACHE.name: True}
+
+    def tearDown(self):
+        config.Registry.test_overrides = {}
+        super(MemcacheManagerTestCase, self).tearDown()
+
+    def test_set_multi(self):
+        data = {'a': 'A', 'b': 'B'}
+        models.MemcacheManager.set_multi(data)
+
+        self.assertEquals('A', models.MemcacheManager.get('a'))
+        self.assertEquals('B', models.MemcacheManager.get('b'))
+
+    def test_get_multi(self):
+        models.MemcacheManager.set('a', 'A')
+        models.MemcacheManager.set('b', 'B')
+
+        data = models.MemcacheManager.get_multi(['a', 'b', 'c'])
+        self.assertEquals(2, len(data.keys()))
+        self.assertEquals('A', data['a'])
+        self.assertEquals('B', data['b'])
+
+    def test_set_multi_no_memcache(self):
+        config.Registry.test_overrides = {}
+        data = {'a': 'A', 'b': 'B'}
+        models.MemcacheManager.set_multi(data)
+
+        self.assertEquals(None, models.MemcacheManager.get('a'))
+        self.assertEquals(None, models.MemcacheManager.get('b'))
+
+    def test_get_multi_no_memcache(self):
+        config.Registry.test_overrides = {}
+        models.MemcacheManager.set('a', 'A')
+        models.MemcacheManager.set('b', 'B')
+
+        data = models.MemcacheManager.get_multi(['a', 'b', 'c'])
+        self.assertEquals(0, len(data.keys()))
+
+
+class TestEntity(entities.BaseEntity):
+    data = db.TextProperty(indexed=False)
+
+
+class TestDto(object):
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+
+class TestDao(models.BaseJsonDao):
+    DTO = TestDto
+    ENTITY = TestEntity
+    ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeName
+
+
+class BaseJsonDaoTestCase(actions.TestBase):
+
+    def setUp(self):
+        super(BaseJsonDaoTestCase, self).setUp()
+        config.Registry.test_overrides = {models.CAN_USE_MEMCACHE.name: True}
+
+    def tearDown(self):
+        config.Registry.test_overrides = {}
+        super(BaseJsonDaoTestCase, self).tearDown()
+
+    def test_bulk_load(self):
+        key_0 = 'dto_0'
+        key_1 = 'dto_1'
+        mc_key_0 = '(entity:TestEntity:dto_0)'
+        mc_key_1 = '(entity:TestEntity:dto_1)'
+
+        dto = TestDto(key_0, {'a': 0})
+        TestDao.save(dto)
+        dto = TestDto(key_1, {'a': 1})
+        TestDao.save(dto)
+
+        def assert_bulk_load_succeeds():
+            dtos = TestDao.bulk_load([key_0, key_1, 'dto_2'])
+            self.assertEquals(3, len(dtos))
+            self.assertEquals(key_0, dtos[0].id)
+            self.assertEquals({'a': 0}, dtos[0].dict)
+            self.assertEquals(key_1, dtos[1].id)
+            self.assertEquals({'a': 1}, dtos[1].dict)
+            self.assertIsNone(dtos[2])
+
+        # Confirm entities in memcache
+        memcache_entities = models.MemcacheManager.get_multi(
+            [mc_key_0, mc_key_1])
+        self.assertEquals(2, len(memcache_entities))
+        self.assertIn(mc_key_0, memcache_entities)
+        self.assertIn(mc_key_1, memcache_entities)
+
+        assert_bulk_load_succeeds()
+
+        # Evict one from memcache
+        models.MemcacheManager.delete(mc_key_0)
+        memcache_entities = models.MemcacheManager.get_multi(
+            [mc_key_0, mc_key_1])
+        self.assertEquals(1, len(memcache_entities))
+        self.assertIn(mc_key_1, memcache_entities)
+
+        assert_bulk_load_succeeds()
+
+        # Evict both from memcache
+        models.MemcacheManager.delete(mc_key_0)
+        models.MemcacheManager.delete(mc_key_1)
+        memcache_entities = models.MemcacheManager.get_multi(
+            [mc_key_0, mc_key_1])
+        self.assertEquals(0, len(memcache_entities))
+
+        assert_bulk_load_succeeds()
 
 
 class QuestionDAOTestCase(actions.TestBase):
