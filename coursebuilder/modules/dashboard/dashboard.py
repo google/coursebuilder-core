@@ -805,12 +805,12 @@ class DashboardHandler(
 
     def _create_location_links(self, locations):
         links = []
-        for assessment in locations['assessments']:
+        for assessment in locations.get('assessments', ()):
             url = 'assessment?name=%s' % assessment.unit_id
             links.append(
                 safe_dom.Element('a', href=url).add_text(assessment.title))
 
-        for (lesson, unit) in locations['lessons']:
+        for (lesson, unit) in locations.get('lessons', ()):
             url = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)
             links.append(
                 safe_dom.Element('a', href=url).add_text(
@@ -906,13 +906,10 @@ class DashboardHandler(
             'td', colspan=str(colspan), style='text-align: center'
         ).add_text(text)))
 
-    def list_questions(self):
+    def list_questions(self, all_questions, all_question_groups, locations_map):
         """Prepare a list of the question bank contents."""
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
-
-        all_questions = QuestionDAO.get_all()
-        all_question_groups = QuestionGroupDAO.get_all()
 
         output = safe_dom.NodeList().append(
             safe_dom.Element(
@@ -945,6 +942,11 @@ class DashboardHandler(
         table.add_child(self._create_empty_footer(
             'No questions available', 5, all_questions))
 
+        question_to_group = {}
+        for group in all_question_groups:
+            for quid in group.question_ids:
+                question_to_group.setdefault(long(quid), []).append(group)
+
         for question in all_questions:
             tr = safe_dom.Element('tr', data_quid=str(question.id))
             # Add description including action icons
@@ -959,7 +961,7 @@ class DashboardHandler(
             td.add_text(question.description)
 
             # Add containing question groups
-            used_by_groups = QuestionDAO.used_by(question.id)
+            used_by_groups = question_to_group.get(question.id, [])
             cell = safe_dom.Element('td', className='groups')
             if all_question_groups:
                 cell.add_child(self._create_add_to_group_button())
@@ -970,10 +972,9 @@ class DashboardHandler(
             tr.add_child(cell)
 
             # Add locations
-            locations = courses.Course(self).get_component_locations(
-                 question.id, 'question')
-            location_links = self._create_location_links(locations)
-            tr.add_child(self._create_list_cell(location_links))
+            locations = locations_map.get(question.id, {})
+            tr.add_child(self._create_list_cell(
+                self._create_location_links(locations)))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
@@ -995,25 +996,23 @@ class DashboardHandler(
             filter_info['type'] = question.type
             filter_info['lessons'] = []
             unit_ids = set()
-            for (lesson, unit) in locations['lessons']:
+            for (lesson, unit) in locations.get('lessons', ()):
                 unit_ids.add(unit.unit_id)
                 filter_info['lessons'].append(lesson.lesson_id)
             filter_info['units'] = list(unit_ids) + [
-                a.unit_id for a in locations['assessments']]
+                a.unit_id for a in  locations.get('assessments', ())]
             filter_info['groups'] = [qg.id for qg in used_by_groups]
-            filter_info['unused'] = 0 if location_links else 1
+            filter_info['unused'] = 0 if locations else 1
             tr.add_attribute(data_filter=transforms.dumps(filter_info))
             tbody.add_child(tr)
 
         return output
 
-    def list_question_groups(self):
+    def list_question_groups(
+        self, all_questions, all_question_groups, locations_map):
         """Prepare a list of question groups."""
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
-
-        # TODO(jorr): Hook this into the datastore
-        all_question_groups = QuestionGroupDAO.get_all()
 
         output = safe_dom.NodeList()
         output.append(
@@ -1043,6 +1042,7 @@ class DashboardHandler(
             table.add_child(self._create_empty_footer(
                 'No question groups available', 4))
 
+        quid_to_question = {long(qu.id): qu for qu in all_questions}
         for question_group in all_question_groups:
             tr = safe_dom.Element('tr', data_qgid=str(question_group.id))
             # Add description including action icons
@@ -1056,15 +1056,13 @@ class DashboardHandler(
             # Add questions
             tr.add_child(self._create_list_cell([
                 safe_dom.Text(descr) for descr in sorted([
-                    QuestionDAO.load(quid).description
+                    quid_to_question[long(quid)].description
                     for quid in question_group.question_ids])
             ]).add_attribute(className='questions'))
 
             # Add locations
-            locations = courses.Course(self).get_component_locations(
-                 question_group.id, 'question-group')
-            tr.add_child(
-                self._create_list_cell(self._create_location_links(locations)))
+            tr.add_child(self._create_list_cell(self._create_location_links(
+                locations_map.get(question_group.id, {}))))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
@@ -1152,8 +1150,14 @@ class DashboardHandler(
                 items.append(asset_lister(self))
 
     def get_assets_questions(self, items, tab, all_paths):
-        items.append(self.list_questions())
-        items.append(self.list_question_groups())
+        all_questions = QuestionDAO.get_all()
+        all_question_groups = QuestionGroupDAO.get_all()
+        (qulocations, qglocations) = courses.Course(
+            self).get_component_locations()
+        items.append(self.list_questions(
+            all_questions, all_question_groups, qulocations))
+        items.append(self.list_question_groups(
+            all_questions, all_question_groups, qglocations))
 
     def get_assets_labels(self, items, tab, all_paths):
         items.append(self.list_labels())
