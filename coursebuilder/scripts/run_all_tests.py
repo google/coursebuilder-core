@@ -27,6 +27,7 @@ import datetime
 import os
 import subprocess
 import threading
+import yaml
 
 
 # all test classes with a total count of tests in each
@@ -34,7 +35,6 @@ ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 2,
     'tests.functional.admin_settings.HtmlHookTest': 11,
     'tests.functional.admin_settings.JinjaContextTest': 2,
-    'tests.functional.app_yaml_edit.RequireAppYamlLibTest': 3,
     'tests.functional.assets_rest.AssetsRestTest': 4,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
@@ -67,6 +67,9 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_student_work.ReviewTest': 3,
     'tests.functional.model_student_work.SubmissionTest': 3,
     'tests.functional.model_utils.QueryMapperTest': 4,
+    'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
+    'tests.functional.module_config_test.ModuleIncorporationTest': 8,
+    'tests.functional.module_config_test.ModuleManifestTest': 7,
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
     'tests.functional.modules_certificate.CertificateCriteriaTestCase': 5,
     'tests.functional.modules_dashboard.QuestionDashboardTestCase': 9,
@@ -177,6 +180,17 @@ def log(message):
             datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), message)
         LOG_LINES.append(line)
         print line
+
+
+def all_third_party_tests():
+    yaml_path = os.path.join(os.path.dirname(__file__),
+                             'third_party_tests.yaml')
+    if os.path.exists(yaml_path):
+        with open(yaml_path) as fp:
+            data = yaml.load(fp)
+        return data['tests']
+    else:
+        return {}
 
 
 def run(exe, strict=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -296,7 +310,11 @@ def run_all_tests(presubmit, verbose):
     # Prepare tasks.
     task_to_test = {}
     tasks = []
-    for test_class_name in ALL_TEST_CLASSES:
+    test_classes = {}
+    test_classes.update(ALL_TEST_CLASSES)
+    test_classes.update(all_third_party_tests())
+
+    for test_class_name in test_classes:
         if presubmit and test_class_name in OMITTED_FROM_PRESUBMIT:
             continue
         test = FunctionalTestTask(test_class_name, verbose)
@@ -314,7 +332,7 @@ def run_all_tests(presubmit, verbose):
         # Check that no unexpected tests were picked up via automatic discovery,
         # and that the number of tests run in a particular suite.py invocation
         # matches the expected number of tests.
-        test_count = ALL_TEST_CLASSES.get(test.test_class_name, None)
+        test_count = test_classes.get(test.test_class_name, None)
         expected_text = 'INFO: All %s tests PASSED!' % test_count
         if test_count is None:
             log('%s\n\nERROR: ran unexpected test class %s' % (

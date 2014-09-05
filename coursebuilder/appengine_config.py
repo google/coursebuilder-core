@@ -90,9 +90,20 @@ def gcb_force_default_encoding(encoding):
         sys.setdefaultencoding(encoding)
 
 
+def _third_party_libs_from_env():
+    ret = []
+    for lib_config in os.environ.get('GCB_THIRD_PARTY_LIBRARIES', '').split():
+        parts = lib_config.split(':')
+        if len(parts) == 1:
+            ret.append(_Library(parts[0]))
+        else:
+            ret.append(_Library(parts[0], relative_path=parts[1]))
+    return ret
+
+
 def gcb_init_third_party():
     """Add all third party libraries to system path."""
-    for lib in THIRD_PARTY_LIBS:
+    for lib in THIRD_PARTY_LIBS + _third_party_libs_from_env():
         if not os.path.exists(lib.file_path):
             raise Exception('Library does not exist: %s' % lib.file_path)
         sys.path.insert(0, lib.full_path)
@@ -113,7 +124,7 @@ def webapp_add_wsgi_middleware(app):
     return app
 
 
-def _import_and_enable_modules(env_var):
+def _import_and_enable_modules(env_var, reraise=False):
     # pylint: disable-msg=broad-except
     for module_name in os.environ.get(env_var, '').split():
         option = 'enabled'
@@ -128,14 +139,16 @@ def _import_and_enable_modules(env_var):
             if option is 'enabled':
                 operation = 'enabling'
                 custom_module.enable()
-        except Exception:
+        except Exception, ex:
             logging.exception('Problem %s module "%s"', operation, module_name)
-            continue
+            if reraise:
+                raise ex
 
 
 def import_and_enable_modules():
     _import_and_enable_modules('GCB_REGISTERED_MODULES')
     _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
+    _import_and_enable_modules('GCB_THIRD_PARTY_MODULES')
 
 
 gcb_init_third_party()

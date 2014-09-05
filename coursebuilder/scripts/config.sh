@@ -12,6 +12,7 @@ export SCRIPTS_DIR=$SOURCE_DIR/scripts
 export INTERNAL_SCRIPTS_DIR=$SOURCE_DIR/internal/scripts
 export DISTRIBUTED_LIBS_DIR=$SOURCE_DIR/lib
 export COURSEBUILDER_RESOURCES=~/coursebuilder_resources
+export MODULES_HOME=$COURSEBUILDER_RESOURCES/modules
 export RUNTIME_HOME=$COURSEBUILDER_RESOURCES/runtime
 export RELEASE_HOME=$COURSEBUILDER_RESOURCES/releases
 export SERVER=appengine.google.com
