@@ -283,22 +283,24 @@ def set_accept_language(accept_language):
     LOCALE_THREAD_LOCAL.accept_language = accept_language
 
 
-def override_locale(locale_str):
-    """Set a locale to override user settings in this session."""
-    LOCALE_THREAD_LOCAL.overridden_locale = locale_str
+def allow_localized_content(allow):
+    LOCALE_THREAD_LOCAL.allow_localized_content = allow
+
+
+def is_localized_content_allowed():
+    return (
+        hasattr(LOCALE_THREAD_LOCAL, 'allow_localized_content') and
+        LOCALE_THREAD_LOCAL.allow_localized_content)
 
 
 def unset_locale_info():
     if hasattr(LOCALE_THREAD_LOCAL, 'accept_language'):
         del LOCALE_THREAD_LOCAL.accept_language
-    if hasattr(LOCALE_THREAD_LOCAL, 'overridden_locale'):
-        del LOCALE_THREAD_LOCAL.overridden_locale
+    if hasattr(LOCALE_THREAD_LOCAL, 'allow_localized_content'):
+        del LOCALE_THREAD_LOCAL.allow_localized_content
 
 
 def get_current_locale(app_context):
-    if hasattr(LOCALE_THREAD_LOCAL, 'overridden_locale'):
-        return LOCALE_THREAD_LOCAL.overridden_locale
-
     prefs = models.StudentPreferencesDAO.load_or_create()
     if prefs is not None and prefs.locale is not None:
         return prefs.locale

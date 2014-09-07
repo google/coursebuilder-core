@@ -415,11 +415,11 @@ class ApplicationHandler(webapp2.RequestHandler):
         super(ApplicationHandler, self).redirect(location)
 
 
-class BaseHandler(ApplicationHandler):
-    """Base handler."""
+class CourseHandler(ApplicationHandler):
+    """Base handler that is aware of the current course."""
 
     def __init__(self, *args, **kwargs):
-        super(BaseHandler, self).__init__(*args, **kwargs)
+        super(CourseHandler, self).__init__(*args, **kwargs)
         self.course = None
 
     def get_course(self):
@@ -435,13 +435,21 @@ class BaseHandler(ApplicationHandler):
         """Gets all units in the course."""
         return self.get_course().get_units()
 
-    def get_track_matching_student(self, student):
-        """Gets units whose labels match those on the student."""
-        return self.get_course().get_track_matching_student(student)
-
     def get_lessons(self, unit_id):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
+
+
+class BaseHandler(CourseHandler):
+    """Base handler."""
+
+    def __init__(self, *args, **kwargs):
+        super(BaseHandler, self).__init__(*args, **kwargs)
+        sites.allow_localized_content(True)
+
+    def get_track_matching_student(self, student):
+        """Gets units whose labels match those on the student."""
+        return self.get_course().get_track_matching_student(student)
 
     def get_progress_tracker(self):
         """Gets the progress tracker for the course."""
@@ -562,6 +570,10 @@ class BaseHandler(ApplicationHandler):
 
 class BaseRESTHandler(BaseHandler):
     """Base REST handler."""
+
+    def __init__(self, *args, **kwargs):
+        super(BaseRESTHandler, self).__init__(*args, **kwargs)
+        sites.allow_localized_content(False)
 
     def assert_xsrf_token_or_fail(self, token_dict, action, args_dict):
         """Asserts that current request has proper XSRF token or fails."""

@@ -59,7 +59,7 @@ from common import safe_dom
 from common import tags
 from controllers import sites
 from controllers import utils
-from controllers.utils import ApplicationHandler
+from controllers.utils import CourseHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import analytics
 from models import config
@@ -90,7 +90,7 @@ class DashboardHandler(
     CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
     QuestionManagerAndEditor, QuestionGroupManagerAndEditor,
     LabelManagerAndEditor, AssignmentManager, AdminPreferencesEditor,
-    HtmlHookHandler, ApplicationHandler, ReflectiveRequestHandler,
+    HtmlHookHandler, CourseHandler, ReflectiveRequestHandler,
     SearchDashboardHandler):
     """Handles all pages and actions required for managing a course."""
 
@@ -167,11 +167,6 @@ class DashboardHandler(
             return
         # Force reload of properties. It is expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
-
-        # Do not localize content in the Dashboard
-        sites.override_locale(
-            courses.Course.get_environ(self.app_context)['course']['locale'])
-
         return super(DashboardHandler, self).get()
 
     def post(self):

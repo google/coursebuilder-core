@@ -904,6 +904,9 @@ def translate_list(thing_list, translations):
 
 
 def translate_course(course):
+    if not sites.is_localized_content_allowed():
+        return
+
     locale = sites.get_current_locale(course.app_context)
     units = course.get_units()
     lessons = course.get_lessons_for_all_units()

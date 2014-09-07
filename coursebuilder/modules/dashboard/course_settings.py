@@ -21,7 +21,6 @@ import urllib
 
 from common import schema_fields
 from controllers.utils import ApplicationHandler
-from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
@@ -52,7 +51,7 @@ class CourseSettingsRights(object):
         return cls.can_edit(handler)
 
 
-class CourseSettingsHandler(BaseHandler):
+class CourseSettingsHandler(ApplicationHandler):
     """Course settings handler."""
 
     EXTRA_CSS_FILES = []
