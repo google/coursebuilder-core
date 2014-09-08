@@ -877,6 +877,7 @@ class ReviewDashboardHandler(BaseHandler):
         rp = course.get_reviews_processor()
         unit, _ = extract_unit_and_lesson(self)
         if not unit:
+            print 'no unit'
             self.error(404)
             return
 
@@ -1095,7 +1096,7 @@ class ReviewHandler(BaseHandler):
 
     def configure_active_review_1_4(self, unit, review_contents):
         self.template_value['assessment_script_src'] = (
-            self.get_course().get_review_form_filename(unit.unit_id))
+            self.get_course().get_review_filename(unit.unit_id))
         saved_answers = (
             StudentWorkUtils.get_answer_list(review_contents)
             if review_contents else [])

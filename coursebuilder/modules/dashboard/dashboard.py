@@ -44,7 +44,6 @@ from question_group_editor import QuestionGroupRESTHandler
 import student_answers_analytics
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
-from unit_lesson_editor import ExportAssessmentRESTHandler
 from unit_lesson_editor import ImportCourseRESTHandler
 from unit_lesson_editor import LessonRESTHandler
 from unit_lesson_editor import LinkRESTHandler
@@ -137,8 +136,7 @@ class DashboardHandler(
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
-            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
-            (ExportAssessmentRESTHandler.URI, ExportAssessmentRESTHandler)]
+            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler)]
 
     # Other modules which manage editable assets can add functions here to
     # list their assets on the Assets tab. The function will receive an instance
