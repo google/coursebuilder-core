@@ -49,7 +49,7 @@ PATH=$RUNTIME_HOME/node/bin:$RUNTIME_HOME/phantomjs/bin:$CHROMEDRIVER_DIR:$PATH
 export YUI_BASE=$RUNTIME_HOME/yui/build
 export KARMA_LIB=$RUNTIME_HOME/karma_lib
 
-CB_ARCHIVE_URL=http://resources.course-builder.googlecode.com/git/lib
+CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master/lib
 
 echo Ensuring Course Builder runtime home exists in $RUNTIME_HOME
 if [ ! -d "$RUNTIME_HOME" ]; then
