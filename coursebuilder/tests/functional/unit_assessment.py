@@ -327,17 +327,16 @@ class UnitPrePostAssessmentTest(actions.TestBase):
         schema = unit_rest_handler.get_annotations_dict(
             new_course, unit.unit_id)
 
-        # Verify that there are 4 valid choices for pre- or post-asssments
-        # for this unit
+        # Verify that despite having some Assessments, we don't have any
+        # valid choices for pre- or post-asssments for the unit, since
+        # old-style assessments don't play nicely in that role.
         choices = self._get_selection_choices(
             schema, ['properties', 'pre_assessment', '_inputex'])
-        self.assertEquals(5, len(choices))
-        self.assertEquals(-1, choices['-- None --'])
+        self.assertEquals({'-- None --': -1}, choices)
 
         choices = self._get_selection_choices(
             schema, ['properties', 'post_assessment', '_inputex'])
-        self.assertEquals(5, len(choices))
-        self.assertEquals(-1, choices['-- None --'])
+        self.assertEquals({'-- None --': -1}, choices)
 
     def test_old_assessment_assignment(self):
         new_course_context = actions.simple_add_course(
@@ -369,7 +368,9 @@ class UnitPrePostAssessmentTest(actions.TestBase):
                 'unit_header': None,
                 'unit_footer': None,
             }, errors)
-        assert not errors
+        self.assertEquals([
+            'The version of assessment "Pre-course assessment" is '
+            'not compatible with use as a pre/post unit element'], errors)
 
     def test_new_assessment_availability(self):
         unit_rest_handler = unit_lesson_editor.UnitRESTHandler()

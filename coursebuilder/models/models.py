@@ -1268,10 +1268,12 @@ class QuestionImporter(object):
         """Import a 'multiple choice group' as a question group."""
 
         QuestionGroupDAO.validate_unique_description(description)
+
         question_group_dict = {
             'version': QuestionDAO.VERSION,
             'description': description,
             'introduction': task}
+
         question_list = []
         for index, question in enumerate(group['questionsList']):
             description = (
@@ -1286,6 +1288,7 @@ class QuestionImporter(object):
         question_group_dict['items'] = [{
             'question': str(quid),
             'weight': 1.0} for quid in qid_list]
+
         return question_group_dict
 
     @classmethod
@@ -1314,102 +1317,6 @@ class QuestionImporter(object):
             'question': orig_question.get('questionHTML') or '',
             'multiple_selections': multiple_selections,
             'choices': choices}
-
-    @classmethod
-    def build_short_answer_question_dict(cls, question_html, matcher, response):
-        return {
-            'version': QuestionDAO.VERSION,
-            'question': question_html or '',
-            'graders': [{
-                'score': 1.0,
-                'matcher': matcher,
-                'response': response,
-            }]
-        }
-
-    @classmethod
-    def build_multiple_choice_question_dict(cls, question):
-        """Assemble the dict for a multiple choice question."""
-
-        question_dict = {
-            'version': QuestionDAO.VERSION,
-            'question': question.get('questionHTML') or '',
-            'multiple_selections': False
-        }
-        choices = []
-        for choice in question.get('choices'):
-            if isinstance(choice, basestring):
-                text = choice
-                score = 0.0
-            else:
-                text = choice.value
-                score = 1.0
-            choices.append({
-                'text': text,
-                'score': score
-            })
-        question_dict['choices'] = choices
-        return question_dict
-
-    @classmethod
-    def import_assessment_question(cls, question):
-        if 'questionHTML' in question:
-            question['questionHTML'] = question['questionHTML'].decode(
-                'string-escape')
-        # Convert a single question into a QuestioDTO.
-        if 'choices' in question:
-            q_dict = cls.build_multiple_choice_question_dict(
-                question)
-            question_type = QuestionDTO.MULTIPLE_CHOICE
-        elif 'correctAnswerNumeric' in question:
-            q_dict = cls.build_short_answer_question_dict(
-                question.get('questionHTML'),
-                'numeric',
-                question.get('correctAnswerNumeric'))
-            question_type = QuestionDTO.SHORT_ANSWER
-        elif 'correctAnswerString' in question:
-            q_dict = cls.build_short_answer_question_dict(
-                question.get('questionHTML'),
-                'case_insensitive',
-                question.get('correctAnswerString'))
-            question_type = QuestionDTO.SHORT_ANSWER
-        elif 'correctAnswerRegex' in question:
-            q_dict = cls.build_short_answer_question_dict(
-                question.get('questionHTML'),
-                'regex',
-                question.get('correctAnswerRegex').value)
-            question_type = QuestionDTO.SHORT_ANSWER
-        else:
-            raise ValueError('Unknown question type')
-        question_dto = QuestionDTO(None, q_dict)
-        question_dto.type = question_type
-        return question_dto
-
-    @classmethod
-    def build_question_dtos(cls, assessment_dict, template, unit, errors):
-        """Convert the assessment into a list of QuestionDTO's."""
-
-        descriptions = QuestionDAO.get_questions_descriptions()
-        question_dtos = []
-        try:
-            for i, q in enumerate(assessment_dict['questionsList']):
-                description = template % (unit.title, (i + 1))
-                if description in descriptions:
-                    raise CollisionError(
-                        'Non-unique question description: %s' % description)
-                question_dto = cls.import_assessment_question(q)
-                question_dto.dict['description'] = description
-                question_dtos.append(question_dto)
-        except CollisionError:
-            errors.append(
-                    'This assessment has already been imported. Remove '
-                    'duplicate questions from the question bank in '
-                    'order to re-import: %s.' % description)
-            return None
-        except Exception as ex:
-            errors.append('Unable to convert: %s' % ex)
-            return None
-        return question_dtos
 
 
 class SaQuestionConstants(object):

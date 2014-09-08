@@ -23,6 +23,7 @@ import urllib
 import messages
 import yaml
 
+from common import safe_dom
 from common import tags
 from common import utils as common_utils
 from common.schema_fields import FieldArray
@@ -439,7 +440,7 @@ class UnitTools(object):
 
     def _get_review_form_path(self, unit):
         return self._course.app_context.fs.impl.physical_to_logical(
-            self._course.get_review_filename(unit.unit_id))
+            self._course.get_review_form_filename(unit.unit_id))
 
     def _assessment_to_dict(self, unit):
         """Assemble a dict with the unit data fields."""
@@ -1381,3 +1382,243 @@ class LessonRESTHandler(BaseRESTHandler):
         course.save()
 
         transforms.send_json_response(self, 200, 'Deleted.')
+
+
+generate_instanceid = common_utils.generate_instance_id
+
+
+class CollisionError(Exception):
+    """Exception raised to show that a collision in a namespace has occurred."""
+
+
+class ExportAssessmentRESTHandler(BaseRESTHandler):
+    """REST handler for requests to export an activity into new format."""
+
+    URI = '/rest/course/asessment/export'
+
+    VERSION = '1.5'
+
+    # pylint: disable-msg=too-many-statements
+    def put(self):
+        """Handle the PUT verb to export an assessment."""
+        request = transforms.loads(self.request.get('request'))
+        key = request.get('key')
+
+        if not CourseOutlineRights.can_edit(self):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': key})
+            return
+
+        if not self.assert_xsrf_token_or_fail(
+                request, 'put-unit', {'key': key}):
+            return
+
+        raw_assessment_dict = transforms.json_to_dict(
+            request.get('payload'), AssessmentRESTHandler.SCHEMA_DICT)
+
+        entity_dict = {}
+        AssessmentRESTHandler.SCHEMA.convert_json_to_entity(
+            raw_assessment_dict, entity_dict)
+
+        course = courses.Course(self)
+        self.unit = course.find_unit_by_id(key)
+        self.question_descriptions = set(
+            [q.description for q in m_models.QuestionDAO.get_all()])
+
+        # Import all the assessment context except the questions
+        new_unit = course.add_assessment()
+        errors = []
+        new_unit.title = 'Exported from %s ' % entity_dict.get('title')
+        try:
+            new_unit.weight = int(entity_dict.get('weight'))
+            if new_unit.weight < 0:
+                errors.append('The weight must be a non-negative integer.')
+        except ValueError:
+            errors.append('The weight must be an integer.')
+        new_unit.now_available = not entity_dict.get('is_draft')
+
+        workflow_dict = entity_dict.get('workflow')
+        if len(ALLOWED_MATCHERS_NAMES) == 1:
+            workflow_dict[courses.MATCHER_KEY] = (
+                ALLOWED_MATCHERS_NAMES.keys()[0])
+        new_unit.workflow_yaml = yaml.safe_dump(workflow_dict)
+        new_unit.workflow.validate(errors=errors)
+
+        if errors:
+            transforms.send_json_response(self, 412, '\n'.join(errors))
+            return
+
+        assessment_dict = self.get_assessment_dict(entity_dict.get('content'))
+        if assessment_dict is None:
+            return
+
+        if assessment_dict.get('checkAnswers'):
+            new_unit.html_check_answers = assessment_dict['checkAnswers'].value
+
+        # Import the questions in the assessment and the review questionnaire
+
+        html_content = []
+        html_review_form = []
+
+        if assessment_dict.get('preamble'):
+            html_content.append(assessment_dict['preamble'])
+
+        # prepare all the dtos for the questions in the assigment content
+        question_dtos = self.get_question_dtos(
+            assessment_dict,
+            'Imported from assessment "%s" (question #%s)')
+        if question_dtos is None:
+            return
+
+        # prepare the questions for the review questionnaire, if necessary
+        review_dtos = []
+        if course.needs_human_grader(new_unit):
+            review_str = entity_dict.get('review_form')
+            review_dict = self.get_assessment_dict(review_str)
+            if review_dict is None:
+                return
+            if review_dict.get('preamble'):
+                html_review_form.append(review_dict['preamble'])
+
+            review_dtos = self.get_question_dtos(
+                review_dict,
+                'Imported from assessment "%s" (review question #%s)')
+            if review_dtos is None:
+                return
+
+        # batch submit the questions and split out their resulting id's
+        all_dtos = question_dtos + review_dtos
+        all_ids = m_models.QuestionDAO.save_all(all_dtos)
+        question_ids = all_ids[:len(question_dtos)]
+        review_ids = all_ids[len(question_dtos):]
+
+        # insert question tags for the assessment content
+        for quid in question_ids:
+            html_content.append(
+                str(safe_dom.Element(
+                    'question',
+                    quid=str(quid), instanceid=generate_instanceid())))
+        new_unit.html_content = '\n'.join(html_content)
+
+        # insert question tags for the review questionnaire
+        for quid in review_ids:
+            html_review_form.append(
+                str(safe_dom.Element(
+                    'question',
+                    quid=str(quid), instanceid=generate_instanceid())))
+        new_unit.html_review_form = '\n'.join(html_review_form)
+
+        course.save()
+        transforms.send_json_response(
+            self, 200, (
+                'The assessment has been exported to "%s".' % new_unit.title),
+            payload_dict={'key': key})
+
+    def get_assessment_dict(self, assessment_content):
+        """Validate the assessment scipt and return as a python dict."""
+        try:
+            content, noverify_text = verify.convert_javascript_to_python(
+                assessment_content, 'assessment')
+            assessment = verify.evaluate_python_expression_from_text(
+                content, 'assessment', verify.Assessment().scope, noverify_text)
+        except Exception:  # pylint: disable-msg=broad-except
+            transforms.send_json_response(
+                self, 412, 'Unable to parse asessment.')
+            return None
+
+        try:
+            verify.Verifier().verify_assessment_instance(assessment, 'none')
+        except verify.SchemaException:
+            transforms.send_json_response(
+                self, 412, 'Unable to validate assessment')
+            return None
+
+        return assessment['assessment']
+
+    def get_question_dtos(self, assessment_dict, description_template):
+        """Convert the assessment into a list of QuestionDTO's."""
+        question_dtos = []
+        try:
+            for i, question in enumerate(assessment_dict['questionsList']):
+                description = description_template % (self.unit.title, (i + 1))
+                if description in self.question_descriptions:
+                    raise CollisionError()
+                question_dto = self.import_question(question)
+                question_dto.dict['description'] = description
+                question_dtos.append(question_dto)
+        except CollisionError:
+            transforms.send_json_response(
+                self, 412, (
+                    'This assessment has already been imported. Remove '
+                    'duplicate imported questions from the question bank in '
+                    'order to re-import.'))
+            return None
+        except Exception as ex:
+            transforms.send_json_response(
+                self, 412, 'Unable to convert: %s' % ex)
+            return None
+        return question_dtos
+
+    def import_question(self, question):
+        """Convert a single question into a QuestioDTO."""
+        if 'choices' in question:
+            question_dict = self.import_multiple_choice_question(question)
+            question_type = m_models.QuestionDTO.MULTIPLE_CHOICE
+        elif 'correctAnswerNumeric' in question:
+            question_dict = self.import_short_answer_question(
+                question.get('questionHTML'),
+                'numeric',
+                question.get('correctAnswerNumeric'))
+            question_type = m_models.QuestionDTO.SHORT_ANSWER
+        elif 'correctAnswerString' in question:
+            question_dict = self.import_short_answer_question(
+                question.get('questionHTML'),
+                'case_insensitive',
+                question.get('correctAnswerString'))
+            question_type = m_models.QuestionDTO.SHORT_ANSWER
+        elif 'correctAnswerRegex' in question:
+            question_dict = self.import_short_answer_question(
+                question.get('questionHTML'),
+                'regex',
+                question.get('correctAnswerRegex').value)
+            question_type = m_models.QuestionDTO.SHORT_ANSWER
+        else:
+            raise ValueError('Unknown question type')
+
+        question_dto = m_models.QuestionDTO(None, question_dict)
+        question_dto.type = question_type
+
+        return question_dto
+
+    def import_multiple_choice_question(self, question):
+        """Assemble the dict for a multiple choice question."""
+        question_dict = {
+            'version': self.VERSION,
+            'question': question.get('questionHTML') or '',
+            'multiple_selections': False
+        }
+        choices = []
+        for choice in question.get('choices'):
+            if isinstance(choice, basestring):
+                text = choice
+                score = 0.0
+            else:
+                text = choice.value
+                score = 1.0
+            choices.append({
+                'text': text,
+                'score': score
+            })
+        question_dict['choices'] = choices
+        return question_dict
+
+    def import_short_answer_question(self, question_html, matcher, response):
+        return {
+            'version': self.VERSION,
+            'question': question_html or '',
+            'graders': [{
+                'score': 1.0,
+                'matcher': matcher,
+                'response': response,
+            }]
+        }

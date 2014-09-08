@@ -3090,7 +3090,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_contains('Filter image results by color', response.body)
 
         # Check assessment is copied.
-        response = self.get('assessment?name=35')
+        response = self.get('assets/js/assessment-35.js')
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
@@ -3288,7 +3288,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # style activities
         with Namespace('ns_test'):
             self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
-            self.assertEqual(69, len(models.QuestionDAO.get_all()))
+            self.assertEqual(48, len(models.QuestionDAO.get_all()))
 
         # clean up
         sites.reset_courses()
@@ -3404,7 +3404,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Check assesment page.
         response = self.get('assessment?name=35')
-        self.assertEqual(5, response.body.count('<div class="qt-question">'))
+        assert_contains(
+            '<script src="assets/js/assessment-35.js"></script>', response.body)
 
         # Check activity page.
         response = self.get('unit?unit=14&lesson=16')
@@ -3759,7 +3760,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertEqual(
             'test question', question_json['rows'][-1]['data'])
         # 48 from the import plus the one we created in the test
-        self.assertEqual(70, len(question_json['rows']))
+        self.assertEqual(49, len(question_json['rows']))
 
     def test_download_course_errors_if_archive_path_exists_on_disk(self):
         self.upload_all_sample_course_files([])
