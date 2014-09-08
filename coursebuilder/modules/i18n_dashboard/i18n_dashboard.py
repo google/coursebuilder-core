@@ -570,11 +570,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
 
-        title_text = 'I18n Workflow'
-
         self.handler.render_page({
-            'page_title': self.handler.format_title(title_text),
-            'page_title_linked': self.handler.format_title(title_text),
+            'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': jinja2.utils.Markup(main_content)})
 
 
@@ -596,7 +593,7 @@ class TranslationConsole(BaseDashboardExtension):
             additional_dirs=[TEMPLATES_DIR])
 
         self.handler.render_page({
-            'page_title': 'I18n Workflow',
+            'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': main_content})
 
 
