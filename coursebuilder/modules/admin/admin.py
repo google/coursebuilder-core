@@ -25,16 +25,18 @@ import time
 import urllib
 
 import messages
-import webapp2
 
 import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
 from controllers import sites
+from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
+import models
 from models import config
 from models import counters
+from models import courses
 from models import custom_modules
 from models import roles
 from models.config import ConfigProperty
@@ -81,8 +83,72 @@ def evaluate_python_code(code):
     return results_io.getvalue(), True
 
 
+class WelcomeHandler(object):
+
+    def _redirect(self, app_context, url):
+        self.app_context = app_context
+        self.redirect(url)
+
+    def get_welcome(self):
+        template_values = {}
+        template_values['version'] = os.environ['GCB_PRODUCT_VERSION']
+        template_values['course_count'] = len(sites.get_all_courses())
+        template_values['add_first_xsrf'] = self.create_xsrf_token(
+            'add_first_course')
+        template_values['explore_sample_xsrf'] = self.create_xsrf_token(
+            'explore_sample')
+        self.response.write(
+            self.get_template('welcome.html', []).render(template_values))
+
+    def _make_new_course(self, uid, title):
+        """Make a new course entry."""
+        errors = []
+        admin_email = users.get_current_user().email()
+        entry = sites.add_new_course_entry(
+            uid, title, admin_email, errors)
+        if errors:
+            raise Exception(errors)
+        app_context = sites.get_all_courses(entry)[0]
+        new_course = models.courses.Course(None, app_context=app_context)
+        new_course.init_new_course_settings(title, admin_email)
+        return app_context
+
+    def _copy_sample_course(self, uid):
+        """Make a fresh copy of sample course."""
+        src_app_context = sites.get_all_courses('course:/:/:')[0]
+        dst_app_context = self._make_new_course(
+            uid, src_app_context.get_title())
+        errors = []
+        dst_course = courses.Course(None, dst_app_context)
+        dst_course.import_from(src_app_context, errors)
+        dst_course.save()
+        if errors:
+            raise Exception(errors)
+        return dst_app_context
+
+    def post_explore_sample(self):
+        """Navigate to or import sample course."""
+        uid = 'sample'
+        for course in sites.get_all_courses():
+            if '/%s' % uid == course.get_slug():
+                self._redirect(course, '/dashboard')
+                return
+        app_context = self._copy_sample_course(uid)
+        self._redirect(app_context, '/dashboard')
+
+    def post_add_first_course(self):
+        """Adds first course to the deployment."""
+        all_courses = sites.get_all_courses()
+        if all_courses:
+            app_context = sites.get_all_courses()[0]
+        else:
+            app_context = self._make_new_course('first', 'My First Course')
+        self._redirect(app_context, '/dashboard')
+
+
 class AdminHandler(
-    webapp2.RequestHandler, ReflectiveRequestHandler, ConfigPropertyEditor):
+    ApplicationHandler, ReflectiveRequestHandler, ConfigPropertyEditor,
+    WelcomeHandler):
     """Handles all pages and actions required for administration of site."""
 
     default_action = 'courses'
@@ -91,14 +157,16 @@ class AdminHandler(
     def get_actions(self):
         actions = [
             self.default_action, 'settings', 'deployment', 'perf',
-            'config_edit', 'add_course']
+            'config_edit', 'add_course', 'welcome']
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             actions.append('console')
         return actions
 
     @property
     def post_actions(self):
-        actions = ['config_reset', 'config_override']
+        actions = [
+            'config_reset', 'config_override', 'explore_sample',
+            'add_first_course']
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
             actions.append('console_run')
         return actions
@@ -106,7 +174,7 @@ class AdminHandler(
     def can_view(self):
         """Checks if current user has viewing rights."""
         action = self.request.get('action')
-        if action == 'add_course':
+        if action in ['add_course', 'add_first_course']:
             return modules.admin.config.CoursesPropertyRights.can_add()
         return roles.Roles.is_super_admin()
 
@@ -116,17 +184,37 @@ class AdminHandler(
 
     def get(self):
         """Enforces rights to all GET operations."""
-        if not self.can_view():
-            self.redirect('/')
+        action = self.request.get('action')
+
+        if action in self.get_actions:
+            destination = '/admin?action=%s' % action
+        else:
+            destination = '/admin'
+
+        user = users.get_current_user()
+        if not user:
+            self.redirect(users.create_login_url(destination), normalize=False)
             return
-        # Force reload of properties. It is expensive, but admin deserves it!
+        if not self.can_view():
+            if appengine_config.PRODUCTION_MODE:
+                self.error(403)
+            else:
+                self.redirect(
+                    users.create_login_url(destination), normalize=False)
+            return
+        if not sites.get_all_courses() and not action:
+            self.redirect('/admin?action=welcome', normalize=False)
+            return
+
+        # Force reload of properties. It's expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
+
         return super(AdminHandler, self).get()
 
     def post(self):
         """Enforces rights to all POST operations."""
         if not self.can_edit():
-            self.redirect('/')
+            self.redirect('/', normalize=False)
             return
         return super(AdminHandler, self).post()
 
@@ -138,7 +226,8 @@ class AdminHandler(
     def _get_user_nav(self):
         current_action = self.request.get('action')
         nav_mappings = [
-            ('', 'Courses'),
+            ('welcome', 'Welcome'),
+            ('courses', 'Courses'),
             ('settings', 'Settings'),
             ('perf', 'Metrics'),
             ('deployment', 'Deployment')]
@@ -560,10 +649,10 @@ class AdminHandler(
                 safe_dom.Element('th').add_text('Student Data Location')
             )
         )
-        courses = sites.get_all_courses()
         count = 0
         for course in sorted(
-            courses, key=lambda course: course.get_title().lower()):
+            sites.get_all_courses(),
+            key=lambda course: course.get_title().lower()):
             count += 1
             error = safe_dom.Text('')
             slug = course.get_slug()

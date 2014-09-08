@@ -30,7 +30,7 @@ from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
 
-DEFAULT_TIMEOUT = 15
+DEFAULT_TIMEOUT = 30
 
 
 def get_parent_element(web_element):
@@ -118,7 +118,23 @@ class DashboardEditor(EditorPageObject):
 class RootPage(PageObject):
     """Page object to model the interactions with the root page."""
 
+    def _add_default_course_if_needed(self, base_url):
+        """Setup default read-only course if not yet setup."""
+        self._tester.driver.get(base_url + '/')
+        try:
+            self.find_element_by_link_text('Course')
+        except exceptions.NoSuchElementException:
+            # exception means an above element was not found
+            LoginPage(self._tester).login('test@example.com', admin=True)
+            self._tester.driver.get(base_url + '/admin?action=settings')
+            AdminSettingsPage(self._tester).click_override(
+                'gcb_courses_config'
+            ).set_status('Active').click_save()
+            self._tester.driver.get(base_url + '/admin?action=courses')
+            self.find_element_by_link_text('Logout').click()
+
     def load(self, base_url):
+        self._add_default_course_if_needed(base_url)
         self._tester.driver.get(base_url + '/')
         return self
 
@@ -257,7 +273,7 @@ class DashboardPage(PageObject):
 
     def click_edit_unit(self, unit_title):
         self.find_element_by_link_text(unit_title).click()
-        self.find_element_by_link_text('Edit unit').click()
+        self.find_element_by_link_text('Edit Unit').click()
         return AddUnit(self._tester, AddUnit.LOADED_MESSAGE)
 
     def click_add_assessment(self):
@@ -968,6 +984,11 @@ class AdminSettingsPage(PageObject):
 
 class ConfigPropertyOverridePage(EditorPageObject):
     """Page object for the admin property override editor."""
+
+    def clear_value(self):
+        element = self.find_element_by_name('value')
+        element.clear()
+        return self
 
     def set_value(self, value):
         element = self.find_element_by_name('value')

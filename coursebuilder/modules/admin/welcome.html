@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Welcome to Course Builder {{ version }}!</title>
+    <style>
+        body {
+          margin: 0px;
+          padding: 0px;
+          background-color: #f5f5f5;
+        }
+        form {
+          display: inline;
+        }
+        html, body, table, td, th {
+          font-family: arial,sans-serif;
+          font-size: 13px;
+        }
+        body {
+          margin-top: 48px;
+        }
+        h2 {
+          font-size: 2.5em;
+          margin-bottom: 0px;
+        }
+        p {
+          font-size: 1.5em;
+        }
+        a {
+          color: black;
+          font-weight: bold;
+        }
+        button {
+          margin-top: 24px;
+          margin-bottom: 24px;
+          border: none;
+          margin-left: 24px;
+          margin-right: 24px;
+          display: inline-block;
+          padding: 12px;
+          color: #FFFFFF;
+          text-decoration: none;
+          background-color: #4d90fe;
+          font-weight: bold;
+          cursor:pointer;
+        }
+        #top {
+          padding: 24px;
+          background: rgb(255, 153, 0);
+          margin: auto;
+          width: 600px;
+          text-align: center;
+        }
+        #bottom {
+          padding: 24px;
+          background-color: rgb(249, 203, 156);
+          margin: auto;
+          width: 600px;
+          text-align: center;
+        }
+    </style>
+  </head>
+  <body>
+    <div id='top'>
+      <h2>Course Builder</h2>
+      <p>version {{ version }}</p>
+    </div>
+    <div id='bottom'>
+      {% if not course_count %}
+      <p>You haven't created a course yet. To <i>create a course</i>,
+          click below on one of the buttons.</p>
+      {% else %}
+        {% if course_count == 1 %}
+          <p>You have created <i>your first</i> course. Great start!</p>
+        {% else %}
+          <p>You have created <i>{{ course_count }} courses</i>. Great job!</p>
+        {% endif %}
+      {% endif %}
+      {% if course_count %}
+      <p>
+        <form action='/admin?action=explore_sample' method='POST'>
+          <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
+          <button id='explore' type='submit'>Explore Sample Course</button>
+        </form>
+      </p>
+      {% else %}
+      <p>
+        <form action='/admin?action=add_first_course' method='POST'>
+          <input name='xsrf_token' value='{{ add_first_xsrf }}' type='hidden'>
+          <button id='create_new' type='submit'>Create New Course</button>
+        </form>
+        <form action='/admin?action=explore_sample' method='POST'>
+          <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
+          <button id='explore' type='submit'>Explore Sample Course</button>
+        </form>
+      </p>
+      {% endif %}
+      <p>Or go directly to a <a href='/admin?action=courses'>control panel</a>.
+      </p>
+    </div>
+  </body>
+</html>

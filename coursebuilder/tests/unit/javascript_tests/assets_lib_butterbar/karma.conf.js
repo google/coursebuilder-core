@@ -12,7 +12,7 @@ files = [
   'tests/unit/javascript_tests/assets_lib_butterbar/*.js',
 
   // Files to test
-  'assets/lib/butterbar.js',
+  'modules/oeditor/resources/butterbar.js',
   {
     pattern: 'tests/unit/javascript_tests/assets_lib_butterbar/*.html',
     watched: true,

@@ -145,6 +145,9 @@ class TestBase(suite.AppEngineTestBase):
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
 
+        self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = True
+
         self.supports_editing = False
         self.assert_default_namespace()
         self.namespace = ''
@@ -154,6 +157,7 @@ class TestBase(suite.AppEngineTestBase):
 
     def tearDown(self):  # pylint: disable-msg=g-bad-name
         self.assert_default_namespace()
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
         super(TestBase, self).tearDown()
 
     def canonicalize(self, href, response=None):

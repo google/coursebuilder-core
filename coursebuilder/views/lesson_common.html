@@ -1,7 +1,7 @@
 {% if is_read_write_course and is_course_admin %}
   <a id="gcb-edit-lesson-button"
       href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
-      class="gcb-button gcb-button-action">Edit lesson</a>
+      class="gcb-button gcb-button-action gcb-button-author">Edit  Lesson</a>
 {% endif %}
 {% if lesson.now_available or is_course_admin %}
   <div {% if lesson.notes %}class="gcb-cols"{% endif %}>

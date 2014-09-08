@@ -1571,12 +1571,14 @@ class CourseModel13(object):
             return True
 
         def copy_to_lesson_13(
-                src_unit, src_lesson, dst_unit, dst_lesson, errors):
+                src_unit, src_lesson, dst_unit, dst_lesson, now_available,
+                errors):
             dst_lesson.objectives = src_lesson.objectives
             dst_lesson.video = src_lesson.video
             dst_lesson.notes = src_lesson.notes
             dst_lesson.duration = src_lesson.duration
             dst_lesson.activity_listed = False
+            dst_lesson.now_available = now_available
 
             # Copy over the activity. Note that we copy files directly and
             # avoid all logical validations of their content. This is done for a
@@ -1590,6 +1592,7 @@ class CourseModel13(object):
                 lesson_w_activity = self.add_lesson(dst_unit, title)
                 lesson_w_activity.auto_index = False
                 lesson_w_activity.activity_listed = False
+                lesson_w_activity.now_available = now_available
                 src_filename = os.path.join(
                     src_course.app_context.get_home(),
                     src_course.get_activity_filename(
@@ -1603,14 +1606,14 @@ class CourseModel13(object):
         def copy_lesson12_into_lesson13(
                 src_unit, src_lesson, dst_unit, dst_lesson, errors):
             copy_to_lesson_13(
-                src_unit, src_lesson, dst_unit, dst_lesson, errors)
-            # Old model does not have this flag, but all lessons are available.
+                src_unit, src_lesson, dst_unit, dst_lesson, True, errors)
             dst_lesson.now_available = True
 
         def copy_lesson13_into_lesson13(
                 src_unit, src_lesson, dst_unit, dst_lesson, errors):
             copy_to_lesson_13(
-                src_unit, src_lesson, dst_unit, dst_lesson, errors)
+                src_unit, src_lesson, dst_unit, dst_lesson,
+                src_lesson.now_available, errors)
             dst_lesson.now_available = src_lesson.now_available
             dst_lesson.scored = src_lesson.scored
             dst_lesson.properties = src_lesson.properties

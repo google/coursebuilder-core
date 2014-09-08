@@ -398,16 +398,23 @@ class ApplicationHandler(webapp2.RequestHandler):
         return jinja2.utils.Markup(
             template.render(template_values, autoescape=True))
 
-    def canonicalize_url(self, location):
+    @classmethod
+    def canonicalize_url_for(cls, app_context, location):
         """Adds the current namespace URL prefix to the relative 'location'."""
         is_relative = (
-            not self.is_absolute(location) and
-            not location.startswith(self.app_context.get_slug()))
+            not cls.is_absolute(location) and
+            not location.startswith(app_context.get_slug()))
         has_slug = (
-            self.app_context.get_slug() and self.app_context.get_slug() != '/')
+            app_context.get_slug() and app_context.get_slug() != '/')
         if is_relative and has_slug:
-            location = '%s%s' % (self.app_context.get_slug(), location)
+            location = '%s%s' % (app_context.get_slug(), location)
         return location
+
+    def canonicalize_url(self, location):
+        if hasattr(self, 'app_context'):
+            return self.canonicalize_url_for(self.app_context, location)
+        else:
+            return location
 
     def redirect(self, location, normalize=True):
         if normalize:

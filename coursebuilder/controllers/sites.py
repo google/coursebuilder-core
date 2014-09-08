@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -170,9 +170,6 @@ DEFAULT_CACHE_CONTROL_PUBLIC = 'public'
 DEFAULT_EXPIRY_DATE = 'Mon, 01 Jan 1990 00:00:00 GMT'
 DEFAULT_PRAGMA = 'no-cache'
 
-# enable debug output
-DEBUG_INFO = False
-
 # thread local storage for current request PATH_INFO
 PATH_INFO_THREAD_LOCAL = threading.local()
 
@@ -320,7 +317,7 @@ def get_current_locale(app_context):
 
 
 def debug(message):
-    if DEBUG_INFO:
+    if ApplicationContext.DEBUG_INFO:
         logging.info(message)
 
 
@@ -353,9 +350,14 @@ def _validate_appcontext_list(contexts, strict=False):
 
 def get_all_courses(rules_text=None):
     """Reads all course rewrite rule definitions from environment variable."""
+
     # Normalize text definition.
     if not rules_text:
         rules_text = GCB_COURSES_CONFIG.value
+        if not ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE and (
+            rules_text == GCB_COURSES_CONFIG.default_value) and (
+            not Registry.get_overrides().get(GCB_COURSES_CONFIG.name)):
+            return []
     rules_text = rules_text.replace(',', '\n')
 
     # Use cached value if exists.
@@ -718,6 +720,12 @@ class AssetHandler(webapp2.RequestHandler):
 class ApplicationContext(object):
     """An application context for a request/response."""
 
+    # if True we auto-deploy filesystem-based default course
+    AUTO_DEPLOY_DEFAULT_COURSE = False
+
+    # enabled debug info output
+    DEBUG_INFO = False
+
     # Here we store a map of a text definition of the courses to be parsed, and
     # a fully validated array of ApplicationContext objects that they define.
     # This is cached in process and automatically recomputed when text
@@ -898,6 +906,9 @@ def _add_new_course_entry_to_persistent_configuration(raw):
         entity.is_draft = False
     if not entity.value:
         entity.value = GCB_COURSES_CONFIG.value
+        if entity.value == GCB_COURSES_CONFIG.default_value:
+            entity.value = ''
+
     lines = entity.value.splitlines()
 
     # Add new entry to the rest of the entries. Since entries are matched
@@ -1518,6 +1529,9 @@ def test_path_construction():
 def run_all_unit_tests():
     assert not ApplicationRequestHandler.CAN_IMPERSONATE
 
+    ApplicationContext.DEBUG_INFO = True
+    ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = True
+
     test_namespace_collisions_are_detected()
     test_unprefix()
     test_rule_definitions()
@@ -1527,5 +1541,4 @@ def run_all_unit_tests():
     test_rule_validations()
 
 if __name__ == '__main__':
-    DEBUG_INFO = True
     run_all_unit_tests()

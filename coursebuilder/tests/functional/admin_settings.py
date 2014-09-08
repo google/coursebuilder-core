@@ -21,12 +21,14 @@ import re
 
 from common import crypto
 from common import utils as common_utils
+from controllers import sites
 from models import courses
 from models import models
 from models import transforms
 from modules.dashboard import course_settings
 from modules.dashboard import filer
 from tests.functional import actions
+from tests.functional.actions import assert_contains
 
 COURSE_NAME = 'admin_settings'
 COURSE_TITLE = 'Admin Settings'
@@ -62,6 +64,66 @@ class AdminSettingsTests(actions.TestBase):
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(SETTINGS_URL)
         self.assertIn('Show hook edit buttons: False', response.body)
+
+
+class WelcomePageTests(actions.TestBase):
+
+    def setUp(self):
+        super(WelcomePageTests, self).setUp()
+        self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = False
+
+    def tearDown(self):
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
+        super(WelcomePageTests, self).tearDown()
+
+    def test_welcome_page(self):
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.get('/')
+        self.assertEqual(response.status_int, 302)
+        self.assertEqual(
+            response.headers['location'],
+            'http://localhost/admin?action=welcome')
+        response = self.get('/admin?action=welcome')
+        assert_contains('Welcome to Course Builder', response.body)
+        assert_contains('/admin?action=add_first_course', response.body)
+        assert_contains('/admin?action=explore_sample', response.body)
+
+    def test_explore_sample_course(self):
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.post(
+            '/admin?action=explore_sample',
+            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'explore_sample')})
+        self.assertEqual(response.status_int, 302)
+        self.assertEqual(
+            response.headers['location'],
+            'http://localhost/sample/dashboard')
+        response = self.get('/sample/dashboard')
+        assert_contains('Power Searching with Google', response.body)
+
+    def test_create_new_course(self):
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        response = self.post(
+            '/admin?action=add_first_course',
+            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'add_first_course')})
+        self.assertEqual(response.status_int, 302)
+        self.assertEqual(
+            response.headers['location'],
+            'http://localhost/first/dashboard')
+        response = self.get('/first/dashboard')
+        assert_contains('My First Course', response.body)
+        response = self.get('/admin?action=welcome')
+        assert_contains('You have created <b>1</b> course(s).', response.body)
+
+    def test_explore_sample_course_idempotent(self):
+        self.test_explore_sample_course()
+        self.test_explore_sample_course()
+
+    def test_create_new_course_idempotent(self):
+        self.test_create_new_course()
+        self.test_create_new_course()
 
 
 class HtmlHookTest(actions.TestBase):

@@ -1,6 +1,6 @@
 /*
 
-  Copyright 2012 Google Inc. All Rights Reserved.
+  Copyright 2014 Google Inc. All Rights Reserved.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -373,6 +373,22 @@ button.gcb-button::-moz-focus-inner {
 a.gcb-button-action, button.gcb-button-action {
   float: right;
   margin-left: 8px;
+}
+
+.gcb-button-author {
+  background-color: #40DA9D;
+  background-image: -moz-linear-gradient(top,#40DA9D,#40DA9D);
+  background-image: -webkit-linear-gradient(top,#40DA9D,#40DA9D);
+  background-image: linear-gradient(top,#40DA9D,#40DA9D);
+  border: 1px solid #40DA9D;
+}
+
+.gcb-button-author:hover {
+  background-color: #009A5D;
+  background-image: -moz-linear-gradient(top,#009A5D,#009A5D);
+  background-image: -webkit-linear-gradient(top,#009A5D,#009A5D);
+  background-image: linear-gradient(top,#009A5D,#009A5D);
+  border: 1px solid #009A5D;
 }
 
 #gcb-nav-x {

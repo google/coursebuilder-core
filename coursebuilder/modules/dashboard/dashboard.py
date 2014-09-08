@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ from common import safe_dom
 from common import tags
 from controllers import sites
 from controllers import utils
+from controllers.utils import ApplicationHandler
 from controllers.utils import CourseHandler
 from controllers.utils import ReflectiveRequestHandler
 from models import analytics
@@ -278,9 +279,8 @@ class DashboardHandler(
         options = []
         for course in sorted(sites.get_all_courses()):
             if roles.Roles.is_course_admin(course):
-                url = '%s/%s' % (
-                    '' if course.get_slug() == '/' else course.get_slug(),
-                    destination)
+                url = ApplicationHandler.canonicalize_url_for(
+                    course, destination)
                 title = '%s (%s)' % (course.get_title(), course.get_slug())
                 option = safe_dom.Element(
                     'option', value=url).add_text(title)

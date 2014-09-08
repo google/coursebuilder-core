@@ -43,14 +43,17 @@ _STRING_PROPERTY_MAX_BYTES = 500
 
 
 class IndexPageHandler(webapp2.RequestHandler):
-    """Handles routing of root url."""
+    """Handles routing of root URL."""
 
     def get(self):
         """Handles GET requests."""
         if course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
             self.redirect('/explorer')
         else:
-            self.redirect('/course?use_last_location=true')
+            if sites.get_all_courses():
+                self.redirect('/course?use_last_location=true')
+            else:
+                self.redirect('/admin?action=welcome')
 
 
 class BaseStudentHandler(webapp2.RequestHandler):
