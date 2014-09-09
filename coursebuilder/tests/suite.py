@@ -37,6 +37,7 @@ Good luck!
 __author__ = 'Sean Lip'
 
 import argparse
+import logging
 import os
 import shutil
 import signal
@@ -109,10 +110,19 @@ class TestBase(unittest.TestCase):
     INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
     ADMIN_SERVER_BASE_URL = 'http://localhost:8000'
 
+    HAS_PENDING_FAILURE = False
+
     def setUp(self):
+        assert not TestBase.HAS_PENDING_FAILURE
         super(TestBase, self).setUp()
-        # Map of object -> {symbol_string: original_value}
-        self._originals = {}
+        self._originals = {}  # Map of object -> {symbol_string: original_value}
+
+    def run(self, result=None):
+        if not result:
+            result = self.defaultTestResult()
+        super(TestBase, self).run(result)
+        if not result.wasSuccessful():
+            TestBase.HAS_PENDING_FAILURE = True
 
     def tearDown(self):
         self._unswap_all()
@@ -264,12 +274,14 @@ def ensure_port_available(port_number):
     try:
         s.bind(('localhost', port_number))
     except socket.error, ex:
-        print '=========================================================='
-        print 'Failed to bind to port %d.' % port_number
-        print 'This probably means another CourseBuilder server is '
-        print 'already running.  Be sure to shut down any manually '
-        print 'started servers before running tests.'
-        print '=========================================================='
+        logging.error(
+            '''==========================================================
+            Failed to bind to port %d.
+            This probably means another CourseBuilder server is
+            already running.  Be sure to shut down any manually
+            started servers before running tests.
+            ==========================================================''',
+            port_number)
         raise ex
     s.close()
 
@@ -286,7 +298,7 @@ def start_integration_server(integration_server_start_cmd, modules):
         fp.writelines(['    %s\n' % module.__name__ for module in modules])
         fp.close()
 
-    print 'Starting external server: %s' % integration_server_start_cmd
+    logging.info('Starting external server: %s', integration_server_start_cmd)
     server = subprocess.Popen(integration_server_start_cmd)
     time.sleep(3)  # Wait for server to start up
     return server

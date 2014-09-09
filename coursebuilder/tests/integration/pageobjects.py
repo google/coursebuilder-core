@@ -30,7 +30,7 @@ from selenium.webdriver.support import select
 from selenium.webdriver.support import wait
 
 
-DEFAULT_TIMEOUT = 30
+DEFAULT_TIMEOUT = 15
 
 
 def get_parent_element(web_element):
@@ -85,8 +85,8 @@ class EditorPageObject(PageObject):
     def __init__(self, tester):
         super(EditorPageObject, self).__init__(tester)
 
-        def successful_butter_bar(driver):
-            butter_bar_message = driver.find_element_by_id(
+        def successful_butter_bar(unused_driver):
+            butter_bar_message = self.find_element_by_id(
                 'gcb-butterbar-message')
             return 'Success' in butter_bar_message.text or (
                 not butter_bar_message.is_displayed())
@@ -120,18 +120,20 @@ class RootPage(PageObject):
 
     def _add_default_course_if_needed(self, base_url):
         """Setup default read-only course if not yet setup."""
+
+        # check default course is deployed
         self._tester.driver.get(base_url + '/')
-        try:
-            self.find_element_by_link_text('Course')
-        except exceptions.NoSuchElementException:
-            # exception means an above element was not found
-            LoginPage(self._tester).login('test@example.com', admin=True)
-            self._tester.driver.get(base_url + '/admin?action=settings')
-            AdminSettingsPage(self._tester).click_override(
-                'gcb_courses_config'
-            ).set_status('Active').click_save()
-            self._tester.driver.get(base_url + '/admin?action=courses')
-            self.find_element_by_link_text('Logout').click()
+        if 'Power Searching with Google' in self._tester.driver.page_source:
+            return
+
+        # deploy it
+        LoginPage(self._tester).login('test@example.com', admin=True)
+        self._tester.driver.get(base_url + '/admin?action=settings')
+        AdminSettingsPage(self._tester).click_override(
+            'gcb_courses_config'
+        ).set_status('Active').click_save()
+        self._tester.driver.get(base_url + '/admin?action=courses')
+        self.find_element_by_link_text('Logout').click()
 
     def load(self, base_url):
         self._add_default_course_if_needed(base_url)
@@ -231,7 +233,7 @@ class LoginPage(PageObject):
     """Page object to model the interactions with the login page."""
 
     def login(self, login, admin=False):
-        email = self._tester.driver.find_element_by_id('email')
+        email = self.find_element_by_id('email')
         email.clear()
         email.send_keys(login)
         if admin:

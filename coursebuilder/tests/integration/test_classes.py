@@ -50,6 +50,7 @@ class BaseIntegrationTest(suite.TestBase):
     LOGIN = 'test@example.com'
 
     def setUp(self):  # pylint: disable=g-bad-name
+        super(BaseIntegrationTest, self).setUp()
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
 
@@ -79,6 +80,7 @@ class BaseIntegrationTest(suite.TestBase):
     def tearDown(self):  # pylint: disable=g-bad-name
         time.sleep(1)  # avoid broken sockets on the server
         self.driver.quit()
+        super(BaseIntegrationTest, self).tearDown()
 
     def load_root_page(self):
         ret = pageobjects.RootPage(self).load(
