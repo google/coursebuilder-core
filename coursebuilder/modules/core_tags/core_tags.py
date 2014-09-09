@@ -26,6 +26,7 @@ import appengine_config
 from common import jinja_utils
 from common import schema_fields
 from common import tags
+from common import utils as common_utils
 from controllers import utils
 from models import custom_modules
 
@@ -179,14 +180,16 @@ class YouTube(CoreTag):
     def _render_with_tracking(self, video_id):
         """Embed video and enable event tracking."""
         video_id = jinja_utils.js_string_raw(video_id)
-        return cElementTree.XML("""
+        uid = common_utils.generate_instance_id()
+        dom = cElementTree.XML("""
 <p>
-    <script src='""" + os.path.join(
-            RESOURCE_FOLDER, 'youtube_video.js') + """'></script>
-    <script>
-      gcbTagYoutubeEnqueueVideo('""" + video_id + """');
-    </script>
+    <script></script>
+    <script></script>
 </p>""")
+        dom.attrib['id'] = uid
+        dom[0].attrib['src'] = os.path.join(RESOURCE_FOLDER, 'youtube_video.js')
+        dom[1].text = 'gcbTagYoutubeEnqueueVideo("%s", "%s");' % (video_id, uid)
+        return dom
 
     def get_icon_url(self):
         return self.create_icon_url('youtube.png')

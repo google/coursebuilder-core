@@ -16,14 +16,19 @@ if (typeof(window['gcb_tag_youtube_videos']) == "undefined"){
     document.body.appendChild(tag);
   }
 
-  function gcbTagYoutubeEnqueueVideo(video_id){
+  function gcbTagYoutubeEnqueueVideo(video_id, container_id){
     var instance_id = gcb_tag_youtube_uid;
     gcb_tag_youtube_uid++;
 
     var div_id = 'gcb-tag-youtube-video-' + instance_id;
-    document.write('<div class="gcb-video-container">' +
-        '<div id="' + div_id + '" class="youtube-player">' +
-        '</div></div>');
+    var div1 = document.createElement('div');
+    div1.className = 'gcb-video-container';
+    var div2 = document.createElement('div');
+    div2.id = div_id;
+    div2.className = "youtube-player";
+    div1.appendChild(div2);
+    document.getElementById(container_id).appendChild(div1);
+
     gcb_tag_youtube_videos.push([instance_id, div_id, video_id]);
 
     gcbTagYoutubeTryEmbedEnqueuedVideos();
