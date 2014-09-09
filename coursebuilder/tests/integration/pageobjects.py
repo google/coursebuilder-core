@@ -43,6 +43,21 @@ class PageObject(object):
     def __init__(self, tester):
         self._tester = tester
 
+    def get(self, url, can_retry=True):
+        if can_retry:
+            tries = 10
+        else:
+            tries = 1
+        while tries > 0:
+            tries -= 1
+            self._tester.driver.get(url)
+            if 'The website may be down' in self._tester.driver.page_source:
+                time.sleep(5)
+                continue
+            return
+        raise exceptions.TimeoutException(
+            'Timeout waiting for %s page to load', url)
+
     def wait(self, timeout=None):
         if timeout is None:
             timeout = DEFAULT_TIMEOUT
@@ -122,22 +137,22 @@ class RootPage(PageObject):
         """Setup default read-only course if not yet setup."""
 
         # check default course is deployed
-        self._tester.driver.get(base_url + '/')
+        self.get(base_url + '/')
         if 'Power Searching with Google' in self._tester.driver.page_source:
             return
 
         # deploy it
         LoginPage(self._tester).login('test@example.com', admin=True)
-        self._tester.driver.get(base_url + '/admin?action=settings')
+        self.get(base_url + '/admin?action=settings')
         AdminSettingsPage(self._tester).click_override(
             'gcb_courses_config'
         ).set_status('Active').click_save()
-        self._tester.driver.get(base_url + '/admin?action=courses')
+        self.get(base_url + '/admin?action=courses')
         self.find_element_by_link_text('Logout').click()
 
     def load(self, base_url):
         self._add_default_course_if_needed(base_url)
-        self._tester.driver.get(base_url + '/')
+        self.get(base_url + '/')
         return self
 
     def click_login(self):
@@ -246,7 +261,7 @@ class DashboardPage(PageObject):
     """Page object to model the interactions with the dashboard landing page."""
 
     def load(self, base_url, name):
-        self._tester.driver.get('/'.join([base_url, name, 'dashboard']))
+        self.get('/'.join([base_url, name, 'dashboard']))
         return self
 
     def verify_read_only_course(self):
@@ -1104,7 +1119,7 @@ class AppengineAdminPage(PageObject):
         self._course_name = course_name
 
     def get_datastore(self, entity_kind):
-        self._tester.driver.get(
+        self.get(
             self._base_url + '/datastore' +
             '?namespace=ns_%s' % self._course_name +
             '&kind=%s' % entity_kind)
@@ -1134,7 +1149,7 @@ class DatastorePage(PageObject):
 
         data = []
         for data_url in data_urls:
-            self._tester.driver.get(data_url)
+            self.get(data_url)
             rows = self._tester.driver.find_elements_by_css_selector(
                 'div.ae-settings-block')
             item = {}
