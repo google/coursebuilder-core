@@ -264,7 +264,7 @@ class DashboardHandler(
             self.get_template('view.html', []).render(template_values))
 
     def get_course_picker(self):
-        destination = 'dashboard'
+        destination = '/dashboard'
         action = self.request.get('action')
         tab = self.request.get('tab')
         if action in self.get_actions:
@@ -273,7 +273,7 @@ class DashboardHandler(
                 tab = '&tab=%s' % tab
             else:
                 tab = ''
-            destination = 'dashboard?action=%s%s' % (action, tab)
+            destination = '/dashboard?action=%s%s' % (action, tab)
 
         current_course = sites.get_course_for_current_request()
         options = []
