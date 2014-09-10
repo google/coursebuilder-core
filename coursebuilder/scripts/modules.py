@@ -14,7 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Manage fetching and installation of extension modules to CourseBuilder."""
+"""Manage fetching and installation of extension modules to CourseBuilder.
+
+To run, use the wrapper script in this directory since it configures paths for
+you:
+
+  sh scripts/modules.sh [args]
+
+For example, to bring in the LTI module you can run
+
+  sh scripts/modules.sh \
+    --targets=lti@https://github.com/google/coursebuilder-lti-module
+"""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
@@ -259,7 +270,8 @@ def _update_tests(coursebuilder_home, modules):
             for test in sorted(tests):
                 fp.write('  %s: %d\n' % (test, tests[test]))
     else:
-        os.unlink(yaml_path)
+        if os.path.exists(yaml_path):
+            os.unlink(yaml_path)
 
 
 def main(args, coursebuilder_home, modules_home):
