@@ -53,6 +53,7 @@ from models import courses
 from models import custom_modules
 from models import models
 from models import transforms
+from modules.dashboard import course_settings
 from modules.notifications import notifications
 from modules.unsubscribe import unsubscribe
 
@@ -279,11 +280,20 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
 
 
 def get_course_settings_fields():
+    enable = schema_fields.SchemaField(
+        'course:invitation_email:enabled',
+        'Enable Invitations', 'boolean',
+        description='Enable students to send emails inviting others to the '
+            'course.',
+        extra_schema_dict_values={
+            'className': 'invitation-enable inputEx-Field inputEx-CheckBox'},
+        optional=True)
     sender_email = schema_fields.SchemaField(
         'course:invitation_email:sender_email',
         'Invitation Origin Email', 'string',
         description='The email address shown as the sender for invitation '
             'emails to this course.',
+        extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
         optional=True)
     subject_template = schema_fields.SchemaField(
         'course:invitation_email:subject_template',
@@ -291,6 +301,7 @@ def get_course_settings_fields():
         description='The subject line in invitation emails to this course. '
             'Use the string {{sender_name}} to include the name of the student '
             'issuing the invitation in the subject line.',
+        extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
         optional=True)
     body_template = schema_fields.SchemaField(
         'course:invitation_email:body_template',
@@ -301,15 +312,22 @@ def get_course_settings_fields():
             'include the string {{unsubscribe_url}} in your message to include '
             'a link which the recipient can use to unsubscribe from future '
             'invitations.',
+        extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
         optional=True)
 
     return (
+        lambda c: enable,
         lambda c: sender_email,
         lambda c: subject_template,
         lambda c: body_template)
 
 
 def get_student_profile_invitation_link(handler, unused_student, unused_course):
+    env = handler.app_context.get_environ()
+    email_env = env['course'].get(INVITATION_EMAIL_KEY, {})
+    if not email_env.get('enabled'):
+        return (None, None)
+
     # I18N: Title encouraging user to invite friends to join a course
     invitation_title = gettext.gettext('Invite Friends')
     if InvitationEmail.is_available(handler):
@@ -370,6 +388,10 @@ def register_module():
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS += [
             get_student_profile_invitation_link,
             get_student_profile_sub_unsub_link]
+        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
+            TEMPLATES_DIR)
+        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.append(
+            'invitation_course_settings.js')
 
     def on_module_disabled():
         for field in course_settings_fields:
@@ -378,6 +400,10 @@ def register_module():
             get_student_profile_invitation_link)
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
             get_student_profile_sub_unsub_link)
+        course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
+            TEMPLATES_DIR)
+        course_settings.CourseSettingsHandler.EXTRA_JS_FILES.remove(
+            'invitation_course_settings.js')
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]

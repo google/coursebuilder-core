@@ -40,10 +40,11 @@ class BaseInvitationTests(actions.TestBase):
     EMAIL_ENV = {
         'course': {
             'invitation_email': {
-            'sender_email': SENDER_EMAIL,
-            'subject_template': 'Email from {{sender_name}}',
-            'body_template':
-                'From {{sender_name}}. Unsubscribe: {{unsubscribe_url}}'}}}
+                'enabled': True,
+                'sender_email': SENDER_EMAIL,
+                'subject_template': 'Email from {{sender_name}}',
+                'body_template':
+                    'From {{sender_name}}. Unsubscribe: {{unsubscribe_url}}'}}}
 
     def setUp(self):
         super(BaseInvitationTests, self).setUp()
@@ -299,13 +300,24 @@ class ProfileViewInvitationTests(BaseInvitationTests):
         for row in dom.findall('.//table[@class="gcb-student-data-table"]//tr'):
             if row.find('th').text == title:
                 return row
+        return None
+
+    def test_invitation_row_supressed_if_invitations_disabled(self):
+        email_env = {'course': {'invitation_email': {'enabled': False}}}
+        with actions.OverriddenEnvironment(email_env):
+            self.register()
+            dom = self.parse_html_string(self.get(self.URL).body)
+            self.assertIsNone(self._find_row(dom, 'Invite Friends'))
+            self.assertIsNotNone(self._find_row(dom, 'Subscribe/Unsubscribe'))
 
     def test_invitation_link_supressed_if_email_not_configured(self):
-        self.register()
-        dom = self.parse_html_string(self.get(self.URL).body)
-        invite_friends_row = self._find_row(dom, 'Invite Friends')
-        td = invite_friends_row.find('td')
-        self.assertEquals('Invitations not currently available', td.text)
+        email_env = {'course': {'invitation_email': {'enabled': True}}}
+        with actions.OverriddenEnvironment(email_env):
+            self.register()
+            dom = self.parse_html_string(self.get(self.URL).body)
+            invite_friends_row = self._find_row(dom, 'Invite Friends')
+            td = invite_friends_row.find('td')
+            self.assertEquals('Invitations not currently available', td.text)
 
     def test_invitation_link_shown(self):
         self.register()
