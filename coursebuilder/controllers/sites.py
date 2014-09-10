@@ -239,42 +239,6 @@ def count_stats(handler):
         logging.error('Failed to count_stats(): %s.', str(e))
 
 
-def has_path_info():
-    """Checks if PATH_INFO is defined for the thread local."""
-    return hasattr(PATH_INFO_THREAD_LOCAL, 'path')
-
-
-def set_path_info(path):
-    """Stores PATH_INFO in thread local."""
-    if not path:
-        raise Exception('Use \'unset()\' instead.')
-    if has_path_info():
-        raise Exception('Expected no path set.')
-
-    PATH_INFO_THREAD_LOCAL.path = path
-    PATH_INFO_THREAD_LOCAL.old_namespace = namespace_manager.get_namespace()
-
-    namespace_manager.set_namespace(
-        ApplicationContext.get_namespace_name_for_request())
-
-
-def get_path_info():
-    """Gets PATH_INFO from thread local."""
-    return PATH_INFO_THREAD_LOCAL.path
-
-
-def unset_path_info():
-    """Removed PATH_INFO from thread local."""
-    if not has_path_info():
-        raise Exception('Expected valid path already set.')
-
-    namespace_manager.set_namespace(
-        PATH_INFO_THREAD_LOCAL.old_namespace)
-
-    del PATH_INFO_THREAD_LOCAL.old_namespace
-    del PATH_INFO_THREAD_LOCAL.path
-
-
 def set_accept_language(accept_language):
     """Store the request's Accept-Language header in thread local scope."""
     LOCALE_THREAD_LOCAL.accept_language = accept_language
@@ -316,11 +280,6 @@ def get_current_locale(app_context):
     return Course.get_environ(app_context)['course']['locale']
 
 
-def debug(message):
-    if ApplicationContext.DEBUG_INFO:
-        logging.info(message)
-
-
 def _validate_appcontext_list(contexts, strict=False):
     """Validates a list of application contexts."""
 
@@ -346,144 +305,6 @@ def _validate_appcontext_list(contexts, strict=False):
         if not is_root_mapped:
             raise Exception(
                 'Please add an entry with \'/\' as course URL prefix.')
-
-
-def get_all_courses(rules_text=None):
-    """Reads all course rewrite rule definitions from environment variable."""
-
-    # Normalize text definition.
-    if not rules_text:
-        rules_text = GCB_COURSES_CONFIG.value
-        if not ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE and (
-            rules_text == GCB_COURSES_CONFIG.default_value) and (
-            not Registry.get_overrides().get(GCB_COURSES_CONFIG.name)):
-            return []
-    rules_text = rules_text.replace(',', '\n')
-
-    # Use cached value if exists.
-    cached = ApplicationContext.ALL_COURSE_CONTEXTS_CACHE.get(rules_text)
-    if cached:
-        return cached
-
-    # Compute the list of contexts.
-    rules = rules_text.split('\n')
-    slugs = {}
-    namespaces = {}
-    all_contexts = []
-    for rule in rules:
-        rule = rule.strip()
-        if not rule or rule.startswith('#'):
-            continue
-        parts = rule.split(':')
-
-        # validate length
-        if len(parts) < 3:
-            raise Exception('Expected rule definition of the form '
-                            ' \'type:slug:folder[:ns]\', got %s: ' % rule)
-
-        # validate type
-        if parts[0] != SITE_TYPE_COURSE:
-            raise Exception('Expected \'%s\', found: \'%s\'.'
-                            % (SITE_TYPE_COURSE, parts[0]))
-        site_type = parts[0]
-
-        # validate slug
-        slug = parts[1]
-        slug_parts = urlparse.urlparse(slug)
-        if slug != slug_parts[2]:
-            raise Exception(
-                'Bad rule: \'%s\'. '
-                'Course URL prefix \'%s\' must be a simple URL fragment.' % (
-                    rule, slug))
-        if slug in slugs:
-            raise Exception(
-                'Bad rule: \'%s\'. '
-                'Course URL prefix \'%s\' is already defined.' % (rule, slug))
-        slugs[slug] = True
-
-        # validate folder name
-        if parts[2]:
-            folder = parts[2]
-            # pylint: disable-msg=g-long-lambda
-            create_fs = lambda unused_ns: LocalReadOnlyFileSystem(
-                logical_home_folder=folder)
-        else:
-            folder = '/'
-            # pylint: disable-msg=g-long-lambda
-            create_fs = lambda ns: DatastoreBackedFileSystem(
-                ns=ns,
-                logical_home_folder=appengine_config.BUNDLE_ROOT,
-                inherits_from=LocalReadOnlyFileSystem(logical_home_folder='/'),
-                inheritable_folders=GCB_INHERITABLE_FOLDER_NAMES)
-
-        # validate or derive namespace
-        namespace = appengine_config.DEFAULT_NAMESPACE_NAME
-        if len(parts) == 4:
-            namespace = parts[3]
-        else:
-            if folder and folder != '/':
-                namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE,
-                                      folder.replace('/', '-'))
-        try:
-            namespace_manager.validate_namespace(namespace)
-        except Exception as e:
-            raise Exception(
-                'Error validating namespace "%s" in rule "%s"; %s.' % (
-                    namespace, rule, e))
-
-        if namespace in namespaces:
-            raise Exception(
-                'Bad rule \'%s\'. '
-                'Namespace \'%s\' is already defined.' % (rule, namespace))
-        namespaces[namespace] = True
-
-        all_contexts.append(ApplicationContext(
-            site_type, slug, folder, namespace,
-            AbstractFileSystem(create_fs(namespace)),
-            raw=rule))
-
-    _validate_appcontext_list(all_contexts)
-
-    # Cache result to avoid re-parsing over and over.
-    ApplicationContext.ALL_COURSE_CONTEXTS_CACHE = {rules_text: all_contexts}
-
-    return all_contexts
-
-
-def get_course_for_current_request():
-    """Chooses app_context that matches current request context path."""
-
-    # get path if defined
-    if not has_path_info():
-        return None
-    path = get_path_info()
-
-    # Get all rules.
-    app_contexts = get_all_courses()
-
-    # Match a path to an app_context.
-    # TODO(psimakov): linear search is unacceptable
-    for app_context in app_contexts:
-        if (path == app_context.get_slug() or
-            path.startswith('%s/' % app_context.get_slug()) or
-            app_context.get_slug() == '/'):
-            return app_context
-
-    debug('No mapping for: %s' % path)
-    return None
-
-
-def get_app_context_for_namespace(namespace):
-    """Chooses the app_context that matches the current namespace."""
-
-    app_contexts = get_all_courses()
-
-    # TODO(psimakov): linear search is unacceptable
-    for app_context in app_contexts:
-        if app_context.get_namespace_name() == namespace:
-            return app_context
-    debug('No app_context in namespace: %s' % namespace)
-    return None
 
 
 def path_join(base, path):
@@ -717,6 +538,43 @@ class AssetHandler(webapp2.RequestHandler):
         self.response.write(stream.read())
 
 
+class CourseIndex(object):
+    """A list of all application contexts."""
+
+    def __init__(self, all_contexts):
+        self._all_contexts = all_contexts
+        self._namespace2app_context = {}
+        self._reindex()
+
+    def _reindex(self):
+        for app_context in self._all_contexts:
+            self._namespace2app_context[app_context.get_namespace_name()] = (
+                app_context)
+
+    def get_all_courses(self):
+        return self._all_contexts
+
+    def _get_course_for_path_linear(self, path):
+        for app_context in self._all_contexts:
+            if (path == app_context.get_slug() or
+                path.startswith('%s/' % app_context.get_slug()) or
+                app_context.get_slug() == '/'):
+                return app_context
+        debug('No mapping for: %s' % path)
+        return None
+
+    def get_app_context_for_namespace(self, namespace):
+        return self._namespace2app_context.get(namespace)
+
+    def get_course_for_path(self, path):
+        return self._get_course_for_path_linear(path)
+
+
+def debug(message):
+    if ApplicationContext.DEBUG_INFO:
+        logging.info(message)
+
+
 class ApplicationContext(object):
     """An application context for a request/response."""
 
@@ -727,10 +585,8 @@ class ApplicationContext(object):
     DEBUG_INFO = False
 
     # Here we store a map of a text definition of the courses to be parsed, and
-    # a fully validated array of ApplicationContext objects that they define.
-    # This is cached in process and automatically recomputed when text
-    # definition changes.
-    ALL_COURSE_CONTEXTS_CACHE = {}
+    # a corresponding CourseIndex.
+    COURSE_INDEX_CACHE = {}
 
     @classmethod
     def get_namespace_name_for_request(cls):
@@ -855,6 +711,168 @@ class ApplicationContext(object):
             loc['locale'] for loc in extra_locales
             if loc['locale'] != default_locale and (
                 loc['availability'] == 'available')]
+
+
+def has_path_info():
+    """Checks if PATH_INFO is defined for the thread local."""
+    return hasattr(PATH_INFO_THREAD_LOCAL, 'path')
+
+
+def set_path_info(path):
+    """Stores PATH_INFO in thread local."""
+    if not path:
+        raise Exception('Use \'unset()\' instead.')
+    if has_path_info():
+        raise Exception('Expected no path set.')
+
+    PATH_INFO_THREAD_LOCAL.path = path
+    PATH_INFO_THREAD_LOCAL.old_namespace = namespace_manager.get_namespace()
+
+    namespace_manager.set_namespace(
+        ApplicationContext.get_namespace_name_for_request())
+
+
+def get_path_info():
+    """Gets PATH_INFO from thread local."""
+    return PATH_INFO_THREAD_LOCAL.path
+
+
+def unset_path_info():
+    """Removed PATH_INFO from thread local."""
+    if not has_path_info():
+        raise Exception('Expected valid path already set.')
+
+    namespace_manager.set_namespace(
+        PATH_INFO_THREAD_LOCAL.old_namespace)
+
+    del PATH_INFO_THREAD_LOCAL.old_namespace
+    del PATH_INFO_THREAD_LOCAL.path
+
+
+def get_course_index(rules_text=None):
+    """Reads all course rewrite rule definitions from environment variable."""
+
+    # Normalize text definition.
+    if not rules_text:
+        rules_text = GCB_COURSES_CONFIG.value
+        if not ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE and (
+            rules_text == GCB_COURSES_CONFIG.default_value) and (
+            not Registry.get_overrides().get(GCB_COURSES_CONFIG.name)):
+            return CourseIndex([])
+    rules_text = rules_text.replace(',', '\n')
+
+    # Use cached value if exists.
+    course_index = ApplicationContext.COURSE_INDEX_CACHE.get(rules_text)
+    if course_index:
+        return course_index
+
+    # Compute the list of contexts.
+    rules = rules_text.split('\n')
+    slugs = {}
+    namespaces = {}
+    all_contexts = []
+    for rule in rules:
+        rule = rule.strip()
+        if not rule or rule.startswith('#'):
+            continue
+        parts = rule.split(':')
+
+        # validate length
+        if len(parts) < 3:
+            raise Exception('Expected rule definition of the form '
+                            ' \'type:slug:folder[:ns]\', got %s: ' % rule)
+
+        # validate type
+        if parts[0] != SITE_TYPE_COURSE:
+            raise Exception('Expected \'%s\', found: \'%s\'.'
+                            % (SITE_TYPE_COURSE, parts[0]))
+        site_type = parts[0]
+
+        # validate slug
+        slug = parts[1]
+        slug_parts = urlparse.urlparse(slug)
+        if slug != slug_parts[2]:
+            raise Exception(
+                'Bad rule: \'%s\'. '
+                'Course URL prefix \'%s\' must be a simple URL fragment.' % (
+                    rule, slug))
+        if slug in slugs:
+            raise Exception(
+                'Bad rule: \'%s\'. '
+                'Course URL prefix \'%s\' is already defined.' % (rule, slug))
+        slugs[slug] = True
+
+        # validate folder name
+        if parts[2]:
+            folder = parts[2]
+            # pylint: disable-msg=g-long-lambda
+            create_fs = lambda unused_ns: LocalReadOnlyFileSystem(
+                logical_home_folder=folder)
+        else:
+            folder = '/'
+            # pylint: disable-msg=g-long-lambda
+            create_fs = lambda ns: DatastoreBackedFileSystem(
+                ns=ns,
+                logical_home_folder=appengine_config.BUNDLE_ROOT,
+                inherits_from=LocalReadOnlyFileSystem(logical_home_folder='/'),
+                inheritable_folders=GCB_INHERITABLE_FOLDER_NAMES)
+
+        # validate or derive namespace
+        namespace = appengine_config.DEFAULT_NAMESPACE_NAME
+        if len(parts) == 4:
+            namespace = parts[3]
+        else:
+            if folder and folder != '/':
+                namespace = '%s%s' % (GCB_BASE_COURSE_NAMESPACE,
+                                      folder.replace('/', '-'))
+        try:
+            namespace_manager.validate_namespace(namespace)
+        except Exception as e:
+            raise Exception(
+                'Error validating namespace "%s" in rule "%s"; %s.' % (
+                    namespace, rule, e))
+
+        if namespace in namespaces:
+            raise Exception(
+                'Bad rule \'%s\'. '
+                'Namespace \'%s\' is already defined.' % (rule, namespace))
+        namespaces[namespace] = True
+
+        all_contexts.append(ApplicationContext(
+            site_type, slug, folder, namespace,
+            AbstractFileSystem(create_fs(namespace)),
+            raw=rule))
+
+    _validate_appcontext_list(all_contexts)
+
+    course_index = CourseIndex(all_contexts)
+    ApplicationContext.COURSE_INDEX_CACHE = {rules_text: course_index}
+    return course_index
+
+
+def get_app_context_for_namespace(namespace):
+    """Chooses the app_context that matches a namespace."""
+    app_context = get_course_index().get_app_context_for_namespace(namespace)
+    if not app_context:
+        debug('No app_context in namespace: %s' % namespace)
+    return app_context
+
+
+def get_course_for_path(path):
+    """Chooses app_context that matches a context path."""
+    return get_course_index().get_course_for_path(path)
+
+
+def get_course_for_current_request():
+    """Chooses app_context that matches current request context path."""
+    if not has_path_info():
+        return None
+    return get_course_for_path(get_path_info())
+
+
+def get_all_courses(rules_text=None):
+    course_index = get_course_index(rules_text)
+    return course_index.get_all_courses()
 
 
 def _courses_config_validator(rules_text, errors):

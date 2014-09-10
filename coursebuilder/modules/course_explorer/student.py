@@ -24,6 +24,7 @@ import webapp2
 import appengine_config
 from common import jinja_utils
 from controllers import sites
+from controllers.utils import ApplicationHandler
 from controllers.utils import PageInitializerService
 from controllers.utils import XsrfTokenManager
 from models import courses as Courses
@@ -50,8 +51,13 @@ class IndexPageHandler(webapp2.RequestHandler):
         if course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
             self.redirect('/explorer')
         else:
-            if sites.get_all_courses():
-                self.redirect('/course?use_last_location=true')
+            index = sites.get_course_index()
+            if index.get_all_courses():
+                course = index.get_course_for_path('/')
+                if not course:
+                    course = index.get_all_courses()[0]
+                self.redirect(ApplicationHandler.canonicalize_url_for(
+                    course, '/course?use_last_location=true'))
             else:
                 self.redirect('/admin?action=welcome')
 
