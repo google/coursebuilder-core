@@ -390,12 +390,17 @@ class _FieldRegistryIndex(object):
 
     def __init__(self, registry):
         self._registry = registry
+        self._names_in_order = []
         self._complex_name_to_field = {}
         self._computed_name_to_field = {}
 
     @property
     def registry(self):
         return self._registry
+
+    @property
+    def names_in_order(self):
+        return self._names_in_order
 
     def _inspect_registry(self, parent_names, registry):
         """Inspects registry and adds its items to the index."""
@@ -409,11 +414,13 @@ class _FieldRegistryIndex(object):
                 if complex_name in self._complex_name_to_field:
                     raise KeyError('Field already defined: %s.' % complex_name)
                 self._complex_name_to_field[complex_name] = field
+                self._names_in_order.append(complex_name)
             else:
                 computed_name = ':'.join(parent_names + [field.name])
                 if computed_name in self._computed_name_to_field:
                     raise KeyError('Field already defined: %s.' % computed_name)
                 self._computed_name_to_field[computed_name] = field
+                self._names_in_order.append(computed_name)
 
         # pylint: disable=protected-access
         for name, registry in registry._sub_registries.items():
@@ -437,6 +444,7 @@ class ValueToTypeBinding(object):
         self.name_to_value = {}  # field name to SchemaFieldValue mapping
         self.name_to_field = {}  # field name to SchemaField mapping
         self.unmapped_names = set()  # a set of field names where mapping failed
+        self.index = None  # the indexed set of schema names
 
     def find_value(self, name):
         return self.name_to_value[name]
@@ -533,4 +541,5 @@ class ValueToTypeBinding(object):
         index.rebuild()
         cls._decompose_entity(
             index, [], json_dumpable_entity, binding)
+        binding.index = index
         return binding

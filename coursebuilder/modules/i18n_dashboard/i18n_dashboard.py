@@ -756,11 +756,35 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         self._add_known_translations_as_defaults(key.locale, sections)
 
+        def cmp_sections(section1, section2):
+            """Comparator to sort the sections in schema order."""
+            name1 = section1['name']
+            name2 = section2['name']
+            path1 = name1.split(':')
+            path2 = name2.split(':')
+            for part1, part2 in zip(path1, path2):
+                if part1[0] == '[' and part1[-1] == ']':
+                    assert part2[0] == '[' and part2[-1] == ']'
+                    c = cmp(int(part1[1:-1]), int(part2[1:-1]))
+                    if c != 0:
+                        return c
+                    else:
+                        continue
+                elif part1 != part2:
+                    name_no_index1, _ = (
+                        schema_fields.FieldRegistry.compute_name(path1))
+                    name_no_index2, _ = (
+                        schema_fields.FieldRegistry.compute_name(path2))
+                    return cmp(
+                        binding.index.names_in_order.index(name_no_index1),
+                        binding.index.names_in_order.index(name_no_index2))
+            return cmp(len(path1), len(path2))
+
         payload_dict = {
             'key': str(key),
             'source_locale': self.app_context.get_environ()['course']['locale'],
             'target_locale': key.locale,
-            'sections': sorted(sections, key=lambda section: section['name'])
+            'sections': sorted(sections, cmp=cmp_sections)
         }
 
         transforms.send_json_response(
