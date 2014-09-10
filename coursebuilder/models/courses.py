@@ -23,6 +23,7 @@ import os
 import pickle
 import sys
 
+import messages
 import progress
 import review
 import transforms
@@ -32,6 +33,7 @@ import yaml
 
 import appengine_config
 from common import locales
+from common import safe_dom
 from common import schema_fields
 from common import utils as common_utils
 import common.tags
@@ -64,7 +66,7 @@ ASSESSMENT_MODEL_VERSION_1_4 = '1.4'
 ASSESSMENT_MODEL_VERSION_1_5 = '1.5'
 SUPPORTED_ASSESSMENT_MODEL_VERSIONS = frozenset(
     [ASSESSMENT_MODEL_VERSION_1_4, ASSESSMENT_MODEL_VERSION_1_5])
-
+ALLOWED_MATCHERS_NAMES = {review.PEER_MATCHER: messages.PEER_MATCHER_NAME}
 
 # Date format string for validating input in ISO 8601 format without a
 # timezone. All such strings are assumed to refer to UTC datetimes.
@@ -349,7 +351,7 @@ class Unit12(object):
     @property
     def workflow_yaml(self):
         """Returns the workflow as a YAML text string."""
-        assert verify.UNIT_TYPE_ASSESSMENT == self.type
+        assert self.is_assessment()
         if self.unit_id == LEGACY_REVIEW_ASSESSMENT:
             return LEGACY_HUMAN_GRADER_WORKFLOW
         else:
@@ -391,6 +393,9 @@ class Unit12(object):
     @property
     def unit_footer(self):
         return None
+
+    def is_assessment(self):
+        return verify.UNIT_TYPE_ASSESSMENT == self.type
 
 
 class Lesson12(object):
@@ -531,6 +536,9 @@ class CourseModel12(object):
     def get_units(self):
         return self._units[:]
 
+    def get_assessments(self):
+        return [x for x in self.get_units() if x.is_assessment()]
+
     def get_lessons(self, unit_id):
         return self._unit_id_to_lessons.get(str(unit_id), [])
 
@@ -544,42 +552,38 @@ class CourseModel12(object):
     def get_parent_unit(self, unused_unit_id):
         return None  # This model does not support any kind of unit relations
 
-    def get_review_form_filename(self, unit_id):
-        """Returns the corresponding review form filename."""
+    def get_review_filename(self, unit_id):
+        """Returns the review filename from unit id."""
         return 'assets/js/review-%s.js' % unit_id
 
     def get_assessment_filename(self, unit_id):
         """Returns assessment base filename."""
         unit = self.find_unit_by_id(unit_id)
-        assert unit and verify.UNIT_TYPE_ASSESSMENT == unit.type
+        assert unit and unit.is_assessment()
         return 'assets/js/assessment-%s.js' % unit.unit_id
 
     def _get_assessment_as_dict(self, filename):
         """Returns the Python dict representation of an assessment file."""
         root_name = 'assessment'
-        context = self._app_context
-        assessment_content = context.fs.impl.get(os.path.join(
-            context.get_home(), filename)).read()
-
+        content = self._app_context.fs.impl.get(os.path.join(
+            self._app_context.get_home(), filename)).read()
         content, noverify_text = verify.convert_javascript_to_python(
-            assessment_content, root_name)
-        assessment = verify.evaluate_python_expression_from_text(
+            content, root_name)
+        return verify.evaluate_python_expression_from_text(
             content, root_name, verify.Assessment().scope, noverify_text)
-
-        return assessment
 
     def get_assessment_content(self, unit):
         """Returns the schema for an assessment as a Python dict."""
         return self._get_assessment_as_dict(
             self.get_assessment_filename(unit.unit_id))
 
-    def get_assessment_model_version(self, unused_unit):
-        return ASSESSMENT_MODEL_VERSION_1_4
-
-    def get_review_form_content(self, unit):
+    def get_review_content(self, unit):
         """Returns the schema for a review form as a Python dict."""
         return self._get_assessment_as_dict(
-            self.get_review_form_filename(unit.unit_id))
+            self.get_review_filename(unit.unit_id))
+
+    def get_assessment_model_version(self, unused_unit):
+        return ASSESSMENT_MODEL_VERSION_1_4
 
     def get_activity_filename(self, unit_id, lesson_id):
         """Returns activity base filename."""
@@ -701,9 +705,15 @@ class Unit13(object):
     @property
     def workflow(self):
         """Returns the workflow as an object."""
-        assert verify.UNIT_TYPE_ASSESSMENT == self.type
+        assert self.is_assessment()
         workflow = Workflow(self.workflow_yaml)
         return workflow
+
+    def is_assessment(self):
+        return verify.UNIT_TYPE_ASSESSMENT == self.type
+
+    def needs_human_grader(self):
+        return self.workflow.get_grader() == HUMAN_GRADER
 
 
 class Lesson13(object):
@@ -998,7 +1008,7 @@ class CourseModel13(object):
 
             # Delete owned assessments.
             for unit in self._deleted_units:
-                if verify.UNIT_TYPE_ASSESSMENT == unit.type:
+                if unit.is_assessment():
                     self._delete_assessment(unit)
 
             # Delete owned activities.
@@ -1077,6 +1087,9 @@ class CourseModel13(object):
     def get_units(self):
         return self._units[:]
 
+    def get_assessments(self):
+        return [x for x in self.get_units() if x.is_assessment()]
+
     def get_lessons(self, unit_id):
         lesson_ids = self._unit_id_to_lesson_ids.get(str(unit_id))
         lessons = []
@@ -1088,15 +1101,13 @@ class CourseModel13(object):
     def get_assessment_filename(self, unit_id):
         """Returns assessment base filename."""
         unit = self.find_unit_by_id(unit_id)
-        assert unit
-        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        assert unit and unit.is_assessment()
         return 'assets/js/assessment-%s.js' % unit.unit_id
 
-    def get_review_form_filename(self, unit_id):
-        """Returns review form filename."""
+    def get_review_filename(self, unit_id):
+        """Returns the review filename from unit id."""
         unit = self.find_unit_by_id(unit_id)
-        assert unit
-        assert verify.UNIT_TYPE_ASSESSMENT == unit.type
+        assert unit and unit.is_assessment()
         return 'assets/js/review-%s.js' % unit.unit_id
 
     def get_activity_filename(self, unused_unit_id, lesson_id):
@@ -1196,7 +1207,7 @@ class CourseModel13(object):
             self._app_context.fs.impl.physical_to_logical(
                 self.get_assessment_filename(unit.unit_id)),
             self._app_context.fs.impl.physical_to_logical(
-                self.get_review_form_filename(unit.unit_id))]
+                self.get_review_filename(unit.unit_id))]
 
         for filename in filenames:
             if self.app_context.fs.isfile(filename):
@@ -1335,22 +1346,25 @@ class CourseModel13(object):
 
         self._index()
 
-    def _get_assessment_as_dict(self, filename):
+    def _get_file_content_as_dict(self, filename):
         """Gets the content of an assessment file as a Python dict."""
         path = self._app_context.fs.impl.physical_to_logical(filename)
         root_name = 'assessment'
-        assessment_content = self.app_context.fs.get(path)
-
+        file_content = self.app_context.fs.get(path)
         content, noverify_text = verify.convert_javascript_to_python(
-            assessment_content, root_name)
-        assessment = verify.evaluate_python_expression_from_text(
+            file_content, root_name)
+        return verify.evaluate_python_expression_from_text(
             content, root_name, verify.Assessment().scope, noverify_text)
-        return assessment
 
     def get_assessment_content(self, unit):
         """Returns the schema for an assessment as a Python dict."""
-        return self._get_assessment_as_dict(
+        return self._get_file_content_as_dict(
             self.get_assessment_filename(unit.unit_id))
+
+    def get_review_content(self, unit):
+        """Returns the schema for a review form as a Python dict."""
+        return self._get_file_content_as_dict(
+            self.get_review_filename(unit.unit_id))
 
     def get_assessment_model_version(self, unit):
         filename = self.get_assessment_filename(unit.unit_id)
@@ -1359,11 +1373,6 @@ class CourseModel13(object):
             return ASSESSMENT_MODEL_VERSION_1_4
         else:
             return ASSESSMENT_MODEL_VERSION_1_5
-
-    def get_review_form_content(self, unit):
-        """Returns the schema for a review form as a Python dict."""
-        return self._get_assessment_as_dict(
-            self.get_review_form_filename(unit.unit_id))
 
     def set_assessment_file_content(
         self, unit, assessment_content, dest_filename, errors=None):
@@ -1412,7 +1421,7 @@ class CourseModel13(object):
         self.set_assessment_file_content(
             unit,
             review_form,
-            self.get_review_form_filename(unit.unit_id),
+            self.get_review_filename(unit.unit_id),
             errors=errors
         )
 
@@ -1452,52 +1461,101 @@ class CourseModel13(object):
     def import_from(self, src_course, errors):
         """Imports a content of another course into this course."""
 
-        def copy_unit12_into_unit13(src_unit, dst_unit):
+        def copy_assessment12_into_assessment13(src_unit, dst_unit, errors):
+            """Copies old an style assessment to a new style assessment."""
+
+            assessment = src_course.get_content_as_dict_safe(src_unit, errors)
+            if errors or not assessment:
+                return False
+
+            workflow_dict = src_unit.workflow.to_dict()
+            if len(ALLOWED_MATCHERS_NAMES) == 1:
+                workflow_dict[MATCHER_KEY] = (
+                    ALLOWED_MATCHERS_NAMES.keys()[0])
+            dst_unit.workflow_yaml = yaml.safe_dump(workflow_dict)
+            dst_unit.workflow.validate(errors=errors)
+            if errors:
+                return False
+
+            if assessment.get('checkAnswers'):
+                dst_unit.html_check_answers = assessment['checkAnswers'].value
+
+            # Import questions in the assessment and the review questionnaire
+            html_content = []
+            html_review_form = []
+
+            if assessment.get('preamble'):
+                html_content.append(assessment['preamble'])
+
+            # prepare all the dtos for the questions in the assignment content
+            question_dtos = QuestionImporter.build_question_dtos(
+                assessment, 'Imported from assessment "%s" (question #%s)',
+                dst_unit, errors)
+            if question_dtos is None:
+                return False
+
+            # prepare the questions for the review questionnaire, if necessary
+            review_dtos = []
+            if dst_unit.needs_human_grader():
+                review_dict = src_course.get_content_as_dict_safe(
+                    src_unit, errors, kind='review')
+                if errors:
+                    return False
+                if review_dict.get('preamble'):
+                    html_review_form.append(review_dict['preamble'])
+                    review_dtos = QuestionImporter.build_question_dtos(
+                        review_dict,
+                        'Imported from assessment "%s" (review question #%s)',
+                        dst_unit, errors)
+                    if review_dtos is None:
+                        return False
+
+            # batch submit the questions and split out their resulting id's
+            all_dtos = question_dtos + review_dtos
+            all_ids = models.QuestionDAO.save_all(all_dtos)
+            question_ids = all_ids[:len(question_dtos)]
+            review_ids = all_ids[len(question_dtos):]
+
+            # insert question tags for the assessment content
+            for quid in question_ids:
+                html_content.append(
+                    str(safe_dom.Element(
+                        'question',
+                        quid=str(quid),
+                        instanceid=common_utils.generate_instance_id())))
+            dst_unit.html_content = '\n'.join(html_content)
+
+            # insert question tags for the review questionnaire
+            for quid in review_ids:
+                html_review_form.append(
+                    str(safe_dom.Element(
+                        'question',
+                        quid=str(quid),
+                        instanceid=common_utils.generate_instance_id())))
+            dst_unit.html_review_form = '\n'.join(html_review_form)
+            return True
+
+        def copy_unit12_into_unit13(src_unit, dst_unit, errors):
             """Copies unit object attributes between versions."""
             assert dst_unit.type == src_unit.type
 
-            dst_unit.title = src_unit.title
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
 
             if verify.UNIT_TYPE_LINK == dst_unit.type:
                 dst_unit.href = src_unit.href
 
-            # Copy over the assessment. Note that we copy files directly and
-            # avoid all logical validations of their content. This is done for
-            # a purpose - at this layer we don't care what is in those files.
-            if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
-                if src_unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
-                    dst_unit.weight = (
-                        DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[src_unit.unit_id])
-
-                filepath_mappings = [{
-                    'src': src_course.get_assessment_filename(src_unit.unit_id),
-                    'dst': self.get_assessment_filename(dst_unit.unit_id)
-                }, {
-                    'src': src_course.get_review_form_filename(
-                        src_unit.unit_id),
-                    'dst': self.get_review_form_filename(dst_unit.unit_id)
-                }]
-
-                for mapping in filepath_mappings:
-                    src_filename = os.path.join(
-                        src_course.app_context.get_home(), mapping['src'])
-
-                    if src_course.app_context.fs.isfile(src_filename):
-                        astream = src_course.app_context.fs.open(src_filename)
-                        if astream:
-                            dst_filename = os.path.join(
-                                self.app_context.get_home(), mapping['dst'])
-                            self.app_context.fs.put(dst_filename, astream)
-
-                dst_unit.workflow_yaml = src_unit.workflow_yaml
+            # Copy over the assessment.
+            if dst_unit.is_assessment():
+                copy_assessment12_into_assessment13(src_unit, dst_unit, errors)
 
         def copy_unit13_into_unit13(src_unit, dst_unit):
             """Copies unit13 attributes to a new unit."""
-            copy_unit12_into_unit13(src_unit, dst_unit)
+            dst_unit.release_date = src_unit.release_date
+            dst_unit.now_available = src_unit.now_available
+            dst_unit.workflow_yaml = src_unit.workflow_yaml
 
-            if verify.UNIT_TYPE_ASSESSMENT == dst_unit.type:
+            if dst_unit.is_assessment():
                 dst_unit.properties = copy.deepcopy(src_unit.properties)
                 dst_unit.weight = src_unit.weight
                 dst_unit.html_content = src_unit.html_content
@@ -1680,7 +1738,7 @@ class CourseModel13(object):
                 if src_course.version == CourseModel13.VERSION:
                     copy_unit13_into_unit13(unit, new_unit)
                 elif src_course.version == CourseModel12.VERSION:
-                    copy_unit12_into_unit13(unit, new_unit)
+                    copy_unit12_into_unit13(unit, new_unit, errors)
                 else:
                     raise Exception(
                         'Unsupported course version: %s', src_course.version)
@@ -1698,6 +1756,14 @@ class CourseModel13(object):
                         raise Exception(
                             'Unsupported course version: '
                             '%s', src_course.version)
+
+            # assign weights to assignments imported from version 12
+            if src_course.version == CourseModel12.VERSION:
+                if self.get_assessments():
+                    w = common_utils.truncate(
+                        100.0 / len(self.get_assessments()))
+                    for x in self.get_assessments():
+                        x.weight = w
 
         # import course dependencies from the datastore
         _copy_entities_between_namespaces(
@@ -2385,14 +2451,11 @@ class Course(object):
         return assessment_score_list
 
     def get_assessment_list(self):
-        """Returns a list of units that are assessments."""
+        """Returns a list of dup units that are assessments."""
         # TODO(psimakov): Streamline this so that it does not require a full
         # iteration on each request, probably by modifying the index() method.
-        assessment_list = []
-        for unit in self.get_units():
-            if verify.UNIT_TYPE_ASSESSMENT == unit.type:
-                assessment_list.append(unit)
-        return copy.deepcopy(assessment_list)
+        assessments = [x for x in self.get_units() if x.is_assessment()]
+        return copy.deepcopy(assessments)
 
     def get_peer_reviewed_units(self):
         """Returns a list of units that are peer-reviewed assessments.
@@ -2412,8 +2475,8 @@ class Course(object):
     def get_assessment_filename(self, unit_id):
         return self._model.get_assessment_filename(unit_id)
 
-    def get_review_form_filename(self, unit_id):
-        return self._model.get_review_form_filename(unit_id)
+    def get_review_filename(self, unit_id):
+        return self._model.get_review_filename(unit_id)
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
@@ -2440,6 +2503,24 @@ class Course(object):
             return []
 
         return common.tags.get_components_from_html(lesson.objectives)
+
+    def get_content_as_dict_safe(self, unit, errors, kind='assessment'):
+        """Validate the assessment or review script and return as a dict."""
+        try:
+            if kind == 'assessment':
+                r = self._model.get_assessment_content(unit)
+            else:
+                r = self._model.get_review_content(unit)
+            return r['assessment']
+        except verify.SchemaException as e:
+            logging.error('Unable to validate %s %s: %s', kind, unit.unit_id, e)
+            errors.append(
+                'Unable to validate %s: %s' % (kind, unit.unit_id))
+        except Exception as e:  # pylint: disable-msg=broad-except
+            logging.error('Unable to parse %s: %s.', kind, str(e))
+            errors.append(
+                'Unable to parse %s: %s' % (kind, unit.unit_id))
+        return None
 
     def get_assessment_components(self, unit_id):
         """Returns a list of dicts representing components in an assessment.
@@ -2534,9 +2615,9 @@ class Course(object):
     def get_assessment_model_version(self, unit):
         return self._model.get_assessment_model_version(unit)
 
-    def get_review_form_content(self, unit):
+    def get_review_content(self, unit):
         """Returns the schema for a review form as a Python dict."""
-        return self._model.get_review_form_content(unit)
+        return self._model.get_review_content(unit)
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
         return self._model.set_assessment_content(
@@ -2551,11 +2632,8 @@ class Course(object):
 
     def is_valid_assessment_id(self, assessment_id):
         """Tests whether the given assessment id is valid."""
-        for unit in self.get_units():
-            if (verify.UNIT_TYPE_ASSESSMENT == unit.type and
-                str(assessment_id) == str(unit.unit_id)):
-                return True
-        return False
+        return any(x for x in self.get_units() if x.is_assessment() and str(
+            assessment_id) == str(x.unit_id))
 
     def is_valid_unit_lesson_id(self, unit_id, lesson_id):
         """Tests whether the given unit id and lesson id are valid."""

@@ -241,7 +241,7 @@ class AssignmentManager(ApplicationHandler):
 
     def get_readonly_review_1_4(self, unit, review_content):
         return create_readonly_assessment_params(
-            courses.Course(self).get_review_form_content(unit),
+            courses.Course(self).get_review_content(unit),
             student_work.StudentWorkUtils.get_answer_list(review_content))
 
     def get_readonly_review_1_5(self, unit, review_content):

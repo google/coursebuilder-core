@@ -217,5 +217,3 @@ REVIEW_MIN_COUNT_DESCRIPTION = assemble_sanitized_message(
 AUTO_GRADER_NAME = 'Automatic Grading'
 
 HUMAN_GRADER_NAME = 'Peer Review'
-
-PEER_MATCHER_NAME = 'Peer'

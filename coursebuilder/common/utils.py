@@ -44,6 +44,12 @@ def generate_instance_id():
     return ''.join([random.choice(ALPHANUM) for _ in xrange(length)])
 
 
+def truncate(x, precision=2):
+    assert isinstance(precision, int) and precision >= 0
+    factor = 10 ** precision
+    return int(x * factor) / float(factor)
+
+
 class Namespace(object):
     """Save current namespace and reset it.
 

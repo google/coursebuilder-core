@@ -3029,6 +3029,7 @@ class DatastoreBackedCourseTest(actions.TestBase):
         files_added.append(course_yaml)
 
     def calc_course_stats(self, course):
+        assessment_count = len(course.get_assessment_list())
         units_count = len(course.get_units())
         activities_count = 0
         lessons_count = 0
@@ -3036,7 +3037,7 @@ class DatastoreBackedCourseTest(actions.TestBase):
             unit_lessons = course.get_lessons(uid)
             lessons_count += len(unit_lessons)
             activities_count += sum(x.activity for x in unit_lessons)
-        return units_count, lessons_count, activities_count
+        return units_count, lessons_count, activities_count, assessment_count
 
 
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
@@ -3090,7 +3091,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_contains('Filter image results by color', response.body)
 
         # Check assessment is copied.
-        response = self.get('assets/js/assessment-35.js')
+        response = self.get('assessment?name=35')
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
@@ -3253,18 +3254,19 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # import sample course
         dst_app_context = sites.get_all_courses()[0]
-        src_app_context = sites.get_all_courses()[1]
         dst_course = courses.Course(None, app_context=dst_app_context)
+        src_app_context = sites.get_all_courses()[1]
+        src_course = courses.Course(None, app_context=src_app_context)
 
         errors = []
-        src_course_out, dst_course_out = dst_course.import_from(
+        _, dst_course_out = dst_course.import_from(
             src_app_context, errors)
         if errors:
             raise Exception(errors)
         dst_course_out.save()
 
-        u1, l1, a1 = self.calc_course_stats(src_course_out)
-        u2, l2, _ = self.calc_course_stats(dst_course_out)
+        u1, l1, ac1, as1 = self.calc_course_stats(src_course)
+        u2, l2, _, as2 = self.calc_course_stats(dst_course)
 
         # the old and the new course have same number of units each
         self.assertEqual(12, u1)
@@ -3272,12 +3274,20 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # old course had lessons and activities
         self.assertEqual(29, l1)
-        self.assertEqual(26, a1)
+        self.assertEqual(26, ac1)
 
         # new course has the same number of lessons as the old one, plus one
         # new lesson instead of each old activity
         self.assertEqual(55, l2)
-        self.assertEqual(l1 + a1, l2)
+        self.assertEqual(l1 + ac1, l2)
+
+        # both the new & the old courses have 4 assessments
+        self.assertEqual(4, as1)
+        self.assertEqual(4, as2)
+
+        # new course assessment weights are equal to 25.0
+        for x in dst_course.get_assessment_list():
+            self.assertEqual(25.0, x.weight)
 
         # old course does not have any questions or question groups
         with Namespace(''):
@@ -3288,7 +3298,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         # style activities
         with Namespace('ns_test'):
             self.assertEqual(2, len(models.QuestionGroupDAO.get_all()))
-            self.assertEqual(48, len(models.QuestionDAO.get_all()))
+            self.assertEqual(69, len(models.QuestionDAO.get_all()))
 
         # clean up
         sites.reset_courses()
@@ -3404,8 +3414,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Check assesment page.
         response = self.get('assessment?name=35')
-        assert_contains(
-            '<script src="assets/js/assessment-35.js"></script>', response.body)
+        self.assertEqual(5, response.body.count('<div class="qt-question">'))
 
         # Check activity page.
         response = self.get('unit?unit=14&lesson=16')
@@ -3759,8 +3768,8 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             question.key().id(), question_json['rows'][-1]['key.id'])
         self.assertEqual(
             'test question', question_json['rows'][-1]['data'])
-        # 48 from the import plus the one we created in the test
-        self.assertEqual(49, len(question_json['rows']))
+        # 69 from the import plus the one we created in the test
+        self.assertEqual(70, len(question_json['rows']))
 
     def test_download_course_errors_if_archive_path_exists_on_disk(self):
         self.upload_all_sample_course_files([])
@@ -4609,8 +4618,8 @@ var activity = [
         errors = []
         dst_course.import_from(src_ctx, errors)
         self.assertEqual(0, len(errors))
-        u1, l1, a1 = self.calc_course_stats(src_course)
-        u2, l2, _ = self.calc_course_stats(dst_course)
+        u1, l1, a1, _ = self.calc_course_stats(src_course)
+        u2, l2, _, _ = self.calc_course_stats(dst_course)
         self.assertEqual(1, l1)
         self.assertEqual(2, l2)
         self.assertEqual(u1, u2)

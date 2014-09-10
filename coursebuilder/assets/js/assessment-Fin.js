@@ -36,7 +36,7 @@ var assessment = {
      // for further study if the student answers this question incorrectly.
      lesson: '1.4'},
 
-    {questionHTML: 'Your friends know that you are interested in taking this trip to the 2016 Olympics, and one sends you the following post: "Hey! Know you are planning your trip to the Olympics. Thought you might like to see this.” He did not identify the picture in any way, and he is not available right now for you to ask him.<p><img src="http://www.loc.gov/rr/main/images/tugwar.jpg"<p><p>What is the title of the work in which this picture was published?',
+  {questionHTML: 'Your friends know that you are interested in taking this trip to the 2016 Olympics, and one sends you the following post: "Hey! Know you are planning your trip to the Olympics. Thought you might like to see this." He did not identify the picture in any way, and he is not available right now for you to ask him.<p><img src="http://www.loc.gov/rr/main/images/tugwar.jpg"></p><p>What is the title of the work in which this picture was published?</p>',
      choices: ['The Olympic Games Being a Short History of the Olympic Movement From 1896 up to the Present Day, by Theodore Andrea Cook',
                'The Olympic Games: Daily Official Program, by the Amateur Athletic Union of the United States',
                'The Olympic games at Athens, 1906, by James Edward Sullivan',

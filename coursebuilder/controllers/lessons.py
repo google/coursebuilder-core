@@ -820,7 +820,7 @@ class AssessmentHandler(BaseHandler):
 
     def get_review_received_1_4(self, unit, review):
         return create_readonly_assessment_params(
-            self.get_course().get_review_form_content(unit),
+            self.get_course().get_review_content(unit),
             StudentWorkUtils.get_answer_list(review))
 
     def get_review_received_1_5(self, unit, review):
@@ -1083,7 +1083,7 @@ class ReviewHandler(BaseHandler):
 
     def configure_readonly_review_1_4(self, unit, review_contents):
         readonly_review_form = create_readonly_assessment_params(
-            self.get_course().get_review_form_content(unit),
+            self.get_course().get_review_content(unit),
             StudentWorkUtils.get_answer_list(review_contents))
         self.template_value['readonly_review_form'] = readonly_review_form
 
@@ -1095,7 +1095,7 @@ class ReviewHandler(BaseHandler):
 
     def configure_active_review_1_4(self, unit, review_contents):
         self.template_value['assessment_script_src'] = (
-            self.get_course().get_review_form_filename(unit.unit_id))
+            self.get_course().get_review_filename(unit.unit_id))
         saved_answers = (
             StudentWorkUtils.get_answer_list(review_contents)
             if review_contents else [])
