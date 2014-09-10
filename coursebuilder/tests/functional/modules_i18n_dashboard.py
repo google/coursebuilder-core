@@ -19,8 +19,8 @@ __author__ = 'John Orr (jorr@google.com)'
 import unittest
 
 from common import crypto
-from controllers import sites
 from models import courses
+from models import models
 from models import transforms
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDTO
@@ -546,8 +546,9 @@ class CourseContentTranslationTests(actions.TestBase):
             ResourceKey.LESSON_TYPE, self.lesson.lesson_id, 'el')
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)
-
-        sites.override_locale('el')
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'el'
+        models.StudentPreferencesDAO.save(prefs)
 
     def tearDown(self):
         namespace_manager.set_namespace(self.old_namespace)
