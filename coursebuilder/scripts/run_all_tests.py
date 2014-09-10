@@ -172,7 +172,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.test_classes.ReviewModuleDomainTests': 1,
     'tests.unit.test_classes.SuiteTestCaseTest': 3,
 }
-OMITTED_FROM_PRESUBMIT = ['tests.integration.test_classes']
+EXPENSIVE_TESTS = ['tests.integration.test_classes']
 
 LOG_LINES = []
 LOG_LOCK = threading.Lock()
@@ -253,8 +253,7 @@ class TaskThread(threading.Thread):
 
         for task in tasks:
             while True:
-                # Timeouts should happen after 15 seconds.
-                task.join(15)
+                task.join(30)
                 if task.isAlive():
                     log('Still waiting for: %s.' % task.name)
                     continue
@@ -306,7 +305,13 @@ def setup_all_dependencies():
     run(['sh', common_sh], strict=True, stdout=None)
 
 
-def run_all_tests(presubmit, verbose):
+def chunk_list(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in xrange(0, len(l), n):
+        yield l[i:i+n]
+
+
+def run_all_tests(skip_expensive_tests, verbose):
     """Runs all functional tests concurrently."""
 
     setup_all_dependencies()
@@ -319,15 +324,26 @@ def run_all_tests(presubmit, verbose):
     test_classes.update(all_third_party_tests())
 
     for test_class_name in test_classes:
-        if presubmit and test_class_name in OMITTED_FROM_PRESUBMIT:
+        if skip_expensive_tests and test_class_name in EXPENSIVE_TESTS:
             continue
         test = FunctionalTestTask(test_class_name, verbose)
         task = TaskThread(test.run, name='testing %s' % test_class_name)
         task_to_test[task] = test
         tasks.append(task)
 
-    # Execute tasks.
-    TaskThread.execute_task_list(tasks)
+    # order tests by their size largest to smallest
+    tasks = sorted(
+        tasks,
+        key=lambda task: test_classes.get(task_to_test[task].test_class_name),
+        reverse=True)
+
+    # execute tests in chunks to avoid contention
+    count_total = 0
+    count_per_chunk = 32
+    for chunk in chunk_list(tasks, count_per_chunk):
+        count_total += count_per_chunk
+        log('Running tests %s/%s.' % (count_total, len(tasks)))
+        TaskThread.execute_task_list(chunk)
 
     # Check we ran all tests as expected.
     total_count = 0
