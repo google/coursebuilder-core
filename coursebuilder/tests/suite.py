@@ -110,10 +110,12 @@ class TestBase(unittest.TestCase):
     INTEGRATION_SERVER_BASE_URL = 'http://localhost:8081'
     ADMIN_SERVER_BASE_URL = 'http://localhost:8000'
 
+    STOP_AFTER_FIRST_FAILURE = False
     HAS_PENDING_FAILURE = False
 
     def setUp(self):
-        assert not TestBase.HAS_PENDING_FAILURE
+        if TestBase.STOP_AFTER_FIRST_FAILURE:
+            assert not TestBase.HAS_PENDING_FAILURE
         super(TestBase, self).setUp()
         self._originals = {}  # Map of object -> {symbol_string: original_value}
 

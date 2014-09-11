@@ -30,7 +30,6 @@ import threading
 import time
 import yaml
 
-
 # all test classes with a total count of tests in each
 ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 2,
@@ -236,67 +235,40 @@ class TaskThread(threading.Thread):
         self.name = name
 
     @classmethod
-    def start_all_tasks(cls, tasks):
-        """Starts all tasks."""
-        for task in tasks:
-            task.start()
+    def execute_task_list(
+        cls, tasks,
+        chunk_size=None, runtimes_sec=None, fail_on_first_error=False):
 
-    @classmethod
-    def check_all_tasks(cls, tasks):
-        """Checks results of all tasks; fails on the first exception found."""
-        first_error = None
-        first_failed_task = None
+        if chunk_size is None:
+            chunk_size = len(tasks)
+        assert chunk_size > 0
+        assert chunk_size < 256
 
-        def fail_if_error_pending():
-            if first_error:
-                log(Exception(first_error))
-                log('Failed task: %s.' % first_failed_task.name)
-                raise Exception()
+        if runtimes_sec is None:
+          runtimes_sec = []
 
-        for task in tasks:
-            while True:
-                task.join(30)
-                if task.isAlive():
-                    log('Still waiting for: %s.' % task.name)
-                    continue
-                else:
-                    break
-
-            if task.exception:
-                fail_if_error_pending()
-                first_error = task.exception
-                first_failed_task = task
-
-        fail_if_error_pending()
-
-    @classmethod
-    def execute_task_list(cls, tasks):
-        """Starts all tasks and checks the results."""
-        cls.start_all_tasks(tasks)
-        cls.check_all_tasks(tasks)
-
-    @classmethod
-    def execute_task_list_chunked(cls, tasks, chunk_size):
-        first_error = None
-        first_failed_task = None
+        errors = []
 
         todo = [] + tasks
         running = set()
+        task_to_runtime_sec = {}
 
-        def fail_if_error_pending():
-            if first_error:
-                log(Exception(first_error))
-                log('Failed task: %s.' % first_failed_task.name)
-                raise Exception()
+        def on_error(error, task):
+            errors.append(error)
+            log(Exception(error))
+            log('Failed task: %s.' % task.name)
+            if fail_on_first_error:
+                raise Exception(error)
 
         def update_progress():
-            log('Progress so far: %s completed, %s running of %s total.' % (
-                len(tasks) - len(todo) - len(running), len(running),
-                len(tasks)))
+            log(
+                'Progress so far: '
+                '%s failed, %s completed, %s running, %s pending.' % (
+                    len(errors), len(tasks) - len(todo) - len(running),
+                    len(running), len(todo)))
 
         last_update_on = 0
         while todo or running:
-            fail_if_error_pending()
 
             # update progress
             now = time.time()
@@ -310,18 +282,37 @@ class TaskThread(threading.Thread):
                 for task in list(running):
                     task.join(1)
                     if task.isAlive():
+                        start, end = task_to_runtime_sec[task]
+                        now = time.time()
+                        if now - end > 60:
+                            log('Waiting over %ss for: %s' % (
+                                int(now - start), task.name))
+                            task_to_runtime_sec[task] = (start, now)
                         continue
                     if task.exception:
-                        first_error = task.exception
-                        first_failed_task = task
-                        fail_if_error_pending()
+                        on_error(task.exception, task)
+                    start, _ = task_to_runtime_sec[task]
+                    now = time.time()
+                    task_to_runtime_sec[task] = (start, now)
                     running.remove(task)
 
             # submit new work
             while len(running) < chunk_size and todo:
                 task = todo.pop(0)
                 running.add(task)
+                now = time.time()
+                task_to_runtime_sec[task] = (now, now)
                 task.start()
+
+        update_progress()
+
+        if errors:
+            raise Exception('There were %s errors' % len(errors))
+
+        # format runtimes
+        for task in tasks:
+            start, end = task_to_runtime_sec[task]
+            runtimes_sec.append(end - start)
 
     def run(self):
         try:
@@ -338,7 +329,8 @@ class FunctionalTestTask(object):
         self.verbose = verbose
 
     def run(self):
-        log('Running all tests in: %s.' % (self.test_class_name))
+        if self.verbose:
+            log('Running all tests in: %s.' % (self.test_class_name))
         test_sh = os.path.join(os.path.dirname(__file__), 'test.sh')
         result, self.output = run(
             ['sh', test_sh, self.test_class_name],
@@ -350,9 +342,18 @@ class FunctionalTestTask(object):
 def setup_all_dependencies():
     """Setup all third party Python packages."""
 
-    log('Setup common environment.')
     common_sh = os.path.join(os.path.dirname(__file__), 'common.sh')
-    run(['sh', common_sh], strict=True, stdout=None)
+    result, output = run(['sh', common_sh], strict=True)
+    if result != 0:
+        raise Exception()
+    for line in output.split('\n'):
+        if not line:
+            continue
+        # ignore garbage produced by the script; it proven impossible to fix the
+        # script to avoid garbage from being produced
+        if 'grep: write error' in line or 'grep: writing output' in line:
+            continue
+        log(line)
 
 
 def chunk_list(l, n):
@@ -364,7 +365,7 @@ def chunk_list(l, n):
 def run_all_tests(skip_expensive_tests, verbose):
     """Runs all functional tests concurrently."""
 
-    setup_all_dependencies()
+    start = time.time()
 
     # Prepare tasks.
     task_to_test = {}
@@ -387,8 +388,27 @@ def run_all_tests(skip_expensive_tests, verbose):
         key=lambda task: test_classes.get(task_to_test[task].test_class_name),
         reverse=True)
 
+    # setup dependencies
+    setup_all_dependencies()
+
     # execute all tasks
-    TaskThread.execute_task_list_chunked(tasks, 32)
+    log('Executing all %s test suites' % len(tasks))
+    runtimes_sec = []
+    TaskThread.execute_task_list(
+        tasks, chunk_size=16, runtimes_sec=runtimes_sec)
+
+    # map durations to names
+    name_durations = []
+    for index, duration in enumerate(runtimes_sec):
+        name_durations.append((
+            round(duration, 2), task_to_test[tasks[index]].test_class_name))
+
+    # report all longest first
+    log('Reporting execution times for 10 longest tests')
+    for duration, name in sorted(
+        name_durations, key=lambda name_duration: name_duration[0],
+        reverse=True)[:10]:
+        log('Took %ss for %s' % (int(duration), name))
 
     # Check we ran all tests as expected.
     total_count = 0
@@ -409,7 +429,8 @@ def run_all_tests(skip_expensive_tests, verbose):
             raise Exception()
         total_count += test_count
 
-    log('Ran %s tests in %s test classes.' % (total_count, len(tasks)))
+    log('Ran %s tests in %s test classes; took %ss' % (
+        total_count, len(tasks), int(time.time() - start)))
 
 
 def main():

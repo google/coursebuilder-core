@@ -51,12 +51,12 @@ export KARMA_LIB=$RUNTIME_HOME/karma_lib
 
 CB_ARCHIVE_URL=https://github.com/google/coursebuilder-resources/raw/master/lib
 
-echo Ensuring Course Builder runtime home exists in $RUNTIME_HOME
+echo Ensuring runtime folder $RUNTIME_HOME
 if [ ! -d "$RUNTIME_HOME" ]; then
   mkdir -p $RUNTIME_HOME
 fi
 
-echo Checking if GAE is installed in $GOOGLE_APP_ENGINE_HOME
+echo Using GAE from $GOOGLE_APP_ENGINE_HOME
 if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
   echo Installing GAE
   mkdir -p $RUNTIME_HOME
@@ -73,8 +73,7 @@ function need_install() {
   local expected_version=$1 && shift
   local package_dir=$RUNTIME_HOME/$package_name
 
-  echo "Checking that version $expected_version of $package_name" \
-    "is installed in $package_dir"
+  echo "Using $package_name-$expected_version from $package_dir"
 
   if [ ! -d $package_dir ] ; then
     echo "No directory found for $package_name; installing."
@@ -177,7 +176,7 @@ DISTRIBUTED_LIBS="\
   mathjax-2.3.0.zip \
   mathjax-fonts-2.3.0.zip "
 
-echo Checking whether third party Python packages are installed
+echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR
 if [ ! -d "$DISTRIBUTED_LIBS_DIR" ]; then
   mkdir -p "$DISTRIBUTED_LIBS_DIR"
 fi
@@ -199,5 +198,5 @@ if need_install yui build/yui/yui.js YUI 3.6.0 ; then
   unzip "$DISTRIBUTED_LIBS_DIR/yui_3.6.0.zip" -d $RUNTIME_HOME
 fi
 
-echo Deleting old *.pyc files
+# "Deleting existing files: *.pyc"
 find "$SOURCE_DIR" -iname "*.pyc" -exec rm -f {} \;
