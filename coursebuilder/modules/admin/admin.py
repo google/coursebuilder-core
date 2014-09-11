@@ -129,21 +129,22 @@ class WelcomeHandler(object):
     def post_explore_sample(self):
         """Navigate to or import sample course."""
         uid = 'sample'
-        for course in sites.get_all_courses():
-            if '/%s' % uid == course.get_slug():
-                self._redirect(course, '/dashboard')
-                return
-        app_context = self._copy_sample_course(uid)
-        self._redirect(app_context, '/dashboard')
+        course = sites.get_course_index().get_course_for_path('/%s' % uid)
+        if course:
+            self._redirect(course, '/dashboard')
+            return
+        course = self._copy_sample_course(uid)
+        self._redirect(course, '/dashboard')
 
     def post_add_first_course(self):
         """Adds first course to the deployment."""
-        all_courses = sites.get_all_courses()
-        if all_courses:
-            app_context = sites.get_all_courses()[0]
-        else:
-            app_context = self._make_new_course('first', 'My First Course')
-        self._redirect(app_context, '/dashboard')
+        uid = 'first'
+        course = sites.get_course_index().get_course_for_path('/%s' % uid)
+        if course:
+            self._redirect(course, '/dashboard')
+            return
+        course = self._make_new_course(uid, 'My First Course')
+        self._redirect(course, '/dashboard')
 
 
 class AdminHandler(

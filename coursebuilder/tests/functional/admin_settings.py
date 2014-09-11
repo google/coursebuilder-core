@@ -29,6 +29,7 @@ from modules.dashboard import course_settings
 from modules.dashboard import filer
 from tests.functional import actions
 from tests.functional.actions import assert_contains
+from tests.functional.actions import assert_does_not_contain
 
 COURSE_NAME = 'admin_settings'
 COURSE_TITLE = 'Admin Settings'
@@ -101,6 +102,7 @@ class WelcomePageTests(actions.TestBase):
             'http://localhost/sample/dashboard')
         response = self.get('/sample/dashboard')
         assert_contains('Power Searching with Google', response.body)
+        assert_does_not_contain('explore_sample', response.body)
 
     def test_create_new_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
@@ -115,15 +117,29 @@ class WelcomePageTests(actions.TestBase):
         response = self.get('/first/dashboard')
         assert_contains('My First Course', response.body)
         response = self.get('/admin?action=welcome')
-        assert_contains('You have created <b>1</b> course(s).', response.body)
+        assert_does_not_contain('add_first_course', response.body)
 
     def test_explore_sample_course_idempotent(self):
         self.test_explore_sample_course()
         self.test_explore_sample_course()
 
+        self.test_create_new_course()
+        response = self.get('/')
+        self.assertEqual(response.status_int, 302)
+        self.assertEqual(
+            response.headers['location'],
+            'http://localhost/sample/course?use_last_location=true')
+
     def test_create_new_course_idempotent(self):
         self.test_create_new_course()
         self.test_create_new_course()
+
+        self.test_explore_sample_course()
+        response = self.get('/')
+        self.assertEqual(response.status_int, 302)
+        self.assertEqual(
+            response.headers['location'],
+            'http://localhost/first/course?use_last_location=true')
 
 
 class HtmlHookTest(actions.TestBase):

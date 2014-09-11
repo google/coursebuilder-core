@@ -27,6 +27,7 @@ import datetime
 import os
 import subprocess
 import threading
+import time
 import yaml
 
 
@@ -35,6 +36,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.AdminSettingsTests': 2,
     'tests.functional.admin_settings.HtmlHookTest': 11,
     'tests.functional.admin_settings.JinjaContextTest': 2,
+    'tests.functional.admin_settings.WelcomePageTests': 5,
     'tests.functional.assets_rest.AssetsRestTest': 4,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
@@ -273,6 +275,54 @@ class TaskThread(threading.Thread):
         cls.start_all_tasks(tasks)
         cls.check_all_tasks(tasks)
 
+    @classmethod
+    def execute_task_list_chunked(cls, tasks, chunk_size):
+        first_error = None
+        first_failed_task = None
+
+        todo = [] + tasks
+        running = set()
+
+        def fail_if_error_pending():
+            if first_error:
+                log(Exception(first_error))
+                log('Failed task: %s.' % first_failed_task.name)
+                raise Exception()
+
+        def update_progress():
+            log('Progress so far: %s completed, %s running of %s total.' % (
+                len(tasks) - len(todo) - len(running), len(running),
+                len(tasks)))
+
+        last_update_on = 0
+        while todo or running:
+            fail_if_error_pending()
+
+            # update progress
+            now = time.time()
+            update_frequency_sec = 15
+            if now - last_update_on > update_frequency_sec:
+                last_update_on = now
+                update_progress()
+
+            # check status of running jobs
+            if running:
+                for task in list(running):
+                    task.join(1)
+                    if task.isAlive():
+                        continue
+                    if task.exception:
+                        first_error = task.exception
+                        first_failed_task = task
+                        fail_if_error_pending()
+                    running.remove(task)
+
+            # submit new work
+            while len(running) < chunk_size and todo:
+                task = todo.pop(0)
+                running.add(task)
+                task.start()
+
     def run(self):
         try:
             self.func()
@@ -337,13 +387,8 @@ def run_all_tests(skip_expensive_tests, verbose):
         key=lambda task: test_classes.get(task_to_test[task].test_class_name),
         reverse=True)
 
-    # execute tests in chunks to avoid contention
-    count_total = 0
-    count_per_chunk = 32
-    for chunk in chunk_list(tasks, count_per_chunk):
-        count_total += count_per_chunk
-        log('Running tests %s/%s.' % (count_total, len(tasks)))
-        TaskThread.execute_task_list(chunk)
+    # execute all tasks
+    TaskThread.execute_task_list_chunked(tasks, 32)
 
     # Check we ran all tests as expected.
     total_count = 0
