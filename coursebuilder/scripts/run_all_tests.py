@@ -362,7 +362,7 @@ def chunk_list(l, n):
         yield l[i:i + n]
 
 
-def run_all_tests(skip_expensive_tests, verbose):
+def run_all_tests(skip_expensive_tests, verbose, setup_deps=True):
     """Runs all functional tests concurrently."""
 
     start = time.time()
@@ -389,7 +389,8 @@ def run_all_tests(skip_expensive_tests, verbose):
         reverse=True)
 
     # setup dependencies
-    setup_all_dependencies()
+    if setup_deps:
+        setup_all_dependencies()
 
     # execute all tasks
     log('Executing all %s test suites' % len(tasks))
@@ -439,3 +440,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
