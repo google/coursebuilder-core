@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-04 10:30-0700\n"
+"POT-Creation-Date: 2014-09-09 10:08-0700\n"
 "PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sv <LL@li.org>\n"
@@ -112,7 +112,7 @@ msgstr "%(points)s poäng"
 #: experimental/coursebuilder/modules/assessment_tags/templates/mc_question.html:34
 #: experimental/coursebuilder/modules/assessment_tags/templates/question_group.html:20
 #: experimental/coursebuilder/modules/assessment_tags/templates/sa_question.html:41
-#: experimental/coursebuilder/views/base.html:25
+#: experimental/coursebuilder/views/base.html:19
 msgid " Check Answer "
 msgstr " Kontrollera svaret mot facit "
 
@@ -162,19 +162,19 @@ msgid "%(course)s course"
 msgstr ""
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:27
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
 msgid "Explore Courses"
 msgstr "Utforska kurser"
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:32
-#: experimental/coursebuilder/views/base_course.html:65
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:33
+#: experimental/coursebuilder/views/base_course.html:66
 msgid "My Courses"
 msgstr "Mina kurser"
 
 #. Navbar tab.
-#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:37
-#: experimental/coursebuilder/views/base_course.html:70
+#: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:38
+#: experimental/coursebuilder/views/base_course.html:71
 msgid "Profile"
 msgstr "Profil"
 
@@ -235,7 +235,7 @@ msgstr "Registrerade kurser"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:77
+#: experimental/coursebuilder/views/base_course.html:78
 msgid "Progress"
 msgstr "Studieresultat"
 
@@ -344,8 +344,8 @@ msgstr ""
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:33
 msgid ""
 "Do you know other people who might want to join this course? Enter their "
-"email addresses below and click “Send”. They will receive an email from "
-"you with the text shown below."
+"email addresses below and click \"Send\". They will receive an email from"
+" you with the text shown below."
 msgstr ""
 
 #. Instructions on how to fill out email addresses in a form.
@@ -492,7 +492,7 @@ msgstr "Öppna föregående sida och försök igen."
 #. Title of the webpage.
 #. Navbar tab.
 #: experimental/coursebuilder/views/announcements.html:5
-#: experimental/coursebuilder/views/base_course.html:38
+#: experimental/coursebuilder/views/base_course.html:39
 msgid "Announcements"
 msgstr "Meddelanden"
 
@@ -560,25 +560,25 @@ msgstr "Du har inte fått några granskningar av andra studenters uppgifter än
 
 #. Text on the button for saving a draft answer.
 #: experimental/coursebuilder/views/assessment_html_content.html:31
-#: experimental/coursebuilder/views/base.html:41
+#: experimental/coursebuilder/views/base.html:35
 msgid " Save Draft "
 msgstr " Spara utkast "
 
 #. Text on the button for submitting a peer review.
 #: experimental/coursebuilder/views/assessment_html_content.html:34
-#: experimental/coursebuilder/views/base.html:53
+#: experimental/coursebuilder/views/base.html:47
 msgid " Submit Review "
 msgstr " Skicka granskning "
 
 #. Text on the button for checking a set of answers.
 #: experimental/coursebuilder/views/assessment_html_content.html:42
-#: experimental/coursebuilder/views/base.html:29
+#: experimental/coursebuilder/views/base.html:23
 msgid " Check Answers "
 msgstr " Kontrollera svaren mot facit "
 
 #. Text on the button for submitting answers.
 #: experimental/coursebuilder/views/assessment_html_content.html:50
-#: experimental/coursebuilder/views/base.html:45
+#: experimental/coursebuilder/views/base.html:39
 msgid " Submit Answers "
 msgstr " Skicka svar "
 
@@ -588,49 +588,49 @@ msgid "Assessment"
 msgstr "Bedömning"
 
 #. Text on the button for showing the answer to a question.
-#: experimental/coursebuilder/views/base.html:33
+#: experimental/coursebuilder/views/base.html:27
 msgid " Skip and Show Answer "
 msgstr " Hoppa över och visa svaret "
 
 #. Text on the button for saving answers to a question.
-#: experimental/coursebuilder/views/base.html:37
+#: experimental/coursebuilder/views/base.html:31
 msgid " Save Answers "
 msgstr " Spara svar "
 
 #. Text on the button for submitting a peer-reviewed assignment.
-#: experimental/coursebuilder/views/base.html:49
+#: experimental/coursebuilder/views/base.html:43
 msgid " Submit Assignment "
 msgstr " Skicka uppgift "
 
 #. Text to prompt the student to select a multiple-choice answer.
-#: experimental/coursebuilder/views/base.html:57
+#: experimental/coursebuilder/views/base.html:51
 msgid " Please click one of the buttons for your answer. "
 msgstr " Klicka på en av svarsknapparna. "
 
 #. Text appearing after the student has answered all questions correctly.
-#: experimental/coursebuilder/views/base.html:61
+#: experimental/coursebuilder/views/base.html:55
 msgid " All your answers are correct! "
 msgstr " Du har alla rätt! "
 
 #. Text appearing after the student has answered all questions correctly.
-#: experimental/coursebuilder/views/base.html:65
+#: experimental/coursebuilder/views/base.html:59
 msgid " Number of questions you answered correctly "
 msgstr " Antal rätta svar "
 
 #. Text appearing after the student has submitted an assessment.
-#: experimental/coursebuilder/views/base.html:69
+#: experimental/coursebuilder/views/base.html:63
 msgid " You received a score on this assessment of "
 msgstr " Du fick följande resultat "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:73
+#: experimental/coursebuilder/views/base.html:67
 msgid " Here are lessons you could review to improve your score "
 msgstr " Du kan förbättra resultatet genom att gå igenom följande lektioner "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:77
+#: experimental/coursebuilder/views/base.html:71
 msgid ""
 " Congratulations! Press the \\'Submit Answers\\' button to submit your "
 "grade. "
@@ -640,7 +640,7 @@ msgstr ""
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
-#: experimental/coursebuilder/views/base.html:81
+#: experimental/coursebuilder/views/base.html:75
 msgid ""
 " Press the \\'Submit Answers\\' button below to save your scores. You can"
 " also edit your answers above before clicking \\'Submit Answers\\'. "
@@ -650,47 +650,47 @@ msgstr ""
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit an assignment.
-#: experimental/coursebuilder/views/base.html:85
+#: experimental/coursebuilder/views/base.html:79
 msgid " Are you sure you want to submit this assignment? "
 msgstr " Är du säker på att du vill skicka in den här uppgiften? "
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit a review.
-#: experimental/coursebuilder/views/base.html:89
+#: experimental/coursebuilder/views/base.html:83
 msgid " Are you sure you want to submit this review? "
 msgstr " Är du säker på att du vill skicka in den här granskningen? "
 
 #. Text appearing in a confirmation dialog after 'Are you sure you want to
 #. submit this assignment/review?'
-#: experimental/coursebuilder/views/base.html:93
+#: experimental/coursebuilder/views/base.html:87
 msgid " You cannot edit or delete it after you have done so. "
 msgstr " Du kan varken redigera eller ta bort den när den har skickats in. "
 
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:241
+#: experimental/coursebuilder/views/base.html:235
 msgid "Not registered"
 msgstr "Ej registrerad"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:246
+#: experimental/coursebuilder/views/base.html:240
 msgid "Logout"
 msgstr "Logga ut"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:252
+#: experimental/coursebuilder/views/base.html:246
 msgid "Login"
 msgstr "Logga in"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:289
+#: experimental/coursebuilder/views/base.html:283
 msgid "Privacy & Terms"
 msgstr "Sekretess och villkor"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:295
+#: experimental/coursebuilder/views/base.html:289
 msgid "Locale:"
 msgstr ""
 
@@ -698,20 +698,20 @@ msgstr ""
 #. Navbar tab.
 #. Navigation breadcrumb.
 #: experimental/coursebuilder/views/base_course.html:7
-#: experimental/coursebuilder/views/base_course.html:42
+#: experimental/coursebuilder/views/base_course.html:43
 #: experimental/coursebuilder/views/unit.html:65
 msgid "Course"
 msgstr "Kurs"
 
 #. Navbar tab.
 #. Title of the webpage.
-#: experimental/coursebuilder/views/base_course.html:47
+#: experimental/coursebuilder/views/base_course.html:48
 #: experimental/coursebuilder/views/forum.html:13
 msgid "Forum"
 msgstr "Forum"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:82
+#: experimental/coursebuilder/views/base_course.html:83
 msgid "Registration"
 msgstr "Registrering"
 
@@ -1181,6 +1181,4 @@ msgstr "Nästa sida"
 msgid "End"
 msgstr "Slut"
 
-#~ msgid "You are currently unsubscribed from invitations. "
-#~ msgstr ""
 
