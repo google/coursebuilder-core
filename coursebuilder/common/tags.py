@@ -300,7 +300,7 @@ def html_string_to_element_tree(html_string):
     return parser.parseFragment('<div>%s</div>' % html_string)[0]
 
 
-def html_to_safe_dom(html_string, handler):
+def html_to_safe_dom(html_string, handler, render_custom_tags=True):
     """Render HTML text as a tree of safe_dom elements."""
 
     tag_bindings = get_tag_bindings()
@@ -343,7 +343,7 @@ def html_to_safe_dom(html_string, handler):
         # Otherwise, attempt to parse this tag and all its child tags.
         original_elt = elt
         try:
-            if elt.tag in tag_bindings:
+            if render_custom_tags and elt.tag in tag_bindings:
                 tag = tag_bindings[elt.tag]()
                 if isinstance(tag, ContextAwareTag):
                     # Get or initialize a environment dict for this type of tag.

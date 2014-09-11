@@ -238,7 +238,8 @@ class ContentIO(object):
     @classmethod
     def fromstring(cls, content):
         """Converts HTML string content into an XML tree."""
-        return html_to_safe_dom(unicode(content), None)
+        return (
+            html_to_safe_dom(unicode(content), None, render_custom_tags=False))
 
     @classmethod
     def tostring(cls, tree):
@@ -290,14 +291,14 @@ class TranslationIO(object):
     def _find_replace_for_tag_open(cls, source_delimiter, target_delimiter):
         """Returns regex pattern for replacing delimiter in the open tag."""
         return (
-            r'<([a-zA-Z]+)%s([0-9]+)' % source_delimiter,
+            r'<([a-zA-Z_\-]+)%s([0-9]+)' % source_delimiter,
             '<\\1%s\\2' % target_delimiter)
 
     @classmethod
     def _find_replace_for_tag_close(cls, source_delimiter, target_delimiter):
         """Returns regex pattern for replacing delimiter in the closing tag."""
         return (
-            r'</([a-zA-Z]+)%s([0-9]+)>' % source_delimiter,
+            r'</([a-zA-Z_\-]+)%s([0-9]+)>' % source_delimiter,
             '</\\1%s\\2>' % target_delimiter)
 
     @classmethod
@@ -388,7 +389,11 @@ class TranslationIO(object):
     @classmethod
     def parse_indexed_tag_name(cls, node):
         try:
-            tag_name, index = node.tagName.split('-')
+            # Split off the last component after a '-'. (Note that custom tags
+            # may contain '-' in their tag names.)
+            parts = node.tagName.split('-')
+            index = parts.pop()
+            tag_name = '-'.join(parts)
             return tag_name, int(index)
         except:
             raise SyntaxError(

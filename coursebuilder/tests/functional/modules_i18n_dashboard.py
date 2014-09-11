@@ -496,6 +496,22 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals('unit_footer', footer_section['name'])
         self.assertEquals(0, len(footer_section['data']))
 
+    def test_get_unit_content_with_custom_tag(self):
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit with Tag'
+        unit.unit_header = (
+            'text'
+            '<gcb-youtube videoid="Kdg2drcUjYI" instanceid="c4CLTDvttJEu">'
+            '</gcb-youtube>')
+        self.course.save()
+
+        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        response = self._get_by_key(key)
+        payload = transforms.loads(response['payload'])
+        data = payload['sections'][2]['data']
+        self.assertEquals(1, len(data))
+        self.assertEquals('text<gcb-youtube#1 />', data[0]['source_value'])
+
 
 class CourseContentTranslationTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
@@ -607,3 +623,46 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('TEST LESSON', page_html)
         self.assertNotIn('<p>C</p><p>D</p>', page_html)
         self.assertIn('<p>c</p><p>d</p>', page_html)
+
+    def test_custom_tag_expanded(self):
+        videoid = 'Kdg2drcUjYI'
+        unit_header = (
+            'text'
+            '<gcb-youtube videoid="%s" instanceid="c4CLTDvttJEu">'
+            '</gcb-youtube>' % videoid)
+
+        unit = self.course.add_unit()
+        unit.title = 'Tag Unit'
+        unit.unit_header = unit_header
+        self.course.save()
+
+        unit_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Tag Unit', 'target_value': 'TAG UNIT'}]
+            },
+            'unit_header': {
+                'type': 'html',
+                'source_value': unit_header,
+                'data': [
+                    {
+                        'source_value': 'text<gcb-youtube#1 />',
+                        'target_value': 'TEXT<gcb-youtube#1 />'}]
+            }
+        }
+        unit_key_el = ResourceBundleKey(
+            ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(unit_key_el), unit_bundle))
+
+        page_html = self.get('unit?unit=%s' % unit.unit_id).body
+        dom = self.parse_html_string(page_html)
+        main = dom.find('.//div[@id="gcb-main-article"]/div[1]')
+        self.assertEquals('TEXT', main.text.strip())
+        self.assertEquals('div', main[0].tag)
+        self.assertEquals('gcb-video-container', main[0].attrib['class'])
+        self.assertEquals(1, len(main[0]))
+        self.assertEquals('iframe', main[0][0].tag)
+        self.assertIn(videoid, main[0][0].attrib['src'])

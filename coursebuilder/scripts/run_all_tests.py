@@ -82,14 +82,14 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 3,
+    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 4,
     'tests.functional.modules_i18n_dashboard.ResourceKeyTests': 2,
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 1,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
     'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleRestHandlerTests': 4,
+        '.TranslationConsoleRestHandlerTests': 5,
     'tests.functional.modules_invitation.InvitationHandlerTests': 15,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
@@ -358,7 +358,7 @@ def setup_all_dependencies():
 def chunk_list(l, n):
     """Yield successive n-sized chunks from l."""
     for i in xrange(0, len(l), n):
-        yield l[i:i+n]
+        yield l[i:i + n]
 
 
 def run_all_tests(skip_expensive_tests, verbose):

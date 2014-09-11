@@ -725,6 +725,9 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         map_lists_source_to_target = (
             xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
+        config = xcontent.Configuration(opaque_tag_names=[
+            tag_name.upper()
+            for tag_name in tags.Registry.get_all_tags().keys()])
         sections = []
         for mapping in mappings:
             if mapping.type == TYPE_HTML:
@@ -733,7 +736,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                     field_dict = resource_bundle_dto.dict.get(mapping.name)
                     if field_dict:
                         existing_mappings = field_dict['data']
-                transformer = xcontent.ContentTransformer()
+                transformer = xcontent.ContentTransformer(config=config)
                 context = xcontent.Context(
                     xcontent.ContentIO.fromstring(mapping.source_value))
                 transformer.decompose(context)
@@ -910,7 +913,10 @@ class LazyTranslator(object):
         try:
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
-            transformer = xcontent.ContentTransformer()
+            config = xcontent.Configuration(opaque_tag_names=[
+                tag_name.upper()
+                for tag_name in tags.Registry.get_all_tags().keys()])
+            transformer = xcontent.ContentTransformer(config=config)
             transformer.decompose(context)
 
             resource_bundle = [
