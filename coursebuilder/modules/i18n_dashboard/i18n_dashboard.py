@@ -105,6 +105,31 @@ class ResourceKey(object):
         index = key_str.index(':')
         return ResourceKey(key_str[:index], key_str[index + 1:])
 
+    def get_title(self, app_context):
+        course = courses.Course(None, app_context=app_context)
+
+        if self._type == ResourceKey.UNIT_TYPE:
+            return utils.display_unit_title(course.find_unit_by_id(self._key))
+        elif self._type == ResourceKey.LESSON_TYPE:
+            lesson = course.find_lesson_by_id(None, self._key)
+            return utils.display_lesson_title(
+                course.get_unit_for_lesson(lesson), lesson)
+        elif self._type in [ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE]:
+            return course.find_unit_by_id(self._key).title
+        elif self._type == ResourceKey.ASSET_IMG_TYPE:
+            return self._key
+        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
+            schema = course.create_settings_schema()
+            return schema.sub_registries[self._key].title
+        elif self._type == ResourceKey.QUESTION_TYPE:
+            qu = models.QuestionDAO.load(self._key)
+            return qu.description
+        elif self._type in ResourceKey.QUESTION_GROUP_TYPE:
+            qgp = models.QuestionGroupDAO.load(self._key)
+            return qgp.description
+
+        return 'none'
+
     def get_schema_data_for_resource(self, app_context):
         course = courses.Course(None, app_context=app_context)
         if self.type == ResourceKey.ASSESSMENT_TYPE:
@@ -323,23 +348,8 @@ class ResourceRow(TableRow):
 
     @property
     def name(self):
-        if self._type == ResourceKey.UNIT_TYPE:
-            return utils.display_unit_title(self._resource)
-        elif self._type == ResourceKey.LESSON_TYPE:
-            return utils.display_lesson_title(
-                self._course.find_unit_by_id(self._resource.unit_id),
-                self._resource)
-        elif self._type in [ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE]:
-            return self._resource.title
-        elif self._type == ResourceKey.ASSET_IMG_TYPE:
-            return self._key
-        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return self._key
-        elif self._type in [
-                ResourceKey.QUESTION_GROUP_TYPE, ResourceKey.QUESTION_TYPE]:
-            return self._resource.description
-
-        return 'none'
+        return ResourceKey(self._type, self._key).get_title(
+            self._course.app_context)
 
     @property
     def class_name(self):
@@ -514,7 +524,9 @@ class I18nDashboardHandler(BaseDashboardExtension):
         # Course settings
         data_rows = []
 
-        for section in ['base', 'course', 'reg_form', 'homepage', 'unit']:
+        for section in [
+                'course', 'registration', 'homepage', 'unit', 'i18n',
+                'invitation']:
             data_rows.append(self._get_resource_row(
                 None, ResourceKey.COURSE_SETTINGS_TYPE, section))
         rows += self._make_table_section(data_rows, 'Course Settings')
@@ -601,6 +613,10 @@ def tc_generate_schema():
     schema = schema_fields.FieldRegistry(
         'Translation Console', extra_schema_dict_values={
             'className': 'inputEx-Group translation-console'})
+
+    schema.add_property(schema_fields.SchemaField(
+        'title', 'Title', 'string', editable=False))
+
     schema.add_property(schema_fields.SchemaField(
         'key', 'ID', 'string', hidden=True))
     schema.add_property(schema_fields.SchemaField(
@@ -782,6 +798,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         payload_dict = {
             'key': str(key),
+            'title': key.resource_key.get_title(self.app_context),
             'source_locale': self.app_context.get_environ()['course']['locale'],
             'target_locale': key.locale,
             'sections': sorted(sections, cmp=cmp_sections)

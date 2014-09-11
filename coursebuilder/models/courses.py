@@ -2315,6 +2315,13 @@ class Course(object):
                 lessons.append(lesson)
         return lessons
 
+    def get_unit_for_lesson(self, the_lesson):
+        for unit in self.get_units():
+            for lesson in self.get_lessons(unit.unit_id):
+                if lesson.lesson_id == the_lesson.lesson_id:
+                    return unit
+        return None
+
     def save(self):
         return self._model.save()
 
