@@ -60,7 +60,7 @@ from modules.unsubscribe import unsubscribe
 
 # The intent recorded for the emails sent by the notifications module
 INVITATION_INTENT = 'course_invitation'
-COURSE_SETTINGS_SCHEMA_SECTION = 'invitation'
+COURSE_SETTINGS_SCHEMA_SECTION = courses.Course.SCHEMA_SECTION_COURSE
 
 RESOURCES_PATH = '/modules/invitation/resources'
 
@@ -295,7 +295,7 @@ def get_course_settings_fields():
         description='The email address shown as the sender for invitation '
             'emails to this course.',
         extra_schema_dict_values={'className': 'invitation-data inputEx-Field'},
-        optional=True)
+        optional=True, i18n=False)
     subject_template = schema_fields.SchemaField(
         'course:invitation_email:subject_template',
         'Invitation Subject Line', 'string',

@@ -56,6 +56,7 @@ VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
 
 TYPE_HTML = 'html'
 TYPE_STRING = 'string'
+TYPE_TEXT = 'text'
 TYPE_URL = 'url'
 
 
@@ -525,8 +526,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
         data_rows = []
 
         for section in [
-                'course', 'registration', 'homepage', 'unit', 'i18n',
-                'invitation']:
+                'course', 'registration', 'homepage', 'unit', 'i18n']:
             data_rows.append(self._get_resource_row(
                 None, ResourceKey.COURSE_SETTINGS_TYPE, section))
         rows += self._make_table_section(data_rows, 'Course Settings')
@@ -673,7 +673,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         """Filter only translatable strings."""
         return schema_fields.ValueToTypeBinding.filter_on_criteria(
             binding,
-            type_names=[TYPE_HTML, TYPE_STRING, TYPE_URL],
+            type_names=[TYPE_HTML, TYPE_STRING, TYPE_TEXT, TYPE_URL],
             hidden_values=[False],
             i18n_values=[None, True],
             editable_values=[True])

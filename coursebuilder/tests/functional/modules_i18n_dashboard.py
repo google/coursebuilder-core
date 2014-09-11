@@ -220,7 +220,6 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Homepage',
             'Units and Lessons',
             'I18N',
-            'Invitation',
             'Course Outline',
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
@@ -277,7 +276,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             td = row.findall('td')[index]
             self.assertIn(class_name, td.get('class').split())
 
-        lesson_row_index = 9
+        lesson_row_index = 8
         extra_env = {
             'extra_locales': [
                 {'locale': 'el', 'availability': 'unavailable'},
