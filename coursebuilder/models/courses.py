@@ -397,6 +397,9 @@ class Unit12(object):
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
 
+    def is_old_style_assessment(self):
+        return self.is_assessment()
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -711,6 +714,9 @@ class Unit13(object):
 
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
+
+    def is_old_style_assessment(self):
+        return self.is_assessment() and not self.html_content
 
     def needs_human_grader(self):
         return self.workflow.get_grader() == HUMAN_GRADER
@@ -1549,18 +1555,22 @@ class CourseModel13(object):
             if dst_unit.is_assessment():
                 copy_assessment12_into_assessment13(src_unit, dst_unit, errors)
 
-        def copy_unit13_into_unit13(src_unit, dst_unit):
+        def copy_unit13_into_unit13(src_unit, dst_unit, errors):
             """Copies unit13 attributes to a new unit."""
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
             dst_unit.workflow_yaml = src_unit.workflow_yaml
 
             if dst_unit.is_assessment():
-                dst_unit.properties = copy.deepcopy(src_unit.properties)
-                dst_unit.weight = src_unit.weight
-                dst_unit.html_content = src_unit.html_content
-                dst_unit.html_check_answers = src_unit.html_check_answers
-                dst_unit.html_review_form = src_unit.html_review_form
+                if src_unit.is_old_style_assessment():
+                    copy_assessment12_into_assessment13(
+                        src_unit, dst_unit, errors)
+                else:
+                    dst_unit.properties = copy.deepcopy(src_unit.properties)
+                    dst_unit.weight = src_unit.weight
+                    dst_unit.html_content = src_unit.html_content
+                    dst_unit.html_check_answers = src_unit.html_check_answers
+                    dst_unit.html_review_form = src_unit.html_review_form
 
         def import_lesson12_activities(
                 text, unit, lesson_w_activity, lesson_title, errors):
@@ -1736,7 +1746,7 @@ class CourseModel13(object):
                 # import unit
                 new_unit = self.add_unit(unit.type, unit.title)
                 if src_course.version == CourseModel13.VERSION:
-                    copy_unit13_into_unit13(unit, new_unit)
+                    copy_unit13_into_unit13(unit, new_unit, errors)
                 elif src_course.version == CourseModel12.VERSION:
                     copy_unit12_into_unit13(unit, new_unit, errors)
                 else:

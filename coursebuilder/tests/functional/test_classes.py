@@ -4583,6 +4583,71 @@ var activity = [
         namespace_manager.set_namespace(self.old_namespace)
         super(ImportActivityTests, self).tearDown()
 
+    def test_import_course13_w_assessment12(self):
+        """Tests importing a new-style course with old-style assessment."""
+
+        # set up the src and dst courses ver.13
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+        src_app_ctx = sites.get_all_courses()[0]
+        src_course = courses.Course(None, app_context=src_app_ctx)
+        dst_app_ctx = sites.get_all_courses()[0]
+        dst_course = courses.Course(None, app_context=dst_app_ctx)
+
+        # add old-style assessment to the src
+        a1_title = 'Assessment content version 12'
+        a1 = src_course.add_assessment()
+        a1.title = a1_title
+        src_course.update_unit(a1)
+        assessment_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Pre.js'), 'rb').readlines()
+        assessment_content = u''.join(assessment_content)
+        errors = []
+        src_course.set_assessment_content(
+            a1, assessment_content, errors)
+
+        # add new style assessment to src
+        a2_title = 'Assessment content version 13'
+        a2_html_content = 'content'
+        a2 = src_course.add_assessment()
+        a2.title = a2_title
+        a2.html_content = a2_html_content
+        a2.html_check_answers = 'check'
+        a2.html_review_form = 'review'
+        a2.workflow_yaml = 'a: 3'
+        src_course.update_unit(a2)
+
+        # add empty new style assessment to src
+        a3 = src_course.add_assessment()
+        a3.title = 'Assessment empty version 13'
+        src_course.update_unit(a3)
+
+        # save course and confirm assessments
+        src_course.save()
+        assert not errors
+        assessment_content_stored = src_course.app_context.fs.get(os.path.join(
+            src_course.app_context.get_home(),
+            src_course.get_assessment_filename(a1.unit_id)))
+        assert assessment_content == assessment_content_stored
+
+        # import course
+        dst_course.import_from(src_app_ctx, errors)
+        self.assertEqual(1, len(errors))
+        self.assertEqual('Unable to parse assessment: 3', errors[0])
+
+        # assert old-style assessment has been ported to a new-style one
+        dst_a1 = dst_course.get_units()[0]
+        self.assertEqual('A', dst_a1.type)
+        self.assertEqual(a1_title, dst_a1.title)
+        assert dst_a1.html_content
+        dst_a2 = dst_course.get_units()[1]
+        self.assertEqual('A', dst_a1.type)
+        self.assertEqual(a2_title, dst_a2.title)
+        self.assertEqual(a2_html_content, dst_a2.html_content)
+
+        # cleaning up
+        sites.reset_courses()
+
     def test_import_lesson13_w_activity12_to_lesson13(self):
 
         # Setup the src and destination courses.

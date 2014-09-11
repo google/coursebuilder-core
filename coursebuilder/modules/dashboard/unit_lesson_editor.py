@@ -478,11 +478,11 @@ class UnitTools(object):
         unit_common.update({
             'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
             'content': content,
-            'html_content': (unit.html_content or ''
-                             if hasattr(unit, 'html_content') else ''),
+            'html_content': (
+                '' if unit.is_old_style_assessment() else unit.html_content),
             'html_check_answers': (
-                unit.html_check_answers
-                if hasattr(unit, 'html_check_answers') else False),
+                False if unit.is_old_style_assessment()
+                else unit.html_check_answers),
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
                 submission_due_date),
             workflow_key(courses.GRADER_KEY): workflow.get_grader(),
