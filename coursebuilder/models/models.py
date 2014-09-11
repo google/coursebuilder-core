@@ -991,6 +991,12 @@ class BaseJsonDao(object):
             cls.DTO(e.key().id(), transforms.loads(e.data)) for e in entities]
 
     @classmethod
+    def _maybe_apply_post_hooks(cls, dto_list):
+        if hasattr(cls, 'POST_LOAD_HOOKS'):
+            for hook in cls.POST_LOAD_HOOKS:
+                hook(dto_list)
+
+    @classmethod
     def _load_entity(cls, obj_id):
         if not obj_id:
             return None
@@ -1010,7 +1016,9 @@ class BaseJsonDao(object):
     def load(cls, obj_id):
         entity = cls._load_entity(obj_id)
         if entity:
-            return cls.DTO(obj_id, transforms.loads(entity.data))
+            dto = cls.DTO(obj_id, transforms.loads(entity.data))
+            cls._maybe_apply_post_hooks([dto])
+            return dto
         else:
             return None
 
@@ -1032,10 +1040,13 @@ class BaseJsonDao(object):
         # weave the results together
         ret = []
         memcache_update = {}
+        dtos_for_post_hooks = []
         for obj_id, memcache_key in both_keys:
             entity = datastore_entities.get(obj_id)
             if entity is not None:
-                ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
+                dto = cls.DTO(obj_id, transforms.loads(entity.data))
+                ret.append(dto)
+                dtos_for_post_hooks.append(dto)
                 memcache_update[memcache_key] = entity
             elif memcache_key not in memcache_entities:
                 ret.append(None)
@@ -1046,6 +1057,7 @@ class BaseJsonDao(object):
                     ret.append(None)
                 else:
                     ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
+        cls._maybe_apply_post_hooks(dtos_for_post_hooks)
         MemcacheManager.set_multi(memcache_update)
         return ret
 
@@ -1151,6 +1163,8 @@ class QuestionDAO(LastModfiedJsonDao):
     DTO = QuestionDTO
     ENTITY = QuestionEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
+    # Enable other modules to add post-load transformations
+    POST_LOAD_HOOKS = []
 
     @classmethod
     def used_by(cls, question_id):
@@ -1457,6 +1471,8 @@ class QuestionGroupDAO(LastModfiedJsonDao):
     DTO = QuestionGroupDTO
     ENTITY = QuestionGroupEntity
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
+    # Enable other modules to add post-load transformations
+    POST_LOAD_HOOKS = []
 
     @classmethod
     def get_question_groups_descriptions(cls):

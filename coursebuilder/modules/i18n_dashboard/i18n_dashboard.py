@@ -77,12 +77,14 @@ class ResourceKey(object):
     LESSON_TYPE = 'lesson'
     LINK_TYPE = 'link'
     QUESTION_GROUP_TYPE = 'question_group'
-    QUESTION_TYPE = 'question'
+    QUESTION_MC_TYPE = 'question_mc'
+    QUESTION_SA_TYPE = 'question_sa'
     UNIT_TYPE = 'unit'
 
     RESOURCE_TYPES = [
         ASSESSMENT_TYPE, ASSET_IMG_TYPE, COURSE_SETTINGS_TYPE, LESSON_TYPE,
-        LINK_TYPE, QUESTION_GROUP_TYPE, QUESTION_TYPE, UNIT_TYPE]
+        LINK_TYPE, QUESTION_GROUP_TYPE, QUESTION_MC_TYPE, QUESTION_SA_TYPE,
+        UNIT_TYPE]
 
     def __init__(self, type_str, key):
         self._type = type_str
@@ -122,65 +124,81 @@ class ResourceKey(object):
         elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
             schema = course.create_settings_schema()
             return schema.sub_registries[self._key].title
-        elif self._type == ResourceKey.QUESTION_TYPE:
+        elif self._type in [
+                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
             qu = models.QuestionDAO.load(self._key)
             return qu.description
         elif self._type in ResourceKey.QUESTION_GROUP_TYPE:
             qgp = models.QuestionGroupDAO.load(self._key)
             return qgp.description
+        else:
+            return 'none'
 
-        return 'none'
-
-    def get_schema_data_for_resource(self, app_context):
+    def get_schema(self, app_context):
         course = courses.Course(None, app_context=app_context)
         if self.type == ResourceKey.ASSESSMENT_TYPE:
-            schema = unit_lesson_editor.AssessmentRESTHandler.SCHEMA
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return (schema, unit_dict)
+            return unit_lesson_editor.AssessmentRESTHandler.SCHEMA
         elif self.type == ResourceKey.LINK_TYPE:
-            schema = unit_lesson_editor.LinkRESTHandler.SCHEMA
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return (schema, unit_dict)
+            return unit_lesson_editor.LinkRESTHandler.SCHEMA
         elif self.type == ResourceKey.UNIT_TYPE:
-            schema = unit_lesson_editor.UnitRESTHandler.SCHEMA
-            unit = course.find_unit_by_id(self.key)
-            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
-            return (schema, unit_dict)
+            return unit_lesson_editor.UnitRESTHandler.SCHEMA
         elif self.type == ResourceKey.LESSON_TYPE:
             units = course.get_units()
+            return unit_lesson_editor.LessonRESTHandler.get_schema(units)
+        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
+            return course.create_settings_schema().clone_only_items_named(
+                [self.key])
+        elif self.type == ResourceKey.QUESTION_MC_TYPE:
+            return question_editor.McQuestionRESTHandler.get_schema()
+        elif self.type == ResourceKey.QUESTION_SA_TYPE:
+            return question_editor.SaQuestionRESTHandler.get_schema()
+        elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
+            return question_group_editor.QuestionGroupRESTHandler.get_schema()
+        else:
+            raise ValueError('Unknown content type: %s' % self.type)
+
+    def get_data_dict(self, app_context):
+        course = courses.Course(None, app_context=app_context)
+        if self.type == ResourceKey.ASSESSMENT_TYPE:
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return unit_dict
+        elif self.type == ResourceKey.LINK_TYPE:
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return unit_dict
+        elif self.type == ResourceKey.UNIT_TYPE:
+            unit = course.find_unit_by_id(self.key)
+            unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
+            return unit_dict
+        elif self.type == ResourceKey.LESSON_TYPE:
             lesson = course.find_lesson_by_id(None, self.key)
-            return (
-                unit_lesson_editor.LessonRESTHandler.get_schema(units),
-                unit_lesson_editor.LessonRESTHandler.get_lesson_dict(
-                    app_context, lesson))
+            return unit_lesson_editor.LessonRESTHandler.get_lesson_dict(
+                app_context, lesson)
         elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
             schema = course.create_settings_schema().clone_only_items_named(
                 [self.key])
             json_entity = {}
             schema.convert_entity_to_json_entity(
                 course.get_environ(app_context), json_entity)
-            return (schema, json_entity[self.key])
-        elif self.type == ResourceKey.QUESTION_TYPE:
-            question = models.QuestionDAO.load(int(self.key))
-            if question.type == models.QuestionDTO.MULTIPLE_CHOICE:
-                return (
-                    question_editor.McQuestionRESTHandler.get_schema(),
-                    question.dict)
-            elif question.type == models.QuestionDTO.SHORT_ANSWER:
-                return (
-                    question_editor.SaQuestionRESTHandler.get_schema(),
-                    question.dict)
-            else:
-                raise ValueError('Unknown question type: %s' % question.type)
+            return json_entity[self.key]
+        elif self.type in [
+                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
+            return models.QuestionDAO.load(int(self.key)).dict
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
-            question_group = models.QuestionGroupDAO.load(int(self.key))
-            return (
-                question_group_editor.QuestionGroupRESTHandler.get_schema(),
-                question_group.dict)
+            return models.QuestionGroupDAO.load(int(self.key)).dict
         else:
             raise ValueError('Unknown content type: %s' % self.type)
+
+    @classmethod
+    def get_question_type(cls, qu):
+        """Utility to convert between question type codes."""
+        if qu.type == models.QuestionDTO.MULTIPLE_CHOICE:
+            return ResourceKey.QUESTION_MC_TYPE
+        elif qu.type == models.QuestionDTO.SHORT_ANSWER:
+            return ResourceKey.QUESTION_SA_TYPE
+        else:
+            raise ValueError('Unknown question type: %s' % qu.type)
 
 
 class ResourceBundleKey(object):
@@ -397,7 +415,8 @@ class ResourceRow(TableRow):
             return self._key
         elif self._type in [
                 ResourceKey.COURSE_SETTINGS_TYPE, ResourceKey.LINK_TYPE,
-                ResourceKey.QUESTION_GROUP_TYPE, ResourceKey.QUESTION_TYPE]:
+                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE,
+                ResourceKey.QUESTION_GROUP_TYPE]:
             return 'javascript:void(0)'
 
         raise ValueError('Unknown type %s' % self._type)
@@ -557,9 +576,11 @@ class I18nDashboardHandler(BaseDashboardExtension):
         rows += self._make_table_section(data_rows, 'Images and Documents')
 
         # Run over questions and question groups
-        data_rows = [
-            self._get_resource_row(qu, ResourceKey.QUESTION_TYPE, qu.id)
-            for qu in models.QuestionDAO.get_all()]
+        data_rows = []
+        for qu in models.QuestionDAO.get_all():
+            qu_type = ResourceKey.get_question_type(qu)
+            data_rows.append(self._get_resource_row(qu, qu_type, qu.id))
+
         rows += self._make_table_section(data_rows, 'Questions')
 
         data_rows = [
@@ -697,8 +718,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': str(key)})
             return
 
-        schema, values = key.resource_key.get_schema_data_for_resource(
-            self.app_context)
+        schema = key.resource_key.get_schema(self.app_context)
+        values = key.resource_key.get_data_dict(self.app_context)
 
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             values, schema)
@@ -966,12 +987,54 @@ def translate_course(course):
     translate_list(units + lessons, ResourceBundleDAO.bulk_load(keys))
 
 
+def translate_dto_list(dto_list, key_list):
+    if not sites.is_localized_content_allowed():
+        return
+
+    app_context = sites.get_course_for_current_request()
+    if app_context is None:
+        return
+
+    locale = sites.get_current_locale(app_context)
+
+    bundle_list = ResourceBundleDAO.bulk_load(
+        [str(ResourceBundleKey(key.type, key.key, locale)) for key in key_list])
+
+    for resource_key, dto, bundle in zip(key_list, dto_list, bundle_list):
+        if bundle is None:
+            continue
+        schema = resource_key.get_schema(app_context)
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            dto.dict, schema)
+        for name, translation_dict in bundle.dict.items():
+            source_value = binding.name_to_value[name].value
+            binding.name_to_value[name].value = LazyTranslator(
+                source_value, translation_dict)
+
+
+def translate_question_dto(dto_list):
+    key_list = []
+    for dto in dto_list:
+        qu_type = ResourceKey.get_question_type(dto)
+        key_list.append(ResourceKey(qu_type, dto.id))
+    translate_dto_list(dto_list, key_list)
+
+
+def translate_question_group_dto(dto_list):
+    key_list = [
+        ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, dto.id)
+        for dto in dto_list]
+    translate_dto_list(dto_list, key_list)
+
+
 def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
         [I18nDashboardHandler.ACTION, 'i18n'])
     I18nDashboardHandler.register()
     TranslationConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
+    models.QuestionDAO.POST_LOAD_HOOKS.append(translate_question_dto)
+    models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
 
 
 def notify_module_disabled():
@@ -980,6 +1043,8 @@ def notify_module_disabled():
     I18nDashboardHandler.unregister()
     TranslationConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)
+    models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
+    models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
 
 
 def register_module():

@@ -406,17 +406,20 @@ class FieldRegistry(Registry):
 class SchemaFieldValue(object):
     """This class represents an instance of a field value."""
 
-    def __init__(self, name, field, value):
+    def __init__(self, name, field, value, setter):
         """An object that name, value and type of a field.
 
         Args:
             name: a name of the value
             field: SchemaField object that holds the type
             value: Python object that holds the value
+            setter: a function which sets the value in the underlying data
+                structure
         """
         self._name = name
         self._field = field
         self._value = value
+        self._setter = setter
 
     @property
     def name(self):
@@ -429,6 +432,11 @@ class SchemaFieldValue(object):
     @property
     def value(self):
         return self._value
+
+    @value.setter
+    def value(self, new_value):
+        self._value = new_value
+        self._setter(new_value)
 
 
 class _FieldRegistryIndex(object):
@@ -517,14 +525,21 @@ class ValueToTypeBinding(object):
         return result
 
     @classmethod
+    def _get_setter(cls, entity, key):
+        def setter(value):
+            entity[key] = value
+        return setter
+
+    @classmethod
     def _visit_dict(cls, index, parent_names, entity, binding):
         """Visit dict entity."""
         for _name, _value in entity.items():
             cls._decompose_entity(
-                index, parent_names + [_name], _value, binding)
+                index, parent_names + [_name], _value, binding,
+                cls._get_setter(entity, _name))
 
     @classmethod
-    def _visit_list(cls, index, parent_names, entity, binding):
+    def _visit_list(cls, index, parent_names, entity, binding, setter):
         """Visit list entity."""
         name_no_index, name = index.registry.compute_name(parent_names)
         _field = index.find(name_no_index)
@@ -534,22 +549,23 @@ class ValueToTypeBinding(object):
             binding.name_to_field[name] = _field
             assert name not in binding.name_to_value, name
             binding.name_to_value[name] = SchemaFieldValue(
-                name, _field, entity)
+                name, _field, entity, setter)
             for _index, _item in enumerate(entity):
                 _item_name = '[%s]' % _index
                 cls._decompose_entity(
-                    index, parent_names + [_item_name], _item, binding)
+                    index, parent_names + [_item_name], _item, binding,
+                    cls._get_setter(entity, _index))
         else:
             assert name not in binding.unmapped_names
             binding.unmapped_names.add(name)
 
     @classmethod
-    def _visit_attribute(cls, index, parent_names, entity, binding):
+    def _visit_attribute(cls, index, parent_names, entity, binding, setter):
         """Visit simple attribute."""
         name_no_index, name = index.registry.compute_name(parent_names)
         _field = index.find(name_no_index)
         if _field:
-            _value = SchemaFieldValue(name, _field, entity)
+            _value = SchemaFieldValue(name, _field, entity, setter)
             binding.value_list.append(_value)
             assert name not in binding.name_to_value, name
             binding.name_to_value[name] = _value
@@ -561,14 +577,14 @@ class ValueToTypeBinding(object):
 
     @classmethod
     def _decompose_entity(
-        cls, index, parent_names, entity, binding):
+        cls, index, parent_names, entity, binding, setter):
         """Recursively decomposes entity."""
         if isinstance(entity, dict):
             cls._visit_dict(index, parent_names, entity, binding)
         elif isinstance(entity, list):
-            cls._visit_list(index, parent_names, entity, binding)
+            cls._visit_list(index, parent_names, entity, binding, setter)
         else:
-            cls._visit_attribute(index, parent_names, entity, binding)
+            cls._visit_attribute(index, parent_names, entity, binding, setter)
 
     @classmethod
     def bind_entity_to_schema(cls, json_dumpable_entity, registry):
@@ -586,6 +602,6 @@ class ValueToTypeBinding(object):
         index = _FieldRegistryIndex(registry)
         index.rebuild()
         cls._decompose_entity(
-            index, [], json_dumpable_entity, binding)
+            index, [], json_dumpable_entity, binding, None)
         binding.index = index
         return binding

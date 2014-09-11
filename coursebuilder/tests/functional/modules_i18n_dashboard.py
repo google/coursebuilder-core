@@ -665,3 +665,147 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(1, len(main[0]))
         self.assertEquals('iframe', main[0][0].tag)
         self.assertIn(videoid, main[0][0].attrib['src'])
+
+    def _add_question(self):
+        # Create a question
+        qu_dict = {
+            'type': 0,
+            'question': 'question text',
+            'description': 'description text',
+            'choices': [
+                {'text': 'choice 1', 'score': 0.0, 'feedback': ''},
+                {'text': 'choice 2', 'score': 1.0, 'feedback': ''}],
+            'multiple_selections': False,
+            'last_modified': 1410451682.042784,
+            'version': '1.5'
+        }
+        qu_dto = models.QuestionDTO(None, qu_dict)
+        qu_id = models.QuestionDAO.save(qu_dto)
+
+        # Store translation data for the question
+        qu_bundle = {
+            'question': {
+                'type': 'html',
+                'source_value': 'question text',
+                'data': [
+                    {
+                        'source_value': 'question text',
+                        'target_value': 'QUESTION TEXT'
+                    }]
+            },
+            'description': {
+                'source_value': None,
+                'type': 'string',
+                'data': [
+                    {
+                        'source_value': 'description text',
+                        'target_value': 'DESCRIPTION TEXT'
+                    }]
+            },
+            'choices:[0]:text': {
+                'type': 'html',
+                'source_value': 'choice 1',
+                'data': [
+                    {
+                        'source_value': 'choice 1',
+                        'target_value': 'CHOICE 1'
+                    }
+                ]
+            },
+            'choices:[1]:text': {
+                'source_value': 'choice 2',
+                'type': 'html',
+                'data': [
+                    {
+                        'source_value': 'choice 2',
+                        'target_value': 'CHOICE 2'
+                    }
+                ]
+            }}
+        key_el = ResourceBundleKey(
+            ResourceKey.QUESTION_MC_TYPE, qu_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(key_el), qu_bundle))
+
+        return qu_id
+
+    def test_questions_are_translated(self):
+        # Create an assessment and add the question to the content
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.html_content = """
+            <question quid="%s" weight="1" instanceid="test_question"></question>
+        """ % self._add_question()
+        self.course.save()
+
+        page_html = self.get('assessment?name=%s' % assessment.unit_id).body
+        self.assertIn('QUESTION TEXT', page_html)
+        self.assertIn('CHOICE 1', page_html)
+        self.assertIn('CHOICE 2', page_html)
+
+    def test_question_groupss_are_translated(self):
+        # Create a question group with one question
+        qgp_dict = {
+            'description': 'description text',
+            'introduction': '<p>a</p><p>b</p>',
+            'items': [{'question': self._add_question(), 'weight': '1'}],
+            'last_modified': 1410451682.042784,
+            'version': '1.5'
+        }
+        qgp_dto = models.QuestionGroupDTO(None, qgp_dict)
+        qgp_id = models.QuestionGroupDAO.save(qgp_dto)
+
+        # Create an assessment and add the question group to the content
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.html_content = """
+            <question-group qgid="%s" instanceid="test-qgp">
+            </question-group><br>
+        """ % qgp_id
+        self.course.save()
+
+        # Store translation data for the question
+        qgp_bundle = {
+            'description': {
+                'source_value': None,
+                'type': 'string',
+                'data': [
+                    {
+                        'source_value': 'description text',
+                        'target_value': 'DESCRIPTION TEXT'
+                    }]
+            },
+            'introduction': {
+                'type': 'html',
+                'source_value': '<p>a</p><p>b</p>',
+                'data': [
+                    {
+                        'source_value': 'a',
+                        'target_value': 'A'
+                    },
+                    {
+                        'source_value': 'b',
+                        'target_value': 'B'
+                    }
+                ]
+            }}
+        key_el = ResourceBundleKey(
+            ResourceKey.QUESTION_GROUP_TYPE, qgp_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(key_el), qgp_bundle))
+
+        page_html = self.get('assessment?name=%s' % assessment.unit_id).body
+        dom = self.parse_html_string(page_html)
+        main = dom.find('.//div[@id="test-qgp"]')
+        self.assertEquals(
+            'A', main.find('.//div[@class="qt-introduction"]/p[1]').text)
+        self.assertEquals(
+            'B', main.find('.//div[@class="qt-introduction"]/p[2]').text)
+        self.assertEquals(
+            'QUESTION TEXT', main.find('.//div[@class="qt-question"]').text)
+        self.assertEquals(
+            'CHOICE 1',
+            main.findall('.//div[@class="qt-choices"]//label')[0].text.strip())
+        self.assertEquals(
+            'CHOICE 2',
+            main.findall('.//div[@class="qt-choices"]//label')[1].text.strip())
