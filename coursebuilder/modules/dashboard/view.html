@@ -59,6 +59,11 @@
           {% else %}
           <form id='{{ action.id }}' action='{{ action.action }}' method='POST'>
             <input type="hidden" name="xsrf_token" value="{{ action.xsrf_token }}">
+            {% if action.params %}
+              {% for name, value in action.params.iteritems() %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+              {% endfor %}
+            {% endif %}
             <button class="gcb-button gcb-pull-right" type="submit">{{ action.caption }}</button>
           </form>
           {% endif %}

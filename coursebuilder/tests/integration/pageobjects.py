@@ -315,6 +315,7 @@ class DashboardPage(PageObject):
 
     def click_settings(self):
         self.find_element_by_link_text('Settings').click()
+        self.find_element_by_link_text('Homepage').click()
         return SettingsPage(self._tester)
 
     def verify_course_outline_contains_unit(self, unit_title):
@@ -466,7 +467,7 @@ class SettingsPage(PageObject):
         super(SettingsPage, self).__init__(tester)
 
         def successful_load(unused_driver):
-            tab = self.find_element_by_link_text('Settings')
+            tab = self.find_element_by_link_text('Homepage')
             print tab, tab.get_attribute('class'), tab.get_attribute('href')
             return 'selected' == tab.get_attribute('class')
 
@@ -474,7 +475,7 @@ class SettingsPage(PageObject):
 
     def click_course_options(self):
         self.find_element_by_css_selector(
-            '#edit_basic_course_settings_course > button').click()
+            '#edit_course_settings > button').click()
         return CourseOptionsEditorPage(self._tester)
 
 

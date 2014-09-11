@@ -1381,7 +1381,7 @@ class CourseAuthorAspectTest(actions.TestBase):
         assert_contains('assets/lib/activity-generic-1.3.js', response.body)
 
         # Test settings view.
-        response = self.get('dashboard?action=settings')
+        response = self.get('dashboard?action=settings&tab=advanced')
         # Verify title does not have link text
         assert_contains(
             '<title>Course Builder &gt; Power Searching with Google &gt; Dash',
@@ -2881,7 +2881,7 @@ class I18NTest(MultipleCoursesTestBase):
         assert_page_contains(
             'assets', [self.course_ru.title])
         assert_page_contains(
-            'settings', [
+            '', [
                 self.course_ru.title,
                 vfs.AbstractFileSystem.normpath(self.course_ru.home)])
 
@@ -3161,14 +3161,15 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         email = 'test_get_put_file@google.com'
 
         actions.login(email, is_admin=True)
-        response = self.get('dashboard?action=settings')
+        response = self.get('dashboard?action=settings&tab=advanced')
 
         # Check course.yaml edit form.
         compute_form = response.forms['edit_course_yaml']
         response = self.submit(compute_form)
         assert_equals(response.status_int, 302)
         assert_contains(
-            'dashboard?action=edit_settings&key=%2Fcourse.yaml',
+            'dashboard?action=edit_settings&tab_title=Advanced'
+            '&tab=advanced&key=%2Fcourse.yaml',
             response.location)
         response = self.get(response.location)
         assert_contains('rest/files/item?key=%2Fcourse.yaml', response.body)

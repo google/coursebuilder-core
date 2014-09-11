@@ -66,8 +66,9 @@ their assignment submission and any associated reviews.
 """, None)
 
 CONTENTS_OF_THE_COURSE_DESCRIPTION = assemble_sanitized_message("""
-The course.yaml file contains many course settings.  Edit it using the buttons
-at the right.
+The course.yaml file contains all course-level settings.  It can be
+modified from other settings sub-tabs, or directly edited in its
+raw form here.
 """, 'https://code.google.com/p/course-builder/wiki/CourseSettings')
 
 COURSE_ADMIN_DESCRIPTION = assemble_sanitized_message("""
@@ -86,9 +87,15 @@ parent unit.
 """, None)
 
 COURSE_TEMPLATE_DESCRIPTION = assemble_sanitized_message("""
-The course_template.yaml file contains the common template settings
-for all courses. You can override the template settings for this
-course by editing your course.yaml file.
+The course_template.yaml file provides default values for course settings.
+These values are not dynamically editable, but you can override them
+by editing your course.yaml file directly, or by changing settings in
+the other Settings sub-tabs.
+
+You can also change the default settings for all courses by editing
+the course_template.yaml file on disk and re-pushing CourseBuilder to
+AppEngine.  Changing the defaults in the file will not erase or
+override any course-specific settings you may have made.
 """, None)
 
 DATA_FILES_DESCRIPTION = assemble_sanitized_message("""

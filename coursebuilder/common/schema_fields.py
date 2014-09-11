@@ -81,6 +81,9 @@ class Registry(object):
                 return prop
         return None
 
+    def get_sub_registry(self, sub_registry_name):
+        return self._sub_registries.get(sub_registry_name)
+
     def remove_property(self, property_name):
         prop = self.get_property(property_name)
         if prop:
@@ -97,22 +100,61 @@ class Registry(object):
     def has_subregistries(self):
         return True if self._sub_registries else False
 
-    def clone_only_items_named(self, names):
-        # Only accessing protected members of cloned registry/sub-registries
-        # pylint: disable-msg=protected-access
+    def clone_only_items_named(self, paths):
+        """Clone only the selected items from a registry.
+
+        Args:
+          paths: Each item is a path into the schema, with slashes as
+            separators.  E.g., "foo" would match things at the top level
+            named "foo".  Similarly, 'foo/bar/baz' looks in sub-schema
+            "foo" for a sub-schema "bar", and within that, "baz."  The
+            returned schema would include not just the leaf item, but
+            sub-registry 'foo' containing 'bar', containing 'baz'.
+
+            NOTE - Schema hierarchy components are stored separately from
+            properties, and so "foo" may well match _both_ a subschema
+            _and_ a property, if someone were unwise enough to build
+            a schema with overloaded names.
+
+            Also note that colons in names are not special to this function,
+            though they may well have special meaning to, e.g., the
+            course schema mapping to course.yaml dict hierarchy.  Picking
+            out a single such field would use a name such as
+            "registration/course:send_welcome_notifications".
+        Returns:
+          A schema with only the named items present.
+        """
+
+        # Arbitrary depth instantiate-on-reference dict constructor
+        treebuilder = lambda: collections.defaultdict(treebuilder)
+
+        # Build a tree of nodes from the given paths.
+        root = treebuilder()
+        for path in paths:
+            parts = path.split('/')
+            node = root
+            for part in parts:
+                node = node[part]
+
         registry = copy.deepcopy(self)
-        sub_registry = registry
-        for name in names:
-            # Here and below: copy() to permit deleting while iterating.
-            for p in copy.copy(sub_registry._properties):
-                if not p.name.endswith(':' + name):
-                    sub_registry._properties.remove(p)
-            for sub_name in copy.copy(sub_registry._sub_registries):
-                if sub_name != name:
-                    del sub_registry._sub_registries[sub_name]
-                else:
-                    next_sub_registry = sub_registry._sub_registries[name]
-            sub_registry = next_sub_registry
+        def delete_all_but(registry, node):
+            # pylint: disable-msg=protected-access
+            # Copy so deleting does not wreck iterator.
+            for prop in copy.copy(registry._properties):
+                if prop.name not in node:
+                    registry._properties.remove(prop)
+            for name, value in registry._sub_registries.iteritems():
+                # If this subregistry is not named at all, remove it.
+                if name not in node:
+                    del registry._sub_registries[name]
+
+                # If the paths-to-save gives sub-entries within this
+                # node, then proceed into the node to prune its members.
+                # Otherwise, do nothing, leaving the node and all its
+                # children in place.
+                elif node[name]:
+                    delete_all_but(value, node[name])
+        delete_all_but(registry, root)
         return registry
 
 

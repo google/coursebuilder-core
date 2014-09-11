@@ -251,8 +251,9 @@ def register_module():
     def on_module_enabled():
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
             'inputex-list')
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS.append(
-            get_criteria_editor_schema)
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            courses.Course.SCHEMA_SECTION_COURSE].append(
+                get_criteria_editor_schema)
         course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.append(
             os.path.dirname(__file__))
         course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.append(
@@ -265,8 +266,9 @@ def register_module():
     def on_module_disabled():
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.remove(
             'inputex-list')
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS.remove(
-            get_criteria_editor_schema)
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            courses.Course.SCHEMA_SECTION_COURSE].remove(
+                get_criteria_editor_schema)
         course_settings.CourseSettingsHandler.ADDITIONAL_DIRS.remove(
             os.path.dirname(__file__))
         course_settings.CourseSettingsHandler.EXTRA_CSS_FILES.remove(

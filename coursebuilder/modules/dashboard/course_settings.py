@@ -58,13 +58,30 @@ class CourseSettingsHandler(ApplicationHandler):
     EXTRA_JS_FILES = []
     ADDITIONAL_DIRS = []
 
-    def post_edit_basic_course_settings(self):
+    def post_course_availability(self):
+        course = self.get_course()
+        settings = course.get_environ(self.app_context)
+        availability = self.request.get('availability') == 'True'
+        settings['course']['now_available'] = availability
+        course.save_settings(settings)
+        self.redirect('/dashboard')
+
+    def post_course_browsability(self):
+        course = self.get_course()
+        settings = course.get_environ(self.app_context)
+        browsability = self.request.get('browsability') == 'True'
+        settings['course']['browsable'] = browsability
+        course.save_settings(settings)
+        self.redirect('/dashboard')
+
+    def post_edit_course_settings(self):
         """Handles editing of course.yaml."""
         filer.create_course_file_if_not_exists(self)
         extra_args = {}
-        section_names = self.request.get('section_names')
-        if section_names:
-            extra_args['section_names'] = section_names
+        for name in ('section_names', 'tab', 'tab_title'):
+            value = self.request.get(name)
+            if value:
+                extra_args[name] = value
         self.redirect(self.get_action_url(
             'edit_basic_settings', key='/course.yaml', extra_args=extra_args))
 
@@ -80,11 +97,13 @@ class CourseSettingsHandler(ApplicationHandler):
         # "base:before_head_tag_ends" selects just that one field.
         registry = self.get_course().create_settings_schema()
 
-        section_names = self.request.get('section_names')
+        section_names = urllib.unquote(self.request.get('section_names'))
         if section_names:
-            registry = registry.clone_only_items_named(section_names.split(':'))
+            registry = registry.clone_only_items_named(section_names.split(','))
 
-        exit_url = self.canonicalize_url('/dashboard?action=settings')
+        tab = self.request.get('tab')
+        exit_url = self.canonicalize_url('/dashboard?action=settings&tab=%s' %
+                                         tab)
         rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
             self, registry.get_json_schema(), registry.get_schema_dict(),
@@ -92,12 +111,14 @@ class CourseSettingsHandler(ApplicationHandler):
             extra_js_files=self.EXTRA_JS_FILES,
             additional_dirs=self.ADDITIONAL_DIRS,
             required_modules=CourseSettingsRESTHandler.REQUIRED_MODULES)
-
-        template_values = {}
-        template_values['page_title'] = self.format_title('Edit Settings')
-        template_values['page_description'] = messages.EDIT_SETTINGS_DESCRIPTION
-        template_values['main_content'] = form_html
-        self.render_page(template_values)
+        template_values = {
+            'page_title': self.format_title(
+                'Settings > %s' %
+                urllib.unquote(self.request.get('tab_title'))),
+            'page_description': messages.EDIT_SETTINGS_DESCRIPTION,
+            'main_content': form_html,
+            }
+        self.render_page(template_values, in_action='settings')
 
 
 class CourseYamlRESTHandler(BaseRESTHandler):

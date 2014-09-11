@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import collections
 import copy
 from datetime import datetime
 import logging
@@ -99,11 +100,10 @@ def deep_dict_merge(real_values_dict, default_values_dict):
     return result
 
 # The template dict for all courses
-course_template_yaml = open(os.path.join(os.path.dirname(
-    __file__), '../course_template.yaml'), 'r')
-
-COURSE_TEMPLATE_DICT = yaml.safe_load(
-    course_template_yaml.read().decode('utf-8'))
+yaml_path = os.path.join(appengine_config.BUNDLE_ROOT, 'course_template.yaml')
+with open(yaml_path) as course_template_yaml:
+    COURSE_TEMPLATE_DICT = yaml.safe_load(
+        course_template_yaml.read().decode('utf-8'))
 
 # Here are the defaults for a new course.
 DEFAULT_COURSE_YAML_DICT = {
@@ -1924,15 +1924,37 @@ class Workflow(object):
 class Course(object):
     """Manages a course and all of its components."""
 
-    # Placeholder for modules to register additional schema fields for setting
-    # course options. See create_settings_schema().
-    OPTIONS_SCHEMA_PROVIDERS = []
+    # Place for modules to register additional schema fields for setting
+    # course options.  Used in create_common_settings_schema().
+    #
+    # This is a dict of lists.  The dict key is a string matching a
+    # sub-registry in the course schema.  It is legitimate and expected usage
+    # to name a sub-schema that's created in create_common_settings_schema(),
+    # in which case the relevant settings are added to that subsection, and
+    # will appear with other settings in that subsection in the admin editor
+    # page.
+    #
+    # It is also reasonable to add a new subsection name.  If you do that, you
+    # should also edit the registration of the settings sub-tabs in
+    # modules.dashboard.dashboard.register_module() to add either a new
+    # sub-tab, or add your section to an existing sub-tab.
+    #
+    # Schema providers are expected to be functions which take one argument:
+    # the current course.  Providers should return exactly one SchemaField
+    # object, which will be added to the appropriate subsection.
+    OPTIONS_SCHEMA_PROVIDERS = collections.defaultdict(list)
 
     # Holds callback functions which are passed the course object after it it
     # loaded, to perform any further processing on loaded course data. An
     # instance of the newly created course is passed into each of the hook
     # methods in the order they were added to the list.
     POST_LOAD_HOOKS = []
+
+    SCHEMA_SECTION_COURSE = 'course'
+    SCHEMA_SECTION_HOMEPAGE = 'homepage'
+    SCHEMA_SECTION_REGISTRATION = 'registration'
+    SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
+    SCHEMA_SECTION_I18N = 'i18n'
 
     @classmethod
     def get_environ(cls, app_context):
@@ -1965,33 +1987,16 @@ class Course(object):
     def create_common_settings_schema(cls, course):
         """Create the registry for course properties."""
 
-        reg = schema_fields.FieldRegistry('Basic Course Settings',
+        reg = schema_fields.FieldRegistry('Course Settings',
                                           description='Course Settings')
 
-        base_opts = reg.add_sub_registry('base', 'Base Config')
-        base_opts.add_property(schema_fields.SchemaField(
-            'base:show_gplus_button', 'Show G+ Button', 'boolean',
-            optional=True, description='Whether to show a G+ button on the '
-            'header of all pages.'))
-        base_opts.add_property(schema_fields.SchemaField(
-            'base:nav_header', 'Nav Header', 'string',
-            optional=True,
-            description='Header phrase for the main navigation bar'))
-        base_opts.add_property(schema_fields.SchemaField(
-            'base:privacy_terms_url', 'Privacy Terms URL', 'string',
-            optional=True, description='Link to your privacy policy '
-            'and terms of service'))
-        base_opts.add_property(schema_fields.SchemaField(
-            'base:locale', 'Locale', 'string',
-            optional=True, i18n=False,
-            description='Locale for internationalization '
-            'of explorer pages. See modules/i18n/resources/locale for '
-            'available locales.'))
-
-        # Course level settings.
-        course_opts = reg.add_sub_registry('course', 'Course Config')
+        course_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_COURSE, 'Course')
         course_opts.add_property(schema_fields.SchemaField(
-            'course:title', 'Course Name', 'string'))
+            'course:now_available', 'Make Course Available', 'boolean'))
+        course_opts.add_property(schema_fields.SchemaField(
+            'course:browsable', 'Make Course Browsable', 'boolean',
+            description='Allow non-registered users to view course content.'))
         course_opts.add_property(schema_fields.SchemaField(
             'course:admin_user_emails', 'Course Admin Emails', 'string',
             i18n=False,
@@ -2011,68 +2016,17 @@ class Course(object):
             'course:forum_url', 'Forum URL', 'string', optional=True,
             description='URL for the forum.'))
         course_opts.add_property(schema_fields.SchemaField(
+            'course:announcement_list_url', 'Announcement List URL',
+            'string', optional=True, description='URL for the mailing list '
+            'where students can register to receive course announcements.'))
+        course_opts.add_property(schema_fields.SchemaField(
             'course:announcement_list_email', 'Announcement List Email',
             'string', optional=True, description='Email for the mailing list '
             'where students can register to receive course announcements, e.g. '
             '\'My-Course-Announce@googlegroups.com\''))
         course_opts.add_property(schema_fields.SchemaField(
-            'course:announcement_list_url', 'Announcement List URL',
-            'string', optional=True, description='URL for the mailing list '
-            'where students can register to receive course announcements.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:whitelist', 'Whitelisted Students', 'text', optional=True,
-            i18n=False,
-            description='List of email addresses of students who may register.'
-            'Syntax: Entries may be separated with any combination of '
-            'tabs, spaces, commas, or newlines.  Existing values using "[" and '
-            '"]" around email addresses continues to be supported.  '
-            'Regular expressions are not supported.'))
-
-        locale_data_for_select = [
-            (loc, locales.get_locale_display_name(loc))
-            for loc in locales.get_system_supported_locales()]
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:locale', 'Base Locale', 'string', i18n=False,
-            select_data=locale_data_for_select))
-
-        locale_type = schema_fields.FieldRegistry(
-            'Locale',
-            extra_schema_dict_values={'className': 'settings-list-item'})
-
-        locale_type.add_property(schema_fields.SchemaField(
-            'locale', 'Locale', 'string', optional=True, i18n=False,
-            select_data=locale_data_for_select))
-
-        select_data = [
-            ('unavailable', 'Unavailable'), ('available', 'Available')]
-        locale_type.add_property(schema_fields.SchemaField(
-            'availability', 'Availability', 'boolean', optional=True,
-            select_data=select_data))
-
-        course_opts.add_property(schema_fields.FieldArray(
-            'extra_locales', 'Extra locales',
-            item_type=locale_type,
-            description=(
-                'Locales which are listed here and marked as available can be '
-                'selected by students as their preferred locale.'),
-            extra_schema_dict_values={
-                'className': 'settings-list',
-                'listAddLabel': 'Add a locale',
-                'listRemoveLabel': 'Delete locale'}))
-
-        course_opts.add_property(schema_fields.SchemaField(
             'course:start_date', 'Course Start Date', 'string', optional=True,
             i18n=False))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:now_available', 'Make Course Available', 'boolean'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:browsable', 'Make Course Browsable', 'boolean',
-            description='Allow non-registered users to view course content.'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:display_unit_title_without_index',
-            'Display Unit Title Without Index', 'boolean',
-            description='Omit the unit number when displaying unit titles.'))
-
         course_opts.add_property(schema_fields.SchemaField(
             'course:google_analytics_id', 'ID for Google Analytics', 'string',
             optional=True, i18n=False,
@@ -2089,62 +2043,18 @@ class Course(object):
             'site.  Obtain this ID by signing up at '
             'http://www.google.com/tagmanager'))
 
-        # Course-level notifications settings.
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:send_welcome_notifications',
-            'Send welcome notifications', 'boolean', description='If enabled, '
-            'welcome notifications will be sent when new users register for '
-            'the course. Must also set "Welcome notifications sender" for '
-            'messages to be sent successfully, and you must have both the '
-            'notifications and unsubscribe modules active (which is the '
-            'default)'))
-        course_opts.add_property(schema_fields.SchemaField(
-            'course:welcome_notifications_sender',
-            'Welcome notifications sender', 'string', optional=True,
-            i18n=False,
-            description='The "From:" email address used on outgoing '
-            'notifications. If "Send welcome notifications" is enabled, you '
-            'must set this to a valid value for App Engine email or outgoing '
-            'messages will fail. Note that you cannot use the user in session. '
-            'See https://developers.google.com/appengine/docs/python/mail/'
-            'emailmessagefields for details'))
-
-        for schema_provider in cls.OPTIONS_SCHEMA_PROVIDERS:
-            course_opts.add_property(schema_provider(course))
-
-        # Unit level settings.
-        unit_opts = reg.add_sub_registry('unit', 'Unit and Lesson Settings')
-        unit_opts.add_property(schema_fields.SchemaField(
-            'unit:hide_lesson_navigation_buttons',
-            'Hide Lesson Navigation Buttons',
-            'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below lesson and activity pages'))
-        unit_opts.add_property(schema_fields.SchemaField(
-            'unit:hide_assessment_navigation_buttons',
-            'Hide Assessment Navigation Buttons',
-            'boolean', description='Whether to hide the \'Previous Page\' and '
-            ' \'Next Page\' buttons below pre/post assessments within units'))
-        unit_opts.add_property(schema_fields.SchemaField(
-            'unit:show_unit_links_in_leftnav', 'Show Units in Side Bar',
-            'boolean', description='Whether to show the unit links in the side '
-            'navigation bar.'))
-
-        # Course registration settings.
-        reg_opts = reg.add_sub_registry(
-            'reg_form', 'Student Registration Options')
-        reg_opts.add_property(schema_fields.SchemaField(
-            'reg_form:can_register', 'Enable Registrations', 'boolean',
-            description='Checking this box allows new students to register for '
-            'the course.'))
-        reg_opts.add_property(schema_fields.SchemaField(
-            'reg_form:additional_registration_fields', 'Additional Fields',
-            'html', description='Additional registration text or questions.'))
-
-        # Course homepage settings.
-        homepage_opts = reg.add_sub_registry('homepage', 'Homepage Settings')
+        homepage_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_HOMEPAGE, 'Homepage')
         homepage_opts.add_property(schema_fields.SchemaField(
-            'course:instructor_details', 'Instructor Details', 'html',
-            optional=True))
+            'base:show_gplus_button', 'Show G+ Button', 'boolean',
+            optional=True, description='Whether to show a G+ button on the '
+            'header of all pages.'))
+        homepage_opts.add_property(schema_fields.SchemaField(
+            'base:nav_header', 'Organization Name', 'string',
+            optional=True,
+            description='Header phrase for the main navigation bar'))
+        homepage_opts.add_property(schema_fields.SchemaField(
+            'course:title', 'Course Name', 'string'))
         homepage_opts.add_property(schema_fields.SchemaField(
             'course:blurb', 'Course Abstract', 'html', optional=True,
             description='Text, shown on the course homepage, that explains '
@@ -2153,6 +2063,9 @@ class Course(object):
                 'supportCustomTags': common.tags.CAN_USE_DYNAMIC_TAGS.value,
                 'excludedCustomTags':
                 common.tags.EditorBlacklists.COURSE_SCOPE}))
+        homepage_opts.add_property(schema_fields.SchemaField(
+            'course:instructor_details', 'Instructor Details', 'html',
+            optional=True))
         homepage_opts.add_property(schema_fields.SchemaField(
             'course:main_video:url', 'Course Video', 'url', optional=True,
             description='URL for the preview video shown on the course '
@@ -2167,6 +2080,111 @@ class Course(object):
             optional=True,
             description='Alt text for the preview image on the course '
             'homepage.'))
+        homepage_opts.add_property(schema_fields.SchemaField(
+            'base:privacy_terms_url', 'Privacy Terms URL', 'string',
+            optional=True, description='Link to your privacy policy '
+            'and terms of service'))
+
+        registration_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_REGISTRATION, 'Registration')
+        registration_opts.add_property(schema_fields.SchemaField(
+            'reg_form:can_register', 'Enable Registrations', 'boolean',
+            description='Checking this box allows new students to register for '
+            'the course.'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'reg_form:additional_registration_fields', 'Additional Fields',
+            'html', description='Additional registration text or questions.'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'course:whitelist', 'Whitelisted Students', 'text', optional=True,
+            i18n=False,
+            description='List of email addresses of students who may register.'
+            'Syntax: Entries may be separated with any combination of '
+            'tabs, spaces, commas, or newlines.  Existing values using "[" and '
+            '"]" around email addresses continues to be supported.  '
+            'Regular expressions are not supported.'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'course:send_welcome_notifications',
+            'Send welcome notifications', 'boolean', description='If enabled, '
+            'welcome notifications will be sent when new users register for '
+            'the course. Must also set "Welcome notifications sender" for '
+            'messages to be sent successfully, and you must have both the '
+            'notifications and unsubscribe modules active (which is the '
+            'default)'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'course:welcome_notifications_sender',
+            'Welcome notifications sender', 'string', optional=True,
+            i18n=False,
+            description='The "From:" email address used on outgoing '
+            'notifications. If "Send welcome notifications" is enabled, you '
+            'must set this to a valid value for App Engine email or outgoing '
+            'messages will fail. Note that you cannot use the user in session. '
+            'See https://developers.google.com/appengine/docs/python/mail/'
+            'emailmessagefields for details'))
+
+        unit_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units and Lessons')
+        unit_opts.add_property(schema_fields.SchemaField(
+            'unit:hide_lesson_navigation_buttons',
+            'Hide Lesson Navigation Buttons',
+            'boolean', description='Whether to hide the \'Previous Page\' and '
+            ' \'Next Page\' buttons below lesson and activity pages'))
+        unit_opts.add_property(schema_fields.SchemaField(
+            'unit:hide_assessment_navigation_buttons',
+            'Hide Assessment Navigation Buttons',
+            'boolean', description='Whether to hide the \'Previous Page\' and '
+            ' \'Next Page\' buttons below pre/post assessments within units'))
+        unit_opts.add_property(schema_fields.SchemaField(
+            'unit:show_unit_links_in_leftnav', 'Show Units in Side Bar',
+            'boolean', description='Whether to show the unit links in the side '
+            'navigation bar.'))
+        unit_opts.add_property(schema_fields.SchemaField(
+            'course:display_unit_title_without_index',
+            'Display Unit Title Without Index', 'boolean',
+            description='Omit the unit number when displaying unit titles.'))
+
+        i18n_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_I18N, 'I18N')
+        i18n_opts.add_property(schema_fields.SchemaField(
+            'base:locale', 'Locale', 'string',
+            optional=True, i18n=False,
+            description='Locale for internationalization '
+            'of explorer pages. See modules/i18n/resources/locale for '
+            'available locales.'))
+        locale_data_for_select = [
+            (loc, locales.get_locale_display_name(loc))
+            for loc in locales.get_system_supported_locales()]
+        i18n_opts.add_property(schema_fields.SchemaField(
+            'course:locale', 'Base Locale', 'string', i18n=False,
+            select_data=locale_data_for_select))
+        locale_type = schema_fields.FieldRegistry(
+            'Locale',
+            extra_schema_dict_values={'className': 'settings-list-item'})
+        locale_type.add_property(schema_fields.SchemaField(
+            'locale', 'Locale', 'string', optional=True, i18n=False,
+            select_data=locale_data_for_select))
+        select_data = [
+            ('unavailable', 'Unavailable'), ('available', 'Available')]
+        locale_type.add_property(schema_fields.SchemaField(
+            'availability', 'Availability', 'boolean', optional=True,
+            select_data=select_data))
+        i18n_opts.add_property(schema_fields.FieldArray(
+            'extra_locales', 'Extra locales',
+            item_type=locale_type,
+            description=(
+                'Locales which are listed here and marked as available can be '
+                'selected by students as their preferred locale.'),
+            extra_schema_dict_values={
+                'className': 'settings-list',
+                'listAddLabel': 'Add a locale',
+                'listRemoveLabel': 'Delete locale'}))
+
+        for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
+            sub_registry = reg.get_sub_registry(schema_section)
+            if not sub_registry:
+                sub_registry = reg.add_sub_registry(
+                    schema_section, schema_section.capitalize())
+            for schema_provider in cls.OPTIONS_SCHEMA_PROVIDERS[schema_section]:
+                sub_registry.add_property(schema_provider(course))
 
         return reg
 
@@ -2697,4 +2715,3 @@ course:
 
         fs.put(course_yaml, vfs.string_to_stream(course_yaml_text))
         return True
-

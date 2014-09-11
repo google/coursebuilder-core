@@ -43,7 +43,7 @@ class AdminPreferencesEditor(dto_editor.BaseDatastoreAssetEditor):
             'main_content': self.get_form(
                 AdminPreferencesRESTHandler,
                 users.get_current_user().user_id(),
-                '/dashboard?action=settings',
+                '/dashboard?action=settings&tab=admin_prefs',
                 deletable=False)
         }
         self.render_page(template_values, 'settings')

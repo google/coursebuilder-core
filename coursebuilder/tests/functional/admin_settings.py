@@ -40,7 +40,7 @@ ADMIN_SETTINGS_URL = '/%s%s' % (
 TEXT_ASSET_URL = '/%s%s' % (
     COURSE_NAME, filer.TextAssetRESTHandler.URI)
 STUDENT_EMAIL = 'student@foo.com'
-SETTINGS_URL = '/%s/dashboard?action=settings' % COURSE_NAME
+SETTINGS_URL = '/%s/dashboard?action=settings&tab=admin_prefs' % COURSE_NAME
 
 
 class AdminSettingsTests(actions.TestBase):

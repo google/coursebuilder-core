@@ -126,14 +126,21 @@ class FileManagerAndEditor(ApplicationHandler):
     def post_create_or_edit_settings(self):
         """Handles creation or/and editing of course.yaml."""
         create_course_file_if_not_exists(self)
-        self.redirect(self.get_action_url('edit_settings', key='/course.yaml'))
+        extra_args = {}
+        for name in ('tab', 'tab_title'):
+            value = self.request.get(name)
+            if value:
+                extra_args[name] = value
+        self.redirect(self.get_action_url('edit_settings', key='/course.yaml',
+                                          extra_args=extra_args))
 
     def get_edit_settings(self):
         """Shows editor for course.yaml."""
 
         key = self.request.get('key')
-
-        exit_url = self.canonicalize_url('/dashboard?action=settings')
+        tab = self.request.get('tab')
+        exit_url = self.canonicalize_url('/dashboard?action=settings&tab=%s' %
+                                         tab)
         rest_url = self.canonicalize_url('/rest/files/item')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
@@ -146,7 +153,7 @@ class FileManagerAndEditor(ApplicationHandler):
         template_values['page_title'] = self.format_title('Edit Settings')
         template_values['page_description'] = messages.EDIT_SETTINGS_DESCRIPTION
         template_values['main_content'] = form_html
-        self.render_page(template_values)
+        self.render_page(template_values, in_action='settings')
 
     def get_add_asset(self):
         """Show an upload dialog for assets."""

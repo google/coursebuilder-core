@@ -60,6 +60,7 @@ from modules.unsubscribe import unsubscribe
 
 # The intent recorded for the emails sent by the notifications module
 INVITATION_INTENT = 'course_invitation'
+COURSE_SETTINGS_SCHEMA_SECTION = 'invitation'
 
 RESOURCES_PATH = '/modules/invitation/resources'
 
@@ -384,7 +385,8 @@ def register_module():
     course_settings_fields = get_course_settings_fields()
 
     def on_module_enabled():
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS += course_settings_fields
+        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+            COURSE_SETTINGS_SCHEMA_SECTION] += course_settings_fields
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS += [
             get_student_profile_invitation_link,
             get_student_profile_sub_unsub_link]
@@ -395,7 +397,8 @@ def register_module():
 
     def on_module_disabled():
         for field in course_settings_fields:
-            courses.Course.OPTIONS_SCHEMA_PROVIDERS.remove(field)
+            courses.Course.OPTIONS_SCHEMA_PROVIDERS[
+                COURSE_SETTINGS_SCHEMA_SECTION].remove(field)
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(
             get_student_profile_invitation_link)
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.remove(

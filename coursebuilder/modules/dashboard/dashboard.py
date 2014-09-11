@@ -109,9 +109,9 @@ class DashboardHandler(
     post_actions = [
         'create_or_edit_settings', 'add_unit',
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
-        'clear_index', 'edit_basic_course_settings', 'add_reviewer',
+        'clear_index', 'edit_course_settings', 'add_reviewer',
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
-        'add_to_question_group']
+        'add_to_question_group', 'course_availability', 'course_browsability']
     nav_mappings = [
         ('', 'Outline'),
         ('assets', 'Assets'),
@@ -452,10 +452,64 @@ class DashboardHandler(
     def get_outline(self):
         """Renders course outline view."""
 
-        pages_info_actions = [
+        pages_info_actions = []
+        # Basic course info.
+        course_info = []
+        course_actions = [
             {'id': 'add_course',
              'caption': 'Add Course',
              'href': '/admin?action=add_course'}]
+        course_info.append(
+            'Course Title: %s' % self.app_context.get_environ()['course'][
+                'title'])
+
+        if not self.app_context.is_editable_fs():
+            course_info.append('The course is read-only.')
+        else:
+            if self.app_context.now_available:
+                course_availability_caption = 'Make Course Unavailable'
+                course_info.append('The course is publicly available.')
+                if self.app_context.get_environ()['course']['browsable']:
+                    browsable = True
+                    course_browsability_caption = (
+                        'Hide Course From Unregistered Users')
+                    course_info.append('The course is is browsable by '
+                                       'un-registered users')
+                else:
+                    browsable = False
+                    course_browsability_caption = (
+                        'Allow Unregistered Users to Browse Course')
+                    course_info.append('The course is not visible to '
+                                       'un-registered users.')
+                course_actions.append({
+                    'id': 'course_browsability',
+                    'caption': course_browsability_caption,
+                    'action': self.get_action_url('course_browsability'),
+                    'xsrf_token': self.create_xsrf_token('course_browsability'),
+                    'params': {'browsability': not browsable},
+                    })
+            else:
+                course_availability_caption = 'Make Course Available'
+                course_info.append('The course is not available.')
+
+            course_actions.append({
+                'id': 'course_availability',
+                'caption': course_availability_caption,
+                'action': self.get_action_url('course_availability'),
+                'xsrf_token': self.create_xsrf_token('course_availability'),
+                'params': {'availability': not self.app_context.now_available},
+                })
+
+        course_info.append('Context Path: %s' % self.app_context.get_slug())
+        course_info.append('Datastore Namespace: %s' %
+                           self.app_context.get_namespace_name())
+
+        # Course file system.
+        fs = self.app_context.fs.impl
+        course_info.append(('File System: %s' % fs.__class__.__name__))
+        if fs.__class__ == vfs.LocalReadOnlyFileSystem:
+            course_info.append(('Home Folder: %s' % sites.abspath(
+                self.app_context.get_home_folder(), '/')))
 
         pages_info = [
             safe_dom.Element(
@@ -504,6 +558,11 @@ class DashboardHandler(
 
         sections = [
             {
+                'title': 'About the Course',
+                'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
+                'actions': course_actions,
+                'children': course_info},
+            {
                 'title': 'Pages',
                 'description': messages.PAGES_DESCRIPTION,
                 'actions': pages_info_actions,
@@ -535,18 +594,54 @@ class DashboardHandler(
         return self.canonicalize_url(url)
 
     def get_settings(self):
-        """Renders course settings view."""
+        tab = tabs.Registry.get_tab(
+            'settings', self.request.get('tab') or 'course')
+        template_values = {
+            'page_title': self.format_title('Settings > %s' % tab.title),
+            'page_description': messages.SETTINGS_DESCRIPTION,
+        }
+        if tab.name == 'admin_prefs':
+            self.get_settings_admin_prefs(template_values, tab)
+        elif tab.name == 'advanced':
+            self.get_settings_advanced(template_values, tab)
+        else:
+            self.get_settings_section(template_values, tab)
+        self.render_page(template_values)
 
-        admin_prefs_actions = []
-        yaml_actions = []
-        basic_setting_actions = []
+    def get_settings_section(self, template_values, tab):
+        actions = []
+        if self.app_context.is_editable_fs():
+            actions.append({
+                'id': 'edit_course_settings',
+                'caption': 'Edit Settings',
+                'action': self.get_action_url(
+                    'edit_course_settings',
+                    extra_args={
+                        'section_names': tab.contents,
+                        'tab': tab.name,
+                        'tab_title': tab.title,
+                        }),
+                'xsrf_token': self.create_xsrf_token('edit_course_settings')})
+        template_values['sections'] = [{
+            'title': 'Course Settings',
+            'actions': actions,
+            'children': ['TODO(psimakov): Nice formatted text for options']
+            }]
 
+    def get_settings_admin_prefs(self, template_values, tab):
+        actions = []
         # Admin prefs setup.
-        admin_prefs_actions.append({
-            'id': 'edit_admin_prefs',
-            'caption': 'Edit Prefs',
-            'action': self.get_action_url('edit_admin_preferences'),
-            'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
+        if self.app_context.is_editable_fs():
+            actions.append({
+                'id': 'edit_admin_prefs',
+                'caption': 'Edit Prefs',
+                'action': self.get_action_url(
+                    'edit_admin_preferences',
+                    extra_args={
+                        'tab': tab.name,
+                        'tab_title': tab.title,
+                        }),
+                'xsrf_token': self.create_xsrf_token('edit_admin_preferences')})
         admin_prefs_info = []
         admin_prefs = models.StudentPreferencesDAO.load_or_create()
         admin_prefs_info.append('Show hook edit buttons: %s' %
@@ -554,68 +649,30 @@ class DashboardHandler(
         admin_prefs_info.append('Show jinja context: %s' %
                                 admin_prefs.show_jinja_context)
 
-        # Basic course info.
-        course_info = [
-            'Course Title: %s' % self.app_context.get_environ()['course'][
-                'title'],
-            'Context Path: %s' % self.app_context.get_slug(),
-            'Datastore Namespace: %s' % self.app_context.get_namespace_name()]
+        template_values['sections'] = [
+            {
+                'title': 'Admin Preferences',
+                'description': messages.ADMIN_PREFERENCES_DESCRIPTION,
+                'actions': actions,
+                'children': admin_prefs_info},
+            ]
 
-        # Course file system.
-        fs = self.app_context.fs.impl
-        course_info.append(('File System: %s' % fs.__class__.__name__))
-        if fs.__class__ == vfs.LocalReadOnlyFileSystem:
-            course_info.append(('Home Folder: %s' % sites.abspath(
-                self.app_context.get_home_folder(), '/')))
+    def get_settings_advanced(self, template_values, tab):
+        """Renders course settings view."""
 
-        # Enable editing if supported.
+        actions = []
         if self.app_context.is_editable_fs():
-            yaml_actions.append({
+            actions.append({
                 'id': 'edit_course_yaml',
                 'caption': 'Advanced Edit',
-                'action': self.get_action_url('create_or_edit_settings'),
+                'action': self.get_action_url(
+                    'create_or_edit_settings',
+                    extra_args={
+                        'tab': tab.name,
+                        'tab_title': tab.title,
+                        }),
                 'xsrf_token': self.create_xsrf_token(
                     'create_or_edit_settings')})
-            yaml_actions.append({
-                'id': 'edit_basic_course_settings_unit',
-                'caption': 'Unit Options',
-                'action': self.get_action_url(
-                    'edit_basic_course_settings',
-                    extra_args={'section_names': 'unit'}),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
-            yaml_actions.append({
-                'id': 'edit_basic_course_settings_reg_opts',
-                'caption': 'Course Homepage Options',
-                'action': self.get_action_url(
-                    'edit_basic_course_settings',
-                    extra_args={'section_names': 'homepage'}),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
-            yaml_actions.append({
-                'id': 'edit_basic_course_settings_reg_opts',
-                'caption': 'Registration Options',
-                'action': self.get_action_url(
-                    'edit_basic_course_settings',
-                    extra_args={'section_names': 'reg_form'}),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
-            yaml_actions.append({
-                'id': 'edit_basic_course_settings_course',
-                'caption': 'Course Options',
-                'action': self.get_action_url(
-                    'edit_basic_course_settings',
-                    extra_args={'section_names': 'course'}),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
-            yaml_actions.append({
-                'id': 'edit_basic_course_settings_base',
-                'caption': 'Base Options',
-                'action': self.get_action_url(
-                    'edit_basic_course_settings',
-                    extra_args={'section_names': 'base'}),
-                'xsrf_token': self.create_xsrf_token(
-                    'edit_basic_course_settings')})
 
         # course.yaml file content.
         yaml_info = []
@@ -640,33 +697,16 @@ class DashboardHandler(
         else:
             course_template_info.append('< empty file >')
 
-        # Prepare template values.
-        template_values = {
-            'page_title': self.format_title('Settings'),
-            'page_description': messages.SETTINGS_DESCRIPTION,
-        }
         template_values['sections'] = [
-            {
-                'title': 'Admin Preferences',
-                'description': messages.ADMIN_PREFERENCES_DESCRIPTION,
-                'actions': admin_prefs_actions,
-                'children': admin_prefs_info},
-            {
-                'title': 'About the Course',
-                'description': messages.ABOUT_THE_COURSE_DESCRIPTION,
-                'actions': basic_setting_actions,
-                'children': course_info},
             {
                 'title': 'Contents of course.yaml file',
                 'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
-                'actions': yaml_actions,
+                'actions': actions,
                 'children': yaml_info},
             {
                 'title': 'Contents of course_template.yaml file',
                 'description': messages.COURSE_TEMPLATE_DESCRIPTION,
                 'children': course_template_info}]
-
-        self.render_page(template_values)
 
     def list_files(self, subfolder, merge_local_files=False, all_paths=None):
         """Makes a list of files in a subfolder.
@@ -1333,6 +1373,16 @@ def register_module():
                            DashboardHandler.get_assets_templates)
     tabs.Registry.register('assets', 'contrib', 'Extension Items',
                            DashboardHandler.get_assets_contrib)
+
+    tabs.Registry.register('settings', 'course', 'Course', 'course')
+    tabs.Registry.register('settings', 'homepage', 'Homepage', 'homepage')
+    tabs.Registry.register('settings', 'registration', 'Registration',
+                           'registration,invitation')
+    tabs.Registry.register('settings', 'units', 'Units and Lessons',
+                           'unit,assessment_confirmations')
+    tabs.Registry.register('settings', 'i18n', 'I18N', 'i18n')
+    tabs.Registry.register('settings', 'advanced', 'Advanced', None)
+    tabs.Registry.register('settings', 'admin_prefs', 'Admin Preferences', None)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
