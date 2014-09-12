@@ -9,21 +9,51 @@ function parseJson(s) {
   return JSON.parse(s.replace(XSSI_PREFIX, ""));
 }
 
+function setDraftStatus(padlock, isDraft) {
+  if (isDraft) {
+    padlock.removeClass("icon-unlocked").addClass("icon-locked");
+  } else {
+    padlock.removeClass("icon-locked").addClass("icon-unlocked");
+  }
+}
+
 function setDraftStatusCallback(data, padlock) {
   var response = parseJson(data);
+  var isDraft = padlock.hasClass("icon-locked")
   if (response.status != 200){
     cbShowAlert("Error: " + response.message);
+    setDraftStatus(padlock, ! isDraft);
     return;
   }
   var payload = parseJson(response.payload);
-  if (payload.is_draft) {
-    padlock.removeClass("icon-unlocked");
-    padlock.addClass("icon-locked");
-  } else {
-    padlock.removeClass("icon-locked");
-    padlock.addClass("icon-unlocked");
+  if (payload["is_draft"] != isDraft) {
+    cbShowAlert("The page contains inconsistent data. Please refesh.");
+    setDraftStatus(padlock, payload["is_draft"]);
+    return;
   }
   cbShowMsgAutoHide(response.message);
+}
+
+function onDraftStatusClick() {
+  var padlock = $(this);
+  var setDraft = $(this).hasClass("icon-unlocked");
+  // Optimistically update icon and revert if server confirmation not received
+  setDraftStatus(padlock, setDraft);
+  $.post(
+    "dashboard",
+    {
+      action: "set_draft_status",
+      key: $(this).data("key"),
+      type: $(this).data("component-type"),
+      set_draft: setDraft ? 1 : 0,
+      xsrf_token: $(this).parents("#course-outline").data(
+        "status-xsrf-token")
+    },
+    function(data) {
+      setDraftStatusCallback(data, padlock);
+    },
+    "text"
+  );
 }
 
 function openModal() {
@@ -153,25 +183,7 @@ function appendOptions(select, data) {
  * Toggle draft status on click on padlock icon.
  */
 function setUpDraftStatus() {
-  $(".icon-draft-status:not(.inactive)").on("click", function(e) {
-    var padlock = $(this);
-    var setDraft = $(this).hasClass("icon-unlocked");
-    $.post(
-      "dashboard",
-      {
-        action: "set_draft_status",
-        key: $(this).data("key"),
-        type: $(this).data("component-type"),
-        set_draft: setDraft ? 1 : 0,
-        xsrf_token: $(this).parents("#course-outline").data(
-          "status-xsrf-token")
-      },
-      function(data) {
-        setDraftStatusCallback(data, padlock);
-      },
-      "text"
-    );
-  });
+  $(".icon-draft-status:not(.inactive)").on("click", onDraftStatusClick);
 }
 
 /**

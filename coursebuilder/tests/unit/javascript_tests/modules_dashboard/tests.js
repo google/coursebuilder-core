@@ -162,27 +162,47 @@ describe('draft status toggling', function() {
   beforeEach(function() {
     cbShowAlert = jasmine.createSpy("cbShowAlert");
     cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
+    this.oldPost = $.post;
+    $.post = jasmine.createSpy("$.post");
+    this.padlock = $("<div class='icon icon-locked'>");
+    onDraftStatusClick.call(this.padlock);
   });
-  it('simulates a toggle from public to draft', function() {
-    var padlock = $("<div class='icon icon-unlocked'>");
+  afterEach(function() {
+    $.post = this.oldPost;
+  });
+  it('optimistically changes the draft status icon', function() {
+    expect(this.padlock.hasClass("icon-unlocked")).toBe(true);
+    expect(this.padlock.hasClass("icon-locked")).toBe(false);
+  });
+  it('makes a POST request to the server', function() {
+    expect($.post).toHaveBeenCalledWith(
+      'dashboard',
+      {
+        action: 'set_draft_status',
+        set_draft: 0
+      },
+      jasmine.any(Function),
+      'text'
+    );
+  });
+  it('verifies the server response and shows a message', function() {
     setDraftStatusCallback(
-      '{"status": 200, "payload":"{\\"is_draft\\":true}"}', padlock);
-    expect(padlock.hasClass("icon-unlocked")).toBe(false);
-    expect(padlock.hasClass("icon-locked")).toBe(true);
+      '{"status": 200, "payload":"{\\"is_draft\\":false}"}', this.padlock);
+    expect(this.padlock.hasClass("icon-unlocked")).toBe(true);
+    expect(this.padlock.hasClass("icon-locked")).toBe(false);
     expect(cbShowMsgAutoHide).toHaveBeenCalled();
   });
-  it('simulates a toggle from draft to public', function() {
-    var padlock = $("<div class='icon icon-locked'>")
-    setDraftStatusCallback(
-      '{"status": 200, "payload":"{\\"is_draft\\":false}"}', padlock);
-    expect(padlock.hasClass("icon-locked")).toBe(false);
-    expect(padlock.hasClass("icon-unlocked")).toBe(true);
-    expect(cbShowMsgAutoHide).toHaveBeenCalled();
+  it('resets the draft status icon when an error is received', function() {
+    setDraftStatusCallback('{"status": 401}', this.padlock);
+    expect(this.padlock.hasClass("icon-unlocked")).toBe(false);
+    expect(this.padlock.hasClass("icon-locked")).toBe(true);
+    expect(cbShowAlert).toHaveBeenCalled();
   });
-  it('simulates an access denied', function() {
-    var padlock = $("<div class='icon icon-locked'>")
-    setDraftStatusCallback('{"status": 401}', padlock);
-    expect(padlock.hasClass("icon-locked")).toBe(true);
+  it('adjusts the draft status icon upon a server inconsistency', function() {
+    setDraftStatusCallback(
+      '{"status": 200, "payload":"{\\"is_draft\\":true}"}', this.padlock);
+    expect(this.padlock.hasClass("icon-unlocked")).toBe(false);
+    expect(this.padlock.hasClass("icon-locked")).toBe(true);
     expect(cbShowAlert).toHaveBeenCalled();
   });
 });
