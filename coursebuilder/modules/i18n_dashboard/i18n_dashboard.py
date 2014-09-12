@@ -822,7 +822,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         payload_dict = {
             'key': str(key),
-            'title': key.resource_key.get_title(self.app_context),
+            'title': str(key.resource_key.get_title(self.app_context)),
             'source_locale': self.app_context.get_environ()['course']['locale'],
             'target_locale': key.locale,
             'sections': sorted(sections, cmp=cmp_sections)
