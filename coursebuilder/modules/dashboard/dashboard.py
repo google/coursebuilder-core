@@ -716,6 +716,21 @@ class DashboardHandler(
                 'children': admin_prefs_info},
             ]
 
+    def text_file_to_safe_dom(self, reader, content_if_empty):
+        """Load text file and convert it to safe_dom tree for display."""
+        info = []
+        if reader:
+            lines = reader.read().decode('utf-8')
+            for line in lines.split('\n'):
+                if not line:
+                    continue
+                pre = safe_dom.Element('pre')
+                pre.add_text(line)
+                info.append(pre)
+        else:
+            info.append(content_if_empty)
+        return info
+
     def get_settings_advanced(self, template_values, tab):
         """Renders course settings view."""
 
@@ -734,27 +749,15 @@ class DashboardHandler(
                     'create_or_edit_settings')})
 
         # course.yaml file content.
-        yaml_info = []
-        yaml_stream = self.app_context.fs.open(
+        yaml_reader = self.app_context.fs.open(
             self.app_context.get_config_filename())
-        if yaml_stream:
-            yaml_lines = yaml_stream.read().decode('utf-8')
-            for line in yaml_lines.split('\n'):
-                yaml_info.append(line)
-        else:
-            yaml_info.append('< empty file >')
+        yaml_info = self.text_file_to_safe_dom(yaml_reader, '< empty file >')
 
         # course_template.yaml file contents
-        course_template_info = []
-        course_template_stream = open(os.path.join(os.path.dirname(
+        course_template_reader = open(os.path.join(os.path.dirname(
             __file__), '../../course_template.yaml'), 'r')
-        if course_template_stream:
-            course_template_lines = course_template_stream.read().decode(
-                'utf-8')
-            for line in course_template_lines.split('\n'):
-                course_template_info.append(line)
-        else:
-            course_template_info.append('< empty file >')
+        course_template_info = self.text_file_to_safe_dom(
+            course_template_reader, '< empty file >')
 
         template_values['sections'] = [
             {
