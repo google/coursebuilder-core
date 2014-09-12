@@ -330,6 +330,7 @@ div#formContainer div.settings-list-item fieldset legend span {
   width  : 120px;
   text-align: right;
   margin-right: 5px;
+  vertical-align: middle;
 }
 .form-popup input[type="text"] {
   width: 216px;
@@ -338,7 +339,8 @@ div#formContainer div.settings-list-item fieldset legend span {
 .form-popup input[type="checkbox"] {
   margin: 3px 0px;
 }
-.form-popup select {
+.form-popup select, .form-popup label span.uneditable-field {
+  text-align: left;
   width: 220px;
   margin: 0px;
 }

@@ -228,7 +228,9 @@ function setUpAddToGroup() {
     $(".icon-add").on("click", function(e) {
       openModal();
       var popup = $("#add-to-group");
-      popup.find(".question").val($(this).closest("tr").data("quid"));
+      var row = $(this).closest("tr");
+      popup.find(".description").text(row.find(".description").text());
+      popup.find(".question").val(row.data("quid"));
       popup.show();
     });
 
@@ -250,15 +252,10 @@ function setUpAddToGroup() {
     });
   }
 
-  function populateDropdowns() {
+  if($("#question-table").size() == 1) {
+    // Populate question groups dropdown
     appendOptions(
       $("#add-to-group .group"), $("#question-table").data("groups"));
-    appendOptions(
-      $("#add-to-group .question"), $("#question-table").data("questions"));
-  }
-
-  if($("#question-table").size() == 1) {
-    populateDropdowns();
     addBindings();
   }
 };
