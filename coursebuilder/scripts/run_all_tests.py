@@ -43,7 +43,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.common_crypto.GenCryptoKeyFromHmac': 2,
     'tests.functional.common_crypto.GetExternalUserIdTests': 4,
     'tests.functional.explorer_module.CourseExplorerTest': 3,
-    'tests.functional.explorer_module.CourseExplorerDisabledTest': 1,
+    'tests.functional.explorer_module.CourseExplorerDisabledTest': 2,
     'tests.functional.explorer_module.GlobalProfileTest': 1,
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,
     'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,

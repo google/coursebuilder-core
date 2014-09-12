@@ -23,6 +23,7 @@ from controllers import sites
 from models import config
 from models import roles
 from models import transforms
+from modules.course_explorer import course_explorer
 from tests.functional import actions
 
 COURSE_NAME = 'whitelist_test'
@@ -57,6 +58,9 @@ class WhitelistTest(actions.TestBase):
 
     def setUp(self):
         super(WhitelistTest, self).setUp()
+
+        config.Registry.test_overrides[
+            course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
 
         actions.login(ADMIN_EMAIL, is_admin=True)
         payload_dict = {

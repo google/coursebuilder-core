@@ -157,23 +157,76 @@ class CourseExplorerTest(BaseExplorerTest):
 class CourseExplorerDisabledTest(actions.TestBase):
     """Tests when course explorer is disabled."""
 
-    def test_course_explorer_disabled(self):
+    def get_auto_deploy(self):
+        return False
+
+    def test_anonymous_access(self):
         """Tests for disabled course explorer page."""
-        # This call should redirect to course page not explorer page.
+
+        # disable the explorer
+        config.Registry.test_overrides[
+            course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = False
+        self.assertFalse(course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value)
+
+        # check root URL's properly redirect to login
         response = self.get('/')
-        assert_contains('/course', response.location)
+        assert_equals(response.status_int, 302)
+        assert_contains(
+            'http://localhost/admin?action=welcome', response.location)
 
-        name = 'Test explorer page off'
-        email = 'student'
+        response = self.get('/assets/img/your_logo_here.png')
+        assert_equals(response.status_int, 302)
+        assert_contains('accounts/Login', response.location)
 
-        # Register
-        actions.login(email)
-        actions.register(self, name)
+        # check explorer pages are not accessible
+        not_accessibles = [
+            '/explorer',
+            '/explorer/courses',
+            '/explorer/profile',
+            '/explorer/assets/img/your_logo_here.png']
+        for not_accessible in not_accessibles:
+            response = self.get(not_accessible, expect_errors=True)
+            assert_equals(response.status_int, 404)
 
-        response = self.get('/course')
-        # 'My courses' and 'Profile' tab should not be present in tab bar.
+        # enable course explorer
+        config.Registry.test_overrides[
+            course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
+        self.assertTrue(course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value)
+
+        # check explorer pages are accessible
+        accessibles = [
+            '/explorer',
+            '/explorer/courses',
+            '/explorer/assets/img/your_logo_here.png']
+        for accessible in accessibles:
+            response = self.get(accessible, expect_errors=True)
+            assert_equals(response.status_int, 200)
+
+        # check student pages are not accessible
+        response = self.get('/explorer/profile')
+        assert_equals(response.status_int, 302)
+        self.assertEqual('http://localhost/explorer', response.location)
+
+    def test_student_access(self):
+        # enable course explorer
+        config.Registry.test_overrides[
+            course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
+        self.assertTrue(course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value)
+
+        # check not being logged in
+        response = self.get('/explorer')
+        assert_contains('Explore Courses', response.body)
         assert_does_not_contain('My Courses', response.body)
-        assert_does_not_contain('Profile', response.body)
+
+        # login and check logged in student perspective
+        config.Registry.test_overrides[
+            sites.GCB_COURSES_CONFIG.name] = 'course:/:/'
+
+        email = 'student'
+        actions.login(email)
+        response = self.get('/explorer')
+        assert_contains('Explore Courses', response.body)
+        assert_contains('My Courses', response.body)
 
 
 class GlobalProfileTest(BaseExplorerTest):

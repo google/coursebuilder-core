@@ -50,16 +50,17 @@ class IndexPageHandler(webapp2.RequestHandler):
         """Handles GET requests."""
         if course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
             self.redirect('/explorer')
+            return
+
+        index = sites.get_course_index()
+        if index.get_all_courses():
+            course = index.get_course_for_path('/')
+            if not course:
+                course = index.get_all_courses()[0]
+            self.redirect(ApplicationHandler.canonicalize_url_for(
+                course, '/course?use_last_location=true'))
         else:
-            index = sites.get_course_index()
-            if index.get_all_courses():
-                course = index.get_course_for_path('/')
-                if not course:
-                    course = index.get_all_courses()[0]
-                self.redirect(ApplicationHandler.canonicalize_url_for(
-                    course, '/course?use_last_location=true'))
-            else:
-                self.redirect('/admin?action=welcome')
+            self.redirect('/admin?action=welcome')
 
 
 class BaseStudentHandler(webapp2.RequestHandler):
@@ -177,7 +178,15 @@ class ProfileHandler(BaseStudentHandler):
 
     def get(self):
         """Handles GET requests."""
+        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
+            self.error(404)
+            return
+
         user = self.initialize_page_and_get_user()
+        if not user:
+            self.redirect('/explorer')
+            return
+
         courses = self.get_public_courses()
         self.template_values['student'] = (
             StudentProfileDAO.get_profile_by_user_id(user.user_id()))
@@ -195,13 +204,13 @@ class ProfileHandler(BaseStudentHandler):
 
     def post(self):
         """Handles post requests."""
-        user = self.initialize_page_and_get_user()
-        if not user:
+        if not self.is_valid_xsrf_token(STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID):
             self.error(403)
             return
 
-        if not self.is_valid_xsrf_token(STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID):
-            self.error(403)
+        user = self.initialize_page_and_get_user()
+        if not user:
+            self.redirect('/explorer')
             return
 
         new_name = self.request.get('name')
@@ -219,6 +228,10 @@ class AllCoursesHandler(BaseStudentHandler):
 
     def get(self):
         """Handles GET requests."""
+        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
+            self.error(404)
+            return
+
         self.initialize_page_and_get_user()
         courses = self.get_public_courses()
 
@@ -237,6 +250,11 @@ class RegisteredCoursesHandler(BaseStudentHandler):
 
     def get(self):
         """Handles GET request."""
+
+        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
+            self.error(404)
+            return
+
         self.initialize_page_and_get_user()
         courses = self.get_public_courses()
         enrolled_courses = self.get_enrolled_courses(courses)
@@ -263,6 +281,10 @@ class AssetsHandler(webapp2.RequestHandler):
 
     def get(self, path):
         """Handles GET requests."""
+        if not course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.value:
+            self.error(404)
+            return
+
         filename = '%s/assets/%s' % (appengine_config.BUNDLE_ROOT, path)
         with open(filename, 'r') as f:
             self.response.headers['Content-Type'] = self.get_mime_type(filename)

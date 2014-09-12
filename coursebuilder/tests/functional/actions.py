@@ -142,11 +142,15 @@ class TestBase(suite.AppEngineTestBase):
         if ns != appengine_config.DEFAULT_NAMESPACE_NAME:
             raise Exception('Expected default namespace, found: %s' % ns)
 
+    def get_auto_deploy(self):
+        return True
+
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
 
         self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
-        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = True
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = (
+            self.get_auto_deploy())
 
         self.supports_editing = False
         self.assert_default_namespace()
