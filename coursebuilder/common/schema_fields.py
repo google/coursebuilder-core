@@ -53,6 +53,13 @@ class Property(object):
     def set_select_data(self, select_data):
         self._select_data = select_data
 
+    def get_display_dict(self):
+        return {
+            'name': self._name,
+            'label': self._label,
+            'description': self._description,
+            }
+
 
 class Registry(object):
     """Registry is a collection of Property's."""
@@ -103,6 +110,14 @@ class Registry(object):
 
     def has_subregistries(self):
         return True if self._sub_registries else False
+
+    def get_display_dict(self):
+        return {
+            'title': self._title,
+            'properties': [p.get_display_dict() for p in self._properties],
+            'registries': [r.get_display_dict()
+                           for r in self._sub_registries.itervalues()],
+            }
 
     def clone_only_items_named(self, paths):
         """Clone only the selected items from a registry.

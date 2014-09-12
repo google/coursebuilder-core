@@ -17,6 +17,7 @@
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
+import HTMLParser
 import os
 import urllib
 
@@ -613,6 +614,49 @@ class DashboardHandler(
         self.render_page(template_values)
 
     def get_settings_section(self, template_values, tab):
+        html_parser = HTMLParser.HTMLParser()
+
+        def get_environ_value(environ, name):
+            for part in name.split(':'):
+                environ = environ.get(part)
+                if not environ:
+                    return ''
+            return environ or ''
+
+        def build_settings_property(setting_dict, environ):
+            section = safe_dom.Element('div', className='settings-property')
+            label = safe_dom.Element('div', className='settings-property-label')
+            box = safe_dom.Element('div', className='settings-property-box')
+            value = safe_dom.Element('div', className='settings-property-value')
+            descr = safe_dom.Element('div', className='settings-property-descr')
+            clear = safe_dom.Element('div', className='settings-property-clear')
+            section.add_child(label)
+            section.add_child(box)
+            box.add_child(value)
+            box.add_child(descr)
+            section.add_child(clear)
+            label.add_text(setting_dict['label'])
+            value.add_text(get_environ_value(environ, setting_dict['name']))
+            description = setting_dict['description']
+            if description:
+                description = html_parser.unescape(description)
+                descr.add_text(description)
+            return section
+
+        def build_settings_section(display_dict, environ):
+            section = safe_dom.Element('div', className='settings-section')
+            title = safe_dom.Element('div', className='settings-section-title')
+            title.add_text(display_dict['title'])
+            content = safe_dom.Element('div',
+                                       className='settings-section-content')
+            section.add_child(title)
+            section.add_child(content)
+            for registry in display_dict['registries']:
+                content.add_child(build_settings_section(registry, environ))
+            for prop in display_dict['properties']:
+                content.add_child(build_settings_property(prop, environ))
+            return section
+
         actions = []
         if self.app_context.is_editable_fs():
             actions.append({
@@ -629,8 +673,19 @@ class DashboardHandler(
         template_values['sections'] = [{
             'title': 'Course Settings',
             'actions': actions,
-            'children': ['TODO(psimakov): Nice formatted text for options']
+            'pre': ' ',
             }]
+
+        course = self.get_course()
+        environ = course.get_environ(self.app_context)
+        display_dict = (course
+                        .create_settings_schema()
+                        .clone_only_items_named(tab.contents.split(','))
+                        .get_display_dict())
+        main_content = safe_dom.NodeList()
+        for registry in display_dict['registries']:
+            main_content.append(build_settings_section(registry, environ))
+        template_values['main_content'] = main_content
 
     def get_settings_admin_prefs(self, template_values, tab):
         actions = []
@@ -655,7 +710,7 @@ class DashboardHandler(
 
         template_values['sections'] = [
             {
-                'title': 'Admin Preferences',
+                'title': 'Preferences',
                 'description': messages.ADMIN_PREFERENCES_DESCRIPTION,
                 'actions': actions,
                 'children': admin_prefs_info},
@@ -1365,7 +1420,7 @@ def register_module():
                            DashboardHandler.get_assets_assessments)
     tabs.Registry.register('assets', 'activities', 'Activities',
                            DashboardHandler.get_assets_activities)
-    tabs.Registry.register('assets', 'images', 'Images and Documents',
+    tabs.Registry.register('assets', 'images', 'Images & Documents',
                            DashboardHandler.get_assets_images)
     tabs.Registry.register('assets', 'css', 'CSS',
                            DashboardHandler.get_assets_css)
@@ -1386,7 +1441,7 @@ def register_module():
                            'unit,assessment_confirmations')
     tabs.Registry.register('settings', 'i18n', 'I18N', 'i18n')
     tabs.Registry.register('settings', 'advanced', 'Advanced', None)
-    tabs.Registry.register('settings', 'admin_prefs', 'Admin Preferences', None)
+    tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),

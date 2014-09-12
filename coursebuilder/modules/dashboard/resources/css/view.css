@@ -369,3 +369,44 @@ li.activity-item {
   background-color: #f5f5f5;
   border: solid 1px #C0C0C0;
 }
+.settings-section {
+  width: 700px;
+  margin: auto;
+}
+.settings-section-title {
+  font-weight: bold;
+  padding-left: 1em;
+  background-color: #eee;
+  color: #555;
+}
+.settings-section-content {
+  margin-left: 2em;
+}
+.settings-property {
+  margin: 8px;
+}
+.settings-property-label {
+  float: left;
+  padding-right: 1em;
+  width: 130px;
+  text-align: right;
+  color: #555;
+}
+.settings-property-box {
+  float: left;
+  width: 500px;
+}
+.settings-property-value {
+  border-left: 1px solid #999;
+  color: #555;
+  background: #EEE;
+  padding: 3px;
+  min-height: 1em;
+}
+.settings-property-descr {
+  font-size: 75%;
+  color: #555;
+}
+.settings-property-clear {
+  clear: both;
+}

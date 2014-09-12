@@ -223,7 +223,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Course Outline',
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
-            'Images and Documents',
+            'Images & Documents',
             'Empty section',
             'Questions',
             'Empty section',

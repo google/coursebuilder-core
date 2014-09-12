@@ -573,7 +573,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
         data_rows = [
             self._get_resource_row(None, ResourceKey.ASSET_IMG_TYPE, path)
             for path in self.handler.list_files('/assets/img')]
-        rows += self._make_table_section(data_rows, 'Images and Documents')
+        rows += self._make_table_section(data_rows, 'Images & Documents')
 
         # Run over questions and question groups
         data_rows = []
@@ -602,10 +602,21 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
-
+        actions = [{
+            'id': 'edit_18n_settings',
+            'caption': 'Edit I18N Settings',
+            'href': self.handler.get_action_url(
+                'settings', extra_args={'tab': 'i18n'})
+            }]
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Workflow'),
-            'main_content': jinja2.utils.Markup(main_content)})
+            'main_content': jinja2.utils.Markup(main_content),
+            'sections': [{
+                    'title': 'Internationalization',
+                    'actions': actions,
+                    'pre': ' ',
+                    }]
+            })
 
 
 class TranslationConsole(BaseDashboardExtension):
@@ -1029,7 +1040,7 @@ def translate_question_group_dto(dto_list):
 
 def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
-        [I18nDashboardHandler.ACTION, 'i18n'])
+        [I18nDashboardHandler.ACTION, 'I18N'])
     I18nDashboardHandler.register()
     TranslationConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
@@ -1039,7 +1050,7 @@ def notify_module_enabled():
 
 def notify_module_disabled():
     dashboard.DashboardHandler.nav_mappings.remove(
-        [I18nDashboardHandler.ACTION, 'i18n'])
+        [I18nDashboardHandler.ACTION, 'I18N'])
     I18nDashboardHandler.unregister()
     TranslationConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)
