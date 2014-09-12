@@ -187,8 +187,7 @@ def augment_assessment_units(course, student):
 
     for unit in course.get_units():
         if unit.type == 'A':
-            unit.needs_human_grader = course.needs_human_grader(unit)
-            if unit.needs_human_grader:
+            if unit.needs_human_grader():
                 review_steps = rp.get_review_steps_by(
                     unit.unit_id, student.get_key())
                 review_min_count = unit.workflow.get_review_min_count()

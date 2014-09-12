@@ -400,6 +400,9 @@ class Unit12(object):
     def is_old_style_assessment(self):
         return self.is_assessment()
 
+    def needs_human_grader(self):
+        return self.workflow.get_grader() == HUMAN_GRADER
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
