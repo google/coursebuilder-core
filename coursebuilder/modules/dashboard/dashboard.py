@@ -459,6 +459,7 @@ class DashboardHandler(
             {'id': 'add_course',
              'caption': 'Add Course',
              'href': '/admin?action=add_course'}]
+
         course_info.append(
             'Course Title: %s' % self.app_context.get_environ()['course'][
                 'title'])
@@ -500,6 +501,7 @@ class DashboardHandler(
                 'params': {'availability': not self.app_context.now_available},
                 })
 
+        course_info.append('Schema Version: %s' % courses.Course(self).version)
         course_info.append('Context Path: %s' % self.app_context.get_slug())
         course_info.append('Datastore Namespace: %s' %
                            self.app_context.get_namespace_name())
@@ -571,11 +573,13 @@ class DashboardHandler(
                 'title': 'Course Outline',
                 'description': messages.COURSE_OUTLINE_DESCRIPTION,
                 'actions': outline_actions,
-                'pre': self.render_course_outline_to_html()},
-            {
+                'pre': self.render_course_outline_to_html()}]
+
+        if courses.Course(self).version == courses.COURSE_MODEL_VERSION_1_2:
+            sections.append({
                 'title': 'Data Files',
                 'description': messages.DATA_FILES_DESCRIPTION,
-                'children': data_info}]
+                'children': data_info})
 
         template_values = {
             'page_title': self.format_title('Outline'),

@@ -439,7 +439,7 @@ a.gcb-button-action, button.gcb-button-action {
   width: 103.067484663%;
 }
 
-.gcb-cols:after {
+.gcb-cols:after, #gcb-nav-x:after {
   clear: both;
   content: " ";
   display: block;
