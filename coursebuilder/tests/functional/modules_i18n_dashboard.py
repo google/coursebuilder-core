@@ -516,13 +516,14 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
 class CourseContentTranslationTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'i18n_course'
+    COURSE_TITLE = 'I18N Course'
 
     def setUp(self):
         super(CourseContentTranslationTests, self).setUp()
 
         self.base = '/' + self.COURSE_NAME
         app_context = actions.simple_add_course(
-            self.COURSE_NAME, self.ADMIN_EMAIL, 'I18N Course')
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
 
@@ -810,3 +811,42 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(
             'CHOICE 2',
             main.findall('.//div[@class="qt-choices"]//label')[1].text.strip())
+
+    def test_course_settings_are_translated(self):
+        course_bundle = {
+            'course:title': {
+                'source_value': None,
+                'type': 'string',
+                'data': [
+                    {
+                        'source_value': self.COURSE_TITLE,
+                        'target_value': 'TRANSLATED TITLE'
+                    }]
+            }}
+        key_el = ResourceBundleKey(
+            ResourceKey.COURSE_SETTINGS_TYPE, 'homepage', 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(key_el), course_bundle))
+
+        page_html = self.get('course').body
+        dom = self.parse_html_string(page_html)
+        self.assertEquals(
+            'TRANSLATED TITLE',
+            dom.find('.//h1[@class="gcb-product-headers-large"]').text.strip())
+
+    def test_course_settings_load_with_default_locale(self):
+        # NOTE: This is to test the protections against a vulnerability
+        # to infinite recursion in the course settings translation. The issue
+        # is that when no locale is set, then sites.get_current_locale needs
+        # to refer to the course settings to find the default locale. However
+        # if this call to get_current_locale takes place inside the translation
+        # callback from loading the course settings, there will be infinite
+        # recursion. This test checks that this case is defended.
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        models.StudentPreferencesDAO.delete(prefs)
+
+        page_html = self.get('course').body
+        dom = self.parse_html_string(page_html)
+        self.assertEquals(
+            self.COURSE_TITLE,
+            dom.find('.//h1[@class="gcb-product-headers-large"]').text.strip())

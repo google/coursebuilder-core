@@ -1963,6 +1963,10 @@ class Course(object):
     # methods in the order they were added to the list.
     POST_LOAD_HOOKS = []
 
+    # Holds callback functions which are passed the course env dict after it it
+    # loaded, to perform any further processing on it.
+    COURSE_ENV_POST_LOAD_HOOKS = []
+
     SCHEMA_SECTION_COURSE = 'course'
     SCHEMA_SECTION_HOMEPAGE = 'homepage'
     SCHEMA_SECTION_REGISTRATION = 'registration'
@@ -1985,6 +1989,23 @@ class Course(object):
     @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
+        env = cls._load_environ(app_context)
+
+        # Monkey patch to defend against infinite recursion. Downstream calls do
+        # not reload the env but just return the copy we have here.
+        old_get_environ = cls.get_environ
+        cls.get_environ = classmethod(lambda cl, ac: env)
+        try:
+            for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
+                hook(env)
+        finally:
+            # Restore the original method from monkey-patch
+            cls.get_environ = old_get_environ
+
+        return env
+
+    @classmethod
+    def _load_environ(cls, app_context):
         course_yaml = None
         course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()

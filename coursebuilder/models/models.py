@@ -992,6 +992,16 @@ class BaseJsonDao(object):
 
     @classmethod
     def _maybe_apply_post_hooks(cls, dto_list):
+        """Run any post-load processing hooks.
+
+        Modules may insert post-load processing hooks (e.g. for i18n
+        translation) into the list POST_LOAD_HOOKS defined on the DAO class.
+        If the class has this list and any hook functions are present, they
+        are passed the list of DTO's for in-place processing.
+
+        Args:
+            dto_list: list of DTO objects
+        """
         if hasattr(cls, 'POST_LOAD_HOOKS'):
             for hook in cls.POST_LOAD_HOOKS:
                 hook(dto_list)

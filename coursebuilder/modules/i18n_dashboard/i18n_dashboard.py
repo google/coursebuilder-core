@@ -997,6 +997,36 @@ def translate_course(course):
     translate_list(units + lessons, ResourceBundleDAO.bulk_load(keys))
 
 
+def translate_course_env(env):
+    if not sites.is_localized_content_allowed():
+        return
+
+    app_context = sites.get_course_for_current_request()
+    if app_context is None:
+        return
+
+    locale = sites.get_current_locale(app_context)
+
+    key_list = [
+        ResourceBundleKey(ResourceKey.COURSE_SETTINGS_TYPE, key, locale)
+        for key in courses.Course.get_schema_sections()]
+
+    bundle_list = ResourceBundleDAO.bulk_load([str(key) for key in key_list])
+
+    for key, bundle in zip(key_list, bundle_list):
+        if bundle is None:
+            continue
+
+        schema = key.resource_key.get_schema(app_context)
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            env, schema)
+
+        for name, translation_dict in bundle.dict.items():
+            field = binding.name_to_value[name]
+            source_value = field.value
+            field.value = LazyTranslator(source_value, translation_dict)
+
+
 def translate_dto_list(dto_list, key_list):
     if not sites.is_localized_content_allowed():
         return
@@ -1043,6 +1073,7 @@ def notify_module_enabled():
     I18nDashboardHandler.register()
     TranslationConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
+    courses.Course.COURSE_ENV_POST_LOAD_HOOKS.append(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.append(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
 
@@ -1053,6 +1084,7 @@ def notify_module_disabled():
     I18nDashboardHandler.unregister()
     TranslationConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)
+    courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
 
