@@ -306,8 +306,8 @@ class UnitLessonEditor(ApplicationHandler):
         self, rest_handler_cls, title, schema=None, annotations_dict=None,
         delete_xsrf_token='delete-unit', page_description=None,
         extra_js_files=None):
-        annotations_dict = annotations_dict or []
         """Renders an editor form for a given REST handler class."""
+        annotations_dict = annotations_dict or []
         if schema:
             schema_json = schema.get_json_schema()
             annotations_dict = schema.get_schema_dict() + annotations_dict
