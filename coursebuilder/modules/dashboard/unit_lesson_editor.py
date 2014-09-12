@@ -154,6 +154,12 @@ class CourseOutlineRights(object):
 class UnitLessonEditor(ApplicationHandler):
     """An editor for the unit and lesson titles."""
 
+    HIDE_ACTIVITY_ANNOTATIONS = [
+        (['properties', 'activity_title', '_inputex'], {'_type': 'hidden'}),
+        (['properties', 'activity_listed', '_inputex'], {'_type': 'hidden'}),
+        (['properties', 'activity', '_inputex'], {'_type': 'hidden'}),
+    ]
+
     def get_import_course(self):
         """Shows setup form for course import."""
 
@@ -300,10 +306,11 @@ class UnitLessonEditor(ApplicationHandler):
         self, rest_handler_cls, title, schema=None, annotations_dict=None,
         delete_xsrf_token='delete-unit', page_description=None,
         extra_js_files=None):
+        annotations_dict = annotations_dict or []
         """Renders an editor form for a given REST handler class."""
         if schema:
             schema_json = schema.get_json_schema()
-            annotations_dict = schema.get_schema_dict()
+            annotations_dict = schema.get_schema_dict() + annotations_dict
         else:
             schema_json = rest_handler_cls.SCHEMA_JSON
             if not annotations_dict:
@@ -366,10 +373,16 @@ class UnitLessonEditor(ApplicationHandler):
 
     def get_edit_lesson(self):
         """Shows the lesson/activity editor."""
+        key = self.request.get('key')
+        course = courses.Course(self)
+        lesson = course.find_lesson_by_id(None, key)
+        annotations_dict = (
+            None if lesson.has_activity
+            else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
         self._render_edit_form_for(
             LessonRESTHandler, 'Lessons and Activities',
-            schema=LessonRESTHandler.get_schema(
-                courses.Course(self).get_units()),
+            schema=LessonRESTHandler.get_schema(course.get_units()),
+            annotations_dict=annotations_dict,
             delete_xsrf_token='delete-lesson',
             extra_js_files=None)
 
@@ -1189,7 +1202,7 @@ class LessonRESTHandler(BaseRESTHandler):
 
     REQUIRED_MODULES = [
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
-        'inputex-uneditable', 'inputex-checkbox']
+        'inputex-uneditable', 'inputex-checkbox', 'inputex-hidden']
 
     @classmethod
     def get_schema(cls, units):
@@ -1342,8 +1355,10 @@ class LessonRESTHandler(BaseRESTHandler):
         activity = updates_dict.get('activity', '').strip()
         errors = []
         if activity:
-            lesson.has_activity = True
-            course.set_activity_content(lesson, activity, errors=errors)
+            if lesson.has_activity:
+                course.set_activity_content(lesson, activity, errors=errors)
+            else:
+                errors.append('Old-style activities are not supported.')
         else:
             lesson.has_activity = False
             fs = self.app_context.fs

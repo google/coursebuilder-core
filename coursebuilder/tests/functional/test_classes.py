@@ -4648,6 +4648,55 @@ var activity = [
         # cleaning up
         sites.reset_courses()
 
+    def test_hide_activity(self):
+        """Tests old-style activity annotations."""
+
+        # set up a version 13 course
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        app_ctx = sites.get_all_courses()[0]
+        course = courses.Course(None, app_context=app_ctx)
+
+        # add a unit & a lesson w.o. activity
+        unit = course.add_unit()
+        course.add_lesson(unit)
+        course.save()
+
+        # admin logs in and gets the lesson for editing
+        actions.login('admin@foo.com', is_admin=True)
+        response = self.get('/test/dashboard?action=edit_lesson&key=2')
+        self.assertEqual(200, response.status_int)
+
+        # assert that there are 3 hidden annotations
+        self.assert_num_hidden_annotations(response.body, 3)
+
+        # add a lesson w. old-style activity
+        lesson = course.add_lesson(unit)
+        lesson.scored = True
+        lesson.has_activity = True
+        lesson.activity_title = 'activity title'
+        lesson.activity_listed = True
+        errors = []
+        course.set_activity_content(
+            lesson, unicode(self.FREETEXT_QUESTION), errors)
+        assert not errors
+        course.save()
+
+        # assert that there are no hidden annotations
+        actions.login('admin@foo.com', is_admin=True)
+        response = self.get('/test/dashboard?action=edit_lesson&key=3')
+        self.assertEqual(200, response.status_int)
+        self.assert_num_hidden_annotations(response.body, 0)
+
+        # cleaning up
+        sites.reset_courses()
+
+    def assert_num_hidden_annotations(self, body, n):
+        start_marker = 'load_schema_with_annotations = function(schema)'
+        suffix = body.split(start_marker)[1]
+        end_marker = re.compile(r'\s+}')
+        func_body = end_marker.split(suffix)[0]
+        self.assertEqual(n, func_body.count('hidden'))
+
     def test_import_lesson13_w_activity12_to_lesson13(self):
 
         # Setup the src and destination courses.

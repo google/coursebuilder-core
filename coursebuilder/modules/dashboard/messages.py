@@ -134,7 +134,9 @@ Width of the input field, measured in columns.
 """
 
 LESSON_ACTIVITY_DESCRIPTION = assemble_sanitized_message("""
-Create an activity by entering the correct syntax above.
+Note: Activities defined in the "Activity" area are deprecated, please use the
+"Lesson Body" area instead. Old-style activities are automatically
+converted during "Import Course".
 """, ('https://code.google.com/p/course-builder/wiki/CreateActivities'
       '#Writing_activities'))
 
