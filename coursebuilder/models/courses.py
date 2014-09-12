@@ -1970,6 +1970,19 @@ class Course(object):
     SCHEMA_SECTION_I18N = 'i18n'
 
     @classmethod
+    def get_schema_sections(cls):
+        ret = set([
+            cls.SCHEMA_SECTION_COURSE,
+            cls.SCHEMA_SECTION_HOMEPAGE,
+            cls.SCHEMA_SECTION_REGISTRATION,
+            cls.SCHEMA_SECTION_UNITS_AND_LESSONS,
+            cls.SCHEMA_SECTION_I18N,
+            ])
+        for name in cls.OPTIONS_SCHEMA_PROVIDERS:
+            ret.add(name)
+        return ret
+
+    @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
         course_yaml = None

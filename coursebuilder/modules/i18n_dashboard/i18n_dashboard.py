@@ -544,8 +544,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
         # Course settings
         data_rows = []
 
-        for section in [
-                'course', 'registration', 'homepage', 'unit', 'i18n']:
+        for section in sorted(courses.Course.get_schema_sections()):
             data_rows.append(self._get_resource_row(
                 None, ResourceKey.COURSE_SETTINGS_TYPE, section))
         rows += self._make_table_section(data_rows, 'Course Settings')

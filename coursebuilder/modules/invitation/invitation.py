@@ -60,7 +60,7 @@ from modules.unsubscribe import unsubscribe
 
 # The intent recorded for the emails sent by the notifications module
 INVITATION_INTENT = 'course_invitation'
-COURSE_SETTINGS_SCHEMA_SECTION = courses.Course.SCHEMA_SECTION_COURSE
+COURSE_SETTINGS_SCHEMA_SECTION = 'invitation'
 
 RESOURCES_PATH = '/modules/invitation/resources'
 
