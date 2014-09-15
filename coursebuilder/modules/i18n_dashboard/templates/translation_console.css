@@ -114,10 +114,10 @@ div#formContainer div:first-child > .translation-item > fieldset {
   width: 700px;
 }
 
-/* Align name and Type labels on a line with their text. */
+/* Align Name and Type labels on a line with their text. */
 .translation-console > fieldset > legend + div > .inputEx-label,
-.translation-item > fieldset > div:first-child > .inputEx-label,
-.translation-item > fieldset > div:first-child + div > .inputEx-label {
+.translation-item > fieldset > div:first-child + div > .inputEx-label,
+.translation-item > fieldset > div:first-child + div + div > .inputEx-label {
   float: left;
   width: 3em;
 }
@@ -127,12 +127,12 @@ div#formContainer div:first-child > .translation-item > fieldset {
 }
 
 /* Hide the label on the item list */ 
-.translation-item > fieldset > div:first-child + div + div + div > div:first-child {
+.translation-item > fieldset > div:first-child + div + div + div + div > div:first-child {
   display: none;
 }
 
 /* Style the item list fieldset. */
-div#formContainer fieldset > div:first-child + div + div + div fieldset {
+div#formContainer fieldset > div:first-child + div + div + div + div fieldset {
   border-top: none;
   margin: 0;
   padding: 0;

@@ -809,8 +809,9 @@ class ContentTransformer(object):
 class SourceToTargetMapping(object):
     """Class that maps source to target."""
 
-    def __init__(self, name, type_name, source_value, target_value):
+    def __init__(self, name, label, type_name, source_value, target_value):
         self._name = name
+        self._label = label
         self._type = type_name
         self._source = source_value
         self._target = target_value
@@ -822,6 +823,10 @@ class SourceToTargetMapping(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def label(self):
+        return self._label
 
     @property
     def source_value(self):
@@ -854,11 +859,12 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
     SIMILARITY_CUTOFF = 0.5
 
     def __init__(
-            self, name, source_value, target_value, type_name, verb,
+            self, name, label, type_name,
+            source_value, target_value, verb,
             source_value_index, target_value_index):
         assert verb in self.ALLOWED_VERBS
         super(SourceToTargetDiffMapping, self).__init__(
-            name, source_value, target_value, type_name)
+            name, label, type_name, source_value, target_value)
         self._verb = verb
         self._source_value_index = source_value_index
         self._target_value_index = target_value_index
@@ -884,12 +890,14 @@ class SourceToTargetDiffMapping(SourceToTargetMapping):
             cls, field_value, source_value, target_value, verb,
             source_value_index, target_value_index):
         _name = None
+        _label = None
         _type = None
         if field_value is not None:
             _name = field_value.name
+            _label = field_value.field.label
             _type = field_value.field.type
         return SourceToTargetDiffMapping(
-            _name, _type,
+            _name, _label, _type,
             source_value, target_value, verb,
             source_value_index, target_value_index)
 

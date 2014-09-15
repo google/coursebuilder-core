@@ -367,6 +367,10 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             ['title', 'description', 'unit_header', 'unit_footer'],
             [s['name'] for s in sections])
 
+        self.assertEquals(
+            ['Title', 'Description', 'Unit Header', 'Unit Footer'],
+            [s['label'] for s in sections])
+
         expected_values = [
             ('title', 'string', 1, ''),
             ('description', 'string', 1, ''),
@@ -418,6 +422,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a translation for the title
         title_section = sections[0]
         self.assertEquals('title', title_section['name'])
+        self.assertEquals('Title', title_section['label'])
         self.assertEquals(1, len(title_section['data']))
         self.assertEquals(VERB_CURRENT, title_section['data'][0]['verb'])
         self.assertEquals('TEST UNIT', title_section['data'][0]['target_value'])
@@ -425,11 +430,13 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a new description
         description_section = sections[1]
         self.assertEquals('description', description_section['name'])
+        self.assertEquals('Description', description_section['label'])
         self.assertEquals(VERB_NEW, description_section['data'][0]['verb'])
 
         # Confirm there is a translation for one of the two paragraphs
         header_section = sections[2]
         self.assertEquals('unit_header', header_section['name'])
+        self.assertEquals('Unit Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
         self.assertEquals(VERB_CURRENT, header_section['data'][0]['verb'])
         self.assertEquals('a', header_section['data'][0]['source_value'])
@@ -439,7 +446,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
 
         # Confirm there is a no footer data
         footer_section = sections[3]
-        self.assertEquals('unit_footer', footer_section['name'])
+        self.assertEquals('Unit Footer', footer_section['label'])
         self.assertEquals(0, len(footer_section['data']))
 
     def test_get_unit_content_with_changed_values(self):
@@ -471,6 +478,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a translation for the title
         title_section = sections[0]
         self.assertEquals('title', title_section['name'])
+        self.assertEquals('Title', title_section['label'])
         self.assertEquals(1, len(title_section['data']))
         self.assertEquals(VERB_CHANGED, title_section['data'][0]['verb'])
         self.assertEquals(
@@ -479,11 +487,13 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a new description
         description_section = sections[1]
         self.assertEquals('description', description_section['name'])
+        self.assertEquals('Description', description_section['label'])
         self.assertEquals(VERB_NEW, description_section['data'][0]['verb'])
 
         # Confirm there is a translation for one of the two paragraphs
         header_section = sections[2]
         self.assertEquals('unit_header', header_section['name'])
+        self.assertEquals('Unit Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
         self.assertEquals(VERB_CHANGED, header_section['data'][0]['verb'])
         self.assertEquals('a', header_section['data'][0]['source_value'])
@@ -494,6 +504,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         # Confirm there is a no footer data
         footer_section = sections[3]
         self.assertEquals('unit_footer', footer_section['name'])
+        self.assertEquals('Unit Footer', footer_section['label'])
         self.assertEquals(0, len(footer_section['data']))
 
     def test_get_unit_content_with_custom_tag(self):

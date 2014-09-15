@@ -659,7 +659,9 @@ def tc_generate_schema():
         None, 'section', extra_schema_dict_values={
             'className': 'inputEx-Group translation-item'})
     section.add_property(schema_fields.SchemaField(
-        'name', 'Name', 'string', editable=False))
+        'name', '', 'string', hidden=True))
+    section.add_property(schema_fields.SchemaField(
+        'label', 'Name', 'string', editable=False))
     section.add_property(schema_fields.SchemaField(
         'type', 'Type', 'string', editable=False, optional=True))
     section.add_property(schema_fields.SchemaField(
@@ -748,7 +750,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                     target_value = value['data'][0]['target_value']
 
                 existing_mappings.append(xcontent.SourceToTargetMapping(
-                    name, value['type'], source_value, target_value))
+                    name, None, value['type'], source_value, target_value))
 
         mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
             binding, allowed_names=allowed_names,
@@ -799,6 +801,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
             sections.append({
                 'name': mapping.name,
+                'label': mapping.label,
                 'type': mapping.type,
                 'source_value': source_value,
                 'data': data
