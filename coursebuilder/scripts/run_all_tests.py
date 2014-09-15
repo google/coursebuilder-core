@@ -91,7 +91,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
     'tests.functional.modules_i18n_dashboard'
         '.TranslationConsoleRestHandlerTests': 5,
-    'tests.functional.modules_invitation.InvitationHandlerTests': 15,
+    'tests.functional.modules_invitation.InvitationHandlerTests': 16,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
     'tests.functional.modules_math.MathTagTests': 3,

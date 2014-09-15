@@ -72,6 +72,10 @@ SENDER_EMAIL_KEY = 'sender_email'
 SUBJECT_TEMPLATE_KEY = 'subject_template'
 BODY_TEMPLATE_KEY = 'body_template'
 
+# In order to prevent spamming, the number of invitations which can be sent per
+# user is limited.
+MAX_EMAILS = 100
+
 
 def is_email_valid(email):
     # TODO(jorr): Use google.appengine.api.mail.is_email_valid when Issue 7471
@@ -153,6 +157,9 @@ class InvitationStudentProperty(models.StudentPropertyEntity):
         email_set.update(email_list)
         value_dict[self.EMAIL_LIST_KEY] = list(email_set)
         self.value = transforms.dumps(value_dict)
+
+    def invited_list_size(self):
+        return len(transforms.loads(self.value))
 
 
 class InvitationHandler(utils.BaseHandler):
@@ -243,6 +250,16 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             return
 
         invitation_data = InvitationStudentProperty.load_or_create(student)
+
+        # Limit the number of emails a user can send, to prevent spamming
+        if invitation_data.invited_list_size() + len(email_set) > MAX_EMAILS:
+            transforms.send_json_response(
+                self, 200,
+                gettext.gettext(
+                    'This exceeds your email cap. Number of remaining '
+                    'invitations: %s. No messages sent.' % (
+                        MAX_EMAILS - invitation_data.invited_list_size())))
+            return
 
         messages = []
         for email in email_set:

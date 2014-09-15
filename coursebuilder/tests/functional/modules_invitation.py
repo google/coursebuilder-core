@@ -23,6 +23,7 @@ from common import crypto
 from models import courses
 from models import models
 from models import transforms
+from modules.invitation import invitation
 from modules.notifications import notifications
 from modules.unsubscribe import unsubscribe
 from tests.functional import actions
@@ -291,6 +292,21 @@ class InvitationHandlerTests(BaseInvitationTests):
             'You have already sent an invitation email to "spammed@foo.com"',
             response['message'])
         self.assertEqual(2, self.send_async_count)
+
+    def test_rest_handler_limits_number_of_invitations(self):
+        old_max_emails = invitation.MAX_EMAILS
+        invitation.MAX_EMAILS = 2
+        try:
+            email_list = ['a@foo.com', 'b@foo.com', 'c@foo.com']
+            response = self._do_valid_email_list_post(email_list)
+            self.assertEquals(200, response['status'])
+            self.assertEquals(
+                'This exceeds your email cap. '
+                'Number of remaining invitations: 2. '
+                'No messages sent.', response['message'])
+            self.assertEqual(0, self.send_async_count)
+        finally:
+            invitation.MAX_EMAILS = old_max_emails
 
 
 class ProfileViewInvitationTests(BaseInvitationTests):
