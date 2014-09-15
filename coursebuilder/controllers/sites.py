@@ -110,6 +110,7 @@ import os
 import posixpath
 import re
 import threading
+import traceback
 import urlparse
 import zipfile
 
@@ -236,7 +237,8 @@ def count_stats(handler):
         if handler.response and handler.response.content_length:
             HTTP_BYTES_OUT.inc(handler.response.content_length)
     except Exception as e:  # pylint: disable-msg=broad-except
-        logging.error('Failed to count_stats(): %s.', str(e))
+        logging.error(
+            'Failed to count_stats(): %s\n%s', e, traceback.format_exc())
 
 
 def set_accept_language(accept_language):
@@ -541,13 +543,75 @@ class AssetHandler(webapp2.RequestHandler):
 class CourseIndex(object):
     """A list of all application contexts."""
 
+    CAN_USE_INDEXED_GETTER = True
+
     def __init__(self, all_contexts):
         self._all_contexts = all_contexts
         self._namespace2app_context = {}
+        self._slug_parts2app_context = {}
         self._reindex()
+
+    @classmethod
+    def _slug_to_parts(cls, path):
+      """Split slug into parts; slug parts are '/' separated."""
+      if path in ['/', '']:
+          return None
+      _parts = path.split('/')
+      assert _parts[0] == ''  # pylint: disable-msg=g-explicit-bool-comparison
+      _parts.pop(0)
+      return _parts
+
+    @classmethod
+    def _validate_and_split_path_to_parts(cls, path):
+      """Split path into parts; path parts are '/' separated."""
+      if path in ['/', '']:
+          return True, None
+      _parts = path.split('/')
+      if _parts[0] != '':  # pylint: disable-msg=g-explicit-bool-comparison
+          return False, None
+      _parts.pop(0)
+      return True, _parts
+
+    def _update_slug_parts_index(self, app_context):
+      """An index is a tree keyed by slug part."""
+      _parts = self._slug_to_parts(app_context.get_slug())
+      _parent = self._slug_parts2app_context
+      while True:
+          if not _parts:
+              _parent[None] = app_context
+              break
+          _part = _parts.pop(0)
+          _node = _parent.get(_part)
+          if not _node:
+              _node = {_part: {}}
+              _parent.update(_node)
+          _parent = _parent[_part]
+
+    def _get_course_for_path_via_index(self, path):
+        _result = None
+        _valid, _parts = self._validate_and_split_path_to_parts(path)
+        if not _valid:
+            return None
+        _parent = self._slug_parts2app_context
+        while True:
+            if not _parts:
+                if _parent:
+                    _result = _parent.get(None)
+                break
+            _part = _parts.pop(0)
+            _node = _parent.get(_part)
+            if not _node:
+                if _parent:
+                    _result = _parent.get(None)
+                break
+            _parent = _node
+        if not _result:
+            debug('No mapping for: %s' % path)
+        return _result
 
     def _reindex(self):
         for app_context in self._all_contexts:
+            self._update_slug_parts_index(app_context)
             self._namespace2app_context[app_context.get_namespace_name()] = (
                 app_context)
 
@@ -567,7 +631,10 @@ class CourseIndex(object):
         return self._namespace2app_context.get(namespace)
 
     def get_course_for_path(self, path):
-        return self._get_course_for_path_linear(path)
+        if CourseIndex.CAN_USE_INDEXED_GETTER:
+            return self._get_course_for_path_via_index(path)
+        else:
+            return self._get_course_for_path_linear(path)
 
 
 def debug(message):
@@ -586,7 +653,7 @@ class ApplicationContext(object):
 
     # Here we store a map of a text definition of the courses to be parsed, and
     # a corresponding CourseIndex.
-    COURSE_INDEX_CACHE = {}
+    _COURSE_INDEX_CACHE = {}
 
     @classmethod
     def get_namespace_name_for_request(cls):
@@ -628,8 +695,19 @@ class ApplicationContext(object):
         self.namespace = namespace
         self._fs = fs
         self._raw = raw
+        self._cached_environ = None
 
+        self.clear_per_request_cache()
         self.after_create(self)
+
+    @classmethod
+    def clear_per_process_cache(cls):
+        """Clears all objects from global in-process cache."""
+        cls._COURSE_INDEX_CACHE = {}
+
+    def clear_per_request_cache(self):
+        """Clears all objects cached per request."""
+        self._cached_environ = None
 
     @ property
     def raw(self):
@@ -742,6 +820,10 @@ def unset_path_info():
     if not has_path_info():
         raise Exception('Expected valid path already set.')
 
+    app_context = get_course_for_current_request()
+    if app_context:
+        app_context.clear_per_request_cache()
+
     namespace_manager.set_namespace(
         PATH_INFO_THREAD_LOCAL.old_namespace)
 
@@ -761,8 +843,8 @@ def get_course_index(rules_text=None):
             return CourseIndex([])
     rules_text = rules_text.replace(',', '\n')
 
-    # Use cached value if exists.
-    course_index = ApplicationContext.COURSE_INDEX_CACHE.get(rules_text)
+    # pylint: disable-msg=protected-access
+    course_index = ApplicationContext._COURSE_INDEX_CACHE.get(rules_text)
     if course_index:
         return course_index
 
@@ -846,7 +928,8 @@ def get_course_index(rules_text=None):
     _validate_appcontext_list(all_contexts)
 
     course_index = CourseIndex(all_contexts)
-    ApplicationContext.COURSE_INDEX_CACHE = {rules_text: course_index}
+    # pylint: disable-msg=protected-access
+    ApplicationContext._COURSE_INDEX_CACHE = {rules_text: course_index}
     return course_index
 
 
@@ -875,13 +958,17 @@ def get_all_courses(rules_text=None):
     return course_index.get_all_courses()
 
 
-def _courses_config_validator(rules_text, errors):
+def _courses_config_validator(rules_text, errors, expect_failures=True):
     """Validates a textual definition of courses entries."""
     try:
         _validate_appcontext_list(
             get_all_courses(rules_text=rules_text))
+        return True
     except Exception as e:  # pylint: disable-msg=broad-except
+        if not expect_failures:
+            logging.error('%s\n%s', e, traceback.format_exc())
         errors.append(str(e))
+        return False
 
 
 def validate_new_course_entry_attributes(name, title, admin_email, errors):
@@ -939,9 +1026,7 @@ def _add_new_course_entry_to_persistent_configuration(raw):
         new_lines_text = '\n'.join(new_lines)
 
         # Validate the rule list definition.
-        errors = []
-        _courses_config_validator(new_lines_text, errors)
-        if not errors:
+        if _courses_config_validator(new_lines_text, [], expect_failures=True):
             final_lines_text = new_lines_text
             break
 
@@ -1406,6 +1491,86 @@ def test_url_to_rule_mapping():
     reset_courses()
 
 
+def build_index_for_rules_text(rules_text):
+    Registry.test_overrides[GCB_COURSES_CONFIG.name] = rules_text
+    courses = get_all_courses()
+    index = get_course_index()
+    return courses, index
+
+
+def test_get_course_for_path_impl():
+    # pylint: disable-msg=protected-access
+    courses, index = build_index_for_rules_text('course:/::ns_x')
+    expected = {None: courses[0]}
+    assert expected == index._slug_parts2app_context
+    for path in ['', '/course', '/a/b']:
+        assert courses[0] == get_course_for_path(path)
+
+    courses, index = build_index_for_rules_text('course:/a::ns_x')
+    expected = {'a': {None: courses[0]}}
+    assert expected == index._slug_parts2app_context
+    for path in ['/a', '/a/course', '/a/b/c']:
+        assert courses[0] == get_course_for_path(path)
+    for path in ['', '/', '/course']:
+        assert not get_course_for_path(path)
+
+    courses, index = build_index_for_rules_text(
+        'course:/a::ns_x\ncourse:/b::ns_y')
+    expected = {'a': {None: courses[0]}, 'b': {None: courses[1]}}
+    assert expected == index._slug_parts2app_context
+    for path in ['/a', '/a/course', '/a/b/c']:
+        assert courses[0] == get_course_for_path(path)
+    for path in ['/b', '/b/course', '/b/a/c']:
+        assert courses[1] == get_course_for_path(path)
+    for path in ['', '/', '/course']:
+        assert not get_course_for_path(path)
+
+    courses, index = build_index_for_rules_text('course:/a/b::ns_x')
+    expected = {'a': {'b': {None: courses[0]}}}
+    assert expected == index._slug_parts2app_context
+    for path in ['/a/b', '/a/b/course', '/a/b/c']:
+        assert courses[0] == get_course_for_path(path)
+    for path in ['', '/a', '/a/course', '/a/c']:
+        assert not get_course_for_path(path)
+
+    courses, index = build_index_for_rules_text(
+        'course:/a/c::ns_x\ncourse:/b/d::ns_y')
+    expected = {'a': {'c': {None: courses[0]}}, 'b': {'d': {None: courses[1]}}}
+    assert expected == index._slug_parts2app_context
+    for path in ['/a/c', '/a/c/course', '/a/c/d']:
+        assert courses[0] == get_course_for_path(path)
+    for path in ['/b/d', '/b/d/course', '/b/d/c']:
+        assert courses[1] == get_course_for_path(path)
+    for path in ['', '/', '/course', '/a', '/b']:
+        assert not get_course_for_path(path)
+
+    try:
+        courses, index = build_index_for_rules_text(
+            'course:/a::ns_x\ncourse:/a/b::ns_y')
+    except Exception as e:  # pylint: disable-msg=broad-except
+        assert 'reorder course entries' in e.message
+
+    courses, index = build_index_for_rules_text(
+        'course:/a/b::ns_x\ncourse:/a::ns_y')
+    expected = {'a': {'b': {None: courses[0]}, None: courses[1]}}
+    assert expected == index._slug_parts2app_context
+    for path in ['/a/b', '/a/b/c', '/a/b/c/course', '/a/b/c/d']:
+        assert courses[0] == get_course_for_path(path)
+    for path in ['/a', '/a/c', '/a/course', '/a/c/d']:
+        assert courses[1] == get_course_for_path(path)
+    for path in ['/', '/course', '/b']:
+        assert not get_course_for_path(path)
+    # pylint: enable-msg=protected-access
+
+
+def test_get_course_for_path():
+    """Tests linear and indexed search to make sure both work the same way."""
+    CourseIndex.CAN_USE_INDEXED_GETTER = False
+    test_get_course_for_path_impl()
+    CourseIndex.CAN_USE_INDEXED_GETTER = True
+    test_get_course_for_path_impl()
+
+
 def test_url_to_handler_mapping_for_course_type():
     """Tests mapping of a URL to a handler for course type."""
 
@@ -1550,6 +1715,7 @@ def run_all_unit_tests():
     ApplicationContext.DEBUG_INFO = True
     ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = True
 
+    test_get_course_for_path()
     test_namespace_collisions_are_detected()
     test_unprefix()
     test_rule_definitions()

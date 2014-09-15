@@ -1,4 +1,4 @@
-# Copyright 2013 Google Inc. All Rights Reserved.
+# Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -186,6 +186,7 @@ etl_lib = None
 memcache = None
 metadata = None
 remote = None
+sites = None
 transforms = None
 vfs = None
 
@@ -841,6 +842,7 @@ def _import_modules_into_global_scope():
     global courses
     global crypto
     global models
+    global sites
     global transforms
     global vfs
     global etl_lib
@@ -853,6 +855,7 @@ def _import_modules_into_global_scope():
         from common import crypto
         from common import utils as common_utils
         from models import config
+        from controllers import sites
         from models import courses
         from models import entities
         from models import entity_transforms
@@ -1055,6 +1058,7 @@ def _upload(params):
             _upload_datastore(params, type_names)
         elif params.type == _TYPE_DATASTORE:
             _upload_datastore(params, params.datastore_types)
+        sites.ApplicationContext.clear_per_process_cache()
 
 
 def _can_upload_entity_to_course(entity):

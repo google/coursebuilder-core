@@ -883,25 +883,16 @@ def update_course_config(name, settings):
     site_type = 'course'
     namespace = 'ns_%s' % name
     slug = '/%s' % name
-    folder = '/'
     rule = '%s:%s::%s' % (site_type, slug, namespace)
 
-    fs = vfs.DatastoreBackedFileSystem(
-        ns=namespace,
-        logical_home_folder=appengine_config.BUNDLE_ROOT,
-        inherits_from=vfs.LocalReadOnlyFileSystem(
-            logical_home_folder=folder),
-        inheritable_folders=sites.GCB_INHERITABLE_FOLDER_NAMES)
-    context = sites.ApplicationContext(site_type, slug, folder, namespace,
-                                       vfs.AbstractFileSystem(fs), rule)
-    environ = courses.Course.get_environ(context)
+    context = sites.get_all_courses(rule)[0]
     environ = courses.deep_dict_merge(settings,
                                       courses.Course.get_environ(context))
     content = yaml.safe_dump(environ)
     with common_utils.Namespace(namespace):
-        fs.put(fs.physical_to_logical('course.yaml'),
-               vfs.string_to_stream(unicode(content)))
-
+        context.fs.put(
+            context.get_config_filename(),
+            vfs.string_to_stream(unicode(content)))
     course_config = config.Registry.test_overrides.get(
         sites.GCB_COURSES_CONFIG.name, 'course:/:/')
     if rule not in course_config:

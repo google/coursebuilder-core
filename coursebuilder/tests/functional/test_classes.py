@@ -3331,9 +3331,6 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
                 """Checks that specific URL supports caching."""
                 memcache.flush_all()
 
-                self.keys = []
-                self.count = 0
-
                 # Expect cache misses first time we load page.
                 cache_miss_before = self.count
                 response = self.get(url)
@@ -3352,6 +3349,9 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
                             cache_miss_allowed, cache_miss_actual,
                             '\n'.join(self.keys)))
 
+            self.keys = []
+            self.count = 0
+
             old_inc = models.CACHE_MISS.inc
             models.CACHE_MISS.inc = custom_inc
 
@@ -3363,6 +3363,8 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             actions.login(email, is_admin=True)
             assert_cached('preview', 'Putting it all together')
             actions.register(self, name)
+            assert_cached(
+                'course', 'Putting it all together', cache_miss_allowed=2)
             assert_cached(
                 'unit?unit=14', 'When search results suggest something new')
             assert_cached(

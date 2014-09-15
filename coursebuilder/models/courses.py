@@ -2005,7 +2005,7 @@ class Course(object):
         return env
 
     @classmethod
-    def _load_environ(cls, app_context):
+    def _load_environ_no_cache(cls, app_context):
         course_yaml = None
         course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()
@@ -2029,6 +2029,16 @@ class Course(object):
         return deep_dict_merge(deep_dict_merge(
             course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT),
                                COURSE_TEMPLATE_DICT)
+
+    @classmethod
+    def _load_environ(cls, app_context):
+        # pylint: disable-msg=protected-access
+        environ = app_context._cached_environ
+        if environ:
+            return environ
+        environ = cls._load_environ_no_cache(app_context)
+        app_context._cached_environ = environ
+        return environ
 
     @classmethod
     def create_common_settings_schema(cls, course):
@@ -2300,7 +2310,9 @@ class Course(object):
         return self._model.extend_settings_schema(registry)
 
     def save_settings(self, course_settings):
-        return self._model.save_settings(course_settings)
+        result = self._model.save_settings(course_settings)
+        self._app_context.clear_per_request_cache()
+        return result
 
     def get_progress_tracker(self):
         if not self._tracker:
@@ -2725,7 +2737,9 @@ class Course(object):
         # Import 1.2 or 1.3 -> 1.3
         if (src_course.version in [
             CourseModel12.VERSION, CourseModel13.VERSION]):
-            return self._model.import_from(src_course, errors)
+            result = self._model.import_from(src_course, errors)
+            self.app_context.clear_per_request_cache()
+            return result
 
         errors.append(
             'Import of '
@@ -2768,4 +2782,5 @@ course:
 """ % (title, admin_email)
 
         fs.put(course_yaml, vfs.string_to_stream(course_yaml_text))
+        self.app_context.clear_per_request_cache()
         return True
