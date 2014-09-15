@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Verify operation of <gcb-include> custom tag."""
+"""Verify operation of custom tags from core_tags module."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
@@ -36,6 +36,63 @@ GCB_INCLUDE = (PRE_INCLUDE +
                'instanceid="uODxjWHTxxIC"></gcb-include>' +
                POST_INCLUDE)
 LESSON_URL = '/test_course/unit?unit=1&lesson=2'
+
+
+class TagsMarkdown(actions.TestBase):
+
+    def test_markdown(self):
+        self.context = actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL,
+                                                 COURSE_TITLE)
+        self.course = courses.Course(None, self.context)
+        self.unit = self.course.add_unit()
+        self.unit.title = 'The Unit'
+        self.unit.now_available = True
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'The Lesson'
+        self.lesson.now_available = True
+        self.lesson.objectives = '''
+ Welcome to Markdown!
+
+<gcb-markdown markdown="# This is an H1
+
+## This is an H2
+
+This is [an example](http://example.com/ &quot;Title&quot;) inline link.
+
+[This link](http://example.net/) has no title attribute.
+
+ Text attributes *italic*,
+ **bold**, `monospace`.
+
+ Shopping list:
+
+   * apples
+   * oranges
+   * pears
+
+ Numbered list:
+
+   1. apples
+   2. oranges
+   3. pears" instanceid="BHpNAOMuLdMn"></gcb-markdown><br>'''
+        self.course.save()
+
+        response = self.get(LESSON_URL)
+        self.assertIn('<h1>This is an H1</h1>', response.body)
+        self.assertIn('<h2>This is an H2</h2>', response.body)
+        self.assertIn(
+            '<p><a href="http://example.net/">This link</a> '
+            'has no title attribute.</p>', response.body)
+        self.assertIn('<em>italic</em>', response.body)
+        self.assertIn('<strong>bold</strong>', response.body)
+        self.assertIn('<code>monospace</code>', response.body)
+        self.assertIn('<li>apples</li>', response.body)
+        self.assertIn('<li>oranges</li>', response.body)
+        self.assertIn('<ul>\n<li>apples</li>', response.body)
+        self.assertIn('<ol>\n<li>apples</li>', response.body)
+        self.assertIn(
+            '<p>This is <a href="http://example.com/" title="Title">'
+            'an example</a> inline link.</p>', response.body)
 
 
 class TagsInclude(actions.TestBase):

@@ -71,9 +71,8 @@ THIRD_PARTY_LIBS = [
         'google-api-python-client-1.1.zip',
         relative_path='google-api-python-client-1.1'),
     _Library('mapreduce-r645.zip'),
-    # .zip repackaged from .tar.gz download.
+    _Library('markdown-2.5.zip', relative_path='Markdown-2.5'),
     _Library('mrs-mapreduce-0.9.zip', relative_path='mrs-mapreduce-0.9'),
-    # .zip repackaged from .tar.gz download.
     _Library('python-gflags-2.0.zip', relative_path='python-gflags-2.0'),
     _Library('oauth-1.0.1.zip', relative_path='oauth'),
     _Library('pyparsing-1.5.7.zip'),

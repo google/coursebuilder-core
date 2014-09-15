@@ -21,6 +21,7 @@ import re
 import urllib
 import urlparse
 from xml.etree import cElementTree
+import markdown
 
 import appengine_config
 from common import jinja_utils
@@ -397,6 +398,39 @@ class Include(CoreTag):
         return reg
 
 
+class Markdown(tags.ContextAwareTag, CoreTag):
+
+    @classmethod
+    def name(cls):
+        return 'Markdown'
+
+    def get_icon_url(self):
+        return self.create_icon_url('markdown.png')
+
+    def render(self, node, context):
+        html = markdown.markdown(node.attrib.get('markdown'))
+        return cElementTree.fromstring(
+            '<div class="gcb-markdown">%s</div>' % html)
+
+    def rollup_header_footer(self, context):
+        """Include markdown css only when markdown tag is present."""
+        header = tags.html_string_to_element_tree(
+            '<link href="%s/markdown.css" rel="stylesheet" '
+            'type="text/css">' % RESOURCE_FOLDER)
+        footer = tags.html_string_to_element_tree('')
+        return (header, footer)
+
+    def get_schema(self, handler):
+        reg = schema_fields.FieldRegistry(Markdown.name())
+        reg.add_property(schema_fields.SchemaField(
+            'markdown', 'Markdown', 'text', optional=False,
+            description='Provide '
+            '<a target="_blank" '
+            'href="http://daringfireball.net/projects/markdown/syntax">'
+            'markdown</a> text'))
+        return reg
+
+
 custom_module = None
 
 
@@ -405,7 +439,7 @@ def register_module():
 
     custom_tags = [
         GoogleDoc, GoogleSpreadsheet, YouTube, Html5Video, GoogleGroup,
-        IFrame, Include]
+        IFrame, Include, Markdown]
 
     def make_binding_name(custom_tag):
         return 'gcb-%s' % custom_tag.__name__.lower()

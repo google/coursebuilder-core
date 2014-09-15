@@ -169,6 +169,7 @@ DISTRIBUTED_LIBS="\
   python-gflags-2.0.zip \
   mrs-mapreduce-0.9.zip \
   mapreduce-r645.zip \
+  markdown-2.5.zip \
   crossfilter-1.3.7.zip \
   d3-3.4.3.zip \
   dc.js-1.6.0.zip \
