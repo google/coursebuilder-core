@@ -16,7 +16,13 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import cgi
+import cStringIO
+import StringIO
 import unittest
+import zipfile
+
+from babel.messages import pofile
 
 from common import crypto
 from models import courses
@@ -29,6 +35,7 @@ from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
 from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from modules.i18n_dashboard.i18n_dashboard import ResourceRow
+from modules.i18n_dashboard.i18n_dashboard import TranslationUploadRestHandler
 from modules.i18n_dashboard.i18n_dashboard import VERB_CHANGED
 from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
 from modules.i18n_dashboard.i18n_dashboard import VERB_NEW
@@ -950,3 +957,52 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(
             self.COURSE_TITLE,
             dom.find('.//h1[@class="gcb-product-headers-large"]').text.strip())
+
+    def test_upload_translations(self):
+        self._store_resource_bundle()
+        actions.update_course_config(
+            self.COURSE_NAME,
+            {'extra_locales': [{'locale': 'el', 'availability': 'available'}]})
+
+        # Download the course translations, and build a catalog containing
+        # all the translations repeated.
+        response = self.get('dashboard?action=i18n_download')
+        download_zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
+        out_stream = StringIO.StringIO()
+        out_stream.fp = out_stream
+        upload_zf = zipfile.ZipFile(out_stream, 'w')
+        num_translations = 0
+        for item in download_zf.infolist():
+            catalog = pofile.read_po(cStringIO.StringIO(download_zf.read(item)))
+            for msg in catalog:
+                if msg.locations:
+                    msg.string *= 2  # Repeat each translated string
+            content = cStringIO.StringIO()
+            pofile.write_po(content, catalog)
+            upload_zf.writestr(item.filename, content.getvalue())
+            content.close()
+        upload_zf.close()
+
+        # Upload the modified translations.
+        upload_contents = out_stream.getvalue()
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            TranslationUploadRestHandler.XSRF_TOKEN_NAME)
+        self.post('/%s%s' % (self.COURSE_NAME,
+                             TranslationUploadRestHandler.URL),
+                  {'request': transforms.dumps({
+                      'xsrf_token': cgi.escape(xsrf_token),
+                      'payload': transforms.dumps({'key', ''})})},
+                  upload_files=[('file', 'doesntmatter', upload_contents)])
+
+        # Download the translations; verify the doubling.
+        response = self.get('dashboard?action=i18n_download')
+        zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
+        num_translations = 0
+        for item in zf.infolist():
+            catalog = pofile.read_po(cStringIO.StringIO(zf.read(item)))
+            for msg in catalog:
+                if msg.locations:  # Skip header pseudo-message entry
+                    num_translations += 1
+                    self.assertNotEquals(msg.id, msg.string)
+                    self.assertEquals(msg.id.upper() * 2, msg.string)
+        self.assertEquals(6, num_translations)

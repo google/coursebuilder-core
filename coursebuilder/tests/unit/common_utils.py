@@ -16,8 +16,10 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import os
 import unittest
 
+import appengine_config
 from common import utils
 
 
@@ -142,3 +144,42 @@ class CommonUnitTests(unittest.TestCase):
     def test_split_join(self):
         text = 'a b c'
         self.assertEquals(text, utils.list_to_text(utils.text_to_list(text)))
+
+
+class ZipAwareOpenTests(unittest.TestCase):
+
+    def test_find_in_lib_without_relative_path(self):
+        path = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'lib', 'babel-0.9.6.zip',
+            'babel', 'localedata', 'root.dat')
+        with self.assertRaises(IOError):
+            open(path)  # This fails.
+        with utils.ZipAwareOpen():
+            data = open(path).read()
+            self.assertEquals(17490, len(data))
+
+            data = open(path, 'r').read()
+            self.assertEquals(17490, len(data))
+
+            data = open(path, mode='r').read()
+            self.assertEquals(17490, len(data))
+
+            data = open(name=path, mode='r').read()
+            self.assertEquals(17490, len(data))
+
+            data = open(name=path).read()
+            self.assertEquals(17490, len(data))
+
+        with self.assertRaises(IOError):
+            open(path)  # This fails again; open has been reset to normal.
+
+    def test_find_in_lib_with_relative_path(self):
+        path = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'lib', 'markdown-2.5.zip',
+            'setup.cfg')
+
+        with self.assertRaises(IOError):
+            open(path)  # This fails.
+        with utils.ZipAwareOpen():
+            data = open(path).read()
+            self.assertEquals(12, len(data))

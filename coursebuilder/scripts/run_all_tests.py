@@ -83,7 +83,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 10,
+    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 11,
     'tests.functional.modules_i18n_dashboard.ResourceKeyTests': 3,
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 1,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
@@ -161,6 +161,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_safe_dom.EntityTests': 11,
     'tests.unit.common_tags.CustomTagTests': 12,
     'tests.unit.common_utils.CommonUnitTests': 11,
+    'tests.unit.common_utils.ZipAwareOpenTests': 2,
     'tests.unit.javascript_tests.AllJavaScriptTests': 6,
     'tests.unit.models_analytics.AnalyticsTests': 5,
     'tests.unit.models_courses.WorkflowValidationTests': 13,
@@ -441,4 +442,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

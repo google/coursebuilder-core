@@ -16,10 +16,18 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import cgi
+import collections
+import cStringIO
 import logging
 import os
+import StringIO
 import urllib
+import zipfile
 
+from babel import localedata
+from babel.messages import catalog
+from babel.messages import pofile
 import jinja2
 from webapp2_extras import i18n
 
@@ -27,6 +35,7 @@ import appengine_config
 from common import crypto
 from common import schema_fields
 from common import tags
+from common import utils as common_utils
 from common import xcontent
 from controllers import sites
 from controllers import utils
@@ -43,7 +52,6 @@ from modules.oeditor import oeditor
 from tools import verify
 
 from google.appengine.ext import db
-
 
 RESOURCES_PATH = '/modules/i18n_dashboard/resources'
 
@@ -525,6 +533,262 @@ class BaseDashboardExtension(object):
         self.handler = handler
 
 
+class TranslationsAndLocations(object):
+
+    def __init__(self):
+        self._translations = set()
+        self._locations = []
+
+    def add_translation(self, translation):
+        self._translations.add(translation)
+
+    def add_location(self, location):
+        self._locations.append(location)
+
+    @property
+    def locations(self):
+        return self._locations
+
+    @property
+    def translations(self):
+        return self._translations
+
+
+class I18nDownloadHandler(BaseDashboardExtension):
+    ACTION = 'i18n_download'
+
+    def _build_translations(self):
+        """Build up a dictionary of all translated strings -> locale.
+
+        For each {original-string,locale}, keep track of the course
+        locations where this occurs, and each of the translations given.
+
+        Returns:
+          Map of original-string -> locale -> TranslationsAndLocations.
+        """
+
+        translations = collections.defaultdict(
+            lambda: collections.defaultdict(TranslationsAndLocations))
+        for bundle in ResourceBundleDAO.get_all_iter():
+            key = ResourceBundleKey.fromstring(bundle.id)
+            title = key.resource_key.get_title(self.handler.app_context)
+            locale = key.locale
+
+            for item_name, value in bundle.dict.iteritems():
+                for translation in value['data']:
+                    message = translation['source_value']
+                    translated_message = translation['target_value']
+                    t_and_l = translations[message][locale]
+                    t_and_l.add_translation(translated_message)
+                    t_and_l.add_location('"%s" in %s GCB-1.7:%s:%s' % (
+                        item_name, title, item_name, str(key)))
+        return translations
+
+    def _build_zip_file(self, out_stream, translations):
+        """Create a .zip file with one .po file for each translated language.
+
+        Args:
+          out_stream: An open file-like which can be written and seeked.
+          translations: Map of string -> locale -> TranslationsAndLocations
+            as returned from _build_translations().
+        """
+        course = self.handler.get_course()
+        environ = course.get_environ(self.handler.app_context)
+        course_title = environ['course'].get('title')
+        bugs_address = environ['course'].get('admin_user_emails')
+        organization = environ['base'].get('nav_header')
+        original_locale = environ['base'].get('locale')
+        with common_utils.ZipAwareOpen():
+            localedata.load(original_locale)
+
+        zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
+        try:
+            for locale in self.handler.app_context.get_available_locales():
+                if locale == original_locale:
+                    continue
+                with common_utils.ZipAwareOpen():
+                    localedata.load(locale)  # Load metadata for locale.
+                cat = catalog.Catalog(locale=locale, project=course_title,
+                                      msgid_bugs_address=bugs_address,
+                                      copyright_holder=organization)
+                for tr_id in translations:
+                    if locale in translations[tr_id]:
+                        t_and_l = translations[tr_id][locale]
+                        cat.add(tr_id, string=t_and_l.translations.pop(),
+                                locations=[(l, 0) for l in t_and_l.locations],
+                                auto_comments=['also translated as "%s"' % s
+                                               for s in t_and_l.translations])
+                filename = os.path.join(
+                    'locale', locale, 'LC_MESSAGES', 'messages.po')
+                content = cStringIO.StringIO()
+                try:
+                    pofile.write_po(content, cat)
+                    zf.writestr(filename, content.getvalue())
+                finally:
+                    content.close()
+        finally:
+            zf.close()
+
+    def _send_response(self, out_stream):
+        self.handler.response.headers.add(
+            'Content-Disposition', 'attachment; filename="translations.zip"')
+        self.handler.response.headers.add(
+            'Content-Type', 'application/octet-stream')
+        self.handler.response.write(out_stream.getvalue())
+
+    def render(self):
+        translations = self._build_translations()
+        out_stream = StringIO.StringIO()
+        out_stream.fp = out_stream  # zip assumes stream has a real fp; fake it.
+        try:
+            self._build_zip_file(out_stream, translations)
+            self._send_response(out_stream)
+        finally:
+            out_stream.close()
+
+
+class I18nUploadHandler(BaseDashboardExtension):
+    ACTION = 'i18n_upload'
+
+    def render(self):
+        main_content = oeditor.ObjectEditor.get_html_for(
+            self.handler,
+            TranslationUploadRestHandler.SCHEMA.get_json_schema(),
+            TranslationUploadRestHandler.SCHEMA.get_schema_dict(),
+            '',
+            self.handler.canonicalize_url(TranslationUploadRestHandler.URL),
+            self.handler.get_action_url(I18nDashboardHandler.ACTION),
+            required_modules=TranslationUploadRestHandler.REQUIRED_MODULES,
+            save_method='upload', save_button_caption='Upload',
+            auto_return=True)
+        self.handler.render_page({
+            'page_title': self.handler.format_title('I18n Translation Upload'),
+            'main_content': main_content,
+            })
+
+
+def translation_upload_generate_schema():
+    schema = schema_fields.FieldRegistry('Translation Upload')
+    schema.add_property(schema_fields.SchemaField(
+        'file', 'Translation File', 'file',
+        description='Use this option to nominate a .po file containing '
+        'translations for a single language, or a .zip file containing '
+        'multiple translated languages.  The internal structure of the .zip '
+        'file is unimportant; all files ending in ".po" will be considered.'))
+    return schema
+
+
+class TranslationUploadRestHandler(utils.BaseRESTHandler):
+    URL = '/rest/modules/i18n_dashboard/upload'
+    XSRF_TOKEN_NAME = 'translation-upload'
+    SCHEMA = translation_upload_generate_schema()
+    REQUIRED_MODULES = ['inputex-hidden', 'inputex-select', 'inputex-string',
+                        'inputex-uneditable', 'inputex-file',
+                        'io-upload-iframe']
+
+    def get(self):
+        transforms.send_json_response(
+            self, 200, 'success', payload_dict={'key': None},
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN_NAME))
+
+    def _update_translation(self, data):
+        pseudo_file = cStringIO.StringIO(data)
+        the_catalog = pofile.read_po(pseudo_file)
+        total_translations = 0
+        matched_translations = 0
+        updated_translations = 0
+        for message in the_catalog:
+            for location, _ in message.locations:
+                total_translations += 1
+                protocol, component_name, key = location.split(':', 2)
+                if protocol != 'GCB-1.7':
+                    transforms.send_file_upload_response(
+                        self, 400, 'Location protocol GCB-1.7 expected.')
+                    return
+                dto = ResourceBundleDAO.load(key)
+                if not dto:
+                    logging.warning(
+                        'ResourceBundle with key "%s" not found', key)
+                    continue
+                component = dto.dict.get(component_name)
+                if not component:
+                    logging.warning(
+                        'ResourceBundle with key "%s" missing component "%s"',
+                        key, component_name)
+                    continue
+
+                dirty = False
+                found = False
+                for translation_item in component['data']:
+                    if translation_item['source_value'] == message.id:
+                        found = True
+                        matched_translations += 1
+                        if translation_item['target_value'] != message.string:
+                            dirty = True
+                            translation_item['target_value'] = message.string
+                            updated_translations += 1
+                if not found:
+                    logging.warning(
+                        'ResourceBundle "%s" component "%s" string "%s" gone',
+                        key, component_name, message.id)
+                if dirty:
+                    ResourceBundleDAO.save(dto)
+        return total_translations, matched_translations, updated_translations
+
+    def post(self):
+        request = transforms.loads(self.request.get('request'))
+        if not self.assert_xsrf_token_or_fail(
+            request, self.XSRF_TOKEN_NAME, {'key': None}):
+            return
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_file_upload_response(self, 401, 'Access denied.')
+            return
+
+        upload = self.request.POST['file']
+        if not isinstance(upload, cgi.FieldStorage):
+            transforms.send_file_upload_response(
+                self, 400, 'Must provide a .zip or .po file to upload')
+            return
+        file_content = upload.file.read()
+        if not isinstance(upload, cgi.FieldStorage):
+            transforms.send_file_upload_response(
+                self, 400, 'The .zip or .po file must not be empty.')
+            return
+
+        all_total = 0
+        all_matched = 0
+        all_updated = 0
+        try:
+            zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
+            for item in zf.infolist():
+                if item.filename.endswith('.po'):
+                    # pylint: disable-msg=unpacking-non-sequence
+                    tot, match, update = self._update_translation(zf.read(item))
+                    all_total += tot
+                    all_matched += match
+                    all_updated += update
+        except zipfile.BadZipfile:
+            try:
+                # pylint: disable-msg=unpacking-non-sequence
+                all_total, all_matched, all_updated = (
+                    self._update_translation(file_content))
+            except UnicodeDecodeError:
+                transforms.send_file_upload_response(
+                    self, 400,
+                    'Uploaded file did not parse as .zip or .po file.')
+        if all_total == 0:
+            # .PO file parser is pretty lenient; random text files don't
+            # necessarily result in exceptions, but count of total
+            # translations will be zero, so also consider that an error.
+            transforms.send_file_upload_response(
+                self, 400, 'No translations found in provided file.')
+        else:
+            transforms.send_file_upload_response(
+                self, 200, '%d total, %d matched, %d changed translations' % (
+                    all_total, all_matched, all_updated))
+
+
 class I18nDashboardHandler(BaseDashboardExtension):
     """Provides the logic for rendering the i18n workflow dashboard."""
 
@@ -609,12 +873,24 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
-        actions = [{
-            'id': 'edit_18n_settings',
-            'caption': 'Edit I18N Settings',
-            'href': self.handler.get_action_url(
-                'settings', extra_args={'tab': 'i18n'})
-            }]
+        actions = [
+            {
+                'id': 'upload_translation_files',
+                'caption': 'Upload Translation Files',
+                'href': self.handler.get_action_url(I18nUploadHandler.ACTION),
+                },
+            {
+                'id': 'download_translation_files',
+                'caption': 'Download Translation Files',
+                'href': self.handler.get_action_url(I18nDownloadHandler.ACTION),
+                },
+            {
+                'id': 'edit_18n_settings',
+                'caption': 'Edit I18N Settings',
+                'href': self.handler.get_action_url(
+                    'settings', extra_args={'tab': 'i18n'})
+                },
+            ]
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': jinja2.utils.Markup(main_content),
@@ -852,7 +1128,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         transforms.send_json_response(
             self, 200, 'success',
             payload_dict=payload_dict,
-            xsrf_token=utils.XsrfTokenManager.create_xsrf_token(
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 self.XSRF_TOKEN_NAME))
 
     def put(self):
@@ -1114,6 +1390,8 @@ def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
         [I18nDashboardHandler.ACTION, 'I18N'])
     I18nDashboardHandler.register()
+    I18nDownloadHandler.register()
+    I18nUploadHandler.register()
     TranslationConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.append(translate_course_env)
@@ -1125,6 +1403,8 @@ def notify_module_disabled():
     dashboard.DashboardHandler.nav_mappings.remove(
         [I18nDashboardHandler.ACTION, 'I18N'])
     I18nDashboardHandler.unregister()
+    I18nDownloadHandler.unregister()
+    I18nUploadHandler.unregister()
     TranslationConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
@@ -1140,6 +1420,7 @@ def register_module():
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
     namespaced_routes = [
         (TranslationConsoleRestHandler.URL, TranslationConsoleRestHandler),
+        (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
         (IsTranslatableRestHandler.URL, IsTranslatableRestHandler)]
 
     global custom_module
