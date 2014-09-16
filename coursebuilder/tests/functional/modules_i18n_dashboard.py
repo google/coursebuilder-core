@@ -33,6 +33,7 @@ from modules.i18n_dashboard.i18n_dashboard import VERB_CHANGED
 from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
 from modules.i18n_dashboard.i18n_dashboard import VERB_NEW
 from tests.functional import actions
+from tools import verify
 
 from google.appengine.api import namespace_manager
 
@@ -50,6 +51,19 @@ class ResourceKeyTests(unittest.TestCase):
             ResourceKey('BAD_TYPE', '23')
         with self.assertRaises(AssertionError):
             ResourceKey.fromstring('BAD_TYPE:23')
+
+    def test_for_unit(self):
+        type_table = [
+            (verify.UNIT_TYPE_ASSESSMENT, ResourceKey.ASSESSMENT_TYPE),
+            (verify.UNIT_TYPE_LINK, ResourceKey.LINK_TYPE),
+            (verify.UNIT_TYPE_UNIT, ResourceKey.UNIT_TYPE)]
+        for unit_type, key_type in type_table:
+            unit = courses.Unit13()
+            unit.type = unit_type
+            unit.unit_id = 5
+            key = ResourceKey.for_unit(unit)
+            self.assertEquals(key_type, key.type)
+            self.assertEquals(5, key.key)
 
 
 class ResourceBundleKeyTests(unittest.TestCase):
@@ -611,6 +625,81 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('<p>A</p><p>B</p>', page_html)
         self.assertIn('TEST LESSON', page_html)
         self.assertIn('<p>C</p><p>D</p>', page_html)
+
+    def test_links_are_translated(self):
+        link = self.course.add_link()
+        link.title = 'Test Link'
+        link.description = 'Test Description'
+        link.href = 'http://www.foo.com'
+        self.course.save()
+
+        link_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                        'source_value': 'Test Link',
+                        'target_value': 'TEST LINK'}]
+            },
+            'description': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                        'source_value': 'Test description',
+                        'target_value': 'TEST DESCRIPTION'}]
+            },
+            'url': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                    'source_value': 'http://www.foo.com',
+                    'target_value': 'http://www.foo.gr'}]
+            }
+        }
+        link_key = ResourceBundleKey(
+            ResourceKey.LINK_TYPE, link.unit_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(link_key), link_bundle))
+
+        page_html = self.get('course').body
+        self.assertIn('TEST LINK', page_html)
+        self.assertIn('TEST DESCRIPTION', page_html)
+        self.assertIn('http://www.foo.gr', page_html)
+
+    def test_assessments_are_translated(self):
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.html_content = '<p>a</p><p>b</p>'
+        self.course.save()
+
+        assessment_bundle = {
+            'assessment:title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                        'source_value': 'Test Assessment',
+                        'target_value': 'TEST ASSESSMENT'}]
+            },
+            'assessment:html_content': {
+                'type': 'html',
+                'source_value': '<p>a</p><p>b</p>',
+                'data': [
+                    {'source_value': 'a', 'target_value': 'A'},
+                    {'source_value': 'b', 'target_value': 'B'}]
+            }
+        }
+        assessment_key = ResourceBundleKey(
+            ResourceKey.ASSESSMENT_TYPE, assessment.unit_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(assessment_key), assessment_bundle))
+
+        page_html = self.get('assessment?name=%s' % assessment.unit_id).body
+        self.assertIn('TEST ASSESSMENT', page_html)
+        self.assertIn('<p>A</p><p>B</p>', page_html)
 
     def test_fallback_to_default_when_translation_missing(self):
         del self.lesson_bundle['objectives']

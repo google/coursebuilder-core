@@ -108,6 +108,19 @@ class ResourceKey(object):
         index = key_str.index(':')
         return ResourceKey(key_str[:index], key_str[index + 1:])
 
+    @classmethod
+    def for_unit(cls, unit):
+        if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+            unit_type = ResourceKey.ASSESSMENT_TYPE
+        elif unit.type == verify.UNIT_TYPE_LINK:
+            unit_type = ResourceKey.LINK_TYPE
+        elif unit.type == verify.UNIT_TYPE_UNIT:
+            unit_type = ResourceKey.UNIT_TYPE
+        else:
+            raise ValueError('Unknown unit type: %s' % unit.type)
+
+        return ResourceKey(unit_type, unit.unit_id)
+
     def get_title(self, app_context):
         course = courses.Course(None, app_context=app_context)
 
@@ -135,25 +148,28 @@ class ResourceKey(object):
             return 'none'
 
     def get_schema(self, app_context):
-        course = courses.Course(None, app_context=app_context)
         if self.type == ResourceKey.ASSESSMENT_TYPE:
             return unit_lesson_editor.AssessmentRESTHandler.SCHEMA
         elif self.type == ResourceKey.LINK_TYPE:
             return unit_lesson_editor.LinkRESTHandler.SCHEMA
         elif self.type == ResourceKey.UNIT_TYPE:
             return unit_lesson_editor.UnitRESTHandler.SCHEMA
-        elif self.type == ResourceKey.LESSON_TYPE:
-            units = course.get_units()
-            return unit_lesson_editor.LessonRESTHandler.get_schema(units)
-        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return course.create_settings_schema().clone_only_items_named(
-                [self.key])
         elif self.type == ResourceKey.QUESTION_MC_TYPE:
             return question_editor.McQuestionRESTHandler.get_schema()
         elif self.type == ResourceKey.QUESTION_SA_TYPE:
             return question_editor.SaQuestionRESTHandler.get_schema()
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
             return question_group_editor.QuestionGroupRESTHandler.get_schema()
+
+        # The following resources need an app_context to get the schema
+        course = courses.Course(None, app_context=app_context)
+
+        if self.type == ResourceKey.LESSON_TYPE:
+            units = course.get_units()
+            return unit_lesson_editor.LessonRESTHandler.get_schema(units)
+        elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
+            return course.create_settings_schema().clone_only_items_named(
+                [self.key])
         else:
             raise ValueError('Unknown content type: %s' % self.type)
 
@@ -552,20 +568,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
         # Run over units and lessons
         data_rows = []
         for unit in self.course.get_units():
-            if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-                data_rows.append(self._get_resource_row(
-                    unit, ResourceKey.ASSESSMENT_TYPE, unit.unit_id))
-            elif unit.type == verify.UNIT_TYPE_LINK:
-                data_rows.append(self._get_resource_row(
-                    unit, ResourceKey.LINK_TYPE, unit.unit_id))
-            elif unit.type == verify.UNIT_TYPE_UNIT:
-                data_rows.append(self._get_resource_row(
-                    unit, ResourceKey.UNIT_TYPE, unit.unit_id))
+            key = ResourceKey.for_unit(unit)
+            data_rows.append(self._get_resource_row(unit, key.type, key.key))
+            if unit.type == verify.UNIT_TYPE_UNIT:
                 for lesson in self.course.get_lessons(unit.unit_id):
                     data_rows.append(self._get_resource_row(
                         lesson, ResourceKey.LESSON_TYPE, lesson.lesson_id))
-            else:
-                raise Exception('Unknown unit type: %s.' % unit.type)
         rows += self._make_table_section(data_rows, 'Course Outline')
 
         # Run over file assets
@@ -940,6 +948,11 @@ class LazyTranslator(object):
     def __len__(self):
         return len(unicode(self))
 
+    def __add__(self, other):
+        if isinstance(other, basestring):
+            return other + unicode(self)
+        return super(LazyTranslator, self).__add__(other)
+
     def _translate_html(self):
         if self.translation_dict['source_value'] != self.source_value:
             return self.source_value
@@ -974,11 +987,47 @@ def set_attribute(thing, attribute_name, translation_dict):
         source_value, translation_dict))
 
 
-def translate_list(thing_list, translations):
-    for thing, bundle in zip(thing_list, translations):
+def translate_lessons(course, locale):
+    lesson_list = course.get_lessons_for_all_units()
+    keys_list = [
+        str(ResourceBundleKey(
+            ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
+        for lesson in lesson_list]
+
+    bundle_list = ResourceBundleDAO.bulk_load(keys_list)
+
+    for lesson, bundle in zip(lesson_list, bundle_list):
         if bundle is not None:
-            for flattened_name, translation_dict in bundle.dict.items():
-                set_attribute(thing, flattened_name, translation_dict)
+            for name, translation_dict in bundle.dict.items():
+                set_attribute(lesson, name, translation_dict)
+
+
+def translate_units(course, locale):
+    unit_list = course.get_units()
+    key_list = []
+    for unit in unit_list:
+        key = ResourceKey.for_unit(unit)
+        key_list.append(ResourceBundleKey(key.type, key.key, locale))
+
+    bundle_list = ResourceBundleDAO.bulk_load([str(key) for key in key_list])
+    unit_tools = unit_lesson_editor.UnitTools(course)
+
+    for key, unit, bundle in zip(key_list, unit_list, bundle_list):
+        if bundle is None:
+            continue
+
+        schema = key.resource_key.get_schema(course.app_context)
+        data_dict = unit_tools.unit_to_dict(unit)
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            data_dict, schema)
+
+        for name, translation_dict in bundle.dict.items():
+            source_value = binding.name_to_value[name].value
+            binding.name_to_value[name].value = LazyTranslator(
+                source_value, translation_dict)
+
+        errors = []
+        unit_tools.apply_updates(unit, data_dict, errors)
 
 
 def translate_course(course):
@@ -986,18 +1035,9 @@ def translate_course(course):
         return
 
     locale = sites.get_current_locale(course.app_context)
-    units = course.get_units()
-    lessons = course.get_lessons_for_all_units()
 
-    keys = [
-        str(ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, locale))
-        for unit in units]
-    keys += [
-        str(ResourceBundleKey(
-            ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
-        for lesson in lessons]
-
-    translate_list(units + lessons, ResourceBundleDAO.bulk_load(keys))
+    translate_units(course, locale)
+    translate_lessons(course, locale)
 
 
 def translate_course_env(env):

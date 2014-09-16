@@ -392,6 +392,147 @@ class UnitTools(object):
     def __init__(self, course):
         self._course = course
 
+    def apply_updates(self, unit, updated_unit_dict, errors):
+        if unit.type == verify.UNIT_TYPE_ASSESSMENT:
+            self._apply_updates_to_assessment(unit, updated_unit_dict, errors)
+        elif unit.type == verify.UNIT_TYPE_LINK:
+            self._apply_updates_to_link(unit, updated_unit_dict, errors)
+        elif unit.type == verify.UNIT_TYPE_UNIT:
+            self._apply_updates_to_unit(unit, updated_unit_dict, errors)
+        else:
+            raise ValueError('Unknown unit type %s' % unit.type)
+
+    def _apply_updates_common(self, unit, updated_unit_dict, errors):
+        """Apply changes common to all unit types."""
+        unit.title = updated_unit_dict.get('title')
+        unit.description = updated_unit_dict.get('description')
+        unit.now_available = not updated_unit_dict.get('is_draft')
+
+        labels = set()
+        for label_group in updated_unit_dict['label_groups']:
+            for label in label_group['labels']:
+                if label['checked'] and label['id'] > 0:
+                    labels.add(label['id'])
+
+        if self._course.get_parent_unit(unit.unit_id):
+            track_label_ids = m_models.LabelDAO.get_set_of_ids_of_type(
+                m_models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
+            if track_label_ids.intersection(labels):
+                errors.append('Cannot set track labels on entities which '
+                              'are used within other units.')
+
+        unit.labels = common_utils.list_to_text(labels)
+
+    def _apply_updates_to_assessment(self, unit, updated_unit_dict, errors):
+        """Store the updated assessment."""
+
+        entity_dict = {}
+        AssessmentRESTHandler.SCHEMA.convert_json_to_entity(
+            updated_unit_dict, entity_dict)
+
+        self._apply_updates_common(unit, entity_dict, errors)
+        try:
+            unit.weight = int(entity_dict.get('weight'))
+            if unit.weight < 0:
+                errors.append('The weight must be a non-negative integer.')
+        except ValueError:
+            errors.append('The weight must be an integer.')
+        content = entity_dict.get('content')
+        if content:
+            self._course.set_assessment_content(
+                unit, entity_dict.get('content'), errors=errors)
+
+        unit.html_content = entity_dict.get('html_content')
+        unit.html_check_answers = entity_dict.get('html_check_answers')
+
+        workflow_dict = entity_dict.get('workflow')
+        if len(ALLOWED_MATCHERS_NAMES) == 1:
+            workflow_dict[courses.MATCHER_KEY] = (
+                ALLOWED_MATCHERS_NAMES.keys()[0])
+        unit.workflow_yaml = yaml.safe_dump(workflow_dict)
+        unit.workflow.validate(errors=errors)
+
+        # Only save the review form if the assessment needs human grading.
+        if not errors:
+            if self._course.needs_human_grader(unit):
+                review_form = entity_dict.get('review_form')
+                if review_form:
+                    self._course.set_review_form(
+                        unit, review_form, errors=errors)
+                unit.html_review_form = entity_dict.get('html_review_form')
+            elif entity_dict.get('review_form'):
+                errors.append(
+                    'Review forms for auto-graded assessments should be empty.')
+
+    def _apply_updates_to_link(self, unit, updated_unit_dict, errors):
+        self._apply_updates_common(unit, updated_unit_dict, errors)
+        unit.href = updated_unit_dict.get('url')
+
+    def _is_assessment_unused(self, unit, assessment, errors):
+        parent_unit = self._course.get_parent_unit(assessment.unit_id)
+        if parent_unit and parent_unit.unit_id != unit.unit_id:
+            errors.append(
+                'Assessment "%s" is already asssociated to unit "%s"' % (
+                    assessment.title, parent_unit.title))
+            return False
+        return True
+
+    def _is_assessment_version_ok(self, assessment, errors):
+        # Here, we want to establish that the display model for the
+        # assessment is compatible with the assessment being used in
+        # the context of a Unit.  Model version 1.4 is not, because
+        # the way sets up submission is to build an entirely new form
+        # from JavaScript (independent of the form used to display the
+        # assessment), and the way it learns the ID of the assessment
+        # is by looking in the URL (as opposed to taking a parameter).
+        # This is incompatible with the URLs for unit display, so we
+        # just disallow older assessments here.
+        model_version = self._course.get_assessment_model_version(assessment)
+        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
+            errors.append(
+                'The version of assessment "%s" ' % assessment.title +
+                'is not compatible with use as a pre/post unit element')
+            return False
+        return True
+
+    def _is_assessment_on_track(self, assessment, errors):
+        if self._course.get_unit_track_labels(assessment):
+            errors.append(
+                'Assessment "%s" has track labels, ' % assessment.title +
+                'so it cannot be used as a pre/post unit element')
+            return True
+        return False
+
+    def _apply_updates_to_unit(self, unit, updated_unit_dict, errors):
+        self._apply_updates_common(unit, updated_unit_dict, errors)
+        unit.unit_header = updated_unit_dict['unit_header']
+        unit.unit_footer = updated_unit_dict['unit_footer']
+        unit.pre_assessment = None
+        unit.post_assessment = None
+        unit.manual_progress = updated_unit_dict['manual_progress']
+        pre_assessment_id = updated_unit_dict['pre_assessment']
+        if pre_assessment_id >= 0:
+            assessment = self._course.find_unit_by_id(pre_assessment_id)
+            if (self._is_assessment_unused(unit, assessment, errors) and
+                self._is_assessment_version_ok(assessment, errors) and
+                not self._is_assessment_on_track(assessment, errors)):
+                unit.pre_assessment = pre_assessment_id
+
+        post_assessment_id = updated_unit_dict['post_assessment']
+        if post_assessment_id >= 0 and pre_assessment_id == post_assessment_id:
+            errors.append(
+                'The same assessment cannot be used as both the pre '
+                'and post assessment of a unit.')
+        elif post_assessment_id >= 0:
+            assessment = self._course.find_unit_by_id(post_assessment_id)
+            if (assessment and
+                self._is_assessment_unused(unit, assessment, errors) and
+                self._is_assessment_version_ok(assessment, errors) and
+                not self._is_assessment_on_track(assessment, errors)):
+                unit.post_assessment = post_assessment_id
+        unit.show_contents_on_one_page = (
+            updated_unit_dict['show_contents_on_one_page'])
+
     def unit_to_dict(self, unit):
         if unit.type == verify.UNIT_TYPE_ASSESSMENT:
             return self._assessment_to_dict(unit)
@@ -542,31 +683,10 @@ class CommonUnitRESTHandler(BaseRESTHandler):
         """Converts a unit to a dictionary representation."""
         return UnitTools(self.get_course()).unit_to_dict(unit)
 
-    def apply_updates(
-        self, unused_unit, unused_updated_unit_dict, unused_errors):
+    def apply_updates(self, unit, updated_unit_dict, errors):
         """Applies changes to a unit; modifies unit input argument."""
-        raise Exception('Not implemented')
-
-    def apply_updates_common(self, course, unit, updated_unit_dict, errors):
-        """Apply changes common to all unit types."""
-        unit.title = updated_unit_dict.get('title')
-        unit.description = updated_unit_dict.get('description')
-        unit.now_available = not updated_unit_dict.get('is_draft')
-
-        labels = set()
-        for label_group in updated_unit_dict['label_groups']:
-            for label in label_group['labels']:
-                if label['checked'] and label['id'] > 0:
-                    labels.add(label['id'])
-
-        if course.get_parent_unit(unit.unit_id):
-            track_label_ids = m_models.LabelDAO.get_set_of_ids_of_type(
-                m_models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-            if track_label_ids.intersection(labels):
-                errors.append('Cannot set track labels on entities which '
-                              'are used within other units.')
-
-        unit.labels = common_utils.list_to_text(labels)
+        UnitTools(courses.Course(self)).apply_updates(
+            unit, updated_unit_dict, errors)
 
     def get(self):
         """A GET REST method shared by all unit types."""
@@ -736,72 +856,6 @@ class UnitRESTHandler(CommonUnitRESTHandler):
 
         return schema.get_schema_dict()
 
-    def _is_assessment_unused(self, course, unit, assessment, errors):
-        parent_unit = course.get_parent_unit(assessment.unit_id)
-        if parent_unit and parent_unit.unit_id != unit.unit_id:
-            errors.append(
-                'Assessment "%s" is already asssociated to unit "%s"' % (
-                    assessment.title, parent_unit.title))
-            return False
-        return True
-
-    def _is_assessment_version_ok(self, course, assessment, errors):
-        # Here, we want to establish that the display model for the
-        # assessment is compatible with the assessment being used in
-        # the context of a Unit.  Model version 1.4 is not, because
-        # the way sets up submission is to build an entirely new form
-        # from JavaScript (independent of the form used to display the
-        # assessment), and the way it learns the ID of the assessment
-        # is by looking in the URL (as opposed to taking a parameter).
-        # This is incompatible with the URLs for unit display, so we
-        # just disallow older assessments here.
-        model_version = course.get_assessment_model_version(assessment)
-        if model_version == courses.ASSESSMENT_MODEL_VERSION_1_4:
-            errors.append(
-                'The version of assessment "%s" ' % assessment.title +
-                'is not compatible with use as a pre/post unit element')
-            return False
-        return True
-
-    def _is_assessment_on_track(self, course, assessment, errors):
-        if course.get_unit_track_labels(assessment):
-            errors.append(
-                'Assessment "%s" has track labels, ' % assessment.title +
-                'so it cannot be used as a pre/post unit element')
-            return True
-        return False
-
-    def apply_updates(self, unit, updated_unit_dict, errors):
-        course = courses.Course(self)
-        self.apply_updates_common(course, unit, updated_unit_dict, errors)
-        unit.unit_header = updated_unit_dict['unit_header']
-        unit.unit_footer = updated_unit_dict['unit_footer']
-        unit.pre_assessment = None
-        unit.post_assessment = None
-        unit.manual_progress = updated_unit_dict['manual_progress']
-        pre_assessment_id = updated_unit_dict['pre_assessment']
-        if pre_assessment_id >= 0:
-            assessment = course.find_unit_by_id(pre_assessment_id)
-            if (self._is_assessment_unused(course, unit, assessment, errors) and
-                self._is_assessment_version_ok(course, assessment, errors) and
-                not self._is_assessment_on_track(course, assessment, errors)):
-                unit.pre_assessment = pre_assessment_id
-
-        post_assessment_id = updated_unit_dict['post_assessment']
-        if post_assessment_id >= 0 and pre_assessment_id == post_assessment_id:
-            errors.append(
-                'The same assessment cannot be used as both the pre '
-                'and post assessment of a unit.')
-        elif post_assessment_id >= 0:
-            assessment = course.find_unit_by_id(post_assessment_id)
-            if (assessment and
-                self._is_assessment_unused(course, unit, assessment, errors) and
-                self._is_assessment_version_ok(course, assessment, errors) and
-                not self._is_assessment_on_track(course, assessment, errors)):
-                unit.post_assessment = post_assessment_id
-        unit.show_contents_on_one_page = (
-            updated_unit_dict['show_contents_on_one_page'])
-
 
 def generate_link_schema():
     schema = generate_common_schema('Link')
@@ -822,11 +876,6 @@ class LinkRESTHandler(CommonUnitRESTHandler):
     REQUIRED_MODULES = [
         'inputex-string', 'inputex-select', 'inputex-uneditable',
         'inputex-list', 'inputex-hidden', 'inputex-number', 'inputex-checkbox']
-
-    def apply_updates(self, unit, updated_unit_dict, errors):
-        course = courses.Course(self)
-        self.apply_updates_common(course, unit, updated_unit_dict, errors)
-        unit.href = updated_unit_dict.get('url')
 
 
 class ImportCourseRESTHandler(CommonUnitRESTHandler):
@@ -1034,47 +1083,6 @@ class AssessmentRESTHandler(CommonUnitRESTHandler):
         'gcb-rte', 'inputex-select', 'inputex-string', 'inputex-textarea',
         'inputex-uneditable', 'inputex-integer', 'inputex-hidden',
         'inputex-checkbox', 'inputex-list']
-
-    def apply_updates(self, unit, updated_unit_dict, errors):
-        """Store the updated assessment."""
-
-        course = courses.Course(self)
-        entity_dict = {}
-        AssessmentRESTHandler.SCHEMA.convert_json_to_entity(
-            updated_unit_dict, entity_dict)
-        self.apply_updates_common(course, unit, entity_dict, errors)
-        try:
-            unit.weight = int(entity_dict.get('weight'))
-            if unit.weight < 0:
-                errors.append('The weight must be a non-negative integer.')
-        except ValueError:
-            errors.append('The weight must be an integer.')
-        content = entity_dict.get('content')
-        if content:
-            course.set_assessment_content(
-                unit, entity_dict.get('content'), errors=errors)
-
-        unit.html_content = entity_dict.get('html_content')
-        unit.html_check_answers = entity_dict.get('html_check_answers')
-
-        workflow_dict = entity_dict.get('workflow')
-        if len(ALLOWED_MATCHERS_NAMES) == 1:
-            workflow_dict[courses.MATCHER_KEY] = (
-                ALLOWED_MATCHERS_NAMES.keys()[0])
-        unit.workflow_yaml = yaml.safe_dump(workflow_dict)
-        unit.workflow.validate(errors=errors)
-
-        # Only save the review form if the assessment needs human grading.
-        if not errors:
-            if course.needs_human_grader(unit):
-                review_form = entity_dict.get('review_form')
-                if review_form:
-                    course.set_review_form(
-                        unit, review_form, errors=errors)
-                unit.html_review_form = entity_dict.get('html_review_form')
-            elif entity_dict.get('review_form'):
-                errors.append(
-                    'Review forms for auto-graded assessments should be empty.')
 
 
 class UnitLessonTitleRESTHandler(BaseRESTHandler):
