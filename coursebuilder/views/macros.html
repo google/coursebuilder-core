@@ -50,9 +50,6 @@
               {{ unit.description }}
             </span>
           {% endif %}
-          {% if not unit.now_available and is_course_admin %}
-            (Private)
-          {% endif %}
           {% if unit.needs_human_grader() and not transient_student %}
             </p></li>
             <li>
