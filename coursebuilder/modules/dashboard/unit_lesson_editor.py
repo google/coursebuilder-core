@@ -1001,7 +1001,7 @@ def create_assessment_registry():
     # Course level settings.
     course_opts = generate_common_schema('Assessment Config')
     course_opts.add_property(
-        SchemaField('weight', 'Weight', 'string', optional=True))
+        SchemaField('weight', 'Weight', 'string', optional=True, i18n=False))
     course_opts.add_property(SchemaField(
         'content', 'Assessment Content', 'text', optional=True,
         description=str(messages.ASSESSMENT_CONTENT_DESCRIPTION),

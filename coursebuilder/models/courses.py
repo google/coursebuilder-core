@@ -2065,7 +2065,7 @@ class Course(object):
         course_opts.add_property(schema_fields.SchemaField(
             'course:forum_email', 'Forum Email', 'string', optional=True,
             description='Email for the forum, e.g. '
-            '\'My-Course@googlegroups.com\'.'))
+            '\'My-Course@googlegroups.com\'.', i18n=False))
         course_opts.add_property(schema_fields.SchemaField(
             'course:forum_embed_url', 'Forum URL for embedding', 'string',
             optional=True, description='URL for the forum &lt;iframe&gt;.'))
@@ -2080,7 +2080,7 @@ class Course(object):
             'course:announcement_list_email', 'Announcement List Email',
             'string', optional=True, description='Email for the mailing list '
             'where students can register to receive course announcements, e.g. '
-            '\'My-Course-Announce@googlegroups.com\''))
+            '\'My-Course-Announce@googlegroups.com\'', i18n=False))
         course_opts.add_property(schema_fields.SchemaField(
             'course:start_date', 'Course Start Date', 'string', optional=True,
             i18n=False))
