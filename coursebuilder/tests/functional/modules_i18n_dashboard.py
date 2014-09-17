@@ -27,7 +27,10 @@ from babel.messages import pofile
 from common import crypto
 from models import courses
 from models import models
+from models import roles
 from models import transforms
+from modules.dashboard import dashboard
+from modules.i18n_dashboard import i18n_dashboard
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
@@ -1006,3 +1009,72 @@ class CourseContentTranslationTests(actions.TestBase):
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
         self.assertEquals(6, num_translations)
+
+
+class TranslatorRoleTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    USER_EMAIL = 'user@foo.com'
+    COURSE_NAME = 'i18n_course'
+    DASHBOARD_URL = 'dashboard?action=i18n_dashboard'
+    CONSOLE_REST_URL = 'rest/modules/i18n_dashboard/translation_console'
+    ENVIRON = {
+        'extra_locales': [
+            {'locale': 'el', 'availability': 'unavailable'},
+            {'locale': 'ru', 'availability': 'unavailable'},
+        ]}
+
+    def setUp(self):
+        super(TranslatorRoleTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'I18N Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.old_registered_permission = roles.Roles._REGISTERED_PERMISSIONS
+        roles.Roles.REGISTERED_PERMISSIONS = {}
+
+    def tearDown(self):
+        roles.Roles.REGISTERED_PERMISSIONS = self.old_registered_permission
+        namespace_manager.set_namespace(self.old_namespace)
+        super(TranslatorRoleTests, self).tearDown()
+
+    def _createTranslatorRole(self, name, locales):
+        permissions = {
+            dashboard.custom_module.name: [i18n_dashboard.ACCESS_PERMISSION],
+            i18n_dashboard.custom_module.name: [
+                i18n_dashboard.locale_to_permission(loc) for loc in locales]
+        }
+        role_dto = models.RoleDTO(None, {
+            'name': name,
+            'users': [self.USER_EMAIL],
+            'permissions': permissions
+        })
+        models.RoleDAO.save(role_dto)
+
+    def test_no_permission_redirect(self):
+        with actions.OverriddenEnvironment(self.ENVIRON):
+            actions.login(self.USER_EMAIL, is_admin=False)
+            self.assertEquals(self.get(self.DASHBOARD_URL).status_int, 302)
+
+    def test_restricted_access(self):
+        with actions.OverriddenEnvironment(self.ENVIRON):
+            self._createTranslatorRole('ElTranslator', ['el'])
+            actions.login(self.USER_EMAIL, is_admin=False)
+            dom = self.parse_html_string(self.get(self.DASHBOARD_URL).body)
+            table = dom.find('.//table[@class="i18n-progress-table"]')
+            columns = table.findall('./thead/tr/th')
+            expected_col_data = [
+                'Asset',
+                'el'
+            ]
+            self.assertEquals(len(expected_col_data), len(columns))
+            for index, expected in enumerate(expected_col_data):
+                self.assertEquals(expected, columns[index].text)
+            response = self.get('%s?key=%s' % (
+                self.CONSOLE_REST_URL, 'course_settings%3Acourse%3Aru'))
+            self.assertEquals(transforms.loads(response.body)['status'], 401)
+            response = self.get('%s?key=%s' % (
+                self.CONSOLE_REST_URL, 'course_settings%3Acourse%3Ael'))
+            self.assertEquals(transforms.loads(response.body)['status'], 200)

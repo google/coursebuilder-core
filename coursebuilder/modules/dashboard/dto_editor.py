@@ -117,6 +117,10 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
         """Give subclasses a hook to modify the DTO before saving."""
         pass
 
+    def after_save_hook(self):
+        """Give subclasses a hook to perform an action after saving."""
+        pass
+
     def is_deletion_allowed(self, dto):
         """Allow subclasses to check referential integrity before delete.
 
@@ -135,6 +139,10 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
 
     def transform_for_editor_hook(self, item_dict):
         """Allow subclasses to modify dict before it goes to the edit form."""
+        return item_dict
+
+    def transform_after_editor_hook(self, item_dict):
+        """Allow subclasses to modify dict returned from editor form."""
         return item_dict
 
     def get_default_content(self):
@@ -168,6 +176,7 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             if version not in self.SCHEMA_VERSIONS:
                 errors.append('Version %s not supported.' % version)
             else:
+                python_dict = self.transform_after_editor_hook(python_dict)
                 self.validate(python_dict, key, version, errors)
         except ValueError as err:
             errors.append(str(err))
@@ -181,8 +190,8 @@ class BaseDatastoreRestHandler(utils.BaseRESTHandler):
             item = self.DAO.DTO(None, python_dict)
 
         self.pre_save_hook(item)
-
         key_after_save = self.DAO.save(item)
+        self.after_save_hook()
 
         transforms.send_json_response(
             self, 200, 'Saved.', payload_dict={'key': key_after_save})

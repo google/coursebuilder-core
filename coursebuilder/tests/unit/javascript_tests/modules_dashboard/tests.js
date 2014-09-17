@@ -362,3 +362,26 @@ describe('adding a question to a question group', function() {
     expect(cbShowAlert).toHaveBeenCalledWith("Error: error");
   });
 });
+
+describe('editing a role in the role editor', function() {
+  beforeEach(function() {
+    showNoPermissionsMessage = jasmine.createSpy("showNoPermissionsMessage");
+    jasmine.getFixtures().fixturesPath = 'base/';
+    loadFixtures('tests/unit/javascript_tests/modules_dashboard/'
+        + 'role_editor_fixture.html');
+  });
+  it('it shows a message when there are no permissions available', function() {
+    $(".inputEx-ListField-childContainer").text("");
+    setUpRoleEditorForm();
+    expect(showNoPermissionsMessage).toHaveBeenCalled();
+  });
+  it('it shows no message with at least one permission', function() {
+    setUpRoleEditorForm();
+    expect(showNoPermissionsMessage).not.toHaveBeenCalled();
+  });
+  it('hides permissions modules with no permissions', function() {
+    setUpRoleEditorForm();
+    expect($("#a").is(":visible")).toBe(true);
+    expect($("#b").is(":visible")).toBe(false);
+  })
+});

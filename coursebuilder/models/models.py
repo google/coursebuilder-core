@@ -1739,3 +1739,37 @@ class StudentPreferencesDAO(BaseJsonDao):
                 })
             cls.save(prefs)
         return prefs
+
+
+class RoleEntity(BaseEntity):
+    data = db.TextProperty(indexed=False)
+
+
+class RoleDTO(object):
+    """Data transfer object for roles."""
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+    @property
+    def name(self):
+        return self.dict.get('name', '')
+
+    @property
+    def description(self):
+        return self.dict.get('description', '')
+
+    @property
+    def users(self):
+        return self.dict.get('users', [])
+
+    @property
+    def permissions(self):
+        return self.dict.get('permissions', {})
+
+
+class RoleDAO(BaseJsonDao):
+    DTO = RoleDTO
+    ENTITY = RoleEntity
+    ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId

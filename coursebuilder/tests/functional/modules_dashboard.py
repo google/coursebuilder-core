@@ -25,7 +25,11 @@ from controllers import utils
 from models import courses
 from models import models
 from models import transforms
+from models.custom_modules import Module
+from models.roles import Permission
+from models.roles import Roles
 from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
+from modules.dashboard.role_editor import RoleRESTHandler
 
 from google.appengine.api import namespace_manager
 
@@ -447,3 +451,122 @@ class CourseOutlineTestCase(actions.TestBase):
             self.get(self.URL).body).findall('.//ul[@id="course-outline"]/li')
         self.assertIn('icon-unlocked', lis[0].find('div').get('class', ''))
         self.assertIn('icon-locked', lis[2].find('ol/li/div').get('class', ''))
+
+
+class RoleEditorTestCase(actions.TestBase):
+    """Tests the Roles tab and Role Editor."""
+    COURSE_NAME = 'outline'
+    ADMIN_EMAIL = 'admin@foo.com'
+    URL = 'dashboard?action=roles'
+
+    def setUp(self):
+        super(RoleEditorTestCase, self).setUp()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Roles Testing')
+
+        self.course = courses.Course(None, context)
+
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        # pylint: disable-msg=protected-access
+        self.old_registered_permission = Roles._REGISTERED_PERMISSIONS
+        Roles._REGISTERED_PERMISSIONS = {}
+
+    def tearDown(self):
+        # pylint: disable-msg=protected-access
+        Roles._REGISTERED_PERMISSIONS = self.old_registered_permission
+        namespace_manager.set_namespace(self.old_namespace)
+        super(RoleEditorTestCase, self).tearDown()
+
+    def _create_role(self, role):
+        role_dto = models.RoleDTO(None, {
+            'name': role,
+        })
+        return models.RoleDAO.save(role_dto)
+
+    def test_roles_tab(self):
+        role_name = 'Test Role'
+        role_id = self._create_role(role_name)
+        li = self.parse_html_string(self.get(self.URL).body).find('.//ul/li')
+        self.assertEquals(li.text, role_name)
+        self.assertEquals(li.find('a').get('href'), (
+            'dashboard?action=edit_role&key=%s' % role_id))
+
+    def test_editor_hooks(self):
+        # pylint: disable-msg=g-long-lambda
+        module1 = Module('module1', '', [], [])
+        module2 = Module('module2', '', [], [])
+        module3 = Module('module3', '', [], [])
+        module4 = Module('module4', '', [], [])
+        Roles.register_permissions(module1, lambda unused: [
+            Permission('permissiona', 'a'), Permission('permissionb', 'b')])
+
+        Roles.register_permissions(module2, lambda unused: [
+            Permission('permissionc', 'c'), Permission('permissiond', 'd')])
+        Roles.register_permissions(module4, lambda unused: [
+            Permission('permissiong', 'g'), Permission('permissiond', 'h')])
+        handler = RoleRESTHandler()
+        handler.course = self.course
+
+        datastore_permissions = {
+            module1.name: ['permission', 'permissiona', 'permissionb'],
+            module2.name: ['permissionc', 'permissiond'],
+            module3.name: ['permissione', 'permissionf']
+        }
+        datastore_dict = {
+            'name': 'Role Name',
+            'users': ['test@test.com', 'test2@test.com'],
+            'permissions': datastore_permissions
+        }
+        editor_dict = handler.transform_for_editor_hook(datastore_dict)
+        self.assertEquals(editor_dict['name'], 'Role Name')
+        self.assertEquals(editor_dict['users'], 'test@test.com, test2@test.com')
+        modules = editor_dict['modules']
+        # Test registered assigned permission
+        permissionc = modules[module2.name][0]
+        self.assertEquals(permissionc['assigned'], True)
+        self.assertEquals(permissionc['name'], 'permissionc')
+        self.assertEquals(permissionc['description'], 'c')
+        # Test unregistered module with assigned permission
+        permissionsf = modules[RoleRESTHandler.INACTIVE_MODULES][1]
+        self.assertEquals(permissionsf['assigned'], True)
+        self.assertEquals(permissionsf['name'], 'permissionf')
+        self.assertEquals(
+            permissionsf['description'],
+            'This permission was set by the module "module3" which is '
+            'currently not registered.'
+        )
+        # Test registered module with assigned unregistered permission
+        permission = modules[module1.name][2]
+        self.assertEquals(permission['assigned'], True)
+        self.assertEquals(permission['name'], 'permission')
+        self.assertEquals(
+            permission['description'],
+            'This permission is currently not registered.'
+        )
+        # Test registered unassigned permissions
+        permissiong = editor_dict['modules'][module4.name][0]
+        self.assertEquals(permissiong['assigned'], False)
+        self.assertEquals(permissiong['name'], 'permissiong')
+        self.assertEquals(permissiong['description'], 'g')
+        # Call the hook which gets called when saving
+        new_datastore_dict = handler.transform_after_editor_hook(datastore_dict)
+        # If original dict matches new dict then both hooks work correctly
+        self.assertEquals(datastore_dict, new_datastore_dict)
+
+    def test_not_unique_role_name(self):
+        role_name = 'Test Role'
+        role_id = self._create_role(role_name)
+        handler = RoleRESTHandler()
+        handler.course = self.course
+        editor_dict = {
+            'name': role_name
+        }
+        errors = []
+        handler.validate(editor_dict, role_id + 1, None, errors)
+        self.assertEquals(
+            errors[0], 'The role must have a unique non-empty name.')

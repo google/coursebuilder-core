@@ -60,6 +60,7 @@ files = [
   // Files to test
   'modules/dashboard/mc_question_editor_lib.js',
   'modules/dashboard/resources/js/view.js',
+  'modules/dashboard/resources/js/role_editor.js',
 ];
 
 exclude = [

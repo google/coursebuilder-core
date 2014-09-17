@@ -62,6 +62,9 @@ VERB_NEW = xcontent.SourceToTargetDiffMapping.VERB_NEW
 VERB_CHANGED = xcontent.SourceToTargetDiffMapping.VERB_CHANGED
 VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
 
+# This permission grants the user access to the i18n dashboard and console.
+ACCESS_PERMISSION = 'access_i18n_dashboard'
+ACCESS_PERMISSION_DESCRIPTION = 'Can access I18n Dashboard.'
 TYPE_HTML = 'html'
 TYPE_STRING = 'string'
 TYPE_TEXT = 'text'
@@ -517,11 +520,15 @@ class BaseDashboardExtension(object):
         dashboard.DashboardHandler.get_actions.append(cls.ACTION)
         setattr(
             dashboard.DashboardHandler, 'get_%s' % cls.ACTION, get_action)
+        dashboard.DashboardHandler.map_action_to_permission(
+            'get_%s' % cls.ACTION, ACCESS_PERMISSION)
 
     @classmethod
     def unregister(cls):
         dashboard.DashboardHandler.get_actions.remove(cls.ACTION)
         setattr(dashboard.DashboardHandler, 'get_%s' % cls.ACTION, None)
+        dashboard.DashboardHandler.unmap_action_to_permission(
+            'get_%s' % cls.ACTION)
 
     def __init__(self, handler):
         """Initialize the class with a request handler.
@@ -862,14 +869,26 @@ class I18nDashboardHandler(BaseDashboardExtension):
         if not [row for row in rows if type(row) is ResourceRow]:
             rows = [EmptyRow(name='No course content')]
 
+        permitted_locales = []
+        for locale in self.extra_locales:
+            if roles.Roles.is_user_allowed(
+                self.handler.app_context, custom_module,
+                locale_to_permission(locale)
+            ):
+                permitted_locales.append(locale)
+
         template_values = {
-            'main_locale': self.main_locale,
-            'extra_locales': self.extra_locales,
+            'extra_locales': permitted_locales,
             'rows': rows,
-            'num_columns': len(self.extra_locales) + 2,
-            'is_translatable_xsrf_token': (
+            'num_columns': len(permitted_locales) + 1
+        }
+
+        if roles.Roles.is_course_admin(self.handler.app_context):
+            template_values['main_locale'] = self.main_locale
+            template_values['is_translatable_xsrf_token'] = (
                 crypto.XsrfTokenManager.create_xsrf_token(
-                    IsTranslatableRestHandler.XSRF_TOKEN_NAME))}
+                    IsTranslatableRestHandler.XSRF_TOKEN_NAME))
+            template_values['num_columns'] += 1
 
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
@@ -1008,8 +1027,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
     def get(self):
         key = ResourceBundleKey.fromstring(self.request.get('key'))
-
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not has_locale_rights(self.app_context, key.locale):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': str(key)})
             return
@@ -1140,7 +1158,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                 request, self.XSRF_TOKEN_NAME, {'key': key}):
             return
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not has_locale_rights(self.app_context, resource_bundle_key.locale):
             transforms.send_json_response(
                 self, 401, 'Access denied.', {'key': key})
             return
@@ -1386,9 +1404,34 @@ def translate_question_group_dto(dto_list):
     translate_dto_list(dto_list, key_list)
 
 
+def has_locale_rights(app_context, locale):
+    return roles.Roles.is_user_allowed(
+        app_context, dashboard.custom_module, ACCESS_PERMISSION
+    ) and roles.Roles.is_user_allowed(
+        app_context, custom_module, locale_to_permission(locale)
+    )
+
+
+def locale_to_permission(locale):
+    return 'translate_%s' % locale
+
+
+def permissions_callback(app_context):
+    for locale in app_context.get_environ().get('extra_locales', []):
+        yield roles.Permission(
+            locale_to_permission(locale['locale']),
+            'Can submit translations for the locale "%s".' % locale['locale']
+        )
+
+
 def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
         [I18nDashboardHandler.ACTION, 'I18N'])
+    dashboard.DashboardHandler.add_external_permission(
+        ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
+    roles.Roles.register_permissions(
+        custom_module, permissions_callback)
+
     I18nDashboardHandler.register()
     I18nDownloadHandler.register()
     I18nUploadHandler.register()
@@ -1402,6 +1445,9 @@ def notify_module_enabled():
 def notify_module_disabled():
     dashboard.DashboardHandler.nav_mappings.remove(
         [I18nDashboardHandler.ACTION, 'I18N'])
+    dashboard.DashboardHandler.remove_external_permission(ACCESS_PERMISSION)
+    roles.Roles.unregister_permissions(custom_module)
+
     I18nDashboardHandler.unregister()
     I18nDownloadHandler.unregister()
     I18nUploadHandler.unregister()

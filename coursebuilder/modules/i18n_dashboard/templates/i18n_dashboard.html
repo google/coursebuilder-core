@@ -5,7 +5,9 @@
   <thead>
     <tr>
       <th>Asset</th>
-      <th>{{ main_locale }} (Base locale)</th>
+      {% if main_locale %}
+        <th>{{ main_locale }} (Base locale)</th>
+      {% endif %}
       {% for locale in extra_locales %}
         <th>{{ locale }}</th>
       {% endfor %}
@@ -18,12 +20,14 @@
           <td colspan="{{ num_columns }}">{{ row.name }}</td>
         {% else %}
           <td>{{ row.name }}</td>
-          <td>
-            <label>
-              <input class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
-              Translatable
-            </label>
-          </td>
+          {% if main_locale %}
+            <td>
+              <label>
+                <input class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
+                Translatable
+              </label>
+            </td>
+          {% endif %}
           {% for locale in extra_locales %}
             <td class="resource-locale-entry {{row.status_class(locale)}}">
               <a href="{{ row.view_url(locale) }}"><img src="/modules/i18n_dashboard/resources/images/eye.png"></a>

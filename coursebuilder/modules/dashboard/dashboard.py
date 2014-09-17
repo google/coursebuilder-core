@@ -42,6 +42,8 @@ from question_editor import QuestionManagerAndEditor
 from question_editor import SaQuestionRESTHandler
 from question_group_editor import QuestionGroupManagerAndEditor
 from question_group_editor import QuestionGroupRESTHandler
+from role_editor import RoleManagerAndEditor
+from role_editor import RoleRESTHandler
 import student_answers_analytics
 import unit_lesson_editor
 from unit_lesson_editor import AssessmentRESTHandler
@@ -75,6 +77,7 @@ from models.models import LabelDAO
 from models.models import QuestionDAO
 from models.models import QuestionDTO
 from models.models import QuestionGroupDAO
+from models.models import RoleDAO
 from modules.dashboard import tabs
 from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
@@ -86,25 +89,27 @@ from google.appengine.api import users
 
 RESOURCES_PATH = '/modules/dashboard/resources'
 
+custom_module = None
+
 
 class DashboardHandler(
-    CourseSettingsHandler, FileManagerAndEditor, UnitLessonEditor,
-    QuestionManagerAndEditor, QuestionGroupManagerAndEditor,
-    LabelManagerAndEditor, AssignmentManager, AdminPreferencesEditor,
-    HtmlHookHandler, CourseHandler, ReflectiveRequestHandler,
-    SearchDashboardHandler):
+    AdminPreferencesEditor, AssignmentManager, CourseHandler,
+    CourseSettingsHandler, FileManagerAndEditor, HtmlHookHandler,
+    LabelManagerAndEditor, QuestionGroupManagerAndEditor,
+    QuestionManagerAndEditor, ReflectiveRequestHandler, RoleManagerAndEditor,
+    SearchDashboardHandler, UnitLessonEditor):
     """Handles all pages and actions required for managing a course."""
 
-    default_action = 'outline'
+    default_tab_action = 'outline'
     get_actions = [
-        default_action, 'assets', 'settings', 'analytics', 'search',
+        default_tab_action, 'assets', 'settings', 'analytics', 'search',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
         'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
-        'clone_question']
+        'clone_question', 'roles', 'add_role', 'edit_role']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -114,9 +119,10 @@ class DashboardHandler(
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
         'add_to_question_group', 'course_availability', 'course_browsability']
     nav_mappings = [
-        ('', 'Outline'),
+        ('outline', 'Outline'),
         ('assets', 'Assets'),
         ('settings', 'Settings'),
+        ('roles', 'Roles'),
         ('analytics', 'Analytics'),
         ('search', 'Search'),
         ('edit_assignment', 'Peer Review')]
@@ -138,7 +144,13 @@ class DashboardHandler(
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
-            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler)]
+            (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
+            (RoleRESTHandler.URI, RoleRESTHandler)]
+
+    # Dictionary that maps external permissions to their descriptions
+    _external_permissions = {}
+    # Dictionary that maps actions to permissions
+    _action_to_permission = {}
 
     # Other modules which manage editable assets can add functions here to
     # list their assets on the Assets tab. The function will receive an instance
@@ -152,19 +164,38 @@ class DashboardHandler(
         """Add child handlers for REST."""
         return cls.child_routes
 
-    def can_view(self):
+    def can_view(self, action):
         """Checks if current user has viewing rights."""
-        return roles.Roles.is_course_admin(self.app_context)
+        return roles.Roles.is_user_allowed(
+            self.app_context, custom_module,
+            self._action_to_permission.get('get_%s' % action, '')
+        )
 
     def can_edit(self):
         """Checks if current user has editing rights."""
         return roles.Roles.is_course_admin(self.app_context)
 
+    def _default_action_for_current_permissions(self):
+        """Set the default or first active navigation tab as default action."""
+        if self.can_view(self.default_tab_action):
+            return self.default_tab_action
+        for nav in self.nav_mappings:
+            if self.can_view(nav[0]):
+                return nav[0]
+
+        return ''
+
     def get(self):
         """Enforces rights to all GET operations."""
-        if not self.can_view():
+        action = self.request.get('action')
+        if not action:
+            self.default_action = self._default_action_for_current_permissions()
+            action = self.default_action
+
+        if not self.can_view(action):
             self.redirect(self.app_context.get_slug())
             return
+
         # Force reload of properties. It is expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
         return super(DashboardHandler, self).get()
@@ -190,12 +221,13 @@ class DashboardHandler(
         return '\n'.join(alerts)
 
     def _get_top_nav(self, in_action, in_tab):
-        current_action = in_action or self.request.get('action')
-
+        current_action = in_action or self.request.get(
+            'action') or self.default_action
         nav_bars = []
         nav = safe_dom.NodeList()
         for action, title in self.nav_mappings:
-
+            if not self.can_view(action):
+                continue
             class_name = 'selected' if action == current_action else ''
             action_href = 'dashboard?action=%s' % action
             nav.append(safe_dom.Element(
@@ -1340,12 +1372,87 @@ class DashboardHandler(
             }
         self.render_page(template_values)
 
+    def _render_roles_list(self):
+        """Render roles list to HTML."""
+        all_roles = RoleDAO.get_all()
+        if all_roles:
+            output = safe_dom.Element('ul')
+            for role in sorted(all_roles, key=lambda r: r.name):
+                li = safe_dom.Element('li')
+                output.add_child(li)
+                li.add_text(role.name).add_child(self._create_edit_button(
+                    'dashboard?action=edit_role&key=%s' % (role.id)
+                ))
+        else:
+            output = safe_dom.Element('blockquote').add_text('< none >')
 
-custom_module = None
+        return output
+
+    def get_roles(self):
+        """Renders course roles view."""
+        actions = [{
+            'id': 'add_role',
+            'caption': 'Add Role',
+            'href': self.get_action_url('add_role')}]
+        sections = [{
+                'title': 'Roles',
+                'description': messages.ROLES_DESCRIPTION,
+                'actions': actions,
+                'pre': self._render_roles_list()
+        }]
+        template_values = {
+            'page_title': self.format_title('Roles'),
+            'sections': sections,
+        }
+        self.render_page(template_values)
+
+    @classmethod
+    def map_action_to_permission(cls, action, permission):
+        """Maps an action to a permission.
+
+        Map a GET or POST action that goes through the dashboard to a
+        permission to control which users have access. GET actions start with
+        'get_' while post actions start with 'post_'.
+
+        Example:
+            The i18n module maps both the actions 'get_i18n_dashboard' and
+            'get_i18_console' to the permission 'access_i18n_dashboard'.
+            Users who have a role assigned with this permission are then allowed
+            to perform these actions and thus access the translation tools.
+
+        Args:
+            action: a string specifying the action to map.
+            permission: a string specifying to which permission the action maps.
+        """
+        cls._action_to_permission[action] = permission
+
+    @classmethod
+    def unmap_action_to_permission(cls, action):
+        del cls._action_to_permission[action]
+
+    @classmethod
+    def add_external_permission(cls, permission_name, permission_description):
+        """Adds extra permissions that will be registered by the Dashboard."""
+        cls._external_permissions[permission_name] = permission_description
+
+    @classmethod
+    def remove_external_permission(cls, permission_name):
+        del cls._external_permissions[permission_name]
+
+    @classmethod
+    def permissions_callback(cls, unused_app_context):
+        return cls._external_permissions.iteritems()
 
 
 def register_module():
     """Registers this module in the registry."""
+
+    def on_module_enabled():
+        roles.Roles.register_permissions(
+            custom_module, DashboardHandler.permissions_callback)
+
+    def on_module_disabled():
+        roles.Roles.unregister_permissions(custom_module)
 
     data_sources.Registry.register(
         student_answers_analytics.QuestionAnswersDataSource)
@@ -1457,5 +1564,7 @@ def register_module():
     custom_module = custom_modules.Module(
         'Course Dashboard',
         'A set of pages for managing Course Builder course.',
-        global_routes, dashboard_handlers)
+        global_routes, dashboard_handlers,
+        notify_module_enabled=on_module_enabled,
+        notify_module_disabled=on_module_disabled)
     return custom_module

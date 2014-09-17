@@ -195,6 +195,12 @@ REVIEWER_FEEDBACK_FORM_DESCRIPTION = assemble_sanitized_message("""
 Review form questions and answers (JavaScript format).
 """, 'https://code.google.com/p/course-builder/wiki/PeerReview')
 
+ROLES_DESCRIPTION = """
+Manage the different roles associated with your course.
+A role binds a set of permissions to a set of users. The role editor allows you
+to assign any of the permissions currently registered by the enabled modules.
+"""
+
 SETTINGS_DESCRIPTION = assemble_sanitized_message(
     None, 'https://code.google.com/p/course-builder/wiki/Dashboard#Settings')
 

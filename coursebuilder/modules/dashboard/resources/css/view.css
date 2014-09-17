@@ -371,6 +371,36 @@ li.activity-item {
   background-color: #f5f5f5;
   border: solid 1px #C0C0C0;
 }
+/* Styles for role editor */
+div.permission-module {
+  display: inline-block;
+}
+div.permission-item.inputEx-ListField-subFieldEl {
+  margin: 0;
+  margin-bottom: 8px;
+}
+div.permission-item input {
+  margin: 1px 5px 0px 0px;
+}
+div.permission-item .inputEx-label,
+div.permission-item label,
+div.permission-item .inputEx-Group-legend,
+div.permission-module .inputEx-List-link {
+  display: none;
+}
+div.permission-item .inputEx-fieldWrapper {
+  display: inline-block;
+  vertical-align: text-top;
+  margin: 0;
+}
+div.permission-item .inputEx-fieldWrapper + .inputEx-fieldWrapper + .inputEx-fieldWrapper {
+  display: block;
+}
+div#formContainer fieldset .permission-item fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
 .settings-section {
   width: 700px;
   margin: auto;
