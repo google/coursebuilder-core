@@ -315,11 +315,16 @@ class ValidationError(Exception):
     """Exception raised to show that a validation failed."""
 
 
-class HTMLChunkEntity(BaseEntity):
-    """Defines storage for HtmlChunk, a blob of HTML for display."""
+class ContentChunkEntity(BaseEntity):
+    """Defines storage for ContentChunk, a blob of opaque content to display."""
 
-    _PROPERTY_EXPORT_BLACKLIST = []  # No PII in HTMLChunks.
+    _PROPERTY_EXPORT_BLACKLIST = []  # No PII in ContentChunks.
 
+    # A string that gives the type of the content chunk. At the data layer we
+    # make no restrictions on the values that can be used here -- we only
+    # require that a type is given. The type here may be independent of any
+    # notion of Content-Type in an HTTP header.
+    content_type = db.StringProperty(required=True)
     # UTC last modification timestamp.
     last_modified = db.DateTimeProperty(auto_now=True, required=True)
     # Whether or not the chunk supports custom tags. If True, the renderer may
@@ -327,22 +332,22 @@ class HTMLChunkEntity(BaseEntity):
     # for future functionality that does not exist yet). If False, the contents
     # of the chunk will be rendered verbatim.
     supports_custom_tags = db.BooleanProperty(default=False)
-    # Optional URL that the HTML was sourced from. Max size is 500B, enforced by
-    # datastore.
+    # Optional URL that the content was sourced from. Max size is 500B, enforced
+    # by datastore.
     url = db.StringProperty(indexed=True)
 
-    # Payload of the HTML chunk. Max size is 1MB, enforced by datastore.
+    # Payload of the chunk. Max size is 1MB, enforced by datastore.
     contents = db.TextProperty()
 
 
-class HTMLChunkDAO(object):
-    """Data access object for HTMLChunks."""
+class ContentChunkDAO(object):
+    """Data access object for ContentChunks."""
 
     @classmethod
     def delete(cls, entity_id):
-        """Deletes HTMLChunkEntity for given datastore id int; returns None."""
+        """Deletes ContentChunkEntity for datastore id int; returns None."""
         memcache_key = cls._get_memcache_key(entity_id)
-        entity = HTMLChunkEntity.get_by_id(entity_id)
+        entity = ContentChunkEntity.get_by_id(entity_id)
 
         if entity:
             db.delete(entity)
@@ -351,7 +356,7 @@ class HTMLChunkDAO(object):
 
     @classmethod
     def get(cls, entity_id):
-        """Gets HTMLEntityDTO or None from HTMLChunkEntity datastore id int."""
+        """Gets ContentChunkEntityDTO or None from given datastore id int."""
         if entity_id is None:
             return
 
@@ -366,7 +371,7 @@ class HTMLChunkDAO(object):
             result = None
             cache_value = NO_OBJECT
 
-            entity = HTMLChunkEntity.get_by_id(entity_id)
+            entity = ContentChunkEntity.get_by_id(entity_id)
             if entity:
                 result = cls._make_dto(entity)
                 cache_value = result
@@ -377,8 +382,8 @@ class HTMLChunkDAO(object):
     @classmethod
     def get_by_url(cls, url):
         """Gets list of DTOs for all entities matching the given url string."""
-        results = HTMLChunkEntity.all().filter(
-            HTMLChunkEntity.url.name, url
+        results = ContentChunkEntity.all().filter(
+            ContentChunkEntity.url.name, url
         ).fetch(1000)
         return sorted(
             [cls._make_dto(result) for result in results],
@@ -399,18 +404,18 @@ class HTMLChunkDAO(object):
         this value for our getters.
 
         Args:
-            dto: HTMLChunkDTO. last_modified will be ignored.
+            dto: ContentChunkDTO. last_modified will be ignored.
 
         Returns:
-            db.Key of saved HTMLEntity.
+            db.Key of saved ContentChunkEntity.
         """
         if dto.id is None:
-            entity = HTMLChunkEntity()
+            entity = ContentChunkEntity(content_type=dto.content_type)
         else:
-            entity = HTMLChunkEntity.get_by_id(dto.id)
+            entity = ContentChunkEntity.get_by_id(dto.id)
 
             if entity is None:
-                entity = HTMLChunkEntity()
+                entity = ContentChunkEntity(content_type=dto.content_type)
 
         entity.contents = dto.contents
         entity.supports_custom_tags = dto.supports_custom_tags
@@ -424,11 +429,12 @@ class HTMLChunkDAO(object):
     @classmethod
     def _get_memcache_key(cls, entity_id):
         assert entity_id is not None
-        return '(%s:%s)' % (HTMLChunkEntity.kind(), entity_id)
+        return '(%s:%s)' % (ContentChunkEntity.kind(), entity_id)
 
     @classmethod
     def _make_dto(cls, entity):
-        return HTMLChunkDTO({
+        return ContentChunkDTO({
+            'content_type': entity.content_type,
             'contents': entity.contents,
             'id': entity.key().id(),
             'last_modified': entity.last_modified,
@@ -437,10 +443,11 @@ class HTMLChunkDAO(object):
         })
 
 
-class HTMLChunkDTO(object):
-    """Data transfer object for HTMLChunks."""
+class ContentChunkDTO(object):
+    """Data transfer object for ContentChunks."""
 
     def __init__(self, entity_dict):
+        self.content_type = entity_dict.get('content_type')
         self.contents = entity_dict.get('contents')
         self.id = entity_dict.get('id')
         self.last_modified = entity_dict.get('last_modified')
@@ -449,7 +456,8 @@ class HTMLChunkDTO(object):
 
     def __eq__(self, other):
         return (
-            isinstance(other, HTMLChunkDTO) and
+            isinstance(other, ContentChunkDTO) and
+            self.content_type == other.content_type and
             self.contents == other.contents and
             self.id == other.id and
             self.last_modified == other.last_modified and
