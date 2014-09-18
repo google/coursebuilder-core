@@ -120,6 +120,7 @@ from webapp2_extras import i18n
 
 import appengine_config
 from common import safe_dom
+from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -479,19 +480,25 @@ class AssetHandler(webapp2.RequestHandler):
         """Handles GET requests."""
         debug('File: %s' % self.filename)
 
-        if not self.app_context.fs.isfile(self.filename):
-            self.error(404)
-            return
+        self.app_context.fs.begin_readonly()
+        models.MemcacheManager.begin_readonly()
+        try:
+            if not self.app_context.fs.isfile(self.filename):
+                self.error(404)
+                return
 
-        stream = self.app_context.fs.open(self.filename)
-        if not self._can_view(self.app_context.fs, stream):
-            self.error(403)
-            return
+            stream = self.app_context.fs.open(self.filename)
+            if not self._can_view(self.app_context.fs, stream):
+                self.error(403)
+                return
 
-        set_static_resource_cache_control(self)
-        self.response.headers['Content-Type'] = self.get_mime_type(
-            self.filename)
-        self.response.write(stream.read())
+            set_static_resource_cache_control(self)
+            self.response.headers['Content-Type'] = self.get_mime_type(
+                self.filename)
+            self.response.write(stream.read())
+        finally:
+            models.MemcacheManager.end_readonly()
+            self.app_context.fs.end_readonly()
 
 
 class CourseIndex(object):

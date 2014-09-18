@@ -294,7 +294,7 @@ class AbstractCachedObject(object):
             logging.error(
                 'Failed to load object \'%s\' from memcache. %s',
                 cls._make_key(), e)
-            return None
+        return None
 
     @classmethod
     def save(cls, app_context, instance):
@@ -488,8 +488,8 @@ class CourseModel12(object):
             units, lessons = load_csv_course(app_context)
             if units and lessons:
                 course = CourseModel12(app_context, units, lessons)
-        if course:
-            CachedCourse12.save(app_context, course)
+            if course:
+                CachedCourse12.save(app_context, course)
         return course
 
     @classmethod
@@ -914,8 +914,8 @@ class CourseModel13(object):
         course = CachedCourse13.load(app_context)
         if not course:
             course = PersistentCourse13.load(app_context)
-        if course:
-            CachedCourse13.save(app_context, course)
+            if course:
+                CachedCourse13.save(app_context, course)
         return course
 
     @classmethod

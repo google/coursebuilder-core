@@ -229,13 +229,14 @@ def add_course_outline_to_template(handler, student):
     _tuples = []
     units = handler.get_track_matching_student(student)
     units = filter_assessments_used_within_units(units)
-    progress_recorded = is_progress_recorded(handler, student)
+    progress = _tracker.get_or_create_progress(
+          student) if is_progress_recorded(handler, student) else None
     for _unit in units:
         _lessons = handler.get_lessons(_unit.unit_id)
         _lesson_progress = None
-        if progress_recorded:
+        if progress:
             _lesson_progress = _tracker.get_lesson_progress(
-                student, _unit.unit_id)
+                student, _unit.unit_id, progress=progress)
         pre_assessment = None
         if _unit.pre_assessment:
             pre_assessment = handler.find_unit_by_id(_unit.pre_assessment)
@@ -249,7 +250,7 @@ def add_course_outline_to_template(handler, student):
 
     handler.template_value['course_outline'] = _tuples
     handler.template_value['unit_progress'] = _tracker.get_unit_progress(
-        student)
+        student, progress=progress)
 
 
 class CourseHandler(BaseHandler):

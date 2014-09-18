@@ -881,13 +881,14 @@ class UnitLessonCompletionTracker(object):
         progress = self.get_or_create_progress(student)
         return self.get_course_status(progress) or self.NOT_STARTED_STATE
 
-    def get_unit_progress(self, student):
+    def get_unit_progress(self, student, progress=None):
         """Returns a dict with the states of each unit."""
         if student.is_transient:
             return {}
 
         units = self._get_course().get_units()
-        progress = self.get_or_create_progress(student)
+        if progress is None:
+            progress = self.get_or_create_progress(student)
 
         result = {}
         for unit in units:
@@ -910,6 +911,7 @@ class UnitLessonCompletionTracker(object):
         assessment_scores = {int(s['id']): s['score'] / 100.0
                              for s in course.get_all_scores(student)}
         result = {}
+        progress = self.get_or_create_progress(student)
         for unit in units:
             # Assessments are scored as themselves.
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
@@ -922,8 +924,8 @@ class UnitLessonCompletionTracker(object):
                 else:
                     # Otherwise, count % completion on lessons within unit.
                     num_completed = 0
-                    lesson_progress = self.get_lesson_progress(student,
-                                                               unit.unit_id)
+                    lesson_progress = self.get_lesson_progress(
+                        student, unit.unit_id, progress=progress)
                     if not lesson_progress:
                         result[unit.unit_id] = 0.0
                     else:
@@ -942,13 +944,14 @@ class UnitLessonCompletionTracker(object):
                             num_completed / float(len(lesson_progress)), 3)
         return result
 
-    def get_lesson_progress(self, student, unit_id):
+    def get_lesson_progress(self, student, unit_id, progress=None):
         """Returns a dict saying which lessons in this unit are completed."""
         if student.is_transient:
             return {}
 
         lessons = self._get_course().get_lessons(unit_id)
-        progress = self.get_or_create_progress(student)
+        if progress is None:
+            progress = self.get_or_create_progress(student)
 
         result = {}
         for lesson in lessons:
