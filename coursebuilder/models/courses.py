@@ -2034,11 +2034,10 @@ class Course(object):
     def _load_environ(cls, app_context):
         # pylint: disable-msg=protected-access
         environ = app_context._cached_environ
-        if environ:
-            return environ
-        environ = cls._load_environ_no_cache(app_context)
-        app_context._cached_environ = environ
-        return environ
+        if not environ:
+            environ = cls._load_environ_no_cache(app_context)
+            app_context._cached_environ = environ
+        return copy.deepcopy(environ)
 
     @classmethod
     def create_common_settings_schema(cls, course):

@@ -1224,6 +1224,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 class LazyTranslator(object):
 
     def __init__(self, source_value, translation_dict):
+        assert isinstance(source_value, basestring)
         self.source_value = source_value
         self.target_value = None
         self.translation_dict = translation_dict
