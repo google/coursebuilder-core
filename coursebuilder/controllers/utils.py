@@ -379,7 +379,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         _p = self.app_context.get_environ()
         self.init_template_values(_p)
         template_environ = self.app_context.get_template_environ(
-            sites.get_current_locale(self.app_context), additional_dirs)
+            self.app_context.get_current_locale(), additional_dirs)
         template_environ.filters[
             'gcb_tags'] = jinja_utils.get_gcb_tags_filter(self)
         template_environ.globals.update({
@@ -429,10 +429,47 @@ class CourseHandler(ApplicationHandler):
         super(CourseHandler, self).__init__(*args, **kwargs)
         self.course = None
 
+    def get_user(self):
+        """Get the current user."""
+        return users.get_current_user()
+
+    def get_student(self):
+        """Get the current student."""
+        user = self.get_user()
+        if user is None:
+            return None
+        return Student.get_by_email(user.email())
+
+    def get_locale_for(self, request, app_context):
+        """Returns a locale that should be used by this request."""
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if prefs is not None and prefs.locale is not None:
+            return prefs.locale
+
+        accept_langs = request.headers.get('Accept-Language')
+        accept_lang_list = locales.parse_accept_language(
+              accept_langs)
+        available_locales = app_context.get_available_locales()
+        for lang, _ in accept_lang_list:
+            for supported_lang in available_locales:
+                if lang.lower() == supported_lang.lower():
+                    return supported_lang
+
+        return Course.get_environ(app_context)['course']['locale']
+
     def get_course(self):
+        """Get current course."""
         if not self.course:
             self.course = Course(self)
         return self.course
+
+    def get_track_matching_student(self, student):
+        """Gets units whose labels match those on the student."""
+        return self.get_course().get_track_matching_student(student)
+
+    def get_progress_tracker(self):
+        """Gets the progress tracker for the course."""
+        return self.get_course().get_progress_tracker()
 
     def find_unit_by_id(self, unit_id):
         """Gets a unit with a specific id or fails with an exception."""
@@ -452,19 +489,17 @@ class BaseHandler(CourseHandler):
 
     def __init__(self, *args, **kwargs):
         super(BaseHandler, self).__init__(*args, **kwargs)
-        sites.allow_localized_content(True)
+        self._old_locale = None
 
-    def get_track_matching_student(self, student):
-        """Gets units whose labels match those on the student."""
-        return self.get_course().get_track_matching_student(student)
+    def before_method(self, verb, path):
+        """Modify global locale value for the duration of this handler."""
+        self._old_locale = self.app_context.get_current_locale()
+        new_locale = self.get_locale_for(self.request, self.app_context)
+        self.app_context.set_current_locale(new_locale)
 
-    def get_progress_tracker(self):
-        """Gets the progress tracker for the course."""
-        return self.get_course().get_progress_tracker()
-
-    def get_user(self):
-        """Get the current user."""
-        return users.get_current_user()
+    def after_method(self, verb, path):
+        """Restore original global locale value."""
+        self.app_context.set_current_locale(self._old_locale)
 
     def personalize_page_and_get_user(self):
         """If the user exists, add personalized fields to the navbar."""
@@ -545,10 +580,13 @@ class BaseHandler(CourseHandler):
     def render(self, template_file):
         """Renders a template."""
         template = self.get_template(template_file)
+
         self.app_context.fs.begin_readonly()
+        models.MemcacheManager.begin_readonly()
         try:
             self.response.out.write(template.render(self.template_value))
         finally:
+            models.MemcacheManager.end_readonly()
             self.app_context.fs.end_readonly()
 
         # If the page displayed successfully, save the location for registered
@@ -575,12 +613,11 @@ class BaseHandler(CourseHandler):
         return None
 
 
-class BaseRESTHandler(BaseHandler):
+class BaseRESTHandler(CourseHandler):
     """Base REST handler."""
 
     def __init__(self, *args, **kwargs):
         super(BaseRESTHandler, self).__init__(*args, **kwargs)
-        sites.allow_localized_content(False)
 
     def assert_xsrf_token_or_fail(self, token_dict, action, args_dict):
         """Asserts that current request has proper XSRF token or fails."""

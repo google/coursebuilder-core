@@ -3363,8 +3363,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
             actions.login(email, is_admin=True)
             assert_cached('preview', 'Putting it all together')
             actions.register(self, name)
-            assert_cached(
-                'course', 'Putting it all together', cache_miss_allowed=2)
+            assert_cached('course', 'Putting it all together')
             assert_cached(
                 'unit?unit=14', 'When search results suggest something new')
             assert_cached(
@@ -3425,6 +3424,69 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
 
         # Clean up.
         sites.reset_courses()
+
+    def test_readonly_caching(self):
+        self.import_sample_course()
+
+        sites.setup_courses('course:/::ns_test')
+        self.namespace = 'ns_test'
+        course = sites.get_all_courses()[0]
+        fn = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'data/course.json')
+
+        config.Registry.test_overrides[
+            models.CAN_USE_MEMCACHE.name] = True
+
+        # get the page and record hits and misses
+        hit_local_before = models.CACHE_HIT_LOCAL.value
+        hit_before = models.CACHE_HIT.value
+        miss_local_before = models.CACHE_MISS_LOCAL.value
+        miss_before = models.CACHE_MISS.value
+        course.fs.impl.get(fn)
+        hit_local_after = models.CACHE_HIT_LOCAL.value
+        hit_after = models.CACHE_HIT.value
+        miss_local_after = models.CACHE_MISS_LOCAL.value
+        miss_after = models.CACHE_MISS.value
+        self.assertEquals(hit_after, hit_before)
+        self.assertEquals(miss_after, miss_before + 1)
+        self.assertEquals(hit_local_after, hit_local_before)
+        self.assertEquals(miss_local_after, miss_local_before)
+
+        # enable read_only caching and repeat
+        models.MemcacheManager.begin_readonly()
+        try:
+
+          # first fetch chould miss local cache, but hit memcache
+          hit_local_before = models.CACHE_HIT_LOCAL.value
+          hit_before = models.CACHE_HIT.value
+          miss_local_before = models.CACHE_MISS_LOCAL.value
+          miss_before = models.CACHE_MISS.value
+          course.fs.impl.get(fn)
+          hit_local_after = models.CACHE_HIT_LOCAL.value
+          hit_after = models.CACHE_HIT.value
+          miss_local_after = models.CACHE_MISS_LOCAL.value
+          miss_after = models.CACHE_MISS.value
+          self.assertEquals(hit_after, hit_before + 1)
+          self.assertEquals(miss_after, miss_before)
+          self.assertEquals(hit_local_after, hit_local_before)
+          self.assertEquals(miss_local_after, miss_local_before + 1)
+
+          # second fetch must hit local cache, and not hit memcache
+          hit_local_before = models.CACHE_HIT_LOCAL.value
+          hit_before = models.CACHE_HIT.value
+          miss_local_before = models.CACHE_MISS_LOCAL.value
+          miss_before = models.CACHE_MISS.value
+          course.fs.impl.get(fn)
+          hit_local_after = models.CACHE_HIT_LOCAL.value
+          hit_after = models.CACHE_HIT.value
+          miss_local_after = models.CACHE_MISS_LOCAL.value
+          miss_after = models.CACHE_MISS.value
+          self.assertEquals(hit_after, hit_before)
+          self.assertEquals(miss_after, miss_before)
+          self.assertEquals(hit_local_after, hit_local_before + 1)
+          self.assertEquals(miss_local_after, miss_local_before)
+        finally:
+            models.MemcacheManager.end_readonly()
 
 
 class DatastoreBackedSampleCourseTest(DatastoreBackedCourseTest):

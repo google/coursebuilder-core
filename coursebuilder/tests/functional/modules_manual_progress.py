@@ -176,7 +176,9 @@ class ManualProgressTest(actions.TestBase):
         actions.logout()
         response = self.get(UNIT_PROGRESS_URL +
                             '?key=%s' % self._unit_one.unit_id)
-        self.assertEquals(response.status_int, 302)
+        self._expect_response(
+            response, 403,
+            'Bad XSRF token. Please reload the page and try again')
 
     def test_not_registered(self):
         actions.logout()
@@ -186,7 +188,7 @@ class ManualProgressTest(actions.TestBase):
         response = self.get(UNIT_PROGRESS_URL +
                             '?key=%s' % self._unit_one.unit_id +
                             '&xsrf_token=%s' % xsrf_token)
-        self._expect_response(response, 401, 'Access Denied.', 302)
+        self._expect_response(response, 401, 'Access Denied.')
 
     def test_no_key(self):
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(

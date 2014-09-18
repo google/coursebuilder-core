@@ -119,9 +119,7 @@ import webapp2
 from webapp2_extras import i18n
 
 import appengine_config
-from common import locales
 from common import safe_dom
-from models import models
 from models import transforms
 from models.config import ConfigProperty
 from models.config import ConfigPropertyEntity
@@ -173,9 +171,6 @@ DEFAULT_PRAGMA = 'no-cache'
 
 # thread local storage for current request PATH_INFO
 PATH_INFO_THREAD_LOCAL = threading.local()
-
-# thread local storage for current locale
-LOCALE_THREAD_LOCAL = threading.local()
 
 # performance counters
 STATIC_HANDLER_COUNT = PerfCounter(
@@ -239,47 +234,6 @@ def count_stats(handler):
     except Exception as e:  # pylint: disable-msg=broad-except
         logging.error(
             'Failed to count_stats(): %s\n%s', e, traceback.format_exc())
-
-
-def set_accept_language(accept_language):
-    """Store the request's Accept-Language header in thread local scope."""
-    LOCALE_THREAD_LOCAL.accept_language = accept_language
-
-
-def allow_localized_content(allow):
-    LOCALE_THREAD_LOCAL.allow_localized_content = allow
-
-
-def is_localized_content_allowed():
-    return (
-        hasattr(LOCALE_THREAD_LOCAL, 'allow_localized_content') and
-        LOCALE_THREAD_LOCAL.allow_localized_content)
-
-
-def unset_locale_info():
-    if hasattr(LOCALE_THREAD_LOCAL, 'accept_language'):
-        del LOCALE_THREAD_LOCAL.accept_language
-    if hasattr(LOCALE_THREAD_LOCAL, 'allow_localized_content'):
-        del LOCALE_THREAD_LOCAL.allow_localized_content
-
-
-def get_current_locale(app_context):
-    prefs = models.StudentPreferencesDAO.load_or_create()
-    if prefs is not None and prefs.locale is not None:
-        return prefs.locale
-
-    accept_lang_list = []
-    if hasattr(LOCALE_THREAD_LOCAL, 'accept_language'):
-        accept_lang_list = locales.parse_accept_language(
-            LOCALE_THREAD_LOCAL.accept_language)
-    available_locales = app_context.get_available_locales()
-
-    for lang, _ in accept_lang_list:
-        for supported_lang in available_locales:
-            if lang.lower() == supported_lang.lower():
-                return supported_lang
-
-    return Course.get_environ(app_context)['course']['locale']
 
 
 def _validate_appcontext_list(contexts, strict=False):
@@ -697,6 +651,8 @@ class ApplicationContext(object):
         self._raw = raw
         self._cached_environ = None
 
+        self._locale_threadlocal = threading.local()
+
         self.clear_per_request_cache()
         self.after_create(self)
 
@@ -726,6 +682,19 @@ class ApplicationContext(object):
     def whitelist(self):
         course = self.get_environ().get('course')
         return '' if not course else course.get('whitelist', '')
+
+    def set_current_locale(self, locale):
+        old_locale = self.get_current_locale()
+        if locale != old_locale:
+            self._locale_threadlocal.locale = locale
+            self.clear_per_request_cache()
+
+    def get_current_locale(self):
+        # we cache instances of this object between requests; it's possible
+        # that new thread reuses the object and has no threadlocal initialized
+        if not hasattr(self._locale_threadlocal, 'locale'):
+            self._locale_threadlocal.locale = None
+        return self._locale_threadlocal.locale
 
     def get_title(self):
         try:
@@ -1259,71 +1228,54 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         NO_HANDLER_COUNT.inc()
         return None
 
-    def _set_accept_language(self):
-        set_accept_language(self.request.headers.get('Accept-Language'))
+    def before_method(self, handler, verb, path):
+        if hasattr(handler, 'before_method'):
+            handler.before_method(verb, path)
+
+    def after_method(self, handler, verb, path):
+        if hasattr(handler, 'after_method'):
+            handler.after_method(verb, path)
+
+    def invoke_http_verb(self, verb, path, no_handler):
+        """Sets up the environemnt and invokes HTTP verb on the self.handler."""
+        try:
+            set_path_info(path)
+            handler = self.get_handler()
+            if not handler:
+                no_handler(path)
+            else:
+                set_default_response_headers(handler)
+                self.before_method(handler, verb, path)
+                try:
+                    getattr(handler, verb.lower())()
+                finally:
+                    self.after_method(handler, verb, path)
+        finally:
+            count_stats(self)
+            unset_path_info()
+
+    def _error_404(self, path):
+        """Fail with 404."""
+        self.error(404)
+
+    def _login_or_404(self, path):
+        """If no user, offer login page, otherwise fail 404."""
+        if not users.get_current_user():
+            self.redirect(users.create_login_url(path))
+        else:
+            self.error(404)
 
     def get(self, path):
-        try:
-            set_path_info(path)
-            self._set_accept_language()
-            handler = self.get_handler()
-            if not handler:
-                if not users.get_current_user():
-                    self.redirect(users.create_login_url(path))
-                else:
-                    self.error(404)
-            else:
-                set_default_response_headers(handler)
-                handler.get()
-        finally:
-            count_stats(self)
-            unset_path_info()
-            unset_locale_info()
+        self.invoke_http_verb('GET', path, self._login_or_404)
 
     def post(self, path):
-        try:
-            set_path_info(path)
-            self._set_accept_language()
-            handler = self.get_handler()
-            if not handler:
-                self.error(404)
-            else:
-                set_default_response_headers(handler)
-                handler.post()
-        finally:
-            count_stats(self)
-            unset_path_info()
-            unset_locale_info()
+        self.invoke_http_verb('POST', path, self._error_404)
 
     def put(self, path):
-        try:
-            set_path_info(path)
-            self._set_accept_language()
-            handler = self.get_handler()
-            if not handler:
-                self.error(404)
-            else:
-                set_default_response_headers(handler)
-                handler.put()
-        finally:
-            count_stats(self)
-            unset_path_info()
-            unset_locale_info()
+        self.invoke_http_verb('PUT', path, self._error_404)
 
     def delete(self, path):
-        try:
-            set_path_info(path)
-            self._set_accept_language()
-            handler = self.get_handler()
-            if not handler:
-                self.error(404)
-            else:
-                set_default_response_headers(handler)
-                handler.delete()
-        finally:
-            count_stats(self)
-            unset_path_info()
-            unset_locale_info()
+        self.invoke_http_verb('DELETE', path, self._error_404)
 
 
 def assert_mapped(src, dest):

@@ -76,6 +76,16 @@ CACHE_DELETE = PerfCounter(
     'gcb-models-cache-delete',
     'A number of times an object was deleted from memcache.')
 
+# performance counters for in-process cache
+CACHE_PUT_LOCAL = PerfCounter(
+    'gcb-models-cache-put-local',
+    'A number of times an object was put into local memcache.')
+CACHE_HIT_LOCAL = PerfCounter(
+    'gcb-models-cache-hit-local',
+    'A number of times an object was found in local memcache.')
+CACHE_MISS_LOCAL = PerfCounter(
+    'gcb-models-cache-miss-local',
+    'A number of times an object was not found in local memcache.')
 
 # Intent for sending welcome notifications.
 WELCOME_NOTIFICATION_INTENT = 'welcome'
@@ -83,6 +93,19 @@ WELCOME_NOTIFICATION_INTENT = 'welcome'
 
 class MemcacheManager(object):
     """Class that consolidates all memcache operations."""
+
+    _LOCAL_CACHE = None
+    _IS_READONLY = False
+
+    @classmethod
+    def begin_readonly(cls):
+        cls._IS_READONLY = True
+        cls._LOCAL_CACHE = {}
+
+    @classmethod
+    def end_readonly(cls):
+        cls._IS_READONLY = False
+        cls._LOCAL_CACHE = {}
 
     @classmethod
     def get_namespace(cls):
@@ -99,11 +122,61 @@ class MemcacheManager(object):
         return cls.get_namespace()
 
     @classmethod
+    def _local_cache_get(cls, key, namespace):
+        if cls._IS_READONLY:
+            _dict = cls._LOCAL_CACHE.get(namespace)
+            if not _dict:
+                _dict = {}
+                cls._LOCAL_CACHE[namespace] = _dict
+            if key in _dict:
+                CACHE_HIT_LOCAL.inc()
+                value = _dict[key]
+                return True, value
+            else:
+                CACHE_MISS_LOCAL.inc()
+        return False, None
+
+    @classmethod
+    def _local_cache_put(cls, key, namespace, value):
+        if cls._IS_READONLY:
+            _dict = cls._LOCAL_CACHE.get(namespace)
+            if not _dict:
+                _dict = {}
+                cls._LOCAL_CACHE[namespace] = _dict
+            _dict[key] = value
+            CACHE_PUT_LOCAL.inc()
+
+    @classmethod
+    def _local_cache_get_multi(cls, keys, namespace):
+        if cls._IS_READONLY:
+            values = []
+            for key in keys:
+                is_cached, value = cls._local_cache_get(key, namespace)
+                if not is_cached:
+                    return False, []
+                else:
+                    values.append(value)
+            return True, values
+        return False, []
+
+    @classmethod
+    def _local_cache_put_multi(cls, values, namespace):
+        if cls._IS_READONLY:
+            for key, value in values.items():
+                cls._local_cache_put(key, namespace, value)
+
+    @classmethod
     def get(cls, key, namespace=None):
         """Gets an item from memcache if memcache is enabled."""
         if not CAN_USE_MEMCACHE.value:
             return None
-        value = memcache.get(key, namespace=cls._get_namespace(namespace))
+        _namespace = cls._get_namespace(namespace)
+
+        is_cached, value = cls._local_cache_get(key, _namespace)
+        if is_cached:
+            return value
+
+        value = memcache.get(key, namespace=_namespace)
 
         # We store some objects in memcache that don't evaluate to True, but are
         # real objects, '{}' for example. Count a cache miss only in a case when
@@ -113,6 +186,8 @@ class MemcacheManager(object):
         else:
             logging.info('Cache miss, key: %s. %s', key, Exception())
             CACHE_MISS.inc(context=key)
+
+        cls._local_cache_put(key, _namespace, value)
         return value
 
     @classmethod
@@ -120,15 +195,22 @@ class MemcacheManager(object):
         """Gets a set of items from memcache if memcache is enabled."""
         if not CAN_USE_MEMCACHE.value:
             return {}
-        values = memcache.get_multi(
-            keys, namespace=cls._get_namespace(namespace))
 
+        _namespace = cls._get_namespace(namespace)
+
+        is_cached, values = cls._local_cache_get_multi(keys, _namespace)
+        if is_cached:
+            return values
+
+        values = memcache.get_multi(keys, namespace=_namespace)
         for key, value in values.items():
             if value is not None:
                 CACHE_HIT.inc()
             else:
                 logging.info('Cache miss, key: %s. %s', key, Exception())
                 CACHE_MISS.inc(context=key)
+
+        cls._local_cache_put_multi(values, _namespace)
         return values
 
     @classmethod
@@ -140,13 +222,16 @@ class MemcacheManager(object):
                 CACHE_PUT_TOO_BIG.inc()
             else:
                 CACHE_PUT.inc()
-                memcache.set(
-                    key, value, ttl, namespace=cls._get_namespace(namespace))
+                _namespace = cls._get_namespace(namespace)
+                memcache.set(key, value, ttl, namespace=_namespace)
+                cls._local_cache_put(key, _namespace, value)
 
     @classmethod
     def set_multi(cls, mapping, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets a dict of items in memcache if memcache is enabled."""
         if CAN_USE_MEMCACHE.value:
+            if not mapping:
+                return
             size = sum([
                 sys.getsizeof(key) + sys.getsizeof(value)
                 for key, value in mapping.items()])
@@ -154,12 +239,14 @@ class MemcacheManager(object):
                 CACHE_PUT_TOO_BIG.inc()
             else:
                 CACHE_PUT.inc()
-                memcache.set_multi(
-                    mapping, time=ttl, namespace=cls._get_namespace(namespace))
+                _namespace = cls._get_namespace(namespace)
+                memcache.set_multi(mapping, time=ttl, namespace=_namespace)
+                cls._local_cache_put_multi(mapping, _namespace)
 
     @classmethod
     def delete(cls, key, namespace=None):
         """Deletes an item from memcache if memcache is enabled."""
+        assert not cls._IS_READONLY
         if CAN_USE_MEMCACHE.value:
             CACHE_DELETE.inc()
             memcache.delete(key, namespace=cls._get_namespace(namespace))
@@ -167,6 +254,7 @@ class MemcacheManager(object):
     @classmethod
     def delete_multi(cls, key_list, namespace=None):
         """Deletes a list of items from memcache if memcache is enabled."""
+        assert not cls._IS_READONLY
         if CAN_USE_MEMCACHE.value:
             CACHE_DELETE.inc(increment=len(key_list))
             memcache.delete_multi(
@@ -175,6 +263,7 @@ class MemcacheManager(object):
     @classmethod
     def incr(cls, key, delta, namespace=None):
         """Incr an item in memcache if memcache is enabled."""
+        assert not cls._IS_READONLY
         if CAN_USE_MEMCACHE.value:
             memcache.incr(
                 key, delta,
@@ -852,6 +941,10 @@ class TransientStudent(object):
     @property
     def is_transient(self):
         return True
+
+    @property
+    def is_enrolled(self):
+        return False
 
 
 class EventEntity(BaseEntity):

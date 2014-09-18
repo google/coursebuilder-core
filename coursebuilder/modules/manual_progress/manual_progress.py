@@ -31,10 +31,9 @@ XSRF_ACTION = 'manual_progress'
 class ProgressRESTBase(utils.BaseRESTHandler):
 
     def _perform_checks(self):
-
         success = False
         key = self.request.params.get('key')
-        student = self.personalize_page_and_get_enrolled()
+        student = self.get_student()
         course = self.get_course()
         if not self.assert_xsrf_token_or_fail(
             self.request.params, XSRF_ACTION, {'key': key}):
@@ -42,7 +41,7 @@ class ProgressRESTBase(utils.BaseRESTHandler):
         elif not key:
             transforms.send_json_response(
                 self, 400, 'Bad Request.', {})
-        elif not student:
+        elif not student or student.is_transient or not student.is_enrolled:
             transforms.send_json_response(
                 self, 401, 'Access Denied.', {'key': key})
         elif not course:

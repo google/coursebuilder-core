@@ -125,7 +125,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.CourseAuthorAspectTest': 4,
     'tests.functional.test_classes.CourseAuthorCourseCreationTest': 2,
     'tests.functional.test_classes.CourseUrlRewritingTest': 44,
-    'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 5,
+    'tests.functional.test_classes.DatastoreBackedCustomCourseTest': 6,
     'tests.functional.test_classes.DatastoreBackedSampleCourseTest': 44,
     'tests.functional.test_classes.EtlMainTestCase': 42,
     'tests.functional.test_classes.EtlRemoteEnvironmentTestCase': 0,

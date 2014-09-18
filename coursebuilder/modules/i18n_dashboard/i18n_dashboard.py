@@ -1324,32 +1324,37 @@ def translate_units(course, locale):
         unit_tools.apply_updates(unit, data_dict, errors)
 
 
+def is_translation_required():
+    """Returns True if current locale is different from the course default."""
+    app_context = sites.get_course_for_current_request()
+    if not app_context:
+        return False
+    default_locale = courses.Course.get_environ(app_context)['course']['locale']
+    current_locale = app_context.get_current_locale()
+    if not current_locale:
+        return False
+    return current_locale != default_locale
+
+
 def translate_course(course):
-    if not sites.is_localized_content_allowed():
+    if not is_translation_required():
         return
-
-    locale = sites.get_current_locale(course.app_context)
-
-    translate_units(course, locale)
-    translate_lessons(course, locale)
+    app_context = sites.get_course_for_current_request()
+    translate_units(course, app_context.get_current_locale())
+    translate_lessons(course, app_context.get_current_locale())
 
 
 def translate_course_env(env):
-    if not sites.is_localized_content_allowed():
+    if not is_translation_required():
         return
-
     app_context = sites.get_course_for_current_request()
-    if app_context is None:
-        return
-
-    locale = sites.get_current_locale(app_context)
-
     key_list = [
-        ResourceBundleKey(ResourceKey.COURSE_SETTINGS_TYPE, key, locale)
+        ResourceBundleKey(
+            ResourceKey.COURSE_SETTINGS_TYPE,
+            key, app_context.get_current_locale())
         for key in courses.Course.get_schema_sections()]
 
     bundle_list = ResourceBundleDAO.bulk_load([str(key) for key in key_list])
-
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
@@ -1365,17 +1370,14 @@ def translate_course_env(env):
 
 
 def translate_dto_list(dto_list, key_list):
-    if not sites.is_localized_content_allowed():
+    if not is_translation_required():
         return
 
     app_context = sites.get_course_for_current_request()
-    if app_context is None:
-        return
 
-    locale = sites.get_current_locale(app_context)
-
-    bundle_list = ResourceBundleDAO.bulk_load(
-        [str(ResourceBundleKey(key.type, key.key, locale)) for key in key_list])
+    bundle_list = ResourceBundleDAO.bulk_load([str(ResourceBundleKey(
+        key.type,
+        key.key, app_context.get_current_locale())) for key in key_list])
 
     for resource_key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:
