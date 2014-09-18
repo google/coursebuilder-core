@@ -78,7 +78,3 @@ base:
 
   # Link to your privacy policy and terms of service
   privacy_terms_url: 'PRIVACY_POLICY_AND_TERMS_OF_SERVICE'
-
-  # Locale for internationalization of explorer pages. See
-  # modules/i18n/resources/locale for available locales.
-  locale: 'en_US'

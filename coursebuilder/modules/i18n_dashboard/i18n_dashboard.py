@@ -604,7 +604,7 @@ class I18nDownloadHandler(BaseDashboardExtension):
         course_title = environ['course'].get('title')
         bugs_address = environ['course'].get('admin_user_emails')
         organization = environ['base'].get('nav_header')
-        original_locale = environ['base'].get('locale')
+        original_locale = environ['course'].get('locale')
         with common_utils.ZipAwareOpen():
             localedata.load(original_locale)
 

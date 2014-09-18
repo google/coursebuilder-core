@@ -36,7 +36,6 @@ from google.appengine.api import users
 
 # We want to use views file in both /views and /modules/course_explorer/views.
 DIR = appengine_config.BUNDLE_ROOT
-LOCALE = Courses.COURSE_TEMPLATE_DICT['base']['locale']
 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 
 # Int. Maximum number of bytes App Engine's db.StringProperty can store.
@@ -70,6 +69,10 @@ class BaseStudentHandler(webapp2.RequestHandler):
         super(BaseStudentHandler, self).__init__(*args, **kwargs)
         self.template_values = {}
         self.initialize_student_state()
+
+    def get_locale_for_user(self):
+        """Chooses locale for a user."""
+        return 'en_US'  # TODO(psimakov): choose proper locale from profile
 
     def initialize_student_state(self):
         """Initialize course information related to student."""
@@ -140,7 +143,8 @@ class BaseStudentHandler(webapp2.RequestHandler):
     def initialize_page_and_get_user(self):
         """Add basic fields to template and return user."""
         self.template_values['course_info'] = Courses.COURSE_TEMPLATE_DICT
-        self.template_values['course_info']['course'] = {'locale': LOCALE}
+        self.template_values['course_info']['course'] = {
+            'locale': self.get_locale_for_user()}
         user = users.get_current_user()
         if not user:
             self.template_values['loginUrl'] = users.create_login_url('/')
@@ -199,7 +203,8 @@ class ProfileHandler(BaseStudentHandler):
         self.template_values['student_preferences'] = {}
 
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/profile.html', DIR, LOCALE)
+            '/modules/course_explorer/views/profile.html', DIR,
+            self.get_locale_for_user())
         self.response.write(template.render(self.template_values))
 
     def post(self):
@@ -241,7 +246,8 @@ class AllCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
+            '/modules/course_explorer/views/course_explorer.html', DIR,
+            self.get_locale_for_user())
         self.response.write(template.render(self.template_values))
 
 
@@ -266,7 +272,8 @@ class RegisteredCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR, LOCALE)
+            '/modules/course_explorer/views/course_explorer.html', DIR,
+            self.get_locale_for_user())
         self.response.write(template.render(self.template_values))
 
 

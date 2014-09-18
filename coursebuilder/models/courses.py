@@ -2200,12 +2200,6 @@ class Course(object):
 
         i18n_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'I18N')
-        i18n_opts.add_property(schema_fields.SchemaField(
-            'base:locale', 'Locale', 'string',
-            optional=True, i18n=False,
-            description='Locale for internationalization '
-            'of explorer pages. See modules/i18n/resources/locale for '
-            'available locales.'))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
