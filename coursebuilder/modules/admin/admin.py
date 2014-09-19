@@ -478,7 +478,7 @@ class AdminHandler(
                 style = 'text-align: center;'
             return style
 
-        def get_action_html(caption, args, onclick=None):
+        def get_action_html(caption, args, onclick=None, idName=None):
             """Formats actions <a> link."""
             a = safe_dom.Element(
                 'a', href='/admin?%s' % urllib.urlencode(args),
@@ -486,13 +486,15 @@ class AdminHandler(
             ).add_text(caption)
             if onclick:
                 a.add_attribute(onclick=onclick)
+            if idName:
+                a.add_attribute(id=idName)
             return a
 
         def get_actions(name, override):
             """Creates actions appropriate to an item."""
             if override:
                 return get_action_html('Edit', {
-                    'action': 'config_edit', 'name': name})
+                    'action': 'config_edit', 'name': name}, idName=name)
             else:
                 return safe_dom.Element(
                     'form',

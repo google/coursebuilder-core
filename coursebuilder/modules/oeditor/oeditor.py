@@ -29,6 +29,7 @@ from common import tags
 from controllers import utils
 from models import custom_modules
 from models import transforms
+from models.config import ConfigProperty
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -42,6 +43,13 @@ ALL_MODULES = [
     'inputex-file', 'io-upload-iframe']
 
 RESOURCES_PATH = '/modules/oeditor/resources'
+
+# Global code syntax highlighter controls.
+CAN_HIGHLIGHT_CODE = ConfigProperty(
+    'gcb_can_highlight_code', bool, (
+        'Whether or not to highlight code syntax '
+        'in Dashboard editors and displays.'),
+    True)
 
 
 class ObjectEditor(object):
@@ -140,7 +148,8 @@ class ObjectEditor(object):
             'save_button_caption': save_button_caption,
             'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons),
             'delete_message': delete_message,
-            }
+            'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
+        }
 
         if delete_url and not read_only:
             template_values['delete_url'] = delete_url
@@ -259,6 +268,11 @@ def register_module():
             os.path.join(
                 appengine_config.BUNDLE_ROOT, 'lib/yui_2in3-2.9.0.zip')))]
 
+    codemirror_handler = [
+        ('/static/codemirror/(.*)', sites.make_zip_handler(
+            os.path.join(
+                appengine_config.BUNDLE_ROOT, 'lib/codemirror-4.5.0.zip')))]
+
     if appengine_config.BUNDLE_LIB_FILES:
         yui_handlers += [
             ('/static/combo/inputex', sites.make_css_combo_zip_handler(
@@ -274,7 +288,7 @@ def register_module():
                 '/static/2in3/'))]
 
     oeditor_handlers = [('/oeditorpopup', PopupHandler)]
-    global_routes = yui_handlers + [
+    global_routes = yui_handlers + codemirror_handler + [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
     global custom_module

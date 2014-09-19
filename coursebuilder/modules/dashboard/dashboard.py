@@ -81,6 +81,7 @@ from models.models import RoleDAO
 from modules.dashboard import tabs
 from modules.data_source_providers import rest_providers
 from modules.data_source_providers import synchronous_providers
+from modules.oeditor import oeditor
 from modules.search.search import SearchDashboardHandler
 from tools import verify
 
@@ -288,6 +289,7 @@ class DashboardHandler(
         template_values['application_id'] = app_identity.get_application_id()
         template_values['application_version'] = (
             os.environ['CURRENT_VERSION_ID'])
+        template_values['can_highlight_code'] = oeditor.CAN_HIGHLIGHT_CODE.value
         if not template_values.get('sections'):
             template_values['sections'] = []
 
@@ -763,6 +765,13 @@ class DashboardHandler(
             info.append(content_if_empty)
         return info
 
+    def text_file_to_string(self, reader, content_if_empty):
+        """Load text file and convert it to string for display."""
+        if reader:
+            return reader.read().decode('utf-8')
+        else:
+            return content_if_empty
+
     def get_settings_advanced(self, template_values, tab):
         """Renders course settings view."""
 
@@ -784,11 +793,18 @@ class DashboardHandler(
         yaml_reader = self.app_context.fs.open(
             self.app_context.get_config_filename())
         yaml_info = self.text_file_to_safe_dom(yaml_reader, '< empty file >')
+        yaml_reader = self.app_context.fs.open(
+            self.app_context.get_config_filename())
+        yaml_lines = self.text_file_to_string(yaml_reader, '< empty file >')
 
         # course_template.yaml file contents
         course_template_reader = open(os.path.join(os.path.dirname(
             __file__), '../../course_template.yaml'), 'r')
         course_template_info = self.text_file_to_safe_dom(
+            course_template_reader, '< empty file >')
+        course_template_reader = open(os.path.join(os.path.dirname(
+            __file__), '../../course_template.yaml'), 'r')
+        course_template_lines = self.text_file_to_string(
             course_template_reader, '< empty file >')
 
         template_values['sections'] = [
@@ -796,11 +812,18 @@ class DashboardHandler(
                 'title': 'Contents of course.yaml file',
                 'description': messages.CONTENTS_OF_THE_COURSE_DESCRIPTION,
                 'actions': actions,
-                'children': yaml_info},
+                'children': yaml_info,
+                'code': yaml_lines,
+                'mode': 'yaml'
+            },
             {
                 'title': 'Contents of course_template.yaml file',
                 'description': messages.COURSE_TEMPLATE_DESCRIPTION,
-                'children': course_template_info}]
+                'children': course_template_info,
+                'code': course_template_lines,
+                'mode': 'yaml'
+            }
+        ]
 
     def list_files(self, subfolder, merge_local_files=False, all_paths=None):
         """Makes a list of files in a subfolder.

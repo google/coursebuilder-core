@@ -886,6 +886,30 @@ class CourseContentElement(DashboardEditor):
             self.instanceid_list_snapshot, self._get_instanceid_list())
         return self
 
+    def _codemirror_is_ready_builder(self, nth_instance):
+        def codemirror_is_ready(unused_driver):
+            return self._tester.driver.execute_script(
+                "return $('.CodeMirror')[%s]"
+                ".CodeMirror.gcbCodeMirrorMonitor.cmReady;" % nth_instance)
+
+        return codemirror_is_ready
+
+    def setvalue_codemirror(self, nth_instance, code_body):
+        self.wait().until(self._codemirror_is_ready_builder(nth_instance))
+
+        self._tester.driver.execute_script(
+            "$('.CodeMirror')[%s].CodeMirror.setValue('%s');" % (
+                nth_instance, code_body))
+        return self
+
+    def assert_equal_codemirror(self, nth_instance, expected_code_body):
+        self.wait().until(self._codemirror_is_ready_builder(nth_instance))
+
+        actual_code_body = self._tester.driver.execute_script(
+            "return $('.CodeMirror')[%s].CodeMirror.getValue();" % nth_instance)
+        self._tester.assertEqual(expected_code_body, actual_code_body)
+        return self
+
 
 class AddUnit(CourseContentElement):
     """Page object to model the dashboard's add unit editor."""

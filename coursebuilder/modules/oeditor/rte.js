@@ -28,6 +28,8 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       this.fieldContainer.appendChild(this.el);
       this.isInRteMode = false;
 
+      this._replaceTextAreaWithCodeMirror();
+
       // Make a button to toggle between plain text and rich text
       var showRteText = "Rich Text";
       var hideRteText = "<HTML>";
@@ -92,7 +94,91 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       }
     },
 
+    _replaceTextAreaWithCodeMirror: function() {
+      if (! env.can_highlight_code) {
+        return;
+      }
+
+      this.cmReady = false;
+
+      // note: the first calling when this.cmInstance does not exist
+      //       (by renderComponent) will not make CodeMirror ready
+      //       this is because setValue must be call after renderComponent
+      //       (to sync old value from database, "" will passed for first time)
+      //       this is why this.cmReady will be set on the else clause
+      if (!this.cmInstance) {
+        // div for scrollbar positional-correction
+        var cmDiv = document.createElement('div');
+        this.fieldContainer.appendChild(cmDiv);
+        $(cmDiv).css("overflow", "auto");
+        $(cmDiv).css("position", "relative");
+        cmDiv.className = 'codemirror-container-editable'
+        this.cmInstance = CodeMirror(cmDiv, {
+          value: this.el.value,
+          lineNumbers: true,
+          keyMap: "sublime",
+          mode: "htmlmixed"
+        });
+        this.cmInstance.gcbCodeMirrorMonitor = this;
+      } else {
+        this.cmInstance.setValue(this.el.value);
+        this.cmReady = true;
+      }
+
+      var textArea = this.el;
+      Dom.setStyle(textArea, 'visibility', 'hidden');
+      Dom.setStyle(textArea, 'top', '-9999px');
+      Dom.setStyle(textArea, 'left', '-9999px');
+      Dom.setStyle(textArea, 'position', 'absolute');
+      Dom.addClass(textArea, 'raw-text-editor');
+
+      var cmWrapper = this.cmInstance.getWrapperElement();
+      Dom.setStyle(cmWrapper, 'visibility', 'visible');
+      Dom.setStyle(cmWrapper, 'top', '');
+      Dom.setStyle(cmWrapper, 'left', '');
+      Dom.setStyle(cmWrapper, 'position', 'static');
+
+      var self = this;
+      window.setTimeout(function(){
+        self.cmInstance.refresh();
+      }, 0);
+    },
+
+    _syncTextAreaWithCodeMirror: function() {
+      if (! env.can_highlight_code) {
+        return;
+      }
+
+      this.el.value = this.cmInstance.getValue();
+    },
+
+    _replaceCodeMirrorWithTextArea: function() {
+      if (! env.can_highlight_code) {
+        return;
+      }
+
+      if (this.cmInstance) {
+        this._syncTextAreaWithCodeMirror();
+
+        this.cmReady = false;
+
+        var textArea = this.el;
+        Dom.setStyle(textArea, 'visibility', 'visible');
+        Dom.setStyle(textArea, 'top', '');
+        Dom.setStyle(textArea, 'left', '');
+        Dom.setStyle(textArea, 'position', 'static');
+
+        var cmWrapper = this.cmInstance.getWrapperElement();
+        Dom.setStyle(cmWrapper, 'visibility', 'hidden');
+        Dom.setStyle(cmWrapper, 'top', '-9999px');
+        Dom.setStyle(cmWrapper, 'left', '-9999px');
+        Dom.setStyle(cmWrapper, 'position', 'absolute');
+      }
+    },
+
     showNewRte: function() {
+      this._replaceCodeMirrorWithTextArea();
+
       var that = this;
       var options = this.options;
       var _def = {
@@ -182,6 +268,8 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     },
 
     showExistingRte: function() {
+      this._replaceCodeMirrorWithTextArea();
+
       var editor = this.editor,
           textArea = this.el;
           rteDiv = textArea.previousSibling;
@@ -229,6 +317,8 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       Dom.setStyle(textArea, 'left', '');
       Dom.setStyle(textArea, 'position', 'static');
       Dom.addClass(textArea, 'raw-text-editor');
+
+      this._replaceTextAreaWithCodeMirror();
     },
 
     setValue: function(value, sendUpdatedEvt) {
@@ -236,6 +326,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
         this.editor.setEditorHTML(value);
       } else {
         this.el.value = value;
+        this._replaceTextAreaWithCodeMirror();
       }
       if(sendUpdatedEvt !== false) {
         this.fireUpdatedEvt();
@@ -250,6 +341,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
         this._customTagManager.insertMarkerTags();
         return value;
       } else {
+        this._syncTextAreaWithCodeMirror();
         return this.el.value;
       }
     }

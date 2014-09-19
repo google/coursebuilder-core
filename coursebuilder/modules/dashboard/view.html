@@ -6,6 +6,13 @@
     <meta charset="utf-8">
     <title>{{ header_title }}</title>
 
+    {% if can_highlight_code and sections %}
+      <!-- import CodeMirror -->
+      <script src="/static/codemirror/lib/codemirror.js"></script>
+      <link rel="stylesheet" href="/static/codemirror/lib/codemirror.css">
+      <script src="/static/codemirror/addon/mode/loadmode.js"></script>
+    {% endif %}
+
     <!-- import jQuery -->
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="/modules/oeditor/resources/butterbar.js"></script>
@@ -77,20 +84,39 @@
           </p>
         {% endif %}
         {% if section.pre %}
-        {{ section.pre }}
+          {{ section.pre }}
+        {% elif can_highlight_code and section.code %}
+          <div class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</div>
         {% else %}
-        <ol>
-          {% if not section.children %}
-          &lt; none &gt;
-          {% endif %}
-          {% for item in section.children %}
-          <li>{{ item }}</li>
-          {% endfor %}
-        </ol>
+          <ol>
+            {% if not section.children %}
+            &lt; none &gt;
+            {% endif %}
+            {% for item in section.children %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ol>
         {% endif %}
       </div>
       {% endfor %}
     </div>
+    {% if can_highlight_code %}
+      <script>
+        CodeMirror.modeURL = "/static/codemirror/mode/%N/%N.js";
+        $('.codemirror-container-readonly').each(function() {
+          var code = this.innerHTML;
+          $(this).empty();
+          var cmInstance = CodeMirror(this, {
+            value: code,
+            lineNumbers: true,
+            readOnly: true
+          });
+          var mode = this.getAttribute('mode');
+          cmInstance.setOption("mode", mode);
+          CodeMirror.autoLoadMode(cmInstance, mode);
+        });
+      </script>
+    {% endif %}
     {% endif %}
     {% if main_content %}
     <div id='gcb-main-content'>
@@ -113,7 +139,7 @@
     Powered by
     <a target='_blank' href="https://code.google.com/p/course-builder/">
       Course Builder</a> {{ coursebuilder_version }}
-    as distributed under 
+    as distributed under
     <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">
       Apache License Version 2.0
     </a>

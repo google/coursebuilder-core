@@ -442,3 +442,11 @@ div#formContainer fieldset .permission-item fieldset {
 .settings-property-clear {
   clear: both;
 }
+
+div.codemirror-container-readonly {
+    padding-bottom: 1.5em;
+}
+
+div.codemirror-container-readonly div.CodeMirror {
+    height: auto!important;
+}

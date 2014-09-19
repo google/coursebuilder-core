@@ -175,7 +175,8 @@ DISTRIBUTED_LIBS="\
   dc.js-1.6.0.zip \
   oauth-1.0.1.zip \
   mathjax-2.3.0.zip \
-  mathjax-fonts-2.3.0.zip "
+  mathjax-fonts-2.3.0.zip \
+  codemirror-4.5.0.zip"
 
 echo Using third party Python packages from $DISTRIBUTED_LIBS_DIR
 if [ ! -d "$DISTRIBUTED_LIBS_DIR" ]; then

@@ -134,6 +134,21 @@ class BaseIntegrationTest(suite.TestBase):
 
         return (name, title)
 
+    def set_admin_setting(self, setting_name, state):
+        """Configure a property on Admin setting page."""
+
+        self.load_root_page(
+        ).click_admin(
+        ).click_settings(
+        ).click_override(
+            setting_name
+        ).set_value(
+            state
+        ).set_status(
+            'Active'
+        ).click_save(
+        ).click_close()
+
 
 class SampleCourseTests(BaseIntegrationTest):
     """Integration tests on the sample course installed with Course Builder."""
@@ -145,8 +160,11 @@ class SampleCourseTests(BaseIntegrationTest):
 
         self.load_root_page(
         ).click_login(
-        ).login(
-            login, admin=True
+        ).login(login, admin=True)
+
+        self.set_admin_setting('gcb_can_highlight_code', False)
+
+        self.load_root_page(
         ).click_announcements(
         ).click_add_new(
         ).enter_fields(
@@ -210,6 +228,34 @@ class AdminTests(BaseIntegrationTest):
         ).click_save(
         ).click_close(
         ).verify_course_outline_contains_unit('Unit 1 - Test Unit 1')
+
+    def test_rte_codemirror(self):
+        """Test that CodeMirror is working properly with rte."""
+
+        name = self.create_new_course()[0]
+
+        unit_title = 'Test Unit 1'
+        unit_header_html = '<h1> header </h1> <p> paragraph </p>'
+
+        self.load_dashboard(
+            name
+        ).click_add_unit(
+        ).set_title(
+            unit_title
+        ).set_status(
+            'Public'
+        ).setvalue_codemirror(
+            0, unit_header_html
+        ).assert_equal_codemirror(
+            0, unit_header_html
+        ).click_save(
+        ).click_close(
+        ).click_edit_unit(
+            'Unit 1 - ' + unit_title
+        ).assert_equal_codemirror(
+        # recheck that the data is really on the server
+            0, unit_header_html
+        ).click_close()
 
     def test_cancel_add_with_no_changes_should_not_need_confirm(self):
         """Test entering editors and clicking close without making changes."""
@@ -389,6 +435,9 @@ class QuestionsTest(BaseIntegrationTest):
 
     def test_add_question_and_solve_it(self):
         name = self.create_new_course()[0]
+
+        self.set_admin_setting('gcb_can_highlight_code', False)
+
         self.load_dashboard(
             name
         ).click_course(

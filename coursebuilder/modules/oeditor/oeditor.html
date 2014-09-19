@@ -13,6 +13,17 @@
 <script
     src="/static/inputex-3.1.0/lib/jsonPretty.js" type='text/javascript'></script>
 
+{% if can_highlight_code %}
+  <!-- import CodeMirror -->
+  <script src="/static/codemirror/lib/codemirror.js"></script>
+  <link rel="stylesheet" href="/static/codemirror/lib/codemirror.css">
+  <script src="/static/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="/static/codemirror/mode/xml/xml.js"></script>
+  <script src="/static/codemirror/mode/javascript/javascript.js"></script>
+  <script src="/static/codemirror/mode/css/css.js"></script>
+  <script src="/static/codemirror/keymap/sublime.js"></script>
+{% endif %}
+
 <link rel="stylesheet" type="text/css"
     href="/modules/oeditor/resources/oeditor.css"/>
 <style>
@@ -64,6 +75,7 @@
         '{{ module }}'{% if not loop.last %},{% endif %}{% endfor %}];
     cb_global.schema = JSON.parse("{{ schema|js_string }}");
     cb_global.delete_message = '{{ delete_message }}';
+    cb_global.can_highlight_code = {% if can_highlight_code %}true{% else %}false{% endif %};
     cb_global.load_schema_with_annotations = function(schema) {
       {% for annotation in schema_annotations %}
         schema.root{% for element in annotation[0] %}['{{element}}']{% endfor %}

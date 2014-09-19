@@ -509,3 +509,15 @@ div.label-none-in-group {
   margin-left: -3.0em;
   background-color: #fff
 }
+
+div.codemirror-container-editable div.CodeMirror {
+  width: 496px;
+  border: solid 2px #999999;
+  word-wrap: normal;
+  height: auto;
+}
+
+div.codemirror-container-editable div.CodeMirror-scroll {
+  min-height: 150px;
+  max-height: 400px;
+}
