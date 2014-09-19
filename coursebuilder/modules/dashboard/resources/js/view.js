@@ -469,6 +469,16 @@ function setUpFiltering() {
   setUpFilterBindings();
 }
 
+function setUpCoursePicker(){
+  $('#gcb-course-picker').bind('change', function () {
+      var url = $(this).val();
+      if (url) {
+          window.location = url;
+      }
+      return false;
+  });
+}
+
 function init() {
   setUpDraftStatus();
   setUpLocalTimes();
@@ -477,17 +487,8 @@ function init() {
   setUpAddToGroup();
   setUpTableSorting();
   setUpFiltering();
+  setUpCoursePicker();
 };
 
-// bind change event to course picker select
-$(function(){
-  $('#gcb-course-picker').bind('change', function () {
-      var url = $(this).val();
-      if (url) {
-          window.location = url;
-      }
-      return false;
-  });
-});
 
 init();

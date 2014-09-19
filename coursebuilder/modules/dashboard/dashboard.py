@@ -59,6 +59,7 @@ from common import crypto
 from common import jinja_utils
 from common import safe_dom
 from common import tags
+from common.utils import Namespace
 from controllers import sites
 from controllers import utils
 from controllers.utils import ApplicationHandler
@@ -311,15 +312,16 @@ class DashboardHandler(
         current_course = sites.get_course_for_current_request()
         options = []
         for course in sorted(sites.get_all_courses()):
-            if roles.Roles.is_course_admin(course):
-                url = ApplicationHandler.canonicalize_url_for(
-                    course, destination)
-                title = '%s (%s)' % (course.get_title(), course.get_slug())
-                option = safe_dom.Element(
-                    'option', value=url).add_text(title)
-                if current_course == course:
-                    option.set_attribute('selected', '')
-                options.append((course.get_title(), option))
+            with Namespace(course.namespace):
+                if self.current_user_has_access(course):
+                    url = ApplicationHandler.canonicalize_url_for(
+                        course, destination)
+                    title = '%s (%s)' % (course.get_title(), course.get_slug())
+                    option = safe_dom.Element(
+                        'option', value=url).add_text(title)
+                    if current_course == course:
+                        option.set_attribute('selected', '')
+                    options.append((course.get_title(), option))
 
         picker = safe_dom.Element('select', id='gcb-course-picker')
         for title, option in sorted(
@@ -1465,6 +1467,16 @@ class DashboardHandler(
     @classmethod
     def permissions_callback(cls, unused_app_context):
         return cls._external_permissions.iteritems()
+
+    @classmethod
+    def current_user_has_access(cls, app_context):
+        for action, _ in cls.nav_mappings:
+            if roles.Roles.is_user_allowed(
+                app_context, custom_module,
+                cls._action_to_permission.get('get_%s' % action, '')
+            ):
+                return True
+        return False
 
 
 def register_module():

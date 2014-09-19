@@ -21,6 +21,7 @@ import time
 
 import actions
 from common import crypto
+from common.utils import Namespace
 from controllers import utils
 from models import courses
 from models import models
@@ -28,6 +29,8 @@ from models import transforms
 from models.custom_modules import Module
 from models.roles import Permission
 from models.roles import Roles
+from modules.dashboard import dashboard
+from modules.dashboard.dashboard import DashboardHandler
 from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
 from modules.dashboard.role_editor import RoleRESTHandler
 
@@ -455,7 +458,7 @@ class CourseOutlineTestCase(actions.TestBase):
 
 class RoleEditorTestCase(actions.TestBase):
     """Tests the Roles tab and Role Editor."""
-    COURSE_NAME = 'outline'
+    COURSE_NAME = 'role_editor'
     ADMIN_EMAIL = 'admin@foo.com'
     URL = 'dashboard?action=roles'
 
@@ -570,3 +573,84 @@ class RoleEditorTestCase(actions.TestBase):
         handler.validate(editor_dict, role_id + 1, None, errors)
         self.assertEquals(
             errors[0], 'The role must have a unique non-empty name.')
+
+
+class DashboardAccessTestCase(actions.TestBase):
+    ACCESS_COURSE_NAME = 'dashboard_access_yes'
+    NO_ACCESS_COURSE_NAME = 'dashboard_access_no'
+    ADMIN_EMAIL = 'admin@foo.com'
+    USER_EMAIL = 'user@foo.com'
+    ROLE = 'test_role'
+    ACTION = 'outline'
+    PERMISSION = 'can_access_dashboard'
+    PERMISSION_DESCRIPTION = 'Can Access Dashboard.'
+
+    def setUp(self):
+        super(DashboardAccessTestCase, self).setUp()
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+        context = actions.simple_add_course(
+            self.ACCESS_COURSE_NAME, self.ADMIN_EMAIL, 'Course with access')
+
+        self.course_with_access = courses.Course(None, context)
+
+        with Namespace(self.course_with_access.app_context.namespace):
+            role_dto = models.RoleDTO(None, {
+                'name': self.ROLE,
+                'users': [self.USER_EMAIL],
+                'permissions': {dashboard.custom_module.name: [self.PERMISSION]}
+            })
+            models.RoleDAO.save(role_dto)
+
+        context = actions.simple_add_course(
+            self.NO_ACCESS_COURSE_NAME, self.ADMIN_EMAIL,
+            'Course with no access'
+        )
+
+        self.course_without_access = courses.Course(None, context)
+
+        self.old_nav_mappings = DashboardHandler.nav_mappings
+        DashboardHandler.nav_mappings = [(self.ACTION, 'outline')]
+        DashboardHandler.map_action_to_permission(
+            'get_%s'% self.ACTION, self.PERMISSION)
+        actions.logout()
+
+    def tearDown(self):
+        DashboardHandler.nav_mappings = self.old_nav_mappings
+        super(DashboardAccessTestCase, self).tearDown()
+
+    def test_dashboard_access_method(self):
+        with Namespace(self.course_with_access.app_context.namespace):
+            self.assertFalse(DashboardHandler.current_user_has_access(
+                self.course_with_access.app_context))
+        with Namespace(self.course_without_access.app_context.namespace):
+            self.assertFalse(DashboardHandler.current_user_has_access(
+                self.course_without_access.app_context))
+        actions.login(self.USER_EMAIL, is_admin=False)
+        with Namespace(self.course_with_access.app_context.namespace):
+            self.assertTrue(DashboardHandler.current_user_has_access(
+                self.course_with_access.app_context))
+        with Namespace(self.course_without_access.app_context.namespace):
+            self.assertFalse(DashboardHandler.current_user_has_access(
+                self.course_without_access.app_context))
+        actions.logout()
+
+    def _get_all_picker_options(self):
+        return self.parse_html_string(
+            self.get('/%s/dashboard' % self.ACCESS_COURSE_NAME).body
+        ).findall(
+            './/select[@id="gcb-course-picker"]/option')
+
+    def test_course_picker(self):
+        actions.login(self.USER_EMAIL, is_admin=False)
+        picker_options = self._get_all_picker_options()
+        self.assertEquals(len(list(picker_options)), 1)
+        self.assertEquals(picker_options[0].get(
+            'value'), '/%s/dashboard' % self.ACCESS_COURSE_NAME)
+        actions.logout()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        picker_options = self._get_all_picker_options()
+        # Expect 3 courses, as the default one is also considered for the picker
+        self.assertEquals(len(picker_options), 3)
+        actions.logout()
