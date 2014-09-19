@@ -552,6 +552,7 @@ class CourseContentTranslationTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'i18n_course'
     COURSE_TITLE = 'I18N Course'
+    STUDENT_EMAIL = 'student@foo.com'
 
     def setUp(self):
         super(CourseContentTranslationTests, self).setUp()
@@ -566,10 +567,12 @@ class CourseContentTranslationTests(actions.TestBase):
         self.unit = self.course.add_unit()
         self.unit.title = 'Test Unit'
         self.unit.unit_header = '<p>a</p><p>b</p>'
+        self.unit.now_available = True
 
         self.lesson = self.course.add_lesson(self.unit)
         self.lesson.title = 'Test Lesson'
         self.lesson.objectives = '<p>c</p><p>d</p>'
+        self.lesson.now_available = True
 
         self.course.save()
 
@@ -710,6 +713,25 @@ class CourseContentTranslationTests(actions.TestBase):
         page_html = self.get('assessment?name=%s' % assessment.unit_id).body
         self.assertIn('TEST ASSESSMENT', page_html)
         self.assertIn('<p>A</p><p>B</p>', page_html)
+
+    def test_bad_translations_are_flagged_for_admin(self):
+        del self.unit_bundle['unit_header']['data'][1]
+        self._store_resource_bundle()
+
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+
+        self.assertEquals(
+            'The lists of translations must have the same number of items (1) '
+            'as extracted from the original content (2).',
+            dom.find('.//div[@class="gcb-translation-error-body"]').text)
+
+    def test_bad_translations_are_not_flagged_for_student(self):
+        del self.unit_bundle['unit_header']['data'][1]
+        self._store_resource_bundle()
+
+        actions.logout()
+        actions.login(self.STUDENT_EMAIL, is_admin=False)
+        self.assertIn('<p>a</p><p>b</p>', self.get('unit?unit=1').body)
 
     def test_fallback_to_default_when_translation_missing(self):
         del self.lesson_bundle['objectives']
@@ -855,7 +877,7 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('CHOICE 1', page_html)
         self.assertIn('CHOICE 2', page_html)
 
-    def test_question_groupss_are_translated(self):
+    def test_question_groups_are_translated(self):
         # Create a question group with one question
         qgp_dict = {
             'description': 'description text',

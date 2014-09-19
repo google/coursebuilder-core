@@ -318,6 +318,9 @@ class HtmlHooks(object):
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
+    EXTRA_GLOBAL_CSS_URLS = []
+    EXTRA_GLOBAL_JS_URLS = []
+
     @classmethod
     def is_absolute(cls, url):
         return bool(urlparse.urlparse(url).scheme)
@@ -360,6 +363,10 @@ class ApplicationHandler(webapp2.RequestHandler):
                 def get_context(context):
                     return context
                 self.template_value['context'] = get_context
+        self.template_value[
+            'extra_global_css_urls'] = self.EXTRA_GLOBAL_CSS_URLS
+        self.template_value[
+            'extra_global_js_urls'] = self.EXTRA_GLOBAL_JS_URLS
 
         # Common template information for the locale picker (only shown for
         # user in session)

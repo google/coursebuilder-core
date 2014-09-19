@@ -1,0 +1,52 @@
+.gcb-translation-error {
+  position: relative;
+  display: inline-block;
+  border: solid 1px red;
+  border-radius: 3px;
+}
+.gcb-translation-error-details {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+}
+.gcb-translation-error-title {
+  position: absolute;
+  display: inline-block;
+  background-color: red;
+  border-top-left-radius: 3px;
+  font-weight: bold;
+  color: white;
+  font-size: 60%;
+  padding: 0 2px;
+  z-index: 10;
+}
+.gcb-translation-error-body {
+  position: absolute;
+  background-color: #ffffb7;
+  border: 1px solid #BFBA26;
+  border-radius: 3px;
+  box-shadow: 4px 4px 2px #aaa;
+  text-align: left;
+  line-height: 1.2;
+  font-size: 80%;
+  min-width: 20em;
+  padding: 1.5em 0.8em 0.8em 0.8em;
+  z-index: 5;
+  left: -1000px;
+  opacity: 0;
+  -webkit-transition: opacity 0.75s, left 0.75s step-end;
+  -moz-transition: opacity 0.75s, left 0.75s step-end;
+  -ms-transition: opacity 0.75s, left 0.75s step-end;
+  transition: opacity 0.75s, left 0.75s step-end;
+}
+.gcb-translation-error-details:hover .gcb-translation-error-body {
+  -webkit-transition: opacity 0.75s, left 0.75s step-start;
+  -webkit-transition: opacity 0.75s, left 0.75s step-start;
+  -webkit-transition: opacity 0.75s, left 0.75s step-start;
+  -webkit-transition: opacity 0.75s, left 0.75s step-start;
+  left: 0;
+  opacity: 1;
+}
+.gcb-translation-error-alt {
+  padding: 8px;
+}

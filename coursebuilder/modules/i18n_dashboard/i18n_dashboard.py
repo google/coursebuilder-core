@@ -58,6 +58,9 @@ RESOURCES_PATH = '/modules/i18n_dashboard/resources'
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'i18n_dashboard', 'templates')
 
+# The path to the CSS file with application-wide i18n-related styling
+GLOBAL_CSS = '/modules/i18n_dashboard/resources/css/global_i18n.css'
+
 VERB_NEW = xcontent.SourceToTargetDiffMapping.VERB_NEW
 VERB_CHANGED = xcontent.SourceToTargetDiffMapping.VERB_CHANGED
 VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
@@ -65,6 +68,7 @@ VERB_CURRENT = xcontent.SourceToTargetDiffMapping.VERB_CURRENT
 # This permission grants the user access to the i18n dashboard and console.
 ACCESS_PERMISSION = 'access_i18n_dashboard'
 ACCESS_PERMISSION_DESCRIPTION = 'Can access I18n Dashboard.'
+
 TYPE_HTML = 'html'
 TYPE_STRING = 'string'
 TYPE_TEXT = 'text'
@@ -1267,9 +1271,26 @@ class LazyTranslator(object):
 
             transformer.recompose(context, resource_bundle, errors)
             return xcontent.ContentIO.tostring(context.tree)
-        except Exception:  # pylint: disable-msg=broad-except
+
+        except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
-            return self.source_value
+            app_context = sites.get_course_for_current_request()
+            if roles.Roles.is_user_allowed(
+                    app_context, custom_module,
+                    locale_to_permission(app_context.get_current_locale())):
+                return self._detailed_error(str(ex))
+            else:
+                return self.source_value
+
+    def _detailed_error(self, msg):
+        return (
+            '<div class="gcb-translation-error">'
+            '  <div class="gcb-translation-error-details">'
+            '    <div class="gcb-translation-error-title">Error</div>'
+            '    <div class="gcb-translation-error-body">%s</div>'
+            '  </div>'
+            '  <div class="gcb-translation-error-alt">%s</div>'
+            '</div>') % (cgi.escape(msg), self.source_value)
 
 
 def set_attribute(thing, attribute_name, translation_dict):
@@ -1443,6 +1464,7 @@ def notify_module_enabled():
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.append(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.append(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
+    utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.append(GLOBAL_CSS)
 
 
 def notify_module_disabled():
@@ -1459,6 +1481,7 @@ def notify_module_disabled():
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
+    utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.remove(GLOBAL_CSS)
 
 
 def register_module():

@@ -90,6 +90,14 @@
     {% block assets %}
     {% endblock %}
 
+    {% for url in extra_global_css_urls %}
+      <link rel="stylesheet" href="{{url}}" type="text/css">
+    {% endfor %}
+
+    {% for url in extra_global_js_urls %}
+      <script src="{{url}}" type="text/javascript"></script>
+    {% endfor %}
+
     <script>
       var eventXsrfToken = '{{ event_xsrf_token }}';
       {% if record_tag_events %}
