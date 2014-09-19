@@ -55,7 +55,8 @@ DEFAULT_FETCH_LIMIT = 100
 # all entities of these types are copies from source to target during course
 # import
 COURSE_CONTENT_ENTITIES = frozenset([
-    models.QuestionEntity, models.QuestionGroupEntity, models.LabelEntity])
+    models.QuestionEntity, models.QuestionGroupEntity, models.LabelEntity,
+    models.RoleEntity])
 
 # add your custom entities here during module registration; they will also be
 # copied from source to target during course import

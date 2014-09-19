@@ -649,7 +649,9 @@ def _download_course(context, course, archive_path, params):
             manifest.add(_ManifestEntity(internal_path, False))
 
     _LOG.info('Adding dependencies from datastore')
-    for found_type in courses.COURSE_CONTENT_ENTITIES:
+    all_entities = list(courses.COURSE_CONTENT_ENTITIES) + list(
+        courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT)
+    for found_type in all_entities:
         _download_type(
             archive, manifest, found_type.__name__, params.batch_size,
             _IDENTITY_TRANSFORM)
@@ -1051,10 +1053,12 @@ def _upload(params):
     _LOG.info('Processing course with URL prefix %s from archive path %s',
               params.course_url_prefix, params.archive_path)
     context = _get_context_or_die(params.course_url_prefix)
+    all_entities = list(courses.COURSE_CONTENT_ENTITIES) + list(
+        courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT)
     with common_utils.Namespace(context.get_namespace_name()):
         if params.type == _TYPE_COURSE:
             _upload_course(context, params)
-            type_names = [x.__name__ for x in courses.COURSE_CONTENT_ENTITIES]
+            type_names = [x.__name__ for x in all_entities]
             _upload_datastore(params, type_names)
         elif params.type == _TYPE_DATASTORE:
             _upload_datastore(params, params.datastore_types)

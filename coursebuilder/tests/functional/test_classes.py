@@ -74,11 +74,6 @@ from google.appengine.ext import db
 # A number of data files in a test course.
 COURSE_FILE_COUNT = 70
 
-# Datastore entities that hold parts of course content. Delay-loaded.
-COURSE_CONTENT_ENTITY_FILES = [
-    'QuestionEntity.json', 'QuestionGroupEntity.json', 'LabelEntity.json']
-
-
 # There is an expectation in our tests of automatic import of data/*.csv files,
 # which is achieved below by selecting an alternative factory method.
 courses.Course.create_new_default_course = (
@@ -4141,6 +4136,14 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             SystemExit, etl.main, self.upload_course_args,
             environment_class=FakeEnvironment)
 
+    def _get_all_entity_files(self):
+        files = []
+        all_entities = list(courses.COURSE_CONTENT_ENTITIES) + list(
+            courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT)
+        for entity in all_entities:
+            files.append('%s.json' % entity.__name__)
+        return files
+
     def test_upload_course_succeeds(self):
         """Tests upload of archive contents."""
         question = self.create_archive_with_question('test question')
@@ -4164,7 +4167,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         self.assertEqual(
             len(archive.manifest.entities)
             - len(all_files_before_upload)  # less already-present files
-            - len(COURSE_CONTENT_ENTITY_FILES),  # less entity files
+            - len(self._get_all_entity_files()),  # less entity files
             len(vfs_files_after_upload - all_files_before_upload))
 
         # check course structure
@@ -4178,7 +4181,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         # check entities
         for entity in archive.manifest.entities:
             _, tail = os.path.split(entity.path)
-            if tail in COURSE_CONTENT_ENTITY_FILES:
+            if tail in self._get_all_entity_files():
                 continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,
@@ -4206,7 +4209,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
         self.assertEqual(
             len(archive.manifest.entities),
-            len(filesystem_contents) + len(COURSE_CONTENT_ENTITY_FILES))
+            len(filesystem_contents) + len(self._get_all_entity_files()))
         self.assertEqual(self.new_course_title, context.get_title())
         units = etl._get_course_from(context).get_units()
         spot_check_single_unit = [u for u in units if u.unit_id == 14][0]
@@ -4215,7 +4218,7 @@ class EtlMainTestCase(DatastoreBackedCourseTest):
             self.assertTrue(unit.title)
         for entity in archive.manifest.entities:
             _, tail = os.path.split(entity.path)
-            if tail in COURSE_CONTENT_ENTITY_FILES:
+            if tail in self._get_all_entity_files():
                 continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,

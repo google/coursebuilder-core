@@ -1456,6 +1456,9 @@ def notify_module_enabled():
     roles.Roles.register_permissions(
         custom_module, permissions_callback)
 
+    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(ResourceBundleEntity)
+    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(I18nProgressEntity)
+
     I18nDashboardHandler.register()
     I18nDownloadHandler.register()
     I18nUploadHandler.register()
@@ -1472,6 +1475,9 @@ def notify_module_disabled():
         [I18nDashboardHandler.ACTION, 'I18N'])
     dashboard.DashboardHandler.remove_external_permission(ACCESS_PERMISSION)
     roles.Roles.unregister_permissions(custom_module)
+
+    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.pop(ResourceBundleEntity)
+    courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.pop(I18nProgressEntity)
 
     I18nDashboardHandler.unregister()
     I18nDownloadHandler.unregister()
