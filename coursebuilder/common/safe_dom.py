@@ -157,9 +157,16 @@ class Element(Node):
     def has_attribute(self, name):
         return name.lower() in self._attr
 
+    @property
+    def attributes(self):
+        return self._attr.keys()
+
     def set_attribute(self, name, value):
         self._attr[name.lower()] = value
         return self
+
+    def get_escaped_attribute(self, name):
+        return escape(self._attr[name.lower()])
 
     def add_attribute(self, **attr):
         for attr_name, value in attr.items():

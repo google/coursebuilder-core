@@ -336,14 +336,24 @@ class TranslationIO(object):
         assert index
         tag_name = '%s#%s' % (element.tag_name.lower(), index)
 
+        start_tag = tag_name
+        for attr in element.attributes:
+            tag_name_set = config.recomposable_attributes_map.get(attr.upper())
+            if tag_name_set and (
+                element.tag_name.upper() in tag_name_set
+                or '*' in tag_name_set
+            ):
+                start_tag += ' %s="%s"' % (
+                    attr, element.get_escaped_attribute(attr))
+
         if element.tag_name.upper() in ((
             config.opaque_tag_names) + (
             config.opaque_decomposable_tag_names)):
-            return False, '<%s />' % tag_name
+            return False, '<%s />' % start_tag
 
         has_content = False
         if element.children:
-            lines.append('<%s>' % tag_name)
+            lines.append('<%s>' % start_tag)
             for child in element.children:
                 if not isinstance(child, safe_dom.Text):
                     raise TypeError('Unsupported node type: %s.' % child)
@@ -353,7 +363,7 @@ class TranslationIO(object):
                 lines.append(value)
             lines.append('</%s>' % tag_name)
         else:
-            lines.append('<%s />' % tag_name)
+            lines.append('<%s />' % start_tag)
         return has_content, ''.join(lines)
 
     @classmethod
@@ -1806,7 +1816,8 @@ class TestCasesForContentRecompose(TestCasesBase):
 
     def test_some_new_tag_attributes_can_be_added_in_translations(self):
         html = 'The <a class="foo" alt="bar">skies</a> are blue.'
-        self._assert_decomposes(html, None)
+        self._assert_decomposes(
+            html, ['The <a#1 alt="bar">skies</a#1> are blue.'])
         translation = ['The <a#1 alt="BAR">SKIES</a#1> are blue.']
         # TODO(psimakov): order of attributes is not preserved
         result = 'The <a alt="BAR" class="foo">SKIES</a> are blue.'
