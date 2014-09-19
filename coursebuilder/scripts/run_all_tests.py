@@ -80,7 +80,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_core_tags.TagsMarkdown': 1,
     'tests.functional.modules_dashboard.QuestionDashboardTestCase': 9,
     'tests.functional.modules_dashboard.CourseOutlineTestCase': 1,
-    'tests.functional.modules_dashboard.DashboardAccessTestCase': 2,
+    'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,
     'tests.functional.modules_dashboard.RoleEditorTestCase': 3,
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,

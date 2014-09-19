@@ -50,16 +50,11 @@
         {% endif %}
 
         <!-- right-aligned links are in order -->
-        {% if is_super_admin %}
+        {% for href, link in right_links %}
           <li class="gcb-pull-right">
-            <a href="/admin">Admin</a>
+            <a href="{{ href }}">{{ link }}</a>
           </li>
-        {% endif %}
-        {% if is_course_admin %}
-          <li class="gcb-pull-right">
-            <a href="dashboard">Dashboard</a>
-          </li>
-        {% endif %}
+        {% endfor %}
         {% if show_course_explorer_tab and logoutUrl %}
           <li class="gcb-pull-right">
             {# I18N: Navbar tab. #}

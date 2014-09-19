@@ -1478,6 +1478,12 @@ class DashboardHandler(
                 return True
         return False
 
+    @classmethod
+    def generate_dashboard_link(cls, app_context):
+        if cls.current_user_has_access(app_context):
+            return [('dashboard', 'Dashboard')]
+        return []
+
 
 def register_module():
     """Registers this module in the registry."""
@@ -1485,9 +1491,13 @@ def register_module():
     def on_module_enabled():
         roles.Roles.register_permissions(
             custom_module, DashboardHandler.permissions_callback)
+        ApplicationHandler.RIGHT_LINKS.append(
+            DashboardHandler.generate_dashboard_link)
 
     def on_module_disabled():
         roles.Roles.unregister_permissions(custom_module)
+        ApplicationHandler.RIGHT_LINKS.remove(
+            DashboardHandler.generate_dashboard_link)
 
     data_sources.Registry.register(
         student_answers_analytics.QuestionAnswersDataSource)

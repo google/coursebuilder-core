@@ -318,6 +318,7 @@ class HtmlHooks(object):
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
+    RIGHT_LINKS = []
     EXTRA_GLOBAL_CSS_URLS = []
     EXTRA_GLOBAL_JS_URLS = []
 
@@ -353,6 +354,10 @@ class ApplicationHandler(webapp2.RequestHandler):
             'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
+        self.template_value['right_links'] = (
+            [('/admin', 'Admin')] if Roles.is_super_admin() else [])
+        for func in self.RIGHT_LINKS:
+            self.template_value['right_links'].extend(func(self.app_context))
 
         prefs = models.StudentPreferencesDAO.load_or_create()
         self.template_value['student_preferences'] = prefs

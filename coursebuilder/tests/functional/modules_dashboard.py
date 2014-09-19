@@ -654,3 +654,33 @@ class DashboardAccessTestCase(actions.TestBase):
         # Expect 3 courses, as the default one is also considered for the picker
         self.assertEquals(len(picker_options), 3)
         actions.logout()
+
+    def _get_right_nav_links(self):
+        return self.parse_html_string(
+            self.get('/%s/' % self.ACCESS_COURSE_NAME).body
+        ).findall(
+            './/div[@id="gcb-nav-x"]/div/ul/li[@class="gcb-pull-right"]')
+
+    def test_dashboard_link(self):
+        # Not signed in => no dashboard or admin link visible
+        self.assertEquals(len(self._get_right_nav_links()), 0)
+        # Sign in user with dashboard permissions => dashboard link visible
+        actions.login(self.USER_EMAIL, is_admin=False)
+        links = self._get_right_nav_links()
+        self.assertEquals(len(links), 1)
+        self.assertEquals(links[0].find('a').get('href'), 'dashboard')
+        self.assertEquals(links[0].find('a').text, 'Dashboard')
+        # Sign in course admin => dashboard link visible
+        actions.login(self.ADMIN_EMAIL, is_admin=False)
+        links = self._get_right_nav_links()
+        self.assertEquals(len(links), 1)
+        self.assertEquals(links[0].find('a').get('href'), 'dashboard')
+        self.assertEquals(links[0].find('a').text, 'Dashboard')
+        # Sign in super admin => dashboard and admin link visible
+        actions.login('dummy@email.com', is_admin=True)
+        links = self._get_right_nav_links()
+        self.assertEquals(len(links), 2)
+        self.assertEquals(links[0].find('a').get('href'), '/admin')
+        self.assertEquals(links[0].find('a').text, 'Admin')
+        self.assertEquals(links[1].find('a').get('href'), 'dashboard')
+        self.assertEquals(links[1].find('a').text, 'Dashboard')
