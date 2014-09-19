@@ -35,7 +35,7 @@ class RoleManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         return template_values
 
     def get_add_role(self):
-        self.render_page(self.rolemae_prepare_template(''), 'roles')
+        self.render_page(self._prepare_template(''), 'roles')
 
     def get_edit_role(self):
         self.render_page(
