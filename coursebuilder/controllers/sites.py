@@ -131,6 +131,7 @@ from models.roles import Roles
 from models.vfs import AbstractFileSystem
 from models.vfs import DatastoreBackedFileSystem
 from models.vfs import LocalReadOnlyFileSystem
+from modules.courses import courses as courses_module
 
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
@@ -757,14 +758,15 @@ class ApplicationContext(object):
     def is_editable_fs(self):
         return self._fs.impl.__class__ == DatastoreBackedFileSystem
 
-    def get_available_locales(self):
+    def get_allowed_locales(self):
         environ = self.get_environ()
         default_locale = environ['course'].get('locale')
         extra_locales = environ.get('extra_locales', [])
+        can_pick_all_locales = courses_module.can_pick_all_locales(self)
         return [default_locale] + [
             loc['locale'] for loc in extra_locales
             if loc['locale'] != default_locale and (
-                loc['availability'] == 'available')]
+                loc['availability'] == 'available' or can_pick_all_locales)]
 
 
 def has_path_info():

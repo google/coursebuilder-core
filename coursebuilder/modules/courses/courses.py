@@ -21,14 +21,35 @@ from controllers import lessons
 from controllers import utils
 from models import content
 from models import custom_modules
+from models import roles
 from tools import verify
+
+
+All_LOCALES_PERMISSION = 'can_pick_all_locales'
+All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
 
 
 custom_module = None
 
 
+def can_pick_all_locales(app_context):
+    return roles.Roles.is_user_allowed(
+        app_context, custom_module, All_LOCALES_PERMISSION)
+
+
 def register_module():
     """Registers this module in the registry."""
+
+    def on_module_enabled():
+        roles.Roles.register_permissions(
+            custom_module, permissions_callback)
+
+    def on_module_disabled():
+        roles.Roles.unregister_permissions(custom_module)
+
+    def permissions_callback(unused_app_context):
+        return [
+            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION)]
 
     # provide parser to verify
     verify.parse_content = content.parse_string_in_scope
@@ -56,5 +77,7 @@ def register_module():
     custom_module = custom_modules.Module(
         'Course',
         'A set of pages for delivering an online course.',
-        [], courses_routes)
+        [], courses_routes,
+        notify_module_enabled=on_module_enabled,
+        notify_module_disabled=on_module_disabled)
     return custom_module

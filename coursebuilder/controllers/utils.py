@@ -375,7 +375,7 @@ class ApplicationHandler(webapp2.RequestHandler):
                 {
                     'name': locales.get_locale_display_name(loc),
                     'value': loc
-                } for loc in self.app_context.get_available_locales()]
+                } for loc in self.app_context.get_allowed_locales()]
             self.template_value['locale_xsrf_token'] = (
                 XsrfTokenManager.create_xsrf_token(
                     StudentLocaleRESTHandler.XSRF_TOKEN_NAME))
@@ -456,7 +456,7 @@ class CourseHandler(ApplicationHandler):
         accept_langs = request.headers.get('Accept-Language')
         accept_lang_list = locales.parse_accept_language(
               accept_langs)
-        available_locales = app_context.get_available_locales()
+        available_locales = app_context.get_allowed_locales()
         for lang, _ in accept_lang_list:
             for supported_lang in available_locales:
                 if lang.lower() == supported_lang.lower():
@@ -934,7 +934,7 @@ class StudentLocaleRESTHandler(BaseRESTHandler):
             return
 
         selected = request['payload']['selected']
-        if selected not in self.app_context.get_available_locales():
+        if selected not in self.app_context.get_allowed_locales():
             transforms.send_json_response(self, 401, 'Bad locale')
             return
 

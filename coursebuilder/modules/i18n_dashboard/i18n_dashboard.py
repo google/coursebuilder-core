@@ -614,7 +614,7 @@ class I18nDownloadHandler(BaseDashboardExtension):
 
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
-            for locale in self.handler.app_context.get_available_locales():
+            for locale in self.handler.app_context.get_allowed_locales():
                 if locale == original_locale:
                     continue
                 with common_utils.ZipAwareOpen():
