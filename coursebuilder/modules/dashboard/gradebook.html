@@ -39,9 +39,8 @@
   margin-bottom: 1em;
 }
 
-#gcb-gradebook .answer-block {
+#gcb-gradebook .hover-block {
   position: absolute;
-  max-width: 20em;
   background: white;
   z-index: 100;
   border: 1px solid black;
@@ -53,11 +52,15 @@
   left: 10px;
 }
 
-#gcb-gradebook .td-answers {
+#gcb-gradebook .td-answers, #gcb-gradebook .question-description {
   position: relative;
 }
 
-#gcb-gradebook .answers:hover .answer-block {
+#gcb-gradebook .answers:hover .hover-block {
+  display: block;
+}
+
+#gcb-gradebook .question-description:hover .hover-block {
   display: block;
 }
 
@@ -153,11 +156,12 @@
       {% for unit in units %}
         {% for item in unit.contents %}
           {% for question in item.questions %}
-            <th colspan="2">
+            <th colspan="2" class="question-description">
               <div class="clip">
                 <div class="rotate">
                   <a href="{{ question.href }}">{{ question.description }}</a>
                 </div>
+                <span class="hover-block">{{ question.description }}</span>
               </div>
             </th>
           {% endfor %}
@@ -293,7 +297,7 @@ function emitAnswersTd(tr, answerList){
     answersTd.appendChild(div);
 
     var hoverSpan = document.createElement('span');
-    hoverSpan.className = 'answer-block';
+    hoverSpan.className = 'hover-block';
     hoverSpan.appendChild(document.createTextNode(answer.answers));
     div.appendChild(hoverSpan);
   });

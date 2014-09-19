@@ -228,8 +228,6 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
                     'score': answer.score,
                     'tallied': answer.tallied,
                     })
-        for thing in ret:
-            print thing
         return ret
 
 
@@ -256,12 +254,24 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                     question_ids.append(int(component['quid']))
                 elif component['cpt_name'] == 'question-group':
                     for question_id in groups[int(component['qgid'])]:
-                        question_ids.append(question_id)
+                        question_ids.append(int(question_id))
             return question_ids
 
         def _look_up_questions(questions, question_ids):
+            """Build a dict used to build HTML for one column for one question.
+
+            Args:
+              questions: Map from question ID to QuestionDAO
+              question_ids: Set of IDS for which we want to build helper dicts.
+            Returns:
+              An array of dicts, one per question named in question_ids.
+            """
             ret = []
-            for qid in question_ids:
+
+            for qid in list(question_ids):
+                if qid not in questions:
+                    question_ids.remove(qid)
+                    continue
                 ret.append({
                     'id': qid,
                     'description': questions[qid],
@@ -332,6 +342,10 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
             g.id: g.question_ids for g in models.QuestionGroupDAO.get_all()}
         units = []
         question_keys = []
+
+        # Walk through the course in display order, gathering all items
+        # that may contain questions.  This is used to build up the HTML
+        # table headers for display.
         for unit in course.get_units():
 
             # Skip contained pre/post assessments; these will be done in their
@@ -347,40 +361,46 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                 continue
 
             unit_contents = []
-            units.append({
-                'href': href,
-                'unit_id': unit.unit_id,
-                'title': unit.title,
-                'contents': unit_contents,
-                })
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
                 q_keys, contents = _add_assessment(unit)
-                question_keys += q_keys + ['subtotal']
-                unit_contents.append(contents)
+                if q_keys:
+                    question_keys += q_keys + ['subtotal']
+                    unit_contents.append(contents)
             if unit.pre_assessment:
                 assessment = course.find_unit_by_id(unit.pre_assessment)
                 if assessment:
                     q_keys, contents = _add_sub_assessment(unit, assessment)
-                    question_keys += q_keys + ['subtotal']
-                    unit_contents.append(contents)
+                    if q_keys:
+                        question_keys += q_keys + ['subtotal']
+                        unit_contents.append(contents)
             for lesson in course.get_lessons(unit.unit_id):
-                q_keys, contents = _add_lesson(unit, lesson,)
-                question_keys += q_keys
-                if lesson.scored:
-                    question_keys += ['subtotal']
-                unit_contents.append(contents)
+                q_keys, contents = _add_lesson(unit, lesson)
+                if q_keys:
+                    question_keys += q_keys
+                    if lesson.scored:
+                        question_keys += ['subtotal']
+                    unit_contents.append(contents)
             if unit.post_assessment:
                 assessment = course.find_unit_by_id(unit.post_assessment)
                 if assessment:
                     q_keys, contents = _add_sub_assessment(unit, assessment)
-                    question_keys += q_keys + ['subtotal']
-                    unit_contents.append(contents)
+                    if q_keys:
+                        question_keys += q_keys + ['subtotal']
+                        unit_contents.append(contents)
 
-            # If there is only one sub-component within the unit, pop off
-            # the 'subtotal' column.
-            if len(unit_contents) == 1:
-                question_keys.pop()
-            question_keys.append('total')
+            if unit_contents:
+                units.append({
+                    'href': href,
+                    'unit_id': unit.unit_id,
+                    'title': unit.title,
+                    'contents': unit_contents,
+                    })
+
+                # If there is only one sub-component within the unit, pop off
+                # the 'subtotal' column.
+                if len(unit_contents) == 1:
+                    question_keys.pop()
+                question_keys.append('total')
 
         _count_colspans(units)
         template_values['units'] = units
