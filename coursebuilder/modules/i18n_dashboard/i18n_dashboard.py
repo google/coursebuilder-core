@@ -1064,9 +1064,10 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         map_lists_source_to_target = (
             xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
-        config = xcontent.Configuration(opaque_tag_names=[
+        all_tag_names = xcontent.DEFAULT_OPAQUE_TAG_NAMES + [
             tag_name.upper()
-            for tag_name in tags.Registry.get_all_tags().keys()])
+            for tag_name in tags.Registry.get_all_tags().keys()]
+        config = xcontent.Configuration(opaque_tag_names=all_tag_names)
         sections = []
         for mapping in mappings:
             if mapping.type == TYPE_HTML:

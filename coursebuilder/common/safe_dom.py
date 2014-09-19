@@ -244,19 +244,6 @@ class A(Element):
         self.add_attribute(href=href)
 
 
-class _Script(Text):
-
-    def __init__(self, script):
-        super(_Script, self).__init__(None)
-        self._script = script
-
-    @property
-    def sanitized(self):
-        if '</script>' in self._script:
-            raise ValueError('End script tag forbidden')
-        return self._script
-
-
 class ScriptElement(Element):
     """Represents an HTML <script> element."""
 
@@ -277,7 +264,20 @@ class ScriptElement(Element):
 
     def add_text(self, text):
         """Add the script body."""
-        self._children.append(_Script(text))
+
+        class Script(Text):
+
+            def __init__(self, script):
+                super(Script, self).__init__(None)
+                self._script = script
+
+            @property
+            def sanitized(self):
+                if '</script>' in self._script:
+                    raise ValueError('End script tag forbidden')
+                return self._script
+
+        self._children.append(Script(text))
 
 
 class Entity(Node):

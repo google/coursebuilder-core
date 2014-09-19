@@ -1523,6 +1523,12 @@ class TestCasesForContentDecompose(TestCasesBase):
         expected = ['The skies <script#1 /> are blue.']
         self._assert_decomposes(original, expected)
 
+        config = Configuration(opaque_tag_names=[])
+        self.transformer = ContentTransformer(config=config)
+        original = 'The skies <script>alert("Foo!");</script> are blue.'
+        expected = ['The skies', 'alert("Foo!");', 'are blue.']
+        self._assert_decomposes(original, expected)
+
     def test_extract_script_and_style_value(self):
         original = (
             'The skies <script>alert("Foo!");</script> are '
