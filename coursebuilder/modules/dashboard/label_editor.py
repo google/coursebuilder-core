@@ -77,12 +77,15 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         schema.add_property(schema_fields.SchemaField(
             'type', 'Type', 'integer',
             description='The purpose for which this label will be used. '
-            'E.g., Course Track labels are used to match to labels on '
+            'E.g., <b>Course Track</b> labels are used to match to labels on '
             'students to select which units the student will see when '
-            'taking the course.  More types of label will be added '
-            'as more features are added to Course Builder.',
+            'taking the course. <b>Locale</b> labels are automatically '
+            'created by the system and are used to select content applicable '
+            'to a specific language and/or country. More types of label will '
+            'be added as more features are added.',
             select_data=[
-                (lt.type, lt.title) for lt in models.LabelDTO.LABEL_TYPES],
+                (lt.type, lt.title) for lt in (
+                    models.LabelDTO.USER_EDITABLE_LABEL_TYPES)],
             extra_schema_dict_values={
                 '_type': 'radio',
                 'className': 'label-selection'}))
@@ -100,8 +103,21 @@ class LabelRestHandler(dto_editor.BaseDatastoreRestHandler):
         self._validate_10(label_dict, key, errors)
 
     def _validate_10(self, label_dict, key, errors):
+        existing_label = models.LabelDAO.load(key)
+        for label in models.LabelDTO.SYSTEM_EDITABLE_LABEL_TYPES:
+            # prevent adding
+            if label.type == label_dict['type']:
+                errors.append(
+                    'Unable to add system-managed label '
+                    'type %s.' % label.type)
+            # prevent edit
+            if existing_label:
+                if label.type == existing_label.type:
+                    errors.append(
+                        'Unable to edit system-managed label '
+                        'type %s.' % label.type)
+
         for label in models.LabelDAO.get_all():
-            print label.title, label.id
             if (label.title == label_dict['title'] and
                 (not key or label.id != long(key))):
                 errors.append('There is already a label with this title!')

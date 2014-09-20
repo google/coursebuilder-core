@@ -1289,11 +1289,15 @@ class DashboardHandler(
                         labels_of_type_ul.add_child(li)
                         li.add_text(
                             label.title
-                        ).add_child(
-                            self._create_edit_button(
-                                'dashboard?action=edit_label&key=%s' %
-                                label.id,
-                            ).add_attribute(id='label_%s' % label.title))
+                        )
+                        if label_type not in (
+                            models.LabelDTO.SYSTEM_EDITABLE_LABEL_TYPES):
+                                li.add_child(
+                                    self._create_edit_button(
+                                        'dashboard?action=edit_label&key=%s' %
+                                        label.id,
+                                    ).add_attribute(
+                                        id='label_%s' % label.title))
         else:
             output.append(safe_dom.Element('blockquote').add_text('< none >'))
         return output

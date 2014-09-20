@@ -25,6 +25,8 @@ import zipfile
 from babel.messages import pofile
 
 from common import crypto
+from common.utils import Namespace
+from controllers import sites
 from models import courses
 from models import models
 from models import roles
@@ -1100,3 +1102,49 @@ class TranslatorRoleTests(actions.TestBase):
             response = self.get('%s?key=%s' % (
                 self.CONSOLE_REST_URL, 'course_settings%3Acourse%3Ael'))
             self.assertEquals(transforms.loads(response.body)['status'], 200)
+
+
+class SampleCourseLocalizationTest(actions.TestBase):
+
+    def test_add_locales(self):
+        auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = False
+
+        email = 'test_course_localization@google.com'
+        actions.login(email, is_admin=True)
+
+        # copy sample course
+        response = self.get('/admin?action=welcome')
+        self.assertEquals(response.status_int, 200)
+        response = self.post(
+            '/admin?action=explore_sample',
+            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'explore_sample')})
+        self.assertEquals(response.status_int, 302)
+
+        sites.setup_courses('course:/sample::ns_sample')
+
+        response = self.get('sample/dashboard')
+        self.assertIn('Power Searching with Google', response.body)
+        self.assertEquals(response.status_int, 200)
+
+        # add new locale
+        request = {
+            'key': '/course.yaml',
+            'payload': (
+                '{\"i18n\":{\"course:locale\":\"en_US\",\"extra_locales\":['
+                '{\"locale\":\"ru\",\"availability\":\"unavailable\"}]}}'),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'basic-course-settings-put')}
+        response = self.put(
+            'sample/rest/course/settings', params={
+            'request': transforms.dumps(request)})
+        self.assertEquals(response.status_int, 200)
+
+        # check labels exist
+        with Namespace('ns_sample'):
+            labels = models.LabelDAO.get_all_of_type(
+                models.LabelDTO.LABEL_TYPE_LOCALE)
+            self.assertEqual(1, len(labels))
+
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = auto_deploy

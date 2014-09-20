@@ -24,6 +24,7 @@ from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
+from models import models
 from models import roles
 from models import transforms
 from modules.dashboard import filer
@@ -263,6 +264,38 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
 
         return json_payload
 
+    def _process_course_data(self, course_data):
+        if 'forum_email' in course_data:
+            forum_email = course_data['forum_email']
+            forum_web_url = self.get_groups_web_url(forum_email)
+            if forum_web_url:
+                course_data['forum_url'] = forum_web_url
+            forum_web_url = self.get_groups_embed_url(forum_email)
+            if forum_web_url:
+                course_data['forum_embed_url'] = forum_web_url
+
+        if 'announcement_list_email' in course_data:
+            announcement_email = course_data['announcement_list_email']
+            announcement_web_url = self.get_groups_web_url(
+                announcement_email)
+            if announcement_web_url:
+                course_data['announcement_list_url'] = announcement_web_url
+
+    def _process_extra_locales(self, extra_locales):
+        """Make sure each locale has a label to go along."""
+        existing = set([
+            label.title for label in models.LabelDAO.get_all_of_type(
+                models.LabelDTO.LABEL_TYPE_LOCALE)])
+        for extra_locale in extra_locales:
+            locale = extra_locale['locale']
+            if locale in existing:
+                continue
+            models.LabelDAO.save(models.LabelDTO(
+                None, {'title': locale,
+                       'version': '1.0',
+                       'description': 'System-managed locale label %s' % locale,
+                       'type': models.LabelDTO.LABEL_TYPE_LOCALE}))
+
     def process_put(self, request, payload):
         errors = []
         request_data = {}
@@ -275,23 +308,11 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
                 self, 400, 'Invalid data: \n' + '\n'.join(errors))
             return
 
+        if 'extra_locales' in request_data:
+            self._process_extra_locales(request_data['extra_locales'])
         if 'course' in request_data:
-            course_data = request_data['course']
-            if 'forum_email' in course_data:
-                forum_email = course_data['forum_email']
-                forum_web_url = self.get_groups_web_url(forum_email)
-                if forum_web_url:
-                    course_data['forum_url'] = forum_web_url
-                forum_web_url = self.get_groups_embed_url(forum_email)
-                if forum_web_url:
-                    course_data['forum_embed_url'] = forum_web_url
+            self._process_course_data(request_data['course'])
 
-            if 'announcement_list_email' in course_data:
-                announcement_email = course_data['announcement_list_email']
-                announcement_web_url = self.get_groups_web_url(
-                    announcement_email)
-                if announcement_web_url:
-                    course_data['announcement_list_url'] = announcement_web_url
         return request_data
 
     def is_deletion_allowed(self):

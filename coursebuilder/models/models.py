@@ -1676,6 +1676,7 @@ class LabelDTO(object):
 
     LABEL_TYPE_GENERAL = 0
     LABEL_TYPE_COURSE_TRACK = 1
+    LABEL_TYPE_LOCALE = 2
     # ... etc.
     # If you are extending CourseBuilder, please consider picking
     # a number at 1,000 or over to avoid any potential conflicts
@@ -1684,10 +1685,14 @@ class LabelDTO(object):
     # Provide consistent naming and labeling for admin UI elements.
     LabelType = collections.namedtuple(
         'LabelType', ['type', 'name', 'title', 'menu_order'])
-    LABEL_TYPES = [
+    USER_EDITABLE_LABEL_TYPES = [
         LabelType(LABEL_TYPE_GENERAL, 'general', 'General', 0),
         LabelType(LABEL_TYPE_COURSE_TRACK, 'course_track', 'Course Track', 1),
         ]
+    SYSTEM_EDITABLE_LABEL_TYPES = [
+        LabelType(LABEL_TYPE_LOCALE, 'locale', 'Locale', 2),
+        ]
+    LABEL_TYPES = USER_EDITABLE_LABEL_TYPES + SYSTEM_EDITABLE_LABEL_TYPES
 
     def __init__(self, the_id, the_dict):
         self.id = the_id
