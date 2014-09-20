@@ -86,6 +86,27 @@ function insertSorted(parentElement, newChild) {
   }
 }
 
+function updateQuestionLocations(questionRow, groupRow) {
+  var qLocationsList = questionRow.find("td.locations ul");
+  groupRow.find("td.locations ul li").each(function() {
+    var groupLocation = $(this);
+    var added = false;
+    qLocationsList.find("li").each(function() {
+      if ($(this).data("id") == groupLocation.data("id")) {
+        var count = parseInt($(this).data("count")) + parseInt(
+          groupLocation.data("count"));
+        $(this).data("count", count);
+        $(this).find(".count").text(" (" + count.toString() + ")");
+        added = true;
+        return false; //break
+      }
+    })
+    if (! added) {
+      qLocationsList.append(groupLocation);
+    }
+  });
+}
+
 function addToGroupCallback(data) {
   var response = parseJson(data);
   if (response.status != 200) {
@@ -109,6 +130,9 @@ function addToGroupCallback(data) {
       $("<li/>").text(questionRow.find("td.description").text())
     );
     updateSortTable($("#question-group-table th").eq(1));
+    // Add the group's locations to the question's locations
+    updateQuestionLocations(questionRow, groupRow);
+    updateSortTable($("#question-table th").eq(2));
   }
   closeModal();
   $("#add-to-group .submit").prop("disabled", false);

@@ -353,6 +353,13 @@ describe('adding a question to a question group', function() {
     addToGroupCallback(
       '{"status": 200, "payload":"{\\"question-id\\": 2, \\"group-id\\": 3}"}');
     expect($("#question-table td.groups ul:nth-child(1) li").size()).toBe(1);
+    var locations = $("#question-table td.locations ul:first-child li")
+    expect(locations.size()).toBe(3);
+    expect(locations.eq(0).data("count")).toBe(2);
+    expect(locations.eq(0).find(".count").text()).toBe(" (2)");
+    expect(locations.eq(1).data("count")).toBe(1);
+    expect(locations.eq(1).find(".count").text()).toBe("");
+    expect(locations.eq(2).data("count")).toBe(1);
     expect(
       $("#question-group-table td.questions ul:first-child li").size()).toBe(1);
     expect(cbShowMsgAutoHide).toHaveBeenCalled();

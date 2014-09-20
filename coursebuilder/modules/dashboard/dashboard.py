@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import copy
 import datetime
 import HTMLParser
 import os
@@ -980,19 +981,29 @@ class DashboardHandler(
                 (QuestionDTO.SHORT_ANSWER, 'Short Answer')])
         )
 
-    def _create_location_links(self, locations):
-        links = []
-        for assessment in locations.get('assessments', ()):
-            url = 'assessment?name=%s' % assessment.unit_id
-            links.append(
-                safe_dom.Element('a', href=url).add_text(assessment.title))
+    def _create_location_link(self, text, url, loc_id, count):
+        return safe_dom.Element(
+            'li', data_count=str(count), data_id=str(loc_id)).add_child(
+            safe_dom.Element('a', href=url).add_text(text)).add_child(
+            safe_dom.Element('span', className='count').add_text(
+            ' (%s)' % count if count > 1 else ''))
 
-        for (lesson, unit) in locations.get('lessons', ()):
-            url = 'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id)
-            links.append(
-                safe_dom.Element('a', href=url).add_text(
-                '%s: %s' % (unit.title, lesson.title)))
-        return links
+    def _create_locations_cell(self, locations):
+        ul = safe_dom.Element('ul')
+        for (assessment, count) in locations.get('assessments', {}).iteritems():
+            ul.add_child(self._create_location_link(
+                assessment.title, 'assessment?name=%s' % assessment.unit_id,
+                assessment.unit_id, count
+            ))
+
+        for ((lesson, unit), count) in locations.get('lessons', {}).iteritems():
+            ul.add_child(self._create_location_link(
+                '%s: %s' % (unit.title, lesson.title),
+                'unit?unit=%s&lesson=%s' % (unit.unit_id, lesson.lesson_id),
+                lesson.lesson_id, count
+            ))
+
+        return safe_dom.Element('td', className='locations').add_child(ul)
 
     def _create_list(self, list_items):
         ul = safe_dom.Element('ul')
@@ -1083,7 +1094,32 @@ class DashboardHandler(
             'td', colspan=str(colspan), style='text-align: center'
         ).add_text(text)))
 
-    def list_questions(self, all_questions, all_question_groups, locations_map):
+    def _get_question_locations(self, quid, location_maps, used_by_groups):
+        """Calculates the locations of a question and its containing groups."""
+        (qulocations_map, qglocations_map) = location_maps
+        locations = qulocations_map.get(quid, None)
+        if locations is None:
+            locations = {'lessons': {}, 'assessments': {}}
+        else:
+            locations = copy.deepcopy(locations)
+        # At this point locations holds counts of the number of times quid
+        # appears in each lesson and assessment. Now adjust the counts by
+        # counting the number of times quid appears in a question group in that
+        # lesson or assessment.
+        lessons = locations['lessons']
+        assessments = locations['assessments']
+        for group in used_by_groups:
+            qglocations = qglocations_map.get(group.id, None)
+            if not qglocations:
+                continue
+            for lesson in qglocations['lessons']:
+                lessons[lesson] = lessons.get(lesson, 0) + 1
+            for assessment in qglocations['assessments']:
+                assessments[assessment] = assessments.get(assessment, 0) + 1
+
+        return locations
+
+    def list_questions(self, all_questions, all_question_groups, location_maps):
         """Prepare a list of the question bank contents."""
         if not self.app_context.is_editable_fs():
             return safe_dom.NodeList()
@@ -1149,9 +1185,9 @@ class DashboardHandler(
             tr.add_child(cell)
 
             # Add locations
-            locations = locations_map.get(question.id, {})
-            tr.add_child(self._create_list_cell(
-                self._create_location_links(locations)))
+            locations = self._get_question_locations(
+                question.id, location_maps, used_by_groups)
+            tr.add_child(self._create_locations_cell(locations))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
@@ -1238,8 +1274,8 @@ class DashboardHandler(
             ]).add_attribute(className='questions'))
 
             # Add locations
-            tr.add_child(self._create_list_cell(self._create_location_links(
-                locations_map.get(question_group.id, {}))))
+            tr.add_child(self._create_locations_cell(
+                locations_map.get(question_group.id, {})))
 
             # Add last modified timestamp
             tr.add_child(safe_dom.Element(
@@ -1333,12 +1369,12 @@ class DashboardHandler(
     def get_assets_questions(self, items, tab, all_paths):
         all_questions = QuestionDAO.get_all()
         all_question_groups = QuestionGroupDAO.get_all()
-        (qulocations, qglocations) = courses.Course(
+        locations = courses.Course(
             self).get_component_locations()
         items.append(self.list_questions(
-            all_questions, all_question_groups, qulocations))
+            all_questions, all_question_groups, locations))
         items.append(self.list_question_groups(
-            all_questions, all_question_groups, qglocations))
+            all_questions, all_question_groups, locations[1]))
 
     def get_assets_labels(self, items, tab, all_paths):
         items.append(self.list_labels())

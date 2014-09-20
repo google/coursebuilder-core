@@ -260,6 +260,9 @@ div#formContainer div.settings-list-item fieldset legend span {
   padding: 0px;
   list-style-type: none;
 }
+.assets-table span.count {
+  font-style: italic;
+}
 #modal-window {
   display: none;
 }

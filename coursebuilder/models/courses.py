@@ -2642,9 +2642,30 @@ class Course(object):
             A tuple (question_locations, group_locations) which are dictionaries
             that map component_id to location information about that component.
             Location information is a dict that can have the following keys:
-            - assessments: a list of assessments that contain the component.
-            - lessons: a list of (unit, lesson) tuples that contain the
-                component.
+            - assessments: a dict that maps assessments to the number of times
+                it contains the component.
+            - lessons: a dict that maps (unit, lesson) to the number of times
+                it contains the component.
+            Example:
+            [
+                (
+                    <quid_1>: {
+                        'assessments': {
+                          <assessment_id_1>: <assessment_count_1>,
+                          <assessment_id_2>: <assessment_count_1>
+                        },
+                        'lessons':{
+                          (<unit_id_1>, <lesson_id_1>): <lesson_count_1>,
+                          (<unit_id_2>, <lesson_id_2>): <_lessoncount_2>,
+                        }
+                    },
+                    <quid_2>: ...
+                ),
+                (
+                    <qgid_1>: { ... },
+                    <qgid_2>: { ... }
+                )
+            ]
         """
 
         qulocations = {}
@@ -2653,19 +2674,26 @@ class Course(object):
         def _add_to_map(component, unit, lesson=None):
             if component.get('cpt_name') == 'question':
                 compononent_locations = qulocations.setdefault(
-                    long(component.get('quid')), {})
+                    long(component.get('quid')),
+                    {'lessons': {}, 'assessments': {}}
+                )
             elif component.get('cpt_name') == 'question-group':
                 compononent_locations = qglocations.setdefault(
-                    long(component.get('qgid')), {})
+                    long(component.get('qgid')),
+                    {'lessons': {}, 'assessments': {}}
+                )
             else:
                 return
 
             if lesson is not None:
-                compononent_locations.setdefault(
-                    'lessons', set()).add((lesson, unit))
+                lessons = compononent_locations.setdefault(
+                    'lessons', {})
+                lessons[(lesson, unit)] = lessons.get(
+                    (lesson, unit), 0) + 1
             else:
-                compononent_locations.setdefault(
-                    'assessments', set()).add(unit)
+                assessments = compononent_locations.setdefault(
+                    'assessments', {})
+                assessments[unit] = assessments.get(unit, 0) + 1
 
         for unit in self.get_units():
             if unit.type == verify.UNIT_TYPE_ASSESSMENT:
