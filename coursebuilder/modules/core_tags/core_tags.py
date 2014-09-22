@@ -99,7 +99,7 @@ class GoogleDoc(CoreTag):
                              '"Publish to the web" dialog')))
         reg.add_property(
             schema_fields.SchemaField(
-                'height', 'Height', 'string',
+                'height', 'Height', 'string', i18n=False,
                 optional=True,
                 extra_schema_dict_values={'value': '300'},
                 description=('Height of the document, in pixels. Width will be '
@@ -143,7 +143,7 @@ class GoogleSpreadsheet(CoreTag):
                              '"Publish to the web" dialog')))
         reg.add_property(
             schema_fields.SchemaField(
-                'height', 'Height', 'string',
+                'height', 'Height', 'string', i18n=False,
                 optional=True,
                 extra_schema_dict_values={'value': '300'},
                 description=('Height of the spreadsheet, in pixels. Width will '
@@ -304,10 +304,10 @@ class GoogleGroup(CoreTag):
     def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(GoogleGroup.name())
         reg.add_property(schema_fields.SchemaField(
-            'group', 'Group Name', 'string', optional=True,
+            'group', 'Group Name', 'string', optional=True, i18n=False,
             description='Name of the Google Group (e.g. mapping-with-google)'))
         reg.add_property(schema_fields.SchemaField(
-            'category', 'Category Name', 'string', optional=True,
+            'category', 'Category Name', 'string', optional=True, i18n=False,
             description='Name of the Category (e.g. unit5-2-annotation)'))
         return reg
 
@@ -344,12 +344,12 @@ class IFrame(CoreTag):
             optional=True,
             description='Provide title of iframe'))
         reg.add_property(schema_fields.SchemaField(
-            'height', 'Height', 'string',
+            'height', 'Height', 'string', i18n=False,
             optional=True,
             extra_schema_dict_values={'value': '400'},
             description=('Height of the iframe')))
         reg.add_property(schema_fields.SchemaField(
-            'width', 'Width', 'string',
+            'width', 'Width', 'string', i18n=False,
             optional=True,
             extra_schema_dict_values={'value': '650'},
             description=('Width of the iframe')))

@@ -736,6 +736,7 @@ class ContentTransformer(object):
                 continue
             if node.nodeType == minidom.Node.ELEMENT_NODE:
                 tag_name, index = TranslationIO.parse_indexed_tag_name(node)
+                node.tagName = tag_name
                 target_node = context.index.find_node_in_collation(
                     context.collations[collation_index], index)
                 if not target_node:

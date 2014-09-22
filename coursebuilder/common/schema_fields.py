@@ -454,7 +454,7 @@ class SchemaFieldValue(object):
         self._setter(new_value)
 
 
-class _FieldRegistryIndex(object):
+class FieldRegistryIndex(object):
     """Helper class that allows fast access to values and their fields."""
 
     def __init__(self, registry):
@@ -505,6 +505,47 @@ class _FieldRegistryIndex(object):
         return field if field else self._computed_name_to_field.get(name)
 
 
+class FieldFilter(object):
+    """Filter for collections of schema fields."""
+
+    def __init__(
+            self, type_names=None, hidden_values=None, i18n_values=None,
+            editable_values=None):
+        self._type_names = type_names
+        self._hidden_values = hidden_values
+        self._i18n_values = i18n_values
+        self._editable_values = editable_values
+
+    def _filter(self, named_field_list):
+        """Filters a list of name, SchemaField pairs."""
+        result = set()
+        for name, field in named_field_list:
+            if self._type_names and field.type not in self._type_names:
+                continue
+            if self._hidden_values and field.hidden not in self._hidden_values:
+                continue
+            if self._editable_values and (
+                    field.editable not in self._editable_values):
+                continue
+            if self._i18n_values and field.i18n not in self._i18n_values:
+                continue
+            result.add(name)
+        return result
+
+    def filter_value_to_type_binding(self, binding):
+        """Returns a set of value names that pass the criterion."""
+        named_field_list = [
+            (field_value.name, field_value.field)
+            for field_value in binding.value_list]
+        return self._filter(named_field_list)
+
+    def filter_field_registry_index(self, index):
+        """Returns the field names in the schema that pass the criterion."""
+        named_field_list = [
+            (name, index.find(name)) for name in index.names_in_order]
+        return self._filter(named_field_list)
+
+
 class ValueToTypeBinding(object):
     """This class provides mapping of entity attributes to their types."""
 
@@ -520,24 +561,6 @@ class ValueToTypeBinding(object):
 
     def find_field(self, name):
         return self.name_to_field[name]
-
-    @classmethod
-    def filter_on_criteria(
-        cls, binding, type_names=None,
-        hidden_values=None, i18n_values=None, editable_values=None):
-        """Returns a set of value names that pass the criterion."""
-        result = set()
-        for item in binding.value_list:
-            if type_names and item.field.type not in type_names:
-                continue
-            if hidden_values and item.field.hidden not in hidden_values:
-                continue
-            if editable_values and item.field.editable not in editable_values:
-                continue
-            if i18n_values and item.field.i18n not in i18n_values:
-                continue
-            result.add(item.name)
-        return result
 
     @classmethod
     def _get_setter(cls, entity, key):
@@ -614,7 +637,7 @@ class ValueToTypeBinding(object):
             to their types
         """
         binding = ValueToTypeBinding()
-        index = _FieldRegistryIndex(registry)
+        index = FieldRegistryIndex(registry)
         index.rebuild()
         cls._decompose_entity(
             index, [], json_dumpable_entity, binding, None)

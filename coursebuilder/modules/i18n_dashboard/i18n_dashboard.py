@@ -74,6 +74,13 @@ TYPE_STRING = 'string'
 TYPE_TEXT = 'text'
 TYPE_URL = 'url'
 
+# Filter for those schema fields which are translatable
+TRANSLATABLE_FIELDS_FILTER = schema_fields.FieldFilter(
+    type_names=[TYPE_HTML, TYPE_STRING, TYPE_TEXT, TYPE_URL],
+    hidden_values=[False],
+    i18n_values=[None, True],
+    editable_values=[True])
+
 
 custom_module = None
 
@@ -1009,15 +1016,6 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         'inputex-hidden', 'inputex-list', 'inputex-string', 'inputex-textarea',
         'inputex-uneditable']
 
-    def _filter_translatable(self, binding):
-        """Filter only translatable strings."""
-        return schema_fields.ValueToTypeBinding.filter_on_criteria(
-            binding,
-            type_names=[TYPE_HTML, TYPE_STRING, TYPE_TEXT, TYPE_URL],
-            hidden_values=[False],
-            i18n_values=[None, True],
-            editable_values=[True])
-
     def _add_known_translations_as_defaults(self, locale, sections):
         translations = i18n.get_store().get_translations(locale)
         for section in sections:
@@ -1042,7 +1040,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             values, schema)
 
-        allowed_names = self._filter_translatable(binding)
+        allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
+            binding)
 
         existing_mappings = []
         resource_bundle_dto = ResourceBundleDAO.load(str(key))
@@ -1064,10 +1063,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         map_lists_source_to_target = (
             xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
-        all_tag_names = xcontent.DEFAULT_OPAQUE_TAG_NAMES + [
-            tag_name.upper()
-            for tag_name in tags.Registry.get_all_tags().keys()]
-        config = xcontent.Configuration(opaque_tag_names=all_tag_names)
+
         sections = []
         for mapping in mappings:
             if mapping.type == TYPE_HTML:
@@ -1076,7 +1072,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                     field_dict = resource_bundle_dto.dict.get(mapping.name)
                     if field_dict:
                         existing_mappings = field_dict['data']
-                transformer = xcontent.ContentTransformer(config=config)
+                transformer = xcontent.ContentTransformer(
+                    config=get_xcontent_configuration(self.app_context))
                 context = xcontent.Context(
                     xcontent.ContentIO.fromstring(mapping.source_value))
                 transformer.decompose(context)
@@ -1256,26 +1253,23 @@ class LazyTranslator(object):
     def _translate_html(self):
         if self.translation_dict['source_value'] != self.source_value:
             return self.source_value
-
+        app_context = sites.get_course_for_current_request()
         try:
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
-            config = xcontent.Configuration(opaque_tag_names=[
-                tag_name.upper()
-                for tag_name in tags.Registry.get_all_tags().keys()])
-            transformer = xcontent.ContentTransformer(config=config)
+            transformer = xcontent.ContentTransformer(
+                config=get_xcontent_configuration(app_context))
             transformer.decompose(context)
 
             resource_bundle = [
                 data['target_value'] for data in self.translation_dict['data']]
-            errors = []
 
+            errors = []
             transformer.recompose(context, resource_bundle, errors)
             return xcontent.ContentIO.tostring(context.tree)
 
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
-            app_context = sites.get_course_for_current_request()
             if roles.Roles.is_user_allowed(
                     app_context, custom_module,
                     locale_to_permission(app_context.get_current_locale())):
@@ -1292,6 +1286,39 @@ class LazyTranslator(object):
             '  </div>'
             '  <div class="gcb-translation-error-alt">%s</div>'
             '</div>') % (cgi.escape(msg), self.source_value)
+
+
+def get_xcontent_configuration(app_context):
+    custom_tags = tags.Registry.get_all_tags()
+
+    opaque_tag_names = xcontent.DEFAULT_OPAQUE_TAG_NAMES + [
+        tag_name.upper()
+        for tag_name in tags.Registry.get_all_tags().keys()]
+
+    recomposable_attributes_map = dict(
+        xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
+    for tag_name, tag_cls in custom_tags.items():
+        tag_schema = None
+        try:
+            # TODO(jorr): refactor BaseTag.get_schema to work without handler
+            fake_handler = utils.BaseHandler()
+            fake_handler.app_context = app_context
+            tag_schema = tag_cls().get_schema(fake_handler)
+        except Exception:  # pylint: disable-msg=broad-except
+            logging.exception('Cannot get schema for %s', tag_name)
+            continue
+
+        index = schema_fields.FieldRegistryIndex(tag_schema)
+        index.rebuild()
+
+        for name in (
+                TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)):
+            recomposable_attributes_map.setdefault(
+                name.upper(), set()).add(tag_name.upper())
+
+    return xcontent.Configuration(
+        opaque_tag_names=opaque_tag_names,
+        recomposable_attributes_map=recomposable_attributes_map)
 
 
 def set_attribute(thing, attribute_name, translation_dict):

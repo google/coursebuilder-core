@@ -37,14 +37,16 @@ BASE_URL = '/' + COURSE_NAME
 STUDENT_EMAIL = 'foo@foo.com'
 
 
+FIELD_FILTER = schema_fields.FieldFilter(
+    type_names=['string', 'html', 'url'],
+    hidden_values=[False],
+    i18n_values=[None, True],
+    editable_values=[True])
+
+
 def _filter(binding):
     """Filter out translatable strings."""
-    return schema_fields.ValueToTypeBinding.filter_on_criteria(
-        binding,
-        type_names=['string', 'html', 'url'],
-        hidden_values=[False],
-        i18n_values=[None, True],
-        editable_values=[True])
+    return FIELD_FILTER.filter_value_to_type_binding(binding)
 
 
 class I18NCourseSettingsTests(actions.TestBase):
@@ -140,7 +142,7 @@ class I18NCourseSettingsTests(actions.TestBase):
 
     def test_translations_must_have_same_type(self):
         translation = xcontent.SourceToTargetMapping(
-            'course:title', 'unknown_type',
+            'course:title', 'Title', 'unknown_type',
             'Power Searching with Google', 'POWER SEARCHING WITH Google')
         errors = []
         binding, _ = self._build_mapping(
@@ -158,7 +160,7 @@ class I18NCourseSettingsTests(actions.TestBase):
 
     def test_retranslate_already_translated_verb_same(self):
         translation = xcontent.SourceToTargetMapping(
-            'course:title', 'string',
+            'course:title', 'Title', 'string',
             'Power Searching with Google', 'POWER SEARCHING WITH Google',)
         translations = [translation]
 
@@ -183,7 +185,7 @@ class I18NCourseSettingsTests(actions.TestBase):
 
     def test_retranslate_already_translated_verb_changed(self):
         translation = xcontent.SourceToTargetMapping(
-            'course:title', 'string',
+            'course:title', 'Title', 'string',
             'Power Searching with Google (old)',
             'POWER SEARCHING WITH Google (old)')
         translations = [translation]
@@ -297,7 +299,7 @@ class I18NMultipleChoiceQuestionTests(actions.TestBase):
             self.question, self.schema)
         desired = _filter(binding)
         translation = xcontent.SourceToTargetMapping(
-            'choices:[1]:feedback', 'html',
+            'choices:[1]:feedback', 'Feedback', 'html',
             'Correct!',
             'CORRECT!')
         mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
@@ -328,7 +330,7 @@ class I18NMultipleChoiceQuestionTests(actions.TestBase):
             self.question, self.schema)
         desired = _filter(binding)
         translation = xcontent.SourceToTargetMapping(
-            'choices:[1]:feedback', 'html',
+            'choices:[1]:feedback', 'Feedback', 'html',
             'Correct (old)!',
             'CORRECT (old)!')
         mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
@@ -346,7 +348,7 @@ class I18NMultipleChoiceQuestionTests(actions.TestBase):
             self.question, self.schema)
         desired = _filter(binding)
         translation = xcontent.SourceToTargetMapping(
-            'choices:[0]:feedback', 'html',
+            'choices:[0]:feedback', 'Feedback', 'html',
             'Correct (old)!',
             'CORRECT!')
         mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
@@ -364,7 +366,7 @@ class I18NMultipleChoiceQuestionTests(actions.TestBase):
             self.question, self.schema)
         desired = _filter(binding)
         translation = xcontent.SourceToTargetMapping(
-            'choices:[0]:feedback', 'html',
+            'choices:[0]:feedback', 'Feedback', 'html',
             'Correct (old)!',
             'CORRECT!')
         try:

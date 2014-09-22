@@ -124,7 +124,6 @@ class AbstractFileSystem(object):
 
     def list(self, dir_name, include_inherited=False):
         """Lists all files in a directory."""
-        self._assert_not_readonly()
         return self._impl.list(dir_name, include_inherited)
 
     def get_jinja_environ(self, dir_names, autoescape=True):

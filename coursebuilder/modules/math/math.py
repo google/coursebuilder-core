@@ -70,7 +70,7 @@ class MathTag(tags.ContextAwareTag):
         reg = schema_fields.FieldRegistry(MathTag.name())
         reg.add_property(
             schema_fields.SchemaField(
-                'input_type', 'Type', 'string',
+                'input_type', 'Type', 'string', i18n=False,
                 optional=True,
                 select_data=[('TeX', 'TeX'), ('MML', 'MML')],
                 extra_schema_dict_values={'value': 'TeX'},

@@ -48,6 +48,8 @@ ALL_TEST_CLASSES = {
     'tests.functional.controllers_review.PeerReviewControllerTest': 7,
     'tests.functional.controllers_review.PeerReviewDashboardAdminTest': 1,
     'tests.functional.controllers_review.PeerReviewDashboardStudentTest': 2,
+    'tests.functional.i18n.I18NCourseSettingsTests': 6,
+    'tests.functional.i18n.I18NMultipleChoiceQuestionTests': 6,
     'tests.functional.model_analytics.AnalyticsTabsWithNoJobs': 8,
     'tests.functional.model_analytics.CronCleanupTest': 14,
     'tests.functional.model_analytics.ProgressAnalyticsTest': 8,

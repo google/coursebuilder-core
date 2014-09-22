@@ -547,7 +547,9 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         payload = transforms.loads(response['payload'])
         data = payload['sections'][2]['data']
         self.assertEquals(1, len(data))
-        self.assertEquals('text<gcb-youtube#1 />', data[0]['source_value'])
+        self.assertEquals(
+            'text<gcb-youtube#1 videoid="Kdg2drcUjYI" />',
+            data[0]['source_value'])
 
 
 class CourseContentTranslationTests(actions.TestBase):
@@ -760,11 +762,12 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('<p>c</p><p>d</p>', page_html)
 
     def test_custom_tag_expanded(self):
-        videoid = 'Kdg2drcUjYI'
+        source_video_id = 'Kdg2drcUjYI'
+        target_video_id = 'jUfccP5Rl5M'
         unit_header = (
             'text'
             '<gcb-youtube videoid="%s" instanceid="c4CLTDvttJEu">'
-            '</gcb-youtube>' % videoid)
+            '</gcb-youtube>') % source_video_id
 
         unit = self.course.add_unit()
         unit.title = 'Tag Unit'
@@ -783,8 +786,12 @@ class CourseContentTranslationTests(actions.TestBase):
                 'source_value': unit_header,
                 'data': [
                     {
-                        'source_value': 'text<gcb-youtube#1 />',
-                        'target_value': 'TEXT<gcb-youtube#1 />'}]
+                        'source_value': (
+                            'text<gcb-youtube#1 videoid="%s" />'
+                        ) % source_video_id,
+                        'target_value': (
+                            'TEXT<gcb-youtube#1 videoid="%s" />'
+                        ) % target_video_id}]
             }
         }
         unit_key_el = ResourceBundleKey(
@@ -800,7 +807,7 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals('gcb-video-container', main[0].attrib['class'])
         self.assertEquals(1, len(main[0]))
         self.assertEquals('iframe', main[0][0].tag)
-        self.assertIn(videoid, main[0][0].attrib['src'])
+        self.assertIn(target_video_id, main[0][0].attrib['src'])
 
     def _add_question(self):
         # Create a question
