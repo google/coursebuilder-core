@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-09 10:08-0700\n"
+"POT-Creation-Date: 2014-09-22 11:29-0700\n"
 "PO-Revision-Date: 2013-08-14 10:20-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: iw <LL@li.org>\n"
@@ -64,14 +64,14 @@ msgstr " יש להפעיל JavaScript כדי לדרג את השאלה הזו. "
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:31
 #: experimental/coursebuilder/views/macros.html:29
 #: experimental/coursebuilder/views/macros.html:30
-#: experimental/coursebuilder/views/macros.html:65
-#: experimental/coursebuilder/views/macros.html:66
-#: experimental/coursebuilder/views/macros.html:112
-#: experimental/coursebuilder/views/macros.html:113
-#: experimental/coursebuilder/views/macros.html:223
-#: experimental/coursebuilder/views/macros.html:224
-#: experimental/coursebuilder/views/macros.html:272
-#: experimental/coursebuilder/views/macros.html:273
+#: experimental/coursebuilder/views/macros.html:61
+#: experimental/coursebuilder/views/macros.html:62
+#: experimental/coursebuilder/views/macros.html:107
+#: experimental/coursebuilder/views/macros.html:108
+#: experimental/coursebuilder/views/macros.html:218
+#: experimental/coursebuilder/views/macros.html:219
+#: experimental/coursebuilder/views/macros.html:267
+#: experimental/coursebuilder/views/macros.html:268
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
@@ -80,16 +80,16 @@ msgstr "הסתיים"
 #. Alt text for image representing student progress.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:35
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:36
-#: experimental/coursebuilder/views/macros.html:124
-#: experimental/coursebuilder/views/macros.html:125
-#: experimental/coursebuilder/views/macros.html:235
-#: experimental/coursebuilder/views/macros.html:236
-#: experimental/coursebuilder/views/macros.html:284
-#: experimental/coursebuilder/views/macros.html:285
-#: experimental/coursebuilder/views/macros.html:320
-#: experimental/coursebuilder/views/macros.html:321
-#: experimental/coursebuilder/views/macros.html:348
-#: experimental/coursebuilder/views/macros.html:349
+#: experimental/coursebuilder/views/macros.html:119
+#: experimental/coursebuilder/views/macros.html:120
+#: experimental/coursebuilder/views/macros.html:230
+#: experimental/coursebuilder/views/macros.html:231
+#: experimental/coursebuilder/views/macros.html:279
+#: experimental/coursebuilder/views/macros.html:280
+#: experimental/coursebuilder/views/macros.html:315
+#: experimental/coursebuilder/views/macros.html:316
+#: experimental/coursebuilder/views/macros.html:343
+#: experimental/coursebuilder/views/macros.html:344
 msgid "Not yet started"
 msgstr "עדיין לא התחיל"
 
@@ -168,13 +168,13 @@ msgstr "עיין בקורסים"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:33
-#: experimental/coursebuilder/views/base_course.html:66
+#: experimental/coursebuilder/views/base_course.html:61
 msgid "My Courses"
 msgstr "הקורסים שלי"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:38
-#: experimental/coursebuilder/views/base_course.html:71
+#: experimental/coursebuilder/views/base_course.html:66
 msgid "Profile"
 msgstr "פרופיל"
 
@@ -235,7 +235,7 @@ msgstr "קורסים שאליהם נרשמת"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:78
+#: experimental/coursebuilder/views/base_course.html:73
 msgid "Progress"
 msgstr "התקדמות"
 
@@ -261,71 +261,78 @@ msgid "Change Name"
 msgstr "שנה שם"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:240
+#: experimental/coursebuilder/modules/invitation/invitation.py:249
 msgid "Error: Empty email list"
 msgstr ""
 
+#: experimental/coursebuilder/modules/invitation/invitation.py:261
+#, python-format
+msgid ""
+"This exceeds your email cap. Number of remaining invitations: %s. No "
+"messages sent."
+msgstr ""
+
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:249
+#: experimental/coursebuilder/modules/invitation/invitation.py:268
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr ""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:253
+#: experimental/coursebuilder/modules/invitation/invitation.py:272
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr ""
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:270
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr ""
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:278
+#: experimental/coursebuilder/modules/invitation/invitation.py:297
 #, python-format
 msgid "OK, %s messages sent"
 msgstr ""
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:314
+#: experimental/coursebuilder/modules/invitation/invitation.py:350
 msgid "Invite Friends"
 msgstr ""
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:319
+#: experimental/coursebuilder/modules/invitation/invitation.py:355
 msgid "Click to send invitations to family and friends"
 msgstr ""
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:323
+#: experimental/coursebuilder/modules/invitation/invitation.py:359
 msgid "Invitations not currently available"
 msgstr ""
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:335
+#: experimental/coursebuilder/modules/invitation/invitation.py:371
 msgid "Subscribe/Unsubscribe"
 msgstr ""
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:342
+#: experimental/coursebuilder/modules/invitation/invitation.py:378
 msgid "You are currently unsubscribed from invitations."
 msgstr ""
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:346
+#: experimental/coursebuilder/modules/invitation/invitation.py:382
 msgid "Click here to re-subscribe."
 msgstr ""
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:351
+#: experimental/coursebuilder/modules/invitation/invitation.py:387
 msgid "You can currently receive invitations. "
 msgstr ""
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:354
+#: experimental/coursebuilder/modules/invitation/invitation.py:390
 msgid "Click here to unsubscribe."
 msgstr ""
 
@@ -663,28 +670,28 @@ msgstr " לא תוכל לערוך או למחוק אותה לאחר שתעשה �
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:235
+#: experimental/coursebuilder/views/base.html:244
 msgid "Not registered"
 msgstr "לא רשום"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:240
+#: experimental/coursebuilder/views/base.html:249
 msgid "Logout"
 msgstr "התנתק"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:246
+#: experimental/coursebuilder/views/base.html:255
 msgid "Login"
 msgstr "התחבר"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:283
+#: experimental/coursebuilder/views/base.html:292
 msgid "Privacy & Terms"
 msgstr "פרטיות ותנאים"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:289
+#: experimental/coursebuilder/views/base.html:298
 msgid "Locale:"
 msgstr ""
 
@@ -705,7 +712,7 @@ msgid "Forum"
 msgstr "פורום"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:83
+#: experimental/coursebuilder/views/base_course.html:78
 msgid "Registration"
 msgstr "הרשמה"
 
@@ -804,37 +811,37 @@ msgstr "השיעור הזה לא זמין."
 #. Alt text for image representing student progress.
 #: experimental/coursebuilder/views/macros.html:35
 #: experimental/coursebuilder/views/macros.html:36
-#: experimental/coursebuilder/views/macros.html:77
-#: experimental/coursebuilder/views/macros.html:78
+#: experimental/coursebuilder/views/macros.html:73
+#: experimental/coursebuilder/views/macros.html:74
 msgid "Not yet submitted"
 msgstr "עדיין לא נשלח"
 
 #. Alt text for image representing student progress.
-#: experimental/coursebuilder/views/macros.html:71
-#: experimental/coursebuilder/views/macros.html:72
-#: experimental/coursebuilder/views/macros.html:118
-#: experimental/coursebuilder/views/macros.html:119
-#: experimental/coursebuilder/views/macros.html:229
-#: experimental/coursebuilder/views/macros.html:230
-#: experimental/coursebuilder/views/macros.html:278
-#: experimental/coursebuilder/views/macros.html:279
+#: experimental/coursebuilder/views/macros.html:67
+#: experimental/coursebuilder/views/macros.html:68
+#: experimental/coursebuilder/views/macros.html:113
+#: experimental/coursebuilder/views/macros.html:114
+#: experimental/coursebuilder/views/macros.html:224
+#: experimental/coursebuilder/views/macros.html:225
+#: experimental/coursebuilder/views/macros.html:273
+#: experimental/coursebuilder/views/macros.html:274
 msgid "In progress"
 msgstr "בביצוע"
 
 #. Displayed in the course contents page. Indicates a page to which students
 #. can go to review other students' assignments.
 #. Text for the button on the assignment submission confirmation page.
-#: experimental/coursebuilder/views/macros.html:88
-#: experimental/coursebuilder/views/macros.html:95
+#: experimental/coursebuilder/views/macros.html:83
+#: experimental/coursebuilder/views/macros.html:90
 #: experimental/coursebuilder/views/reviewed_assessment_confirmation.html:39
 msgid "Review peer assignments"
 msgstr "בצע ביקורת על מטלות של עמיתים"
 
 #. Menu item.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:301
-#: experimental/coursebuilder/views/macros.html:305
-#: experimental/coursebuilder/views/macros.html:363
+#: experimental/coursebuilder/views/macros.html:296
+#: experimental/coursebuilder/views/macros.html:300
+#: experimental/coursebuilder/views/macros.html:358
 #: experimental/coursebuilder/views/unit.html:76
 msgid "Activity"
 msgstr "פעילות"
@@ -1075,10 +1082,19 @@ msgstr "נהל את ההרשמה לקורסים מהפרופיל שלך"
 msgid "Student profile not found ..."
 msgstr "פרופיל הסטודנט לא נמצא..."
 
+#. Shown after the student has submitted an assessment.
+#: experimental/coursebuilder/views/test_confirmation_content.html:3
+#, python-format
+msgid ""
+"Thank you for taking the %(assessment_name)s. Your score for this "
+"assessment is %(score)s%%. If you wish, you may return to the assessment "
+"and take it again."
+msgstr ""
+
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
-#: experimental/coursebuilder/views/test_confirmation_content.html:21
+#: experimental/coursebuilder/views/test_confirmation_content.html:20
 msgid "Return to Unit"
 msgstr ""
 
@@ -1160,5 +1176,4 @@ msgstr "הדף הבא"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "סיום"
-
 

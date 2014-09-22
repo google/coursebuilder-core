@@ -555,6 +555,8 @@ class UnitHandler(BaseHandler):
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
                                               left_nav_elements)
+                self.template_value['assessment_name'] = (
+                    self.template_value.get('assessment_name').lower())
                 display_content.append(self.render_template_to_html(
                     self.template_value, 'test_confirmation_content.html'))
             else:
