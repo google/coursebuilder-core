@@ -398,7 +398,7 @@ class UnitTools(object):
 
         self._apply_updates_common(unit, entity_dict, errors)
         try:
-            unit.weight = int(entity_dict.get('weight'))
+            unit.weight = float(entity_dict.get('weight'))
             if unit.weight < 0:
                 errors.append('The weight must be a non-negative integer.')
         except ValueError:

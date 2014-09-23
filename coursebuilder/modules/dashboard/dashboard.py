@@ -254,6 +254,15 @@ class DashboardHandler(
 
         tab_group = tabs.Registry.get_tab_group(current_action)
         if tab_group:
+            if current_action == 'assets':
+                exclude_tabs = []
+                course = self.get_course()
+                if courses.has_only_new_style_assessments(course):
+                    exclude_tabs.append('Assessments')
+                if courses.has_only_new_style_activities(course):
+                    exclude_tabs.append('Activities')
+                    tab_group = [
+                        t for t in tab_group if t.title not in exclude_tabs]
             tab_name = in_tab or self.request.get('tab') or tab_group[0].name
             sub_nav = safe_dom.NodeList()
             for tab in tab_group:

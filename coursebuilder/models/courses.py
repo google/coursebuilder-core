@@ -252,6 +252,28 @@ def index_units_and_lessons(course):
                     lesson_index += 1
 
 
+def has_at_least_one_old_style_assessment(course):
+    assessments = course.get_assessment_list()
+    return any(a.is_old_style_assessment() for a in assessments)
+
+
+def has_only_new_style_assessments(course):
+    return not has_at_least_one_old_style_assessment(course)
+
+
+def has_at_least_one_old_style_activity(course):
+    for unit in course.get_units():
+        for lesson in course.get_lessons(unit.unit_id):
+            if lesson.activity and course.get_activity_abs_path(
+                unit.unit_id, lesson.lesson_id):
+                return True
+    return False
+
+
+def has_only_new_style_activities(course):
+    return not has_at_least_one_old_style_activity(course)
+
+
 class AbstractCachedObject(object):
     """Abstract serializable versioned object that can stored in memcache."""
 
@@ -2551,6 +2573,15 @@ class Course(object):
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
+
+    def get_activity_abs_path(self, unit_id, lesson_id):
+        fn = os.path.join(
+            self.app_context.get_home(),
+            self.get_activity_filename(unit_id, lesson_id))
+        if self.app_context.fs.isfile(fn):
+            return fn
+        else:
+            return None
 
     def get_parent_unit(self, unit_id):
         return self._model.get_parent_unit(unit_id)

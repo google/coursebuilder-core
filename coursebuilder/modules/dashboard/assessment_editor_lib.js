@@ -123,10 +123,9 @@ AssessmentEditorController.prototype.hasHTMLContent = function() {
           this.inputExForm.inputs[1].inputs, 'html_review_form').getValue();
 };
 AssessmentEditorController.prototype.init = function() {
-  if (this.isHTMLAssessment()) {
-    this.hideJSEditors();
+  if (this.isJSAssessment()) {
+    this.hideHTMLEditors();
   } else {
     this.hideJSEditors();
-    this.showRevertButton();
   }
 };
