@@ -332,9 +332,14 @@ class ContentChunkEntity(BaseEntity):
     # for future functionality that does not exist yet). If False, the contents
     # of the chunk will be rendered verbatim.
     supports_custom_tags = db.BooleanProperty(default=False)
-    # Optional URL that the content was sourced from. Max size is 500B, enforced
-    # by datastore.
-    url = db.StringProperty(indexed=True)
+    # Optional identifier for the chunk in the system it was sourced from.
+    # Format is type_id:resource_id where type_id is an identifier that maps to
+    # an external system and resource_id is the identifier for a resource within
+    # that system (e.g. 'drive:1234' or 'web:http://example.com/index.html').
+    # Exact values are up to the caller, but if either type_id or resource_id is
+    # given, both must be, they must both be truthy, and type_id cannot contain
+    # ':'. Max size is 500B, enforced by datastore.
+    uid = db.StringProperty(indexed=True)
 
     # Payload of the chunk. Max size is 1MB, enforced by datastore.
     contents = db.TextProperty()
@@ -380,14 +385,23 @@ class ContentChunkDAO(object):
             return result
 
     @classmethod
-    def get_by_url(cls, url):
-        """Gets list of DTOs for all entities matching the given url string."""
+    def get_by_uid(cls, uid):
+        """Gets list of DTOs for all entities with given uid string."""
         results = ContentChunkEntity.all().filter(
-            ContentChunkEntity.url.name, url
+            ContentChunkEntity.uid.name, uid
         ).fetch(1000)
         return sorted(
             [cls._make_dto(result) for result in results],
             key=lambda dto: dto.id)
+
+    @classmethod
+    def make_uid(cls, type_id, resource_id):
+        """Makes a uid string (or None) from the given strings (or Nones)."""
+        if type_id is None and resource_id is None:
+            return None
+
+        assert type_id and resource_id and ':' not in type_id
+        return '%s:%s' % (type_id, resource_id)
 
     @classmethod
     def save(cls, dto):
@@ -419,7 +433,7 @@ class ContentChunkDAO(object):
 
         entity.contents = dto.contents
         entity.supports_custom_tags = dto.supports_custom_tags
-        entity.url = dto.url
+        entity.uid = cls.make_uid(dto.type_id, dto.resource_id)
         entity.put()
         MemcacheManager.set(
             cls._get_memcache_key(entity.key().id()), cls._make_dto(entity))
@@ -433,14 +447,28 @@ class ContentChunkDAO(object):
 
     @classmethod
     def _make_dto(cls, entity):
+        type_id, resource_id = cls._split_uid(entity.uid)
         return ContentChunkDTO({
             'content_type': entity.content_type,
             'contents': entity.contents,
             'id': entity.key().id(),
             'last_modified': entity.last_modified,
+            'resource_id': resource_id,
             'supports_custom_tags': entity.supports_custom_tags,
-            'url': entity.url,
+            'type_id': type_id,
         })
+
+    @classmethod
+    def _split_uid(cls, uid):
+        resource_id = None
+        type_id = None
+
+        if uid is not None:
+            assert ':' in uid
+            type_id, resource_id = uid.split(':', 1)
+            assert type_id and resource_id
+
+        return type_id, resource_id
 
 
 class ContentChunkDTO(object):
@@ -451,8 +479,9 @@ class ContentChunkDTO(object):
         self.contents = entity_dict.get('contents')
         self.id = entity_dict.get('id')
         self.last_modified = entity_dict.get('last_modified')
+        self.resource_id = entity_dict.get('resource_id')
         self.supports_custom_tags = entity_dict.get('supports_custom_tags')
-        self.url = entity_dict.get('url')
+        self.type_id = entity_dict.get('type_id')
 
     def __eq__(self, other):
         return (
@@ -461,8 +490,9 @@ class ContentChunkDTO(object):
             self.contents == other.contents and
             self.id == other.id and
             self.last_modified == other.last_modified and
+            self.resource_id == other.resource_id and
             self.supports_custom_tags == other.supports_custom_tags and
-            self.url == other.url)
+            self.type_id == other.type_id)
 
 
 class PersonalProfile(BaseEntity):

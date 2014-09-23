@@ -59,8 +59,11 @@ class ContentChunkTestCase(actions.ExportTestBase):
         self.contents = 'contents'
         self.id = 1
         self.memcache_key = models.ContentChunkDAO._get_memcache_key(self.id)
+        self.resource_id = 'resource:id'  # To check colons are preserved.
         self.supports_custom_tags = True
-        self.url = 'http://example.com/url'
+        self.type_id = 'type_id'
+        self.uid = models.ContentChunkDAO.make_uid(
+            self.type_id, self.resource_id)
 
     def tearDown(self):
         config.Registry.test_overrides = {}
@@ -73,9 +76,10 @@ class ContentChunkTestCase(actions.ExportTestBase):
         self.assertEqual(first.content_type, second.content_type)
         self.assertEqual(first.contents, second.contents)
         self.assertEqual(first.id, second.id)
+        self.assertEqual(first.resource_id, second.resource_id)
         self.assertEqual(
             first.supports_custom_tags, second.supports_custom_tags)
-        self.assertEqual(first.url, second.url)
+        self.assertEqual(first.type_id, second.type_id)
 
     def assert_list_fuzzy_equal(self, first, second):
         self.assertEqual(len(first), len(second))
@@ -88,8 +92,9 @@ class ContentChunkTestCase(actions.ExportTestBase):
             'content_type': self.content_type,
             'contents': self.contents,
             'id': self.id,
+            'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
-            'url': self.url,
+            'type_id': self.type_id,
         }))
         entity = db.get(key)
         dto = models.ContentChunkDAO.get(key.id())
@@ -111,8 +116,9 @@ class ContentChunkTestCase(actions.ExportTestBase):
         key = models.ContentChunkDAO.save(models.ContentChunkDTO({
             'content_type': self.content_type,
             'contents': self.contents,
+            'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
-            'url': self.url,
+            'type_id': self.type_id,
         }))
         entity = db.get(key)
         entity.contents = 'patched'
@@ -130,8 +136,9 @@ class ContentChunkTestCase(actions.ExportTestBase):
         key = models.ContentChunkDAO.save(models.ContentChunkDTO({
             'content_type': self.content_type,
             'contents': self.contents,
+            'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
-            'url': self.url,
+            'type_id': self.type_id,
         }))
         expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
         from_datastore = models.ContentChunkEntity.get_by_id(self.id)
@@ -150,31 +157,33 @@ class ContentChunkTestCase(actions.ExportTestBase):
         self.assertEqual(
             models.NO_OBJECT, models.MemcacheManager.get(self.memcache_key))
 
-    def test_dao_get_by_url_returns_empty_list_if_no_matches(self):
-        self.assertEqual([], models.ContentChunkDAO.get_by_url(self.url))
+    def test_dao_get_by_uid_returns_empty_list_if_no_matches(self):
+        self.assertEqual([], models.ContentChunkDAO.get_by_uid(self.uid))
 
-    def test_dao_get_by_url_returns_matching_dtos_sorted_by_id(self):
+    def test_dao_get_by_uid_returns_matching_dtos_sorted_by_id(self):
+        different_uid = models.ContentChunkDAO.make_uid(
+            'other', self.resource_id)
         first_key = models.ContentChunkEntity(
             content_type=self.content_type, contents=self.contents,
-            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
+            supports_custom_tags=self.supports_custom_tags, uid=self.uid).put()
         second_key = models.ContentChunkEntity(
             content_type=self.content_type, contents=self.contents + '2',
-            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
-        unused_different_url_key = models.ContentChunkEntity(
+            supports_custom_tags=self.supports_custom_tags, uid=self.uid).put()
+        unused_different_uid_key = models.ContentChunkEntity(
             content_type=self.content_type, contents=self.contents,
             supports_custom_tags=self.supports_custom_tags,
-            url=self.url + 'not').put()
+            uid=different_uid).put()
         expected_dtos = [
             models.ContentChunkDAO.get(first_key.id()),
             models.ContentChunkDAO.get(second_key.id())]
-        actual_dtos = models.ContentChunkDAO.get_by_url(self.url)
+        actual_dtos = models.ContentChunkDAO.get_by_uid(self.uid)
 
         self.assert_list_fuzzy_equal(expected_dtos, actual_dtos)
 
     def test_dao_make_dto(self):
         key = models.ContentChunkEntity(
             content_type=self.content_type, contents=self.contents,
-            supports_custom_tags=self.supports_custom_tags, url=self.url).put()
+            supports_custom_tags=self.supports_custom_tags, uid=self.uid).put()
         entity = db.get(key)  # Refetch to avoid timestamp skew.
         dto = models.ContentChunkDAO._make_dto(entity)
 
@@ -183,7 +192,55 @@ class ContentChunkTestCase(actions.ExportTestBase):
         self.assertEqual(entity.key().id(), dto.id)
         self.assertEqual(entity.last_modified, dto.last_modified)
         self.assertEqual(entity.supports_custom_tags, dto.supports_custom_tags)
-        self.assertEqual(entity.url, dto.url)
+
+        entity_type_id, entity_resource_id = models.ContentChunkDAO._split_uid(
+            entity.uid)
+        self.assertEqual(entity_resource_id, dto.resource_id)
+        self.assertEqual(entity_type_id, dto.type_id)
+
+    def test_dao_make_uid(self):
+        self.assertEqual(None, models.ContentChunkDAO.make_uid(None, None))
+        self.assertEqual(
+            'foo:bar', models.ContentChunkDAO.make_uid('foo', 'bar'))
+
+    def test_dao_make_uid_requires_both_args_disallows_colons_in_type_id(self):
+        bad_pairs = [
+            (None, 'foo'),
+            ('foo', None),
+            (':', None),
+            (':', 'foo'),
+            ('', ''),
+            ('', 'foo'),
+            ('foo', ''),
+            (':', ''),
+            (':', 'foo'),
+        ]
+
+        for bad_pair in bad_pairs:
+            with self.assertRaises(AssertionError):
+                models.ContentChunkDAO.make_uid(*bad_pair)
+
+    def test_dao_split_uid(self):
+        self.assertEqual(
+            (None, None), models.ContentChunkDAO._split_uid(None))
+        self.assertEqual(
+            ('foo', 'bar'), models.ContentChunkDAO._split_uid('foo:bar'))
+        self.assertEqual(
+            ('foo', 'http://bar'),
+            models.ContentChunkDAO._split_uid('foo:http://bar'))
+
+    def test_dao_split_uid_requires_colon_and_both_values_are_truthy(self):
+        with self.assertRaises(AssertionError):
+            models.ContentChunkDAO._split_uid('foo')
+
+        with self.assertRaises(AssertionError):
+            models.ContentChunkDAO._split_uid(':')
+
+        with self.assertRaises(AssertionError):
+            models.ContentChunkDAO._split_uid('foo:')
+
+        with self.assertRaises(AssertionError):
+            models.ContentChunkDAO._split_uid(':foo')
 
     def test_dao_save_creates_new_object_and_populates_cache(self):
         self.assertIsNone(models.MemcacheManager.get(self.memcache_key))
@@ -192,8 +249,9 @@ class ContentChunkTestCase(actions.ExportTestBase):
             'content_type': self.content_type,
             'contents': self.contents,
             'id': self.id,
+            'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
-            'url': self.url,
+            'type_id': self.type_id,
         }))
         expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
 
@@ -205,8 +263,9 @@ class ContentChunkTestCase(actions.ExportTestBase):
             'content_type': self.content_type,
             'contents': self.contents,
             'id': self.id,
+            'resource_id': self.resource_id,
             'supports_custom_tags': self.supports_custom_tags,
-            'url': self.url,
+            'type_id': self.type_id,
         }))
         original_dto = models.ContentChunkDAO._make_dto(db.get(key))
 
@@ -216,7 +275,7 @@ class ContentChunkTestCase(actions.ExportTestBase):
         original_dto.content_type = 'new_content_type'
         original_dto.contents = 'new_contents'
         original_dto.supports_custom_tags = True
-        original_dto.url = 'http://example.com/new'
+        original_dto.uid = 'new_system_id:new_resource:id'
         models.ContentChunkDAO.save(original_dto)
         expected_dto = models.ContentChunkDAO._make_dto(db.get(key))
 

@@ -60,7 +60,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.model_entities.EntityTransformsTest': 4,
     'tests.functional.model_jobs.JobOperationsTest': 15,
     'tests.functional.model_models.BaseJsonDaoTestCase': 1,
-    'tests.functional.model_models.ContentChunkTestCase': 11,
+    'tests.functional.model_models.ContentChunkTestCase': 15,
     'tests.functional.model_models.EventEntityTestCase': 1,
     'tests.functional.model_models.MemcacheManagerTestCase': 4,
     'tests.functional.model_models.PersonalProfileTestCase': 1,
