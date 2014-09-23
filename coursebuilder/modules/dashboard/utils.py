@@ -12,9 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Registration of sub-tabs for under Dashboard > Analytics."""
+"""Utilities for dashboard module.  Separated here to break include loops."""
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
+
+import os
+
+import appengine_config
+
+RESOURCES_PATH = '/modules/dashboard/resources'
+RESOURCES_DIR = os.path.join(appengine_config.BUNDLE_ROOT,
+                             RESOURCES_PATH.lstrip('/'))
 
 
 def build_assets_url(tab_name):

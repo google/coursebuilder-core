@@ -17,6 +17,8 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cgi
+import os
+import urllib
 
 from common import crypto
 from models import transforms
@@ -29,6 +31,26 @@ NAMESPACE = 'ns_%s' % COURSE_NAME
 ADMIN_EMAIL = 'admin@foo.com'
 TEXT_ASSET_URL = '/%s%s' % (COURSE_NAME, filer.TextAssetRESTHandler.URI)
 ITEM_ASSET_URL = '/%s%s' % (COURSE_NAME, filer.AssetItemRESTHandler.URI)
+FILES_HANDLER_URL = '/%s%s' % (COURSE_NAME, filer.FilesItemRESTHandler.URI)
+
+
+def _post_asset(test, base, key_name, file_name, content,
+                locale=None):
+    xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+        filer.AssetItemRESTHandler.XSRF_TOKEN_NAME)
+    if key_name:
+        key = os.path.join(base, key_name)
+    else:
+        key = base
+    if locale:
+        key = '/locale/%s/%s' % (locale, key)
+    response = test.post(
+        '/%s%s' % (test.COURSE_NAME, filer.AssetItemRESTHandler.URI),
+        {'request': transforms.dumps({
+            'xsrf_token': cgi.escape(xsrf_token),
+            'payload': transforms.dumps({'key': key, 'base': base})})},
+        upload_files=[('file', file_name, content)])
+    return response
 
 
 class AssetsRestTest(actions.TestBase):
@@ -36,7 +58,11 @@ class AssetsRestTest(actions.TestBase):
     def setUp(self):
         super(AssetsRestTest, self).setUp()
         actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL, COURSE_TITLE)
-        actions.login(ADMIN_EMAIL)
+        actions.login(ADMIN_EMAIL, is_admin=True)
+        actions.update_course_config(COURSE_NAME, {
+            'extra_locales': [
+                {'locale': 'de_DE', 'availability': 'available'}]})
+        self.COURSE_NAME = COURSE_NAME
 
     def test_add_file_in_unsupported_dir(self):
 
@@ -77,30 +103,159 @@ class AssetsRestTest(actions.TestBase):
         response = self.get('/%s/%s' % (COURSE_NAME, key))
         self.assertEquals(contents, response.body)
 
-    def test_add_item_in_subdir(self):
+    def test_add_new_asset(self):
+        base = 'assets/lib'
+        name = 'foo.js'
+        content = 'alert("Hello, world");'
+        response = _post_asset(self, base, None, name, content)
+        self.assertIn('<status>200</status>', response)
+        self.assertIn('<message>Saved.</message>', response)
 
-        # Upload file via REST POST
-        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
-            filer.AssetItemRESTHandler.XSRF_TOKEN_NAME)
-        base = 'assets/lib/my_project'
-        filename = 'foo.js'
-        contents = 'alert("Hello, world");'
-        response = self.post(
-            ITEM_ASSET_URL,
-            {'request': transforms.dumps({
-                'xsrf_token': cgi.escape(xsrf_token),
-                'payload': transforms.dumps({
-                    'base': base})})},
-            upload_files=[('file', filename, contents)])
+        # Verify asset available via AssetHandler
+        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, name))
+        self.assertEquals(content, response.body)
+
+    def test_add_new_asset_with_key(self):
+        base = 'assets/lib'
+        name = 'foo.js'
+        content = 'alert("Hello, world");'
+        response = _post_asset(self, base, name, name, content)
+        self.assertIn('<status>200</status>', response)
+        self.assertIn('<message>Saved.</message>', response)
+
+        # Verify asset available via AssetHandler
+        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, name))
+        self.assertEquals(content, response.body)
+
+    def test_add_asset_in_subdir(self):
+        base = 'assets/lib'
+        key_name = 'a/b/c/foo.js'
+        file_name = 'foo.js'
+        content = 'alert("Hello, world");'
+        response = _post_asset(self, base, key_name, file_name, content)
         self.assertIn('<status>200</status>', response.body)
         self.assertIn('<message>Saved.</message>', response.body)
 
-        # Verify that file uploaded to subdir is available via HTTP server
-        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, filename))
-        self.assertEquals(contents, response.body)
+        # Verify asset available via AssetHandler
+        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, key_name))
+        self.assertEquals(content, response.body)
+
+    def test_add_asset_in_bad_dir(self):
+        base = 'assets/not_a_supported_asset_directory'
+        name = 'foo.js'
+        content = 'alert("Hello, world");'
+        response = _post_asset(self, base, name, name, content)
+        self.assertIn('<status>400</status>', response.body)
+        self.assertIn('<message>Malformed request.</message>', response.body)
 
     def test_get_item_asset_url_in_subdir(self):
-        response = self.get(ITEM_ASSET_URL +
-                            '?key=assets/lib/my_project')
+        response = self.get(ITEM_ASSET_URL + '?key=assets/lib/my_project')
         payload = transforms.loads(response.body)
         self.assertEquals(200, payload['status'])
+
+    def test_get_asset_directory(self):
+        response = self.get(ITEM_ASSET_URL + '?key=assets/img')
+        payload = transforms.loads(transforms.loads(response.body)['payload'])
+        self.assertEquals('assets/img', payload['key'])
+        self.assertEquals('assets/img', payload['base'])
+        self.assertNotIn('asset_url', payload)
+
+    def test_get_nonexistent_asset(self):
+        response = self.get(ITEM_ASSET_URL + '?key=assets/img/foo.jpg')
+        payload = transforms.loads(transforms.loads(response.body)['payload'])
+        self.assertEquals('assets/img/foo.jpg', payload['key'])
+        self.assertEquals('assets/img', payload['base'])
+        self.assertNotIn('asset_url', payload)
+
+    def test_get_existing_asset(self):
+        base = 'assets/img'
+        file_name = key_name = 'foo.jpg'
+        asset_path = os.path.join(base, key_name)
+        content = 'Gooooooooooooooooooooood morning, Vietnam!'
+        _post_asset(self, base, key_name, file_name, content)
+        response = self.get(ITEM_ASSET_URL + '?key=' + asset_path)
+        payload = transforms.loads(transforms.loads(response.body)['payload'])
+        self.assertEquals(asset_path, payload['key'])
+        self.assertEquals(base, payload['base'])
+        self.assertIn('locale/en_US/' + asset_path, payload['asset_url'])
+
+    def test_cannot_overwrite_existing_file_without_key(self):
+        def add_asset():
+            base = 'assets/lib'
+            name = 'foo.js'
+            content = 'alert("Hello, world");'
+            return _post_asset(self, base, None, name, content)
+        response = add_asset()
+        self.assertIn('<message>Saved.</message>', response.body)
+        response = add_asset()
+        self.assertIn('<status>403</status>', response.body)
+        self.assertIn('<message>Cannot overwrite existing file.</message>',
+                      response.body)
+
+    def test_can_overwrite_existing_file_with_key(self):
+        def add_asset():
+            base = 'assets/lib'
+            name = 'foo.js'
+            content = 'alert("Hello, world");'
+            return _post_asset(self, base, name, name, content)
+        response = add_asset()
+        self.assertIn('<message>Saved.</message>', response.body)
+        response = add_asset()
+        self.assertIn('<message>Saved.</message>', response.body)
+
+    def test_overwrite_ignores_file_name(self):
+        base = 'assets/lib'
+        key_name = 'foo.js'
+        file_name = 'bar.js'
+        content = 'alert("Hello, world");'
+        _post_asset(self, base, key_name, file_name, content)
+
+        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, key_name))
+        self.assertEquals(200, response.status_int)
+        response = self.get('/%s/%s/%s' % (COURSE_NAME, base, file_name),
+                            expect_errors=True)
+        self.assertEquals(404, response.status_int)
+
+    def test_add_localized_asset(self):
+        base = 'assets/img'
+        name = 'foo.jpg'
+        locale = 'de_DE'
+        en_content = 'xyzzy'
+        de_content = 'plugh'
+        _post_asset(self, base, name, name, en_content)
+        _post_asset(self, base, name, name, de_content, locale)
+
+        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
+        response = self.get(asset_url)
+        self.assertEquals(en_content, response.body)
+        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'})
+        self.assertEquals(de_content, response.body)
+        response = self.get('%s/locale/de_DE/%s/%s' % (
+            COURSE_NAME, base, name))
+        self.assertEquals(de_content, response.body)
+
+    def test_deleting_localized_deletes_all_copies(self):
+        base = 'assets/img'
+        name = 'foo.jpg'
+        locale = 'de_DE'
+        en_content = 'xyzzy'
+        de_content = 'plugh'
+        _post_asset(self, base, name, name, en_content)
+        _post_asset(self, base, name, name, de_content, locale)
+
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('delete-asset')
+        key = os.path.join(base, name)
+        delete_url = '%s?%s' % (
+            FILES_HANDLER_URL,
+            urllib.urlencode({
+                'key': key,
+                'xsrf_token': cgi.escape(xsrf_token)
+            }))
+        self.delete(delete_url)
+
+        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
+        response = self.get(asset_url, expect_errors=True)
+        self.assertEquals(404, response.status_int)
+        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'},
+                            expect_errors=True)
+        self.assertEquals(404, response.status_int)

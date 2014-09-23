@@ -466,8 +466,7 @@ class CourseHandler(ApplicationHandler):
             for supported_lang in available_locales:
                 if lang.lower() == supported_lang.lower():
                     return supported_lang
-
-        return Course.get_environ(app_context)['course']['locale']
+        return app_context.default_locale
 
     def get_course(self):
         """Get current course."""

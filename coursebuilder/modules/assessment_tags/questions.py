@@ -138,7 +138,7 @@ class QuestionTag(tags.BaseTag):
 
     def render(self, node, handler):
         """Renders a question."""
-        locale = handler.app_context.get_environ()['course']['locale']
+        locale = handler.app_context.default_locale
 
         quid = node.attrib.get('quid')
         weight = node.attrib.get('weight')
@@ -200,7 +200,7 @@ class QuestionGroupTag(tags.BaseTag):
     def render(self, node, handler):
         """Renders a question."""
 
-        locale = handler.app_context.get_environ()['course']['locale']
+        locale = handler.app_context.default_locale
 
         qgid = node.attrib.get('qgid')
         group_instanceid = node.attrib.get('instanceid')

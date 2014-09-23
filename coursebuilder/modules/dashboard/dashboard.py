@@ -28,9 +28,7 @@ from course_settings import CourseSettingsHandler
 from course_settings import CourseSettingsRESTHandler
 from course_settings import HtmlHookHandler
 from course_settings import HtmlHookRESTHandler
-import filer
 from filer import AssetItemRESTHandler
-from filer import AssetUriRESTHandler
 from filer import FileManagerAndEditor
 from filer import FilesItemRESTHandler
 from filer import TextAssetRESTHandler
@@ -55,7 +53,9 @@ from unit_lesson_editor import UnitLessonEditor
 from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
 
+import utils as dashboard_utils
 import appengine_config
+
 from common import crypto
 from common import jinja_utils
 from common import safe_dom
@@ -90,8 +90,6 @@ from tools import verify
 from google.appengine.api import app_identity
 from google.appengine.api import users
 
-RESOURCES_PATH = '/modules/dashboard/resources'
-
 custom_module = None
 
 
@@ -108,7 +106,7 @@ class DashboardHandler(
         default_tab_action, 'assets', 'settings', 'analytics', 'search',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
         'edit_unit', 'edit_link', 'edit_lesson', 'edit_assessment',
-        'add_asset', 'delete_asset', 'manage_text_asset', 'import_course',
+        'manage_asset', 'manage_text_asset', 'import_course',
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
@@ -136,8 +134,6 @@ class DashboardHandler(
             (CourseSettingsRESTHandler.URI, CourseSettingsRESTHandler),
             (HtmlHookRESTHandler.URI, HtmlHookRESTHandler),
             (FilesItemRESTHandler.URI, FilesItemRESTHandler),
-            (AssetItemRESTHandler.URI, AssetItemRESTHandler),
-            (AssetUriRESTHandler.URI, AssetUriRESTHandler),
             (ImportCourseRESTHandler.URI, ImportCourseRESTHandler),
             (LabelRestHandler.URI, LabelRestHandler),
             (LessonRESTHandler.URI, LessonRESTHandler),
@@ -892,8 +888,13 @@ class DashboardHandler(
             # make a <li> item
             li = safe_dom.Element('li')
             if links:
+                if sites.is_localizable_asset(filename):
+                    url = sites.asset_path_for_localized_item(
+                        self.app_context.default_locale, filename)
+                else:
+                    url = urllib.quote(filename)
                 li.add_child(safe_dom.Element(
-                    'a', href=urllib.quote(filename)).add_text(filename))
+                    'a', href=url).add_text(filename))
             else:
                 li.add_text(filename)
 
@@ -922,12 +923,11 @@ class DashboardHandler(
                 safe_dom.Element(
                     'a', className='gcb-button gcb-pull-right',
                     href='dashboard?%s' % urllib.urlencode(
-                        {'action': 'add_asset',
+                        {'action': 'manage_asset',
                          'tab': tab_name,
-                         'base': subfolder})
+                         'key': subfolder})
                 ).add_text(
-                    'Upload to ' +
-                    filer.strip_leading_and_trailing_slashes(subfolder))
+                    'Upload to ' + subfolder.lstrip('/').rstrip('/'))
             ).append(
                 safe_dom.Element(
                     'div', style='clear: both; padding-top: 2px;'
@@ -1393,7 +1393,8 @@ class DashboardHandler(
         items.append(self.list_and_format_file_list(
             'Images & Documents', '/assets/img/', tab.name, links=True,
             upload=True,
-            edit_url_template='dashboard?action=delete_asset&tab=%s&uri=%s',
+            edit_url_template=(
+                'dashboard?action=manage_asset&tab=%s&key=%s'),
             caption_if_empty='< inherited from /assets/img/ >',
             all_paths=all_paths))
 
@@ -1639,8 +1640,10 @@ def register_module():
     tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)
 
     global_routes = [
-        (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
-        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
+        (os.path.join(dashboard_utils.RESOURCES_PATH, 'js', '.*'),
+         tags.JQueryHandler),
+        (os.path.join(dashboard_utils.RESOURCES_PATH, '.*'),
+         tags.ResourcesHandler)]
 
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),

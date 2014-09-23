@@ -126,7 +126,7 @@ class TextFileUploadTag(tags.BaseTag):
 
         template = jinja_utils.get_template(
             'templates/form.html', os.path.dirname(__file__),
-            locale=handler.app_context.get_environ()['course']['locale'],
+            locale=handler.app_context.default_locale
         )
 
         already_submitted = False

@@ -36,7 +36,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.HtmlHookTest': 11,
     'tests.functional.admin_settings.JinjaContextTest': 2,
     'tests.functional.admin_settings.WelcomePageTests': 5,
-    'tests.functional.assets_rest.AssetsRestTest': 4,
+    'tests.functional.assets_rest.AssetsRestTest': 15,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
     'tests.functional.common_crypto.PiiObfuscationHmac': 2,
@@ -92,7 +92,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 1,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
-    'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
+    'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 7,
     'tests.functional.modules_i18n_dashboard'
         '.TranslationConsoleRestHandlerTests': 5,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
