@@ -1,15 +1,15 @@
 # Ukrainian translations for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
+# Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-22 11:29-0700\n"
-"PO-Revision-Date: 2013-08-14 10:20-0700\n"
+"POT-Creation-Date: 2014-09-23 09:58-0700\n"
+"PO-Revision-Date: 2014-09-23 09:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: uk <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -23,7 +23,7 @@ msgstr ""
 #: experimental/coursebuilder/controllers/utils.py:203
 #, python-format
 msgid "Unit %s - %s"
-msgstr ""
+msgstr "Розділ %s – %s"
 
 #. Message displayed as title for unit within a course.
 #: experimental/coursebuilder/controllers/utils.py:215
@@ -125,12 +125,12 @@ msgstr " Підказка "
 #. Title of section on page showing certificates for course completion.
 #: experimental/coursebuilder/modules/certificate/certificate.py:173
 msgid "Certificate"
-msgstr ""
+msgstr "Сертифікат"
 
 #. Label on control to navigate to page showing certificate.
 #: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Click for certificate"
-msgstr ""
+msgstr "Натисніть, щоб переглянути сертифікат"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:186
@@ -138,29 +138,31 @@ msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
 msgstr ""
+"Ви ще не відповідаєте вимогам для отримання сертифіката про завершення "
+"курсу."
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
-msgstr ""
+msgstr "Сертифікат про завершення курсу"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
-msgstr ""
+msgstr "Отримує"
 
 #. Phrase signifying that a student has successfully completed a course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
-msgstr ""
+msgstr "за успішне завершення"
 
 #. Phrase giving the name of an instructional course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
-msgstr ""
+msgstr "курсу \"%(course)s\""
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
@@ -264,7 +266,7 @@ msgstr "Змінити ім’я"
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:249
 msgid "Error: Empty email list"
-msgstr ""
+msgstr "Помилка: порожній список електронних адрес"
 
 #: experimental/coursebuilder/modules/invitation/invitation.py:261
 #, python-format
@@ -272,70 +274,72 @@ msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
 "messages sent."
 msgstr ""
+"This exceeds your email cap. Number of remaining invitations: %s. No "
+"messages sent."
 
 #. Error indicating an email addresses is not well-formed.
 #: experimental/coursebuilder/modules/invitation/invitation.py:268
 #, python-format
 msgid "Error: Invalid email \"%s\""
-msgstr ""
+msgstr "Помилка: недійсна електронна адреса %s"
 
 #. Error indicating an email addresses is already known.
 #: experimental/coursebuilder/modules/invitation/invitation.py:272
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
-msgstr ""
+msgstr "Помилка: ви вже надіслали запрошення на електронну адресу %s"
 
 #. Error indicating not all email messages were sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
-msgstr ""
+msgstr "Надіслано не всі повідомлення (%s / %s):"
 
 #. Success message indicating number of emails sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:297
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "Надіслано повідомлень: %s"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:350
 msgid "Invite Friends"
-msgstr ""
+msgstr "Запросіть друзів"
 
 #. Label on control asking user to invite friends to join.
 #: experimental/coursebuilder/modules/invitation/invitation.py:355
 msgid "Click to send invitations to family and friends"
-msgstr ""
+msgstr "Натисніть, щоб надіслати запрошення родичам і друзям"
 
 #. Inviting friends to join a course is not currently enabled.
 #: experimental/coursebuilder/modules/invitation/invitation.py:359
 msgid "Invitations not currently available"
-msgstr ""
+msgstr "Запрошення зараз недоступні"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
 #: experimental/coursebuilder/modules/invitation/invitation.py:371
 msgid "Subscribe/Unsubscribe"
-msgstr ""
+msgstr "Підписатись або скасувати підписку"
 
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:378
 msgid "You are currently unsubscribed from invitations."
-msgstr ""
+msgstr "Ви скасували підписку на запрошення."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:382
 msgid "Click here to re-subscribe."
-msgstr ""
+msgstr "Натисніть тут, щоб знову підписатися."
 
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:387
 msgid "You can currently receive invitations. "
-msgstr ""
+msgstr "Ви можете отримувати запрошення. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:390
 msgid "Click here to unsubscribe."
-msgstr ""
+msgstr "Натисніть тут, щоб скасувати підписку."
 
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:19
@@ -346,7 +350,7 @@ msgstr "Перебіг курсу"
 #. title on page requesting user to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:30
 msgid "Invite friends or family members to join the course"
-msgstr ""
+msgstr "Запросіть друзів і родичів приєднатися до курсу"
 
 #. Block of text inviting users to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:33
@@ -355,6 +359,9 @@ msgid ""
 "email addresses below and click \"Send\". They will receive an email from"
 " you with the text shown below."
 msgstr ""
+"Знаєте людей, які хочуть приєднатися до курсу? Введіть їхні електронні "
+"адреси нижче та натисніть \"Надіслати\". Вони отримають від вас "
+"електронний лист із наведеним нижче текстом."
 
 #. Instructions on how to fill out email addresses in a form.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:43
@@ -362,21 +369,23 @@ msgid ""
 "Enter recipients' email addresses separated by commas. E.g., "
 "alice@gmail.com, ben@gmail.com"
 msgstr ""
+"Введіть через кому електронні адреси отримувачів. Наприклад, "
+"alice@gmail.com, ben@gmail.com"
 
 #. Label on control submitting a form with email addresses
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:52
 msgid "Send"
-msgstr ""
+msgstr "Надіслати"
 
 #. Section title indicating an example of an email.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:57
 msgid "Sample Email"
-msgstr ""
+msgstr "Зразок електронного листа"
 
 #. Example subject line of an email to be sent.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:60
 msgid "Subject:"
-msgstr ""
+msgstr "Тема:"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -441,6 +450,8 @@ msgid ""
 "The following email address has been subscribed to receive emails for "
 "this course:"
 msgstr ""
+"Власник цієї електронної адреси підписався на електронні листи щодо цього"
+" курсу:"
 
 #. Indicates that a user will no longer recieve email about a course
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:25
@@ -448,6 +459,8 @@ msgid ""
 "The following email address has been unsubscribed from emails for this "
 "course:"
 msgstr ""
+"Власник цієї електронної адреси скасував підписку на електронні листи "
+"щодо цього курсу:"
 
 #. After a user has unsubscribed from email notifications, indicate that
 #. re-subscribing is possible using a control lower on the page.
@@ -456,11 +469,13 @@ msgid ""
 "If you prefer to continue receiving notifications, please click below to "
 "resubscribe."
 msgstr ""
+"Якщо ви хочете надалі отримувати сповіщення, натисніть нижче, щоб знову "
+"підписатися."
 
 #. Button at the bottom of the page to resubscribe to notifications.
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:44
 msgid "Resubscribe"
-msgstr ""
+msgstr "Підписатися"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -643,8 +658,8 @@ msgid ""
 " Congratulations! Press the \\'Submit Answers\\' button to submit your "
 "grade. "
 msgstr ""
-" Вітаємо! Натисніть кнопку \\\"Надіслати відповіді\\\", щоб надіслати "
-"свою оцінку. "
+" Вітаємо! Натисніть кнопку \"Надіслати відповіді\", щоб надіслати свою "
+"оцінку. "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
@@ -653,9 +668,9 @@ msgid ""
 " Press the \\'Submit Answers\\' button below to save your scores. You can"
 " also edit your answers above before clicking \\'Submit Answers\\'. "
 msgstr ""
-" Нижче натисніть кнопку \\\"Надіслати відповіді\\\", щоб зберегти свої "
+" Нижче натисніть кнопку \"Надіслати відповіді\", щоб зберегти свої "
 "результати. Можна також відредагувати відповіді вище, перш ніж натискати "
-"\\\"Надіслати відповіді\\\". "
+"\"Надіслати відповіді\". "
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit an assignment.
@@ -701,7 +716,7 @@ msgstr "Конфіденційність і умови"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:298
 msgid "Locale:"
-msgstr ""
+msgstr "Код мови:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1016,7 +1031,7 @@ msgstr "Рецензувати нове завдання"
 #. a class.
 #: experimental/coursebuilder/views/review_dashboard.html:81
 msgid "Back to assignment"
-msgstr ""
+msgstr "Назад до завдання"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
@@ -1110,33 +1125,36 @@ msgid ""
 "assessment is %(score)s%%. If you wish, you may return to the assessment "
 "and take it again."
 msgstr ""
+"Thank you for taking the %(assessment_name)s. Your score for this "
+"assessment is %(score)s%%. If you wish, you may return to the assessment "
+"and take it again."
 
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
 #: experimental/coursebuilder/views/test_confirmation_content.html:20
 msgid "Return to Unit"
-msgstr ""
+msgstr "Назад до розділу"
 
 #. Title shown on the student profile page
 #: experimental/coursebuilder/views/track_selection.html:13
 msgid "Course Tracks"
-msgstr ""
+msgstr "Звукові доріжки курсу"
 
 #. Text indicating which units will be shown for the course
 #: experimental/coursebuilder/views/track_selection.html:28
 msgid "Course Components"
-msgstr ""
+msgstr "Компоненти курсу"
 
 #. Text indicating which course tracks the student has selected
 #: experimental/coursebuilder/views/track_selection.html:59
 msgid "My Tracks"
-msgstr ""
+msgstr "Мої звукові доріжки"
 
 #. Text for a button to save selected course tracks for student.
 #: experimental/coursebuilder/views/track_selection.html:82
 msgid "Set Tracks"
-msgstr ""
+msgstr "Зберегти звукові доріжки"
 
 #. Text shown after a student has unenrolled from a course. It is followed by a
 #. course name.
@@ -1168,18 +1186,18 @@ msgstr "Ні"
 #. Label on a control to show a class schedule.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Schedule"
-msgstr ""
+msgstr "Показати розклад"
 
 #. Label on a control to hide a class schedule.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Schedule"
-msgstr ""
+msgstr "Сховати розклад"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
 #: experimental/coursebuilder/views/unit.html:102
 msgid "This unit has no content."
-msgstr ""
+msgstr "У цьому розділі немає вмісту."
 
 #. Text on the navigation button at the end of a lesson page.
 #: experimental/coursebuilder/views/unit.html:123

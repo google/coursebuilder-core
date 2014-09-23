@@ -1,15 +1,15 @@
 # Spanish translations for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
+# Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-22 11:29-0700\n"
-"PO-Revision-Date: 2013-08-14 10:20-0700\n"
+"POT-Creation-Date: 2014-09-23 09:58-0700\n"
+"PO-Revision-Date: 2014-09-23 09:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: es <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -22,7 +22,7 @@ msgstr ""
 #: experimental/coursebuilder/controllers/utils.py:203
 #, python-format
 msgid "Unit %s - %s"
-msgstr ""
+msgstr "Unidad %s - %s"
 
 #. Message displayed as title for unit within a course.
 #: experimental/coursebuilder/controllers/utils.py:215
@@ -124,12 +124,12 @@ msgstr " Sugerencia "
 #. Title of section on page showing certificates for course completion.
 #: experimental/coursebuilder/modules/certificate/certificate.py:173
 msgid "Certificate"
-msgstr ""
+msgstr "Certificado"
 
 #. Label on control to navigate to page showing certificate.
 #: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Click for certificate"
-msgstr ""
+msgstr "Haz clic para obtener el certificado"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:186
@@ -137,29 +137,31 @@ msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
 msgstr ""
+"Aún no has cumplido los requisitos del curso para obtener un certificado "
+"de realización del curso."
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
-msgstr ""
+msgstr "Certificado de realización del curso"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
-msgstr ""
+msgstr "Otorgado a"
 
 #. Phrase signifying that a student has successfully completed a course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
-msgstr ""
+msgstr "por haber completado satisfactoriamente el"
 
 #. Phrase giving the name of an instructional course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
-msgstr ""
+msgstr "curso %(course)s"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
@@ -263,7 +265,7 @@ msgstr "Cambiar nombre"
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:249
 msgid "Error: Empty email list"
-msgstr ""
+msgstr "Error: lista de correo electrónico vacía"
 
 #: experimental/coursebuilder/modules/invitation/invitation.py:261
 #, python-format
@@ -271,70 +273,72 @@ msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
 "messages sent."
 msgstr ""
+"This exceeds your email cap. Number of remaining invitations: %s. No "
+"messages sent."
 
 #. Error indicating an email addresses is not well-formed.
 #: experimental/coursebuilder/modules/invitation/invitation.py:268
 #, python-format
 msgid "Error: Invalid email \"%s\""
-msgstr ""
+msgstr "Error: la dirección de correo electrónico \"%s\" no es válida"
 
 #. Error indicating an email addresses is already known.
 #: experimental/coursebuilder/modules/invitation/invitation.py:272
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
-msgstr ""
+msgstr "Error: ya has enviado una invitación por correo electrónico a \"%s\""
 
 #. Error indicating not all email messages were sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
-msgstr ""
+msgstr "No se han enviado todos los mensajes (%s/%s):"
 
 #. Success message indicating number of emails sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:297
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "Se han enviado %s mensajes"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:350
 msgid "Invite Friends"
-msgstr ""
+msgstr "Invita a amigos"
 
 #. Label on control asking user to invite friends to join.
 #: experimental/coursebuilder/modules/invitation/invitation.py:355
 msgid "Click to send invitations to family and friends"
-msgstr ""
+msgstr "Haz clic para enviar invitaciones a familiares y amigos"
 
 #. Inviting friends to join a course is not currently enabled.
 #: experimental/coursebuilder/modules/invitation/invitation.py:359
 msgid "Invitations not currently available"
-msgstr ""
+msgstr "Actualmente no están disponibles las invitaciones"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
 #: experimental/coursebuilder/modules/invitation/invitation.py:371
 msgid "Subscribe/Unsubscribe"
-msgstr ""
+msgstr "Suscribirse/Anular suscripción"
 
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:378
 msgid "You are currently unsubscribed from invitations."
-msgstr ""
+msgstr "Actualmente no estás suscrito para recibir invitaciones."
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:382
 msgid "Click here to re-subscribe."
-msgstr ""
+msgstr "Haz clic aquí para volver a suscribirte."
 
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:387
 msgid "You can currently receive invitations. "
-msgstr ""
+msgstr "Actualmente puedes recibir invitaciones. "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:390
 msgid "Click here to unsubscribe."
-msgstr ""
+msgstr "Haz clic aquí para anular la suscripción."
 
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:19
@@ -345,7 +349,7 @@ msgstr "Progreso del curso"
 #. title on page requesting user to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:30
 msgid "Invite friends or family members to join the course"
-msgstr ""
+msgstr "Invita a familiares o amigos a participar en el curso"
 
 #. Block of text inviting users to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:33
@@ -354,6 +358,10 @@ msgid ""
 "email addresses below and click \"Send\". They will receive an email from"
 " you with the text shown below."
 msgstr ""
+"¿Conoces a otras personas que podrían estar interesadas en participar en "
+"este curso? Introduce sus direcciones de correo electrónico a "
+"continuación y haz clic en Enviar. Recibirán un correo electrónico de tu "
+"parte con el texto que se muestra a continuación."
 
 #. Instructions on how to fill out email addresses in a form.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:43
@@ -361,21 +369,23 @@ msgid ""
 "Enter recipients' email addresses separated by commas. E.g., "
 "alice@gmail.com, ben@gmail.com"
 msgstr ""
+"Introduce las direcciones de correo electrónico de los destinatarios "
+"separadas por comas (por ejemplo, alicia@gmail.com, juan@gmail.com)"
 
 #. Label on control submitting a form with email addresses
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:52
 msgid "Send"
-msgstr ""
+msgstr "Enviar"
 
 #. Section title indicating an example of an email.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:57
 msgid "Sample Email"
-msgstr ""
+msgstr "Correo electrónico de ejemplo"
 
 #. Example subject line of an email to be sent.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:60
 msgid "Subject:"
-msgstr ""
+msgstr "Asunto:"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -440,6 +450,8 @@ msgid ""
 "The following email address has been subscribed to receive emails for "
 "this course:"
 msgstr ""
+"La siguiente dirección de correo electrónico se ha suscrito para recibir "
+"correos electrónicos relacionados con este curso:"
 
 #. Indicates that a user will no longer recieve email about a course
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:25
@@ -447,6 +459,8 @@ msgid ""
 "The following email address has been unsubscribed from emails for this "
 "course:"
 msgstr ""
+"La siguiente dirección de correo electrónico ha anulado la suscripción "
+"para recibir correos electrónicos relacionados con este curso:"
 
 #. After a user has unsubscribed from email notifications, indicate that
 #. re-subscribing is possible using a control lower on the page.
@@ -455,11 +469,13 @@ msgid ""
 "If you prefer to continue receiving notifications, please click below to "
 "resubscribe."
 msgstr ""
+"Si prefieres seguir recibiendo notificaciones, haz clic a continuación "
+"para volver a suscribirte."
 
 #. Button at the bottom of the page to resubscribe to notifications.
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:44
 msgid "Resubscribe"
-msgstr ""
+msgstr "Volver a suscribirse"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -644,7 +660,7 @@ msgid ""
 " Congratulations! Press the \\'Submit Answers\\' button to submit your "
 "grade. "
 msgstr ""
-" ¡Enhorabuena! Pulsa el botón \\\"Enviar respuestas\\\" para enviar tu "
+" ¡Enhorabuena! Pulsa el botón \"Enviar respuestas\" para enviar tu "
 "puntuación. "
 
 #. Text appearing after the student has checked his/her answers to an
@@ -654,9 +670,9 @@ msgid ""
 " Press the \\'Submit Answers\\' button below to save your scores. You can"
 " also edit your answers above before clicking \\'Submit Answers\\'. "
 msgstr ""
-" Pulsa el botón \\\"Enviar respuestas\\\", que aparece a continuación, "
-"para guardar tus puntuaciones. También puedes editar las respuestas que "
-"diste arriba antes de hacer clic en \\\"Enviar respuestas\\\". "
+" Pulsa el botón \"Enviar respuestas\", que aparece a continuación, para "
+"guardar tus puntuaciones. También puedes editar las respuestas que diste "
+"arriba antes de hacer clic en \"Enviar respuestas\". "
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit an assignment.
@@ -702,7 +718,7 @@ msgstr "Privacidad y condiciones"
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:298
 msgid "Locale:"
-msgstr ""
+msgstr "Configuración regional:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1017,7 +1033,7 @@ msgstr "Revisar otro trabajo"
 #. a class.
 #: experimental/coursebuilder/views/review_dashboard.html:81
 msgid "Back to assignment"
-msgstr ""
+msgstr "Volver a la tarea"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
@@ -1113,33 +1129,36 @@ msgid ""
 "assessment is %(score)s%%. If you wish, you may return to the assessment "
 "and take it again."
 msgstr ""
+"Thank you for taking the %(assessment_name)s. Your score for this "
+"assessment is %(score)s%%. If you wish, you may return to the assessment "
+"and take it again."
 
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
 #: experimental/coursebuilder/views/test_confirmation_content.html:20
 msgid "Return to Unit"
-msgstr ""
+msgstr "Volver a la unidad"
 
 #. Title shown on the student profile page
 #: experimental/coursebuilder/views/track_selection.html:13
 msgid "Course Tracks"
-msgstr ""
+msgstr "Seguimientos de cursos"
 
 #. Text indicating which units will be shown for the course
 #: experimental/coursebuilder/views/track_selection.html:28
 msgid "Course Components"
-msgstr ""
+msgstr "Componentes del curso"
 
 #. Text indicating which course tracks the student has selected
 #: experimental/coursebuilder/views/track_selection.html:59
 msgid "My Tracks"
-msgstr ""
+msgstr "Mis seguimientos"
 
 #. Text for a button to save selected course tracks for student.
 #: experimental/coursebuilder/views/track_selection.html:82
 msgid "Set Tracks"
-msgstr ""
+msgstr "Establecer seguimientos"
 
 #. Text shown after a student has unenrolled from a course. It is followed by a
 #. course name.
@@ -1171,18 +1190,18 @@ msgstr "No"
 #. Label on a control to show a class schedule.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Schedule"
-msgstr ""
+msgstr "Mostrar horario"
 
 #. Label on a control to hide a class schedule.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Schedule"
-msgstr ""
+msgstr "Ocultar horario"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
 #: experimental/coursebuilder/views/unit.html:102
 msgid "This unit has no content."
-msgstr ""
+msgstr "Esta unidad no tiene contenido."
 
 #. Text on the navigation button at the end of a lesson page.
 #: experimental/coursebuilder/views/unit.html:123

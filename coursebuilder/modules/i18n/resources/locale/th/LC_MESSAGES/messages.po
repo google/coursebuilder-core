@@ -1,15 +1,15 @@
 # Thai translations for PROJECT.
-# Copyright (C) 2013 ORGANIZATION
+# Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-22 11:29-0700\n"
-"PO-Revision-Date: 2013-08-14 10:20-0700\n"
+"POT-Creation-Date: 2014-09-23 09:58-0700\n"
+"PO-Revision-Date: 2014-09-23 09:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: th <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -22,7 +22,7 @@ msgstr ""
 #: experimental/coursebuilder/controllers/utils.py:203
 #, python-format
 msgid "Unit %s - %s"
-msgstr ""
+msgstr "หน่วย %s - %s"
 
 #. Message displayed as title for unit within a course.
 #: experimental/coursebuilder/controllers/utils.py:215
@@ -124,42 +124,42 @@ msgstr " คำแนะนำ "
 #. Title of section on page showing certificates for course completion.
 #: experimental/coursebuilder/modules/certificate/certificate.py:173
 msgid "Certificate"
-msgstr ""
+msgstr "ประกาศนียบัตร"
 
 #. Label on control to navigate to page showing certificate.
 #: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Click for certificate"
-msgstr ""
+msgstr "คลิกเพื่อดูประกาศนียบัตร"
 
 #. Text indicating student has not yet completed a course.
 #: experimental/coursebuilder/modules/certificate/certificate.py:186
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
-msgstr ""
+msgstr "คุณยังไม่มีคุณสมบัติตรงตามข้อกำหนดของหลักสูตรเพื่อรับประกาศนียบัตร"
 
 #. Title on page certifying that user has satisfied the requirements of a
 #. class.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:18
 msgid "Certificate of Completion"
-msgstr ""
+msgstr "ประกาศนียบัตร"
 
 #. Phrase introducing the name of a student to whom a certificate is being
 #. awarded.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:21
 msgid "Presented to"
-msgstr ""
+msgstr "ให้ไว้แก่"
 
 #. Phrase signifying that a student has successfully completed a course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:28
 msgid "for successfully completing the"
-msgstr ""
+msgstr "เนื่องในโอกาสสำเร็จการศึกษา"
 
 #. Phrase giving the name of an instructional course.
 #: experimental/coursebuilder/modules/certificate/templates/certificate.html:32
 #, python-format
 msgid "%(course)s course"
-msgstr ""
+msgstr "หลักสูตร %(course)s"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:28
@@ -263,7 +263,7 @@ msgstr "เปลี่ยนชื่อ"
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:249
 msgid "Error: Empty email list"
-msgstr ""
+msgstr "ข้อผิดพลาด: รายชื่ออีเมลว่างเปล่า"
 
 #: experimental/coursebuilder/modules/invitation/invitation.py:261
 #, python-format
@@ -271,70 +271,72 @@ msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
 "messages sent."
 msgstr ""
+"This exceeds your email cap. Number of remaining invitations: %s. No "
+"messages sent."
 
 #. Error indicating an email addresses is not well-formed.
 #: experimental/coursebuilder/modules/invitation/invitation.py:268
 #, python-format
 msgid "Error: Invalid email \"%s\""
-msgstr ""
+msgstr "ข้อผิดพลาด: อีเมล \"%s\" ไม่ถูกต้อง"
 
 #. Error indicating an email addresses is already known.
 #: experimental/coursebuilder/modules/invitation/invitation.py:272
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
-msgstr ""
+msgstr "ข้อผิดพลาด: คุณได้ส่งอีเมลคำเชิญไปยัง \"%s\" แล้ว"
 
 #. Error indicating not all email messages were sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
-msgstr ""
+msgstr "ระบบไม่ได้ส่งข้อความบางส่วน (%s/%s):"
 
 #. Success message indicating number of emails sent.
 #: experimental/coursebuilder/modules/invitation/invitation.py:297
 #, python-format
 msgid "OK, %s messages sent"
-msgstr ""
+msgstr "ส่ง %s ข้อความแล้ว"
 
 #. Title encouraging user to invite friends to join a course
 #: experimental/coursebuilder/modules/invitation/invitation.py:350
 msgid "Invite Friends"
-msgstr ""
+msgstr "เชิญเพื่อน"
 
 #. Label on control asking user to invite friends to join.
 #: experimental/coursebuilder/modules/invitation/invitation.py:355
 msgid "Click to send invitations to family and friends"
-msgstr ""
+msgstr "คลิกเพื่อส่งคำเชิญไปยังครอบครัวและเพื่อนๆ"
 
 #. Inviting friends to join a course is not currently enabled.
 #: experimental/coursebuilder/modules/invitation/invitation.py:359
 msgid "Invitations not currently available"
-msgstr ""
+msgstr "ไม่มีคำเชิญในปัจจุบัน"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
 #: experimental/coursebuilder/modules/invitation/invitation.py:371
 msgid "Subscribe/Unsubscribe"
-msgstr ""
+msgstr "สมัคร/ยกเลิกการสมัคร"
 
 #. Message - user has unsubscribed from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:378
 msgid "You are currently unsubscribed from invitations."
-msgstr ""
+msgstr "คุณยกเลิกการสมัครรับอีเมลคำเชิญแล้วในขณะนี้"
 
 #. Control allowing user to re-subscribe to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:382
 msgid "Click here to re-subscribe."
-msgstr ""
+msgstr "คลิกที่นี่เพื่อสมัครอีกครั้ง"
 
 #. Text indicating user has opted in to email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:387
 msgid "You can currently receive invitations. "
-msgstr ""
+msgstr "คุณสามารถรับคำเชิญได้แล้วในขณะนี้ "
 
 #. Control allowing user to unsubscribe from email invitations.
 #: experimental/coursebuilder/modules/invitation/invitation.py:390
 msgid "Click here to unsubscribe."
-msgstr ""
+msgstr "คลิกที่นี่เพื่อยกเลิกการสมัคร"
 
 #. Title of the course progress webpage.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:19
@@ -345,7 +347,7 @@ msgstr "ความคืบหน้าของหลักสูตร"
 #. title on page requesting user to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:30
 msgid "Invite friends or family members to join the course"
-msgstr ""
+msgstr "เชิญเพื่อนหรือสมาชิกครอบครัวให้เข้าร่วมหลักสูตร"
 
 #. Block of text inviting users to invite friends to a course.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:33
@@ -354,6 +356,9 @@ msgid ""
 "email addresses below and click \"Send\". They will receive an email from"
 " you with the text shown below."
 msgstr ""
+"หากคุณรู้จักผู้ที่อาจต้องการเข้าร่วมหลักสูตรนี้ "
+"โปรดป้อนที่อยู่อีเมลของพวกเขาด้านล่างและคลิก \"ส่ง\" "
+"พวกเขาจะได้รับอีเมลจากคุณดังข้อความด้านล่าง"
 
 #. Instructions on how to fill out email addresses in a form.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:43
@@ -361,21 +366,23 @@ msgid ""
 "Enter recipients' email addresses separated by commas. E.g., "
 "alice@gmail.com, ben@gmail.com"
 msgstr ""
+"ป้อนที่อยู่อีเมลของผู้รับโดยคั่นด้วยเครื่องหมายจุลภาค เช่น "
+"sophon@gmail.com, panya@gmail.com"
 
 #. Label on control submitting a form with email addresses
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:52
 msgid "Send"
-msgstr ""
+msgstr "ส่ง"
 
 #. Section title indicating an example of an email.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:57
 msgid "Sample Email"
-msgstr ""
+msgstr "ตัวอย่างอีเมล"
 
 #. Example subject line of an email to be sent.
 #: experimental/coursebuilder/modules/invitation/templates/invitation.html:60
 msgid "Subject:"
-msgstr ""
+msgstr "เรื่อง:"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -439,14 +446,14 @@ msgstr "ไม่สามารถใช้การค้นหาได้ใ
 msgid ""
 "The following email address has been subscribed to receive emails for "
 "this course:"
-msgstr ""
+msgstr "ที่อยู่อีเมลต่อไปนี้ได้สมัครรับอีเมลสำหรับหลักสูตรนี้:"
 
 #. Indicates that a user will no longer recieve email about a course
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:25
 msgid ""
 "The following email address has been unsubscribed from emails for this "
 "course:"
-msgstr ""
+msgstr "ที่อยู่อีเมลต่อไปนี้ได้ยกเลิกการสมัครรับอีเมลสำหรับหลักสูตรนี้:"
 
 #. After a user has unsubscribed from email notifications, indicate that
 #. re-subscribing is possible using a control lower on the page.
@@ -454,12 +461,12 @@ msgstr ""
 msgid ""
 "If you prefer to continue receiving notifications, please click below to "
 "resubscribe."
-msgstr ""
+msgstr "หากคุณต้องการรับการแจ้งเตือนต่อไป โปรดคลิกด้านล่างเพื่อสมัครใหม่"
 
 #. Button at the bottom of the page to resubscribe to notifications.
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:44
 msgid "Resubscribe"
-msgstr ""
+msgstr "สมัครรับข้อมูลใหม่"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -639,7 +646,7 @@ msgstr " ต่อไปนี้คือบทเรียนที่คุ�
 msgid ""
 " Congratulations! Press the \\'Submit Answers\\' button to submit your "
 "grade. "
-msgstr " ขอแสดงความยินดี! กดปุ่ม \\\"ส่งคำตอบ\\\" เพื่อส่งเกรดของคุณ "
+msgstr " ขอแสดงความยินดี! กดปุ่ม \"ส่งคำตอบ\" เพื่อส่งเกรดของคุณ "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
@@ -648,8 +655,8 @@ msgid ""
 " Press the \\'Submit Answers\\' button below to save your scores. You can"
 " also edit your answers above before clicking \\'Submit Answers\\'. "
 msgstr ""
-" กดปุ่ม \\\"ส่งคำตอบ\\\" ด้านล่างเพื่อบันทึกคะแนน "
-"คุณยังสามารถแก้ไขคำตอบของคุณด้านบนก่อนจะคลิก \\\"ส่งคำตอบ\\\" ได้อีกด้วย "
+" กดปุ่ม \"ส่งคำตอบ\" ด้านล่างเพื่อบันทึกคะแนน "
+"คุณยังสามารถแก้ไขคำตอบของคุณด้านบนก่อนจะคลิก \"ส่งคำตอบ\" ได้อีกด้วย "
 
 #. Text appearing in a confirmation dialog after the student has tried to
 #. submit an assignment.
@@ -695,7 +702,7 @@ msgstr "นโยบายส่วนบุคคลและข้อกำห
 #. Text describing the locale selector.
 #: experimental/coursebuilder/views/base.html:298
 msgid "Locale:"
-msgstr ""
+msgstr "ภาษา:"
 
 #. Title of the webpage.
 #. Navbar tab.
@@ -1004,7 +1011,7 @@ msgstr "ตรวจสอบงานใหม่"
 #. a class.
 #: experimental/coursebuilder/views/review_dashboard.html:81
 msgid "Back to assignment"
-msgstr ""
+msgstr "กลับไปยังงานที่มอบหมาย"
 
 #. Text shown after a student has asked for a new assignment to review when
 #. there are no assignments left to review.
@@ -1098,33 +1105,36 @@ msgid ""
 "assessment is %(score)s%%. If you wish, you may return to the assessment "
 "and take it again."
 msgstr ""
+"Thank you for taking the %(assessment_name)s. Your score for this "
+"assessment is %(score)s%%. If you wish, you may return to the assessment "
+"and take it again."
 
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
 #. This button allows the student to navigate back to the unit main page.
 #: experimental/coursebuilder/views/test_confirmation_content.html:20
 msgid "Return to Unit"
-msgstr ""
+msgstr "ย้อนกลับไปยังหน่วย"
 
 #. Title shown on the student profile page
 #: experimental/coursebuilder/views/track_selection.html:13
 msgid "Course Tracks"
-msgstr ""
+msgstr "แทร็กหลักสูตร"
 
 #. Text indicating which units will be shown for the course
 #: experimental/coursebuilder/views/track_selection.html:28
 msgid "Course Components"
-msgstr ""
+msgstr "ส่วนประกอบหลักสูตร"
 
 #. Text indicating which course tracks the student has selected
 #: experimental/coursebuilder/views/track_selection.html:59
 msgid "My Tracks"
-msgstr ""
+msgstr "แทร็กของฉัน"
 
 #. Text for a button to save selected course tracks for student.
 #: experimental/coursebuilder/views/track_selection.html:82
 msgid "Set Tracks"
-msgstr ""
+msgstr "ตั้งค่าแทร็ก"
 
 #. Text shown after a student has unenrolled from a course. It is followed by a
 #. course name.
@@ -1156,18 +1166,18 @@ msgstr "ไม่"
 #. Label on a control to show a class schedule.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Schedule"
-msgstr ""
+msgstr "แสดงกำหนดการ"
 
 #. Label on a control to hide a class schedule.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Schedule"
-msgstr ""
+msgstr "ซ่อนกำหนดการ"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
 #: experimental/coursebuilder/views/unit.html:102
 msgid "This unit has no content."
-msgstr ""
+msgstr "หน่วยนี้ไม่มีเนื้อหา"
 
 #. Text on the navigation button at the end of a lesson page.
 #: experimental/coursebuilder/views/unit.html:123
