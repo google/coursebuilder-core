@@ -1274,8 +1274,15 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
 class LazyTranslator(object):
 
-    def __init__(self, source_value, translation_dict):
+    @classmethod
+    def json_encode(cls, obj):
+        if isinstance(obj, cls):
+            return unicode(obj)
+        return None
+
+    def __init__(self, app_context, source_value, translation_dict):
         assert isinstance(source_value, basestring)
+        self._app_context = app_context
         self.source_value = source_value
         self.target_value = None
         self.translation_dict = translation_dict
@@ -1302,12 +1309,11 @@ class LazyTranslator(object):
     def _translate_html(self):
         if self.translation_dict['source_value'] != self.source_value:
             return self.source_value
-        app_context = sites.get_course_for_current_request()
         try:
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
             transformer = xcontent.ContentTransformer(
-                config=get_xcontent_configuration(app_context))
+                config=get_xcontent_configuration(self._app_context))
             transformer.decompose(context)
 
             resource_bundle = [
@@ -1320,8 +1326,9 @@ class LazyTranslator(object):
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
             if roles.Roles.is_user_allowed(
-                    app_context, custom_module,
-                    locale_to_permission(app_context.get_current_locale())):
+                    self._app_context, custom_module,
+                    locale_to_permission(
+                        self._app_context.get_current_locale())):
                 return self._detailed_error(str(ex))
             else:
                 return self.source_value
@@ -1463,14 +1470,14 @@ class TranslatedAssetRESTHandler(filer.AssetItemRESTHandler):
             self._handle_post(physical_path, True, upload)
 
 
-def set_attribute(thing, attribute_name, translation_dict):
+def set_attribute(course, thing, attribute_name, translation_dict):
     # TODO(jorr): Need to be able to deal with hierarchical names from the
     # schema, not just top-level names.
     assert hasattr(thing, attribute_name)
 
     source_value = getattr(thing, attribute_name)
     setattr(thing, attribute_name, LazyTranslator(
-        source_value, translation_dict))
+        course.app_context, source_value, translation_dict))
 
 
 def translate_lessons(course, locale):
@@ -1485,7 +1492,7 @@ def translate_lessons(course, locale):
     for lesson, bundle in zip(lesson_list, bundle_list):
         if bundle is not None:
             for name, translation_dict in bundle.dict.items():
-                set_attribute(lesson, name, translation_dict)
+                set_attribute(course, lesson, name, translation_dict)
 
 
 def translate_units(course, locale):
@@ -1510,7 +1517,7 @@ def translate_units(course, locale):
         for name, translation_dict in bundle.dict.items():
             source_value = binding.name_to_value[name].value
             binding.name_to_value[name].value = LazyTranslator(
-                source_value, translation_dict)
+                course.app_context, source_value, translation_dict)
 
         errors = []
         unit_tools.apply_updates(unit, data_dict, errors)
@@ -1558,7 +1565,8 @@ def translate_course_env(env):
         for name, translation_dict in bundle.dict.items():
             field = binding.name_to_value[name]
             source_value = field.value
-            field.value = LazyTranslator(source_value, translation_dict)
+            field.value = LazyTranslator(
+                app_context, source_value, translation_dict)
 
 
 def translate_dto_list(dto_list, key_list):
@@ -1580,7 +1588,7 @@ def translate_dto_list(dto_list, key_list):
         for name, translation_dict in bundle.dict.items():
             source_value = binding.name_to_value[name].value
             binding.name_to_value[name].value = LazyTranslator(
-                source_value, translation_dict)
+                app_context, source_value, translation_dict)
 
 
 def translate_question_dto(dto_list):
@@ -1638,6 +1646,7 @@ def notify_module_enabled():
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.append(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.append(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
+    transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.append(GLOBAL_CSS)
 
 
@@ -1659,6 +1668,7 @@ def notify_module_disabled():
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
     models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
+    transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.remove(GLOBAL_CSS)
 
 

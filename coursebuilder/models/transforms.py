@@ -60,6 +60,15 @@ JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html', 'boolean',
 # sync with modules/oeditor/oeditor.html.
 JSON_XSSI_PREFIX = ")]}'\n"
 
+# Modules can extends the range of objects which can be JSON serialized by
+# adding custom JSON encoder functions to this list. The function will be called
+# with a single argument which is an object to be encoded. If the encoding
+# function wants to encode this object, it should return a serializable
+# representation of the object, or return None otherwise. The first function
+# that can encode the object wins, so modules should not override the encodings
+# of standard type (list, string, number, etc.
+CUSTOM_JSON_ENCODERS = []
+
 
 def dict_to_json(source_dict, unused_schema):
     """Converts Python dictionary into JSON dictionary using schema."""
@@ -98,15 +107,22 @@ def dumps(*args, **kwargs):
         string. The converted JSON.
     """
 
-    class SetAsListJSONEncoder(json.JSONEncoder):
+    def set_encoder(obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return None
+
+    class CustomJSONEncoder(json.JSONEncoder):
 
         def default(self, obj):
-            if isinstance(obj, set):
-                return list(obj)
-            return super(SetAsListJSONEncoder, self).default(obj)
+            for f in CUSTOM_JSON_ENCODERS + [set_encoder]:
+                value = f(obj)
+                if value is not None:
+                    return value
+            return super(CustomJSONEncoder, self).default(obj)
 
     if 'cls' not in kwargs:
-        kwargs['cls'] = SetAsListJSONEncoder
+        kwargs['cls'] = CustomJSONEncoder
 
     return json.dumps(*args, **kwargs)
 

@@ -93,6 +93,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 7,
+    'tests.functional.modules_i18n_dashboard.LazyTranslatorTests': 1,
     'tests.functional.modules_i18n_dashboard'
         '.TranslationConsoleRestHandlerTests': 5,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,

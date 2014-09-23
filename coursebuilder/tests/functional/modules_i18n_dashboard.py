@@ -38,6 +38,7 @@ from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDTO
+from modules.i18n_dashboard.i18n_dashboard import LazyTranslator
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
@@ -611,6 +612,30 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(
             'text<gcb-youtube#1 videoid="Kdg2drcUjYI" />',
             data[0]['source_value'])
+
+
+class LazyTranslatorTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'i18n_course'
+    COURSE_TITLE = 'I18N Course'
+
+    def setUp(self):
+        super(LazyTranslatorTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
+
+    def test_lazy_translator_is_json_serializable(self):
+        source_value = 'hello'
+        translation_dict = {
+            'type': 'string',
+            'data': [
+                {'source_value': 'hello', 'target_value': 'HELLO'}]}
+        lazy_translator = LazyTranslator(
+            self.app_context, source_value, translation_dict)
+        self.assertEquals(
+            '{"lt": "HELLO"}', transforms.dumps({'lt': lazy_translator}))
 
 
 class CourseContentTranslationTests(actions.TestBase):
