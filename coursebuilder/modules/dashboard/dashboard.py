@@ -1634,7 +1634,7 @@ def register_module():
     tabs.Registry.register('settings', 'registration', 'Registration',
                            'registration,invitation')
     tabs.Registry.register('settings', 'units', 'Units and Lessons',
-                           'unit,assessment_confirmations')
+                           'unit,assessment')
     tabs.Registry.register('settings', 'i18n', 'I18N', 'i18n')
     tabs.Registry.register('settings', 'advanced', 'Advanced', None)
     tabs.Registry.register('settings', 'admin_prefs', 'Preferences', None)

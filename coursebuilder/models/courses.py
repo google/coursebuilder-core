@@ -610,17 +610,6 @@ class CourseModel12(object):
             indent=4, sort_keys=True,
             default=lambda o: o.__dict__)
 
-    def extend_settings_schema(self, registry):
-        assessment_opts = registry.add_sub_registry(
-            'assessment_confirmations', 'Assessment Confirmations')
-        assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:pass', 'Pass', 'string',
-            optional=True, description='Whether the student passes.'))
-        assessment_opts.add_property(schema_fields.SchemaField(
-            'assessment_confirmations:result_text:fail', 'Fail', 'string',
-            optional=True, description='Whether the student fails.'))
-        return registry
-
 
 class Unit13(object):
     """An object to represent a Unit, Assessment or Link (version 1.3)."""
@@ -1047,9 +1036,6 @@ class CourseModel13(object):
         filename = fs.physical_to_logical('/course.yaml')
         fs.put(filename, content_stream)
         return True
-
-    def extend_settings_schema(self, registry):
-        return registry
 
     def _update_dirty_objects(self):
         """Update files owned by course."""
@@ -1972,6 +1958,7 @@ class Course(object):
     SCHEMA_SECTION_HOMEPAGE = 'homepage'
     SCHEMA_SECTION_REGISTRATION = 'registration'
     SCHEMA_SECTION_UNITS_AND_LESSONS = 'unit'
+    SCHEMA_SECTION_ASSESSMENT = 'assessment'
     SCHEMA_SECTION_I18N = 'i18n'
 
     @classmethod
@@ -1981,6 +1968,7 @@ class Course(object):
             cls.SCHEMA_SECTION_HOMEPAGE,
             cls.SCHEMA_SECTION_REGISTRATION,
             cls.SCHEMA_SECTION_UNITS_AND_LESSONS,
+            cls.SCHEMA_SECTION_ASSESSMENT,
             cls.SCHEMA_SECTION_I18N,
             ])
         for name in cls.OPTIONS_SCHEMA_PROVIDERS:
@@ -2149,6 +2137,10 @@ class Course(object):
             description='Checking this box allows new students to register for '
             'the course.'))
         registration_opts.add_property(schema_fields.SchemaField(
+            'reg_form:header_text', 'Welcome Text', 'string', optional=True,
+            description='Text shown to students at the top of the registration '
+            'page encouraging them to sign up for the course.'))
+        registration_opts.add_property(schema_fields.SchemaField(
             'reg_form:additional_registration_fields', 'Additional Fields',
             'html', description='Additional registration text or questions.'))
         registration_opts.add_property(schema_fields.SchemaField(
@@ -2198,6 +2190,17 @@ class Course(object):
             'course:display_unit_title_without_index',
             'Display Unit Title Without Index', 'boolean',
             description='Omit the unit number when displaying unit titles.'))
+
+        assessment_opts = reg.add_sub_registry(
+            Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
+        assessment_opts.add_property(schema_fields.SchemaField(
+            'assessment_confirmations:result_text:pass', 'Pass', 'string',
+            optional=True,
+            description='Text shown to the student on a passing result.'))
+        assessment_opts.add_property(schema_fields.SchemaField(
+            'assessment_confirmations:result_text:fail', 'Fail', 'string',
+            optional=True,
+            description='Text shown to the student on a failing result.'))
 
         i18n_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'I18N')
@@ -2300,8 +2303,7 @@ class Course(object):
         return self._model.to_json()
 
     def create_settings_schema(self):
-        registry = Course.create_common_settings_schema(self)
-        return self._model.extend_settings_schema(registry)
+        return Course.create_common_settings_schema(self)
 
     def save_settings(self, course_settings):
         result = self._model.save_settings(course_settings)

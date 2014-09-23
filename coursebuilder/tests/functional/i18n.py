@@ -92,11 +92,8 @@ class I18NCourseSettingsTests(actions.TestBase):
             self.course_yaml, self.schema)
 
         expected_unmapped = [
-            'assessment_confirmations:result_text:fail',
-            'assessment_confirmations:result_text:pass',
             'preview:after_main_content_ends',
             'preview:after_top_content_ends',
-            'reg_form:header_text',
             'reg_form:whitelist',
             'unit:after_content_begins',
             'unit:after_leftnav_begins',
