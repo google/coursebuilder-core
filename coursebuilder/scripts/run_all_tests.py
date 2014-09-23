@@ -36,7 +36,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.admin_settings.HtmlHookTest': 11,
     'tests.functional.admin_settings.JinjaContextTest': 2,
     'tests.functional.admin_settings.WelcomePageTests': 5,
-    'tests.functional.assets_rest.AssetsRestTest': 15,
+    'tests.functional.assets_rest.AssetsRestTest': 17,
     'tests.functional.common_crypto.EncryptionManagerTests': 5,
     'tests.functional.common_crypto.XsrfTokenManagerTests': 3,
     'tests.functional.common_crypto.PiiObfuscationHmac': 2,

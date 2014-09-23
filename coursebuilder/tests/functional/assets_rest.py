@@ -234,6 +234,42 @@ class AssetsRestTest(actions.TestBase):
             COURSE_NAME, base, name))
         self.assertEquals(de_content, response.body)
 
+    def test_missing_localized_asset(self):
+        # Create English asset but no German version
+        base = 'assets/img'
+        name = 'foo.jpg'
+        en_content = 'xyzzy'
+        _post_asset(self, base, name, name, en_content)
+
+        # Access with current_locale = de_DE falls back to English default
+        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
+        response = self.get(asset_url)
+        self.assertEquals(en_content, response.body)
+        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'})
+        self.assertEquals(en_content, response.body)
+
+        # Direct request for German version fails with 404
+        response = self.get('%s/locale/de_DE/%s/%s' % (
+            COURSE_NAME, base, name), expect_errors=True)
+        self.assertEquals(404, response.status_int)
+
+    def test_localized_access_to_default_locale(self):
+        # Create English asset but no German version
+        base = 'assets/img'
+        name = 'foo.jpg'
+        en_content = 'xyzzy'
+        _post_asset(self, base, name, name, en_content)
+
+        # Asset is available on default assets folder URL
+        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
+        response = self.get(asset_url)
+        self.assertEquals(en_content, response.body)
+
+        # Asset is available with localized url
+        response = self.get('%s/locale/en_US/%s/%s' % (
+            COURSE_NAME, base, name))
+        self.assertEquals(en_content, response.body)
+
     def test_deleting_localized_deletes_all_copies(self):
         base = 'assets/img'
         name = 'foo.jpg'

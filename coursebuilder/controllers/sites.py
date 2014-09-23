@@ -526,12 +526,12 @@ def get_localized_asset_names(app_context, path):
     return ret
 
 
-class AssetHandler(utils.CourseHandler):
+class AssetHandler(utils.BaseHandler):
     """Handles serving of static resources located on the file system."""
 
-    def __init__(self, app_context, norm_path):
+    def __init__(self, app_context, asset_path):
         self.app_context = app_context
-        self.norm_path = norm_path
+        self.asset_path = asset_path
 
     def get_mime_type(self, filename, default='application/octet-stream'):
         guess = mimetypes.guess_type(filename)[0]
@@ -544,48 +544,78 @@ class AssetHandler(utils.CourseHandler):
         public = not fs.is_draft(stream)
         return public or Roles.is_course_admin(self.app_context)
 
-    def _localize_path_if_necessary(self):
-        current_locale = self.get_locale_for(self.request, self.app_context)
-        if (self.norm_path.startswith(GCB_ASSETS_FOLDER_NAME) and
-            current_locale and
-            current_locale != self.app_context.default_locale):
-                self.norm_path = asset_path_for_localized_item(
-                    current_locale, self.norm_path)
+    def _serve_asset(self, path, nocache=False):
+        filename = abspath(self.app_context.get_home_folder(), path)
+        if not self.app_context.fs.isfile(filename):
+            return 404
+        stream = self.app_context.fs.open(filename)
+        if not self._can_view(self.app_context.fs, stream):
+            return 403
+        if nocache:
+            self.response.cache_control.no_cache = True
+        else:
+            set_static_resource_cache_control(self)
+        self.response.headers['Content-Type'] = self.get_mime_type(filename)
+        self.response.write(stream.read())
+        return 200
 
-    def _unlocalize_path_if_necessary(self):
+    def get(self):
+        """Handles GET requests."""
+        if not GCB_ASSETS_REGEX.match(self.asset_path):
+            self.error(404)
+
+        current_locale = self.app_context.get_current_locale()
+
         # We may be asking for an asset with a path like:
         # "/locale/<course-default-locale>/assets/img/foo.jpg" In this case,
         # the filesystem won't have an item at the locale-specific path.  The
         # primary language asset is instead simply at "/assets/img/foo.jpg",
         # so we need to strip off the leading locale specifier.
-        default_locale_path = '%s/%s' % (GCB_LOCALE_FOLDER_NAME,
-                                         self.app_context.default_locale)
-        self.norm_path = self.norm_path.replace(default_locale_path, '')
+        default_locale_path = '%s/%s' % (
+            GCB_LOCALE_FOLDER_NAME, self.app_context.default_locale)
 
-    def get(self):
-        """Handles GET requests."""
-        nocache = self.norm_path.startswith(GCB_LOCALE_FOLDER_NAME)
-        self._localize_path_if_necessary()
-        self._unlocalize_path_if_necessary()
-        filename = abspath(self.app_context.get_home_folder(), self.norm_path)
-        debug('Asset: %s' % filename)
+        nocache = False
+
+        if self.asset_path.startswith(default_locale_path):
+            localized_path = None
+            default_path = self.asset_path.replace(default_locale_path, '')
+
+        elif self.asset_path.startswith(GCB_LOCALE_FOLDER_NAME):
+            localized_path = self.asset_path
+            default_path = None
+            nocache = True
+
+        elif (
+            self.asset_path.startswith(GCB_ASSETS_FOLDER_NAME) and
+            current_locale and
+            current_locale != self.app_context.default_locale
+        ):
+            localized_path = asset_path_for_localized_item(
+                current_locale, self.asset_path)
+            default_path = self.asset_path
+
+        else:
+            localized_path = None
+            default_path = self.asset_path
 
         self.app_context.fs.begin_readonly()
         models.MemcacheManager.begin_readonly()
         try:
-            if not self.app_context.fs.isfile(filename):
-                self.error(404)
+            status = 404
+            if localized_path is not None:
+                status = self._serve_asset(localized_path, nocache=nocache)
+
+            if status == 200:
                 return
-            stream = self.app_context.fs.open(filename)
-            if not self._can_view(self.app_context.fs, stream):
-                self.error(403)
+
+            if default_path is not None:
+                status = self._serve_asset(default_path, nocache=False)
+
+            if status == 200:
                 return
-            if nocache:
-                self.response.cache_control.no_cache = True
-            else:
-                set_static_resource_cache_control(self)
-            self.response.headers['Content-Type'] = self.get_mime_type(filename)
-            self.response.write(stream.read())
+
+            self.error(status)
+
         finally:
             models.MemcacheManager.end_readonly()
             self.app_context.fs.end_readonly()
@@ -1691,7 +1721,7 @@ def test_url_to_handler_mapping_for_course_type():
     # This is allowed as we don't go out of /assets/...
     handler = assert_handled(
         '/a/b/assets/foo/../models/models.py', AssetHandler)
-    assert handler.norm_path == '/assets/models/models.py'
+    assert handler.asset_path == '/assets/models/models.py'
 
     # This is not allowed as we do go out of /assets/...
     assert_handled('/a/b/assets/foo/../../models/models.py', None)
