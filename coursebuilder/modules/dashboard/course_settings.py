@@ -286,14 +286,16 @@ class CourseSettingsRESTHandler(CourseYamlRESTHandler):
         existing = set([
             label.title for label in models.LabelDAO.get_all_of_type(
                 models.LabelDTO.LABEL_TYPE_LOCALE)])
-        for extra_locale in extra_locales:
+
+        course_locale = self.app_context.default_locale
+        for extra_locale in extra_locales + [{'locale': course_locale}]:
             locale = extra_locale['locale']
             if locale in existing:
                 continue
             models.LabelDAO.save(models.LabelDTO(
                 None, {'title': locale,
                        'version': '1.0',
-                       'description': 'System-managed locale label %s' % locale,
+                       'description': '[%s] locale' % locale,
                        'type': models.LabelDTO.LABEL_TYPE_LOCALE}))
 
     def process_put(self, request, payload):

@@ -1796,7 +1796,7 @@ class StudentAspectTest(actions.TestBase):
 
     def test_locale_settings(self):
         extra_environ = {
-            'course': {'locale': 'en_US'},
+            'course': {'locale': 'en_US', 'can_student_change_locale': True},
             'extra_locales': [
                 {'locale': 'el', 'availability': 'available'},
                 {'locale': 'fr', 'availability': 'unavailable'}]}

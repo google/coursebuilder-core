@@ -16,7 +16,7 @@
         {% if announcements.add_action %}
           <form id='gcb-add-announcement' action='{{ announcements.add_action }}' method='POST'>
             <input type="hidden" name="xsrf_token" value="{{ announcements.add_xsrf_token|escape }}">
-            <button class="gcb-button gcb-button-action" type="submit">Add New</button>
+            <button class="gcb-button gcb-button-action gcb-button-author" type="submit">Add New</button>
           </form>
           <div style='clear: both; padding-top: 2px;' />
         {% endif %}
@@ -29,14 +29,14 @@
           {% if item.delete_action %}
           <form id='gcb-delete-announcement-{{ loop.index0 }}' action='{{ item.delete_action }}' method='POST'>
             <input type="hidden" name="xsrf_token" value="{{ item.delete_xsrf_token|escape }}">
-            <button class="gcb-button gcb-button-action" type="submit"
+            <button class="gcb-button gcb-button-action gcb-button-author" type="submit"
               onclick='return confirm("Delete this item?");'>
               Delete
             </button>
           </form>
           {% endif %}
           {% if item.edit_action %}
-            <a role="button" href="{{ item.edit_action }}" class="gcb-button gcb-button-action">
+            <a role="button" href="{{ item.edit_action }}" class="gcb-button gcb-button-action gcb-button-author">
               Edit
             </a>
           {% endif %}
@@ -48,6 +48,8 @@
           <p "margin: 20px 0px;">
           {{ item.html | gcb_tags }}
         {% endfor %}
+      {% else %}
+        {{ content }}  
       {% endif %}
     </div>
   </div>

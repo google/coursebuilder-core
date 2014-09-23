@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,12 +26,14 @@ import zipfile
 from babel.messages import pofile
 
 from common import crypto
+from common import utils
 from common.utils import Namespace
 from controllers import sites
 from models import courses
 from models import models
 from models import roles
 from models import transforms
+from modules.announcements import announcements
 from modules.dashboard import dashboard
 from modules.i18n_dashboard import i18n_dashboard
 from modules.i18n_dashboard.i18n_dashboard import I18nProgressDAO
@@ -49,6 +52,7 @@ from tests.functional import assets_rest
 from tools import verify
 
 from google.appengine.api import namespace_manager
+from google.appengine.api import users
 
 
 class ResourceKeyTests(unittest.TestCase):
@@ -158,6 +162,7 @@ class IsTranslatableRestHandlerTests(actions.TestBase):
         self.course = courses.Course(None, context)
 
     def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(IsTranslatableRestHandlerTests, self).tearDown()
 
@@ -232,6 +237,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
     def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(I18nDashboardHandlerTests, self).tearDown()
 
@@ -412,6 +418,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         actions.login(self.ADMIN_EMAIL, is_admin=True)
 
     def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(TranslationConsoleRestHandlerTests, self).tearDown()
 
@@ -679,6 +686,7 @@ class CourseContentTranslationTests(actions.TestBase):
         models.StudentPreferencesDAO.save(prefs)
 
     def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         namespace_manager.set_namespace(self.old_namespace)
         super(CourseContentTranslationTests, self).tearDown()
 
@@ -1121,6 +1129,7 @@ class TranslatorRoleTests(actions.TestBase):
         roles.Roles.REGISTERED_PERMISSIONS = {}
 
     def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         roles.Roles.REGISTERED_PERMISSIONS = self.old_registered_permission
         namespace_manager.set_namespace(self.old_namespace)
         super(TranslatorRoleTests, self).tearDown()
@@ -1167,45 +1176,388 @@ class TranslatorRoleTests(actions.TestBase):
 
 class SampleCourseLocalizationTest(actions.TestBase):
 
-    def test_add_locales(self):
-        auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
+    def setUp(self):
+        super(SampleCourseLocalizationTest, self).setUp()
+        self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = False
+        self._import_course()
+        self._locale_to_label = {}
 
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
+        super(SampleCourseLocalizationTest, self).tearDown()
+
+    def _import_course(self):
         email = 'test_course_localization@google.com'
         actions.login(email, is_admin=True)
 
-        # copy sample course
         response = self.get('/admin?action=welcome')
         self.assertEquals(response.status_int, 200)
         response = self.post(
-            '/admin?action=explore_sample',
+            '/admin?action=add_first_course',
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
-                'explore_sample')})
+                'add_first_course')})
         self.assertEquals(response.status_int, 302)
 
-        sites.setup_courses('course:/sample::ns_sample')
+        sites.setup_courses('course:/first::ns_first')
 
-        response = self.get('sample/dashboard')
-        self.assertIn('Power Searching with Google', response.body)
+        response = self.get('first/dashboard')
+        self.assertIn('My First Course', response.body)
         self.assertEquals(response.status_int, 200)
 
-        # add new locale
+    def _setup_locales(self, availability='available'):
         request = {
             'key': '/course.yaml',
             'payload': (
                 '{\"i18n\":{\"course:locale\":\"en_US\",\"extra_locales\":['
-                '{\"locale\":\"ru\",\"availability\":\"unavailable\"}]}}'),
+                '{\"locale\":\"ru_RU\",\"availability\":\"%s\"}, '
+                '{\"locale\":\"es_ES\",\"availability\":\"%s\"}'
+                ']}}' % (availability, availability)),
             'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'basic-course-settings-put')}
         response = self.put(
-            'sample/rest/course/settings', params={
+            'first/rest/course/settings', params={
             'request': transforms.dumps(request)})
         self.assertEquals(response.status_int, 200)
 
         # check labels exist
-        with Namespace('ns_sample'):
+        with Namespace('ns_first'):
             labels = models.LabelDAO.get_all_of_type(
                 models.LabelDTO.LABEL_TYPE_LOCALE)
-            self.assertEqual(1, len(labels))
+            self.assertEqual(3, len(labels))
+            for label in labels:
+                self._locale_to_label[label.title] = label
 
-        sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = auto_deploy
+    def _add_announcement(self, title, locales):
+        with Namespace('ns_first'):
+            labels = models.LabelDAO.get_all_of_type(
+                models.LabelDTO.LABEL_TYPE_LOCALE)
+            label_ids = []
+            for label in labels:
+                for locale in locales:
+                    if label.title == locale:
+                        label_ids.append(label.id)
+            annon = announcements.AnnouncementEntity()
+            annon.title = title
+            annon.labels = utils.list_to_text(label_ids)
+            annon.is_draft = False
+            annon.put()
+
+    def _add_announcements(self):
+        self._add_announcement('Test announcement EN', ['en_US'])
+        self._add_announcement('Test announcement RU', ['ru_RU'])
+        self._add_announcement('Test announcement ES', ['es_ES'])
+        self._add_announcement(
+            'Test announcement ALL', ['en_US', 'ru_RU', 'es_ES'])
+        self._add_announcement('Test announcement NONE', [])
+        with Namespace('ns_first'):
+            items = announcements.AnnouncementEntity.get_announcements()
+            self.assertEqual(5, len(items))
+
+    def _add_units(self, locale_labels=False):
+        with Namespace('ns_first'):
+            course = courses.Course(None, sites.get_all_courses()[0])
+
+            _en = course.add_unit()
+            _en.type = 'U'
+            _en.now_available = True
+            _en.title = 'Unit en_US'
+
+            _ru = course.add_unit()
+            _ru.type = 'U'
+            _ru.now_available = True
+            _ru.title = 'Unit ru_RU'
+
+            _es = course.add_unit()
+            _es.type = 'U'
+            _es.now_available = True
+            _es.title = 'Unit es_ES'
+
+            _all = course.add_unit()
+            _all.type = 'U'
+            _all.now_available = True
+            _all.title = 'Unit all_ALL'
+
+            _none = course.add_unit()
+            _none.type = 'U'
+            _none.now_available = True
+            _none.title = 'Unit none_NONE'
+
+            if locale_labels:
+                _en.labels = utils.list_to_text(
+                    [self._locale_to_label['en_US'].id])
+                _ru.labels = utils.list_to_text(
+                    [self._locale_to_label['ru_RU'].id])
+                _es.labels = utils.list_to_text(
+                    [self._locale_to_label['es_ES'].id])
+                _all.labels = utils.list_to_text([
+                    self._locale_to_label['es_ES'].id,
+                    self._locale_to_label['ru_RU'].id])
+                _none.labels = utils.list_to_text([])
+
+            course.save()
+
+    def _set_labels_on_current_student(self, labels):
+        with Namespace('ns_first'):
+            user = users.get_current_user()
+            labels = utils.list_to_text([label.id for label in labels])
+            models.StudentProfileDAO.update(
+                user.user_id(), user.email(), labels=labels)
+
+    def _pick_locale(self, locale):
+        with Namespace('ns_first'):
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.locale = locale
+            models.StudentPreferencesDAO.save(prefs)
+
+    def _assert_picker(self, is_present, has_locales=None, is_admin=False):
+        actions.login('_assert_picker_visible@example.com', is_admin=is_admin)
+        response = self.get('first/course')
+        self.assertEquals(response.status_int, 200)
+        dom = self.parse_html_string(response.body)
+        if is_present:
+            self.assertTrue(dom.find('.//select[@id="locale-select"]'))
+            for has_locale in has_locales:
+                option = dom.find(
+                    './/select[@id="locale-select"]'
+                    '/option[@value="%s"]' % has_locale)
+                self.assertIsNotNone(option)
+        else:
+            self.assertFalse(dom.find('.//select[@id="locale-select"]'))
+        actions.logout()
+
+    def _assert_en_ru_es_all_none(self, en, ru, es, _all, _none, lang):
+        response = self.get('first/announcements')
+        self.assertEquals(response.status_int, 200)
+        if en:
+            self.assertIn('Test announcement EN', response.body)
+        else:
+            self.assertNotIn('Test announcement EN', response.body)
+        if ru:
+            self.assertIn('Test announcement RU', response.body)
+        else:
+            self.assertNotIn('Test announcement RU', response.body)
+        if es:
+            self.assertIn('Test announcement ES', response.body)
+        else:
+            self.assertNotIn('Test announcement ES', response.body)
+        if _all:
+            self.assertIn('Test announcement ALL', response.body)
+        else:
+            self.assertNotIn('Test announcement ALL', response.body)
+        if _none:
+            self.assertIn('Test announcement NONE', response.body)
+        else:
+            self.assertNotIn('Test announcement NONE', response.body)
+        self.assertEquals(self.parse_html_string(
+                response.body).get('lang'), lang)
+        return response
+
+    def _course_en_ru_es_all_none(self, en, ru, es, _all, _none, lang):
+        response = self.get('first/course')
+        self.assertEquals(response.status_int, 200)
+        if en:
+            self.assertIn('Unit en_US', response.body)
+        else:
+            self.assertNotIn('Unit en_US', response.body)
+        if ru:
+            self.assertIn('Unit ru_RU', response.body)
+        else:
+            self.assertNotIn('Unit ru_RU', response.body)
+        if es:
+            self.assertIn('Unit es_ES', response.body)
+        else:
+            self.assertNotIn('Unit es_ES', response.body)
+        if _all:
+            self.assertIn('Unit all_ALL', response.body)
+        else:
+            self.assertNotIn('Unit all_ALL', response.body)
+        if _none:
+            self.assertIn('Unit none_NONE', response.body)
+        else:
+            self.assertNotIn('Unit none_NONE', response.body)
+        self.assertEquals(self.parse_html_string(
+                response.body).get('lang'), lang)
+        return response
+
+    def test_locale_picker_visibility_for_available_locales_as_student(self):
+        self._setup_locales()
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            self._assert_picker(True, ['en_US', 'ru_RU', 'es_ES'])
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': False}}):
+            self._assert_picker(False)
+
+    def test_locale_picker_visibility_for_unavailable_locales_as_student(self):
+        self._setup_locales(availability='unavailable')
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            self._assert_picker(True, ['en_US'])
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': False}}):
+            self._assert_picker(False)
+
+    def test_locale_picker_visibility_for_unavailable_locales_as_admin(self):
+        self._setup_locales(availability='unavailable')
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            self._assert_picker(
+                True, ['en_US', 'ru_RU', 'es_ES'], is_admin=True)
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': False}}):
+            self._assert_picker(False, is_admin=True)
+
+    def test_view_announcement_via_locale_picker(self):
+        self._setup_locales()
+        self._add_announcements()
+
+        actions.logout()
+        actions.login('test_view_announcement_via_locale_picker@example.com')
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            actions.register(
+                self,
+                'test_view_announcement_via_locale_picker', course='first')
+
+            self._pick_locale(None)
+            response = self._assert_en_ru_es_all_none(
+                True, False, False, True, True, 'en_US')
+            self.assertIn('Announcements', response.body)
+
+            self._pick_locale('ru_RU')
+            response = self._assert_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+            self.assertIn('Сообщения', response.body)
+
+            self._pick_locale('es_ES')
+            response = self._assert_en_ru_es_all_none(
+                False, False, True, True, True, 'es_ES')
+            self.assertIn('Avisos', response.body)
+
+            self._pick_locale(None)
+            self._set_labels_on_current_student(
+                [self._locale_to_label['ru_RU']])
+            self._assert_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+
+    def test_announcements_via_locale_labels(self):
+        self._setup_locales()
+        self._add_announcements()
+
+        actions.logout()
+        actions.login('test_announcements_via_locale_labels@example.com')
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': False}}):
+            actions.register(
+                self, 'test_announcements_via_locale_labels', course='first')
+
+            self._set_labels_on_current_student([])
+            self._assert_en_ru_es_all_none(
+                True, True, True, True, True, 'en_US')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['en_US']])
+            self._assert_en_ru_es_all_none(
+                True, False, False, True, True, 'en_US')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['ru_RU']])
+            self._assert_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['es_ES']])
+            self._assert_en_ru_es_all_none(
+                False, False, True, True, True, 'es_ES')
+
+            self._pick_locale('ru_RU')
+            self._set_labels_on_current_student([])
+            response = self._assert_en_ru_es_all_none(
+                True, True, True, True, True, 'ru_RU')
+            self.assertIn('Сообщения', response.body)
+
+            self._pick_locale('ru_RU')
+            self._set_labels_on_current_student(
+                [self._locale_to_label['es_ES']])
+            response = self._assert_en_ru_es_all_none(
+                False, False, True, True, True, 'es_ES')
+            self.assertIn('Avisos', response.body)
+
+    def test_course_track_via_locale_picker(self):
+        self._setup_locales()
+        self._add_units(locale_labels=True)
+
+        actions.logout()
+        actions.login('test_course_track_via_locale_picker@example.com')
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            actions.register(
+                self, 'test_course_track_via_locale_picker', course='first')
+
+            self._pick_locale(None)
+            self._course_en_ru_es_all_none(
+                True, False, False, False, True, 'en_US')
+
+            self._pick_locale('en_US')
+            response = self._course_en_ru_es_all_none(
+                True, False, False, False, True, 'en_US')
+            self.assertIn('Announcements', response.body)
+
+            self._pick_locale('ru_RU')
+            response = self._course_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+            self.assertIn('Сообщения', response.body)
+
+            self._pick_locale('es_ES')
+            response = self._course_en_ru_es_all_none(
+                False, False, True, True, True, 'es_ES')
+            self.assertIn('Avisos', response.body)
+
+    def test_course_track_via_locale_labels(self):
+        self._setup_locales()
+        self._add_units(locale_labels=True)
+
+        actions.logout()
+        actions.login('test_course_track_via_locale_picker@example.com')
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            actions.register(
+                self, 'test_course_track_via_locale_picker', course='first')
+
+            self._set_labels_on_current_student([])
+            self._course_en_ru_es_all_none(
+                True, False, False, False, True, 'en_US')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['en_US']])
+            self._course_en_ru_es_all_none(
+                True, False, False, False, True, 'en_US')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['ru_RU']])
+            self._course_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+
+            self._set_labels_on_current_student(
+                [self._locale_to_label['es_ES']])
+            self._course_en_ru_es_all_none(
+                False, False, True, True, True, 'es_ES')
+
+    def test_track_and_locale_labels_dont_interfer(self):
+        pass  # TODO(psimakov): compleet this

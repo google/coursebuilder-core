@@ -2204,6 +2204,14 @@ class Course(object):
 
         i18n_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'I18N')
+        i18n_opts.add_property(schema_fields.SchemaField(
+            'course:can_student_change_locale', 'Let Student Change Locale',
+            'boolean', optional=True,
+            description='Allow student to change locale at any time '
+            'during the course. If True, a language picker is shown to the '
+            'student and locale changes are allowed at any time. If False, a '
+            'language picker is not shown to the student and the desired '
+            'locale must be assigned during registration process.'))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]
@@ -2241,6 +2249,12 @@ class Course(object):
                 sub_registry.add_property(schema_provider(course))
 
         return reg
+
+    def get_course_setting(self, name):
+        course_settings = self.get_environ(self._app_context).get('course')
+        if not course_settings:
+            return None
+        return course_settings.get(name)
 
     @classmethod
     def validate_course_yaml(cls, raw_string, course):
@@ -2327,31 +2341,8 @@ class Course(object):
         return [unit for unit in self.get_units() if unit_type == unit.type]
 
     def get_track_matching_student(self, student):
-        """Gets course track units whose labels match those on the student.
-
-        If the student has no labels, all units are taken.
-        Similarly, if a unit has no labels, it is included.
-
-        Args:
-          student: the logged-in Student matching the user for this request.
-        Returns:
-          A list of Unit instances.
-        """
-        all_track_ids = models.LabelDAO.get_set_of_ids_of_type(
-                               models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-
-        units = self.get_units()
-        if student and not student.is_transient:
-            student_matches = student.get_labels_of_type(
-                models.LabelDTO.LABEL_TYPE_COURSE_TRACK)
-            for unit in list(units):
-                unit_matches = set([int(label_id) for label_id in
-                                    common_utils.text_to_list(unit.labels)
-                                    if int(label_id) in all_track_ids])
-                if (student_matches and unit_matches and
-                    student_matches.isdisjoint(unit_matches)):
-                    units.remove(unit)
-        return units
+        return models.LabelDAO.apply_course_track_labels_to_student_labels(
+            self, student, self.get_units())
 
     def get_unit_track_labels(self, unit):
         all_track_ids = models.LabelDAO.get_set_of_ids_of_type(

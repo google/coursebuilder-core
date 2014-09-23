@@ -1775,6 +1775,65 @@ class LabelDAO(BaseJsonDao):
     def get_set_of_ids_of_type(cls, label_type):
         return set([label.id for label in cls.get_all_of_type(label_type)])
 
+    @classmethod
+    def _apply_locale_labels_to_locale(cls, locale, items):
+        """Filter out items not matching locale labels and current locale."""
+        if locale:
+            id_to_label = {}
+            for label in LabelDAO.get_all_of_type(
+                LabelDTO.LABEL_TYPE_LOCALE):
+                id_to_label[int(label.id)] = label
+            for item in list(items):
+                item_matches = set([int(label_id) for label_id in
+                                    common_utils.text_to_list(item.labels)
+                                    if int(label_id) in id_to_label.keys()])
+                found = False
+                for item_match in item_matches:
+                    label = id_to_label[item_match]
+                    if id_to_label and label and label.title == locale:
+                        found = True
+                if id_to_label and item_matches and not found:
+                    items.remove(item)
+        return items
+
+    @classmethod
+    def apply_course_track_labels_to_student_labels(
+        cls, course, student, items):
+        items = cls._apply_labels_to_student_labels(
+            LabelDTO.LABEL_TYPE_COURSE_TRACK, student, items)
+        if course.get_course_setting('can_student_change_locale'):
+            return cls._apply_locale_labels_to_locale(
+                course.app_context.get_current_locale(), items)
+        else:
+            return cls._apply_labels_to_student_labels(
+                LabelDTO.LABEL_TYPE_LOCALE, student, items)
+
+    @classmethod
+    def _apply_labels_to_student_labels(cls, label_type, student, items):
+        """Filter out items whose labels don't match those on the student.
+
+        If the student has no labels, all items are taken.
+        Similarly, if a item has no labels, it is included.
+
+        Args:
+          label_type: a label types to consider.
+          student: the logged-in Student matching the user for this request.
+          items: a list of item instances, each having 'labels' attribute.
+        Returns:
+          A list of item instances whose labels match those on the student.
+        """
+        label_ids = LabelDAO.get_set_of_ids_of_type(label_type)
+        if student and not student.is_transient:
+            student_matches = student.get_labels_of_type(label_type)
+            for item in list(items):
+                item_matches = set([int(label_id) for label_id in
+                                    common_utils.text_to_list(item.labels)
+                                    if int(label_id) in label_ids])
+                if (student_matches and item_matches and
+                    student_matches.isdisjoint(item_matches)):
+                    items.remove(item)
+        return items
+
 
 class StudentPreferencesEntity(BaseEntity):
     """A class representing an individual's preferences for a course.

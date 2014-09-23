@@ -19,7 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import logging
 import urllib
-
+from label_editor import LabelGroupsHelper
 import messages
 import yaml
 
@@ -71,42 +71,11 @@ def generate_common_schema(title):
         SchemaField('title', 'Title', 'string', optional=True))
     common.add_property(
         SchemaField('description', 'Description', 'string', optional=True))
-
-    # Label Groups
-    label = FieldRegistry(None, description='label')
-    label.add_property(SchemaField('id', 'ID', 'integer',
-                                   hidden=True,
-                                   editable=False))
-    label.add_property(SchemaField('checked', None, 'boolean'))
-    label.add_property(SchemaField('title', None, 'string',
-                                   optional=True,
-                                   editable=False))
-    label.add_property(SchemaField('description', None, 'string',
-                                   optional=True,
-                                   editable=False,
-                                   extra_schema_dict_values={
-                                       'className': 'label-description'}))
-    label.add_property(SchemaField('no_labels', None, 'string',
-                                   optional=True,
-                                   editable=False,
-                                   extra_schema_dict_values={
-                                       'className': 'label-none-in-group'}))
-
-    label_group = FieldRegistry('', description='label groups')
-    label_group.add_property(SchemaField('title', None, 'string',
-                                         editable=False))
-    label_group.add_property(FieldArray('labels', None,
-                                        item_type=label,
-                                        extra_schema_dict_values={
-                                            'className': 'label-group'}))
     common.add_property(
         FieldArray('label_groups', 'Labels',
-                   item_type=label_group,
+                   item_type=LabelGroupsHelper.make_labels_group_schema_field(),
                    extra_schema_dict_values={
-                       'className': 'inputEx-Field label-group-list',
-                       }))
-
-    # Public/Draft status
+                       'className': 'inputEx-Field label-group-list'}))
     common.add_property(SchemaField('is_draft', 'Status', 'boolean',
                                     select_data=[(True, DRAFT_TEXT),
                                                  (False, PUBLISHED_TEXT)],
@@ -408,11 +377,8 @@ class UnitTools(object):
         unit.description = updated_unit_dict.get('description')
         unit.now_available = not updated_unit_dict.get('is_draft')
 
-        labels = set()
-        for label_group in updated_unit_dict['label_groups']:
-            for label in label_group['labels']:
-                if label['checked'] and label['id'] > 0:
-                    labels.add(label['id'])
+        labels = LabelGroupsHelper.decode_labels_group(
+            updated_unit_dict['label_groups'])
 
         if self._course.get_parent_unit(unit.unit_id):
             track_label_ids = m_models.LabelDAO.get_set_of_ids_of_type(
@@ -550,44 +516,8 @@ class UnitTools(object):
             'title': unit.title,
             'description': unit.description or '',
             'is_draft': not unit.now_available,
-            'label_groups': self._labels_to_dict(unit)}
-
-    def _labels_to_dict(self, unit):
-        parent_unit = self._course.get_parent_unit(unit.unit_id)
-        all_labels = m_models.LabelDAO.get_all()
-        unit_labels = common_utils.text_to_list(unit.labels)
-        label_groups = []
-        for label_type in sorted(m_models.LabelDTO.LABEL_TYPES,
-                                 lambda a, b: cmp(a.menu_order, b.menu_order)):
-            # If unit has a parent, don't even bother showing the UI elements
-            # for setting tracks.
-            if (parent_unit and
-                label_type.type == m_models.LabelDTO.LABEL_TYPE_COURSE_TRACK):
-                continue
-
-            label_group = []
-            for label in sorted(all_labels, lambda a, b: cmp(a.title, b.title)):
-                if label.type == label_type.type:
-                    label_group.append({
-                        'id': label.id,
-                        'title': label.title,
-                        'description': label.description,
-                        'checked': str(label.id) in unit_labels,
-                        'no_labels': '',
-                        })
-            if not label_group:
-                label_group.append({
-                    'id': -1,
-                    'title': '',
-                    'description': '',
-                    'checked': False,
-                    'no_labels': '-- No labels of this type --',
-                    })
-            label_groups.append({
-                'title': label_type.title,
-                'labels': label_group,
-                })
-        return label_groups
+            'label_groups': LabelGroupsHelper.unit_labels_to_dict(
+                self._course, unit)}
 
     def _get_assessment_path(self, unit):
         return self._course.app_context.fs.impl.physical_to_logical(

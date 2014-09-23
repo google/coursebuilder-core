@@ -347,6 +347,8 @@ class ApplicationHandler(webapp2.RequestHandler):
     def init_template_values(self, environ):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
+        self.template_value[
+            'page_locale'] = self.app_context.get_current_locale()
         self.template_value['html_hooks'] = HtmlHooks(self.app_context)
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
@@ -375,7 +377,8 @@ class ApplicationHandler(webapp2.RequestHandler):
 
         # Common template information for the locale picker (only shown for
         # user in session)
-        if prefs is not None:
+        if prefs is not None and self.get_course(
+            ).get_course_setting('can_student_change_locale'):
             self.template_value['available_locales'] = [
                 {
                     'name': locales.get_locale_display_name(loc),
@@ -452,20 +455,47 @@ class CourseHandler(ApplicationHandler):
             return None
         return Student.get_by_email(user.email())
 
+    def _pick_first_valid_locale_from_list(self, desired_locales):
+        available_locales = self.app_context.get_allowed_locales()
+        for lang in desired_locales:
+            for available_locale in available_locales:
+                if lang.lower() == available_locale.lower():
+                    return lang
+        return None
+
     def get_locale_for(self, request, app_context):
         """Returns a locale that should be used by this request."""
+        # check if student has any locale labels assigned
+        student = self.get_student()
+        if student and student.is_enrolled and not student.is_transient:
+            student_label_ids = student.get_labels_of_type(
+                models.LabelDTO.LABEL_TYPE_LOCALE)
+            if student_label_ids:
+                all_labels = models.LabelDAO.get_all_of_type(
+                    models.LabelDTO.LABEL_TYPE_LOCALE)
+                student_locales = []
+                for label in all_labels:
+                    if label.type != models.LabelDTO.LABEL_TYPE_LOCALE:
+                        continue
+                    if label.id in student_label_ids:
+                        student_locales.append(label.title)
+                locale = self._pick_first_valid_locale_from_list(
+                    student_locales)
+                if locale:
+                    return locale
+
+        # check if user preferences have been set
         prefs = models.StudentPreferencesDAO.load_or_create()
         if prefs is not None and prefs.locale is not None:
             return prefs.locale
 
+        # check if accept language has been set
         accept_langs = request.headers.get('Accept-Language')
-        accept_lang_list = locales.parse_accept_language(
-              accept_langs)
-        available_locales = app_context.get_allowed_locales()
-        for lang, _ in accept_lang_list:
-            for supported_lang in available_locales:
-                if lang.lower() == supported_lang.lower():
-                    return supported_lang
+        locale = self._pick_first_valid_locale_from_list(
+            [lang for lang, _ in locales.parse_accept_language(accept_langs)])
+        if locale:
+            return locale
+
         return app_context.default_locale
 
     def get_course(self):

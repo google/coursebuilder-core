@@ -21,18 +21,24 @@ import datetime
 import urllib
 
 from common import tags
+from common import utils
+from common.schema_fields import FieldArray
+from common.schema_fields import FieldRegistry
+from common.schema_fields import SchemaField
 from controllers.utils import BaseHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import ReflectiveRequestHandler
 from controllers.utils import XsrfTokenManager
 from models import custom_modules
 from models import entities
+from models import models
 from models import notify
 from models import roles
 from models import transforms
 from models.models import MemcacheManager
 from models.models import Student
 import modules.announcements.samples as samples
+from modules.dashboard.label_editor import LabelGroupsHelper
 from modules.oeditor import oeditor
 
 from google.appengine.ext import db
@@ -127,8 +133,13 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             items.append(entity)
         return items
 
+    def _render(self):
+        self.template_value['navbar'] = {'announcements': True}
+        self.render('announcements.html')
+
     def get_list(self):
         """Shows a list of announcements."""
+        student = None
         user = self.personalize_page_and_get_user()
         transient_student = False
         if user is None:
@@ -144,33 +155,39 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
             items = self.put_sample_announcements()
 
         items = AnnouncementsRights.apply_rights(self, items)
+        if not roles.Roles.is_course_admin(self.get_course().app_context):
+            items = models.LabelDAO.apply_course_track_labels_to_student_labels(
+                self.get_course(), student, items)
 
         self.template_value['announcements'] = self.format_items_for_template(
             items)
-        self.template_value['navbar'] = {'announcements': True}
-        self.render('announcements.html')
+        self._render()
 
     def get_edit(self):
         """Shows an editor for an announcement."""
-        if not AnnouncementsRights.can_edit(self):
+        user = self.personalize_page_and_get_user()
+        if not user or not AnnouncementsRights.can_edit(self):
             self.error(401)
             return
 
         key = self.request.get('key')
+
+        schema = AnnouncementsItemRESTHandler.SCHEMA(
+            'Announcement',
+            self.get_course().get_course_announcement_list_email())
 
         exit_url = self.canonicalize_url(
             '/announcements#%s' % urllib.quote(key, safe=''))
         rest_url = self.canonicalize_url('/rest/announcements/item')
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
-            AnnouncementsItemRESTHandler.SCHEMA_JSON,
-            AnnouncementsItemRESTHandler.get_schema_annotation_dict(
-                self.get_course().get_course_announcement_list_email()),
+            schema.get_json_schema(),
+            schema.get_schema_dict(),
             key, rest_url, exit_url,
             required_modules=AnnouncementsItemRESTHandler.REQUIRED_MODULES)
-        self.template_value['navbar'] = {'announcements': True}
+
         self.template_value['content'] = form_html
-        self.render('bare.html')
+        self._render()
 
     def post_delete(self):
         """Deletes an announcement."""
@@ -199,68 +216,59 @@ class AnnouncementsHandler(BaseHandler, ReflectiveRequestHandler):
         self.redirect(self.get_action_url('edit', key=entity.key()))
 
 
+DRAFT_TEXT = 'Private'
+PUBLISHED_TEXT = 'Public'
+
+
 class AnnouncementsItemRESTHandler(BaseRESTHandler):
     """Provides REST API for an announcement."""
 
-    # TODO(psimakov): we should really use an ordered dictionary, not plain
-    # text; it can't be just a normal dict because a dict iterates its items in
-    # undefined order;  thus when we render a dict to JSON an order of fields
-    # will not match what we specify here; the final editor will also show the
-    # fields in an undefined order; for now we use the raw JSON, rather than the
-    # dict, but will move to an ordered dict late.
-    SCHEMA_JSON = """
-        {
-            "id": "Announcement Entity",
-            "type": "object",
-            "description": "Announcement",
-            "properties": {
-                "key" : {"type": "string"},
-                "title": {"optional": true, "type": "string"},
-                "date": {"optional": true, "type": "date"},
-                "html": {"optional": true, "type": "html"},
-                "is_draft": {"type": "boolean"},
-                "send_email": {"type": "boolean"}
-                }
-        }
-        """
-
-    SCHEMA_DICT = transforms.loads(SCHEMA_JSON)
-
     REQUIRED_MODULES = [
         'inputex-date', 'gcb-rte', 'inputex-select', 'inputex-string',
-        'inputex-uneditable', 'inputex-checkbox']
+        'inputex-uneditable', 'inputex-checkbox', 'inputex-list',
+        'inputex-hidden']
 
-    @staticmethod
-    def get_send_email_description(announcement_email):
+    @classmethod
+    def SCHEMA(cls, title, announcement_email):
+        schema = FieldRegistry(title)
+        schema.add_property(SchemaField(
+            'key', 'ID', 'string', editable=False,
+            extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
+        schema.add_property(SchemaField(
+            'title', 'Title', 'string', optional=True))
+        schema.add_property(SchemaField(
+            'html', 'Body', 'html', optional=True,
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': tags.EditorBlacklists.COURSE_SCOPE}))
+        schema.add_property(SchemaField(
+            'date', 'Date', 'date',
+            optional=True, extra_schema_dict_values={
+                '_type': 'date', 'dateFormat': 'Y-m-d',
+                'valueFormat': 'Y-m-d'}))
+        schema.add_property(FieldArray(
+            'label_groups', 'Labels',
+             item_type=LabelGroupsHelper.make_labels_group_schema_field(),
+             extra_schema_dict_values={
+                 'className': 'inputEx-Field label-group-list'}))
+        schema.add_property(SchemaField(
+            'send_email', 'Send Email', 'boolean', optional=True,
+            extra_schema_dict_values={
+                'description':
+                    AnnouncementsItemRESTHandler.get_send_email_description(
+                        announcement_email)}))
+        schema.add_property(SchemaField(
+            'is_draft', 'Status', 'boolean',
+            select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
+            extra_schema_dict_values={'className': 'split-from-main-group'}))
+        return schema
+
+    @classmethod
+    def get_send_email_description(cls, announcement_email):
         """Get the description for Send Email field."""
         if announcement_email:
             return 'Email will be sent to : ' + announcement_email
         return 'Announcement list not configured.'
-
-    @staticmethod
-    def get_schema_annotation_dict(announcement_email):
-        """Utility to get schema annotation dict for this course."""
-        schema_dict = [
-            (['title'], 'Announcement'),
-            (['properties', 'key', '_inputex'], {
-                'label': 'ID', '_type': 'uneditable'}),
-            (['properties', 'date', '_inputex'], {
-                'label': 'Date', '_type': 'date', 'dateFormat': 'Y-m-d',
-                'valueFormat': 'Y-m-d'}),
-            (['properties', 'title', '_inputex'], {'label': 'Title'}),
-            (['properties', 'html', '_inputex'], {
-                'label': 'Body', '_type': 'html',
-                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
-                'excludedCustomTags':
-                tags.EditorBlacklists.COURSE_SCOPE}),
-            oeditor.create_bool_select_annotation(
-                ['properties', 'is_draft'], 'Status', 'Draft', 'Published'),
-            (['properties', 'send_email', '_inputex'], {
-                'label': 'Send Email', '_type': 'boolean',
-                'description':
-                AnnouncementsItemRESTHandler.get_send_email_description(
-                    announcement_email)})]
-        return schema_dict
 
     def get(self):
         """Handles REST GET verb and returns an object as JSON payload."""
@@ -283,8 +291,16 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
             return
         entity = viewable[0]
 
-        json_payload = transforms.dict_to_json(transforms.entity_to_dict(
-            entity), AnnouncementsItemRESTHandler.SCHEMA_DICT)
+        schema = AnnouncementsItemRESTHandler.SCHEMA(
+            'Announcement',
+            self.get_course().get_course_announcement_list_email())
+
+        entity_dict = transforms.entity_to_dict(entity)
+        entity_dict['label_groups'] = (
+            LabelGroupsHelper.announcement_labels_to_dict(entity))
+
+        json_payload = transforms.dict_to_json(
+            entity_dict, schema.get_json_schema_dict())
         transforms.send_json_response(
             self, 200, 'Success.',
             payload_dict=json_payload,
@@ -311,10 +327,20 @@ class AnnouncementsItemRESTHandler(BaseRESTHandler):
                 self, 404, 'Object not found.', {'key': key})
             return
 
+        schema = AnnouncementsItemRESTHandler.SCHEMA(
+            'Announcement',
+            self.get_course().get_course_announcement_list_email())
+
         payload = request.get('payload')
-        transforms.dict_to_entity(entity, transforms.json_to_dict(
-            transforms.loads(payload),
-            AnnouncementsItemRESTHandler.SCHEMA_DICT))
+        update_dict = transforms.json_to_dict(
+            transforms.loads(payload), schema.get_json_schema_dict())
+
+        entity.labels = utils.list_to_text(
+            LabelGroupsHelper.decode_labels_group(
+                update_dict.get('label_groups')))
+
+        transforms.dict_to_entity(entity, update_dict)
+
         entity.put()
 
         email_sent = False
@@ -338,6 +364,7 @@ class AnnouncementEntity(entities.BaseEntity):
     title = db.StringProperty(indexed=False)
     date = db.DateProperty()
     html = db.TextProperty(indexed=False)
+    labels = db.StringProperty(indexed=False)
     is_draft = db.BooleanProperty()
     send_email = db.BooleanProperty()
 

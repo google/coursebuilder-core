@@ -232,8 +232,10 @@ class SchemaField(Property):
             schema['_type'] = 'select'
 
         if 'date' is self._property_type:
-            schema['dateFormat'] = 'Y/m/d'
-            schema['valueFormat'] = 'Y/m/d'
+            if 'dateFormat' not in schema:
+                schema['dateFormat'] = 'Y/m/d'
+            if 'valueFormat' not in schema:
+                schema['valueFormat'] = 'Y/m/d'
         elif self._select_data:
             choices = []
             for value, label in self._select_data:

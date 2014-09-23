@@ -795,10 +795,10 @@ class ApplicationContext(object):
 
     @property
     def default_locale(self):
-        if not hasattr(self._locale_threadlocal, 'default_locale'):
-            self._locale_threadlocal.default_locale = (
-                self.get_environ()['course']['locale'])
-        return self._locale_threadlocal.default_locale
+        course_settings = self.get_environ().get('course')
+        if not course_settings:
+            return None
+        return course_settings.get('locale')
 
     def get_title(self):
         try:
