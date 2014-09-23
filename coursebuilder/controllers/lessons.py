@@ -1185,6 +1185,25 @@ class EventsRESTHandler(BaseRESTHandler):
         self.error(404)
         return
 
+    def _add_location_facts(self, payload_json):
+        payload_dict = transforms.loads(payload_json)
+        if 'loc' not in payload_dict:
+            payload_dict['loc'] = {}
+        loc = payload_dict['loc']
+        loc['locale'] = self.get_locale_for(self.request, self.app_context)
+        loc['language'] = self.request.headers.get('Accept-Language')
+        loc['country'] = self.request.headers.get('X-AppEngine-Country')
+        loc['region'] = self.request.headers.get('X-AppEngine-Region')
+        loc['city'] = self.request.headers.get('X-AppEngine-City')
+        lat_long = self.request.headers.get('X-AppEngine-CityLatLong')
+        if lat_long:
+            latitude, longitude = lat_long.split(',')
+            loc['lat'] = float(latitude)
+            loc['long'] = float(longitude)
+        payload_json = transforms.dumps(payload_dict).lstrip(
+            models.transforms.JSON_XSSI_PREFIX)
+        return payload_json
+
     def post(self):
         """Receives event and puts it into datastore."""
 
@@ -1206,7 +1225,7 @@ class EventsRESTHandler(BaseRESTHandler):
 
         source = request.get('source')
         payload_json = request.get('payload')
-
+        payload_json = self._add_location_facts(payload_json)
         models.EventEntity.record(source, user, payload_json)
         COURSE_EVENTS_RECORDED.inc()
 

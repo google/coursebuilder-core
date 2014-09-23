@@ -65,6 +65,8 @@ function gcbAudit(can_post, data_dict, source, is_async) {
   // from emitting too much volume to AppEngine; respect that setting.
   if (can_post) {
     data_dict['location'] = '' + window.location;
+    data_dict['loc'] = {}
+    data_dict['loc']['page_locale'] = $('body').data('gcb-page-locale')
     var request = {
         'source': source,
         'payload': JSON.stringify(data_dict),

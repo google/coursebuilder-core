@@ -174,7 +174,7 @@
     {{ course_info.base.before_head_tag_ends | safe}}
   </head>
 
-  <body>
+  <body data-gcb-page-locale="{{ page_locale }}">
 
     {{ html_hooks.insert('base:after_body_tag_begins') }}
 

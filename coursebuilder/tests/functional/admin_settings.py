@@ -355,8 +355,9 @@ class HtmlHookTest(actions.TestBase):
 
         # Add hook specification to page content.
         contents = contents.replace(
-            '<body>',
-            '<body>\n    {{ html_hooks.insert(\'%s\') | safe }}' % hook_name)
+            '<body data-gcb-page-locale="{{ page_locale }}">',
+            '<body data-gcb-page-locale="{{ page_locale }}">\n' +
+            '{{ html_hooks.insert(\'%s\') | safe }}' % hook_name)
         self.put(TEXT_ASSET_URL, {'request': transforms.dumps({
                 'xsrf_token': cgi.escape(xsrf_token),
                 'key': key,
