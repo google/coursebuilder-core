@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-23 09:58-0700\n"
+"POT-Creation-Date: 2014-09-23 12:15-0700\n"
 "PO-Revision-Date: 2014-09-23 09:58-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bg <LL@li.org>\n"
@@ -265,7 +265,10 @@ msgstr "Промяна на името"
 msgid "Error: Empty email list"
 msgstr "Грешка: Списъкът с имейл адреси е празен"
 
-#: experimental/coursebuilder/modules/invitation/invitation.py:261
+#. Error indicating not all invitations were sent due to
+#. exceeding the maximum number of emails allowed to be sent by
+#. this account.
+#: experimental/coursebuilder/modules/invitation/invitation.py:260
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -275,66 +278,66 @@ msgstr ""
 "messages sent."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:268
+#: experimental/coursebuilder/modules/invitation/invitation.py:269
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Грешка: Имейл адресът „%s“ е невалиден"
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:272
+#: experimental/coursebuilder/modules/invitation/invitation.py:273
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "Грешка: Вече изпратихте имейл с покана до „%s“"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:290
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Някои съобщения не бяха изпратени (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:297
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "Всичко е наред, изпратени бяха %s съобщения"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:350
+#: experimental/coursebuilder/modules/invitation/invitation.py:351
 msgid "Invite Friends"
 msgstr "Поканете приятели"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:355
+#: experimental/coursebuilder/modules/invitation/invitation.py:356
 msgid "Click to send invitations to family and friends"
 msgstr "Кликнете за изпращане на покани до близки и приятели"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:359
+#: experimental/coursebuilder/modules/invitation/invitation.py:360
 msgid "Invitations not currently available"
 msgstr "Поканите понастоящем не са налице"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:371
+#: experimental/coursebuilder/modules/invitation/invitation.py:372
 msgid "Subscribe/Unsubscribe"
 msgstr "Абониране/отписване"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:378
+#: experimental/coursebuilder/modules/invitation/invitation.py:379
 msgid "You are currently unsubscribed from invitations."
 msgstr "Понастоящем сте отписани от покани."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:382
+#: experimental/coursebuilder/modules/invitation/invitation.py:383
 msgid "Click here to re-subscribe."
 msgstr "Кликнете тук за повторно абониране."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:387
+#: experimental/coursebuilder/modules/invitation/invitation.py:388
 msgid "You can currently receive invitations. "
 msgstr "Понастоящем получавате покани. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:390
+#: experimental/coursebuilder/modules/invitation/invitation.py:391
 msgid "Click here to unsubscribe."
 msgstr "Кликнете тук за отписване."
 

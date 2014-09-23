@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-23 09:58-0700\n"
+"POT-Creation-Date: 2014-09-23 12:15-0700\n"
 "PO-Revision-Date: 2014-09-23 09:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: mr <LL@li.org>\n"
@@ -267,7 +267,10 @@ msgstr "नाव बदला"
 msgid "Error: Empty email list"
 msgstr "त्रुटी: रिक्त ईमेल सूची"
 
-#: experimental/coursebuilder/modules/invitation/invitation.py:261
+#. Error indicating not all invitations were sent due to
+#. exceeding the maximum number of emails allowed to be sent by
+#. this account.
+#: experimental/coursebuilder/modules/invitation/invitation.py:260
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -277,66 +280,66 @@ msgstr ""
 "messages sent."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:268
+#: experimental/coursebuilder/modules/invitation/invitation.py:269
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "त्रुटी: अवैध ईमेल \"%s\""
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:272
+#: experimental/coursebuilder/modules/invitation/invitation.py:273
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "त्रुटी: आपण \"%s\" ना आधीपासून एक आमंत्रणाचे ईमेल पाठविले आहे."
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:290
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "सर्व संदेश पाठविले नव्हते (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:297
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "ठीक आहे, %s संदेश पाठविले"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:350
+#: experimental/coursebuilder/modules/invitation/invitation.py:351
 msgid "Invite Friends"
 msgstr "मित्रांना आमंत्रित करा"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:355
+#: experimental/coursebuilder/modules/invitation/invitation.py:356
 msgid "Click to send invitations to family and friends"
 msgstr "कुटुंबास आणि मित्रांना आमंत्रणे पाठविण्‍यासाठी क्लिक करा"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:359
+#: experimental/coursebuilder/modules/invitation/invitation.py:360
 msgid "Invitations not currently available"
 msgstr "सध्‍या आमंत्रणे उपलब्‍ध नाहीत"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:371
+#: experimental/coursebuilder/modules/invitation/invitation.py:372
 msgid "Subscribe/Unsubscribe"
 msgstr "वर्गणीदार व्हा/सदस्यता रद्द करा"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:378
+#: experimental/coursebuilder/modules/invitation/invitation.py:379
 msgid "You are currently unsubscribed from invitations."
 msgstr "आपण सध्‍या आमंत्रणांमधून सदस्यता रद्द केली आहे."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:382
+#: experimental/coursebuilder/modules/invitation/invitation.py:383
 msgid "Click here to re-subscribe."
 msgstr "पुन्हा वर्गणीदार होण्‍यासाठी येथे क्लिक करा."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:387
+#: experimental/coursebuilder/modules/invitation/invitation.py:388
 msgid "You can currently receive invitations. "
 msgstr "आपण सध्‍या आमंत्रणे प्राप्त करू शकता. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:390
+#: experimental/coursebuilder/modules/invitation/invitation.py:391
 msgid "Click here to unsubscribe."
 msgstr "सदस्यता रद्द करण्यासाठी येथे क्लिक करा."
 
