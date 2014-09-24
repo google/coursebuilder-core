@@ -146,12 +146,13 @@ DEFAULT_OPAQUE_TAG_NAMES = ['SCRIPT', 'STYLE']
 # These tags are inspected and are rendered inline without any content;
 # for example: <ul#1 />; their children are extracted and for translation as
 # independent items
-DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES = ['UL', 'TABLE']
+DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES = ['UL', 'TABLE', 'IMG']
 
 # The key is an attribute name. The value is a set of tag names, for which
 # this attribute can be recomposed from resource bundle. All other attributes
 # are not recomposable.
-DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP = {'ALT': set('*'), 'TITLE': set('*')}
+DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP = {
+    'ALT': set(['*']), 'TITLE': set(['*']), 'SRC': set(['IMG'])}
 
 
 class ContentIO(object):
@@ -346,10 +347,12 @@ class TranslationIO(object):
                 start_tag += ' %s="%s"' % (
                     attr, element.get_escaped_attribute(attr))
 
-        if element.tag_name.upper() in ((
-            config.opaque_tag_names) + (
-            config.opaque_decomposable_tag_names)):
+        if element.tag_name.upper() in config.opaque_tag_names:
             return False, '<%s />' % start_tag
+
+        if element.tag_name.upper() in config.opaque_decomposable_tag_names:
+            return (
+                not config.omit_empty_opaque_decomposable, '<%s />' % start_tag)
 
         has_content = False
         if element.children:
@@ -493,7 +496,8 @@ class Configuration(object):
         inline_tag_names=None,
         opaque_tag_names=None,
         opaque_decomposable_tag_names=None,
-        recomposable_attributes_map=None):
+        recomposable_attributes_map=None,
+        omit_empty_opaque_decomposable=True):
 
         if inline_tag_names is not None:
             self.inline_tag_names = inline_tag_names
@@ -516,6 +520,8 @@ class Configuration(object):
         else:
             self.recomposable_attributes_map = (
                 DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
+
+        self.omit_empty_opaque_decomposable = omit_empty_opaque_decomposable
 
 
 class Context(object):
@@ -1656,6 +1662,13 @@ class TestCasesForContentDecompose(TestCasesBase):
         self._assert_decomposes(html, expected)
         self._assert_decomposes(html, expected)
 
+    def test_extract_decompose_opaque_translatable(self):
+        config = Configuration(omit_empty_opaque_decomposable=False)
+        self.transformer = ContentTransformer(config)
+        html = '<img src="foo" />'
+        expected = ['<img#1 src="foo" />']
+        self._assert_decomposes(html, expected)
+
     def test_extract_large_sample_document(self):
         self.maxDiff = None
         original = ContentIO.tostring(ContentIO.fromstring(
@@ -1760,14 +1773,20 @@ class TestCasesForContentRecompose(TestCasesBase):
               </h1>
               <a class="maia-teleport" href="#content">Skip to content</a>
             """
-        expected = ['Open Online Education', '<a#1>Skip to content</a#1>']
+        expected = [
+            '<img#1 src="//www.google.com/images/logos/google_logo_41.png" '
+            'alt="Google" />\n                Open Online Education',
+            '<a#1>Skip to content</a#1>']
         self._assert_decomposes(html, expected)
-        translations = ['Open ONLINE Education', '<a#1>SKIP to content</a#1>']
+        translations = [
+            '<img#1 src="//www.google.com/images/logos/google_logo_99.png" '
+            'alt="Google+" />\n                Open ONLINE Education',
+            '<a#1>SKIP to content</a#1>']
         result = """
               <h1>
                 <a href="/">
-                  <img alt="Google"
-                    src="//www.google.com/images/logos/google_logo_41.png" />
+                  <img alt="Google+"
+                    src="//www.google.com/images/logos/google_logo_99.png" />
                 Open ONLINE Education</a>
               </h1>
               <a class="maia-teleport" href="#content">SKIP to content</a>
@@ -2374,7 +2393,7 @@ new gweb.analytics.AutoTrack({profile:"UA-12481063-1"});
 
 SAMPLE_HTML_DOC_DECOMPOSE = [
     'Google Open Online Education',
-    'Open Online Education',
+    '<img#1 src="//www.google.com/images/logos/google_logo_41.png" alt="Google" />\n          Open Online Education',
     '<a#1>Skip to content</a#1>',
     '<a#1>Home</a#1>',
     '<a#1>Insights</a#1>',

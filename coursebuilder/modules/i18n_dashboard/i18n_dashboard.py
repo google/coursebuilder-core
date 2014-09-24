@@ -1374,7 +1374,8 @@ def get_xcontent_configuration(app_context):
 
     return xcontent.Configuration(
         opaque_tag_names=opaque_tag_names,
-        recomposable_attributes_map=recomposable_attributes_map)
+        recomposable_attributes_map=recomposable_attributes_map,
+        omit_empty_opaque_decomposable=False)
 
 
 class TranslatedAssetConsole(BaseDashboardExtension):
