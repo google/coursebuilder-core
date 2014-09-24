@@ -348,9 +348,13 @@ class UnitLessonEditor(ApplicationHandler):
         annotations_dict = (
             None if lesson.has_activity
             else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
+        schema = LessonRESTHandler.get_schema(course.get_units())
+        if courses.has_only_new_style_activities(self.get_course()):
+            schema.get_property('objectives').extra_schema_dict_values[
+              'excludedCustomTags'] = set(['gcb-activity'])
         self._render_edit_form_for(
             LessonRESTHandler, 'Lessons and Activities',
-            schema=LessonRESTHandler.get_schema(course.get_units()),
+            schema=schema,
             annotations_dict=annotations_dict,
             delete_xsrf_token='delete-lesson',
             extra_js_files=None)

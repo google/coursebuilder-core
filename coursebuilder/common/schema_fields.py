@@ -33,7 +33,7 @@ class Property(object):
         self._select_data = select_data
         self._description = description
         self._optional = optional
-        self._extra_schema_dict_values = extra_schema_dict_values
+        self._extra_schema_dict_values = extra_schema_dict_values or {}
 
     def __str__(self):
         return '%s#%s' % (self._name, self._property_type)
@@ -45,6 +45,10 @@ class Property(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def extra_schema_dict_values(self):
+        return self._extra_schema_dict_values
 
     @property
     def label(self):

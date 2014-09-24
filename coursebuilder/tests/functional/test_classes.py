@@ -248,6 +248,9 @@ class InfrastructureTest(actions.TestBase):
         assert len(
             src_course_out.get_units()) == len(dst_course_out_a.get_units())
 
+        assert courses.has_at_least_one_old_style_assessment(src_course)
+        assert courses.has_only_new_style_assessments(dst_course_a)
+
         final_settings = dst_course_a.app_context.get_environ()
         assert 'assessment_confirmations' in final_settings
         final_course_settings = set(
@@ -3090,6 +3093,11 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         assert_equals(200, response.status_int)
         assert_contains('Humane Society website', response.body)
 
+        # Check activity component is hidden
+        response = self.get('dashboard?key=5&action=edit_lesson')
+        assert_equals(200, response.status_int)
+        assert 'excludedCustomTags\\\": [\\\"gcb-activity' in response.body
+
         # Check activity is copied.
         response = self.get('unit?unit=57&lesson=63')
         assert_equals(200, response.status_int)
@@ -4809,6 +4817,8 @@ var activity = [
         new_lesson = dst_course.get_lessons('1')[1]
         assert 'quid=' in new_lesson.objectives
         self.assertEqual(title, new_lesson.title)
+        assert courses.has_at_least_one_old_style_activity(src_course)
+        assert courses.has_only_new_style_activities(dst_course)
 
     def test_import_free_text_activity(self):
         text = self.FREETEXT_QUESTION
