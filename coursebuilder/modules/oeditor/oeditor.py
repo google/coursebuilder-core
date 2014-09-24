@@ -175,14 +175,33 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
         return jinja_utils.get_template(
             template_name, dirs + [os.path.dirname(__file__)])
 
+    def _validate_schema(self, tag, schema):
+        if schema.has_subregistries():
+            return tag.unavailable_schema(
+                'This tag has an invalid schema and cannot be edited. '
+                'Only simple field types are allowed.')
+
+        text_field_count = 0
+        index = schema_fields.FieldRegistryIndex(schema)
+        index.rebuild()
+        for name in index.names_in_order:
+            if index.find(name).type == 'text':
+                text_field_count += 1
+        if text_field_count > 1:
+            return tag.unavailable_schema(
+                'This tag has an invalid schema and cannot be edited. '
+                'Only one field of type "text" is allowed.')
+
+        return schema
+
     def get_edit_custom_tag(self):
         """Return the the page used to edit a custom HTML tag in a popup."""
         tag_name = self.request.get('tag_name')
         tag_bindings = tags.get_tag_bindings()
         tag_class = tag_bindings[tag_name]
-        schema = tag_class().get_schema(self)
-        if schema.has_subregistries():
-            raise NotImplementedError()
+        tag = tag_class()
+        schema = tag.get_schema(self)
+        schema = self._validate_schema(tag, schema)
 
         template_values = {}
         template_values['form_html'] = ObjectEditor.get_html_for(
@@ -214,7 +233,9 @@ class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
             tag_class = tag_bindings[tag_name]
         else:
             tag_class = tag_bindings[select_data[0][0]]
-        tag_schema = tag_class().get_schema(self)
+        tag = tag_class()
+        tag_schema = tag.get_schema(self)
+        tag_schema = self._validate_schema(tag, tag_schema)
 
         schema = schema_fields.FieldRegistry('Add a Component')
         type_select = schema.add_sub_registry('type', 'Component Type')

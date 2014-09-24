@@ -135,6 +135,10 @@ SPB+uxAAAAAElFTkSuQmCC
         the tag, the display name for the form, and the type (usually
         string).
 
+        The schema field type of "text" plays a special role: a tag is allowed
+        to have at most one field of type "text", and this is stored in the body
+        of the tag, not as an attribute.
+
         Returns:
           the list of fields to be displayed in the editor.
         """

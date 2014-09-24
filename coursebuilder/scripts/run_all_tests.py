@@ -87,7 +87,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 13,
+    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 14,
     'tests.functional.modules_i18n_dashboard.ResourceKeyTests': 3,
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 1,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
@@ -95,7 +95,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 7,
     'tests.functional.modules_i18n_dashboard.LazyTranslatorTests': 1,
     'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleRestHandlerTests': 5,
+        '.TranslationConsoleRestHandlerTests': 6,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
     'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 11,
     'tests.functional.modules_invitation.InvitationHandlerTests': 16,

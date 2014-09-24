@@ -408,7 +408,9 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         return self.create_icon_url('markdown.png')
 
     def render(self, node, context):
-        html = markdown.markdown(node.attrib.get('markdown'))
+        # The markdown is "text" type in the schema and so is presented in the
+        # tag's body.
+        html = markdown.markdown(node.text)
         return cElementTree.fromstring(
             '<div class="gcb-markdown">%s</div>' % html)
 

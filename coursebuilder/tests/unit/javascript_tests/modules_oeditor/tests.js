@@ -62,6 +62,7 @@ describe('FramedEditorControls', function() {
     Y = {};
 
     frameProxy = {
+      init: function() {},
       getValue: function() {},
       setValue: function() {},
       submit: function() {},
@@ -73,9 +74,11 @@ describe('FramedEditorControls', function() {
         getValue: function() {},
         setValue: function() {}
       },
+      schema: {},
       onFormLoad: function() {}
     };
 
+    spyOn(frameProxy, 'init');
     spyOn(frameProxy, 'getValue').andReturn('parent_form_value');
     spyOn(frameProxy, 'setValue');
     spyOn(frameProxy, 'close');
@@ -138,6 +141,7 @@ describe('FramedEditorControls', function() {
     }
     spyOn(document, 'getElementById').andReturn(formContainer)
     framedEditorControls.populateForm();
+    expect(frameProxy.init).toHaveBeenCalledWith(env.schema);
     expect(env.form.setValue).toHaveBeenCalledWith('parent_form_value');
     expect(env.onFormLoad).toHaveBeenCalled();
 
@@ -147,6 +151,7 @@ describe('FramedEditorControls', function() {
 
 describe('FrameProxy', function() {
   var DEFAULT_VALUE = {value: 'one'};
+  var DEFAULT_SCHEMA = {'properties' : {}};
   var DEFAULT_CONTEXT = {};
   var proxy, root, iframe, callbacks;
 
@@ -164,6 +169,7 @@ describe('FrameProxy', function() {
       style: {}
     };
     callbacks = {
+      getValue: function() {},
       onSubmit: function() {},
       onClose: function() {}
     };
@@ -171,16 +177,18 @@ describe('FrameProxy', function() {
     spyOn(root, 'removeChild');
     spyOn(document, 'getElementById').andReturn(root);
     spyOn(document, 'createElement').andReturn(iframe);
+    spyOn(callbacks, 'getValue').andReturn(DEFAULT_VALUE);
     spyOn(callbacks, 'onSubmit');
     spyOn(callbacks, 'onClose');
 
     proxy =  new FrameProxy(
         'rootid',
         'http://url',
-        DEFAULT_VALUE,
+        callbacks.getValue,
         DEFAULT_CONTEXT,
         callbacks.onSubmit,
         callbacks.onClose);
+    proxy.init(DEFAULT_SCHEMA);
   });
 
   it('opens an iframe', function() {
@@ -229,7 +237,8 @@ describe('FrameProxy', function() {
   it('tidies itself and calls its callback on submit', function() {
     proxy.open();
     proxy.submit();
-    expect(callbacks.onSubmit).toHaveBeenCalledWith(DEFAULT_VALUE);
+    expect(callbacks.onSubmit)
+        .toHaveBeenCalledWith(DEFAULT_VALUE, DEFAULT_SCHEMA);
     expect(callbacks.onClose.calls.length).toEqual(0);
     expect(root.removeChild).toHaveBeenCalledWith(iframe);
     expect(root.className).toEqual('hidden');

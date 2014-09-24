@@ -613,6 +613,20 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             'text<gcb-youtube#1 videoid="Kdg2drcUjYI" />',
             data[0]['source_value'])
 
+    def test_get_unit_content_with_custom_tag_with_body(self):
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit with Tag'
+        unit.unit_header = '<gcb-markdown>*hello*</gcb-markdown>'
+        self.course.save()
+
+        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        response = self._get_by_key(key)
+        payload = transforms.loads(response['payload'])
+        data = payload['sections'][2]['data']
+        self.assertEquals(1, len(data))
+        self.assertEquals(
+            '<gcb-markdown#1>*hello*</gcb-markdown#1>', data[0]['source_value'])
+
 
 class LazyTranslatorTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
@@ -895,6 +909,40 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(1, len(main[0]))
         self.assertEquals('iframe', main[0][0].tag)
         self.assertIn(target_video_id, main[0][0].attrib['src'])
+
+    def test_custom_tag_with_body_is_translated(self):
+        tag_string = (
+            '<gcb-markdown instanceid="c4CLTDvttJEu">'
+            '*hello*'
+            '</gcb-markdown>')
+        unit = self.course.add_unit()
+        unit.title = 'Tag Unit'
+        unit.unit_header = tag_string
+        self.course.save()
+
+        unit_bundle = {
+            'unit_header': {
+                'type': 'html',
+                'source_value': tag_string,
+                'data': [
+                    {
+                        'source_value': (
+                            '<gcb-markdown#1>*hello*</gcb-markdown#1>'),
+                        'target_value': (
+                            '<gcb-markdown#1>*HELLO*</gcb-markdown#1>')}
+                ]
+            }
+        }
+        unit_key_el = ResourceBundleKey(
+            ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(unit_key_el), unit_bundle))
+
+        page_html = self.get('unit?unit=%s' % unit.unit_id).body
+        dom = self.parse_html_string(page_html)
+        main = dom.find('.//div[@id="gcb-main-article"]/div[1]')
+        markdown = main.find('.//div[@class="gcb-markdown"]/p')
+        self.assertEquals('HELLO', markdown.find('./em').text)
 
     def _add_question(self):
         # Create a question
@@ -1812,7 +1860,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
         self.assertIn(
             'Russian (Russia) translations for Power Searching with Google.',
             response.body)
-        self.assertNotIn(  # TODO(psimakov): use assertIn() when export works
+        self.assertNotIn(
+            # TODO(psimakov): use assertIn() when export works
             'You are a cosmetologist and business owner', response.body)
 
         # import

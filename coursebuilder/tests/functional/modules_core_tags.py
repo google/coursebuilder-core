@@ -53,7 +53,8 @@ class TagsMarkdown(actions.TestBase):
         self.lesson.objectives = '''
  Welcome to Markdown!
 
-<gcb-markdown markdown="# This is an H1
+<gcb-markdown instanceid="BHpNAOMuLdMn">
+# This is an H1
 
 ## This is an H2
 
@@ -74,7 +75,8 @@ This is [an example](http://example.com/ &quot;Title&quot;) inline link.
 
    1. apples
    2. oranges
-   3. pears" instanceid="BHpNAOMuLdMn"></gcb-markdown><br>'''
+   3. pears
+</gcb-markdown><br>'''
         self.course.save()
 
         response = self.get(LESSON_URL)

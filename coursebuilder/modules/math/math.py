@@ -45,13 +45,18 @@ class MathTag(tags.ContextAwareTag):
         return 'gcb'
 
     def render(self, node, context):
-        input_type = node.attrib.get('input_type')
         math_script = cElementTree.XML('<script/>')
-        math_script.text = node.attrib.get('formula')
+
+        # The formula is "text" type in the schema and so is presented in the
+        # tag's body.
+        math_script.text = node.text
+
+        input_type = node.attrib.get('input_type')
         if input_type == 'MML':
             math_script.set('type', 'math/mml')
         else:
             math_script.set('type', 'math/tex')
+
         return math_script
 
     def rollup_header_footer(self, context):
@@ -83,6 +88,7 @@ class MathTag(tags.ContextAwareTag):
                 description=('Provide mathematical script'
                              ' which will be displayed')))
         return reg
+
 
 custom_module = None
 

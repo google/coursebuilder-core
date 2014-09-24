@@ -1379,15 +1379,12 @@ class LazyTranslator(object):
 
 
 def get_xcontent_configuration(app_context):
-    custom_tags = tags.Registry.get_all_tags()
 
-    opaque_tag_names = xcontent.DEFAULT_OPAQUE_TAG_NAMES + [
-        tag_name.upper()
-        for tag_name in tags.Registry.get_all_tags().keys()]
-
+    inline_tag_names = list(xcontent.DEFAULT_INLINE_TAG_NAMES)
     recomposable_attributes_map = dict(
         xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
-    for tag_name, tag_cls in custom_tags.items():
+
+    for tag_name, tag_cls in tags.Registry.get_all_tags().items():
         tag_schema = None
         try:
             # TODO(jorr): refactor BaseTag.get_schema to work without handler
@@ -1402,12 +1399,14 @@ def get_xcontent_configuration(app_context):
         index.rebuild()
 
         for name in (
-                TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)):
+            TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)
+        ):
+            inline_tag_names.append(tag_name.upper())
             recomposable_attributes_map.setdefault(
                 name.upper(), set()).add(tag_name.upper())
 
     return xcontent.Configuration(
-        opaque_tag_names=opaque_tag_names,
+        inline_tag_names=inline_tag_names,
         recomposable_attributes_map=recomposable_attributes_map,
         omit_empty_opaque_decomposable=False)
 

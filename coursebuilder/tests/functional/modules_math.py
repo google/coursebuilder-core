@@ -53,12 +53,11 @@ class MathTagTests(actions.TestBase):
 
         math_lesson = self.course.add_lesson(math_unit)
         math_lesson.title = 'First lesson with mathematical formula'
-        math_lesson.objectives = r"""
-<gcb-math
-    input_type="TeX" choose_mode="Inline"
-    formula="x^2+2x+1" instanceid="X99HibNGBIX4">
-</gcb-math><br>
-"""
+        math_lesson.objectives = (
+            '<gcb-math input_type="TeX" instanceid="X99HibNGBIX4">'
+            'x^2+2x+1'
+            '</gcb-math><br>')
+
         self.course.save()
 
     def _search_element_lesson_body(self, search_element, assert_function,
