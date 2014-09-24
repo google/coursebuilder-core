@@ -2233,7 +2233,11 @@ class Course(object):
             'during the course. If True, a language picker is shown to the '
             'student and locale changes are allowed at any time. If False, a '
             'language picker is not shown to the student and the desired '
-            'locale must be assigned during registration process.'))
+            'locale must be assigned during registration process via Locale '
+            'Labels. Current locale for any request is determined by looking '
+            'into student Locale Labels first, and then (if this value here '
+            'is set to True) into student preferences set by the language '
+            'picker.'))
         locale_data_for_select = [
             (loc, locales.get_locale_display_name(loc))
             for loc in locales.get_system_supported_locales()]

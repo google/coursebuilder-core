@@ -1231,7 +1231,25 @@ class SampleCourseLocalizationTest(actions.TestBase):
         self.assertIn('My First Course', response.body)
         self.assertEquals(response.status_int, 200)
 
-    def _setup_locales(self, availability='available'):
+    def _import_sample_course(self):
+        email = 'test_course_localization@google.com'
+        actions.login(email, is_admin=True)
+
+        response = self.get('/admin?action=welcome')
+        self.assertEquals(response.status_int, 200)
+        response = self.post(
+            '/admin?action=explore_sample',
+            params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'explore_sample')})
+        self.assertEquals(response.status_int, 302)
+
+        sites.setup_courses('course:/sample::ns_sample')
+
+        response = self.get('sample/dashboard')
+        self.assertIn('Power Searching with Google', response.body)
+        self.assertEquals(response.status_int, 200)
+
+    def _setup_locales(self, availability='available', course='first'):
         request = {
             'key': '/course.yaml',
             'payload': (
@@ -1242,12 +1260,12 @@ class SampleCourseLocalizationTest(actions.TestBase):
             'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'basic-course-settings-put')}
         response = self.put(
-            'first/rest/course/settings', params={
+            '%s/rest/course/settings' % course, params={
             'request': transforms.dumps(request)})
         self.assertEquals(response.status_int, 200)
 
         # check labels exist
-        with Namespace('ns_first'):
+        with Namespace('ns_%s' % course):
             labels = models.LabelDAO.get_all_of_type(
                 models.LabelDTO.LABEL_TYPE_LOCALE)
             self.assertEqual(3, len(labels))
@@ -1323,15 +1341,22 @@ class SampleCourseLocalizationTest(actions.TestBase):
 
             course.save()
 
-    def _set_labels_on_current_student(self, labels):
+            self._locale_to_unit = {}
+            self._locale_to_unit['en_US'] = _en
+            self._locale_to_unit['ru_RU'] = _ru
+            self._locale_to_unit['es_ES'] = _es
+
+    def _set_labels_on_current_student(self, labels, ids=None):
         with Namespace('ns_first'):
             user = users.get_current_user()
-            labels = utils.list_to_text([label.id for label in labels])
+            if ids is None:
+                ids = [label.id for label in labels]
+            labels = utils.list_to_text(ids)
             models.StudentProfileDAO.update(
                 user.user_id(), user.email(), labels=labels)
 
-    def _pick_locale(self, locale):
-        with Namespace('ns_first'):
+    def _set_prefs_locale(self, locale, course='first'):
+        with Namespace('ns_%s' % course):
             prefs = models.StudentPreferencesDAO.load_or_create()
             prefs.locale = locale
             models.StudentPreferencesDAO.save(prefs)
@@ -1454,22 +1479,29 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 self,
                 'test_view_announcement_via_locale_picker', course='first')
 
-            self._pick_locale(None)
+            self._set_prefs_locale(None)
             response = self._assert_en_ru_es_all_none(
                 True, False, False, True, True, 'en_US')
             self.assertIn('Announcements', response.body)
 
-            self._pick_locale('ru_RU')
+            self._set_prefs_locale('ru_RU')
             response = self._assert_en_ru_es_all_none(
                 False, True, False, True, True, 'ru_RU')
             self.assertIn('Сообщения', response.body)
 
-            self._pick_locale('es_ES')
+            self._set_prefs_locale('es_ES')
             response = self._assert_en_ru_es_all_none(
                 False, False, True, True, True, 'es_ES')
             self.assertIn('Avisos', response.body)
 
-            self._pick_locale(None)
+            # when locale labels are combined with prefs, labels win
+            self._set_prefs_locale(None)
+            self._set_labels_on_current_student(
+                [self._locale_to_label['ru_RU']])
+            self._assert_en_ru_es_all_none(
+                False, True, False, True, True, 'ru_RU')
+
+            self._set_prefs_locale('es_ES')
             self._set_labels_on_current_student(
                 [self._locale_to_label['ru_RU']])
             self._assert_en_ru_es_all_none(
@@ -1488,6 +1520,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
             actions.register(
                 self, 'test_announcements_via_locale_labels', course='first')
 
+            self._set_prefs_locale(None)
             self._set_labels_on_current_student([])
             self._assert_en_ru_es_all_none(
                 True, True, True, True, True, 'en_US')
@@ -1507,13 +1540,13 @@ class SampleCourseLocalizationTest(actions.TestBase):
             self._assert_en_ru_es_all_none(
                 False, False, True, True, True, 'es_ES')
 
-            self._pick_locale('ru_RU')
+            self._set_prefs_locale('ru_RU')
             self._set_labels_on_current_student([])
             response = self._assert_en_ru_es_all_none(
                 True, True, True, True, True, 'ru_RU')
             self.assertIn('Сообщения', response.body)
 
-            self._pick_locale('ru_RU')
+            self._set_prefs_locale('ru_RU')
             self._set_labels_on_current_student(
                 [self._locale_to_label['es_ES']])
             response = self._assert_en_ru_es_all_none(
@@ -1533,21 +1566,21 @@ class SampleCourseLocalizationTest(actions.TestBase):
             actions.register(
                 self, 'test_course_track_via_locale_picker', course='first')
 
-            self._pick_locale(None)
+            self._set_prefs_locale(None)
             self._course_en_ru_es_all_none(
                 True, False, False, False, True, 'en_US')
 
-            self._pick_locale('en_US')
+            self._set_prefs_locale('en_US')
             response = self._course_en_ru_es_all_none(
                 True, False, False, False, True, 'en_US')
             self.assertIn('Announcements', response.body)
 
-            self._pick_locale('ru_RU')
+            self._set_prefs_locale('ru_RU')
             response = self._course_en_ru_es_all_none(
                 False, True, False, True, True, 'ru_RU')
             self.assertIn('Сообщения', response.body)
 
-            self._pick_locale('es_ES')
+            self._set_prefs_locale('es_ES')
             response = self._course_en_ru_es_all_none(
                 False, False, True, True, True, 'es_ES')
             self.assertIn('Avisos', response.body)
@@ -1584,5 +1617,205 @@ class SampleCourseLocalizationTest(actions.TestBase):
             self._course_en_ru_es_all_none(
                 False, False, True, True, True, 'es_ES')
 
-    def test_track_and_locale_labels_dont_interfer(self):
-        pass  # TODO(psimakov): compleet this
+    def test_track_and_locale_labels_do_work_together(self):
+        self._setup_locales()
+
+        with Namespace('ns_first'):
+            track_a_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Track A',
+                       'version': '1.0',
+                       'description': 'Track A',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+
+            track_b_id = models.LabelDAO.save(models.LabelDTO(
+                None, {'title': 'Track B',
+                       'version': '1.0',
+                       'description': 'Track B',
+                       'type': models.LabelDTO.LABEL_TYPE_COURSE_TRACK}))
+
+            locale_ru_id = self._locale_to_label['ru_RU'].id
+            locale_es_id = self._locale_to_label['es_ES'].id
+
+            course = courses.Course(None, sites.get_all_courses()[0])
+            unit_1 = course.add_unit()
+            unit_1.type = 'U'
+            unit_1.now_available = True
+            unit_1.title = 'Unit for Track A and Locale ru_RU'
+            unit_1.labels = utils.list_to_text(
+                [track_a_id, locale_ru_id])
+            unit_2 = course.add_unit()
+            unit_2.type = 'U'
+            unit_2.now_available = True
+            unit_2.title = 'Unit for Track B and Locale es_ES'
+            unit_2.labels = utils.list_to_text(
+                [track_b_id, locale_es_id])
+            course.save()
+
+        def _assert_course(
+            locale, label_ids, is_unit_1_visible, is_unit_2_visible):
+            self._set_prefs_locale(locale)
+            self._set_labels_on_current_student(None, ids=label_ids)
+            response = self.get('first/course')
+            if is_unit_1_visible:
+                self.assertIn(unit_1.title, response.body)
+            else:
+                self.assertNotIn(unit_1.title, response.body)
+            if is_unit_2_visible:
+                self.assertIn(unit_2.title, response.body)
+            else:
+                self.assertNotIn(unit_2.title, response.body)
+
+        actions.logout()
+
+        with actions.OverriddenEnvironment(
+            {'course': {'now_available': True}}):
+            actions.login(
+                'test_track_and_locale_labels_dont_interfere@example.com')
+            actions.register(
+                self, 'test_track_and_locale_labels_dont_interfere',
+                course='first')
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+            _assert_course(None, [], False, False)
+            _assert_course('ru_RU', [], True, False)
+            _assert_course('es_ES', [], False, True)
+
+            _assert_course(None, [track_a_id], False, False)
+            _assert_course('ru_RU', [track_a_id], True, False)
+            _assert_course('ru_RU', [track_b_id], False, False)
+            _assert_course('es_ES', [track_a_id], False, False)
+            _assert_course('es_ES', [track_b_id], False, True)
+
+            _assert_course(None, [locale_ru_id], True, False)
+            _assert_course('ru_RU', [locale_ru_id], True, False)
+            _assert_course('ru_RU', [locale_es_id], False, True)
+            _assert_course('es_ES', [locale_ru_id], True, False)
+            _assert_course('es_ES', [locale_es_id], False, True)
+
+            _assert_course(None, [track_a_id, track_b_id], False, False)
+            _assert_course('ru_RU', [track_a_id, track_b_id], True, False)
+            _assert_course('es_ES', [track_a_id, track_b_id], False, True)
+
+            _assert_course(
+                None, [track_a_id, locale_ru_id], True, False)
+            _assert_course('ru_RU', [track_a_id, locale_ru_id], True, False)
+            _assert_course(
+                'ru_RU', [track_a_id, locale_es_id], False, False)
+            _assert_course('ru_RU', [track_b_id, locale_es_id], False, True)
+            _assert_course('ru_RU', [track_b_id, locale_ru_id], False, False)
+
+            _assert_course(
+                None, [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                None, [track_a_id, track_b_id, locale_es_id], False, True)
+            _assert_course(
+                'ru_RU', [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                'ru_RU', [track_a_id, track_b_id, locale_es_id], False, True)
+            _assert_course(
+                'es_ES', [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                'es_ES', [track_a_id, track_b_id, locale_es_id], False, True)
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': False}}):
+            _assert_course(None, [], True, True)
+            _assert_course('ru_RU', [], True, True)
+            _assert_course('es_ES', [], True, True)
+
+            _assert_course(None, [locale_ru_id], True, False)
+            _assert_course('ru_RU', [locale_ru_id], True, False)
+            _assert_course('ru_RU', [locale_es_id], False, True)
+            _assert_course('es_ES', [locale_ru_id], True, False)
+            _assert_course('es_ES', [locale_es_id], False, True)
+
+            _assert_course(None, [track_a_id], True, False)
+            _assert_course('ru_RU', [track_a_id], True, False)
+            _assert_course('ru_RU', [track_b_id], False, True)
+            _assert_course('es_ES', [track_a_id], True, False)
+            _assert_course('es_ES', [track_b_id], False, True)
+
+            _assert_course(None, [track_a_id, track_b_id], True, True)
+            # the one below is not an error; the empty locale label set on
+            # student is a match for unit labeled with any locale or none
+            _assert_course('ru_RU', [track_a_id, track_b_id], True, True)
+            _assert_course('es_ES', [track_a_id, track_b_id], True, True)
+
+            _assert_course(None, [track_a_id, locale_ru_id], True, False)
+            _assert_course('ru_RU', [track_a_id, locale_ru_id], True, False)
+            _assert_course('ru_RU', [track_a_id, locale_es_id], False, False)
+            _assert_course('ru_RU', [track_b_id, locale_es_id], False, True)
+            _assert_course('ru_RU', [track_b_id, locale_ru_id], False, False)
+
+            _assert_course(
+                None, [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                None, [track_a_id, track_b_id, locale_es_id], False, True)
+            _assert_course(
+                'ru_RU', [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                'ru_RU', [track_a_id, track_b_id, locale_es_id], False, True)
+            _assert_course(
+                'es_ES', [track_a_id, track_b_id, locale_ru_id], True, False)
+            _assert_course(
+                'es_ES', [track_a_id, track_b_id, locale_es_id], False, True)
+
+    def test_localized_course_with_images(self):
+        self._import_sample_course()
+        self._setup_locales(course='sample')
+
+        with actions.OverriddenEnvironment(
+            {'course': {'now_available': True}}):
+            actions.logout()
+            actions.login(
+                'test_track_and_locale_labels_dont_interfere@example.com')
+            actions.register(
+                self, 'test_track_and_locale_labels_dont_interfere',
+                course='sample')
+
+        def _assert_image():
+            response = self.get('sample/assets/img/Image2.2.1.png')
+            self.assertEquals(200, response.status_int)
+            self.assertEquals(215086, len(response.body))
+
+        with actions.OverriddenEnvironment(
+            {'course': {
+                'now_available': True, 'can_student_change_locale': True}}):
+
+            self._set_prefs_locale('en_US', course='sample')
+            response = self.get('sample/unit?unit=14&lesson=18')
+            self.assertIn(
+                'You are a cosmetologist and business owner', response.body)
+            self.assertIn('Announcements', response.body)
+            _assert_image()
+
+            self._set_prefs_locale('ru_RU', course='sample')
+            response = self.get('sample/unit?unit=14&lesson=18')
+            self.assertIn(
+                'You are a cosmetologist and business owner', response.body)
+            self.assertIn('Сообщения', response.body)
+            _assert_image()
+
+    def test_export_import(self):
+        self._import_sample_course()
+        self._setup_locales(course='sample')
+
+        # export
+        response = self.get('/sample/dashboard?action=i18n_download')
+        self.assertEquals(response.status_int, 200)
+        self.assertIn('locale/ru_RU/LC_MESSAGES/messages.po', response.body)
+        self.assertIn(
+            'Russian (Russia) translations for Power Searching with Google.',
+            response.body)
+        self.assertNotIn(  # TODO(psimakov): use assertIn() when export works
+            'You are a cosmetologist and business owner', response.body)
+
+        # import
+        # TODO(psimakov): incomplete
+
+    def test_course_with_one_common_unit_and_two_per_locale_units(self):
+        # TODO(psimakov): incomplete
+        pass
