@@ -634,39 +634,39 @@ class CourseIndex(object):
 
     @classmethod
     def _slug_to_parts(cls, path):
-      """Split slug into parts; slug parts are '/' separated."""
-      if path in ['/', '']:
-          return None
-      _parts = path.split('/')
-      assert _parts[0] == ''  # pylint: disable-msg=g-explicit-bool-comparison
-      _parts.pop(0)
-      return _parts
+        """Split slug into parts; slug parts are '/' separated."""
+        if path in ['/', '']:
+            return None
+        _parts = path.split('/')
+        assert _parts[0] == ''  # pylint: disable-msg=g-explicit-bool-comparison
+        _parts.pop(0)
+        return _parts
 
     @classmethod
     def _validate_and_split_path_to_parts(cls, path):
-      """Split path into parts; path parts are '/' separated."""
-      if path in ['/', '']:
-          return True, None
-      _parts = path.split('/')
-      if _parts[0] != '':  # pylint: disable-msg=g-explicit-bool-comparison
-          return False, None
-      _parts.pop(0)
-      return True, _parts
+        """Split path into parts; path parts are '/' separated."""
+        if path in ['/', '']:
+            return True, None
+        _parts = path.split('/')
+        if _parts[0] != '':  # pylint: disable-msg=g-explicit-bool-comparison
+            return False, None
+        _parts.pop(0)
+        return True, _parts
 
     def _update_slug_parts_index(self, app_context):
-      """An index is a tree keyed by slug part."""
-      _parts = self._slug_to_parts(app_context.get_slug())
-      _parent = self._slug_parts2app_context
-      while True:
-          if not _parts:
-              _parent[None] = app_context
-              break
-          _part = _parts.pop(0)
-          _node = _parent.get(_part)
-          if not _node:
-              _node = {_part: {}}
-              _parent.update(_node)
-          _parent = _parent[_part]
+        """An index is a tree keyed by slug part."""
+        _parts = self._slug_to_parts(app_context.get_slug())
+        _parent = self._slug_parts2app_context
+        while True:
+            if not _parts:
+                _parent[None] = app_context
+                break
+            _part = _parts.pop(0)
+            _node = _parent.get(_part)
+            if not _node:
+                _node = {_part: {}}
+                _parent.update(_node)
+            _parent = _parent[_part]
 
     def _get_course_for_path_via_index(self, path):
         _result = None
