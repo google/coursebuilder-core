@@ -567,9 +567,10 @@ class UnitTools(object):
             'weight': str(unit.weight if hasattr(unit, 'weight') else 0),
             'content': content,
             'html_content': (
-                '' if unit.is_old_style_assessment() else unit.html_content),
+                '' if unit.is_old_style_assessment(self._course)
+                else unit.html_content),
             'html_check_answers': (
-                False if unit.is_old_style_assessment()
+                False if unit.is_old_style_assessment(self._course)
                 else unit.html_check_answers),
             workflow_key(courses.SUBMISSION_DUE_DATE_KEY): (
                 submission_due_date),

@@ -248,9 +248,6 @@ class InfrastructureTest(actions.TestBase):
         assert len(
             src_course_out.get_units()) == len(dst_course_out_a.get_units())
 
-        assert courses.has_at_least_one_old_style_assessment(src_course)
-        assert courses.has_only_new_style_assessments(dst_course_a)
-
         final_settings = dst_course_a.app_context.get_environ()
         assert 'assessment_confirmations' in final_settings
         final_course_settings = set(
@@ -4600,6 +4597,106 @@ class TransformsJsonFileTestCase(actions.TestBase):
             {'rows': [self.first, self.second]}, self.reader.read())
 
 
+class ImportAssessmentTests(DatastoreBackedCourseTest):
+    """Functional tests for assessments."""
+
+    def test_assessment_old_style(self):
+
+        # test that assessment version 1.3 with empty html_content
+        # is not assessment version 1.2
+        sites.setup_courses('course:/test::ns_test, course:/:/')
+        course = courses.Course(None, app_context=sites.get_all_courses()[0])
+        a1 = course.add_assessment()
+        course.save()
+        assert course.find_unit_by_id(a1.unit_id)
+        assert not courses.has_at_least_one_old_style_assessment(course)
+        assert courses.has_only_new_style_assessments(course)
+
+        # test that assessment version 1.3 with empty html_content
+        # and js content is considered old-style assessment
+        a2 = course.add_assessment()
+        a2.title = 'Assessment 2'
+        course.update_unit(a2)
+        assessment_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Pre.js'), 'rb').readlines()
+        assessment_content = u''.join(assessment_content)
+        course.set_assessment_content(a2, assessment_content, [])
+        course.save()
+        assert courses.has_at_least_one_old_style_assessment(course)
+        assert not courses.has_only_new_style_assessments(course)
+
+    def test_import_empty_assessment(self):
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b')
+        src = courses.Course(None, app_context=sites.get_all_courses()[0])
+        src.add_assessment()
+        src.save()
+        dst = courses.Course(None, app_context=sites.get_all_courses()[1])
+        errors = []
+        dst.import_from(src.app_context, errors)
+        self.assertEqual(0, len(errors))
+        self.assertEqual(1, len(dst.get_assessment_list()))
+        assert courses.has_only_new_style_assessments(dst)
+
+    def test_import_course13_w_assessment12(self):
+        """Tests importing a new-style course with old-style assessment."""
+
+        # set up the src and dst courses ver.13
+        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+        src_app_ctx = sites.get_all_courses()[0]
+        src_course = courses.Course(None, app_context=src_app_ctx)
+        dst_app_ctx = sites.get_all_courses()[0]
+        dst_course = courses.Course(None, app_context=dst_app_ctx)
+
+        # add old-style assessment to the src
+        a1_title = 'Assessment content version 12'
+        a1 = src_course.add_assessment()
+        a1.title = a1_title
+        src_course.update_unit(a1)
+        assessment_content = open(os.path.join(
+            appengine_config.BUNDLE_ROOT,
+            'assets/js/assessment-Pre.js'), 'rb').readlines()
+        assessment_content = u''.join(assessment_content)
+        errors = []
+        src_course.set_assessment_content(
+            a1, assessment_content, errors)
+
+        # add new style assessment to src
+        a2_title = 'Assessment content version 13'
+        a2_html_content = 'content'
+        a2 = src_course.add_assessment()
+        a2.title = a2_title
+        a2.html_content = a2_html_content
+        a2.html_check_answers = 'check'
+        a2.html_review_form = 'review'
+        a2.workflow_yaml = 'a: 3'
+        src_course.update_unit(a2)
+
+        # save course and confirm assessments
+        src_course.save()
+        assert not errors
+        assessment_content_stored = src_course.app_context.fs.get(os.path.join(
+            src_course.app_context.get_home(),
+            src_course.get_assessment_filename(a1.unit_id)))
+        assert assessment_content == assessment_content_stored
+
+        # import course
+        dst_course.import_from(src_app_ctx, errors)
+
+        # assert old-style assessment has been ported to a new-style one
+        dst_a1 = dst_course.get_units()[0]
+        self.assertEqual('A', dst_a1.type)
+        self.assertEqual(a1_title, dst_a1.title)
+        assert dst_a1.html_content
+        dst_a2 = dst_course.get_units()[1]
+        self.assertEqual('A', dst_a1.type)
+        self.assertEqual(a2_title, dst_a2.title)
+        self.assertEqual(a2_html_content, dst_a2.html_content)
+
+        # cleaning up
+        sites.reset_courses()
+
+
 class ImportActivityTests(DatastoreBackedCourseTest):
     """Functional tests for importing legacy activities into lessons."""
 
@@ -4657,71 +4754,6 @@ var activity = [
     def tearDown(self):
         namespace_manager.set_namespace(self.old_namespace)
         super(ImportActivityTests, self).tearDown()
-
-    def test_import_course13_w_assessment12(self):
-        """Tests importing a new-style course with old-style assessment."""
-
-        # set up the src and dst courses ver.13
-        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
-        src_app_ctx = sites.get_all_courses()[0]
-        src_course = courses.Course(None, app_context=src_app_ctx)
-        dst_app_ctx = sites.get_all_courses()[0]
-        dst_course = courses.Course(None, app_context=dst_app_ctx)
-
-        # add old-style assessment to the src
-        a1_title = 'Assessment content version 12'
-        a1 = src_course.add_assessment()
-        a1.title = a1_title
-        src_course.update_unit(a1)
-        assessment_content = open(os.path.join(
-            appengine_config.BUNDLE_ROOT,
-            'assets/js/assessment-Pre.js'), 'rb').readlines()
-        assessment_content = u''.join(assessment_content)
-        errors = []
-        src_course.set_assessment_content(
-            a1, assessment_content, errors)
-
-        # add new style assessment to src
-        a2_title = 'Assessment content version 13'
-        a2_html_content = 'content'
-        a2 = src_course.add_assessment()
-        a2.title = a2_title
-        a2.html_content = a2_html_content
-        a2.html_check_answers = 'check'
-        a2.html_review_form = 'review'
-        a2.workflow_yaml = 'a: 3'
-        src_course.update_unit(a2)
-
-        # add empty new style assessment to src
-        a3 = src_course.add_assessment()
-        a3.title = 'Assessment empty version 13'
-        src_course.update_unit(a3)
-
-        # save course and confirm assessments
-        src_course.save()
-        assert not errors
-        assessment_content_stored = src_course.app_context.fs.get(os.path.join(
-            src_course.app_context.get_home(),
-            src_course.get_assessment_filename(a1.unit_id)))
-        assert assessment_content == assessment_content_stored
-
-        # import course
-        dst_course.import_from(src_app_ctx, errors)
-        self.assertEqual(1, len(errors))
-        self.assertEqual('Unable to parse assessment: 3', errors[0])
-
-        # assert old-style assessment has been ported to a new-style one
-        dst_a1 = dst_course.get_units()[0]
-        self.assertEqual('A', dst_a1.type)
-        self.assertEqual(a1_title, dst_a1.title)
-        assert dst_a1.html_content
-        dst_a2 = dst_course.get_units()[1]
-        self.assertEqual('A', dst_a1.type)
-        self.assertEqual(a2_title, dst_a2.title)
-        self.assertEqual(a2_html_content, dst_a2.html_content)
-
-        # cleaning up
-        sites.reset_courses()
 
     def test_hide_activity(self):
         """Tests old-style activity annotations."""

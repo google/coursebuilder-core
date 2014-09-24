@@ -254,7 +254,7 @@ def index_units_and_lessons(course):
 
 def has_at_least_one_old_style_assessment(course):
     assessments = course.get_assessment_list()
-    return any(a.is_old_style_assessment() for a in assessments)
+    return any(a.is_old_style_assessment(course) for a in assessments)
 
 
 def has_only_new_style_assessments(course):
@@ -264,9 +264,13 @@ def has_only_new_style_assessments(course):
 def has_at_least_one_old_style_activity(course):
     for unit in course.get_units():
         for lesson in course.get_lessons(unit.unit_id):
-            if lesson.activity and course.get_activity_abs_path(
-                unit.unit_id, lesson.lesson_id):
-                return True
+            if lesson.activity:
+                fn = os.path.join(
+                    course.app_context.get_home(),
+                    course.get_activity_filename(
+                        unit.unit_id, lesson.lesson_id))
+                if course.app_context.fs.isfile(fn):
+                    return True
     return False
 
 
@@ -420,7 +424,7 @@ class Unit12(object):
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
 
-    def is_old_style_assessment(self):
+    def is_old_style_assessment(self, unused_course):
         return self.is_assessment()
 
     def needs_human_grader(self):
@@ -730,8 +734,17 @@ class Unit13(object):
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
 
-    def is_old_style_assessment(self):
-        return self.is_assessment() and not self.html_content
+    def is_old_style_assessment(self, course):
+        content = self.html_content
+        if content:
+            content = content.strip()
+        if self.is_assessment() and not content:
+            fn = os.path.join(
+                course.app_context.get_home(),
+                course.get_assessment_filename(self.unit_id))
+            if course.app_context.fs.isfile(fn):
+                return True
+        return False
 
     def needs_human_grader(self):
         return self.workflow.get_grader() == HUMAN_GRADER
@@ -1567,14 +1580,14 @@ class CourseModel13(object):
             if dst_unit.is_assessment():
                 copy_assessment12_into_assessment13(src_unit, dst_unit, errors)
 
-        def copy_unit13_into_unit13(src_unit, dst_unit, errors):
+        def copy_unit13_into_unit13(src_unit, dst_unit, src_course, errors):
             """Copies unit13 attributes to a new unit."""
             dst_unit.release_date = src_unit.release_date
             dst_unit.now_available = src_unit.now_available
             dst_unit.workflow_yaml = src_unit.workflow_yaml
 
             if dst_unit.is_assessment():
-                if src_unit.is_old_style_assessment():
+                if src_unit.is_old_style_assessment(src_course):
                     copy_assessment12_into_assessment13(
                         src_unit, dst_unit, errors)
                 else:
@@ -1758,7 +1771,7 @@ class CourseModel13(object):
                 # import unit
                 new_unit = self.add_unit(unit.type, unit.title)
                 if src_course.version == CourseModel13.VERSION:
-                    copy_unit13_into_unit13(unit, new_unit, errors)
+                    copy_unit13_into_unit13(unit, new_unit, src_course, errors)
                 elif src_course.version == CourseModel12.VERSION:
                     copy_unit12_into_unit13(unit, new_unit, errors)
                 else:
@@ -2577,15 +2590,6 @@ class Course(object):
 
     def get_activity_filename(self, unit_id, lesson_id):
         return self._model.get_activity_filename(unit_id, lesson_id)
-
-    def get_activity_abs_path(self, unit_id, lesson_id):
-        fn = os.path.join(
-            self.app_context.get_home(),
-            self.get_activity_filename(unit_id, lesson_id))
-        if self.app_context.fs.isfile(fn):
-            return fn
-        else:
-            return None
 
     def get_parent_unit(self, unit_id):
         return self._model.get_parent_unit(unit_id)
