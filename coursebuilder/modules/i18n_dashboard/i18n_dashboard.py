@@ -110,9 +110,10 @@ class ResourceKey(object):
         LINK_TYPE, QUESTION_GROUP_TYPE, QUESTION_MC_TYPE, QUESTION_SA_TYPE,
         UNIT_TYPE]
 
-    def __init__(self, type_str, key):
+    def __init__(self, type_str, key, course=None):
         self._type = type_str
         self._key = key
+        self._course = course
         assert type_str in self.RESOURCE_TYPES, (
             'Unknown resource type: %s' % type_str)
 
@@ -145,9 +146,14 @@ class ResourceKey(object):
 
         return ResourceKey(unit_type, unit.unit_id)
 
-    def get_title(self, app_context):
-        course = courses.Course(None, app_context=app_context)
+    def _get_course(self, app_context):
+        course = self._course
+        if not course or course.app_context != app_context:
+            course = courses.Course(None, app_context=app_context)
+        return course
 
+    def get_title(self, app_context):
+        course = self._get_course(app_context)
         if self._type == ResourceKey.UNIT_TYPE:
             return utils.display_unit_title(course.find_unit_by_id(self._key))
         elif self._type == ResourceKey.LESSON_TYPE:
@@ -185,9 +191,7 @@ class ResourceKey(object):
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
             return question_group_editor.QuestionGroupRESTHandler.get_schema()
 
-        # The following resources need an app_context to get the schema
-        course = courses.Course(None, app_context=app_context)
-
+        course = self._get_course(app_context)
         if self.type == ResourceKey.LESSON_TYPE:
             units = course.get_units()
             return unit_lesson_editor.LessonRESTHandler.get_schema(units)
@@ -198,7 +202,7 @@ class ResourceKey(object):
             raise ValueError('Unknown content type: %s' % self.type)
 
     def get_data_dict(self, app_context):
-        course = courses.Course(None, app_context=app_context)
+        course = self._get_course(app_context)
         if self.type == ResourceKey.ASSESSMENT_TYPE:
             unit = course.find_unit_by_id(self.key)
             unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
@@ -332,6 +336,7 @@ class ResourceBundleEntity(models.BaseEntity):
     """The base entity for storing i18n resource bundles."""
 
     data = db.TextProperty(indexed=False)
+    locale = db.StringProperty(indexed=True)
 
 
 class ResourceBundleDTO(object):
@@ -367,6 +372,11 @@ class ResourceBundleDAO(NamedJsonDAO):
 
     DTO = ResourceBundleDTO
     ENTITY = ResourceBundleEntity
+
+    @classmethod
+    def before_put(cls, dto, entity):
+        resource_bundle_key = ResourceBundleKey.fromstring(dto.id)
+        entity.locale = resource_bundle_key.locale
 
 
 class TableRow(object):
@@ -407,8 +417,9 @@ class ResourceRow(TableRow):
 
     @property
     def name(self):
-        return ResourceKey(self._type, self._key).get_title(
-            self._course.app_context)
+        return ResourceKey(
+            self._type, self._key,
+            course=self._course).get_title(self._course.app_context)
 
     @property
     def class_name(self):
@@ -419,7 +430,7 @@ class ResourceRow(TableRow):
 
     @property
     def resource_key(self):
-        return ResourceKey(self._type, self._key)
+        return ResourceKey(self._type, self._key, course=self._course)
 
     @property
     def is_translatable(self):
@@ -857,6 +868,28 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                     all_total, all_matched, all_updated))
 
 
+class I18nResourceManager(object):
+    """Class that manages optimized loading of I18N data from datastore."""
+
+    def __init__(self, course):
+        self._course = course
+        self._key_to_progress = {}
+        self._preload_progress()
+
+    def _preload_progress(self):
+        for row in I18nProgressDAO.get_all_iter():
+            self._key_to_progress[str(ResourceKey.fromstring(row.id))] = row
+
+    def get_resource_row(self, resource, type_str, key):
+        resource_key = ResourceKey(type_str, key)
+        row = self._key_to_progress.get(str(resource_key))
+        if not row:
+            row = I18nProgressDAO.load_or_create(resource_key)
+        return ResourceRow(
+            self._course, resource, type_str, key,
+            i18n_progress_dto=row)
+
+
 class I18nDashboardHandler(BaseDashboardExtension):
     """Provides the logic for rendering the i18n workflow dashboard."""
 
@@ -868,13 +901,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
         all_locales = self.handler.app_context.get_all_locales()
         self.main_locale = all_locales[0]
         self.extra_locales = all_locales[1:]
-
-    def _get_resource_row(self, resource, type_str, key):
-        i18n_progress_dto = I18nProgressDAO.load_or_create(
-            ResourceKey(type_str, key))
-        return ResourceRow(
-            self.course, resource, type_str, key,
-            i18n_progress_dto=i18n_progress_dto)
+        self.rm = None
 
     def _make_table_section(self, data_rows, section_title):
         rows = []
@@ -886,13 +913,20 @@ class I18nDashboardHandler(BaseDashboardExtension):
         return rows
 
     def render(self):
+        self.rm = I18nResourceManager(self.course)
+        models.MemcacheManager.begin_readonly()
+        try:
+            self._render()
+        finally:
+            models.MemcacheManager.end_readonly()
+
+    def _render(self):
         rows = []
 
         # Course settings
         data_rows = []
-
         for section in sorted(courses.Course.get_schema_sections()):
-            data_rows.append(self._get_resource_row(
+            data_rows.append(self.rm.get_resource_row(
                 None, ResourceKey.COURSE_SETTINGS_TYPE, section))
         rows += self._make_table_section(data_rows, 'Course Settings')
 
@@ -900,10 +934,10 @@ class I18nDashboardHandler(BaseDashboardExtension):
         data_rows = []
         for unit in self.course.get_units():
             key = ResourceKey.for_unit(unit)
-            data_rows.append(self._get_resource_row(unit, key.type, key.key))
+            data_rows.append(self.rm.get_resource_row(unit, key.type, key.key))
             if unit.type == verify.UNIT_TYPE_UNIT:
                 for lesson in self.course.get_lessons(unit.unit_id):
-                    data_rows.append(self._get_resource_row(
+                    data_rows.append(self.rm.get_resource_row(
                         lesson, ResourceKey.LESSON_TYPE, lesson.lesson_id))
         rows += self._make_table_section(data_rows, 'Course Outline')
 
@@ -917,12 +951,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
         data_rows = []
         for qu in models.QuestionDAO.get_all():
             qu_type = ResourceKey.get_question_type(qu)
-            data_rows.append(self._get_resource_row(qu, qu_type, qu.id))
+            data_rows.append(self.rm.get_resource_row(qu, qu_type, qu.id))
 
         rows += self._make_table_section(data_rows, 'Questions')
 
         data_rows = [
-            self._get_resource_row(qg, ResourceKey.QUESTION_GROUP_TYPE, qg.id)
+            self.rm.get_resource_row(qg, ResourceKey.QUESTION_GROUP_TYPE, qg.id)
             for qg in models.QuestionGroupDAO.get_all()]
         rows += self._make_table_section(data_rows, 'Question Groups')
 
@@ -1539,9 +1573,13 @@ def is_translation_required():
 def translate_course(course):
     if not is_translation_required():
         return
-    app_context = sites.get_course_for_current_request()
-    translate_units(course, app_context.get_current_locale())
-    translate_lessons(course, app_context.get_current_locale())
+    appengine_config.log_appstats_event('begin_translate_course')
+    try:
+        app_context = sites.get_course_for_current_request()
+        translate_units(course, app_context.get_current_locale())
+        translate_lessons(course, app_context.get_current_locale())
+    finally:
+        appengine_config.log_appstats_event('end_translate_course')
 
 
 def translate_course_env(env):

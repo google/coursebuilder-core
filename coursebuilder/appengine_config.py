@@ -21,6 +21,8 @@ import logging
 import os
 import sys
 
+# configure Appstats
+appstats_MAX_STACK = 20
 
 # Whether we are running in the production environment.
 PRODUCTION_MODE = not os.environ.get(
@@ -124,12 +126,10 @@ def webapp_add_wsgi_middleware(app):
 
 
 def _import_and_enable_modules(env_var, reraise=False):
-    # pylint: disable-msg=broad-except
     for module_name in os.environ.get(env_var, '').split():
         option = 'enabled'
         if module_name.count('='):
             module_name, option = module_name.split('=', 1)
-
         try:
             operation = 'importing'
             module = importlib.import_module(module_name)
@@ -138,7 +138,7 @@ def _import_and_enable_modules(env_var, reraise=False):
             if option is 'enabled':
                 operation = 'enabling'
                 custom_module.enable()
-        except Exception, ex:
+        except Exception, ex:  # pylint: disable-msg=broad-except
             logging.exception('Problem %s module "%s"', operation, module_name)
             if reraise:
                 raise ex
@@ -148,6 +148,19 @@ def import_and_enable_modules():
     _import_and_enable_modules('GCB_REGISTERED_MODULES')
     _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
     _import_and_enable_modules('GCB_THIRD_PARTY_MODULES')
+
+
+def log_appstats_event(label, data=None):
+    if gcb_appstats_enabled():
+        try:
+            # pylint: disable-msg=g-import-not-at-top
+            from google.appengine.ext.appstats.recording import recorder_proxy
+            # pylint: enable-msg=g-import-not-at-top
+            if recorder_proxy and (
+                recorder_proxy.has_recorder_for_current_request()):
+                recorder_proxy.record_custom_event(label=label, data=data)
+        except Exception:  # pylint: disable-msg=broad-except
+            logging.exception('Failed to record Appstats event %s.', label)
 
 
 gcb_init_third_party()

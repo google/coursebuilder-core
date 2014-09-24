@@ -242,8 +242,8 @@ def display_lesson_title(unit, lesson, course_properties=None):
 
 class HtmlHooks(object):
 
-    def __init__(self, app_context):
-        self.app_context = app_context
+    def __init__(self, course):
+        self.course = course
 
     def _has_visible_content(self, html_text):
 
@@ -284,15 +284,14 @@ class HtmlHooks(object):
         show_admin_content = False
         prefs = models.StudentPreferencesDAO.load_or_create()
         if (prefs and prefs.show_hooks and
-            Roles.is_course_admin(self.app_context)):
+            Roles.is_course_admin(self.course.app_context)):
             show_admin_content = True
-        course = courses.Course(None, self.app_context)
-        if course.version == courses.CourseModel12.VERSION:
+        if self.course.version == courses.CourseModel12.VERSION:
             show_admin_content = False
 
         # Look up desired content chunk in course.yaml dict/sub-dict.
         content = ''
-        environ = self.app_context.get_environ()
+        environ = self.course.app_context.get_environ()
         for part in name.split(':'):
             if part in environ:
                 item = environ[part]
@@ -349,7 +348,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.template_value[COURSE_INFO_KEY] = environ
         self.template_value[
             'page_locale'] = self.app_context.get_current_locale()
-        self.template_value['html_hooks'] = HtmlHooks(self.app_context)
+        self.template_value['html_hooks'] = HtmlHooks(self.get_course())
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
         self.template_value[
@@ -622,6 +621,7 @@ class BaseHandler(CourseHandler):
         """Renders a template."""
         template = self.get_template(template_file)
 
+        appengine_config.log_appstats_event('begin_render')
         self.app_context.fs.begin_readonly()
         models.MemcacheManager.begin_readonly()
         try:
@@ -629,6 +629,7 @@ class BaseHandler(CourseHandler):
         finally:
             models.MemcacheManager.end_readonly()
             self.app_context.fs.end_readonly()
+            appengine_config.log_appstats_event('end_render')
 
         # If the page displayed successfully, save the location for registered
         # students so future visits to the course's base URL sends the student

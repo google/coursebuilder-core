@@ -1378,6 +1378,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def invoke_http_verb(self, verb, path, no_handler):
         """Sets up the environemnt and invokes HTTP verb on the self.handler."""
+        appengine_config.log_appstats_event('begin_invoke_http_verb')
         try:
             set_path_info(path)
             handler = self.get_handler()
@@ -1393,6 +1394,7 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
+            appengine_config.log_appstats_event('end_invoke_http_verb')
 
     def _error_404(self, path):
         """Fail with 404."""

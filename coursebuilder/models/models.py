@@ -41,7 +41,7 @@ from google.appengine.ext import db
 # We want to use memcache for both objects that exist and do not exist in the
 # datastore. If object exists we cache its instance, if object does not exist
 # we cache this object below.
-NO_OBJECT = {}
+NO_OBJECT = 'GCB_MODELS_NO_OBJECT'
 
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 5
@@ -1204,18 +1204,22 @@ class BaseJsonDao(object):
 
     @classmethod
     def bulk_load(cls, obj_id_list):
+        # fetch from memcache
         memcache_keys = [cls._memcache_key(obj_id) for obj_id in obj_id_list]
         memcache_entities = MemcacheManager.get_multi(memcache_keys)
 
+        # fetch missing from datastore
         both_keys = zip(obj_id_list, memcache_keys)
-
         datastore_keys = [
             obj_id for obj_id, memcache_key in both_keys
             if memcache_key not in memcache_entities]
-        datastore_entities_list = db.get([
-            db.Key.from_path(cls.ENTITY.kind(), obj_id)
-            for obj_id in datastore_keys])
-        datastore_entities = dict(zip(datastore_keys, datastore_entities_list))
+        if datastore_keys:
+            datastore_entities = dict(zip(
+                datastore_keys, db.get([
+                    db.Key.from_path(cls.ENTITY.kind(), obj_id)
+                    for obj_id in datastore_keys])))
+        else:
+            datastore_entities = {}
 
         # weave the results together
         ret = []
@@ -1237,8 +1241,14 @@ class BaseJsonDao(object):
                     ret.append(None)
                 else:
                     ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
+
+        # run hooks
         cls._maybe_apply_post_hooks(dtos_for_post_hooks)
-        MemcacheManager.set_multi(memcache_update)
+
+        # put into memcache
+        if datastore_entities:
+            MemcacheManager.set_multi(memcache_update)
+
         return ret
 
     @classmethod
@@ -1250,8 +1260,13 @@ class BaseJsonDao(object):
         return entity
 
     @classmethod
+    def before_put(cls, dto, entity):
+        pass
+
+    @classmethod
     def save(cls, dto):
         entity = cls._create_if_necessary(dto)
+        cls.before_put(dto, entity)
         entity.put()
         MemcacheManager.set(cls._memcache_key(entity.key().id_or_name()),
                             entity)
@@ -1264,6 +1279,7 @@ class BaseJsonDao(object):
         for dto in dtos:
             entity = cls._create_if_necessary(dto)
             entities.append(entity)
+            cls.before_put(dto, entity)
 
         keys = db.put(entities)
         for key, entity in zip(keys, entities):

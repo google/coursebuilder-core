@@ -1203,6 +1203,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
 
     def setUp(self):
         super(SampleCourseLocalizationTest, self).setUp()
+        if sites.GCB_COURSES_CONFIG.name in sites.Registry.test_overrides:
+            del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = False
         self._import_course()
