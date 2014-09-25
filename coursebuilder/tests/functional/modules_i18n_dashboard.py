@@ -248,6 +248,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
         rows = table.findall('./tbody/tr')
 
         expected_row_data = [
+            '',
             'Course Settings',
             'Assessments',
             'Course',
@@ -256,13 +257,17 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Invitation',
             'Registration',
             'Units and Lessons',
+            '',
             'Course Outline',
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
+            '',
             'Images & Documents',
             'Empty section',
+            '',
             'Questions',
             'Empty section',
+            '',
             'Question Groups',
             'Empty section'
         ]
@@ -312,7 +317,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             td = row.findall('td')[index]
             self.assertIn(class_name, td.get('class').split())
 
-        lesson_row_index = 10
+        lesson_row_index = 12
         extra_env = {
             'extra_locales': [
                 {'locale': 'el', 'availability': 'unavailable'},

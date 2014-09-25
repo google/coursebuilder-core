@@ -572,12 +572,13 @@ class SectionRow(TableRow):
 class EmptyRow(SectionRow):
     """A multi-column row in the table which indicates an empty section."""
 
-    def __init__(self, name='Empty section'):
+    def __init__(self, name='Empty section', class_name='empty_section'):
         super(EmptyRow, self).__init__(name)
+        self._class_name = class_name
 
     @property
     def class_name(self):
-        return 'empty-section'
+        return self._class_name
 
 
 class IsTranslatableRestHandler(utils.BaseRESTHandler):
@@ -1080,6 +1081,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
     def _make_table_section(self, data_rows, section_title):
         rows = []
+        rows.append(EmptyRow(name='', class_name='blank-row'))
         rows.append(SectionRow(section_title))
         if data_rows:
             rows += data_rows

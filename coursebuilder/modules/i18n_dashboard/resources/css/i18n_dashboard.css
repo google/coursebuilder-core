@@ -1,4 +1,5 @@
 table.i18n-progress-table {
+  border: none;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -18,6 +19,10 @@ table.i18n-progress-table tr.section-row td {
 table.i18n-progress-table tr.empty-section td{
   text-align: center;
   font-style: italic;
+}
+table.i18n-progress-table tr.blank-row td {
+  border-left: none;
+  border-right: none;
 }
 table.i18n-progress-table tr.not-translatable td {
   color: #777;
