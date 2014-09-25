@@ -452,18 +452,16 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         sections = payload['sections']
 
         self.assertEquals(
-            ['title', 'description', 'unit_header', 'unit_footer'],
+            ['title', 'unit_header'],
             [s['name'] for s in sections])
 
         self.assertEquals(
-            ['Title', 'Description', 'Unit Header', 'Unit Footer'],
+            ['Title', 'Unit Header'],
             [s['label'] for s in sections])
 
         expected_values = [
             ('title', 'string', 1, ''),
-            ('description', 'string', 1, ''),
-            ('unit_header', 'html', 2, '<p>a</p><p>b</p>'),
-            ('unit_footer', 'html', 0, '')]
+            ('unit_header', 'html', 2, '<p>a</p><p>b</p>')]
 
         for i, (name, type_str, data_size, source_value) in enumerate(
                 expected_values):
@@ -475,7 +473,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             for data in section['data']:
                 self.assertEquals(VERB_NEW, data['verb'])
 
-        header_data = sections[2]['data']
+        header_data = sections[1]['data']
         for item in header_data:
             self.assertIsNone(item['old_source_value'])
             self.assertEquals('', item['target_value'])
@@ -506,6 +504,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(200, response['status'])
 
         sections = transforms.loads(response['payload'])['sections']
+        self.assertEquals(2, len(sections))
 
         # Confirm there is a translation for the title
         title_section = sections[0]
@@ -515,14 +514,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(VERB_CURRENT, title_section['data'][0]['verb'])
         self.assertEquals('TEST UNIT', title_section['data'][0]['target_value'])
 
-        # Confirm there is a new description
-        description_section = sections[1]
-        self.assertEquals('description', description_section['name'])
-        self.assertEquals('Description', description_section['label'])
-        self.assertEquals(VERB_NEW, description_section['data'][0]['verb'])
-
         # Confirm there is a translation for one of the two paragraphs
-        header_section = sections[2]
+        header_section = sections[1]
         self.assertEquals('unit_header', header_section['name'])
         self.assertEquals('Unit Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
@@ -531,11 +524,6 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals('a', header_section['data'][0]['old_source_value'])
         self.assertEquals('A', header_section['data'][0]['target_value'])
         self.assertEquals(VERB_NEW, header_section['data'][1]['verb'])
-
-        # Confirm there is a no footer data
-        footer_section = sections[3]
-        self.assertEquals('Unit Footer', footer_section['label'])
-        self.assertEquals(0, len(footer_section['data']))
 
     def test_get_unit_content_with_changed_values(self):
         key = ResourceBundleKey(ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
@@ -562,6 +550,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(200, response['status'])
 
         sections = transforms.loads(response['payload'])['sections']
+        self.assertEquals(2, len(sections))
 
         # Confirm there is a translation for the title
         title_section = sections[0]
@@ -572,14 +561,8 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(
             'OLD TEST UNIT', title_section['data'][0]['target_value'])
 
-        # Confirm there is a new description
-        description_section = sections[1]
-        self.assertEquals('description', description_section['name'])
-        self.assertEquals('Description', description_section['label'])
-        self.assertEquals(VERB_NEW, description_section['data'][0]['verb'])
-
         # Confirm there is a translation for one of the two paragraphs
-        header_section = sections[2]
+        header_section = sections[1]
         self.assertEquals('unit_header', header_section['name'])
         self.assertEquals('Unit Header', header_section['label'])
         self.assertEquals(2, len(header_section['data']))
@@ -588,12 +571,6 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals('aa', header_section['data'][0]['old_source_value'])
         self.assertEquals('AA', header_section['data'][0]['target_value'])
         self.assertEquals(VERB_NEW, header_section['data'][1]['verb'])
-
-        # Confirm there is a no footer data
-        footer_section = sections[3]
-        self.assertEquals('unit_footer', footer_section['name'])
-        self.assertEquals('Unit Footer', footer_section['label'])
-        self.assertEquals(0, len(footer_section['data']))
 
     def test_get_unit_content_with_custom_tag(self):
         unit = self.course.add_unit()
@@ -607,7 +584,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
         response = self._get_by_key(key)
         payload = transforms.loads(response['payload'])
-        data = payload['sections'][2]['data']
+        data = payload['sections'][1]['data']
         self.assertEquals(1, len(data))
         self.assertEquals(
             'text<gcb-youtube#1 videoid="Kdg2drcUjYI" />',
@@ -622,7 +599,7 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
         response = self._get_by_key(key)
         payload = transforms.loads(response['payload'])
-        data = payload['sections'][2]['data']
+        data = payload['sections'][1]['data']
         self.assertEquals(1, len(data))
         self.assertEquals(
             '<gcb-markdown#1>*hello*</gcb-markdown#1>', data[0]['source_value'])

@@ -1491,13 +1491,14 @@ def _build_sections_for_key(key, app_context):
                 'verb': mapping.verb,
                 'changed': False}]
 
-        sections.append({
-            'name': mapping.name,
-            'label': mapping.label,
-            'type': mapping.type,
-            'source_value': source_value,
-            'data': data
-        })
+        if any([item['source_value'] for item in data]):
+            sections.append({
+                'name': mapping.name,
+                'label': mapping.label,
+                'type': mapping.type,
+                'source_value': source_value,
+                'data': data
+            })
 
     if key.locale != app_context.default_locale:
         add_known_translations_as_defaults(key.locale, sections)
