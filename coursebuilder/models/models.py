@@ -49,6 +49,7 @@ DEFAULT_CACHE_TTL_SECS = 60 * 5
 # https://developers.google.com/appengine/docs/python/memcache/#Python_Limits
 MEMCACHE_MAX = (1024 * 1024 - 96 - 250)
 MEMCACHE_MULTI_MAX = 32 * 1024 * 1024
+MAX_IN_PROCESS_CACHE_SIZE_BYTES = 1024 * 1024 * 16
 
 # Global memcache controls.
 CAN_USE_MEMCACHE = ConfigProperty(
@@ -122,6 +123,10 @@ class MemcacheManager(object):
         return cls.get_namespace()
 
     @classmethod
+    def _can_grow_readonly_cache(cls):
+        return sys.getsizeof(cls._LOCAL_CACHE) < MAX_IN_PROCESS_CACHE_SIZE_BYTES
+
+    @classmethod
     def _local_cache_get(cls, key, namespace):
         if cls._IS_READONLY:
             _dict = cls._LOCAL_CACHE.get(namespace)
@@ -138,7 +143,7 @@ class MemcacheManager(object):
 
     @classmethod
     def _local_cache_put(cls, key, namespace, value):
-        if cls._IS_READONLY:
+        if cls._IS_READONLY and cls._can_grow_readonly_cache():
             _dict = cls._LOCAL_CACHE.get(namespace)
             if not _dict:
                 _dict = {}
@@ -1116,10 +1121,30 @@ class BaseJsonDao(object):
         return '(entity:%s:%s)' % (cls.ENTITY.kind(), obj_id)
 
     @classmethod
+    def _memcache_all_key(cls):
+        """Makes a memcache key for caching get_all()."""
+        # Keeping case-sensitivity in kind() because Foo(object) != foo(object).
+        return '(entity-get-all:%s)' % cls.ENTITY.kind()
+
+    @classmethod
     def get_all(cls):
+        # try to get from memcache
+        entities = MemcacheManager.get(cls._memcache_all_key())
+        if entities is not None and entities is not NO_OBJECT:
+            return entities
+
+        # get from datastore
         entities = cls.ENTITY.all().fetch(1000)
-        return [
+        result = [
             cls.DTO(e.key().id(), transforms.loads(e.data)) for e in entities]
+
+        # put into memcache
+        result_to_cache = NO_OBJECT
+        if result:
+            result_to_cache = result
+        MemcacheManager.set(cls._memcache_all_key(), result_to_cache)
+
+        return result
 
     @classmethod
     def get_all_iter(cls):
@@ -1268,6 +1293,7 @@ class BaseJsonDao(object):
         entity = cls._create_if_necessary(dto)
         cls.before_put(dto, entity)
         entity.put()
+        MemcacheManager.delete(cls._memcache_all_key())
         MemcacheManager.set(cls._memcache_key(entity.key().id_or_name()),
                             entity)
         return entity.key().id()
@@ -1282,6 +1308,7 @@ class BaseJsonDao(object):
             cls.before_put(dto, entity)
 
         keys = db.put(entities)
+        MemcacheManager.delete(cls._memcache_all_key())
         for key, entity in zip(keys, entities):
             MemcacheManager.set(cls._memcache_key(key.id_or_name()), entity)
         return [key.id() for key in keys]
@@ -1290,6 +1317,7 @@ class BaseJsonDao(object):
     def delete(cls, dto):
         entity = cls._load_entity(dto.id)
         entity.delete()
+        MemcacheManager.delete(cls._memcache_all_key())
         MemcacheManager.delete(cls._memcache_key(entity.key().id_or_name()))
 
     @classmethod

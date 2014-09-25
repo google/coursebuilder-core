@@ -402,6 +402,16 @@ class ResourceBundleDAO(NamedJsonDAO):
         resource_bundle_key = ResourceBundleKey.fromstring(dto.id)
         entity.locale = resource_bundle_key.locale
 
+    @classmethod
+    def get_all_for_locale(cls, locale):
+        query = cls.ENTITY.all()
+        query.filter('locale = ', locale)
+        result = []
+        for e in query.run(batch_size=100):
+            result.append(
+                cls.DTO(e.key().id_or_name(), transforms.loads(e.data)))
+        return result
+
 
 class TableRow(object):
     """Class to represent a row in the dashboard table."""
@@ -694,13 +704,23 @@ class I18nDownloadHandler(BaseDashboardExtension):
         app_context = self.handler.app_context
         all_locales = app_context.get_all_locales()
 
-        for resource, resource_key in _get_language_resource_keys(course):
-            if resource_key.type == ResourceKey.ASSET_IMG_TYPE:
-                continue
-            for locale in all_locales:
+        transformer = xcontent.ContentTransformer(
+            config=get_xcontent_configuration(app_context))
+        resource_key_map = _get_language_resource_keys(course)
+
+        for locale in all_locales:
+
+            key2dto = {
+                dto.id: dto
+                for dto in ResourceBundleDAO.get_all_for_locale(locale)}
+
+            for resource, resource_key in resource_key_map:
+                if resource_key.type == ResourceKey.ASSET_IMG_TYPE:
+                    continue
                 key = ResourceBundleKey(
                     resource_key.type, resource_key.key, locale)
-                binding, sections = _build_sections_for_key(key, app_context)
+                binding, sections = _build_sections_for_key_ex(
+                    key, app_context, key2dto.get(str(key)), transformer)
                 for section in sections:
                     section_name = section['name']
                     section_type = section['type']
@@ -778,14 +798,21 @@ class I18nDownloadHandler(BaseDashboardExtension):
         self.handler.response.write(out_stream.getvalue())
 
     def render(self):
-        translations = self._build_translations()
-        out_stream = StringIO.StringIO()
-        out_stream.fp = out_stream  # zip assumes stream has a real fp; fake it.
+        self.handler.app_context.fs.begin_readonly()
+        models.MemcacheManager.begin_readonly()
         try:
-            self._build_zip_file(out_stream, translations)
-            self._send_response(out_stream)
+            translations = self._build_translations()
+            out_stream = StringIO.StringIO()
+            # zip assumes stream has a real fp; fake it.
+            out_stream.fp = out_stream
+            try:
+                self._build_zip_file(out_stream, translations)
+                self._send_response(out_stream)
+            finally:
+                out_stream.close()
         finally:
-            out_stream.close()
+            models.MemcacheManager.end_readonly()
+            self.handler.app_context.fs.end_readonly()
 
 
 class I18nUploadHandler(BaseDashboardExtension):
@@ -819,12 +846,20 @@ def translation_upload_generate_schema():
 
 
 def _recalculate_translation_progress(app_context):
+    transformer = xcontent.ContentTransformer(
+        config=get_xcontent_configuration(app_context))
     course = courses.Course(None, app_context)
-    for _, resource_key in _get_language_resource_keys(course):
-        progress = I18nProgressDAO.load_or_create(resource_key)
+    all_resource_keys = _get_language_resource_keys(course)
+    key2progress = {
+        resource_key: I18nProgressDAO.load_or_create(resource_key)
+        for _, resource_key in all_resource_keys}
+
+    for _, resource_key in all_resource_keys:
+        progress = key2progress[resource_key]
         for locale in app_context.get_all_locales():
             key = ResourceBundleKey(resource_key.type, resource_key.key, locale)
-            _, sections = _build_sections_for_key(key, app_context)
+            _, sections = _build_sections_for_key(
+                key, app_context, transformer=transformer)
             partially_translated = False
             fully_translated = True
             for section in sections:
@@ -848,11 +883,10 @@ def _recalculate_translation_progress(app_context):
             else:
                 new_state = I18nProgressDTO.NOT_STARTED
             if progress.get_progress(locale) != new_state:
-                progress_dirty = True
                 progress.set_progress(locale, new_state)
 
-        if progress_dirty:
-            I18nProgressDAO.save(progress)
+    for _, progress in key2progress.items():
+        I18nProgressDAO.save(progress)
 
 
 class TranslationUploadRestHandler(utils.BaseRESTHandler):
@@ -865,7 +899,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
 
     def get(self):
         transforms.send_json_response(
-            self, 200, 'success', payload_dict={'key': None},
+            self, 200, 'Success.', payload_dict={'key': None},
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 self.XSRF_TOKEN_NAME))
 
@@ -1091,13 +1125,6 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
     def render(self):
         self.rm = I18nResourceManager(self.course)
-        models.MemcacheManager.begin_readonly()
-        try:
-            self._render()
-        finally:
-            models.MemcacheManager.end_readonly()
-
-    def _render(self):
         rows = []
 
         # Course settings
@@ -1318,7 +1345,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         }
 
         transforms.send_json_response(
-            self, 200, 'success',
+            self, 200, 'Success.',
             payload_dict=payload_dict,
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 self.XSRF_TOKEN_NAME))
@@ -1395,7 +1422,19 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Saved.')
 
 
-def _build_sections_for_key(key, app_context):
+def _build_sections_for_key(
+    key, app_context, resource_bundle_dto=None, transformer=None):
+    if not resource_bundle_dto:
+        resource_bundle_dto = ResourceBundleDAO.load(str(key))
+    if not transformer:
+        transformer = xcontent.ContentTransformer(
+            config=get_xcontent_configuration(app_context))
+    return _build_sections_for_key_ex(
+        key, app_context, resource_bundle_dto, transformer=transformer)
+
+
+def _build_sections_for_key_ex(
+    key, app_context, resource_bundle_dto, transformer):
 
     def add_known_translations_as_defaults(locale, sections):
         translations = i18n.get_store().get_translations(locale)
@@ -1434,7 +1473,6 @@ def _build_sections_for_key(key, app_context):
         binding)
 
     existing_mappings = []
-    resource_bundle_dto = ResourceBundleDAO.load(str(key))
     if resource_bundle_dto:
         for name, value in resource_bundle_dto.dict.items():
             if value['type'] == TYPE_HTML:
@@ -1462,8 +1500,6 @@ def _build_sections_for_key(key, app_context):
                 field_dict = resource_bundle_dto.dict.get(mapping.name)
                 if field_dict:
                     existing_mappings = field_dict['data']
-            transformer = xcontent.ContentTransformer(
-                config=get_xcontent_configuration(app_context))
             context = xcontent.Context(
                 xcontent.ContentIO.fromstring(mapping.source_value))
             transformer.decompose(context)

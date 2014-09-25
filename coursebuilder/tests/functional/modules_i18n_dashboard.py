@@ -2010,6 +2010,36 @@ class SampleCourseLocalizationTest(actions.TestBase):
             self.assertIn('Сообщения', response.body)
             _assert_image()
 
+    def test_set_current_locale_reloads_environ(self):
+        app_context = sites.get_all_courses()[0]
+        self._setup_locales()
+        course = courses.Course(None, app_context)
+
+        course_bundle = {
+            'course:title': {
+                'source_value': None,
+                'type': 'string',
+                'data': [
+                    {
+                        'source_value': app_context.get_title(),
+                        'target_value': 'TRANSLATED TITLE'
+                    }]
+            }}
+        with Namespace('ns_first'):
+            key_el = ResourceBundleKey(
+                ResourceKey.COURSE_SETTINGS_TYPE, 'homepage', 'es_ES')
+            ResourceBundleDAO.save(
+                ResourceBundleDTO(str(key_el), course_bundle))
+
+        sites.set_path_info('/first')
+        app_context.set_current_locale('ru_RU')
+        ru_env = course.get_environ(app_context)
+        app_context.set_current_locale('es_ES')
+        es_env = course.get_environ(app_context)
+        sites.unset_path_info()
+
+        self.assertNotEquals(ru_env, es_env)
+
     def test_export_import(self):
         self._import_sample_course()
         self._setup_locales(course='sample')

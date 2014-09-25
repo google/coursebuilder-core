@@ -1209,9 +1209,12 @@ class LessonRESTHandler(BaseRESTHandler):
 
     @classmethod
     def get_lesson_dict(cls, app_context, lesson):
+        return cls.get_lesson_dict_for(
+            courses.Course(None, app_context=app_context), lesson)
 
-        fs = app_context.fs
-        course = courses.Course(None, app_context=app_context)
+    @classmethod
+    def get_lesson_dict_for(cls, course, lesson):
+        fs = course.app_context.fs
         path = fs.impl.physical_to_logical(course.get_activity_filename(
             lesson.unit_id, lesson.lesson_id))
         if lesson.has_activity and fs.isfile(path):

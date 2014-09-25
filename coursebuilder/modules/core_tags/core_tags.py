@@ -410,7 +410,9 @@ class Markdown(tags.ContextAwareTag, CoreTag):
     def render(self, node, context):
         # The markdown is "text" type in the schema and so is presented in the
         # tag's body.
-        html = markdown.markdown(node.text)
+        html = ''
+        if node.text:
+            html = markdown.markdown(node.text)
         return tags.html_string_to_element_tree(
             '<div class="gcb-markdown">%s</div>' % html)
 

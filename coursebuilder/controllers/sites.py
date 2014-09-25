@@ -560,6 +560,13 @@ class AssetHandler(utils.BaseHandler):
         return 200
 
     def get(self):
+        models.MemcacheManager.begin_readonly()
+        try:
+            return self._get()
+        finally:
+            models.MemcacheManager.end_readonly()
+
+    def _get(self):
         """Handles GET requests."""
         if not GCB_ASSETS_REGEX.match(self.asset_path):
             self.error(404)

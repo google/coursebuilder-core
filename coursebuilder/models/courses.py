@@ -2013,6 +2013,14 @@ class Course(object):
     @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
+        # pylint: disable-msg=protected-access
+
+        # use cached value if possible
+        env = app_context._cached_environ
+        if env:
+            return copy.deepcopy(env)
+
+        # get from datastore
         env = cls._load_environ(app_context)
 
         # Monkey patch to defend against infinite recursion. Downstream calls do
@@ -2020,16 +2028,20 @@ class Course(object):
         old_get_environ = cls.get_environ
         cls.get_environ = classmethod(lambda cl, ac: env)
         try:
+            # run hooks
             for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
                 hook(env)
+
+            # put into cache
+            app_context._cached_environ = env
         finally:
             # Restore the original method from monkey-patch
             cls.get_environ = old_get_environ
 
-        return env
+        return copy.deepcopy(env)
 
     @classmethod
-    def _load_environ_no_cache(cls, app_context):
+    def _load_environ(cls, app_context):
         course_yaml = None
         course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()
@@ -2053,15 +2065,6 @@ class Course(object):
         return deep_dict_merge(deep_dict_merge(
             course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT),
                                COURSE_TEMPLATE_DICT)
-
-    @classmethod
-    def _load_environ(cls, app_context):
-        # pylint: disable-msg=protected-access
-        environ = app_context._cached_environ
-        if not environ:
-            environ = cls._load_environ_no_cache(app_context)
-            app_context._cached_environ = environ
-        return copy.deepcopy(environ)
 
     @classmethod
     def create_common_settings_schema(cls, course):

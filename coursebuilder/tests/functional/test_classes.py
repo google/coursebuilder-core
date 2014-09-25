@@ -112,6 +112,30 @@ def _assert_identical_data_entity_exists(app_context, test_object):
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_memcache_get_all_caching(self):
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        with Namespace('ns_test'):
+            for index in range(0, 100):
+                models.QuestionDAO.create_question(
+                    {'data': 'data-%s' % index},
+                    models.QuestionDTO.MULTIPLE_CHOICE)
+
+            questions_1 = models.QuestionDAO.get_all()
+            old_all = models.QuestionDAO.ENTITY.all
+            models.QuestionDAO.ENTITY.all = None
+            questions_2 = models.QuestionDAO.get_all()
+            models.QuestionDAO.ENTITY.all = old_all
+
+            self.assertEquals(100, len(questions_1))
+            self.assertEquals(100, len(questions_2))
+            for index in range(0, 100):
+                self.assertEquals(
+                      questions_1[index].dict,
+                      questions_2[index].dict)
+                self.assertEquals(
+                      questions_1[index].id,
+                      questions_2[index].id)
+
     def test_value_cached_in_one_namespace_invisible_in_another(self):
         """Value cached in one namespace is not visible in another."""
 
