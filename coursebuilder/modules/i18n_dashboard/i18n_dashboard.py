@@ -1577,8 +1577,9 @@ class LazyTranslator(object):
 
 
 def get_xcontent_configuration(app_context):
-
     inline_tag_names = list(xcontent.DEFAULT_INLINE_TAG_NAMES)
+    opaque_decomposable_tag_names = list(
+        xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
     recomposable_attributes_map = dict(
         xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
 
@@ -1600,11 +1601,13 @@ def get_xcontent_configuration(app_context):
             TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)
         ):
             inline_tag_names.append(tag_name.upper())
+            opaque_decomposable_tag_names.append(tag_name.upper())
             recomposable_attributes_map.setdefault(
                 name.upper(), set()).add(tag_name.upper())
 
     return xcontent.Configuration(
         inline_tag_names=inline_tag_names,
+        opaque_decomposable_tag_names=opaque_decomposable_tag_names,
         recomposable_attributes_map=recomposable_attributes_map,
         omit_empty_opaque_decomposable=False)
 

@@ -210,16 +210,19 @@ class InfrastructureTest(actions.TestBase):
         """Tests importing one course into another."""
 
         # Setup courses.
-        sites.setup_courses('course:/a::ns_a, course:/b::ns_b, course:/:/')
+        sites.setup_courses(
+            'course:/a::ns_a, course:/b::ns_b, course:/c::ns_c, course:/:/')
 
         # Validate the courses before import.
         all_courses = sites.get_all_courses()
         dst_app_context_a = all_courses[0]
         dst_app_context_b = all_courses[1]
-        src_app_context = all_courses[2]
+        dst_app_context_c = all_courses[2]
+        src_app_context = all_courses[3]
 
         dst_course_a = courses.Course(None, app_context=dst_app_context_a)
         dst_course_b = courses.Course(None, app_context=dst_app_context_b)
+        dst_course_c = courses.Course(None, app_context=dst_app_context_c)
         src_course = courses.Course(None, app_context=src_app_context)
 
         new_course_keys = [
@@ -277,6 +280,17 @@ class InfrastructureTest(actions.TestBase):
         for dependent in dependents:
             _assert_identical_data_entity_exists(
                 dst_course_out_b.app_context, dependent)
+
+        # Import imported 1.3 course into 1.3.
+        errors = []
+        _, dst_course_out_c = dst_course_c.import_from(
+            dst_app_context_b, errors)
+        if errors:
+            raise Exception(errors)
+        assert dst_course_out_c.get_units() == dst_course_out_b.get_units()
+        for dependent in dependents:
+            _assert_identical_data_entity_exists(
+                dst_course_out_c.app_context, dependent)
 
         # Test delete.
         units_to_delete = dst_course_a.get_units()

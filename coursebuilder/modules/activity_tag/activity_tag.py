@@ -61,7 +61,9 @@ class Activity(tags.BaseTag):
             return self.unavailable_schema(
                 'Not available in file-based courses.')
 
-        lesson_id = handler.request.get('lesson_id')
+        lesson_id = None
+        if handler.request:
+            lesson_id = handler.request.get('lesson_id')
 
         activity_list = []
         for unit in course.get_units():

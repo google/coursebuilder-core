@@ -351,8 +351,26 @@ class TranslationIO(object):
             return False, '<%s />' % start_tag
 
         if element.tag_name.upper() in config.opaque_decomposable_tag_names:
-            return (
-                not config.omit_empty_opaque_decomposable, '<%s />' % start_tag)
+            content = None
+            if element.tag_name.upper() in config.inline_tag_names:
+                content = []
+                if element.children:
+                    for child in element.children:
+                        if not isinstance(child, safe_dom.Text):
+                            raise TypeError(
+                                'Unsupported node type: %s.' % child)
+                        value = child.sanitized
+                        content.append(value.strip())
+                if content:
+                    content = ''.join(content).strip()
+                else:
+                    content = None
+            has_content = content or not config.omit_empty_opaque_decomposable
+            if content:
+                return has_content, '<%s>%s</%s>' % (
+                    start_tag, content, tag_name)
+            else:
+                return has_content, '<%s />' % start_tag
 
         has_content = False
         if element.children:
@@ -1667,6 +1685,21 @@ class TestCasesForContentDecompose(TestCasesBase):
         self.transformer = ContentTransformer(config)
         html = '<img src="foo" />'
         expected = ['<img#1 src="foo" />']
+        self._assert_decomposes(html, expected)
+
+    def test_extract_decompose_custom_tag_with_attribute(self):
+        config = Configuration(
+            inline_tag_names=['FOO'],
+            opaque_decomposable_tag_names=['FOO'],
+            omit_empty_opaque_decomposable=False)
+        self.transformer = ContentTransformer(config)
+
+        html = '<div><foo alt="bar"></foo></div>'
+        expected = ['<foo#1 alt="bar" />']
+        self._assert_decomposes(html, expected)
+
+        html = '<div><foo alt="bar">baz</foo></div>'
+        expected = ['<foo#1 alt="bar">baz</foo#1>']
         self._assert_decomposes(html, expected)
 
     def test_extract_large_sample_document(self):
