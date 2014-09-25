@@ -1507,6 +1507,99 @@ def _build_sections_for_key(key, app_context):
     return binding, sections
 
 
+class TranslatedAssetConsole(BaseDashboardExtension):
+    ACTION = 'i18n_asset_console'
+
+    def render(self):
+        key = ResourceBundleKey.fromstring(self.handler.request.get('key'))
+        rest_url = self.handler.canonicalize_url(TranslatedAssetRESTHandler.URL)
+        delete_url = '%s?%s' % (
+            self.handler.canonicalize_url(filer.FilesItemRESTHandler.URI),
+            urllib.urlencode({
+                'key': sites.asset_path_for_localized_item(
+                    key.locale, key.resource_key.key),
+                'xsrf_token': cgi.escape(self.handler.create_xsrf_token(
+                    'delete-asset'))}))
+        exit_url = self.handler.get_action_url(I18nDashboardHandler.ACTION)
+
+        form_html = oeditor.ObjectEditor.get_html_for(
+            self.handler,
+            TranslatedAssetRESTHandler.SCHEMA_JSON,
+            TranslatedAssetRESTHandler.SCHEMA_ANNOTATIONS_DICT,
+            str(key), rest_url, exit_url,
+            save_method='upload', save_button_caption='Upload',
+            delete_url=delete_url, delete_method='delete',
+            extra_js_files=['image_asset.js'],
+            additional_dirs=[os.path.join(dashboard_utils.RESOURCES_DIR, 'js')])
+        self.handler.render_page(
+            {'page_title': self.handler.format_title('I18N Workflow'),
+             'main_content': form_html},
+            in_action=I18nDashboardHandler.ACTION)
+
+
+def generate_translated_asset_rest_handler_schema():
+    schema = schema_fields.FieldRegistry('Translated Asset',
+                                         description='Translated Asset')
+    filer.add_asset_handler_display_field(schema)
+    schema.add_property(schema_fields.SchemaField(
+        'translated_asset_url', 'Translated Asset', 'string',
+        editable=False,
+        optional=True,
+        description='This is the translated version of the asset.',
+        extra_schema_dict_values={
+            'visu': {
+                'visuType': 'funcName',
+                'funcName': 'renderAsset'
+                }
+            }))
+    filer.add_asset_handler_base_fields(schema)
+    return schema
+
+
+class TranslatedAssetRESTHandler(filer.AssetItemRESTHandler):
+
+    URL = '/rest/assets/translated_item'
+    SCHEMA = generate_translated_asset_rest_handler_schema()
+    SCHEMA_JSON = SCHEMA.get_json_schema()
+    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-uneditable', 'inputex-file',
+        'io-upload-iframe']
+    XSRF_TOKEN_NAME = 'translated-asset-upload'
+
+    def _asset_path(self, key):
+        return key.resource_key.key
+
+    def get(self):
+        key = ResourceBundleKey.fromstring(self.request.get('key'))
+        payload_dict = {
+            'key': str(key),
+            'base': 'assets/img'
+        }
+        fs = self.app_context.fs.impl
+
+        asset_path = self._asset_path(key)
+        if fs.isfile(fs.physical_to_logical(asset_path)):
+            payload_dict['asset_url'] = sites.asset_path_for_localized_item(
+                self.app_context.default_locale, self._asset_path(key))
+        payload_dict['translated_asset_url'] = (
+            sites.asset_path_for_localized_item(key.locale, asset_path))
+
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict=payload_dict,
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN_NAME))
+
+    def post(self):
+        is_valid, _, upload = self._validate_post()
+        if is_valid:
+            key = ResourceBundleKey.fromstring(self.request.get('key'))
+            path = self._asset_path(key)
+            physical_path = sites.asset_path_for_localized_item(
+                key.locale, path)
+            self._handle_post(physical_path, True, upload)
+
+
 class LazyTranslator(object):
 
     @classmethod
@@ -1613,99 +1706,6 @@ def get_xcontent_configuration(app_context):
         opaque_decomposable_tag_names=opaque_decomposable_tag_names,
         recomposable_attributes_map=recomposable_attributes_map,
         omit_empty_opaque_decomposable=False)
-
-
-class TranslatedAssetConsole(BaseDashboardExtension):
-    ACTION = 'i18n_asset_console'
-
-    def render(self):
-        key = ResourceBundleKey.fromstring(self.handler.request.get('key'))
-        rest_url = self.handler.canonicalize_url(TranslatedAssetRESTHandler.URL)
-        delete_url = '%s?%s' % (
-            self.handler.canonicalize_url(filer.FilesItemRESTHandler.URI),
-            urllib.urlencode({
-                'key': sites.asset_path_for_localized_item(
-                    key.locale, key.resource_key.key),
-                'xsrf_token': cgi.escape(self.handler.create_xsrf_token(
-                    'delete-asset'))}))
-        exit_url = self.handler.get_action_url(I18nDashboardHandler.ACTION)
-
-        form_html = oeditor.ObjectEditor.get_html_for(
-            self.handler,
-            TranslatedAssetRESTHandler.SCHEMA_JSON,
-            TranslatedAssetRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            str(key), rest_url, exit_url,
-            save_method='upload', save_button_caption='Upload',
-            delete_url=delete_url, delete_method='delete',
-            extra_js_files=['image_asset.js'],
-            additional_dirs=[os.path.join(dashboard_utils.RESOURCES_DIR, 'js')])
-        self.handler.render_page(
-            {'page_title': self.handler.format_title('I18N Workflow'),
-             'main_content': form_html},
-            in_action=I18nDashboardHandler.ACTION)
-
-
-def generate_translated_asset_rest_handler_schema():
-    schema = schema_fields.FieldRegistry('Translated Asset',
-                                         description='Translated Asset')
-    filer.add_asset_handler_display_field(schema)
-    schema.add_property(schema_fields.SchemaField(
-        'translated_asset_url', 'Translated Asset', 'string',
-        editable=False,
-        optional=True,
-        description='This is the translated version of the asset.',
-        extra_schema_dict_values={
-            'visu': {
-                'visuType': 'funcName',
-                'funcName': 'renderAsset'
-                }
-            }))
-    filer.add_asset_handler_base_fields(schema)
-    return schema
-
-
-class TranslatedAssetRESTHandler(filer.AssetItemRESTHandler):
-
-    URL = '/rest/assets/translated_item'
-    SCHEMA = generate_translated_asset_rest_handler_schema()
-    SCHEMA_JSON = SCHEMA.get_json_schema()
-    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-uneditable', 'inputex-file',
-        'io-upload-iframe']
-    XSRF_TOKEN_NAME = 'translated-asset-upload'
-
-    def _asset_path(self, key):
-        return key.resource_key.key
-
-    def get(self):
-        key = ResourceBundleKey.fromstring(self.request.get('key'))
-        payload_dict = {
-            'key': str(key),
-            'base': 'assets/img'
-        }
-        fs = self.app_context.fs.impl
-
-        asset_path = self._asset_path(key)
-        if fs.isfile(fs.physical_to_logical(asset_path)):
-            payload_dict['asset_url'] = sites.asset_path_for_localized_item(
-                self.app_context.default_locale, self._asset_path(key))
-        payload_dict['translated_asset_url'] = (
-            sites.asset_path_for_localized_item(key.locale, asset_path))
-
-        transforms.send_json_response(
-            self, 200, 'Success.', payload_dict=payload_dict,
-            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
-                self.XSRF_TOKEN_NAME))
-
-    def post(self):
-        is_valid, _, upload = self._validate_post()
-        if is_valid:
-            key = ResourceBundleKey.fromstring(self.request.get('key'))
-            path = self._asset_path(key)
-            physical_path = sites.asset_path_for_localized_item(
-                key.locale, path)
-            self._handle_post(physical_path, True, upload)
 
 
 def set_attribute(course, thing, attribute_name, translation_dict):
