@@ -49,7 +49,7 @@ class LocalesTests(unittest.TestCase):
     def test_supported_locale_count(self):
         # NOTE: If this count increases then locales.LOCALES_DISPLAY_NAMES must
         # be updated with the localized display names of the new locale.
-        self.assertEquals(58, len(locales.get_system_supported_locales()))
+        self.assertEquals(59, len(locales.get_system_supported_locales()))
 
     def test_localized_display_name(self):
         self.assertEquals('Deutsch (de)', locales.get_locale_display_name('de'))

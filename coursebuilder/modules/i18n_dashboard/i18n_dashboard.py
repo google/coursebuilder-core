@@ -687,12 +687,16 @@ class TranslationsAndLocations(object):
 class I18nDownloadHandler(BaseDashboardExtension):
     ACTION = 'i18n_download'
 
-    def _build_translations(self):
+    @staticmethod
+    def build_translations(handler, locales):
         """Build up a dictionary of all translated strings -> locale.
 
         For each {original-string,locale}, keep track of the course
         locations where this occurs, and each of the translations given.
 
+        Args:
+          handler: webapp2 handler for looking up context and course.
+          locales: Locales for which translations are desired.
         Returns:
           Map of original-string -> locale -> TranslationsAndLocations.
         """
@@ -700,15 +704,13 @@ class I18nDownloadHandler(BaseDashboardExtension):
         translations = collections.defaultdict(
             lambda: collections.defaultdict(TranslationsAndLocations))
 
-        course = self.handler.get_course()
-        app_context = self.handler.app_context
-        all_locales = app_context.get_all_locales()
-
+        course = handler.get_course()
+        app_context = handler.app_context
         transformer = xcontent.ContentTransformer(
             config=get_xcontent_configuration(app_context))
         resource_key_map = _get_language_resource_keys(course)
 
-        for locale in all_locales:
+        for locale in locales:
 
             key2dto = {
                 dto.id: dto
@@ -741,44 +743,51 @@ class I18nDownloadHandler(BaseDashboardExtension):
                                 t_and_l.add_comment(title)
         return translations
 
-    def _build_zip_file(self, out_stream, translations):
-        """Create a .zip file with one .po file for each translated language.
-
-        Args:
-          out_stream: An open file-like which can be written and seeked.
-          translations: Map of string -> locale -> TranslationsAndLocations
-            as returned from _build_translations().
-        """
-        course = self.handler.get_course()
-        environ = course.get_environ(self.handler.app_context)
+    @staticmethod
+    def build_babel_catalog_for_locale(handler, translations, locale):
+        course = handler.get_course()
+        environ = course.get_environ(handler.app_context)
         course_title = environ['course'].get('title')
         bugs_address = environ['course'].get('admin_user_emails')
         organization = environ['base'].get('nav_header')
-        original_locale = environ['course'].get('locale')
+        with common_utils.ZipAwareOpen():
+            localedata.load(locale)  # Load metadata for locale.
+        cat = catalog.Catalog(
+            locale=locale,
+            project='Translation for %s of %s' % (locale, course_title),
+            msgid_bugs_address=bugs_address,
+            copyright_holder=organization)
+        for tr_id in translations:
+            if locale in translations[tr_id]:
+                t_and_l = translations[tr_id][locale]
+                cat.add(
+                    tr_id, string=t_and_l.translations.pop(),
+                    locations=[(l, 0) for l in t_and_l.locations],
+                    user_comments=t_and_l.comments,
+                    auto_comments=['also translated as "%s"' % s
+                                   for s in t_and_l.translations])
+        return cat
+
+    @staticmethod
+    def build_zip_file(handler, out_stream, translations):
+        """Create a .zip file with one .po file for each translated language.
+
+        Args:
+          handler: webapp2 handler for looking up course and app context
+          out_stream: An open file-like which can be written and seeked.
+          translations: Map of string -> locale -> TranslationsAndLocations
+            as returned from build_translations().
+        """
+        original_locale = handler.app_context.default_locale
         with common_utils.ZipAwareOpen():
             localedata.load(original_locale)
-
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
-            for locale in self.handler.app_context.get_all_locales():
+            for locale in handler.app_context.get_all_locales():
                 if locale == original_locale:
                     continue
-                with common_utils.ZipAwareOpen():
-                    localedata.load(locale)  # Load metadata for locale.
-                cat = catalog.Catalog(
-                    locale=locale,
-                    project='Translation for %s of %s' % (locale, course_title),
-                    msgid_bugs_address=bugs_address,
-                    copyright_holder=organization)
-                for tr_id in translations:
-                    if locale in translations[tr_id]:
-                        t_and_l = translations[tr_id][locale]
-                        cat.add(
-                            tr_id, string=t_and_l.translations.pop(),
-                            locations=[(l, 0) for l in t_and_l.locations],
-                            user_comments=t_and_l.comments,
-                            auto_comments=['also translated as "%s"' % s
-                                           for s in t_and_l.translations])
+                cat = I18nDownloadHandler.build_babel_catalog_for_locale(
+                    handler, translations, locale)
                 filename = os.path.join(
                     'locale', locale, 'LC_MESSAGES', 'messages.po')
                 content = cStringIO.StringIO()
@@ -801,12 +810,13 @@ class I18nDownloadHandler(BaseDashboardExtension):
         self.handler.app_context.fs.begin_readonly()
         models.MemcacheManager.begin_readonly()
         try:
-            translations = self._build_translations()
+            all_locales = self.handler.app_context.get_all_locales()
+            translations = self.build_translations(self.handler, all_locales)
             out_stream = StringIO.StringIO()
             # zip assumes stream has a real fp; fake it.
             out_stream.fp = out_stream
             try:
-                self._build_zip_file(out_stream, translations)
+                self.build_zip_file(self.handler, out_stream, translations)
                 self._send_response(out_stream)
             finally:
                 out_stream.close()
@@ -897,13 +907,17 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                         'inputex-uneditable', 'inputex-file',
                         'io-upload-iframe']
 
+    class ProtocolError(Exception):
+        pass
+
     def get(self):
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict={'key': None},
             xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
                 self.XSRF_TOKEN_NAME))
 
-    def _update_translation(self, data):
+    @staticmethod
+    def update_translation(data):
         pseudo_file = cStringIO.StringIO(data)
         the_catalog = pofile.read_po(pseudo_file)
         total_translations = 0
@@ -915,9 +929,8 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 total_translations += 1
                 protocol, component_name, ttype, key = location.split('|', 4)
                 if protocol != 'GCB-1':
-                    transforms.send_file_upload_response(
-                        self, 400, 'Location protocol GCB-1 expected.')
-                    return
+                    raise TranslationUploadRestHandler.ProtocolError(
+                        'Expected location format GCB-1, but had %s' % protocol)
                 dto = ResourceBundleDAO.load(key)
                 if not dto:
                     dto = ResourceBundleDTO(key, {})
@@ -948,7 +961,6 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                         })
                     dirty = True
                     added_translations += 1
-
                 if dirty:
                     ResourceBundleDAO.save(dto)
         return (
@@ -984,31 +996,39 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
 
         stats_total = [0] * 4
         try:
-            zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
-            for item in zf.infolist():
-                if item.filename.endswith('.po'):
-                    # pylint: disable-msg=unpacking-non-sequence
-                    stats = self._update_translation(zf.read(item))
-                    stats_total = [i + j for i, j in zip(stats, stats_total)]
-        except zipfile.BadZipfile:
             try:
-                stats_total = self._update_translation(file_content)
-            except UnicodeDecodeError:
-                transforms.send_file_upload_response(
-                    self, 400,
-                    'Uploaded file did not parse as .zip or .po file.')
+                zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
+                for item in zf.infolist():
+                    if item.filename.endswith('.po'):
+                        # pylint: disable-msg=unpacking-non-sequence
+                        stats = self.update_translation(zf.read(item))
+                        stats_total = [
+                            i + j for i, j in zip(stats, stats_total)]
+            except zipfile.BadZipfile:
+                try:
+                    stats_total = self.update_translation(file_content)
+                except UnicodeDecodeError:
+                    transforms.send_file_upload_response(
+                        self, 400,
+                        'Uploaded file did not parse as .zip or .po file.')
+                    return
+        except TranslationUploadRestHandler.ProtocolError, ex:
+            transforms.send_file_upload_response(self, 400, str(ex))
+            return
+
         if stats_total[0] == 0:
             # .PO file parser is pretty lenient; random text files don't
             # necessarily result in exceptions, but count of total
             # translations will be zero, so also consider that an error.
             transforms.send_file_upload_response(
                 self, 400, 'No translations found in provided file.')
-        else:
-            _recalculate_translation_progress(self.app_context)
-            transforms.send_file_upload_response(
-                self, 200,
-                '%d total, %d matched, %d changed, %d added translations' %
-                tuple(stats_total))
+            return
+
+        _recalculate_translation_progress(self.app_context)
+        transforms.send_file_upload_response(
+            self, 200,
+            '%d total, %d matched, %d changed, %d added translations' %
+            tuple(stats_total))
 
 
 class I18nResourceManager(object):
@@ -1031,6 +1051,51 @@ class I18nResourceManager(object):
         return ResourceRow(
             self._course, resource, type_str, key,
             i18n_progress_dto=row)
+
+
+class I18nReverseCaseHandler(BaseDashboardExtension):
+    """Provide "translation" that swaps case of letters."""
+
+    ACTION = 'i18n_reverse_case'
+
+    def _add_reverse_case_locale(self, locale):
+        course = self.handler.get_course()
+        environ = course.get_environ(self.handler.app_context)
+        extra_locales = environ.get('extra_locales', [])
+        if not any(l['locale'] == locale for l in extra_locales):
+            extra_locales.append({'locale': locale,
+                                  'availability': 'unavailable'})
+            environ['extra_locales'] = extra_locales
+            course.save_settings(environ)
+
+    def _add_reverse_case_translations(self, locale):
+        original_locale = self.handler.app_context.default_locale
+        with common_utils.ZipAwareOpen():
+            localedata.load(original_locale)
+
+        translations = I18nDownloadHandler.build_translations(
+            self.handler, [locale])
+        cat = I18nDownloadHandler.build_babel_catalog_for_locale(
+            self.handler, translations, locale)
+        for message in cat:
+            message.string = message.id.swapcase()
+        try:
+            content = cStringIO.StringIO()
+            pofile.write_po(content, cat)
+            TranslationUploadRestHandler.update_translation(content.getvalue())
+        finally:
+            content.close()
+
+    def render(self):
+        # Here, using 'ln' because we need a language that Babel knows.
+        # Lingala ( http://en.wikipedia.org/wiki/Lingala ) is not likely to be
+        # a target language for courses hosted in CB in the next few years.
+        locale = 'ln'
+        self._add_reverse_case_locale(locale)
+        self._add_reverse_case_translations(locale)
+        _recalculate_translation_progress(self.handler.app_context)
+        self.handler.redirect(
+            self.handler.get_action_url(I18nDashboardHandler.ACTION))
 
 
 def _get_course_resource_keys(course):
@@ -1191,6 +1256,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
         actions = [
+            {
+                'id': 'translate_to_reverse_case',
+                'caption': '"Translate" to rEVERSED cAPS',
+                'href': self.handler.get_action_url(
+                    I18nReverseCaseHandler.ACTION),
+                },
             {
                 'id': 'upload_translation_files',
                 'caption': 'Upload Translation Files',
@@ -1918,6 +1989,7 @@ def notify_module_enabled():
     I18nDashboardHandler.register()
     I18nDownloadHandler.register()
     I18nUploadHandler.register()
+    I18nReverseCaseHandler.register()
     TranslationConsole.register()
     TranslatedAssetConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
@@ -1940,6 +2012,7 @@ def notify_module_disabled():
     I18nDashboardHandler.unregister()
     I18nDownloadHandler.unregister()
     I18nUploadHandler.unregister()
+    I18nReverseCaseHandler.unregister()
     TranslationConsole.unregister()
     TranslatedAssetConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)

@@ -1130,26 +1130,26 @@ class TranslationImportExportTests(actions.TestBase):
         self.course = courses.Course(None, app_context)
 
         self.unit = self.course.add_unit()
-        self.unit.title = 'unit title'
+        self.unit.title = 'Unit Title'
         self.unit.description = 'unit description'
         self.unit.unit_header = 'unit header'
         self.unit.unit_footer = 'unit footer'
         self.unit.now_available = True
 
         self.assessment = self.course.add_assessment()
-        self.assessment.title = 'assessment title'
+        self.assessment.title = 'Assessment Title'
         self.assessment.description = 'assessment description'
         self.assessment.html_content = 'assessment html content'
         self.assessment.html_review_form = 'assessment html review form'
         self.assessment.now_available = True
 
         self.link = self.course.add_link()
-        self.link.title = 'link title'
+        self.link.title = 'Link Title'
         self.link.description = 'link description'
         self.link.url = 'link url'
 
         self.lesson = self.course.add_lesson(self.unit)
-        self.lesson.title = 'lesson title'
+        self.lesson.title = 'Lesson Title'
         self.lesson.objectives = 'lesson objectives'
         self.lesson.video_id = 'lesson video'
         self.lesson.notes = 'lesson notes'
@@ -1224,10 +1224,10 @@ class TranslationImportExportTests(actions.TestBase):
         to add the item, but instead it really is getting actively suppressed.
         """
         response = self.get(self.URL)
-        self.assertIn('unit title', response.body)
-        self.assertIn('assessment title', response.body)
-        self.assertIn('link title', response.body)
-        self.assertIn('lesson title', response.body)
+        self.assertIn('Unit Title', response.body)
+        self.assertIn('Assessment Title', response.body)
+        self.assertIn('Link Title', response.body)
+        self.assertIn('Lesson Title', response.body)
         self.assertIn('mc description', response.body)
         self.assertIn('sa description', response.body)
         self.assertIn('question group description', response.body)
@@ -1249,17 +1249,17 @@ class TranslationImportExportTests(actions.TestBase):
                 catalog = pofile.read_po(
                     cStringIO.StringIO(download_zf.read(item)))
                 messages = [msg.id for msg in catalog]
-                self.assertIn('unit title', messages)
+                self.assertIn('Unit Title', messages)
                 self.assertIn('unit description', messages)
                 self.assertIn('unit header', messages)
                 self.assertIn('unit footer', messages)
-                self.assertIn('assessment title', messages)
+                self.assertIn('Assessment Title', messages)
                 self.assertIn('assessment description', messages)
                 self.assertIn('assessment html content', messages)
                 self.assertIn('assessment html review form', messages)
-                self.assertIn('link title', messages)
+                self.assertIn('Link Title', messages)
                 self.assertIn('link description', messages)
-                self.assertIn('lesson title', messages)
+                self.assertIn('Lesson Title', messages)
                 self.assertIn('lesson objectives', messages)
                 self.assertIn('lesson notes', messages)
                 self.assertIn('mc question', messages)
@@ -1336,6 +1336,15 @@ class TranslationImportExportTests(actions.TestBase):
         response = self.get('unit?unit=%s' % self.unit.unit_id)
         self.assertIn(self.unit.title.upper() * 2, response.body)
         self.assertIn(self.lesson.title.upper() * 2, response.body)
+
+    def test_reverse_case(self):
+        response = self.get('dashboard?action=i18n_reverse_case')
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'ln'
+        models.StudentPreferencesDAO.save(prefs)
+        response = self.get('unit?unit=%s' % self.unit.unit_id)
+        self.assertIn('uNIT tITLE', response.body)
+        self.assertIn('lESSON tITLE', response.body)
 
 
 class TranslatorRoleTests(actions.TestBase):
@@ -2051,7 +2060,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
         self.assertIn(
             'Translation for ru_RU of Power Searching with Google',
             response.body)
-        self.assertIn(
+        self.assertIn(  # TODO(psimakov): use assertIn() when export works
             'You are a cosmetologist and business owner', response.body)
 
         # import

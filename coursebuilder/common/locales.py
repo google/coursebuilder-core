@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8; -*-
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +59,7 @@ LOCALES_DISPLAY_NAMES = {
     'ja': u'日本語 (ja)',
     'kn': u'ಕನ್ನಡ (kn)',
     'ko': u'한국어 (ko)',
+    'ln': u'Pig Latin',
     'lt': u'lietuvių (lt)',
     'lv': u'latviešu (lv)',
     'ml': u'മലയാളം (ml)',
@@ -92,7 +93,7 @@ LOCALES_DISPLAY_NAMES = {
 def get_system_supported_locales():
     translations_path = os.path.join(
         appengine_config.BUNDLE_ROOT, 'modules/i18n/resources/locale')
-    return sorted(os.listdir(translations_path))
+    return sorted(os.listdir(translations_path) + ['ln'])
 
 
 def get_locale_display_name(locale):
