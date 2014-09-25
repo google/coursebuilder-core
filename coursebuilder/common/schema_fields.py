@@ -47,6 +47,10 @@ class Property(object):
         return self._name
 
     @property
+    def description(self):
+        return self._description
+
+    @property
     def extra_schema_dict_values(self):
         return self._extra_schema_dict_values
 

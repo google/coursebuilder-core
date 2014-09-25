@@ -54,7 +54,6 @@ from unit_lesson_editor import UnitLessonTitleRESTHandler
 from unit_lesson_editor import UnitRESTHandler
 
 import utils as dashboard_utils
-import appengine_config
 
 from common import crypto
 from common import jinja_utils
@@ -155,8 +154,6 @@ class DashboardHandler(
     # list their assets on the Assets tab. The function will receive an instance
     # of DashboardHandler as an argument.
     contrib_asset_listers = []
-
-    local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
 
     @classmethod
     def get_child_routes(cls):
@@ -599,7 +596,7 @@ class DashboardHandler(
                     'href': self.get_action_url('import_course')
                     })
 
-        data_info = self.list_files('/data/')
+        data_info = dashboard_utils.list_files(self, '/data/')
 
         sections = [
             {
@@ -833,46 +830,6 @@ class DashboardHandler(
             }
         ]
 
-    def list_files(self, subfolder, merge_local_files=False, all_paths=None):
-        """Makes a list of files in a subfolder.
-
-        Args:
-            subfolder: string. Relative path of the subfolder to list.
-            merge_local_files: boolean. If True, the returned list will
-                contain files found on either the datastore filesystem or the
-                read-only local filesystem. If a file is found on both, its
-                datastore filesystem version will trump its local filesystem
-                version.
-            all_paths: list. A list of all file paths in the underlying file
-                system.
-
-        Returns:
-            List of relative, normalized file path strings.
-        """
-        home = sites.abspath(self.app_context.get_home_folder(), '/')
-        _paths = None
-        if all_paths is not None:
-            _paths = []
-            for _path in all_paths:
-                if _path.startswith(sites.abspath(
-                        self.app_context.get_home_folder(), subfolder)):
-                    _paths.append(_path)
-            _paths = set(_paths)
-        else:
-            _paths = set(self.app_context.fs.list(
-                sites.abspath(self.app_context.get_home_folder(), subfolder)))
-
-        if merge_local_files:
-            _paths = _paths.union(set([
-                os.path.join(appengine_config.BUNDLE_ROOT, path) for path in
-                self.local_fs.list(subfolder[1:])]))
-
-        result = []
-        for abs_filename in _paths:
-            filename = os.path.relpath(abs_filename, home)
-            result.append(vfs.AbstractFileSystem.normpath(filename))
-        return sorted(result)
-
     def list_and_format_file_list(
         self, title, subfolder, tab_name,
         links=False, upload=False, prefix=None, caption_if_empty='< none >',
@@ -883,13 +840,13 @@ class DashboardHandler(
         # keep a list of files without merging
         unmerged_files = {}
         if merge_local_files:
-            unmerged_files = self.list_files(
-                subfolder, merge_local_files=False, all_paths=all_paths)
+            unmerged_files = dashboard_utils.list_files(
+                self, subfolder, merge_local_files=False, all_paths=all_paths)
 
         items = safe_dom.NodeList()
         count = 0
-        for filename in self.list_files(
-                subfolder, merge_local_files=merge_local_files,
+        for filename in dashboard_utils.list_files(
+                self, subfolder, merge_local_files=merge_local_files,
                 all_paths=all_paths):
             if prefix and not filename.startswith(prefix):
                 continue
@@ -1401,7 +1358,7 @@ class DashboardHandler(
     def get_assets_images(self, items, tab, all_paths):
         items.append(self.list_and_format_file_list(
             'Images & Documents', '/assets/img/', tab.name, links=True,
-            upload=True,
+            upload=True, merge_local_files=True,
             edit_url_template=(
                 'dashboard?action=manage_asset&tab=%s&key=%s'),
             caption_if_empty='< inherited from /assets/img/ >',

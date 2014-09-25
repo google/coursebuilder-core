@@ -19,6 +19,8 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 import os
 
 import appengine_config
+from controllers import sites
+from models import vfs
 
 RESOURCES_PATH = '/modules/dashboard/resources'
 RESOURCES_DIR = os.path.join(appengine_config.BUNDLE_ROOT,
@@ -27,3 +29,46 @@ RESOURCES_DIR = os.path.join(appengine_config.BUNDLE_ROOT,
 
 def build_assets_url(tab_name):
     return '/dashboard?action=assets&tab=%s' % tab_name
+
+
+def list_files(handler, subfolder, merge_local_files=False, all_paths=None):
+    """Makes a list of files in a subfolder.
+
+    Args:
+        handler: webapp request handler.
+        subfolder: string. Relative path of the subfolder to list.
+        merge_local_files: boolean. If True, the returned list will
+            contain files found on either the datastore filesystem or the
+            read-only local filesystem. If a file is found on both, its
+            datastore filesystem version will trump its local filesystem
+            version.
+        all_paths: list. A list of all file paths in the underlying file
+            system.
+
+    Returns:
+        List of relative, normalized file path strings.
+    """
+    home = sites.abspath(handler.app_context.get_home_folder(), '/')
+    _paths = None
+    if all_paths is not None:
+        _paths = []
+        for _path in all_paths:
+            if _path.startswith(sites.abspath(
+                    handler.app_context.get_home_folder(), subfolder)):
+                _paths.append(_path)
+        _paths = set(_paths)
+    else:
+        _paths = set(handler.app_context.fs.list(
+            sites.abspath(handler.app_context.get_home_folder(), subfolder)))
+
+    if merge_local_files:
+        local_fs = vfs.LocalReadOnlyFileSystem(logical_home_folder='/')
+        _paths = _paths.union(set([
+            os.path.join(appengine_config.BUNDLE_ROOT, path) for path in
+            local_fs.list(subfolder[1:])]))
+
+    result = []
+    for abs_filename in _paths:
+        filename = os.path.relpath(abs_filename, home)
+        result.append(vfs.AbstractFileSystem.normpath(filename))
+    return sorted(result)

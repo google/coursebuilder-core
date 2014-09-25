@@ -153,29 +153,53 @@ class ResourceKey(object):
         return course
 
     def get_title(self, app_context):
+        resource = self.get_resource(app_context)
+        return self.get_resource_title(resource)
+
+    def get_resource(self, app_context):
         course = self._get_course(app_context)
         if self._type == ResourceKey.UNIT_TYPE:
-            return utils.display_unit_title(course.find_unit_by_id(self._key))
+            return course.find_unit_by_id(self._key)
         elif self._type == ResourceKey.LESSON_TYPE:
             lesson = course.find_lesson_by_id(None, self._key)
-            return utils.display_lesson_title(
-                course.get_unit_for_lesson(lesson), lesson)
+            unit = course.get_unit_for_lesson(lesson)
+            return (unit, lesson)
         elif self._type in [ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE]:
-            return course.find_unit_by_id(self._key).title
+            return course.find_unit_by_id(self._key)
         elif self._type == ResourceKey.ASSET_IMG_TYPE:
             return self._key
         elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
-            schema = course.create_settings_schema()
-            return schema.sub_registries[self._key].title
+            return course.create_settings_schema()
         elif self._type in [
                 ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
             qu = models.QuestionDAO.load(self._key)
-            return qu.description
+            return qu
         elif self._type in ResourceKey.QUESTION_GROUP_TYPE:
             qgp = models.QuestionGroupDAO.load(self._key)
-            return qgp.description
+            return qgp
         else:
-            return 'none'
+            return None
+
+    def get_resource_title(self, resource):
+        if not resource:
+            return None
+
+        if self._type == ResourceKey.UNIT_TYPE:
+            return utils.display_unit_title(resource)
+        elif self._type == ResourceKey.LESSON_TYPE:
+            return utils.display_lesson_title(resource[0], resource[1])
+        elif self._type in (ResourceKey.ASSESSMENT_TYPE, ResourceKey.LINK_TYPE):
+            return resource.title
+        elif self._type == ResourceKey.ASSET_IMG_TYPE:
+            return resource
+        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
+            return resource.sub_registries[self._key].title
+        elif self._type in (ResourceKey.QUESTION_MC_TYPE,
+                            ResourceKey.QUESTION_SA_TYPE,
+                            ResourceKey.QUESTION_GROUP_TYPE):
+            return resource.description
+        else:
+            return None
 
     def get_schema(self, app_context):
         if self.type == ResourceKey.ASSESSMENT_TYPE:
@@ -617,12 +641,24 @@ class TranslationsAndLocations(object):
     def __init__(self):
         self._translations = set()
         self._locations = []
+        self._comments = []
 
     def add_translation(self, translation):
-        self._translations.add(translation)
+        # Don't add "translations" that are blank, unless we have no other
+        # alternatives.
+        if translation or not self._translations:
+            self._translations.add(translation)
+        # If all we have so far is blank translations, and this one is
+        # nonblank, throw away all the blank ones.
+        if translation and not any(self._translations):
+            self._translations = [translation]
 
     def add_location(self, location):
         self._locations.append(location)
+
+    def add_comment(self, comment):
+        comment = str(comment)  # May be Node or NodeList.
+        self._comments.append(comment)
 
     @property
     def locations(self):
@@ -631,6 +667,10 @@ class TranslationsAndLocations(object):
     @property
     def translations(self):
         return self._translations
+
+    @property
+    def comments(self):
+        return self._comments
 
 
 class I18nDownloadHandler(BaseDashboardExtension):
@@ -648,19 +688,36 @@ class I18nDownloadHandler(BaseDashboardExtension):
 
         translations = collections.defaultdict(
             lambda: collections.defaultdict(TranslationsAndLocations))
-        for bundle in ResourceBundleDAO.get_all_iter():
-            key = ResourceBundleKey.fromstring(bundle.id)
-            title = key.resource_key.get_title(self.handler.app_context)
-            locale = key.locale
 
-            for item_name, value in bundle.dict.iteritems():
-                for translation in value['data']:
-                    message = translation['source_value']
-                    translated_message = translation['target_value']
-                    t_and_l = translations[message][locale]
-                    t_and_l.add_translation(translated_message)
-                    t_and_l.add_location('"%s" in %s GCB-1.7:%s:%s' % (
-                        item_name, title, item_name, str(key)))
+        course = self.handler.get_course()
+        app_context = self.handler.app_context
+        all_locales = app_context.get_all_locales()
+
+        for resource, resource_key in _get_language_resource_keys(course):
+            if resource_key.type == ResourceKey.ASSET_IMG_TYPE:
+                continue
+            for locale in all_locales:
+                key = ResourceBundleKey(
+                    resource_key.type, resource_key.key, locale)
+                binding, sections = _build_sections_for_key(key, app_context)
+                for section in sections:
+                    section_name = section['name']
+                    section_type = section['type']
+                    description = (
+                        binding.find_field(section_name).description or '')
+
+                    for translation in section['data']:
+                        message = unicode(translation['source_value'] or '')
+                        translated_message = translation['target_value'] or ''
+                        t_and_l = translations[message][locale]
+                        t_and_l.add_translation(translated_message)
+                        t_and_l.add_location('GCB-1|%s|%s|%s' % (
+                            section_name, section_type, str(key)))
+                        if not t_and_l.comments and message:
+                            t_and_l.add_comment(description)
+                            title = resource_key.get_resource_title(resource)
+                            if title:
+                                t_and_l.add_comment(title)
         return translations
 
     def _build_zip_file(self, out_stream, translations):
@@ -682,21 +739,25 @@ class I18nDownloadHandler(BaseDashboardExtension):
 
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
-            for locale in self.handler.app_context.get_allowed_locales():
+            for locale in self.handler.app_context.get_all_locales():
                 if locale == original_locale:
                     continue
                 with common_utils.ZipAwareOpen():
                     localedata.load(locale)  # Load metadata for locale.
-                cat = catalog.Catalog(locale=locale, project=course_title,
-                                      msgid_bugs_address=bugs_address,
-                                      copyright_holder=organization)
+                cat = catalog.Catalog(
+                    locale=locale,
+                    project='Translation for %s of %s' % (locale, course_title),
+                    msgid_bugs_address=bugs_address,
+                    copyright_holder=organization)
                 for tr_id in translations:
                     if locale in translations[tr_id]:
                         t_and_l = translations[tr_id][locale]
-                        cat.add(tr_id, string=t_and_l.translations.pop(),
-                                locations=[(l, 0) for l in t_and_l.locations],
-                                auto_comments=['also translated as "%s"' % s
-                                               for s in t_and_l.translations])
+                        cat.add(
+                            tr_id, string=t_and_l.translations.pop(),
+                            locations=[(l, 0) for l in t_and_l.locations],
+                            user_comments=t_and_l.comments,
+                            auto_comments=['also translated as "%s"' % s
+                                           for s in t_and_l.translations])
                 filename = os.path.join(
                     'locale', locale, 'LC_MESSAGES', 'messages.po')
                 content = cStringIO.StringIO()
@@ -738,8 +799,7 @@ class I18nUploadHandler(BaseDashboardExtension):
             self.handler.canonicalize_url(TranslationUploadRestHandler.URL),
             self.handler.get_action_url(I18nDashboardHandler.ACTION),
             required_modules=TranslationUploadRestHandler.REQUIRED_MODULES,
-            save_method='upload', save_button_caption='Upload',
-            auto_return=True)
+            save_method='upload', save_button_caption='Upload')
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Translation Upload'),
             'main_content': main_content,
@@ -755,6 +815,43 @@ def translation_upload_generate_schema():
         'multiple translated languages.  The internal structure of the .zip '
         'file is unimportant; all files ending in ".po" will be considered.'))
     return schema
+
+
+def _recalculate_translation_progress(app_context):
+    course = courses.Course(None, app_context)
+    for _, resource_key in _get_language_resource_keys(course):
+        progress = I18nProgressDAO.load_or_create(resource_key)
+        for locale in app_context.get_all_locales():
+            key = ResourceBundleKey(resource_key.type, resource_key.key, locale)
+            _, sections = _build_sections_for_key(key, app_context)
+            partially_translated = False
+            fully_translated = True
+            for section in sections:
+                for translation in section['data']:
+                    if translation['source_value']:
+                        if translation['target_value']:
+                            partially_translated = True
+                        else:
+                            fully_translated = False
+
+            if fully_translated:
+                # NOTE: Yes, it's considered "fully translated" even if all
+                # the translatable items are blank.  What we want to show on
+                # the I18N console is whether any work remains be done.  The
+                # fact that there may be blanks in the source text is not
+                # something about which this module needs to be nanny-ing the
+                # admin.
+                new_state = I18nProgressDTO.DONE
+            elif partially_translated:
+                new_state = I18nProgressDTO.IN_PROGRESS
+            else:
+                new_state = I18nProgressDTO.NOT_STARTED
+            if progress.get_progress(locale) != new_state:
+                progress_dirty = True
+                progress.set_progress(locale, new_state)
+
+        if progress_dirty:
+            I18nProgressDAO.save(progress)
 
 
 class TranslationUploadRestHandler(utils.BaseRESTHandler):
@@ -777,25 +874,27 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         total_translations = 0
         matched_translations = 0
         updated_translations = 0
+        added_translations = 0
         for message in the_catalog:
             for location, _ in message.locations:
                 total_translations += 1
-                protocol, component_name, key = location.split(':', 2)
-                if protocol != 'GCB-1.7':
+                protocol, component_name, ttype, key = location.split('|', 4)
+                if protocol != 'GCB-1':
                     transforms.send_file_upload_response(
-                        self, 400, 'Location protocol GCB-1.7 expected.')
+                        self, 400, 'Location protocol GCB-1 expected.')
                     return
                 dto = ResourceBundleDAO.load(key)
                 if not dto:
-                    logging.warning(
-                        'ResourceBundle with key "%s" not found', key)
-                    continue
+                    dto = ResourceBundleDTO(key, {})
+
                 component = dto.dict.get(component_name)
                 if not component:
-                    logging.warning(
-                        'ResourceBundle with key "%s" missing component "%s"',
-                        key, component_name)
-                    continue
+                    component = {
+                        'type': ttype,
+                        'data': [],
+                        'source_value': None
+                        }
+                    dto.dict[component_name] = component
 
                 dirty = False
                 found = False
@@ -807,13 +906,21 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                             dirty = True
                             translation_item['target_value'] = message.string
                             updated_translations += 1
-                if not found:
-                    logging.warning(
-                        'ResourceBundle "%s" component "%s" string "%s" gone',
-                        key, component_name, message.id)
+                if not found and message.id and message.string:
+                    component['data'].append({
+                        'source_value': message.id,
+                        'target_value': message.string,
+                        })
+                    dirty = True
+                    added_translations += 1
+
                 if dirty:
                     ResourceBundleDAO.save(dto)
-        return total_translations, matched_translations, updated_translations
+        return (
+            total_translations,
+            matched_translations,
+            updated_translations,
+            added_translations)
 
     def post(self):
         request = transforms.loads(self.request.get('request'))
@@ -835,37 +942,38 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 self, 400, 'The .zip or .po file must not be empty.')
             return
 
-        all_total = 0
-        all_matched = 0
-        all_updated = 0
+        # Get meta-data for supported locales loaded.
+        for locale in self.app_context.get_all_locales():
+            with common_utils.ZipAwareOpen():
+                localedata.load(locale)
+
+        stats_total = [0] * 4
         try:
             zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
             for item in zf.infolist():
                 if item.filename.endswith('.po'):
                     # pylint: disable-msg=unpacking-non-sequence
-                    tot, match, update = self._update_translation(zf.read(item))
-                    all_total += tot
-                    all_matched += match
-                    all_updated += update
+                    stats = self._update_translation(zf.read(item))
+                    stats_total = [i + j for i, j in zip(stats, stats_total)]
         except zipfile.BadZipfile:
             try:
-                # pylint: disable-msg=unpacking-non-sequence
-                all_total, all_matched, all_updated = (
-                    self._update_translation(file_content))
+                stats_total = self._update_translation(file_content)
             except UnicodeDecodeError:
                 transforms.send_file_upload_response(
                     self, 400,
                     'Uploaded file did not parse as .zip or .po file.')
-        if all_total == 0:
+        if stats_total[0] == 0:
             # .PO file parser is pretty lenient; random text files don't
             # necessarily result in exceptions, but count of total
             # translations will be zero, so also consider that an error.
             transforms.send_file_upload_response(
                 self, 400, 'No translations found in provided file.')
         else:
+            _recalculate_translation_progress(self.app_context)
             transforms.send_file_upload_response(
-                self, 200, '%d total, %d matched, %d changed translations' % (
-                    all_total, all_matched, all_updated))
+                self, 200,
+                '%d total, %d matched, %d changed, %d added translations' %
+                tuple(stats_total))
 
 
 class I18nResourceManager(object):
@@ -888,6 +996,73 @@ class I18nResourceManager(object):
         return ResourceRow(
             self._course, resource, type_str, key,
             i18n_progress_dto=row)
+
+
+def _get_course_resource_keys(course):
+    ret = []
+    schema = course.create_settings_schema()
+    for section_name in sorted(courses.Course.get_schema_sections()):
+        ret.append(
+            (schema,
+             ResourceKey(ResourceKey.COURSE_SETTINGS_TYPE, section_name)))
+    return ret
+
+
+def _get_course_component_keys(course):
+    ret = []
+    for unit in course.get_units():
+        if course.get_parent_unit(unit):
+            continue
+        ret.append((unit, ResourceKey.for_unit(unit)))
+        if unit.type == verify.UNIT_TYPE_UNIT:
+            if unit.pre_assessment:
+                assessment = course.find_unit_by_id(unit.pre_assessment)
+                ret.append(
+                    (assessment,
+                     ResourceKey(
+                         ResourceKey.ASSESSMENT_TYPE, unit.pre_assessment)))
+            for lesson in course.get_lessons(unit.unit_id):
+                ret.append(((unit, lesson),
+                            ResourceKey(
+                                ResourceKey.LESSON_TYPE, lesson.lesson_id)))
+            if unit.post_assessment:
+                assessment = course.find_unit_by_id(unit.pre_assessment)
+                ret.append(
+                    (assessment,
+                     ResourceKey(
+                         ResourceKey.ASSESSMENT_TYPE, unit.post_assessment)))
+    return ret
+
+
+def _get_asset_keys(handler):
+    ret = []
+    for path in dashboard_utils.list_files(handler, '/assets/img',
+                                           merge_local_files=True):
+        ret.append((None, ResourceKey(ResourceKey.ASSET_IMG_TYPE, path)))
+    return ret
+
+
+def _get_question_keys():
+    ret = []
+    for qu in models.QuestionDAO.get_all():
+        ret.append((qu, ResourceKey(ResourceKey.get_question_type(qu), qu.id)))
+    return ret
+
+
+def _get_question_group_keys():
+    ret = []
+    for qg in models.QuestionGroupDAO.get_all():
+        ret.append((qg, ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, qg.id)))
+    return ret
+
+
+def _get_language_resource_keys(course):
+    return (
+        _get_course_resource_keys(course) +
+        _get_course_component_keys(course) +
+        _get_question_keys() +
+        _get_question_group_keys()
+        )
 
 
 class I18nDashboardHandler(BaseDashboardExtension):
@@ -925,39 +1100,39 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         # Course settings
         data_rows = []
-        for section in sorted(courses.Course.get_schema_sections()):
+        for resource, key in _get_course_resource_keys(self.course):
             data_rows.append(self.rm.get_resource_row(
-                None, ResourceKey.COURSE_SETTINGS_TYPE, section))
+                resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Course Settings')
 
         # Run over units and lessons
         data_rows = []
-        for unit in self.course.get_units():
-            key = ResourceKey.for_unit(unit)
-            data_rows.append(self.rm.get_resource_row(unit, key.type, key.key))
-            if unit.type == verify.UNIT_TYPE_UNIT:
-                for lesson in self.course.get_lessons(unit.unit_id):
-                    data_rows.append(self.rm.get_resource_row(
-                        lesson, ResourceKey.LESSON_TYPE, lesson.lesson_id))
+        for resource, key in _get_course_component_keys(self.course):
+            if key.type == ResourceKey.LESSON_TYPE:
+                data_rows.append(self.rm.get_resource_row(
+                    resource[1], key.type, key.key))
+            else:  # Unit, Assessment or Link
+                data_rows.append(self.rm.get_resource_row(
+                    resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Course Outline')
 
         # Run over file assets
-        data_rows = [
-            AssetRow(self.handler.app_context, path)
-            for path in self.handler.list_files('/assets/img')]
+        data_rows = []
+        for _, key in _get_asset_keys(self.handler):
+            data_rows.append(AssetRow(self.handler.app_context, key.key))
         rows += self._make_table_section(data_rows, 'Images & Documents')
 
         # Run over questions and question groups
         data_rows = []
-        for qu in models.QuestionDAO.get_all():
-            qu_type = ResourceKey.get_question_type(qu)
-            data_rows.append(self.rm.get_resource_row(qu, qu_type, qu.id))
-
+        for resource, key in _get_question_keys():
+            data_rows.append(self.rm.get_resource_row(
+                resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Questions')
 
-        data_rows = [
-            self.rm.get_resource_row(qg, ResourceKey.QUESTION_GROUP_TYPE, qg.id)
-            for qg in models.QuestionGroupDAO.get_all()]
+        data_rows = []
+        for resource, key in _get_question_group_keys():
+            data_rows.append(self.rm.get_resource_row(
+                resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Question Groups')
 
         if not [row for row in rows if type(row) is ResourceRow]:
@@ -1099,102 +1274,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         'inputex-hidden', 'inputex-list', 'inputex-string', 'inputex-textarea',
         'inputex-uneditable']
 
-    def _add_known_translations_as_defaults(self, locale, sections):
-        translations = i18n.get_store().get_translations(locale)
-        for section in sections:
-            for item in section['data']:
-                if item['verb'] == VERB_NEW:
-                    source_value = item['source_value']
-                    target_value = translations.gettext(source_value)
-                    if source_value and target_value != source_value:
-                        item['target_value'] = target_value
-                        item['verb'] = VERB_CURRENT
-
     def get(self):
-        key = ResourceBundleKey.fromstring(self.request.get('key'))
-        if not has_locale_rights(self.app_context, key.locale):
-            transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': str(key)})
-            return
-
-        schema = key.resource_key.get_schema(self.app_context)
-        values = key.resource_key.get_data_dict(self.app_context)
-
-        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
-            values, schema)
-
-        allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
-            binding)
-
-        existing_mappings = []
-        resource_bundle_dto = ResourceBundleDAO.load(str(key))
-        if resource_bundle_dto:
-            for name, value in resource_bundle_dto.dict.items():
-                if value['type'] == TYPE_HTML:
-                    source_value = value['source_value']
-                    target_value = ''
-                else:
-                    source_value = value['data'][0]['source_value']
-                    target_value = value['data'][0]['target_value']
-
-                existing_mappings.append(xcontent.SourceToTargetMapping(
-                    name, None, value['type'], source_value, target_value))
-
-        mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
-            binding, allowed_names=allowed_names,
-            existing_mappings=existing_mappings)
-
-        map_lists_source_to_target = (
-            xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
-
-        sections = []
-        for mapping in mappings:
-            if mapping.type == TYPE_HTML:
-                existing_mappings = []
-                if resource_bundle_dto:
-                    field_dict = resource_bundle_dto.dict.get(mapping.name)
-                    if field_dict:
-                        existing_mappings = field_dict['data']
-                transformer = xcontent.ContentTransformer(
-                    config=get_xcontent_configuration(self.app_context))
-                context = xcontent.Context(
-                    xcontent.ContentIO.fromstring(mapping.source_value))
-                transformer.decompose(context)
-
-                html_mappings = map_lists_source_to_target(
-                    context.resource_bundle,
-                    [m['source_value'] for m in existing_mappings])
-                source_value = mapping.source_value
-                data = []
-                for html_mapping in html_mappings:
-                    if html_mapping.target_value_index is not None:
-                        target_value = existing_mappings[
-                            html_mapping.target_value_index]['target_value']
-                    else:
-                        target_value = ''
-                    data.append({
-                        'source_value': html_mapping.source_value,
-                        'old_source_value': html_mapping.target_value,
-                        'target_value': target_value,
-                        'verb': html_mapping.verb,
-                        'changed': False})
-            else:
-                source_value = ''
-                data = [{
-                    'source_value': mapping.source_value,
-                    'target_value': mapping.target_value,
-                    'verb': mapping.verb,
-                    'changed': False}]
-
-            sections.append({
-                'name': mapping.name,
-                'label': mapping.label,
-                'type': mapping.type,
-                'source_value': source_value,
-                'data': data
-            })
-
-        self._add_known_translations_as_defaults(key.locale, sections)
 
         def cmp_sections(section1, section2):
             """Comparator to sort the sections in schema order."""
@@ -1220,6 +1300,13 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                         binding.index.names_in_order.index(name_no_index2))
             return cmp(len(path1), len(path2))
 
+        key = ResourceBundleKey.fromstring(self.request.get('key'))
+        if not has_locale_rights(self.app_context, key.locale):
+            transforms.send_json_response(
+                self, 401, 'Access denied.', {'key': str(key)})
+            return
+
+        binding, sections = _build_sections_for_key(key, self.app_context)
         payload_dict = {
             'key': str(key),
             'title': str(key.resource_key.get_title(self.app_context)),
@@ -1304,6 +1391,117 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         I18nProgressDAO.save(i18_progress_dto)
 
         transforms.send_json_response(self, 200, 'Saved.')
+
+
+def _build_sections_for_key(key, app_context):
+
+    def add_known_translations_as_defaults(locale, sections):
+        translations = i18n.get_store().get_translations(locale)
+        for section in sections:
+            for item in section['data']:
+                if item['verb'] == VERB_NEW:
+                    # NOTE: The types of source values we are getting here
+                    # include: unicode, str, float, and None.  It appears to
+                    # be harmless to force a conversion to unicode so that we
+                    # are uniform in what we are asking for a translation for.
+                    source_value = unicode(item['source_value'] or '')
+                    if source_value:
+                        target_value = translations.gettext(source_value)
+
+                        # File under very weird: Mostly, the i18n library
+                        # hands back unicode instances.  However, sometimes
+                        # it will give back a string.  And sometimes, that
+                        # string is the UTF-8 encoding of a unicode string.
+                        # Convert it back to unicode, because trying to do
+                        # reasonable things on such values (such as casting
+                        # to unicode) will raise an exception.
+                        if type(target_value) == str:
+                            try:
+                                target_value = target_value.decode('utf-8')
+                            except UnicodeDecodeError:
+                                pass
+                        if target_value != source_value:
+                            item['target_value'] = target_value
+                            item['verb'] = VERB_CURRENT
+
+    schema = key.resource_key.get_schema(app_context)
+    values = key.resource_key.get_data_dict(app_context)
+    binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+        values, schema)
+    allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
+        binding)
+
+    existing_mappings = []
+    resource_bundle_dto = ResourceBundleDAO.load(str(key))
+    if resource_bundle_dto:
+        for name, value in resource_bundle_dto.dict.items():
+            if value['type'] == TYPE_HTML:
+                source_value = value['source_value']
+                target_value = ''
+            else:
+                source_value = value['data'][0]['source_value']
+                target_value = value['data'][0]['target_value']
+
+            existing_mappings.append(xcontent.SourceToTargetMapping(
+                name, None, value['type'], source_value, target_value))
+
+    mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
+        binding, allowed_names=allowed_names,
+        existing_mappings=existing_mappings)
+
+    map_lists_source_to_target = (
+        xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
+
+    sections = []
+    for mapping in mappings:
+        if mapping.type == TYPE_HTML:
+            existing_mappings = []
+            if resource_bundle_dto:
+                field_dict = resource_bundle_dto.dict.get(mapping.name)
+                if field_dict:
+                    existing_mappings = field_dict['data']
+            transformer = xcontent.ContentTransformer(
+                config=get_xcontent_configuration(app_context))
+            context = xcontent.Context(
+                xcontent.ContentIO.fromstring(mapping.source_value))
+            transformer.decompose(context)
+
+            html_mappings = map_lists_source_to_target(
+                context.resource_bundle,
+                [m['source_value'] for m in existing_mappings])
+            source_value = mapping.source_value
+            data = []
+            for html_mapping in html_mappings:
+                if html_mapping.target_value_index is not None:
+                    target_value = existing_mappings[
+                        html_mapping.target_value_index]['target_value']
+                else:
+                    target_value = ''
+                data.append({
+                    'source_value': html_mapping.source_value,
+                    'old_source_value': html_mapping.target_value,
+                    'target_value': target_value,
+                    'verb': html_mapping.verb,
+                    'changed': False})
+        else:
+            source_value = ''
+            data = [{
+                'source_value': mapping.source_value,
+                'target_value': mapping.target_value,
+                'verb': mapping.verb,
+                'changed': False}]
+
+        sections.append({
+            'name': mapping.name,
+            'label': mapping.label,
+            'type': mapping.type,
+            'source_value': source_value,
+            'data': data
+        })
+
+    if key.locale != app_context.default_locale:
+        add_known_translations_as_defaults(key.locale, sections)
+    return binding, sections
 
 
 class LazyTranslator(object):

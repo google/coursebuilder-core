@@ -1127,8 +1127,181 @@ class CourseContentTranslationTests(actions.TestBase):
             self.COURSE_TITLE,
             dom.find('.//h1[@class="gcb-product-headers-large"]').text.strip())
 
+
+class TranslationImportExportTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'i18n_course'
+    COURSE_TITLE = 'I18N Course'
+    STUDENT_EMAIL = 'student@foo.com'
+
+    URL = 'dashboard?action=i18n_dashboard'
+
+    def setUp(self):
+        super(TranslationImportExportTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, app_context)
+
+        self.unit = self.course.add_unit()
+        self.unit.title = 'unit title'
+        self.unit.description = 'unit description'
+        self.unit.unit_header = 'unit header'
+        self.unit.unit_footer = 'unit footer'
+        self.unit.now_available = True
+
+        self.assessment = self.course.add_assessment()
+        self.assessment.title = 'assessment title'
+        self.assessment.description = 'assessment description'
+        self.assessment.html_content = 'assessment html content'
+        self.assessment.html_review_form = 'assessment html review form'
+        self.assessment.now_available = True
+
+        self.link = self.course.add_link()
+        self.link.title = 'link title'
+        self.link.description = 'link description'
+        self.link.url = 'link url'
+
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'lesson title'
+        self.lesson.objectives = 'lesson objectives'
+        self.lesson.video_id = 'lesson video'
+        self.lesson.notes = 'lesson notes'
+        self.lesson.now_available = True
+
+        self.course.save()
+
+        foo_content = StringIO.StringIO('content of foo.jpg')
+        fs = app_context.fs.impl
+        fs.put(fs.physical_to_logical('/assets/img/foo.jpg'), foo_content)
+
+        mc_qid = models.QuestionDAO.save(models.QuestionDTO(
+            None,
+            {
+                'question': 'mc question',
+                'description': 'mc description',
+                'type': 0,
+                'choices': [
+                    {'score': 1.0,
+                     'feedback': 'mc feedback one',
+                     'text': 'mc answer one'},
+                    {'score': 0.0,
+                     'feedback': 'mc feedback two',
+                     'text': 'mc answer two'}
+                    ],
+                'multiple_selections': False,
+                'version': '1.5',
+                }))
+        sa_qid = models.QuestionDAO.save(models.QuestionDTO(
+            None,
+            {
+                'question': 'sa question',
+                'description': 'sa description',
+                'type': 1,
+                'columns': 100,
+                'hint': 'sa hint',
+                'graders': [
+                    {'score': '1.0',
+                     'response': 'sa response',
+                     'feedback': 'sa feedback',
+                     'matcher': 'case_insensitive'}
+                    ],
+                'version': '1.5',
+                'defaultFeedback': 'sa default feedback',
+                'rows': 1}))
+
+        models.QuestionGroupDAO.save(models.QuestionGroupDTO(
+            None,
+            {'items': [
+                {'weight': '1',
+                 'question': mc_qid},
+                {'weight': '1',
+                 'question': sa_qid}],
+             'version': '1.5',
+             'introduction': 'question group introduction',
+             'description': 'question group description'}))
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'el'
+        models.StudentPreferencesDAO.save(prefs)
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(TranslationImportExportTests, self).tearDown()
+
+    def test_added_items_appear_on_dashboard(self):
+        """Ensure that all items added in setUp are present on dashboard.
+
+        Do this so that we can trust in other tests that when we don't
+        see something that we don't expect to see it's not because we failed
+        to add the item, but instead it really is getting actively suppressed.
+        """
+        response = self.get(self.URL)
+        self.assertIn('unit title', response.body)
+        self.assertIn('assessment title', response.body)
+        self.assertIn('link title', response.body)
+        self.assertIn('lesson title', response.body)
+        self.assertIn('mc description', response.body)
+        self.assertIn('sa description', response.body)
+        self.assertIn('question group description', response.body)
+        self.assertIn('assets/img/foo.jpg', response.body)
+
+    def test_download_exports_all_expected_fields(self):
+        extra_env = {
+            'extra_locales': [{'locale': 'de', 'availability': 'available'}]
+            }
+        with actions.OverriddenEnvironment(extra_env):
+            response = self.get(self.URL)
+            response = self.click(response, 'Download Translation Files')
+            self.assertEquals(200, response.status_int)
+            download_zf = zipfile.ZipFile(
+                cStringIO.StringIO(response.body), 'r')
+            out_stream = StringIO.StringIO()
+            out_stream.fp = out_stream
+            for item in download_zf.infolist():
+                catalog = pofile.read_po(
+                    cStringIO.StringIO(download_zf.read(item)))
+                messages = [msg.id for msg in catalog]
+                self.assertIn('unit title', messages)
+                self.assertIn('unit description', messages)
+                self.assertIn('unit header', messages)
+                self.assertIn('unit footer', messages)
+                self.assertIn('assessment title', messages)
+                self.assertIn('assessment description', messages)
+                self.assertIn('assessment html content', messages)
+                self.assertIn('assessment html review form', messages)
+                self.assertIn('link title', messages)
+                self.assertIn('link description', messages)
+                self.assertIn('lesson title', messages)
+                self.assertIn('lesson objectives', messages)
+                self.assertIn('lesson notes', messages)
+                self.assertIn('mc question', messages)
+                self.assertIn('mc description', messages)
+                self.assertIn('mc feedback one', messages)
+                self.assertIn('mc answer one', messages)
+                self.assertIn('mc feedback two', messages)
+                self.assertIn('mc answer two', messages)
+                self.assertIn('sa question', messages)
+                self.assertIn('sa description', messages)
+                self.assertIn('sa hint', messages)
+                self.assertIn('sa response', messages)
+                self.assertIn('sa feedback', messages)
+                self.assertIn('sa default feedback', messages)
+                self.assertIn('question group introduction', messages)
+                self.assertIn('question group description', messages)
+
+                # Non-translatable items; will require manual attention from
+                # someone who understands the course material.
+                self.assertNotIn('link url', messages)
+                self.assertNotIn('lesson video', messages)
+                self.assertNotIn('foo.jpg', messages)
+
     def test_upload_translations(self):
-        self._store_resource_bundle()
         actions.update_course_config(
             self.COURSE_NAME,
             {'extra_locales': [{'locale': 'el', 'availability': 'available'}]})
@@ -1145,7 +1318,7 @@ class CourseContentTranslationTests(actions.TestBase):
             catalog = pofile.read_po(cStringIO.StringIO(download_zf.read(item)))
             for msg in catalog:
                 if msg.locations:
-                    msg.string *= 2  # Repeat each translated string
+                    msg.string = msg.id.upper() * 2
             content = cStringIO.StringIO()
             pofile.write_po(content, catalog)
             upload_zf.writestr(item.filename, content.getvalue())
@@ -1174,7 +1347,13 @@ class CourseContentTranslationTests(actions.TestBase):
                     num_translations += 1
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
-        self.assertEquals(6, num_translations)
+        self.assertEquals(30, num_translations)
+
+        # And verify the presence of the translated versions on actual
+        # course pages.
+        response = self.get('unit?unit=%s' % self.unit.unit_id)
+        self.assertIn(self.unit.title.upper() * 2, response.body)
+        self.assertIn(self.lesson.title.upper() * 2, response.body)
 
 
 class TranslatorRoleTests(actions.TestBase):
@@ -1858,10 +2037,9 @@ class SampleCourseLocalizationTest(actions.TestBase):
         self.assertEquals(response.status_int, 200)
         self.assertIn('locale/ru_RU/LC_MESSAGES/messages.po', response.body)
         self.assertIn(
-            'Russian (Russia) translations for Power Searching with Google.',
+            'Translation for ru_RU of Power Searching with Google',
             response.body)
-        self.assertNotIn(
-            # TODO(psimakov): use assertIn() when export works
+        self.assertIn(
             'You are a cosmetologist and business owner', response.body)
 
         # import
