@@ -411,7 +411,7 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         # The markdown is "text" type in the schema and so is presented in the
         # tag's body.
         html = markdown.markdown(node.text)
-        return cElementTree.fromstring(
+        return tags.html_string_to_element_tree(
             '<div class="gcb-markdown">%s</div>' % html)
 
     def rollup_header_footer(self, context):
