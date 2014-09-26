@@ -16,11 +16,13 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import collections
 import cStringIO
 import random
 import re
 import string
 import sys
+import unittest
 import zipfile
 
 import appengine_config
@@ -183,3 +185,157 @@ class ZipAwareOpen(object):
         """Reset open() to be the Python internal version."""
         sys.modules['zipfile'].__builtins__['open'] = self._real_open
         return False  # Don't suppress exceptions.
+
+
+class LRUCache(object):
+    """A dict that supports capped size and LRU eviction of items."""
+
+    def __init__(self, max_item_count=None, max_size_bytes=None):
+        assert max_item_count or max_size_bytes
+        if max_item_count:
+            assert max_item_count > 0
+        if max_size_bytes:
+            assert max_size_bytes > 0
+        self.total_size = 0
+        self.max_item_count = max_item_count
+        self.max_size_bytes = max_size_bytes
+        self.items = collections.OrderedDict([])
+
+    def get_entry_size(self, key, value):
+        """Computes item size. Override and compute properly for your items."""
+        return sys.getsizeof(key) + sys.getsizeof(value)
+
+    def _compute_current_size(self):
+        total = 0
+        for key, item in self.items.iteritems():
+            total += sys.getsizeof(key) + self.get_item_size(item)
+        return total
+
+    def _allocate_space(self, key, value):
+        """Remove items in FIFO order until size constraints are met."""
+        while True:
+            over_count = False
+            over_size = False
+            if self.max_item_count:
+                over_count = len(self.items) >= self.max_item_count
+            if self.max_size_bytes:
+                entry_size = self.get_entry_size(key, value)
+                over_size = self.total_size + entry_size >= self.max_size_bytes
+            if not (over_count or over_size):
+                if self.max_size_bytes:
+                    self.total_size += entry_size
+                    assert self.total_size < self.max_size_bytes
+                return True
+            if self.items:
+                _key, _value = self.items.popitem(last=False)
+                if self.max_size_bytes:
+                    self.total_size -= self.get_entry_size(_key, _value)
+                    assert self.total_size >= 0
+            else:
+                break
+        return False
+
+    def _record_access(self, key):
+        """Pop and re-add the item."""
+        item = self.items.pop(key)
+        self.items[key] = item
+
+    def contains(self, key):
+        """Checks if item is contained without accessing it."""
+        assert key
+        return key in self.items
+
+    def put(self, key, value):
+        assert key
+        if self._allocate_space(key, value):
+            self.items[key] = value
+            return True
+        return False
+
+    def get(self, key):
+        """Accessing item makes it less likely to be evicted."""
+        assert key
+        if key in self.items:
+            self._record_access(key)
+            return True, self.items[key]
+        return False, None
+
+    def delete(self, key):
+        assert key
+        if key in self.items:
+            del self.items[key]
+            return True
+        return False
+
+
+class LRUCacheTests(unittest.TestCase):
+
+    def test_ordereddict_works(self):
+        _dict = collections.OrderedDict([])
+        _dict['a'] = '1'
+        _dict['b'] = '2'
+        _dict['c'] = '3'
+        self.assertEqual(('a', '1'), _dict.popitem(last=False))
+        self.assertEqual(('c', '3'), _dict.popitem(last=True))
+
+    def test_initialization(self):
+        with self.assertRaises(AssertionError):
+            LRUCache()
+        with self.assertRaises(AssertionError):
+            LRUCache(max_item_count=-1)
+        with self.assertRaises(AssertionError):
+            LRUCache(max_size_bytes=-1)
+        LRUCache(max_item_count=1)
+        LRUCache(max_size_bytes=1)
+
+    def test_evict_by_count(self):
+        cache = LRUCache(max_item_count=3)
+        self.assertTrue(cache.put('a', '1'))
+        self.assertTrue(cache.put('b', '2'))
+        self.assertTrue(cache.put('c', '3'))
+        self.assertTrue(cache.contains('a'))
+        self.assertTrue(cache.put('d', '4'))
+        self.assertFalse(cache.contains('a'))
+        self.assertEquals(cache.get('a'), (False, None))
+
+    def test_evict_by_count_lru(self):
+        cache = LRUCache(max_item_count=3)
+        self.assertTrue(cache.put('a', '1'))
+        self.assertTrue(cache.put('b', '2'))
+        self.assertTrue(cache.put('c', '3'))
+        self.assertEquals(cache.get('a'), (True, '1'))
+        self.assertTrue(cache.put('d', '4'))
+        self.assertTrue(cache.contains('a'))
+        self.assertFalse(cache.contains('b'))
+
+    def test_evict_by_size(self):
+        min_size = sys.getsizeof(LRUCache(max_item_count=1).items)
+        item_size = sys.getsizeof('a1')
+        cache = LRUCache(max_size_bytes=min_size + 3 * item_size)
+        self.assertTrue(cache.put('a', '1'))
+        self.assertTrue(cache.put('b', '2'))
+        self.assertTrue(cache.put('c', '3'))
+        self.assertFalse(cache.put('d', bytearray(1000)))
+
+    def test_evict_by_size_lru(self):
+        cache = LRUCache(max_size_bytes=5000)
+        self.assertTrue(cache.put('a', bytearray(4500)))
+        self.assertTrue(cache.put('b', '2'))
+        self.assertTrue(cache.put('c', '3'))
+        self.assertTrue(cache.contains('a'))
+        self.assertTrue(cache.put('d', bytearray(1000)))
+        self.assertFalse(cache.contains('a'))
+        self.assertTrue(cache.contains('b'))
+
+
+def run_all_unit_tests():
+    """Runs all unit tests in this module."""
+    suites_list = []
+    for test_class in [LRUCacheTests]:
+        suite = unittest.TestLoader().loadTestsFromTestCase(test_class)
+        suites_list.append(suite)
+    unittest.TextTestRunner().run(unittest.TestSuite(suites_list))
+
+
+if __name__ == '__main__':
+    run_all_unit_tests()
