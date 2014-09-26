@@ -59,7 +59,7 @@ LOCALES_DISPLAY_NAMES = {
     'ja': u'日本語 (ja)',
     'kn': u'ಕನ್ನಡ (kn)',
     'ko': u'한국어 (ko)',
-    'ln': u'Pig Latin',
+    'ln': u'Fake Translation (ln)',
     'lt': u'lietuvių (lt)',
     'lv': u'latviešu (lv)',
     'ml': u'മലയാളം (ml)',
