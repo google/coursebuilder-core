@@ -29,6 +29,7 @@ from common import crypto
 from common import utils
 from common.utils import Namespace
 from controllers import sites
+from models import config
 from models import courses
 from models import models
 from models import roles
@@ -52,8 +53,10 @@ from tests.functional import actions
 from tests.functional import assets_rest
 from tools import verify
 
+from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
+from google.appengine.datastore import datastore_rpc
 
 
 class ResourceKeyTests(unittest.TestCase):
@@ -1578,8 +1581,9 @@ class SampleCourseLocalizationTest(actions.TestBase):
     def _set_prefs_locale(self, locale, course='first'):
         with Namespace('ns_%s' % course):
             prefs = models.StudentPreferencesDAO.load_or_create()
-            prefs.locale = locale
-            models.StudentPreferencesDAO.save(prefs)
+            if prefs:
+                prefs.locale = locale
+                models.StudentPreferencesDAO.save(prefs)
 
     def _assert_picker(self, is_present, has_locales=None, is_admin=False):
         actions.login('_assert_picker_visible@example.com', is_admin=is_admin)
@@ -2069,3 +2073,115 @@ class SampleCourseLocalizationTest(actions.TestBase):
     def test_course_with_one_common_unit_and_two_per_locale_units(self):
         # TODO(psimakov): incomplete
         pass
+
+    def test_rpc_performance(self):
+        """Tests various common actions for the number of memcache/db rpc."""
+        self._import_sample_course()
+
+        # add fake 'ln' locale and fake translations
+        response = self.get('sample/dashboard?action=i18n_reverse_case')
+        self.assertEquals(302, response.status_int)
+        response = self.get('sample/dashboard?action=i18n_dashboard')
+        self.assertEquals(200, response.status_int)
+        self.assertIn('<th>ln</th>', response.body)
+
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+
+        old_memcache_make_async_call = memcache._CLIENT._make_async_call
+        old_db_make_rpc_call = datastore_rpc.BaseConnection._make_rpc_call
+        try:
+            lines = []
+            counters = [0, 0]
+
+            def _profile(url, hint):
+
+                def reset():
+                    counters[0] = 0
+                    counters[1] = 0
+
+                def _memcache_make_async_call(*args, **kwds):
+                    counters[0] += 1
+                    return old_memcache_make_async_call(*args, **kwds)
+
+                def _db_make_rpc_call(*args, **kwds):
+                    counters[1] += 1
+                    return old_db_make_rpc_call(*args, **kwds)
+
+                self._set_prefs_locale(None, course='sample')
+                memcache.flush_all()
+
+                memcache._CLIENT._make_async_call = _memcache_make_async_call
+                datastore_rpc.BaseConnection._make_rpc_call = _db_make_rpc_call
+
+                reset()
+                response = self.get(url)
+                self.assertEquals(200, response.status_int)
+                mc_rpc_count_start, db_rpc_count_start = counters
+
+                reset()
+                response = self.get(url)
+                self.assertEquals(200, response.status_int)
+                mc_rpc_count_mid, db_rpc_count_mid = counters
+
+                self._set_prefs_locale('ln', course='sample')
+                reset()
+                self.get(url)
+                response = self.assertEquals(200, response.status_int)
+                mc_rpc_count_end, db_rpc_count_end = counters
+
+                lines.append(
+                    '\t%s:\tmemcache: [%s, %s, %s]\tdb: [%s, %s, %s] (%s)' % (
+                        hint,
+                        mc_rpc_count_start, mc_rpc_count_mid, mc_rpc_count_end,
+                        db_rpc_count_start, db_rpc_count_mid, db_rpc_count_end,
+                        url))
+
+            header = '[first visit, cached visit, locale visit]'
+
+            with actions.OverriddenEnvironment(
+                {'course': {
+                    'now_available': True, 'can_student_change_locale': True}}):
+
+                actions.logout()
+
+                lines.append('RPC Profile, anonymous user %s' % header)
+                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
+                _profile('sample/assets/css/main.css', 'main.css')
+                _profile('sample/course', 'Home page')
+                _profile('sample/announcements', 'Announcements')
+
+                actions.login('test_rpc_performance@example.com')
+                actions.register(self, 'test_rpc_performance', course='sample')
+
+                lines.append('RPC Profile, registered user %s' % header)
+                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
+                _profile('sample/assets/css/main.css', 'main.css')
+                _profile('sample/course', 'Home page')
+                _profile('sample/announcements', 'Announcements')
+                _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
+                _profile('sample/assessment?name=35', 'Mid-term exam')
+
+                actions.logout()
+                actions.login('test_rpc_performance@example.com', is_admin=True)
+
+                lines.append('RPC Profile, admin user %s' % header)
+                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
+                _profile('sample/assets/css/main.css', 'main.css')
+                _profile('sample/course', 'Home page')
+                _profile('sample/announcements', 'Announcements')
+                _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
+                _profile('sample/assessment?name=35', 'Mid-term exam')
+                _profile('admin', 'Admin home')
+                _profile('admin?action=settings', 'Settings')
+                _profile('sample/dashboard', 'Dashboard')
+                _profile('sample/dashboard?action=assets', 'Questions')
+                _profile(
+                    'sample/dashboard?action=i18n_dashboard', 'I18N Dashboard')
+                _profile('sample/dashboard?action=i18n_download', 'I18N Export')
+
+            print '\n', '\n'.join(lines)
+
+        finally:
+            memcache._CLIENT._make_async_call = old_memcache_make_async_call
+            datastore_rpc.BaseConnection._make_rpc_call = old_db_make_rpc_call
+            del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]

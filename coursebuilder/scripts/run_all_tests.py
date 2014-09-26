@@ -101,7 +101,7 @@ ALL_TEST_CLASSES = {
         '.TranslationConsoleRestHandlerTests': 6,
     'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 4,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
-    'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 12,
+    'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 13,
     'tests.functional.modules_invitation.InvitationHandlerTests': 16,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
