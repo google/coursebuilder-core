@@ -171,11 +171,11 @@ class QuestionTag(tags.BaseTag):
         reg = schema_fields.FieldRegistry('Question')
         reg.add_property(
             schema_fields.SchemaField(
-                'quid', 'Question', 'string', optional=True,
+                'quid', 'Question', 'string', optional=True, i18n=False,
                 select_data=question_list))
         reg.add_property(
             schema_fields.SchemaField(
-                'weight', 'Weight', 'string', optional=True,
+                'weight', 'Weight', 'string', optional=True, i18n=False,
                 extra_schema_dict_values={'value': '1'},
                 description='The number of points for a correct answer.'))
         return reg
@@ -253,7 +253,7 @@ class QuestionGroupTag(tags.BaseTag):
         reg = schema_fields.FieldRegistry('Question Group')
         reg.add_property(
             schema_fields.SchemaField(
-                'qgid', 'Question Group', 'string', optional=True,
+                'qgid', 'Question Group', 'string', optional=True, i18n=False,
                 select_data=question_group_list))
         return reg
 
