@@ -27,9 +27,11 @@ from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
+from models import courses
 from models import custom_modules
 from models import transforms
 from models.config import ConfigProperty
+from modules.core_tags import core_tags
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -149,6 +151,8 @@ class ObjectEditor(object):
             'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons),
             'delete_message': delete_message,
             'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
+            'drive_tag_parent_frame_script_src': (
+                cls._get_drive_tag_parent_frame_script_src()),
         }
 
         if delete_url and not read_only:
@@ -161,6 +165,12 @@ class ObjectEditor(object):
         return jinja2.utils.Markup(handler.get_template('oeditor.html', (
             [os.path.dirname(__file__)] + (additional_dirs or [])
         )).render(template_values))
+
+    @classmethod
+    def _get_drive_tag_parent_frame_script_src(cls):
+        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
+            return ''
+        return core_tags.PARENT_FRAME_SCRIPT
 
 
 class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):

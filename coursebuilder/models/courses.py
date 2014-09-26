@@ -23,6 +23,7 @@ import logging
 import os
 import pickle
 import sys
+import config
 
 import messages
 import progress
@@ -74,6 +75,29 @@ ALLOWED_MATCHERS_NAMES = {review.PEER_MATCHER: messages.PEER_MATCHER_NAME}
 # timezone. All such strings are assumed to refer to UTC datetimes.
 # Example: '2013-03-21 13:00'
 ISO_8601_DATE_FORMAT = '%Y-%m-%d %H:%M'
+
+# Whether or not individual courses are allowed to use Google APIs.
+COURSES_CAN_USE_GOOGLE_APIS = config.ConfigProperty(
+    'gcb_courses_can_use_google_apis', bool, (
+        'Whether or not courses can use Google APIs. If True, individual '
+        'courses must also be configured with API keys, etc., in order to '
+        'actually make API calls'), False)
+
+# The config key part under which course info lives.
+_CONFIG_KEY_PART_COURSE = 'course'
+# The config key part under which google info lives.
+_CONFIG_KEY_PART_GOOGLE = 'google'
+# The config key part under which the api key is stored.
+_CONFIG_KEY_PART_API_KEY = 'api_key'
+# The config key part under which the client id is stored.
+_CONFIG_KEY_PART_CLIENT_ID = 'client_id'
+# The key in course.yaml under which the Google API key lives.
+CONFIG_KEY_GOOGLE_API_KEY = '%s:%s:%s' % (
+    _CONFIG_KEY_PART_COURSE, _CONFIG_KEY_PART_GOOGLE, _CONFIG_KEY_PART_API_KEY)
+# The key in course.yaml under which the Google client id lives.
+CONFIG_KEY_GOOGLE_CLIENT_ID = '%s:%s:%s' % (
+    _CONFIG_KEY_PART_COURSE, _CONFIG_KEY_PART_GOOGLE,
+    _CONFIG_KEY_PART_CLIENT_ID)
 
 
 def deep_dict_merge(real_values_dict, default_values_dict):
@@ -2208,6 +2232,16 @@ class Course(object):
             'See https://developers.google.com/appengine/docs/python/mail/'
             'emailmessagefields for details'))
 
+        # Course-level Google API configuration settings.
+        if COURSES_CAN_USE_GOOGLE_APIS.value:
+            course_opts.add_property(schema_fields.SchemaField(
+                CONFIG_KEY_GOOGLE_API_KEY, 'Google API Key', 'string',
+                optional=True, i18n=False, description='Google API Key'))
+            course_opts.add_property(schema_fields.SchemaField(
+                CONFIG_KEY_GOOGLE_CLIENT_ID, 'Google Client Id', 'string',
+                optional=True, i18n=False, description='Google Client Id'))
+
+        # Unit level settings.
         unit_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_UNITS_AND_LESSONS, 'Units and Lessons')
         unit_opts.add_property(schema_fields.SchemaField(

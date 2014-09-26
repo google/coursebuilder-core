@@ -24,15 +24,26 @@ from xml.etree import cElementTree
 import markdown
 
 import appengine_config
+from common import crypto
 from common import jinja_utils
 from common import schema_fields
 from common import tags
 from common import utils as common_utils
 from controllers import utils
+from models import courses
 from models import custom_modules
+from models import models
+from models import transforms
 
 
-RESOURCE_FOLDER = '/modules/core_tags/resources/'
+_RESOURCE_PREFIX = '/modules/core_tags'
+RESOURCE_FOLDER = _RESOURCE_PREFIX + '/resources/'
+PARENT_FRAME_SCRIPT = RESOURCE_FOLDER + 'drive_tag_parent_frame.js'
+_OEDITOR_RESOURCE_FOLDER = '/modules/oeditor/resources/'
+_RESOURCE_ABSPATH = os.path.join(os.path.dirname(__file__), 'resources')
+_TEMPLATES_ABSPATH = os.path.join(os.path.dirname(__file__), 'templates')
+_GOOGLE_DRIVE_TAG_PATH = _RESOURCE_PREFIX + '/googledrivetag'
+_GOOGLE_DRIVE_TAG_RENDERER_PATH = _RESOURCE_PREFIX + '/googledrivetagrenderer'
 
 
 def _escape_url(url, force_https=True):
@@ -49,6 +60,40 @@ def _replace_url_query(url, new_query):
     """Replaces the query part of a URL with a new one."""
     scheme, netloc, path, _, fragment = urlparse.urlsplit(url)
     return urlparse.urlunsplit((scheme, netloc, path, new_query, fragment))
+
+
+class _Runtime(object):
+    """Derives runtime configuration state from CB application context."""
+
+    def __init__(self, app_context):
+        self._app_context = app_context
+        self._environ = self._app_context.get_environ()
+
+    def courses_can_use_google_apis(self):
+        return courses.COURSES_CAN_USE_GOOGLE_APIS.value
+
+    def configured(self):
+        return (
+            self.courses_can_use_google_apis() and
+            bool(self.get_api_key()) and
+            bool(self.get_client_id()))
+
+    def get_api_key(self):
+        course, google, api_key = courses.CONFIG_KEY_GOOGLE_API_KEY.split(':')
+        return self._environ.get(course, {}).get(google, {}).get(api_key, '')
+
+    def get_client_id(self):
+        course, google, client_id = courses.CONFIG_KEY_GOOGLE_CLIENT_ID.split(
+            ':')
+        return self._environ.get(
+            course, {}
+        ).get(
+            google, {}
+        ).get(
+            client_id, '')
+
+    def get_slug(self):
+        return self._app_context.get_slug()
 
 
 class CoreTag(tags.BaseTag):
@@ -105,6 +150,197 @@ class GoogleDoc(CoreTag):
                 description=('Height of the document, in pixels. Width will be '
                              'set automatically')))
         return reg
+
+
+class GoogleDrive(CoreTag, tags.ContextAwareTag):
+    """Custom tag for Google Drive items."""
+
+    CONTENT_CHUNK_TYPE = 'google-drive'
+
+    @classmethod
+    def additional_dirs(cls):
+        return [_RESOURCE_ABSPATH]
+
+    @classmethod
+    def extra_css_files(cls):
+        return ['google_drive_tag.css']
+
+    @classmethod
+    def extra_js_files(cls):
+        return ['drive_tag_child_frame.js', 'google_drive_tag_lightbox.js']
+
+    @classmethod
+    def name(cls):
+        return 'Google Drive'
+
+    def get_icon_url(self):
+        return self.create_icon_url('drive.png')
+
+    def get_schema(self, handler):
+        runtime = _Runtime(handler.app_context)
+
+        if not runtime.configured():
+            return self.unavailable_schema(
+                'Google Drive is not available. Please make sure the global '
+                'gcb_courses_can_use_google_apis setting is True and set the '
+                'Google API Key and Google Client ID in course settings in '
+                'order to use this tag.')
+
+        reg = schema_fields.FieldRegistry(GoogleDrive.name())
+        reg.add_property(
+            schema_fields.SchemaField(
+                'document-id', 'Document ID', 'string',
+                optional=True,  # Validation enforced by JS code.
+                description='The ID of the Google Drive item you want to '
+                'use', i18n=False, extra_schema_dict_values={
+                    'api-key': runtime.get_api_key(),
+                    'client-id': runtime.get_client_id(),
+                    'type-id': self.CONTENT_CHUNK_TYPE,
+                    'xsrf-token': GoogleDriveRESTHandler.get_xsrf_token(),
+                }))
+
+        return reg
+
+    def render(self, node, context):
+        runtime = _Runtime(context.handler.app_context)
+        resource_id = node.attrib.get('document-id')
+        src = self._get_tag_renderer_url(
+            runtime.get_slug(), self.CONTENT_CHUNK_TYPE, resource_id)
+        iframe = cElementTree.XML("""
+<iframe
+    class="google-drive gcb-needs-resizing"
+    frameborder="0"
+    title="Google Drive"
+    type="text/html"
+    width="100%">
+</iframe>""")
+        iframe.set('src', src)
+        iframe.set('scrolling', 'no')
+        return iframe
+
+    def rollup_header_footer(self, context):
+        header = tags.html_string_to_element_tree("""
+<script src="%s">
+</script>""" % self._get_iframe_resize_script_src())
+        footer = tags.html_string_to_element_tree('')
+        return (header, footer)
+
+    def _get_tag_renderer_url(self, slug, type_id, resource_id):
+        args = urllib.urlencode(
+            {'type_id': type_id, 'resource_id': resource_id})
+        return '%s%s?%s' % (slug, _GOOGLE_DRIVE_TAG_RENDERER_PATH, args)
+
+    def _get_iframe_resize_script_src(self):
+        return '%sresize_iframes.js' % _OEDITOR_RESOURCE_FOLDER
+
+
+class GoogleDriveRESTHandler(utils.BaseRESTHandler):
+
+    _XSRF_TOKEN_NAME = 'modules-core-tags-google-drive'
+    XSRF_TOKEN_REQUEST_KEY = 'xsrf_token'
+
+    @classmethod
+    def get_xsrf_token(cls):
+        return crypto.XsrfTokenManager.create_xsrf_token(cls._XSRF_TOKEN_NAME)
+
+    def put(self):
+        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
+            self.error(404)
+            return
+
+        request = transforms.loads(self.request.get('request', ''))
+
+        if not self.assert_xsrf_token_or_fail(
+                request, self._XSRF_TOKEN_NAME, {}):
+            return
+
+        contents = request.get('contents')
+        document_id = request.get('document_id')
+        type_id = request.get('type_id')
+
+        if not (contents and document_id):
+            transforms.send_json_response(
+                self, 400, 'Save failed; no Google Drive item chosen.')
+            return
+
+        if not type_id:
+            transforms.send_json_response(
+                self, 400, 'Save failed; type_id not set')
+            return
+
+        key = None
+        try:
+            key = self._save_content_chunk(contents, type_id, document_id)
+        except Exception, e:  # On purpose. pylint: disable-msg=broad-except
+            transforms.send_json_response(
+                self, 500, 'Error when saving: %s' % e)
+            return
+
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict={'key': str(key)})
+
+    def _save_content_chunk(self, contents, type_id, resource_id):
+        key = None
+        uid = models.ContentChunkDAO.make_uid(type_id, resource_id)
+        matches = models.ContentChunkDAO.get_by_uid(uid)
+
+        if not matches:
+            key = models.ContentChunkDAO.save(models.ContentChunkDTO({
+                'content_type': 'text/html',
+                'contents': contents,
+                'resource_id': resource_id,
+                'type_id': type_id,
+            }))
+        else:
+            # There is a data race in the DAO -- it's possible to create two
+            # entries at the same time with the same UID. If that happened,
+            # use the first one saved.
+            dto = matches[0]
+            dto.contents = contents
+            dto.content_type = 'text/html'
+            key = models.ContentChunkDAO.save(dto)
+
+        return key
+
+
+class GoogleDriveTagRenderer(utils.BaseHandler):
+
+    def get(self):
+        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
+            self.error(404)
+            return
+
+        resource_id = self.request.get('resource_id')
+        type_id = self.request.get('type_id')
+
+        if not (resource_id and type_id):
+            self._handle_error(400, 'Bad request')
+            return
+
+        matches = models.ContentChunkDAO.get_by_uid(
+            models.ContentChunkDAO.make_uid(type_id, resource_id))
+
+        if not matches:
+            self._handle_error(404, 'Content chunk not found')
+            return
+
+        # There is a data race in the DAO -- it's possible to create two entries
+        # at the same time with the same UID. If that happened, use the first
+        # one saved.
+        chunk = matches[0]
+
+        template = jinja_utils.get_template(
+            'drive_item.html', [_TEMPLATES_ABSPATH])
+        self.response.out.write(template.render({'contents': chunk.contents}))
+
+    def _handle_error(self, code, message):
+        template = jinja_utils.get_template(
+            'drive_error.html', [_TEMPLATES_ABSPATH])
+        self.error(code)
+        self.response.out.write(template.render({
+            'code': code,
+            'message': message,
+        }))
 
 
 class GoogleSpreadsheet(CoreTag):
@@ -442,8 +678,8 @@ def register_module():
     """Registers this module in the registry."""
 
     custom_tags = [
-        GoogleDoc, GoogleSpreadsheet, YouTube, Html5Video, GoogleGroup,
-        IFrame, Include, Markdown]
+        GoogleDoc, GoogleDrive, GoogleSpreadsheet, YouTube, Html5Video,
+        GoogleGroup, IFrame, Include, Markdown]
 
     def make_binding_name(custom_tag):
         return 'gcb-%s' % custom_tag.__name__.lower()
@@ -461,11 +697,15 @@ def register_module():
 
     global_routes = [(
         os.path.join(RESOURCE_FOLDER, '.*'), tags.ResourcesHandler)]
+    namespaced_routes = [
+        (_GOOGLE_DRIVE_TAG_PATH, GoogleDriveRESTHandler),
+        (_GOOGLE_DRIVE_TAG_RENDERER_PATH, GoogleDriveTagRenderer),
+    ]
 
     custom_module = custom_modules.Module(
         'Core Custom Tags Module',
         'A module that provides core custom tags.',
-        global_routes, [],
+        global_routes, namespaced_routes,
         notify_module_enabled=on_module_enable,
         notify_module_disabled=on_module_disable)
     return custom_module

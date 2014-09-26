@@ -24,6 +24,11 @@
   <script src="/static/codemirror/keymap/sublime.js"></script>
 {% endif %}
 
+{% if drive_tag_parent_frame_script_src %}
+  <!-- import Google Drive tag extensions. -->
+  <script src='{{ drive_tag_parent_frame_script_src }}'></script>
+{% endif %}
+
 <link rel="stylesheet" type="text/css"
     href="/modules/oeditor/resources/oeditor.css"/>
 <style>
