@@ -21,6 +21,7 @@ import collections
 import cStringIO
 import logging
 import os
+import re
 import StringIO
 import urllib
 import zipfile
@@ -1078,7 +1079,10 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
         cat = I18nDownloadHandler.build_babel_catalog_for_locale(
             self.handler, translations, locale)
         for message in cat:
-            message.string = message.id.swapcase()
+            message.string = re.sub(
+                r'&[a-zA-Z0-9]+;',
+                lambda m: m.group().swapcase(),
+                message.id.swapcase())
         try:
             content = cStringIO.StringIO()
             pofile.write_po(content, cat)
