@@ -805,18 +805,19 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('<p>A</p><p>B</p>', page_html)
 
     def test_bad_translations_are_flagged_for_admin(self):
-        del self.unit_bundle['unit_header']['data'][1]
+        self.unit_bundle['unit_header']['data'][1] = {
+            'source_value': 'b', 'target_value': '<b#1>b</b#1>'}
         self._store_resource_bundle()
 
         dom = self.parse_html_string(self.get('unit?unit=1').body)
 
         self.assertEquals(
-            'The lists of translations must have the same number of items (1) '
-            'as extracted from the original content (2).',
+            'Unexpected tag: <b#1>.',
             dom.find('.//div[@class="gcb-translation-error-body"]').text)
 
     def test_bad_translations_are_not_flagged_for_student(self):
-        del self.unit_bundle['unit_header']['data'][1]
+        self.unit_bundle['unit_header']['data'][1] = {
+            'source_value': 'b', 'target_value': '<b#1>b</b#1>'}
         self._store_resource_bundle()
 
         actions.logout()
@@ -835,17 +836,59 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertNotIn('<p>C</p><p>D</p>', page_html)
         self.assertIn('<p>c</p><p>d</p>', page_html)
 
-    def test_fallback_to_default_when_partial_translation_found(self):
-        del self.lesson_bundle['objectives']['data'][1]
+    def test_partial_translations(self):
+
+        def update_lesson_objectives(objectives):
+            self.lesson = self.course.find_lesson_by_id(
+                self.unit.unit_id, self.lesson.lesson_id)
+            self.lesson.objectives = objectives
+            self.course.save()
+
+        def assert_p_tags(dom, expected_content_list, expected_error_msg):
+            # Ensure that the lesson body is a list of <p>..</p> tags with the
+            # expected content. All should be insider an error warning div.
+            p_tag_content_list = [
+                p_tag.text for p_tag in dom.findall(
+                 './/div[@class="gcb-lesson-content"]'
+                 '//div[@class="gcb-translation-error-alt"]/p')]
+            self.assertEquals(expected_content_list, p_tag_content_list)
+
+            error_msg = dom.find(
+                 './/div[@class="gcb-lesson-content"]'
+                 '//div[@class="gcb-translation-error-body"]')
+            self.assertIn('content has changed', error_msg.text)
+            if expected_error_msg:
+                self.assertIn(expected_error_msg, error_msg.text)
+
         self._store_resource_bundle()
 
-        page_html = self.get('unit?unit=1').body
+        # Delete first para from lesson
+        update_lesson_objectives('<p>d</p>')
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        assert_p_tags(dom, ['D'], '1 part of the translation is out of date')
 
-        self.assertIn('TEST UNIT', page_html)
-        self.assertIn('<p>A</p><p>B</p>', page_html)
-        self.assertIn('TEST LESSON', page_html)
-        self.assertNotIn('<p>C</p><p>D</p>', page_html)
-        self.assertIn('<p>c</p><p>d</p>', page_html)
+        # Delete second para from lesson
+        update_lesson_objectives('<p>c</p>')
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        assert_p_tags(dom, ['C'], '1 part of the translation is out of date')
+
+        # Add para to lesson
+        update_lesson_objectives('<p>c</p><p>d</p><p>e</p>')
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        assert_p_tags(
+            dom, ['C', 'D', 'e'], '1 part of the translation is out of date')
+
+        # Change para in lesson
+        update_lesson_objectives('<p>cc</p><p>d</p>')
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        assert_p_tags(
+            dom, ['cc', 'D'], '1 part of the translation is out of date')
+
+        # Change two paras
+        update_lesson_objectives('<p>cc</p><p>dd</p>')
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        assert_p_tags(
+            dom, ['cc', 'dd'], '2 parts of the translation are out of date')
 
     def test_custom_tag_expanded(self):
         source_video_id = 'Kdg2drcUjYI'

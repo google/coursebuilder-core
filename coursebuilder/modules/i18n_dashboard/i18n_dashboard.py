@@ -1288,7 +1288,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'id': 'download_translation_files',
                 'caption': 'Download Translation Files',
                 'href': self.handler.get_action_url(I18nDownloadHandler.ACTION),
-                },]
+                }]
 
         actions = []
         if not self.is_readonly(self.course):
@@ -1773,8 +1773,6 @@ class LazyTranslator(object):
         return super(LazyTranslator, self).__add__(other)
 
     def _translate_html(self):
-        if self.translation_dict['source_value'] != self.source_value:
-            return self.source_value
         try:
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
@@ -1782,12 +1780,41 @@ class LazyTranslator(object):
                 config=get_xcontent_configuration(self._app_context))
             transformer.decompose(context)
 
-            resource_bundle = [
-                data['target_value'] for data in self.translation_dict['data']]
+            data_list = self.translation_dict['data']
+            diff_mapping_list = (
+                xcontent.SourceToTargetDiffMapping.map_lists_source_to_target(
+                    context.resource_bundle, [
+                        data['source_value']
+                        for data in data_list]))
+
+            count_misses = 0
+            if len(context.resource_bundle) < len(data_list):
+                count_misses = len(data_list) - len(context.resource_bundle)
+
+            resource_bundle = []
+            for mapping in diff_mapping_list:
+                if mapping.verb == VERB_CURRENT:
+                    resource_bundle.append(
+                        data_list[mapping.target_value_index]['target_value'])
+                elif mapping.verb in [VERB_CHANGED, VERB_NEW]:
+                    count_misses += 1
+                    resource_bundle.append(
+                        context.resource_bundle[mapping.source_value_index])
+                else:
+                    raise ValueError('Unknown verb: %s' % mapping.verb)
 
             errors = []
             transformer.recompose(context, resource_bundle, errors)
-            return xcontent.ContentIO.tostring(context.tree)
+            body = xcontent.ContentIO.tostring(context.tree)
+            if count_misses == 0 and not errors:
+                return body
+            else:
+                parts = 'part' if count_misses == 1 else 'parts'
+                are = 'is' if count_misses == 1 else 'are'
+                return self._detailed_error(
+                    'The content has changed and {n} {parts} of the '
+                    'translation {are} out of date.'.format(
+                    n=count_misses, parts=parts, are=are), body)
 
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
@@ -1795,11 +1822,11 @@ class LazyTranslator(object):
                     self._app_context, custom_module,
                     locale_to_permission(
                         self._app_context.get_current_locale())):
-                return self._detailed_error(str(ex))
+                return self._detailed_error(str(ex), self.source_value)
             else:
                 return self.source_value
 
-    def _detailed_error(self, msg):
+    def _detailed_error(self, msg, body):
         return (
             '<div class="gcb-translation-error">'
             '  <div class="gcb-translation-error-details">'
@@ -1807,7 +1834,7 @@ class LazyTranslator(object):
             '    <div class="gcb-translation-error-body">%s</div>'
             '  </div>'
             '  <div class="gcb-translation-error-alt">%s</div>'
-            '</div>') % (cgi.escape(msg), self.source_value)
+            '</div>') % (cgi.escape(msg), body)
 
 
 def get_xcontent_configuration(app_context):
