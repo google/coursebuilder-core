@@ -376,8 +376,10 @@ class ApplicationHandler(webapp2.RequestHandler):
 
         # Common template information for the locale picker (only shown for
         # user in session)
-        if prefs is not None and self.get_course(
-            ).get_course_setting('can_student_change_locale'):
+        can_student_change_locale = (
+            self.get_course().get_course_setting('can_student_change_locale')
+            or self.get_course().app_context.can_pick_all_locales())
+        if prefs is not None and can_student_change_locale:
             self.template_value['available_locales'] = [
                 {
                     'name': locales.get_locale_display_name(loc),

@@ -1687,7 +1687,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
         with actions.OverriddenEnvironment(
             {'course': {
                 'now_available': True, 'can_student_change_locale': False}}):
-            self._assert_picker(False, is_admin=True)
+            self._assert_picker(
+                True, ['en_US', 'ru_RU', 'es_ES'], is_admin=True)
 
     def test_view_announcement_via_locale_picker(self):
         self._setup_locales()
@@ -2064,7 +2065,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
         self.assertIn(
             'Translation for ru_RU of Power Searching with Google',
             response.body)
-        self.assertIn(  # TODO(psimakov): use assertIn() when export works
+        self.assertIn(
+            # TODO(psimakov): use assertIn() when export works
             'You are a cosmetologist and business owner', response.body)
 
         # import

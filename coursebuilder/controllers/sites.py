@@ -891,15 +891,18 @@ class ApplicationContext(object):
     def is_editable_fs(self):
         return self._fs.impl.__class__ == DatastoreBackedFileSystem
 
+    def can_pick_all_locales(self):
+        return courses_module.can_pick_all_locales(self)
+
     def get_allowed_locales(self):
         environ = self.get_environ()
         default_locale = environ['course'].get('locale')
         extra_locales = environ.get('extra_locales', [])
-        can_pick_all_locales = courses_module.can_pick_all_locales(self)
         return [default_locale] + [
             loc['locale'] for loc in extra_locales
             if loc['locale'] != default_locale and (
-                loc['availability'] == 'available' or can_pick_all_locales)]
+                loc['availability'] == 'available'
+                or self.can_pick_all_locales())]
 
     def get_all_locales(self):
         """Returns _all_ locales, whether enabled or not.  Dashboard only."""
