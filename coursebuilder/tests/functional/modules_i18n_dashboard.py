@@ -2074,6 +2074,29 @@ class SampleCourseLocalizationTest(actions.TestBase):
         # TODO(psimakov): incomplete
         pass
 
+    def test_readonly(self):
+        self._import_sample_course()
+        self._setup_locales(course='sample')
+        actions.login('test_readonly@example.com', is_admin=True)
+
+        response = self.get('sample/dashboard?action=i18n_dashboard')
+        self.assertNotIn('(readonly)', response.body)
+        self.assertNotIn('input disabled', response.body)
+        self.assertIn('action=i18n_download', response.body)
+        self.assertIn('action=i18n_upload', response.body)
+        self.assertIn('action=i18n_reverse_case', response.body)
+        self.assertIn('action=i18_console', response.body)
+
+        with actions.OverriddenEnvironment(
+            {'course': {'prevent_translation_edits': True}}):
+            response = self.get('sample/dashboard?action=i18n_dashboard')
+            self.assertIn('(readonly)', response.body)
+            self.assertIn('input disabled', response.body)
+            self.assertNotIn('action=i18n_download', response.body)
+            self.assertNotIn('action=i18n_upload', response.body)
+            self.assertNotIn('action=i18n_reverse_case', response.body)
+            self.assertNotIn('action=i18_console', response.body)
+
     def test_rpc_performance(self):
         """Tests various common actions for the number of memcache/db rpc."""
         self._import_sample_course()
@@ -2091,9 +2114,10 @@ class SampleCourseLocalizationTest(actions.TestBase):
         old_db_make_rpc_call = datastore_rpc.BaseConnection._make_rpc_call
         try:
             lines = []
-            counters = [0, 0]
 
             def _profile(url, hint):
+
+                counters = [0, 0]
 
                 def reset():
                     counters[0] = 0
@@ -2107,36 +2131,27 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     counters[1] += 1
                     return old_db_make_rpc_call(*args, **kwds)
 
-                self._set_prefs_locale(None, course='sample')
-                memcache.flush_all()
-
+                counters_list = []
                 memcache._CLIENT._make_async_call = _memcache_make_async_call
                 datastore_rpc.BaseConnection._make_rpc_call = _db_make_rpc_call
 
-                reset()
-                response = self.get(url)
-                self.assertEquals(200, response.status_int)
-                mc_rpc_count_start, db_rpc_count_start = counters
+                for locale in [None, 'ln']:
+                    self._set_prefs_locale(locale, course='sample')
+                    memcache.flush_all()
+                    for _ in [0, 1]:
+                        reset()
+                        response = self.get(url)
+                        self.assertEquals(200, response.status_int)
+                        counters_list.append(([] + counters))
 
-                reset()
-                response = self.get(url)
-                self.assertEquals(200, response.status_int)
-                mc_rpc_count_mid, db_rpc_count_mid = counters
+                stats = ','.join([
+                    '[% 4d|% 4d]' % (_memcache, _db)
+                    for _memcache, _db in counters_list])
+                lines.append('\t{ %s }\t%s (%s)' % (stats, hint, url))
 
-                self._set_prefs_locale('ln', course='sample')
-                reset()
-                self.get(url)
-                response = self.assertEquals(200, response.status_int)
-                mc_rpc_count_end, db_rpc_count_end = counters
-
-                lines.append(
-                    '\t%s:\tmemcache: [%s, %s, %s]\tdb: [%s, %s, %s] (%s)' % (
-                        hint,
-                        mc_rpc_count_start, mc_rpc_count_mid, mc_rpc_count_end,
-                        db_rpc_count_start, db_rpc_count_mid, db_rpc_count_end,
-                        url))
-
-            header = '[first visit, cached visit, locale visit]'
+            header = (
+                '[memcache|db] for {first load, second load, '
+                'first locale load, second locale load}')
 
             with actions.OverriddenEnvironment(
                 {'course': {

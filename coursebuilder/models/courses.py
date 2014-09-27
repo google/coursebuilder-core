@@ -2315,6 +2315,14 @@ class Course(object):
                 'className': 'settings-list',
                 'listAddLabel': 'Add a locale',
                 'listRemoveLabel': 'Delete locale'}))
+        i18n_opts.add_property(schema_fields.SchemaField(
+            'course:prevent_translation_edits',
+            'Prevent Translation Edits',
+            'boolean', optional=True,
+            description='Prevent editing of translations. If False, '
+            'translations can be edited. If True, editing of translations is '
+            'not allowed, while advance caching and performance boost logic'
+            'is applied.'))
 
         for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
             sub_registry = reg.get_sub_registry(schema_section)

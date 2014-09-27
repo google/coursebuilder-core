@@ -23,15 +23,21 @@
           {% if main_locale %}
             <td>
               <label>
-                <input class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
+                <input {{ 'disabled' if is_readonly else '' }} class="is-translatable" type="checkbox" {% if row.is_translatable %}checked="checked"{% endif %}>
                 Translatable
               </label>
             </td>
           {% endif %}
           {% for locale in extra_locales %}
             <td class="resource-locale-entry {{row.status_class(locale)}}">
-              <a href="{{ row.view_url(locale) }}"><img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
-              <a href="{{ row.edit_url(locale) }}"><img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
+              {% if row.view_url(locale): %}
+                <a href="{{ row.view_url(locale) }}">
+                  <img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
+              {% endif %}
+              {% if not is_readonly %}
+                <a href="{{ row.edit_url(locale) }}">
+                  <img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
+              {% endif %}
               {{ row.status(locale) }}
             </td>
           {% endfor %}

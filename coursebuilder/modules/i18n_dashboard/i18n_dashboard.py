@@ -34,6 +34,7 @@ from webapp2_extras import i18n
 
 import appengine_config
 from common import crypto
+from common import safe_dom
 from common import schema_fields
 from common import tags
 from common import utils as common_utils
@@ -501,7 +502,7 @@ class ResourceRow(TableRow):
                 ResourceKey.COURSE_SETTINGS_TYPE, ResourceKey.LINK_TYPE,
                 ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE,
                 ResourceKey.QUESTION_GROUP_TYPE]:
-            return 'javascript:void(0)'
+            return None
 
         raise ValueError('Unknown type %s' % self._type)
 
@@ -619,6 +620,17 @@ class IsTranslatableRestHandler(utils.BaseRESTHandler):
 
 class BaseDashboardExtension(object):
     ACTION = None
+
+    @classmethod
+    def is_readonly(cls, course):
+        return course.app_context.get_environ()[
+                'course'].get('prevent_translation_edits')
+
+    @classmethod
+    def format_readonly_message(cls):
+        return safe_dom.Element('P').add_text(
+            'Translation console is currently disabled. '
+            'Course administrator can enable it via I18N Settings.')
 
     @classmethod
     def register(cls):
@@ -1032,7 +1044,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             tuple(stats_total))
 
 
-class I18nResourceManager(object):
+class I18nProgressManager(object):
     """Class that manages optimized loading of I18N data from datastore."""
 
     def __init__(self, course):
@@ -1193,7 +1205,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
         return rows
 
     def render(self):
-        self.rm = I18nResourceManager(self.course)
+        self.rm = I18nProgressManager(self.course)
         rows = []
 
         # Course settings
@@ -1247,7 +1259,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
         template_values = {
             'extra_locales': permitted_locales,
             'rows': rows,
-            'num_columns': len(permitted_locales) + 1
+            'num_columns': len(permitted_locales) + 1,
+            'is_readonly': self.is_readonly(self.course)
         }
 
         if roles.Roles.is_course_admin(self.handler.app_context):
@@ -1259,7 +1272,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
 
         main_content = self.handler.get_template(
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
-        actions = [
+        edit_actions = [
             {
                 'id': 'translate_to_reverse_case',
                 'caption': '"Translate" to rEVERSED cAPS',
@@ -1275,7 +1288,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'id': 'download_translation_files',
                 'caption': 'Download Translation Files',
                 'href': self.handler.get_action_url(I18nDownloadHandler.ACTION),
-                },
+                },]
+
+        actions = []
+        if not self.is_readonly(self.course):
+            actions += edit_actions
+        actions += [
             {
                 'id': 'edit_18n_settings',
                 'caption': 'Edit I18N Settings',
@@ -1287,7 +1305,9 @@ class I18nDashboardHandler(BaseDashboardExtension):
             'page_title': self.handler.format_title('I18n Workflow'),
             'main_content': jinja2.utils.Markup(main_content),
             'sections': [{
-                    'title': 'Internationalization',
+                    'title': 'Internationalization%s' % (
+                        ' (readonly)' if self.is_readonly(
+                            self.course) else ''),
                     'actions': actions,
                     'pre': ' ',
                     }]
@@ -1310,6 +1330,9 @@ class TranslationConsole(BaseDashboardExtension):
             extra_css_files=['translation_console.css'],
             extra_js_files=['translation_console.js'],
             additional_dirs=[TEMPLATES_DIR])
+
+        if self.is_readonly(self.handler.get_course()):
+            main_content = self.format_readonly_message()
 
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Workflow'),
@@ -1642,6 +1665,10 @@ class TranslatedAssetConsole(BaseDashboardExtension):
             delete_url=delete_url, delete_method='delete',
             extra_js_files=['image_asset.js'],
             additional_dirs=[os.path.join(dashboard_utils.RESOURCES_DIR, 'js')])
+
+        if self.is_readonly(self.handler.get_course()):
+            form_html = self.format_readonly_message()
+
         self.handler.render_page(
             {'page_title': self.handler.format_title('I18N Workflow'),
              'main_content': form_html},
