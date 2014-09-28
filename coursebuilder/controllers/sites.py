@@ -544,17 +544,14 @@ class AssetHandler(utils.BaseHandler):
         public = not fs.is_draft(stream)
         return public or Roles.is_course_admin(self.app_context)
 
-    def _serve_asset(self, path, nocache=False):
+    def _serve_asset(self, path):
         filename = abspath(self.app_context.get_home_folder(), path)
-        if not self.app_context.fs.isfile(filename):
-            return 404
         stream = self.app_context.fs.open(filename)
+        if not stream:
+            return 404
         if not self._can_view(self.app_context.fs, stream):
             return 403
-        if nocache:
-            self.response.cache_control.no_cache = True
-        else:
-            set_static_resource_cache_control(self)
+        set_static_resource_cache_control(self)
         self.response.headers['Content-Type'] = self.get_mime_type(filename)
         self.response.write(stream.read())
         return 200
@@ -581,8 +578,6 @@ class AssetHandler(utils.BaseHandler):
         default_locale_path = '%s/%s' % (
             GCB_LOCALE_FOLDER_NAME, self.app_context.default_locale)
 
-        nocache = False
-
         if self.asset_path.startswith(default_locale_path):
             localized_path = None
             default_path = self.asset_path.replace(default_locale_path, '')
@@ -590,7 +585,6 @@ class AssetHandler(utils.BaseHandler):
         elif self.asset_path.startswith(GCB_LOCALE_FOLDER_NAME):
             localized_path = self.asset_path
             default_path = None
-            nocache = True
 
         elif (
             self.asset_path.startswith(GCB_ASSETS_FOLDER_NAME) and
@@ -609,20 +603,18 @@ class AssetHandler(utils.BaseHandler):
         models.MemcacheManager.begin_readonly()
         try:
             status = 404
-            if localized_path is not None:
-                status = self._serve_asset(localized_path, nocache=nocache)
 
+            if localized_path is not None:
+                status = self._serve_asset(localized_path)
             if status == 200:
                 return
 
             if default_path is not None:
-                status = self._serve_asset(default_path, nocache=False)
-
+                status = self._serve_asset(default_path)
             if status == 200:
                 return
 
             self.error(status)
-
         finally:
             models.MemcacheManager.end_readonly()
             self.app_context.fs.end_readonly()
@@ -913,6 +905,58 @@ class ApplicationContext(object):
         return [default_locale] + [loc['locale'] for loc in extra_locales]
 
 
+class ScopedSingleton(object):
+    """A singleton object bound to and managed by a container."""
+
+    CONTAINER = None
+
+    @classmethod
+    def _instances(cls):
+        assert cls.CONTAINER is not None
+        if 'instances' not in cls.CONTAINER:
+            cls.CONTAINER['instances'] = {}
+        return cls.CONTAINER['instances']
+
+    @classmethod
+    def instance(cls, *args, **kwargs):
+        """Creates new or returns existing instance of the object."""
+        # pylint: disable-msg=protected-access
+        _instance = cls._instances().get(cls)
+        if not _instance:
+            _instance = cls(*args, **kwargs)
+            _instance._init_args = (args, kwargs)
+            cls._instances()[cls] = _instance
+        else:
+            _before = _instance._init_args
+            _now = (args, kwargs)
+            if _now != _before:
+                raise AssertionError(
+                    'Singleton initiated with %s already exists. '
+                    'Failed to re-initialized it with %s.' % (_before, _now))
+        return _instance
+
+    @classmethod
+    def clear_all(cls):
+        """Clear all active instances."""
+        if cls._instances():
+            del cls.CONTAINER['instances']
+
+    def clear(self):
+        """Destroys this object and its content."""
+        _instance = self._instances().get(self.__class__)
+        if _instance:
+            del self._instances()[self.__class__]
+
+
+_request_scoped_singleton = threading.local()
+
+
+class RequestScopedSingleton(ScopedSingleton):
+    """A singleton object bound to the request scope."""
+
+    CONTAINER = _request_scoped_singleton.__dict__
+
+
 def has_path_info():
     """Checks if PATH_INFO is defined for the thread local."""
     return hasattr(PATH_INFO_THREAD_LOCAL, 'path')
@@ -931,6 +975,8 @@ def set_path_info(path):
     namespace_manager.set_namespace(
         ApplicationContext.get_namespace_name_for_request())
 
+    RequestScopedSingleton.clear_all()
+
 
 def get_path_info():
     """Gets PATH_INFO from thread local."""
@@ -941,6 +987,9 @@ def unset_path_info():
     """Removed PATH_INFO from thread local."""
     if not has_path_info():
         raise Exception('Expected valid path already set.')
+
+    models.MemcacheManager.clear_readonly_cache()
+    RequestScopedSingleton.clear_all()
 
     app_context = get_course_for_current_request()
     if app_context:
@@ -1388,7 +1437,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
 
     def invoke_http_verb(self, verb, path, no_handler):
         """Sets up the environemnt and invokes HTTP verb on the self.handler."""
-        appengine_config.log_appstats_event('begin_invoke_http_verb')
+        appengine_config.log_appstats_event(
+            'ApplicationRequestHandler:begin_invoke_http_verb')
         try:
             set_path_info(path)
             handler = self.get_handler()
@@ -1404,7 +1454,8 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
-            appengine_config.log_appstats_event('end_invoke_http_verb')
+            appengine_config.log_appstats_event(
+                'ApplicationRequestHandler.end_invoke_http_verb')
 
     def _error_404(self, path):
         """Fail with 404."""
@@ -1812,6 +1863,58 @@ def test_path_construction():
                 os.path.normpath('/a/b/d'))
 
 
+def test_singleton():
+
+    class A(RequestScopedSingleton):
+
+        def __init__(self, data):
+            self.data = data
+
+    class B(RequestScopedSingleton):
+
+        def __init__(self, data):
+            self.data = data
+
+    # TODO(psimakov): prevent direct instantiation
+    A('aaa')
+    B('bbb')
+
+    # using instance() creates and returns the same instance
+    RequestScopedSingleton.clear_all()
+    a = A.instance('bar')
+    b = A.instance('bar')
+    assert a.data == 'bar'
+    assert b.data == 'bar'
+    assert a is b
+
+    # re-initialization fails if arguments differ
+    RequestScopedSingleton.clear_all()
+    a = A.instance('dog')
+    try:
+        b = A.instance('cat')
+        raise Exception('Expected to fail.')
+    except AssertionError:
+        pass
+
+    # clearing one keep others
+    RequestScopedSingleton.clear_all()
+    a = A.instance('bar')
+    b = B.instance('cat')
+    a.clear()
+    c = B.instance('cat')
+    assert c is b
+
+    # clearing all clears all
+    RequestScopedSingleton.clear_all()
+    a = A.instance('bar')
+    b = B.instance('cat')
+    RequestScopedSingleton.clear_all()
+    c = A.instance('bar')
+    d = B.instance('cat')
+    assert a is not c
+    assert b is not d
+
+
 def run_all_unit_tests():
     assert not ApplicationRequestHandler.CAN_IMPERSONATE
 
@@ -1826,6 +1929,7 @@ def run_all_unit_tests():
     test_url_to_handler_mapping_for_course_type()
     test_path_construction()
     test_rule_validations()
+    test_singleton()
 
 if __name__ == '__main__':
     run_all_unit_tests()

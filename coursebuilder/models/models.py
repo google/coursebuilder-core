@@ -97,16 +97,33 @@ class MemcacheManager(object):
 
     _LOCAL_CACHE = None
     _IS_READONLY = False
+    _READONLY_REENTRY_COUNT = 0
 
     @classmethod
     def begin_readonly(cls):
-        cls._IS_READONLY = True
-        cls._LOCAL_CACHE = {}
+        assert cls._READONLY_REENTRY_COUNT >= 0
+        if cls._READONLY_REENTRY_COUNT == 0:
+            appengine_config.log_appstats_event(
+                'MemcacheManager.begin_readonly')
+            cls._IS_READONLY = True
+            cls._LOCAL_CACHE = {}
+        cls._READONLY_REENTRY_COUNT += 1
 
     @classmethod
     def end_readonly(cls):
-        cls._IS_READONLY = False
-        cls._LOCAL_CACHE = {}
+        assert cls._READONLY_REENTRY_COUNT > 0
+        cls._READONLY_REENTRY_COUNT -= 1
+        if cls._READONLY_REENTRY_COUNT == 0:
+            appengine_config.log_appstats_event('MemcacheManager.end_readonly')
+            cls._IS_READONLY = False
+            cls._LOCAL_CACHE = None
+
+    @classmethod
+    def clear_readonly_cache(cls):
+        if cls._IS_READONLY and MemcacheManager._READONLY_REENTRY_COUNT > 0:
+            logging.exception('Mismatched MemcacheManager begin/end.')
+            while MemcacheManager._READONLY_REENTRY_COUNT > 0:
+                MemcacheManager.end_readonly()
 
     @classmethod
     def get_namespace(cls):
@@ -971,8 +988,9 @@ class Student(BaseEntity):
         return key == self.get_key()
 
     def get_labels_of_type(self, label_type):
+        if not self.labels:
+            return set()
         label_ids = LabelDAO.get_set_of_ids_of_type(label_type)
-
         return set([int(label) for label in
                     common_utils.text_to_list(self.labels)
                     if int(label) in label_ids])
@@ -1843,14 +1861,18 @@ class LabelDAO(BaseJsonDao):
     @classmethod
     def apply_course_track_labels_to_student_labels(
         cls, course, student, items):
-        items = cls._apply_labels_to_student_labels(
-            LabelDTO.LABEL_TYPE_COURSE_TRACK, student, items)
-        if course.get_course_setting('can_student_change_locale'):
-            return cls._apply_locale_labels_to_locale(
-                course.app_context.get_current_locale(), items)
-        else:
-            return cls._apply_labels_to_student_labels(
-                LabelDTO.LABEL_TYPE_LOCALE, student, items)
+        MemcacheManager.begin_readonly()
+        try:
+            items = cls._apply_labels_to_student_labels(
+                LabelDTO.LABEL_TYPE_COURSE_TRACK, student, items)
+            if course.get_course_setting('can_student_change_locale'):
+                return cls._apply_locale_labels_to_locale(
+                    course.app_context.get_current_locale(), items)
+            else:
+                return cls._apply_labels_to_student_labels(
+                    LabelDTO.LABEL_TYPE_LOCALE, student, items)
+        finally:
+            MemcacheManager.end_readonly()
 
     @classmethod
     def _apply_labels_to_student_labels(cls, label_type, student, items):

@@ -112,6 +112,52 @@ def _assert_identical_data_entity_exists(app_context, test_object):
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_memcache_begin_end_reentrancy(self):
+        # pylint: disable-msg=protected-access
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        try:
+            self.assertEquals(None, models.MemcacheManager._LOCAL_CACHE)
+            models.MemcacheManager.begin_readonly()
+            models.MemcacheManager.set('a', 'aaa')
+            models.MemcacheManager.begin_readonly()
+            self.assertEquals(
+                'aaa', models.MemcacheManager._LOCAL_CACHE['']['a'])
+            models.MemcacheManager.begin_readonly()
+            self.assertEquals(
+                'aaa', models.MemcacheManager._LOCAL_CACHE['']['a'])
+            models.MemcacheManager.end_readonly()
+            self.assertEquals(
+                'aaa', models.MemcacheManager._LOCAL_CACHE['']['a'])
+            models.MemcacheManager.end_readonly()
+            self.assertEquals(
+                'aaa', models.MemcacheManager._LOCAL_CACHE['']['a'])
+            models.MemcacheManager.end_readonly()
+            self.assertEquals(None, models.MemcacheManager._LOCAL_CACHE)
+        finally:
+            del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
+
+    def test_memcache_fails_missmatched_begin_end(self):
+        # pylint: disable-msg=protected-access
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        models.MemcacheManager.begin_readonly()
+        models.MemcacheManager.set('a', 'aaa')
+        models.MemcacheManager.end_readonly()
+        with self.assertRaises(AssertionError):
+            models.MemcacheManager.end_readonly()
+        self.assertEquals(None, models.MemcacheManager._LOCAL_CACHE)
+        del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
+
+    def test_memcache_can_be_cleared_if_end_readonly_is_not_called(self):
+        # pylint: disable-msg=protected-access
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        models.MemcacheManager.begin_readonly()
+        models.MemcacheManager.set('a', 'aaa')
+        models.MemcacheManager.begin_readonly()
+        models.MemcacheManager.begin_readonly()
+        self.assertEquals('aaa', models.MemcacheManager._LOCAL_CACHE['']['a'])
+        models.MemcacheManager.clear_readonly_cache()
+        del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
+
     def test_memcache_get_all_caching(self):
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
         with Namespace('ns_test'):

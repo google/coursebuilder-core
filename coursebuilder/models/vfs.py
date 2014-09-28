@@ -97,12 +97,12 @@ class AbstractFileSystem(object):
                 _bytes, _metadata = self._open_cache[filename]
             else:
                 _stream = self._impl.get(filename)
+                if not _stream:
+                    return None
                 _metadata = {}
                 if hasattr(_stream, 'metadata'):
                     _metadata = _stream.metadata
-                _bytes = None
-                if _stream:
-                    _bytes = _stream.read()
+                _bytes = _stream.read()
                 self._open_cache[filename] = (_bytes, _metadata)
             return FileStreamWrapped(_metadata, _bytes)
         else:
@@ -181,6 +181,8 @@ class LocalReadOnlyFileSystem(object):
         return os.path.isfile(self._logical_to_physical(filename))
 
     def get(self, filename):
+        if not self.isfile(filename):
+            return None
         return open(self._logical_to_physical(filename), 'rb')
 
     def put(self, unused_filename, unused_stream):
