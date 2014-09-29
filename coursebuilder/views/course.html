@@ -49,7 +49,7 @@
               {% for unit in units %}
                 {{ macros.render_unit_title(
                     unit, progress, is_progress_recorded,
-                    transient_student, is_course_admin, True,
+                    transient_student, can_see_drafts, True,
                     css_class=None,
                     target_url='assessment?name=%s' % unit.unit_id,
                     include_description=True,

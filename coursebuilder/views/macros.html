@@ -2,7 +2,7 @@
 # macro to render a title along with a progress indicator for any kind of unit
 #}
 {% macro render_unit_title(
-    unit, progress, is_progress_recorded, transient_student, is_course_admin,
+    unit, progress, is_progress_recorded, transient_student, can_see_drafts,
     include_link, css_class, target_url, include_description,
     student_preferences) -%}
 
@@ -16,7 +16,7 @@
       {% set css_class = '' %}
     {% endif %}
 
-    {% if unit.now_available or is_course_admin %}
+    {% if unit.now_available or can_see_drafts %}
       {% if unit.type == 'A' %}
         {% if (student_preferences and student_preferences.last_location and
                target_url in student_preferences.last_location) %}
@@ -156,7 +156,7 @@
             <span class="{{ progress_class }}"></span>
             Error: unit type not recognized.
       {% endif %}
-          {% if not unit.now_available and is_course_admin %}
+          {% if not unit.now_available and can_see_drafts %}
             (Private)
           {% endif %}
           </p>
@@ -169,11 +169,11 @@
 # macro to render a unit title
 #}
 {% macro render_u_unit_title(
-    unit, progress, is_progress_recorded, transient_student, is_course_admin,
+    unit, progress, is_progress_recorded, transient_student, can_see_drafts,
     include_link, css_class, student_preferences) -%}
     {{ render_unit_title(
         unit, progress, is_progress_recorded, transient_student,
-        is_course_admin, include_link, css_class,
+        can_see_drafts, include_link, css_class,
         'assessment?name=%s' % unit.unit_id,
         student_preferences=student_preferences) }}
 {%- endmacro %}
@@ -184,10 +184,10 @@
 #}
 {% macro render_a_unit_title(
     unit, assessment, progress, is_progress_recorded, transient_student,
-    is_course_admin, is_active, student_preferences) -%}
+    can_see_drafts, is_active, student_preferences) -%}
     {{ render_unit_title(assessment, progress,
         is_progress_recorded, transient_student,
-        is_course_admin,
+        can_see_drafts,
         not is_active,
         'gcb-assessment-as-lesson active' if is_active else 'gcb-assessment-as-lesson',
         'unit?unit=%s&assessment=%s' % (unit.unit_id, assessment.unit_id),
@@ -200,8 +200,8 @@
 #}
 {% macro render_lesson_title(
     page_type, unit, lesson, lesson_progress, is_progress_recorded,
-    is_active, is_course_admin) -%}
-  {% if lesson.now_available or is_course_admin %}
+    is_active, can_see_drafts) -%}
+  {% if lesson.now_available or can_see_drafts %}
 
     {% if is_progress_recorded %}
       {% set progress_class = 'gcb-progress-empty' %}
@@ -251,7 +251,7 @@
         {% endif %}
       </div>
 
-    {% if not lesson.now_available and is_course_admin %}
+    {% if not lesson.now_available and can_see_drafts %}
       <span class="gcb-grayed">
         (Private)
       </span>

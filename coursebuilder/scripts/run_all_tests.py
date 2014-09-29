@@ -83,6 +83,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_core_tags.RuntimeTest': 10,
     'tests.functional.modules_core_tags.TagsInclude': 8,
     'tests.functional.modules_core_tags.TagsMarkdown': 1,
+    'tests.functional.modules_courses.AccessDraftsTestCase': 2,
     'tests.functional.modules_dashboard.QuestionDashboardTestCase': 9,
     'tests.functional.modules_dashboard.CourseOutlineTestCase': 1,
     'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,

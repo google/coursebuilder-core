@@ -3,12 +3,12 @@
       href="dashboard?action=edit_lesson&key={{ lesson.lesson_id }}"
       class="gcb-button gcb-button-action gcb-button-author">Edit  Lesson</a>
 {% endif %}
-{% if lesson.now_available or is_course_admin %}
+{% if lesson.now_available or can_see_drafts %}
   <div {% if lesson.notes %}class="gcb-cols"{% endif %}>
     <div id="lesson-title" {% if lesson.notes %}class="gcb-col-7"{% endif %}>
       <h1 class="gcb-lesson-title">
         {{ title }}
-        {% if not lesson.now_available and is_course_admin %}
+        {% if not lesson.now_available and can_see_drafts %}
           <span id="lesson-title-private">
             (Private)
           </span>

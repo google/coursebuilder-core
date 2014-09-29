@@ -28,6 +28,9 @@ from tools import verify
 All_LOCALES_PERMISSION = 'can_pick_all_locales'
 All_LOCALES_DESCRIPTION = 'Can pick all locales, including unavailable ones.'
 
+SEE_DRAFTS_PERMISSION = 'can_see_draft_content'
+SEE_DRAFTS_DESCRIPTION = 'Can see lessons and assessments with draft status.'
+
 
 custom_module = None
 
@@ -35,6 +38,11 @@ custom_module = None
 def can_pick_all_locales(app_context):
     return roles.Roles.is_user_allowed(
         app_context, custom_module, All_LOCALES_PERMISSION)
+
+
+def can_see_drafts(app_context):
+    return roles.Roles.is_user_allowed(
+        app_context, custom_module, SEE_DRAFTS_PERMISSION)
 
 
 def register_module():
@@ -49,7 +57,9 @@ def register_module():
 
     def permissions_callback(unused_app_context):
         return [
-            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION)]
+            roles.Permission(All_LOCALES_PERMISSION, All_LOCALES_DESCRIPTION),
+            roles.Permission(SEE_DRAFTS_PERMISSION, SEE_DRAFTS_DESCRIPTION)
+        ]
 
     # provide parser to verify
     verify.parse_content = content.parse_string_in_scope

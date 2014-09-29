@@ -39,8 +39,8 @@ from models.counters import PerfCounter
 from models.models import Student
 from models.models import StudentProfileDAO
 from models.review import ReviewUtils
-from models.roles import Roles
 from models.student_work import StudentWorkUtils
+from modules import courses as courses_module
 from modules.review import domain
 from tools import verify
 
@@ -384,11 +384,11 @@ class UnitHandler(BaseHandler):
                 self)
             unit_id = unit.unit_id
 
-            # If the unit is not currently available, and the user is not an
-            # admin, redirect to the main page.
+            # If the unit is not currently available, and the user does not have
+            # the permission to see drafts, redirect to the main page.
             available_units = self.get_track_matching_student(student)
             if ((not unit.now_available or unit not in available_units) and
-                not Roles.is_course_admin(self.app_context)):
+                not courses_module.courses.can_see_drafts(self.app_context)):
                 self.redirect('/')
                 return
 
@@ -694,10 +694,10 @@ class AssessmentHandler(BaseHandler):
                           (parent_unit.unit_id, self.unit_id))
             return
 
-        # If the assessment is not currently available, and the user is not an
-        # admin, redirect to the main page.
+        # If the assessment is not currently available, and the user does not
+        # have the permission to see drafts redirect to the main page.
         if (not unit.now_available and
-            not Roles.is_course_admin(self.app_context)):
+            not courses_module.courses.can_see_drafts(self.app_context)):
             self.redirect('/')
             return
 

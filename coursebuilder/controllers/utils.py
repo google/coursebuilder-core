@@ -41,6 +41,7 @@ from models.models import Student
 from models.models import StudentProfileDAO
 from models.models import TransientStudent
 from models.roles import Roles
+from modules import courses as courses_module
 
 from google.appengine.api import users
 
@@ -351,6 +352,8 @@ class ApplicationHandler(webapp2.RequestHandler):
         self.template_value['html_hooks'] = HtmlHooks(self.get_course())
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
+        self.template_value['can_see_drafts'] = (
+            courses_module.courses.can_see_drafts(self.app_context))
         self.template_value[
             'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
