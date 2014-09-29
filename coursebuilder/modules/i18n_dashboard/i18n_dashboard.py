@@ -764,7 +764,8 @@ class I18nDownloadHandler(BaseDashboardExtension):
         bugs_address = environ['course'].get('admin_user_emails')
         organization = environ['base'].get('nav_header')
         with common_utils.ZipAwareOpen():
-            localedata.load(locale)  # Load metadata for locale.
+            # Load metadata for locale to which we are translating.
+            localedata.load(locale)
         cat = catalog.Catalog(
             locale=locale,
             project='Translation for %s of %s' % (locale, course_title),
@@ -793,6 +794,9 @@ class I18nDownloadHandler(BaseDashboardExtension):
         """
         original_locale = handler.app_context.default_locale
         with common_utils.ZipAwareOpen():
+            # Load metadata for 'en', which Babel uses internally.
+            localedata.load('en')
+            # Load metadata for source language for course.
             localedata.load(original_locale)
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
@@ -1084,6 +1088,9 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
     def _add_reverse_case_translations(self, locale):
         original_locale = self.handler.app_context.default_locale
         with common_utils.ZipAwareOpen():
+            # Load metadata for 'en', which Babel uses internally.
+            localedata.load('en')
+            # Load metadata for base course language.
             localedata.load(original_locale)
 
         translations = I18nDownloadHandler.build_translations(
