@@ -506,9 +506,8 @@ class ResourceRow(TableRow):
         raise ValueError('Unknown type %s' % self._type)
 
     def edit_url(self, locale):
-        return 'dashboard?%s' % urllib.urlencode({
-            'action': TranslationConsole.ACTION,
-            'key': ResourceBundleKey(self._type, self._key, locale)})
+        return TranslationConsole.get_edit_url(
+            ResourceBundleKey(self._type, self._key, locale))
 
 
 class AssetRow(TableRow):
@@ -1373,6 +1372,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
 class TranslationConsole(BaseDashboardExtension):
     ACTION = 'i18_console'
 
+    @classmethod
+    def get_edit_url(cls, key):
+        return 'dashboard?%s' % urllib.urlencode({
+            'action': cls.ACTION,
+            'key': key})
+
     def render(self):
         main_content = oeditor.ObjectEditor.get_html_for(
             self.handler,
@@ -1803,9 +1808,10 @@ class LazyTranslator(object):
             return unicode(obj)
         return None
 
-    def __init__(self, app_context, source_value, translation_dict):
+    def __init__(self, app_context, key, source_value, translation_dict):
         assert isinstance(source_value, basestring)
         self._app_context = app_context
+        self._key = key
         self.source_value = source_value
         self.target_value = None
         self.translation_dict = translation_dict
@@ -1885,39 +1891,38 @@ class LazyTranslator(object):
                 return self.source_value
 
     def _detailed_error(self, msg, body):
-        return (
-            '<div class="gcb-translation-error">'
-            '  <div class="gcb-translation-error-details">'
-            '    <div class="gcb-translation-error-title">Error</div>'
-            '    <div class="gcb-translation-error-body">%s</div>'
-            '  </div>'
-            '  <div class="gcb-translation-error-alt">%s</div>'
-            '</div>') % (cgi.escape(msg), body)
+        template_env = self._app_context.get_template_environ(
+            self._app_context.default_locale, [TEMPLATES_DIR])
+        template = template_env.get_template('lazy_loader_error.html')
+        return template.render({
+            'error_message': msg,
+            'edit_url': TranslationConsole.get_edit_url(self._key),
+            'body': body})
 
 
-def set_attribute(course, thing, attribute_name, translation_dict):
+def set_attribute(course, key, thing, attribute_name, translation_dict):
     # TODO(jorr): Need to be able to deal with hierarchical names from the
     # schema, not just top-level names.
     assert hasattr(thing, attribute_name)
 
     source_value = getattr(thing, attribute_name)
     setattr(thing, attribute_name, LazyTranslator(
-        course.app_context, source_value, translation_dict))
+        course.app_context, key, source_value, translation_dict))
 
 
 def translate_lessons(course, locale):
     lesson_list = course.get_lessons_for_all_units()
-    keys_list = [
+    key_list = [
         str(ResourceBundleKey(
             ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
         for lesson in lesson_list]
 
-    bundle_list = ResourceBundleDAO.bulk_load(keys_list)
+    bundle_list = ResourceBundleDAO.bulk_load(key_list)
 
-    for lesson, bundle in zip(lesson_list, bundle_list):
+    for key, lesson, bundle in zip(key_list, lesson_list, bundle_list):
         if bundle is not None:
             for name, translation_dict in bundle.dict.items():
-                set_attribute(course, lesson, name, translation_dict)
+                set_attribute(course, key, lesson, name, translation_dict)
 
 
 def translate_units(course, locale):
@@ -1942,7 +1947,7 @@ def translate_units(course, locale):
         for name, translation_dict in bundle.dict.items():
             source_value = binding.name_to_value[name].value
             binding.name_to_value[name].value = LazyTranslator(
-                course.app_context, source_value, translation_dict)
+                course.app_context, key, source_value, translation_dict)
 
         errors = []
         unit_tools.apply_updates(unit, data_dict, errors)
@@ -1999,29 +2004,33 @@ def translate_course_env(env):
             field = binding.name_to_value[name]
             source_value = field.value
             field.value = LazyTranslator(
-                app_context, source_value, translation_dict)
+                app_context, key, source_value, translation_dict)
 
 
-def translate_dto_list(dto_list, key_list):
+def translate_dto_list(dto_list, resource_key_list):
     if not is_translation_required():
         return
 
     app_context = sites.get_course_for_current_request()
+    key_list = [
+        ResourceBundleKey(
+            key.type,
+            key.key, app_context.get_current_locale())
+        for key in resource_key_list]
 
-    bundle_list = ResourceBundleDAO.bulk_load([str(ResourceBundleKey(
-        key.type,
-        key.key, app_context.get_current_locale())) for key in key_list])
+    bundle_list = ResourceBundleDAO.bulk_load([
+        str(key) for key in key_list])
 
-    for resource_key, dto, bundle in zip(key_list, dto_list, bundle_list):
+    for key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:
             continue
-        schema = resource_key.get_schema(app_context)
+        schema = key.resource_key.get_schema(app_context)
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             dto.dict, schema)
         for name, translation_dict in bundle.dict.items():
             source_value = binding.name_to_value[name].value
             binding.name_to_value[name].value = LazyTranslator(
-                app_context, source_value, translation_dict)
+                app_context, key, source_value, translation_dict)
 
 
 def translate_question_dto(dto_list):

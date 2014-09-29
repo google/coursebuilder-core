@@ -631,8 +631,9 @@ class LazyTranslatorTests(actions.TestBase):
             'type': 'string',
             'data': [
                 {'source_value': 'hello', 'target_value': 'HELLO'}]}
+        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
         lazy_translator = LazyTranslator(
-            self.app_context, source_value, translation_dict)
+            self.app_context, key, source_value, translation_dict)
         self.assertEquals(
             '{"lt": "HELLO"}', transforms.dumps({'lt': lazy_translator}))
 
@@ -813,7 +814,15 @@ class CourseContentTranslationTests(actions.TestBase):
 
         self.assertEquals(
             'Unexpected tag: <b#1>.',
-            dom.find('.//div[@class="gcb-translation-error-body"]').text)
+            dom.find('.//div[@class="gcb-translation-error-body"]/p[1]').text)
+
+        edit_link = dom.find(
+            './/div[@class="gcb-translation-error-body"]/p[2]a')
+        self.assertEquals('Edit the resource', edit_link.text)
+        self.assertEquals(
+            'dashboard?action=i18_console&key=unit%%3A%s%%3Ael' % (
+                self.unit.unit_id),
+            edit_link.attrib['href'])
 
     def test_bad_translations_are_not_flagged_for_student(self):
         self.unit_bundle['unit_header']['data'][1] = {
@@ -855,7 +864,7 @@ class CourseContentTranslationTests(actions.TestBase):
 
             error_msg = dom.find(
                  './/div[@class="gcb-lesson-content"]'
-                 '//div[@class="gcb-translation-error-body"]')
+                 '//div[@class="gcb-translation-error-body"]/p[1]')
             self.assertIn('content has changed', error_msg.text)
             if expected_error_msg:
                 self.assertIn(expected_error_msg, error_msg.text)
