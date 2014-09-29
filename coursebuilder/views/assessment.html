@@ -66,7 +66,7 @@
       {% elif model_version == '1.5' %}
         {{
           html_assessment.render(
-              unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True)
+              unit_id, assessment_xsrf_token, html_saved_answers, html_content, readonly=True, transient_student=transient_student)
         }}
       {% endif %}
     </div>
@@ -102,7 +102,8 @@
           {% elif model_version == '1.5' %}
             {{
                 html_assessment.render(unit_id, assessment_xsrf_token,
-                    review['saved_answers'], review['content'], readonly=True)
+                    review['saved_answers'], review['content'], readonly=True,
+                    transient_student=transient_student)
             }}
           {% endif %}
         </div>
@@ -117,7 +118,7 @@
     {{
       html_assessment.render(
           unit_id, assessment_xsrf_token, html_saved_answers, html_content,
-          check_answers=html_check_answers)
+          check_answers=html_check_answers, transient_student=transient_student)
     }}
   {% endif %}
 </div>

@@ -95,7 +95,8 @@
           {{
             html_assessment.render(
                 unit_id, assessment_xsrf_token, html_reviewee_answers,
-                html_review_content, readonly=True)
+                html_review_content, readonly=True,
+                transient_student=transient_student)
           }}
         {% endif %}
     </div>
@@ -110,7 +111,8 @@
           {{
             html_assessment.render(
                 unit_id, assessment_xsrf_token, html_review_answers,
-                html_review_form, readonly=True)
+                html_review_form, readonly=True,
+                transient_student=transient_student)
           }}
         {% endif %}
       </div>
@@ -125,7 +127,8 @@
       {{
         html_assessment.render(
             unit_id, assessment_xsrf_token, html_review_answers,
-            html_review_form, is_review_form=True, review_key=key)
+            html_review_form, is_review_form=True, review_key=key,
+            transient_student=transient_student)
       }}
     {% endif %}
 
