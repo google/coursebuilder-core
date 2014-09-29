@@ -410,9 +410,13 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     def render_template_to_html(self, template_values, template_file,
                                 additional_dirs=None):
-        template = self.get_template(template_file, additional_dirs)
-        return jinja2.utils.Markup(
-            template.render(template_values, autoescape=True))
+        models.MemcacheManager.begin_readonly()
+        try:
+            template = self.get_template(template_file, additional_dirs)
+            return jinja2.utils.Markup(
+                template.render(template_values, autoescape=True))
+        finally:
+            models.MemcacheManager.end_readonly()
 
     @classmethod
     def canonicalize_url_for(cls, app_context, location):
@@ -621,24 +625,25 @@ class BaseHandler(CourseHandler):
 
     def render(self, template_file):
         """Renders a template."""
-        template = self.get_template(template_file)
-
-        appengine_config.log_appstats_event('begin_render')
-        self.app_context.fs.begin_readonly()
-        models.MemcacheManager.begin_readonly()
+        appengine_config.log_appstats_event('BaseHandler.begin_render')
         try:
-            self.response.out.write(template.render(self.template_value))
+            models.MemcacheManager.begin_readonly()
+            try:
+                template = self.get_template(template_file)
+                self.response.out.write(template.render(self.template_value))
+            finally:
+                models.MemcacheManager.end_readonly()
         finally:
-            models.MemcacheManager.end_readonly()
-            self.app_context.fs.end_readonly()
-            appengine_config.log_appstats_event('end_render')
+            appengine_config.log_appstats_event('BaseHandler.end_render')
 
         # If the page displayed successfully, save the location for registered
         # students so future visits to the course's base URL sends the student
         # to the most-recently-visited page.
+        # TODO(psimakov): method called render() must not have mutations
         user = self.get_user()
         if user:
-            student = models.Student.get_enrolled_student_by_email(user.email())
+            student = models.Student.get_enrolled_student_by_email(
+                user.email())
             if student:
                 prefs = models.StudentPreferencesDAO.load_or_create()
                 prefs.last_location = self.request.path_qs

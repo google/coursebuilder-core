@@ -112,6 +112,31 @@ def _assert_identical_data_entity_exists(app_context, test_object):
 class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
+    def test_fs_cleaned_up_when_memcache_begin_or_end_asserts(self):
+        # pylint: disable-msg=protected-access
+        config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
+        try:
+            for method in [
+                models.MemcacheManager.begin_readonly,
+                models.MemcacheManager.end_readonly]:
+                models.MemcacheManager.begin_readonly()
+                models.MemcacheManager.set('a', 'aaa')
+
+                # force error state
+                models.MemcacheManager._READONLY_REENTRY_COUNT = -1
+
+                with self.assertRaises(AssertionError):
+                    method()
+
+                self.assertEquals(None, models.MemcacheManager._LOCAL_CACHE)
+                self.assertEquals(False, models.MemcacheManager._IS_READONLY)
+                self.assertEquals(
+                    0, models.MemcacheManager._READONLY_REENTRY_COUNT)
+                self.assertEquals(
+                    None, models.MemcacheManager._READONLY_APP_CONTEXT)
+        finally:
+            del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
+
     def test_memcache_begin_end_reentrancy(self):
         # pylint: disable-msg=protected-access
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True

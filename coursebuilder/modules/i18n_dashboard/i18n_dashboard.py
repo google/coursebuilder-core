@@ -216,14 +216,13 @@ class ResourceKey(object):
             return question_editor.SaQuestionRESTHandler.get_schema()
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
             return question_group_editor.QuestionGroupRESTHandler.get_schema()
-
-        course = self._get_course(app_context)
-        if self.type == ResourceKey.LESSON_TYPE:
+        elif self.type == ResourceKey.LESSON_TYPE:
+            course = self._get_course(app_context)
             units = course.get_units()
             return unit_lesson_editor.LessonRESTHandler.get_schema(units)
         elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return course.create_settings_schema().clone_only_items_named(
-                [self.key])
+            return courses.Course.create_base_settings_schema(
+                ).clone_only_items_named([self.key])
         else:
             raise ValueError('Unknown content type: %s' % self.type)
 
@@ -720,7 +719,8 @@ class I18nDownloadHandler(BaseDashboardExtension):
         course = handler.get_course()
         app_context = handler.app_context
         transformer = xcontent.ContentTransformer(
-            config=get_xcontent_configuration(app_context))
+            config=I18nTranslationContext.instance(
+                app_context).get_xcontent_configuration())
         resource_key_map = _get_language_resource_keys(course)
 
         for locale in locales:
@@ -824,7 +824,6 @@ class I18nDownloadHandler(BaseDashboardExtension):
         self.handler.response.write(out_stream.getvalue())
 
     def render(self):
-        self.handler.app_context.fs.begin_readonly()
         models.MemcacheManager.begin_readonly()
         try:
             all_locales = self.handler.app_context.get_all_locales()
@@ -839,7 +838,6 @@ class I18nDownloadHandler(BaseDashboardExtension):
                 out_stream.close()
         finally:
             models.MemcacheManager.end_readonly()
-            self.handler.app_context.fs.end_readonly()
 
 
 class I18nUploadHandler(BaseDashboardExtension):
@@ -874,7 +872,8 @@ def translation_upload_generate_schema():
 
 def _recalculate_translation_progress(app_context):
     transformer = xcontent.ContentTransformer(
-        config=get_xcontent_configuration(app_context))
+        config=I18nTranslationContext.instance(
+            app_context).get_xcontent_configuration())
     course = courses.Course(None, app_context)
     all_resource_keys = _get_language_resource_keys(course)
     key2progress = {
@@ -1068,6 +1067,56 @@ class I18nProgressManager(object):
         return ResourceRow(
             self._course, resource, type_str, key,
             i18n_progress_dto=row)
+
+
+class I18nTranslationContext(sites.RequestScopedSingleton):
+
+    def __init__(self, app_context):
+        self.app_context = app_context
+        self._xcontent_config = None
+
+    @classmethod
+    def _init_xcontent_configuration(cls, app_context):
+        inline_tag_names = list(xcontent.DEFAULT_INLINE_TAG_NAMES)
+        opaque_decomposable_tag_names = list(
+            xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
+        recomposable_attributes_map = dict(
+            xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
+
+        for tag_name, tag_cls in tags.Registry.get_all_tags().items():
+            tag_schema = None
+            try:
+                # TODO(jorr): refactor BaseTag.get_schema to work
+                # without handler
+                fake_handler = utils.BaseHandler()
+                fake_handler.app_context = app_context
+                tag_schema = tag_cls().get_schema(fake_handler)
+            except Exception:  # pylint: disable-msg=broad-except
+                logging.exception('Cannot get schema for %s', tag_name)
+                continue
+
+            index = schema_fields.FieldRegistryIndex(tag_schema)
+            index.rebuild()
+
+            for name in (
+                TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)
+            ):
+                inline_tag_names.append(tag_name.upper())
+                opaque_decomposable_tag_names.append(tag_name.upper())
+                recomposable_attributes_map.setdefault(
+                    name.upper(), set()).add(tag_name.upper())
+
+        return xcontent.Configuration(
+            inline_tag_names=inline_tag_names,
+            opaque_decomposable_tag_names=opaque_decomposable_tag_names,
+            recomposable_attributes_map=recomposable_attributes_map,
+            omit_empty_opaque_decomposable=False)
+
+    def get_xcontent_configuration(self):
+        if not self._xcontent_config:
+            self._xcontent_config = self._init_xcontent_configuration(
+                self.app_context)
+        return self._xcontent_config
 
 
 class I18nReverseCaseHandler(BaseDashboardExtension):
@@ -1533,7 +1582,8 @@ def _build_sections_for_key(
         resource_bundle_dto = ResourceBundleDAO.load(str(key))
     if not transformer:
         transformer = xcontent.ContentTransformer(
-            config=get_xcontent_configuration(app_context))
+            config=I18nTranslationContext.instance(
+                app_context).get_xcontent_configuration())
     return _build_sections_for_key_ex(
         key, app_context, resource_bundle_dto, transformer=transformer)
 
@@ -1784,7 +1834,8 @@ class LazyTranslator(object):
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
             transformer = xcontent.ContentTransformer(
-                config=get_xcontent_configuration(self._app_context))
+                config=I18nTranslationContext.instance(
+                    self._app_context).get_xcontent_configuration())
             transformer.decompose(context)
 
             data_list = self.translation_dict['data']
@@ -1844,42 +1895,6 @@ class LazyTranslator(object):
             '</div>') % (cgi.escape(msg), body)
 
 
-def get_xcontent_configuration(app_context):
-    inline_tag_names = list(xcontent.DEFAULT_INLINE_TAG_NAMES)
-    opaque_decomposable_tag_names = list(
-        xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
-    recomposable_attributes_map = dict(
-        xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
-
-    for tag_name, tag_cls in tags.Registry.get_all_tags().items():
-        tag_schema = None
-        try:
-            # TODO(jorr): refactor BaseTag.get_schema to work without handler
-            fake_handler = utils.BaseHandler()
-            fake_handler.app_context = app_context
-            tag_schema = tag_cls().get_schema(fake_handler)
-        except Exception:  # pylint: disable-msg=broad-except
-            logging.exception('Cannot get schema for %s', tag_name)
-            continue
-
-        index = schema_fields.FieldRegistryIndex(tag_schema)
-        index.rebuild()
-
-        for name in (
-            TRANSLATABLE_FIELDS_FILTER.filter_field_registry_index(index)
-        ):
-            inline_tag_names.append(tag_name.upper())
-            opaque_decomposable_tag_names.append(tag_name.upper())
-            recomposable_attributes_map.setdefault(
-                name.upper(), set()).add(tag_name.upper())
-
-    return xcontent.Configuration(
-        inline_tag_names=inline_tag_names,
-        opaque_decomposable_tag_names=opaque_decomposable_tag_names,
-        recomposable_attributes_map=recomposable_attributes_map,
-        omit_empty_opaque_decomposable=False)
-
-
 def set_attribute(course, thing, attribute_name, translation_dict):
     # TODO(jorr): Need to be able to deal with hierarchical names from the
     # schema, not just top-level names.
@@ -1920,7 +1935,7 @@ def translate_units(course, locale):
             continue
 
         schema = key.resource_key.get_schema(course.app_context)
-        data_dict = unit_tools.unit_to_dict(unit)
+        data_dict = unit_tools.unit_to_dict(unit, keys=bundle.dict.keys())
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             data_dict, schema)
 
@@ -1948,13 +1963,17 @@ def is_translation_required():
 def translate_course(course):
     if not is_translation_required():
         return
-    appengine_config.log_appstats_event('begin_translate_course')
+    appengine_config.log_appstats_event(
+        'translate_course.begin_translate_course')
+    models.MemcacheManager.begin_readonly()
     try:
         app_context = sites.get_course_for_current_request()
         translate_units(course, app_context.get_current_locale())
         translate_lessons(course, app_context.get_current_locale())
     finally:
-        appengine_config.log_appstats_event('end_translate_course')
+        models.MemcacheManager.end_readonly()
+        appengine_config.log_appstats_event(
+            'translate_course.end_translate_course')
 
 
 def translate_course_env(env):

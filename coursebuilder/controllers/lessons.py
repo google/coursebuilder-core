@@ -263,63 +263,69 @@ class CourseHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        user = self.personalize_page_and_get_user()
-        if user is None:
-            student = TRANSIENT_STUDENT
-        else:
-            student = Student.get_enrolled_student_by_email(user.email())
-            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
-            self.template_value['has_global_profile'] = profile is not None
-            if not student:
+        models.MemcacheManager.begin_readonly()
+        try:
+            user = self.personalize_page_and_get_user()
+            if user is None:
                 student = TRANSIENT_STUDENT
+            else:
+                student = Student.get_enrolled_student_by_email(user.email())
+                profile = StudentProfileDAO.get_profile_by_user_id(
+                    user.user_id())
+                self.template_value['has_global_profile'] = profile is not None
+                if not student:
+                    student = TRANSIENT_STUDENT
 
-        if (student.is_transient and
-            not self.app_context.get_environ()['course']['browsable']):
-            self.redirect('/preview')
-            return
+            if (student.is_transient and
+                not self.app_context.get_environ()['course']['browsable']):
+                self.redirect('/preview')
+                return
 
-        # If we are on this page due to visiting the course base URL
-        # (and not base url plus "/course"), redirect registered students
-        # to the last page they were looking at.
-        last_location = self.get_redirect_location(student)
-        if last_location:
-            self.redirect(last_location)
-            return
+            # If we are on this page due to visiting the course base URL
+            # (and not base url plus "/course"), redirect registered students
+            # to the last page they were looking at.
+            last_location = self.get_redirect_location(student)
+            if last_location:
+                self.redirect(last_location)
+                return
 
-        tracker = self.get_progress_tracker()
-        units = self.get_track_matching_student(student)
-        units = filter_assessments_used_within_units(units)
-        self.template_value['units'] = units
-        self.template_value['show_registration_page'] = True
+            tracker = self.get_progress_tracker()
+            units = self.get_track_matching_student(student)
+            units = filter_assessments_used_within_units(units)
+            self.template_value['units'] = units
+            self.template_value['show_registration_page'] = True
 
-        if student and not student.is_transient:
-            augment_assessment_units(self.get_course(), student)
-            self.template_value['course_progress'] = (
-                tracker.get_course_progress(student))
-        elif user:
-            profile = StudentProfileDAO.get_profile_by_user_id(user.user_id())
-            additional_registration_fields = self.app_context.get_environ(
-                )['reg_form']['additional_registration_fields']
-            if profile is not None and not additional_registration_fields:
-                self.template_value['show_registration_page'] = False
-                self.template_value['register_xsrf_token'] = (
-                    XsrfTokenManager.create_xsrf_token('register-post'))
+            if student and not student.is_transient:
+                augment_assessment_units(self.get_course(), student)
+                self.template_value['course_progress'] = (
+                    tracker.get_course_progress(student))
+            elif user:
+                profile = StudentProfileDAO.get_profile_by_user_id(
+                    user.user_id())
+                additional_registration_fields = self.app_context.get_environ(
+                    )['reg_form']['additional_registration_fields']
+                if profile is not None and not additional_registration_fields:
+                    self.template_value['show_registration_page'] = False
+                    self.template_value['register_xsrf_token'] = (
+                        XsrfTokenManager.create_xsrf_token('register-post'))
 
-        self.template_value['transient_student'] = student.is_transient
-        self.template_value['progress'] = tracker.get_unit_progress(student)
-        course = self.app_context.get_environ()['course']
-        self.template_value['video_exists'] = bool(
-            'main_video' in course and
-            'url' in course['main_video'] and
-            course['main_video']['url'])
-        self.template_value['image_exists'] = bool(
-            'main_image' in course and
-            'url' in course['main_image'] and
-            course['main_image']['url'])
+            self.template_value['transient_student'] = student.is_transient
+            self.template_value['progress'] = tracker.get_unit_progress(student)
+            course = self.app_context.get_environ()['course']
+            self.template_value['video_exists'] = bool(
+                'main_video' in course and
+                'url' in course['main_video'] and
+                course['main_video']['url'])
+            self.template_value['image_exists'] = bool(
+                'main_image' in course and
+                'url' in course['main_image'] and
+                course['main_image']['url'])
 
-        self.template_value['is_progress_recorded'] = is_progress_recorded(
-            self, student)
-        self.template_value['navbar'] = {'course': True}
+            self.template_value['is_progress_recorded'] = is_progress_recorded(
+                self, student)
+            self.template_value['navbar'] = {'course': True}
+        finally:
+            models.MemcacheManager.end_readonly()
         self.render('course.html')
 
 
@@ -366,48 +372,52 @@ class UnitHandler(BaseHandler):
 
     def get(self):
         """Handles GET requests."""
-        student = self.personalize_page_and_get_enrolled(
-            supports_transient_student=True)
-        if not student:
-            return
+        models.MemcacheManager.begin_readonly()
+        try:
+            student = self.personalize_page_and_get_enrolled(
+                supports_transient_student=True)
+            if not student:
+                return
 
-        # Extract incoming args
-        unit, lesson, assessment = extract_unit_and_lesson_or_assessment(self)
-        unit_id = unit.unit_id
+            # Extract incoming args
+            unit, lesson, assessment = extract_unit_and_lesson_or_assessment(
+                self)
+            unit_id = unit.unit_id
 
-        # If the unit is not currently available, and the user is not an admin,
-        # redirect to the main page.
-        available_units = self.get_track_matching_student(student)
-        if ((not unit.now_available or unit not in available_units) and
-            not Roles.is_course_admin(self.app_context)):
-            self.redirect('/')
-            return
+            # If the unit is not currently available, and the user is not an
+            # admin, redirect to the main page.
+            available_units = self.get_track_matching_student(student)
+            if ((not unit.now_available or unit not in available_units) and
+                not Roles.is_course_admin(self.app_context)):
+                self.redirect('/')
+                return
 
-        # Set template values for nav bar and page type.
-        self.template_value['navbar'] = {'course': True}
+            # Set template values for nav bar and page type.
+            self.template_value['navbar'] = {'course': True}
 
-        # Set template values for a unit and its lesson entities
-        self.template_value['unit'] = unit
-        self.template_value['unit_id'] = unit.unit_id
+            # Set template values for a unit and its lesson entities
+            self.template_value['unit'] = unit
+            self.template_value['unit_id'] = unit.unit_id
 
-        # These attributes are needed in order to render questions (with
-        # progress indicators) in the lesson body. They are used by the
-        # custom component renderers in the assessment_tags module.
-        self.student = student
-        self.unit_id = unit_id
+            # These attributes are needed in order to render questions (with
+            # progress indicators) in the lesson body. They are used by the
+            # custom component renderers in the assessment_tags module.
+            self.student = student
+            self.unit_id = unit_id
 
-        add_course_outline_to_template(self, student)
-        self.template_value['is_progress_recorded'] = is_progress_recorded(
-            self, student)
+            add_course_outline_to_template(self, student)
+            self.template_value['is_progress_recorded'] = is_progress_recorded(
+                self, student)
 
-        if (unit.show_contents_on_one_page and
-            'confirmation' not in self.request.params):
-            self._show_all_contents(student, unit)
-        else:
-            self._show_single_element(student, unit, lesson, assessment)
+            if (unit.show_contents_on_one_page and
+                'confirmation' not in self.request.params):
+                self._show_all_contents(student, unit)
+            else:
+                self._show_single_element(student, unit, lesson, assessment)
 
-        self._set_gcb_html_element_class()
-
+            self._set_gcb_html_element_class()
+        finally:
+            models.MemcacheManager.end_readonly()
         self.render('unit.html')
 
     def _set_gcb_html_element_class(self):

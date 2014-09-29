@@ -503,9 +503,9 @@ class UnitTools(object):
         unit.show_contents_on_one_page = (
             updated_unit_dict['show_contents_on_one_page'])
 
-    def unit_to_dict(self, unit):
+    def unit_to_dict(self, unit, keys=None):
         if unit.type == verify.UNIT_TYPE_ASSESSMENT:
-            return self._assessment_to_dict(unit)
+            return self._assessment_to_dict(unit, keys=keys)
         elif unit.type == verify.UNIT_TYPE_LINK:
             return self._link_to_dict(unit)
         elif unit.type == verify.UNIT_TYPE_UNIT:
@@ -531,22 +531,26 @@ class UnitTools(object):
         return self._course.app_context.fs.impl.physical_to_logical(
             self._course.get_review_filename(unit.unit_id))
 
-    def _assessment_to_dict(self, unit):
+    def _assessment_to_dict(self, unit, keys=None):
         """Assemble a dict with the unit data fields."""
         assert unit.type == 'A'
 
-        path = self._get_assessment_path(unit)
-        fs = self._course.app_context.fs
-        if fs.isfile(path):
-            content = fs.get(path)
-        else:
-            content = ''
+        content = None
+        if keys is not None and 'content' in keys:
+            path = self._get_assessment_path(unit)
+            fs = self._course.app_context.fs
+            if fs.isfile(path):
+                content = fs.get(path)
+            else:
+                content = ''
 
-        review_form_path = self._get_review_form_path(unit)
-        if review_form_path and fs.isfile(review_form_path):
-            review_form = fs.get(review_form_path)
-        else:
-            review_form = ''
+        review_form = None
+        if keys is not None and 'review_form' in keys:
+            review_form_path = self._get_review_form_path(unit)
+            if review_form_path and fs.isfile(review_form_path):
+                review_form = fs.get(review_form_path)
+            else:
+                review_form = ''
 
         workflow = unit.workflow
 

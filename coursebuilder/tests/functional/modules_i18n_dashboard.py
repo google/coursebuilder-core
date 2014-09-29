@@ -2097,23 +2097,35 @@ class SampleCourseLocalizationTest(actions.TestBase):
 
         self.assertNotEquals(ru_env, es_env)
 
-    def test_export_import(self):
+    def test_reverse_case(self):
         self._import_sample_course()
-        self._setup_locales(course='sample')
+        actions.login('test_reverse_case@example.com', is_admin=True)
+        self.get('sample/dashboard?action=i18n_reverse_case')
+        self._set_prefs_locale('ln', course='sample')
 
-        # export
-        response = self.get('/sample/dashboard?action=i18n_download')
-        self.assertEquals(response.status_int, 200)
-        self.assertIn('locale/ru_RU/LC_MESSAGES/messages.po', response.body)
-        self.assertIn(
-            'Translation for ru_RU of Power Searching with Google',
-            response.body)
-        self.assertIn(
-            # TODO(psimakov): use assertIn() when export works
-            'You are a cosmetologist and business owner', response.body)
+        def check_all_in(response, texts):
+            self.assertEquals(200, response.status_int)
+            for text in texts:
+                self.assertIn(text, response.body)
+            # TODO(psimakov): test below must pass
+            # self.assertNoIn('gcb-translation-error', response.body)
 
-        # import
-        # TODO(psimakov): incomplete
+        check_all_in(self.get('sample/course'), [
+            'dANIEL rUSSELL', 'pRE-COURSE ASSESSMENT', 'iNTRODUCTION',
+            'hANG oUT WITH'])
+        check_all_in(self.get('sample/assessment?name=1'), [
+            'tHANK YOU, AND HAVE FUN!', 'wHEN SEARCHING gOOGLE iMAGES',
+            'a AND c', 'iF YOU DO NOT KNOW'])
+        check_all_in(self.get('sample/unit?unit=14'), [
+            'Unit 2 - iNTERPRETING RESULTS', 'wHEN SEARCH RESULTS SUGGEST',
+            'lESSON 2.3 aCTIVITY'])
+        check_all_in(self.get('sample/unit?unit=14&lesson=16'), [
+            'hAVE YOU EVER PLAYED THE'])
+        check_all_in(self.get('sample/unit?unit=47&lesson=53'), [
+            'dID dARWIN, HIMSELF, USE', 'aDVENTURES IN wONDERLAND'])
+        check_all_in(self.get('sample/assessment?name=64'), [
+            'sOLVE THE PROBLEM BELOW', 'hOW MANY pOWER sEARCH CONCEPTS',
+            'lIST THE pOWER sEARCH CONCEPTS'])
 
     def test_course_with_one_common_unit_and_two_per_locale_units(self):
         # TODO(psimakov): incomplete
@@ -2159,8 +2171,9 @@ class SampleCourseLocalizationTest(actions.TestBase):
         old_db_make_rpc_call = datastore_rpc.BaseConnection._make_rpc_call
         try:
             lines = []
+            over_quota = [False]
 
-            def _profile(url, hint):
+            def _profile(url, hint, quota=(128, 32)):
 
                 counters = [0, 0]
 
@@ -2176,20 +2189,41 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     counters[1] += 1
                     return old_db_make_rpc_call(*args, **kwds)
 
+                def _assert_quota(quota, actual):
+                    memcache_quota, db_quota = quota
+                    memcache_actual, db_actual = actual
+
+                    respects_quota = True
+                    if memcache_quota is not None and (
+                        memcache_quota < memcache_actual):
+                        respects_quota = False
+                    if db_quota is not None and (db_quota < db_actual):
+                        respects_quota = False
+
+                    if not respects_quota:
+                        over_quota[0] = True
+                        lines.append(
+                            'Request metrics %s exceed RPC quota '
+                            '[memcache:%s, db:%s]: %s (%s)' % (
+                                actual, memcache_quota, db_quota, hint, url))
+
                 counters_list = []
                 memcache._CLIENT._make_async_call = _memcache_make_async_call
                 datastore_rpc.BaseConnection._make_rpc_call = _db_make_rpc_call
 
-                for locale in [None, 'ln']:
+                for locale in ['en_US', 'ln']:
                     self._set_prefs_locale(locale, course='sample')
                     memcache.flush_all()
-                    for _ in [0, 1]:
+                    for attempt in [0, 1]:
                         reset()
                         response = self.get(url)
                         self.assertEquals(200, response.status_int)
-                        counters_list.append(([] + counters))
+                        actual = [] + counters
+                        counters_list.append((actual))
+                        if quota is not None and attempt == 1:
+                            _assert_quota(quota, actual)
 
-                stats = ','.join([
+                stats = ' '.join([
                     '[% 4d|% 4d]' % (_memcache, _db)
                     for _memcache, _db in counters_list])
                 lines.append('\t{ %s }\t%s (%s)' % (stats, hint, url))
@@ -2205,17 +2239,23 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 actions.logout()
 
                 lines.append('RPC Profile, anonymous user %s' % header)
-                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
-                _profile('sample/assets/css/main.css', 'main.css')
-                _profile('sample/course', 'Home page')
-                _profile('sample/announcements', 'Announcements')
+                _profile(
+                    '/modules/oeditor/resources/butterbar.js',
+                    'Butterbar', quota=(0, 0))
+                _profile('sample/assets/css/main.css', 'main.css', quota=(3, 0))
+                _profile('sample/course', 'Home page', quota=(None, 0))
+                _profile(
+                    'sample/announcements', 'Announcements', quota=(None, 0))
 
                 actions.login('test_rpc_performance@example.com')
                 actions.register(self, 'test_rpc_performance', course='sample')
 
                 lines.append('RPC Profile, registered user %s' % header)
-                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
-                _profile('sample/assets/css/main.css', 'main.css')
+                _profile(
+                    '/modules/oeditor/resources/butterbar.js',
+                    'Butterbar', quota=(0, 0))
+                _profile(
+                    'sample/assets/css/main.css', 'main.css', quota=(6, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
@@ -2225,8 +2265,11 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 actions.login('test_rpc_performance@example.com', is_admin=True)
 
                 lines.append('RPC Profile, admin user %s' % header)
-                _profile('/modules/oeditor/resources/butterbar.js', 'Butterbar')
-                _profile('sample/assets/css/main.css', 'main.css')
+                _profile(
+                    '/modules/oeditor/resources/butterbar.js',
+                    'Butterbar', quota=(0, 0))
+                _profile(
+                    'sample/assets/css/main.css', 'main.css', quota=(6, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
@@ -2240,6 +2283,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 _profile('sample/dashboard?action=i18n_download', 'I18N Export')
 
             print '\n', '\n'.join(lines)
+            self.assertFalse(over_quota[0], msg='Some items exceed quota.')
 
         finally:
             memcache._CLIENT._make_async_call = old_memcache_make_async_call

@@ -72,6 +72,10 @@ class AbstractFileSystem(object):
         self._isfile_cache = {}
         self._readonly = False
 
+    @property
+    def is_readonly(self):
+        return self._readonly
+
     def _assert_not_readonly(self):
         if self._readonly:
             raise Exception(

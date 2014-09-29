@@ -98,32 +98,74 @@ class MemcacheManager(object):
     _LOCAL_CACHE = None
     _IS_READONLY = False
     _READONLY_REENTRY_COUNT = 0
+    _READONLY_APP_CONTEXT = None
+
+    @classmethod
+    def _is_same_app_context_if_set(cls):
+        # pylint: disable-msg=g-import-not-at-top
+        from controllers import sites
+        app_context = sites.get_course_for_current_request()
+        return (
+            cls._READONLY_APP_CONTEXT is None or
+            cls._READONLY_APP_CONTEXT is app_context)
+
+    @classmethod
+    def _assert_true_clear_cache_and_raise_if_not(cls, value_to_assert, msg):
+        if not value_to_assert:
+            cls.clear_readonly_cache()
+            raise AssertionError(msg)
+
+    @classmethod
+    def _fs_begin_readonly(cls):
+        # pylint: disable-msg=g-import-not-at-top
+        from controllers import sites
+        cls._READONLY_APP_CONTEXT = sites.get_course_for_current_request()
+        if cls._READONLY_APP_CONTEXT:
+            cls._READONLY_APP_CONTEXT.fs.begin_readonly()
+
+    @classmethod
+    def _fs_end_readonly(cls):
+        if cls._READONLY_APP_CONTEXT:
+            cls._READONLY_APP_CONTEXT.fs.end_readonly()
+        cls._READONLY_APP_CONTEXT = None
 
     @classmethod
     def begin_readonly(cls):
-        assert cls._READONLY_REENTRY_COUNT >= 0
+        cls._assert_true_clear_cache_and_raise_if_not(
+            cls._READONLY_REENTRY_COUNT >= 0, 'Re-entry counter is < 0.')
+        cls._assert_true_clear_cache_and_raise_if_not(
+            cls._is_same_app_context_if_set(), 'Unable to switch app_context.')
         if cls._READONLY_REENTRY_COUNT == 0:
             appengine_config.log_appstats_event(
                 'MemcacheManager.begin_readonly')
             cls._IS_READONLY = True
             cls._LOCAL_CACHE = {}
+            cls._fs_begin_readonly()
         cls._READONLY_REENTRY_COUNT += 1
 
     @classmethod
     def end_readonly(cls):
-        assert cls._READONLY_REENTRY_COUNT > 0
+        cls._assert_true_clear_cache_and_raise_if_not(
+            cls._READONLY_REENTRY_COUNT > 0, 'Re-entry counter <= 0.')
+        cls._assert_true_clear_cache_and_raise_if_not(
+            cls._is_same_app_context_if_set(), 'Unable to switch app_context.')
         cls._READONLY_REENTRY_COUNT -= 1
         if cls._READONLY_REENTRY_COUNT == 0:
-            appengine_config.log_appstats_event('MemcacheManager.end_readonly')
+            cls._fs_end_readonly()
             cls._IS_READONLY = False
             cls._LOCAL_CACHE = None
+            cls._READONLY_APP_CONTEXT = None
+            appengine_config.log_appstats_event('MemcacheManager.end_readonly')
 
     @classmethod
     def clear_readonly_cache(cls):
-        if cls._IS_READONLY and MemcacheManager._READONLY_REENTRY_COUNT > 0:
-            logging.exception('Mismatched MemcacheManager begin/end.')
-            while MemcacheManager._READONLY_REENTRY_COUNT > 0:
-                MemcacheManager.end_readonly()
+        cls._LOCAL_CACHE = None
+        cls._IS_READONLY = False
+        cls._READONLY_REENTRY_COUNT = 0
+        if cls._READONLY_APP_CONTEXT and (
+            cls._READONLY_APP_CONTEXT.fs.is_readonly):
+            cls._READONLY_APP_CONTEXT.fs.end_readonly()
+        cls._READONLY_APP_CONTEXT = None
 
     @classmethod
     def get_namespace(cls):

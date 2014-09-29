@@ -2044,37 +2044,38 @@ class Course(object):
         if env:
             return copy.deepcopy(env)
 
-        # get from datastore
-        env = cls._load_environ(app_context)
-
-        # Monkey patch to defend against infinite recursion. Downstream calls do
-        # not reload the env but just return the copy we have here.
-        old_get_environ = cls.get_environ
-        cls.get_environ = classmethod(lambda cl, ac: env)
+        models.MemcacheManager.begin_readonly()
         try:
-            # run hooks
-            for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
-                hook(env)
+            # get from datastore
+            env = cls._load_environ(app_context)
 
-            # put into cache
-            app_context._cached_environ = env
+            # Monkey patch to defend against infinite recursion. Downstream
+            # calls do not reload the env but just return the copy we have here.
+            old_get_environ = cls.get_environ
+            cls.get_environ = classmethod(lambda cl, ac: env)
+            try:
+                # run hooks
+                for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
+                    hook(env)
+
+                # put into cache
+                app_context._cached_environ = env
+            finally:
+                # Restore the original method from monkey-patch
+                cls.get_environ = old_get_environ
         finally:
-            # Restore the original method from monkey-patch
-            cls.get_environ = old_get_environ
+            models.MemcacheManager.end_readonly()
 
         return copy.deepcopy(env)
 
     @classmethod
     def _load_environ(cls, app_context):
-        course_yaml = None
-        course_yaml_dict = None
         course_data_filename = app_context.get_config_filename()
-
-        if app_context.fs.isfile(course_data_filename):
-            course_yaml = app_context.fs.open(course_data_filename)
+        course_yaml = app_context.fs.open(course_data_filename)
         if not course_yaml:
             return deep_dict_merge(DEFAULT_COURSE_YAML_DICT,
                                    COURSE_TEMPLATE_DICT)
+        course_yaml_dict = None
         try:
             course_yaml_dict = yaml.safe_load(
                 course_yaml.read().decode('utf-8'))
@@ -2091,7 +2092,7 @@ class Course(object):
                                COURSE_TEMPLATE_DICT)
 
     @classmethod
-    def create_common_settings_schema(cls, course):
+    def create_base_settings_schema(cls):
         """Create the registry for course properties."""
 
         reg = schema_fields.FieldRegistry('Course Settings',
@@ -2323,7 +2324,11 @@ class Course(object):
             'translations can be edited. If True, editing of translations is '
             'not allowed, while advance caching and performance boost logic'
             'is applied.'))
+        return reg
 
+    @classmethod
+    def create_common_settings_schema(cls, course):
+        reg = cls.create_base_settings_schema()
         for schema_section in cls.OPTIONS_SCHEMA_PROVIDERS:
             sub_registry = reg.get_sub_registry(schema_section)
             if not sub_registry:
@@ -2331,7 +2336,6 @@ class Course(object):
                     schema_section, schema_section.capitalize())
             for schema_provider in cls.OPTIONS_SCHEMA_PROVIDERS[schema_section]:
                 sub_registry.add_property(schema_provider(course))
-
         return reg
 
     def get_course_setting(self, name):

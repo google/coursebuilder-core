@@ -599,7 +599,6 @@ class AssetHandler(utils.BaseHandler):
             localized_path = None
             default_path = self.asset_path
 
-        self.app_context.fs.begin_readonly()
         models.MemcacheManager.begin_readonly()
         try:
             status = 404
@@ -617,7 +616,6 @@ class AssetHandler(utils.BaseHandler):
             self.error(status)
         finally:
             models.MemcacheManager.end_readonly()
-            self.app_context.fs.end_readonly()
 
 
 class CourseIndex(object):
@@ -987,19 +985,21 @@ def unset_path_info():
     """Removed PATH_INFO from thread local."""
     if not has_path_info():
         raise Exception('Expected valid path already set.')
-
-    models.MemcacheManager.clear_readonly_cache()
-    RequestScopedSingleton.clear_all()
-
-    app_context = get_course_for_current_request()
-    if app_context:
-        app_context.clear_per_request_cache()
-
-    namespace_manager.set_namespace(
-        PATH_INFO_THREAD_LOCAL.old_namespace)
-
-    del PATH_INFO_THREAD_LOCAL.old_namespace
-    del PATH_INFO_THREAD_LOCAL.path
+    try:
+        models.MemcacheManager.clear_readonly_cache()
+    finally:
+        try:
+            RequestScopedSingleton.clear_all()
+        finally:
+            try:
+                app_context = get_course_for_current_request()
+                if app_context:
+                    app_context.clear_per_request_cache()
+            finally:
+                namespace_manager.set_namespace(
+                    PATH_INFO_THREAD_LOCAL.old_namespace)
+                del PATH_INFO_THREAD_LOCAL.old_namespace
+                del PATH_INFO_THREAD_LOCAL.path
 
 
 def get_course_index(rules_text=None):
