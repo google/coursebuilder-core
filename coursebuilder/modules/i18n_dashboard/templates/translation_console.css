@@ -77,27 +77,43 @@
   background-color: #cfc;
 }
 .verb-new .status:before {
-  content: 'New';'
+  content: 'New';
 }
 .verb-changed .status {
   background-color: #fcf;
 }
 .verb-changed .status:before {
-  content: 'Changed';'
+  content: 'Changed';
 }
 .verb-current .status {
   background-color: #fff;
 }
 .verb-current .status:before {
-  content: 'Current';'
+  content: 'Current';
 }
 .edited .status {
   background-color: #ffffb7;
   box-shadow: 0 0 5px rgba(81, 203, 238, 1);
-  
 }
 .edited .status:before {
-  content: 'Edited';'
+  content: 'Edited';
+}
+
+button.accept {
+  display: inline-block;
+  position: absolute;
+  top: 60px;
+  opacity: 0;
+  left: -10000px;
+  -webkit-transition: opacity 0.75s, left 0.75s step-end;
+  -moz-transition: opacity 0.75s, left 0.75s step-end;
+  -ms-transition: opacity 0.75s, left 0.75s step-end;
+  transition: opacity 0.75s, left 0.75s step-end;
+}
+
+.verb-changed button.accept {
+  opacity: 1;
+  left: -106px;
 }
 
 div#formContainer .translation-item > fieldset {

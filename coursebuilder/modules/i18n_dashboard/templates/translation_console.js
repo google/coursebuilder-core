@@ -32,6 +32,12 @@ function iterateFormItems(env, action) {
   });
 }
 
+function markAsEdited(item) {
+  item.changed.setValue(true);
+  $(item.changed.el).closest("fieldset")
+      .removeClass().addClass(EDITED_CLASS);
+}
+
 $(function() {
   $("input[name=\"verb\"]").each(function() {
     $(this).closest("fieldset").addClass(getVerbClassName($(this).val()));
@@ -42,6 +48,16 @@ $(function() {
   // Insert the status indicators into the DOM
   $(".translation-item fieldset fieldset")
       .append($("<div class=\"status\"></div>"));
+
+  // Set up the accept buttons to appear when there is changed content
+  iterateFormItems(cb_global, function(item) {
+    var button = $("<button class=\"accept inputEx-Button\">Accept</button>");
+    button.click(function() {
+      markAsEdited(item);
+      return false;
+    });
+    $(item.changed.el.parentNode.parentNode).append(button);
+  });
 
   $(".translation-console > fieldset > div:last-child").before($(
       "<div class=\"translation-header\">" +
@@ -55,9 +71,7 @@ $(function() {
   iterateFormItems(cb_global, function(item) {
     $(item.target_value.el).on("input change", function() {
       // Listen on "change" for older browser support
-      item.changed.setValue(true);
-      $(item.changed.el).closest("fieldset")
-          .removeClass().addClass(EDITED_CLASS);
+      markAsEdited(item);
     });
   });
 
