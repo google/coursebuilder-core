@@ -1826,7 +1826,7 @@ class TestCasesForContentRecompose(TestCasesBase):
             """
         self._assert_recomposes(translations, result)
 
-    def test_recompose_colex_value_2(self):
+    def test_recompose_complex_value_2(self):
         html = (
             'The <a class="foo">skies</a> '
             '<p>are <i>not</i></p>'
@@ -1845,6 +1845,53 @@ class TestCasesForContentRecompose(TestCasesBase):
             '<p>ARE <i>NOT</i></p>'
             ' ALWAYS <a href="bar">blue</a>.')
         self._assert_recomposes(translations, result)
+
+    def test_recompose_complex_with_opaque_docomposable(self):
+        config = Configuration(omit_empty_opaque_decomposable=False)
+
+        self.transformer = ContentTransformer(config)
+
+        html = u"""
+            <table border="2">
+              <tbody>
+                <tr>
+                  <td>
+                    <i>table</i>
+                    <p></p>
+                    <ul>
+                      <li>a</li>
+                      <li>b</li>
+                    </ul>
+                    <p></p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>"""
+        expected = [
+          '<table#1 />', '<i#1>table</i#1>', '<ul#1 />', 'a', 'b']
+        self._assert_decomposes(html, expected)
+        translations = [
+          '<table#1/>', '<i#1>TABLE</i#1>', '<ul#1/>', 'A', 'B']
+        result = (
+            '<table border="2">'
+            '<tbody>'
+            '<tr>'
+            '<td>'
+            '<i>TABLE</i>'
+            '<p></p>'
+            '<ul>'
+            '<li>A</li>'
+            '<li>B</li>'
+            '</ul>'
+            '<p></p>'
+            '</td>'
+            '</tr>'
+            '</tbody>'
+            '</table>')
+        wrong_result = '<table border="2"></table>'
+
+        # TODO(jorr): This test should pass with "result", not "wrong_result"
+        self._assert_recomposes(translations, wrong_result)
 
     def test_recompose_empty_p_is_roundtripped(self):
         html = 'The skies are blue.<p></p>The roses are red.'
