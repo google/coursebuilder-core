@@ -50,7 +50,6 @@ from modules.i18n_dashboard.i18n_dashboard import VERB_CHANGED
 from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
 from modules.i18n_dashboard.i18n_dashboard import VERB_NEW
 from tests.functional import actions
-from tests.functional import assets_rest
 from tools import verify
 
 from google.appengine.api import memcache
@@ -265,9 +264,6 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Unit 1 - Test Unit',
             '1.1 Test Lesson',
             '',
-            'Images & Documents',
-            'Empty section',
-            '',
             'Questions',
             'Empty section',
             '',
@@ -349,58 +345,6 @@ class I18nDashboardHandlerTests(actions.TestBase):
 
             assert_progress('done', lesson_row, 2)
             assert_progress('in-progress', lesson_row, 3)
-
-    def test_no_image_assets(self):
-        dom = self.parse_html_string(self.get(self.URL).body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows_text = [''.join(row.itertext())
-                     for row in table.findall('./tbody/tr/td[1]')]
-        self.assertIn('Images & Documents', rows_text)
-        self.assertEquals('Empty section',
-                          rows_text[rows_text.index('Images & Documents') + 1])
-
-    def test_unlocalized_image_asset(self):
-        actions.update_course_config(self.COURSE_NAME, {
-            'extra_locales': [{'locale': 'de', 'availability': 'available'}]})
-
-        base = 'assets/img'
-        name = 'foo.jpg'
-        en_content = 'xyzzy'
-        assets_rest._post_asset(self, base, name, name, en_content)
-
-        dom = self.parse_html_string(self.get(self.URL).body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows_text = [''.join(row.itertext())
-                     for row in table.findall('./tbody/tr/td[1]')]
-        row_index = rows_text.index('Images & Documents') + 2
-        row_text = [''.join(td.itertext()).strip()
-                    for td in table.findall('./tbody/tr[%d]/td' % row_index)]
-        self.assertEquals('assets/img/foo.jpg', row_text[0])
-        self.assertEquals('Translatable', row_text[1])
-        self.assertEquals('Not started', row_text[2])
-
-    def test_localized_image_asset(self):
-        actions.update_course_config(self.COURSE_NAME, {
-            'extra_locales': [{'locale': 'de', 'availability': 'available'}]})
-
-        base = 'assets/img'
-        name = 'foo.jpg'
-        locale = 'de'
-        en_content = 'xyzzy'
-        de_content = 'plugh'
-        assets_rest._post_asset(self, base, name, name, en_content)
-        assets_rest._post_asset(self, base, name, name, de_content, locale)
-
-        dom = self.parse_html_string(self.get(self.URL).body)
-        table = dom.find('.//table[@class="i18n-progress-table"]')
-        rows_text = [''.join(row.itertext())
-                     for row in table.findall('./tbody/tr/td[1]')]
-        row_index = rows_text.index('Images & Documents') + 2
-        row_text = [''.join(td.itertext()).strip()
-                    for td in table.findall('./tbody/tr[%d]/td' % row_index)]
-        self.assertEquals('assets/img/foo.jpg', row_text[0])
-        self.assertEquals('Translatable', row_text[1])
-        self.assertEquals('Done', row_text[2])
 
 
 class TranslationConsoleRestHandlerTests(actions.TestBase):
@@ -1286,7 +1230,6 @@ class TranslationImportExportTests(actions.TestBase):
         self.assertIn('mc description', response.body)
         self.assertIn('sa description', response.body)
         self.assertIn('question group description', response.body)
-        self.assertIn('assets/img/foo.jpg', response.body)
 
     def test_download_exports_all_expected_fields(self):
         extra_env = {
@@ -2251,7 +2194,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 _profile(
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
-                _profile('sample/assets/css/main.css', 'main.css', quota=(3, 0))
+                _profile('sample/assets/css/main.css', 'main.css', quota=(2, 0))
                 _profile('sample/course', 'Home page', quota=(None, 0))
                 _profile(
                     'sample/announcements', 'Announcements', quota=(None, 0))
@@ -2264,7 +2207,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(6, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(4, 3))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
@@ -2278,7 +2221,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(6, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(4, 3))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')

@@ -144,7 +144,6 @@ GCB_BASE_COURSE_NAMESPACE = 'gcb-course'
 
 # these folder and file names are reserved
 GCB_ASSETS_FOLDER_NAME = os.path.normpath('/assets/')
-GCB_LOCALE_FOLDER_NAME = os.path.normpath('/locale/')
 GCB_VIEWS_FOLDER_NAME = os.path.normpath('/views/')
 GCB_DATA_FOLDER_NAME = os.path.normpath('/data/')
 GCB_CONFIG_FILENAME = os.path.normpath('/course.yaml')
@@ -160,16 +159,6 @@ GCB_INHERITABLE_FOLDER_NAMES = [
     os.path.join(GCB_ASSETS_FOLDER_NAME, 'html/'),
     GCB_VIEWS_FOLDER_NAME,
     GCB_MODULES_FOLDER_NAME]
-
-GCB_TRANSLATABLE_FOLDER_NAMES = [
-    os.path.join(GCB_ASSETS_FOLDER_NAME, 'img/'),
-    # TODO(mgainer): os.path.join(GCB_ASSETS_FOLDER_NAME, 'html/'),
-]
-GCB_ASSETS_REGEX = re.compile(
-    '^(%s)' % '|'.join(
-        [GCB_ASSETS_FOLDER_NAME] +
-        ['%s/[^/]+%s' % (GCB_LOCALE_FOLDER_NAME, translatable)
-         for translatable in GCB_TRANSLATABLE_FOLDER_NAMES]))
 
 # supported site types
 SITE_TYPE_COURSE = 'course'
@@ -470,68 +459,12 @@ def make_css_combo_zip_handler(zipfilename, static_file_handler):
     return CustomCssComboZipHandler
 
 
-def asset_path_for_localized_item(locale, asset_path):
-    """Provide a single source of truth for localized versions of asset paths.
-
-    Assets are localized differently than strings found in units, lessons,
-    etc.  The asset for the primary language of the course continues to be
-    stored in the vfs at the regular path of, e.g., "/assets/img/kitten.jpg".
-    This is available at a URI of
-    "http://SITE.com/COURSE/assets/img/kitten.jpg".
-
-    Localized versions of assets are stored in the VFS in a specially-named
-    directory ('locale'), and a subdirectory indicating the language.  E.g.,
-    "/locale/de_DE/assets/img/kitten.jpg".  Note that this localized version
-    is also available at the _same_ URI of
-    "http://SITE.com/COURSE/assets/img/kitten.jpg"; which version of the
-    localized resource is returned depends on the value returned from
-    get_current_locale().
-
-    Also note that pages needing to explicitly set the locale can do that
-    by prepending "/locale/<locale>" to the path.
-
-    Args:
-      locale:  The locale string for the localized version of the asset.
-      asset_path: The normal path to the asset (with or without leading slash)
-        (e.g "assets/img/kitten.jpg" or "/assets/img/kitten.jpg")
-    Returns:
-      A standardized path with which to access the localized version of the
-      asset in the VFS.  Note that this is a "physical" and not a "logical"
-      path.  ("Physical" paths are not prefixed with the full installation
-      path of the coursebuilder instance plus the name of the course,
-      whereas "Logical" paths are paths to an actual physical file that
-      may-or-may-not exist as an uploaded file in an AppEngine instance)
-    """
-    return path_join('locale/%s' % locale, asset_path)
-
-
-def is_localizable_asset(path):
-    """Given a physical path, tell whether it represents a localizable asset."""
-
-    path = os.path.join('/', path)  # Ensure we have leading slash.
-    localizable = any(
-        [path.startswith(name) for name in GCB_TRANSLATABLE_FOLDER_NAMES])
-    return localizable
-
-
-def get_localized_asset_names(app_context, path):
-    """Return all files which are localized versions of a given asset."""
-
-    ret = []
-    fs = app_context.fs.impl
-    for locale in app_context.get_allowed_locales():
-        localized_path = asset_path_for_localized_item(locale, path)
-        if fs.isfile(fs.physical_to_logical(localized_path)):
-            ret.append(localized_path)
-    return ret
-
-
 class AssetHandler(utils.BaseHandler):
     """Handles serving of static resources located on the file system."""
 
-    def __init__(self, app_context, asset_path):
+    def __init__(self, app_context, filename):
         self.app_context = app_context
-        self.asset_path = asset_path
+        self.filename = filename
 
     def get_mime_type(self, filename, default='application/octet-stream'):
         guess = mimetypes.guess_type(filename)[0]
@@ -544,76 +477,21 @@ class AssetHandler(utils.BaseHandler):
         public = not fs.is_draft(stream)
         return public or Roles.is_course_admin(self.app_context)
 
-    def _serve_asset(self, path):
-        filename = abspath(self.app_context.get_home_folder(), path)
-        stream = self.app_context.fs.open(filename)
-        if not stream:
-            return 404
-        if not self._can_view(self.app_context.fs, stream):
-            return 403
-        set_static_resource_cache_control(self)
-        self.response.headers['Content-Type'] = self.get_mime_type(filename)
-        self.response.write(stream.read())
-        return 200
-
     def get(self):
-        models.MemcacheManager.begin_readonly()
-        try:
-            return self._get()
-        finally:
-            models.MemcacheManager.end_readonly()
-
-    def _get(self):
         """Handles GET requests."""
-        if not GCB_ASSETS_REGEX.match(self.asset_path):
-            self.error(404)
-
-        current_locale = self.app_context.get_current_locale()
-
-        # We may be asking for an asset with a path like:
-        # "/locale/<course-default-locale>/assets/img/foo.jpg" In this case,
-        # the filesystem won't have an item at the locale-specific path.  The
-        # primary language asset is instead simply at "/assets/img/foo.jpg",
-        # so we need to strip off the leading locale specifier.
-        default_locale_path = '%s/%s' % (
-            GCB_LOCALE_FOLDER_NAME, self.app_context.default_locale)
-
-        if self.asset_path.startswith(default_locale_path):
-            localized_path = None
-            default_path = self.asset_path.replace(default_locale_path, '')
-
-        elif self.asset_path.startswith(GCB_LOCALE_FOLDER_NAME):
-            localized_path = self.asset_path
-            default_path = None
-
-        elif (
-            self.asset_path.startswith(GCB_ASSETS_FOLDER_NAME) and
-            current_locale and
-            current_locale != self.app_context.default_locale
-        ):
-            localized_path = asset_path_for_localized_item(
-                current_locale, self.asset_path)
-            default_path = self.asset_path
-
-        else:
-            localized_path = None
-            default_path = self.asset_path
-
         models.MemcacheManager.begin_readonly()
         try:
-            status = 404
-
-            if localized_path is not None:
-                status = self._serve_asset(localized_path)
-            if status == 200:
+            stream = self.app_context.fs.open(self.filename)
+            if not stream:
+                self.error(404)
                 return
-
-            if default_path is not None:
-                status = self._serve_asset(default_path)
-            if status == 200:
+            if not self._can_view(self.app_context.fs, stream):
+                self.error(403)
                 return
-
-            self.error(status)
+            set_static_resource_cache_control(self)
+            self.response.headers['Content-Type'] = self.get_mime_type(
+                self.filename)
+            self.response.write(stream.read())
         finally:
             models.MemcacheManager.end_readonly()
 
@@ -966,14 +844,16 @@ def set_path_info(path):
         raise Exception('Use \'unset()\' instead.')
     if has_path_info():
         raise Exception('Expected no path set.')
-
-    PATH_INFO_THREAD_LOCAL.path = path
-    PATH_INFO_THREAD_LOCAL.old_namespace = namespace_manager.get_namespace()
-
-    namespace_manager.set_namespace(
-        ApplicationContext.get_namespace_name_for_request())
-
-    RequestScopedSingleton.clear_all()
+    try:
+        PATH_INFO_THREAD_LOCAL.path = path
+        PATH_INFO_THREAD_LOCAL.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace(
+            ApplicationContext.get_namespace_name_for_request())
+    finally:
+        try:
+            RequestScopedSingleton.clear_all()
+        finally:
+            models.MemcacheManager.clear_readonly_cache()
 
 
 def get_path_info():
@@ -1002,24 +882,12 @@ def unset_path_info():
                 del PATH_INFO_THREAD_LOCAL.path
 
 
-def get_course_index(rules_text=None):
-    """Reads all course rewrite rule definitions from environment variable."""
-
-    # Normalize text definition.
+def _build_course_list_from(rules_text):
+    """Compute the list of contexts from the text rules."""
     if not rules_text:
-        rules_text = GCB_COURSES_CONFIG.value
-        if not ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE and (
-            rules_text == GCB_COURSES_CONFIG.default_value) and (
-            not Registry.get_overrides().get(GCB_COURSES_CONFIG.name)):
-            return CourseIndex([])
+        return []
+
     rules_text = rules_text.replace(',', '\n')
-
-    # pylint: disable-msg=protected-access
-    course_index = ApplicationContext._COURSE_INDEX_CACHE.get(rules_text)
-    if course_index:
-        return course_index
-
-    # Compute the list of contexts.
     rules = rules_text.split('\n')
     slugs = {}
     namespaces = {}
@@ -1097,8 +965,28 @@ def get_course_index(rules_text=None):
             raw=rule))
 
     _validate_appcontext_list(all_contexts)
+    return all_contexts
 
-    course_index = CourseIndex(all_contexts)
+
+def get_course_index(rules_text=None):
+    """Build course index given a text of course definition rules."""
+
+    if not rules_text:
+        rules_text = GCB_COURSES_CONFIG.value
+        if not ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE and (
+            rules_text == GCB_COURSES_CONFIG.default_value) and (
+            not Registry.get_overrides().get(GCB_COURSES_CONFIG.name)):
+            return CourseIndex([])
+
+    rules_text = rules_text.replace(',', '\n')
+
+    # pylint: disable-msg=protected-access
+    course_index = ApplicationContext._COURSE_INDEX_CACHE.get(rules_text)
+    if course_index:
+        return course_index
+
+    course_index = CourseIndex(_build_course_list_from(rules_text=rules_text))
+
     # pylint: disable-msg=protected-access
     ApplicationContext._COURSE_INDEX_CACHE = {rules_text: course_index}
     return course_index
@@ -1133,7 +1021,7 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
     """Validates a textual definition of courses entries."""
     try:
         _validate_appcontext_list(
-            get_all_courses(rules_text=rules_text))
+            _build_course_list_from(rules_text=rules_text))
         return True
     except Exception as e:  # pylint: disable-msg=broad-except
         if not expect_failures:
@@ -1398,8 +1286,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         norm_path = os.path.normpath(path)
 
         # Handle static assets here.
-        if GCB_ASSETS_REGEX.match(norm_path):
-            handler = AssetHandler(self, norm_path)
+        if norm_path.startswith(GCB_ASSETS_FOLDER_NAME):
+            abs_file = abspath(context.get_home_folder(), norm_path)
+            handler = AssetHandler(self, abs_file)
             handler.request = self.request
             handler.response = self.response
             handler.app_context = context
@@ -1784,7 +1673,8 @@ def test_url_to_handler_mapping_for_course_type():
     # This is allowed as we don't go out of /assets/...
     handler = assert_handled(
         '/a/b/assets/foo/../models/models.py', AssetHandler)
-    assert handler.asset_path == '/assets/models/models.py'
+    assert AbstractFileSystem.normpath(handler.filename).endswith(
+        AbstractFileSystem.normpath('/c/d/assets/models/models.py'))
 
     # This is not allowed as we do go out of /assets/...
     assert_handled('/a/b/assets/foo/../../models/models.py', None)

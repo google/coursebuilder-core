@@ -47,7 +47,6 @@ from models import models
 from models import roles
 from models import transforms
 from modules.dashboard import dashboard
-from modules.dashboard import filer
 from modules.dashboard import question_editor
 from modules.dashboard import question_group_editor
 from modules.dashboard import unit_lesson_editor
@@ -508,56 +507,6 @@ class ResourceRow(TableRow):
     def edit_url(self, locale):
         return TranslationConsole.get_edit_url(
             ResourceBundleKey(self._type, self._key, locale))
-
-
-class AssetRow(TableRow):
-    """Row in dashboard table specific to assets/images."""
-
-    def __init__(self, app_context, path):
-        self._app_context = app_context
-        self._path = path
-
-    @property
-    def name(self):
-        return self._path
-
-    @property
-    def class_name(self):
-        return ''
-
-    @property
-    def resource_key(self):
-        return ResourceKey(ResourceKey.ASSET_IMG_TYPE, self._path)
-
-    @property
-    def is_translatable(self):
-        return True
-
-    def _have_translation(self, locale):
-        fs = self._app_context.fs.impl
-        return fs.isfile(fs.physical_to_logical(
-            sites.asset_path_for_localized_item(locale, self._path)))
-
-    def status(self, locale):
-        if self._have_translation(locale):
-            return ResourceRow.DONE_STRING
-        else:
-            return ResourceRow.NOT_STARTED_STRING
-
-    def status_class(self, locale):
-        if self._have_translation(locale):
-            return ResourceRow.DONE_CLASS
-        else:
-            return ResourceRow.NOT_STARTED_CLASS
-
-    def view_url(self, locale):
-        return sites.asset_path_for_localized_item(locale, self._path)
-
-    def edit_url(self, locale):
-        return 'dashboard?%s' % urllib.urlencode({
-            'action': TranslatedAssetConsole.ACTION,
-            'key': ResourceBundleKey(ResourceKey.ASSET_IMG_TYPE, self._path,
-                                     locale)})
 
 
 class SectionRow(TableRow):
@@ -1281,12 +1230,6 @@ class I18nDashboardHandler(BaseDashboardExtension):
                     resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Course Outline')
 
-        # Run over file assets
-        data_rows = []
-        for _, key in _get_asset_keys(self.handler):
-            data_rows.append(AssetRow(self.handler.app_context, key.key))
-        rows += self._make_table_section(data_rows, 'Images & Documents')
-
         # Run over questions and question groups
         data_rows = []
         for resource, key in _get_question_keys():
@@ -1703,103 +1646,6 @@ def _build_sections_for_key_ex(
     return binding, sections
 
 
-class TranslatedAssetConsole(BaseDashboardExtension):
-    ACTION = 'i18n_asset_console'
-
-    def render(self):
-        key = ResourceBundleKey.fromstring(self.handler.request.get('key'))
-        rest_url = self.handler.canonicalize_url(TranslatedAssetRESTHandler.URL)
-        delete_url = '%s?%s' % (
-            self.handler.canonicalize_url(filer.FilesItemRESTHandler.URI),
-            urllib.urlencode({
-                'key': sites.asset_path_for_localized_item(
-                    key.locale, key.resource_key.key),
-                'xsrf_token': cgi.escape(self.handler.create_xsrf_token(
-                    'delete-asset'))}))
-        exit_url = self.handler.get_action_url(I18nDashboardHandler.ACTION)
-
-        form_html = oeditor.ObjectEditor.get_html_for(
-            self.handler,
-            TranslatedAssetRESTHandler.SCHEMA_JSON,
-            TranslatedAssetRESTHandler.SCHEMA_ANNOTATIONS_DICT,
-            str(key), rest_url, exit_url,
-            save_method='upload', save_button_caption='Upload',
-            delete_url=delete_url, delete_method='delete',
-            extra_js_files=['image_asset.js'],
-            additional_dirs=[os.path.join(dashboard_utils.RESOURCES_DIR, 'js')])
-
-        if self.is_readonly(self.handler.get_course()):
-            form_html = self.format_readonly_message()
-
-        self.handler.render_page(
-            {'page_title': self.handler.format_title('I18N Workflow'),
-             'main_content': form_html},
-            in_action=I18nDashboardHandler.ACTION)
-
-
-def generate_translated_asset_rest_handler_schema():
-    schema = schema_fields.FieldRegistry('Translated Asset',
-                                         description='Translated Asset')
-    filer.add_asset_handler_display_field(schema)
-    schema.add_property(schema_fields.SchemaField(
-        'translated_asset_url', 'Translated Asset', 'string',
-        editable=False,
-        optional=True,
-        description='This is the translated version of the asset.',
-        extra_schema_dict_values={
-            'visu': {
-                'visuType': 'funcName',
-                'funcName': 'renderAsset'
-                }
-            }))
-    filer.add_asset_handler_base_fields(schema)
-    return schema
-
-
-class TranslatedAssetRESTHandler(filer.AssetItemRESTHandler):
-
-    URL = '/rest/assets/translated_item'
-    SCHEMA = generate_translated_asset_rest_handler_schema()
-    SCHEMA_JSON = SCHEMA.get_json_schema()
-    SCHEMA_ANNOTATIONS_DICT = SCHEMA.get_schema_dict()
-    REQUIRED_MODULES = [
-        'inputex-string', 'inputex-uneditable', 'inputex-file',
-        'io-upload-iframe']
-    XSRF_TOKEN_NAME = 'translated-asset-upload'
-
-    def _asset_path(self, key):
-        return key.resource_key.key
-
-    def get(self):
-        key = ResourceBundleKey.fromstring(self.request.get('key'))
-        payload_dict = {
-            'key': str(key),
-            'base': 'assets/img'
-        }
-        fs = self.app_context.fs.impl
-
-        asset_path = self._asset_path(key)
-        if fs.isfile(fs.physical_to_logical(asset_path)):
-            payload_dict['asset_url'] = sites.asset_path_for_localized_item(
-                self.app_context.default_locale, self._asset_path(key))
-        payload_dict['translated_asset_url'] = (
-            sites.asset_path_for_localized_item(key.locale, asset_path))
-
-        transforms.send_json_response(
-            self, 200, 'Success.', payload_dict=payload_dict,
-            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
-                self.XSRF_TOKEN_NAME))
-
-    def post(self):
-        is_valid, _, upload = self._validate_post()
-        if is_valid:
-            key = ResourceBundleKey.fromstring(self.request.get('key'))
-            path = self._asset_path(key)
-            physical_path = sites.asset_path_for_localized_item(
-                key.locale, path)
-            self._handle_post(physical_path, True, upload)
-
-
 class LazyTranslator(object):
 
     @classmethod
@@ -2084,7 +1930,6 @@ def notify_module_enabled():
     I18nUploadHandler.register()
     I18nReverseCaseHandler.register()
     TranslationConsole.register()
-    TranslatedAssetConsole.register()
     courses.Course.POST_LOAD_HOOKS.append(translate_course)
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.append(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.append(translate_question_dto)
@@ -2107,7 +1952,6 @@ def notify_module_disabled():
     I18nUploadHandler.unregister()
     I18nReverseCaseHandler.unregister()
     TranslationConsole.unregister()
-    TranslatedAssetConsole.unregister()
     courses.Course.POST_LOAD_HOOKS.remove(translate_course)
     courses.Course.COURSE_ENV_POST_LOAD_HOOKS.remove(translate_course_env)
     models.QuestionDAO.POST_LOAD_HOOKS.remove(translate_question_dto)
@@ -2125,9 +1969,7 @@ def register_module():
     namespaced_routes = [
         (TranslationConsoleRestHandler.URL, TranslationConsoleRestHandler),
         (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
-        (IsTranslatableRestHandler.URL, IsTranslatableRestHandler),
-        (TranslatedAssetRESTHandler.URL, TranslatedAssetRESTHandler),
-        ]
+        (IsTranslatableRestHandler.URL, IsTranslatableRestHandler),]
 
     global custom_module
     custom_module = custom_modules.Module(

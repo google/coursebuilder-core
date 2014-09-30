@@ -26,7 +26,6 @@ import yaml
 
 import appengine_config
 from common import schema_fields
-from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -167,17 +166,6 @@ class FileManagerAndEditor(ApplicationHandler):
             delete_url = self._get_delete_url(
                 FilesItemRESTHandler.URI, key, 'delete-asset')
             delete_method = 'delete'
-            if sites.is_localizable_asset(key):
-                vers = sites.get_localized_asset_names(self.app_context, key)
-                if vers:
-                    delete_message = (
-                        'There {are} {count} additional '
-                        'localized version{plural} of this file.  '
-                        'Are you sure you want to delete it and its '
-                        'localizations?').format(
-                            count=len(vers),
-                            are=('are' if len(vers) > 1 else 'is'),
-                            plural=('s' if len(vers) > 1 else ''))
         else:
             # Sadly, since we don't know the name of the asset when we build
             # the form, the form can't update itself to show the uploaded
@@ -203,7 +191,6 @@ class FileManagerAndEditor(ApplicationHandler):
             delete_url=delete_url, delete_method=delete_method,
             delete_message=delete_message,
             required_modules=AssetItemRESTHandler.REQUIRED_MODULES,
-            extra_js_files=['image_asset.js'],
             additional_dirs=[os.path.join(dashboard_utils.RESOURCES_DIR, 'js')])
 
         template_values = {}
@@ -559,9 +546,6 @@ class FilesItemRESTHandler(BaseRESTHandler):
                 self, 403, 'File does not exist.', None)
             return
         fs.delete(path)
-        if sites.is_localizable_asset(key):
-            for path in sites.get_localized_asset_names(self.app_context, key):
-                fs.delete(fs.physical_to_logical(path))
 
         transforms.send_json_response(self, 200, 'Deleted.')
 
@@ -573,7 +557,7 @@ def add_asset_handler_base_fields(schema):
         'file', 'Upload New File', 'file',
         optional=True,
         description='You may upload a file to set or replace the content '
-        'of the translated asset.'))
+        'of the asset.'))
     schema.add_property(schema_fields.SchemaField(
         'key', 'Key', 'string',
         editable=False,
@@ -655,9 +639,7 @@ class AssetItemRESTHandler(BaseRESTHandler):
         }
         fs = self.app_context.fs.impl
         if fs.isfile(fs.physical_to_logical(key)):
-            json_payload['asset_url'] = sites.asset_path_for_localized_item(
-                self.app_context.default_locale, key)
-
+            json_payload['asset_url'] = key
         transforms.send_json_response(
             self, 200, 'Success.', payload_dict=json_payload,
             xsrf_token=XsrfTokenManager.create_xsrf_token(self.XSRF_TOKEN_NAME))

@@ -167,18 +167,6 @@ class AssetsRestTest(actions.TestBase):
         self.assertEquals('assets/img', payload['base'])
         self.assertNotIn('asset_url', payload)
 
-    def test_get_existing_asset(self):
-        base = 'assets/img'
-        file_name = key_name = 'foo.jpg'
-        asset_path = os.path.join(base, key_name)
-        content = 'Gooooooooooooooooooooood morning, Vietnam!'
-        _post_asset(self, base, key_name, file_name, content)
-        response = self.get(ITEM_ASSET_URL + '?key=' + asset_path)
-        payload = transforms.loads(transforms.loads(response.body)['payload'])
-        self.assertEquals(asset_path, payload['key'])
-        self.assertEquals(base, payload['base'])
-        self.assertIn('locale/en_US/' + asset_path, payload['asset_url'])
-
     def test_cannot_overwrite_existing_file_without_key(self):
         def add_asset():
             base = 'assets/lib'
@@ -216,68 +204,11 @@ class AssetsRestTest(actions.TestBase):
                             expect_errors=True)
         self.assertEquals(404, response.status_int)
 
-    def test_add_localized_asset(self):
-        base = 'assets/img'
-        name = 'foo.jpg'
-        locale = 'de_DE'
-        en_content = 'xyzzy'
-        de_content = 'plugh'
-        _post_asset(self, base, name, name, en_content)
-        _post_asset(self, base, name, name, de_content, locale)
-
-        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
-        response = self.get(asset_url)
-        self.assertEquals(en_content, response.body)
-        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'})
-        self.assertEquals(de_content, response.body)
-        response = self.get('%s/locale/de_DE/%s/%s' % (
-            COURSE_NAME, base, name))
-        self.assertEquals(de_content, response.body)
-
-    def test_missing_localized_asset(self):
-        # Create English asset but no German version
+    def test_deleting(self):
         base = 'assets/img'
         name = 'foo.jpg'
         en_content = 'xyzzy'
         _post_asset(self, base, name, name, en_content)
-
-        # Access with current_locale = de_DE falls back to English default
-        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
-        response = self.get(asset_url)
-        self.assertEquals(en_content, response.body)
-        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'})
-        self.assertEquals(en_content, response.body)
-
-        # Direct request for German version fails with 404
-        response = self.get('%s/locale/de_DE/%s/%s' % (
-            COURSE_NAME, base, name), expect_errors=True)
-        self.assertEquals(404, response.status_int)
-
-    def test_localized_access_to_default_locale(self):
-        # Create English asset but no German version
-        base = 'assets/img'
-        name = 'foo.jpg'
-        en_content = 'xyzzy'
-        _post_asset(self, base, name, name, en_content)
-
-        # Asset is available on default assets folder URL
-        asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
-        response = self.get(asset_url)
-        self.assertEquals(en_content, response.body)
-
-        # Asset is available with localized url
-        response = self.get('%s/locale/en_US/%s/%s' % (
-            COURSE_NAME, base, name))
-        self.assertEquals(en_content, response.body)
-
-    def test_deleting_localized_deletes_all_copies(self):
-        base = 'assets/img'
-        name = 'foo.jpg'
-        locale = 'de_DE'
-        en_content = 'xyzzy'
-        de_content = 'plugh'
-        _post_asset(self, base, name, name, en_content)
-        _post_asset(self, base, name, name, de_content, locale)
 
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('delete-asset')
         key = os.path.join(base, name)
@@ -291,7 +222,4 @@ class AssetsRestTest(actions.TestBase):
 
         asset_url = '/%s/%s/%s' % (COURSE_NAME, base, name)
         response = self.get(asset_url, expect_errors=True)
-        self.assertEquals(404, response.status_int)
-        response = self.get(asset_url, headers={'Accept-Language': 'de_DE'},
-                            expect_errors=True)
         self.assertEquals(404, response.status_int)

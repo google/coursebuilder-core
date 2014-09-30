@@ -854,11 +854,7 @@ class DashboardHandler(
             # make a <li> item
             li = safe_dom.Element('li')
             if links:
-                if sites.is_localizable_asset(filename):
-                    url = sites.asset_path_for_localized_item(
-                        self.app_context.default_locale, filename)
-                else:
-                    url = urllib.quote(filename)
+                url = urllib.quote(filename)
                 li.add_child(safe_dom.Element(
                     'a', href=url).add_text(filename))
             else:
@@ -1592,7 +1588,7 @@ def register_module():
                            DashboardHandler.get_assets_html)
     tabs.Registry.register('assets', 'templates', 'Templates',
                            DashboardHandler.get_assets_templates)
-    tabs.Registry.register('assets', 'contrib', 'Extension Items',
+    tabs.Registry.register('assets', 'contrib', 'Extensions',
                            DashboardHandler.get_assets_contrib)
 
     tabs.Registry.register('settings', 'course', 'Course', 'course')

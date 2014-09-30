@@ -41,7 +41,7 @@ from google.appengine.ext import db
 # We want to use memcache for both objects that exist and do not exist in the
 # datastore. If object exists we cache its instance, if object does not exist
 # we cache this object below.
-NO_OBJECT = 'GCB_MODELS_NO_OBJECT'
+NO_OBJECT = {}
 
 # The default amount of time to cache the items for in memcache.
 DEFAULT_CACHE_TTL_SECS = 60 * 5
@@ -102,12 +102,17 @@ class MemcacheManager(object):
 
     @classmethod
     def _is_same_app_context_if_set(cls):
+        if cls._READONLY_APP_CONTEXT is None:
+            return True
         # pylint: disable-msg=g-import-not-at-top
         from controllers import sites
         app_context = sites.get_course_for_current_request()
-        return (
-            cls._READONLY_APP_CONTEXT is None or
-            cls._READONLY_APP_CONTEXT is app_context)
+        same_slug = (
+            cls._READONLY_APP_CONTEXT.get_slug() == app_context.get_slug())
+        same_ns = (
+            cls._READONLY_APP_CONTEXT.get_namespace_name() ==
+            app_context.get_namespace_name())
+        return same_slug and same_ns
 
     @classmethod
     def _assert_true_clear_cache_and_raise_if_not(cls, value_to_assert, msg):
@@ -168,26 +173,13 @@ class MemcacheManager(object):
         cls._READONLY_APP_CONTEXT = None
 
     @classmethod
-    def get_namespace(cls):
-        """Look up namespace from namespace_manager or use default."""
-        namespace = namespace_manager.get_namespace()
-        if namespace:
-            return namespace
-        return appengine_config.DEFAULT_NAMESPACE_NAME
-
-    @classmethod
-    def _get_namespace(cls, namespace):
-        if namespace is not None:
-            return namespace
-        return cls.get_namespace()
-
-    @classmethod
     def _can_grow_readonly_cache(cls):
         return sys.getsizeof(cls._LOCAL_CACHE) < MAX_IN_PROCESS_CACHE_SIZE_BYTES
 
     @classmethod
     def _local_cache_get(cls, key, namespace):
         if cls._IS_READONLY:
+            assert cls._is_same_app_context_if_set()
             _dict = cls._LOCAL_CACHE.get(namespace)
             if not _dict:
                 _dict = {}
@@ -203,6 +195,7 @@ class MemcacheManager(object):
     @classmethod
     def _local_cache_put(cls, key, namespace, value):
         if cls._IS_READONLY and cls._can_grow_readonly_cache():
+            assert cls._is_same_app_context_if_set()
             _dict = cls._LOCAL_CACHE.get(namespace)
             if not _dict:
                 _dict = {}
@@ -213,6 +206,7 @@ class MemcacheManager(object):
     @classmethod
     def _local_cache_get_multi(cls, keys, namespace):
         if cls._IS_READONLY:
+            assert cls._is_same_app_context_if_set()
             values = []
             for key in keys:
                 is_cached, value = cls._local_cache_get(key, namespace)
@@ -226,8 +220,23 @@ class MemcacheManager(object):
     @classmethod
     def _local_cache_put_multi(cls, values, namespace):
         if cls._IS_READONLY:
+            assert cls._is_same_app_context_if_set()
             for key, value in values.items():
                 cls._local_cache_put(key, namespace, value)
+
+    @classmethod
+    def get_namespace(cls):
+        """Look up namespace from namespace_manager or use default."""
+        namespace = namespace_manager.get_namespace()
+        if namespace:
+            return namespace
+        return appengine_config.DEFAULT_NAMESPACE_NAME
+
+    @classmethod
+    def _get_namespace(cls, namespace):
+        if namespace is not None:
+            return namespace
+        return cls.get_namespace()
 
     @classmethod
     def get(cls, key, namespace=None):
@@ -432,7 +441,7 @@ class ContentChunkDAO(object):
         memcache_key = cls._get_memcache_key(entity_id)
         found = MemcacheManager.get(memcache_key)
 
-        if found is NO_OBJECT:
+        if found == NO_OBJECT:
             return None
         elif found:
             return found
@@ -1190,7 +1199,7 @@ class BaseJsonDao(object):
     def get_all(cls):
         # try to get from memcache
         entities = MemcacheManager.get(cls._memcache_all_key())
-        if entities is not None and entities is not NO_OBJECT:
+        if entities is not None and entities != NO_OBJECT:
             return entities
 
         # get from datastore
