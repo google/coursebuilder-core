@@ -1872,7 +1872,7 @@ class TestCasesForContentRecompose(TestCasesBase):
         self._assert_decomposes(html, expected)
         translations = [
           '<table#1/>', '<i#1>TABLE</i#1>', '<ul#1/>', 'A', 'B']
-        result = (
+        unused_result = (
             '<table border="2">'
             '<tbody>'
             '<tr>'

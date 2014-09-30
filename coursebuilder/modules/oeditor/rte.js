@@ -95,6 +95,8 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     },
 
     _replaceTextAreaWithCodeMirror: function() {
+      var that = this;
+
       if (! env.can_highlight_code) {
         return;
       }
@@ -106,41 +108,39 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       //       this is because setValue must be call after renderComponent
       //       (to sync old value from database, "" will passed for first time)
       //       this is why this.cmReady will be set on the else clause
-      if (!this.cmInstance) {
-        // div for scrollbar positional-correction
-        var cmDiv = document.createElement('div');
-        this.fieldContainer.appendChild(cmDiv);
-        $(cmDiv).css("overflow", "auto");
-        $(cmDiv).css("position", "relative");
-        cmDiv.className = 'codemirror-container-editable'
-        this.cmInstance = CodeMirror(cmDiv, {
-          value: this.el.value,
-          lineNumbers: true,
-          keyMap: "sublime",
-          mode: "htmlmixed"
-        });
+      if (! this.cmInstance) {
+        this.cmInstance = CodeMirror(this.fieldContainer,
+            {
+              value: this.el.value,
+              lineNumbers: true,
+              keyMap: "sublime",
+              mode: "htmlmixed"
+            }
+        );
+        // Reference used for testing
         this.cmInstance.gcbCodeMirrorMonitor = this;
+
+        new Resize(this.cmInstance.getWrapperElement(),
+            {
+              handles: ['br'],
+              minHeight: 200,
+              minWidth: 200,
+              proxy: true,
+              setSize: false
+            }
+        ).on("resize", function(args) {
+          that.cmInstance.setSize(args.width, args.height);
+        });
       } else {
         this.cmInstance.setValue(this.el.value);
         this.cmReady = true;
       }
 
-      var textArea = this.el;
-      Dom.setStyle(textArea, 'visibility', 'hidden');
-      Dom.setStyle(textArea, 'top', '-9999px');
-      Dom.setStyle(textArea, 'left', '-9999px');
-      Dom.setStyle(textArea, 'position', 'absolute');
-      Dom.addClass(textArea, 'raw-text-editor');
+      Dom.addClass(this.el, "hidden");
+      Dom.removeClass(this.cmInstance.getWrapperElement(), "hidden");
 
-      var cmWrapper = this.cmInstance.getWrapperElement();
-      Dom.setStyle(cmWrapper, 'visibility', 'visible');
-      Dom.setStyle(cmWrapper, 'top', '');
-      Dom.setStyle(cmWrapper, 'left', '');
-      Dom.setStyle(cmWrapper, 'position', 'static');
-
-      var self = this;
       window.setTimeout(function(){
-        self.cmInstance.refresh();
+        that.cmInstance.refresh();
       }, 0);
     },
 
@@ -159,20 +159,10 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
 
       if (this.cmInstance) {
         this._syncTextAreaWithCodeMirror();
-
         this.cmReady = false;
 
-        var textArea = this.el;
-        Dom.setStyle(textArea, 'visibility', 'visible');
-        Dom.setStyle(textArea, 'top', '');
-        Dom.setStyle(textArea, 'left', '');
-        Dom.setStyle(textArea, 'position', 'static');
-
-        var cmWrapper = this.cmInstance.getWrapperElement();
-        Dom.setStyle(cmWrapper, 'visibility', 'hidden');
-        Dom.setStyle(cmWrapper, 'top', '-9999px');
-        Dom.setStyle(cmWrapper, 'left', '-9999px');
-        Dom.setStyle(cmWrapper, 'position', 'absolute');
+        Dom.removeClass(this.el, "hidden");
+        Dom.addClass(this.cmInstance.getWrapperElement(), "hidden");
       }
     },
 
