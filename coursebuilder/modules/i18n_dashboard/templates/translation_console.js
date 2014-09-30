@@ -53,7 +53,8 @@ $(function() {
   $(".translation-header .target-locale").text(formValue['target_locale']);
 
   iterateFormItems(cb_global, function(item) {
-    $(item.target_value.el).on("keyup", function() {
+    $(item.target_value.el).on("input change", function() {
+      // Listen on "change" for older browser support
       item.changed.setValue(true);
       $(item.changed.el).closest("fieldset")
           .removeClass().addClass(EDITED_CLASS);
