@@ -22,6 +22,7 @@ import random
 import re
 import string
 import sys
+import threading
 import unittest
 import zipfile
 
@@ -185,6 +186,64 @@ class ZipAwareOpen(object):
         """Reset open() to be the Python internal version."""
         sys.modules['zipfile'].__builtins__['open'] = self._real_open
         return False  # Don't suppress exceptions.
+
+
+class ScopedSingleton(object):
+    """A singleton object bound to and managed by a container."""
+
+    CONTAINER = None
+
+    @classmethod
+    def _instances(cls):
+        assert cls.CONTAINER is not None
+        if 'instances' not in cls.CONTAINER:
+            cls.CONTAINER['instances'] = {}
+        return cls.CONTAINER['instances']
+
+    @classmethod
+    def instance(cls, *args, **kwargs):
+        """Creates new or returns existing instance of the object."""
+        # pylint: disable-msg=protected-access
+        _instance = cls._instances().get(cls)
+        if not _instance:
+            _instance = cls(*args, **kwargs)
+            _instance._init_args = (args, kwargs)
+            cls._instances()[cls] = _instance
+        else:
+            _before = _instance._init_args
+            _now = (args, kwargs)
+            if _now != _before:
+                raise AssertionError(
+                    'Singleton initiated with %s already exists. '
+                    'Failed to re-initialized it with %s.' % (_before, _now))
+        return _instance
+
+    @classmethod
+    def clear_all(cls):
+        """Clear all active instances."""
+        if cls._instances():
+            del cls.CONTAINER['instances']
+
+    def clear(self):
+        """Destroys this object and its content."""
+        _instance = self._instances().get(self.__class__)
+        if _instance:
+            del self._instances()[self.__class__]
+
+_process_scoped_singleton = {}
+_request_scoped_singleton = threading.local()
+
+
+class ProcessScopedSingleton(ScopedSingleton):
+    """A singleton object bound to the process."""
+
+    CONTAINER = _process_scoped_singleton
+
+
+class RequestScopedSingleton(ScopedSingleton):
+    """A singleton object bound to the request scope."""
+
+    CONTAINER = _request_scoped_singleton.__dict__
 
 
 class LRUCache(object):

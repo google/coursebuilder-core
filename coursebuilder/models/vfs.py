@@ -23,15 +23,9 @@ from entities import BaseEntity
 import jinja2
 
 from common import jinja_utils
-from models import MemcacheManager
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
-
-# We want to use memcache for both objects that exist and do not exist in the
-# datastore. If object exists we cache its instance, if object does not exist
-# we cache this object below.
-NO_OBJECT = {}
 
 
 class AbstractFileSystem(object):
@@ -40,8 +34,6 @@ class AbstractFileSystem(object):
     def __init__(self, impl):
         self._impl = impl
         self._readonly = False
-        self._open_cache = {}
-        self._isfile_cache = {}
 
     @property
     def impl(self):
@@ -58,18 +50,12 @@ class AbstractFileSystem(object):
     def begin_readonly(self):
         """Activates caching of resources and prevents mutations."""
         self._assert_not_readonly()
-
-        self._open_cache = {}
-        self._isfile_cache = {}
         self._readonly = True
 
     def end_readonly(self):
         """Deactivates caching of resources and enables mutations."""
         if not self._readonly:
             raise Exception('Not readonly.')
-
-        self._open_cache = {}
-        self._isfile_cache = {}
         self._readonly = False
 
     @property
@@ -83,34 +69,11 @@ class AbstractFileSystem(object):
 
     def isfile(self, filename):
         """Checks if file exists, similar to os.path.isfile(...)."""
-        if self._readonly:
-            if filename in self._open_cache:
-                return True
-            if filename in self._isfile_cache:
-                return self._isfile_cache[filename]
-            result = self._impl.isfile(filename)
-            self._isfile_cache[filename] = result
-            return result
-        else:
-            return self._impl.isfile(filename)
+        return self._impl.isfile(filename)
 
     def open(self, filename):
         """Returns a stream with the file content, similar to open(...)."""
-        if self._readonly:
-            if filename in self._open_cache:
-                _bytes, _metadata = self._open_cache[filename]
-            else:
-                _stream = self._impl.get(filename)
-                if not _stream:
-                    return None
-                _metadata = {}
-                if hasattr(_stream, 'metadata'):
-                    _metadata = _stream.metadata
-                _bytes = _stream.read()
-                self._open_cache[filename] = (_bytes, _metadata)
-            return FileStreamWrapped(_metadata, _bytes)
-        else:
-            return self._impl.get(filename)
+        return self._impl.get(filename)
 
     def get(self, filename):
         """Returns bytes with the file content, but no metadata."""
@@ -334,7 +297,6 @@ class DatastoreBackedFileSystem(object):
             Exception: if invalid inherits_from is given.
         """
 
-        # We cache files loaded via inherited fs; make sure they don't change.
         if inherits_from and not isinstance(
                 inherits_from, LocalReadOnlyFileSystem):
             raise Exception('Can only inherit from LocalReadOnlyFileSystem.')
@@ -428,42 +390,17 @@ class DatastoreBackedFileSystem(object):
     def get(self, afilename):
         """Gets a file from a datastore. Raw bytes stream, no encodings."""
         filename = self._logical_to_physical(afilename)
-
-        # Load from cache.
-        result = MemcacheManager.get(
-            self.make_key(filename), namespace=self._ns)
-        if result:
-            return result
-        if NO_OBJECT == result:
-            return None
-
-        # Load from a datastore.
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             data = FileDataEntity.get_by_key_name(filename)
             if data:
-                result = FileStreamWrapped(metadata, data.data)
-                MemcacheManager.set(
-                    self.make_key(filename), result, namespace=self._ns)
-                return result
-
+                return FileStreamWrapped(metadata, data.data)
         result = None
-        metadata = None
-
-        # Load from parent fs.
         if self._inherits_from and self._can_inherit(filename):
             result = self._inherits_from.get(afilename)
-
-        # Cache result.
         if result:
-            result = FileStreamWrapped(metadata, result.read())
-            MemcacheManager.set(
-                self.make_key(filename), result, namespace=self._ns)
-        else:
-            MemcacheManager.set(
-                self.make_key(filename), NO_OBJECT, namespace=self._ns)
-
-        return result
+            return FileStreamWrapped(None, result.read())
+        return None
 
     @db.transactional(xg=True)
     def put(self, filename, stream, is_draft=False, metadata_only=False):
@@ -494,8 +431,6 @@ class DatastoreBackedFileSystem(object):
 
         metadata.put()
 
-        MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
-
     def put_multi_async(self, filedata_list):
         """Initiate an async put of the given files.
 
@@ -503,8 +438,7 @@ class DatastoreBackedFileSystem(object):
         (presented as pairs of the form (filename, data_source)). It is not
         transactional, and does not block, and instead immediately returns a
         callback function. When this function is called it will block until
-        the puts are confirmed to have completed. At this point it will also
-        clear stale information out of the memcache. For maximum efficiency it's
+        the puts are confirmed to have completed. For maximum efficiency it's
         advisable to defer calling the callback until all other request handling
         has completed, but in any event, it MUST be called before the request
         handler can exit successfully.
@@ -517,8 +451,7 @@ class DatastoreBackedFileSystem(object):
         Returns:
             callable. Returns a wait-and-finalize function. This function must
             be called at some point before the request handler exists, in order
-            to confirm that the puts have succeeded and to purge old values
-            from the memcache.
+            to confirm that the puts have succeeded.
         """
         filename_list = []
         data_list = []
@@ -550,10 +483,6 @@ class DatastoreBackedFileSystem(object):
             data_future.check_success()
             metadata_future.check_success()
 
-            MemcacheManager.delete_multi(
-                [self.make_key(filename) for filename in filename_list],
-                namespace=self._ns)
-
         return wait_and_finalize
 
     @db.transactional(xg=True)
@@ -566,36 +495,16 @@ class DatastoreBackedFileSystem(object):
         data = FileDataEntity(key_name=filename)
         if data:
             data.delete()
-        MemcacheManager.delete(self.make_key(filename), namespace=self._ns)
 
     def isfile(self, afilename):
         """Checks file existence by looking up the datastore row."""
         filename = self._logical_to_physical(afilename)
-
-        # Check cache.
-        result = MemcacheManager.get(
-            self.make_key(filename), namespace=self._ns)
-        if result:
-            return True
-        if NO_OBJECT == result:
-            return False
-
-        # Check datastore.
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             return True
-
         result = False
-
-        # Check with parent fs.
         if self._inherits_from and self._can_inherit(filename):
             result = self._inherits_from.isfile(afilename)
-
-        # Put NO_OBJECT marker into memcache to avoid repeated lookups.
-        if not result:
-            MemcacheManager.set(
-                self.make_key(filename), NO_OBJECT, namespace=self._ns)
-
         return result
 
     def list(self, dir_name, include_inherited=False):

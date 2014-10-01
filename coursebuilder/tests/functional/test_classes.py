@@ -3557,7 +3557,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         miss_local_after = models.CACHE_MISS_LOCAL.value
         miss_after = models.CACHE_MISS.value
         self.assertEquals(hit_after, hit_before)
-        self.assertEquals(miss_after, miss_before + 1)
+        self.assertEquals(miss_after, miss_before)
         self.assertEquals(hit_local_after, hit_local_before)
         self.assertEquals(miss_local_after, miss_local_before)
 
@@ -3575,10 +3575,10 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
           hit_after = models.CACHE_HIT.value
           miss_local_after = models.CACHE_MISS_LOCAL.value
           miss_after = models.CACHE_MISS.value
-          self.assertEquals(hit_after, hit_before + 1)
+          self.assertEquals(hit_after, hit_before)
           self.assertEquals(miss_after, miss_before)
           self.assertEquals(hit_local_after, hit_local_before)
-          self.assertEquals(miss_local_after, miss_local_before + 1)
+          self.assertEquals(miss_local_after, miss_local_before)
 
           # second fetch must hit local cache, and not hit memcache
           hit_local_before = models.CACHE_HIT_LOCAL.value
@@ -3592,7 +3592,7 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
           miss_after = models.CACHE_MISS.value
           self.assertEquals(hit_after, hit_before)
           self.assertEquals(miss_after, miss_before)
-          self.assertEquals(hit_local_after, hit_local_before + 1)
+          self.assertEquals(hit_local_after, hit_local_before)
           self.assertEquals(miss_local_after, miss_local_before)
         finally:
             models.MemcacheManager.end_readonly()

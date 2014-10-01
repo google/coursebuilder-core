@@ -2002,7 +2002,9 @@ def run_all_unit_tests():
         TestCasesForContentDecompose, TestCasesForContentRecompose]:
         suite = unittest.TestLoader().loadTestsFromTestCase(test_class)
         suites_list.append(suite)
-    unittest.TextTestRunner().run(unittest.TestSuite(suites_list))
+    result = unittest.TextTestRunner().run(unittest.TestSuite(suites_list))
+    if not result.wasSuccessful() or result.errors:
+        raise Exception(result)
 
 
 # Below we keep content needed for test cases. We keep them here to allow this

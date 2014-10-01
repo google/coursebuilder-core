@@ -49,7 +49,6 @@ DEFAULT_CACHE_TTL_SECS = 60 * 5
 # https://developers.google.com/appengine/docs/python/memcache/#Python_Limits
 MEMCACHE_MAX = (1024 * 1024 - 96 - 250)
 MEMCACHE_MULTI_MAX = 32 * 1024 * 1024
-MAX_IN_PROCESS_CACHE_SIZE_BYTES = 1024 * 1024 * 16
 
 # Global memcache controls.
 CAN_USE_MEMCACHE = ConfigProperty(
@@ -168,13 +167,9 @@ class MemcacheManager(object):
         cls._IS_READONLY = False
         cls._READONLY_REENTRY_COUNT = 0
         if cls._READONLY_APP_CONTEXT and (
-            cls._READONLY_APP_CONTEXT.fs.is_readonly):
+            cls._READONLY_APP_CONTEXT.fs.is_in_readonly):
             cls._READONLY_APP_CONTEXT.fs.end_readonly()
         cls._READONLY_APP_CONTEXT = None
-
-    @classmethod
-    def _can_grow_readonly_cache(cls):
-        return sys.getsizeof(cls._LOCAL_CACHE) < MAX_IN_PROCESS_CACHE_SIZE_BYTES
 
     @classmethod
     def _local_cache_get(cls, key, namespace):
@@ -194,7 +189,7 @@ class MemcacheManager(object):
 
     @classmethod
     def _local_cache_put(cls, key, namespace, value):
-        if cls._IS_READONLY and cls._can_grow_readonly_cache():
+        if cls._IS_READONLY:
             assert cls._is_same_app_context_if_set()
             _dict = cls._LOCAL_CACHE.get(namespace)
             if not _dict:
@@ -1196,16 +1191,14 @@ class BaseJsonDao(object):
         return '(entity-get-all:%s)' % cls.ENTITY.kind()
 
     @classmethod
-    def get_all(cls):
+    def get_all_mapped(cls):
         # try to get from memcache
         entities = MemcacheManager.get(cls._memcache_all_key())
         if entities is not None and entities != NO_OBJECT:
             return entities
 
         # get from datastore
-        entities = cls.ENTITY.all().fetch(1000)
-        result = [
-            cls.DTO(e.key().id(), transforms.loads(e.data)) for e in entities]
+        result = {dto.id: dto for dto in cls.get_all_iter()}
 
         # put into memcache
         result_to_cache = NO_OBJECT
@@ -1214,6 +1207,10 @@ class BaseJsonDao(object):
         MemcacheManager.set(cls._memcache_all_key(), result_to_cache)
 
         return result
+
+    @classmethod
+    def get_all(cls):
+        return cls.get_all_mapped().values()
 
     @classmethod
     def get_all_iter(cls):

@@ -1018,7 +1018,7 @@ class I18nProgressManager(object):
             i18n_progress_dto=row)
 
 
-class I18nTranslationContext(sites.RequestScopedSingleton):
+class I18nTranslationContext(common_utils.RequestScopedSingleton):
 
     def __init__(self, app_context):
         self.app_context = app_context

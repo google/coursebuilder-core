@@ -120,6 +120,7 @@ from webapp2_extras import i18n
 
 import appengine_config
 from common import safe_dom
+from common import utils as common_utils
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -781,58 +782,6 @@ class ApplicationContext(object):
         return [default_locale] + [loc['locale'] for loc in extra_locales]
 
 
-class ScopedSingleton(object):
-    """A singleton object bound to and managed by a container."""
-
-    CONTAINER = None
-
-    @classmethod
-    def _instances(cls):
-        assert cls.CONTAINER is not None
-        if 'instances' not in cls.CONTAINER:
-            cls.CONTAINER['instances'] = {}
-        return cls.CONTAINER['instances']
-
-    @classmethod
-    def instance(cls, *args, **kwargs):
-        """Creates new or returns existing instance of the object."""
-        # pylint: disable-msg=protected-access
-        _instance = cls._instances().get(cls)
-        if not _instance:
-            _instance = cls(*args, **kwargs)
-            _instance._init_args = (args, kwargs)
-            cls._instances()[cls] = _instance
-        else:
-            _before = _instance._init_args
-            _now = (args, kwargs)
-            if _now != _before:
-                raise AssertionError(
-                    'Singleton initiated with %s already exists. '
-                    'Failed to re-initialized it with %s.' % (_before, _now))
-        return _instance
-
-    @classmethod
-    def clear_all(cls):
-        """Clear all active instances."""
-        if cls._instances():
-            del cls.CONTAINER['instances']
-
-    def clear(self):
-        """Destroys this object and its content."""
-        _instance = self._instances().get(self.__class__)
-        if _instance:
-            del self._instances()[self.__class__]
-
-
-_request_scoped_singleton = threading.local()
-
-
-class RequestScopedSingleton(ScopedSingleton):
-    """A singleton object bound to the request scope."""
-
-    CONTAINER = _request_scoped_singleton.__dict__
-
-
 def has_path_info():
     """Checks if PATH_INFO is defined for the thread local."""
     return hasattr(PATH_INFO_THREAD_LOCAL, 'path')
@@ -851,7 +800,7 @@ def set_path_info(path):
             ApplicationContext.get_namespace_name_for_request())
     finally:
         try:
-            RequestScopedSingleton.clear_all()
+            common_utils.RequestScopedSingleton.clear_all()
         finally:
             models.MemcacheManager.clear_readonly_cache()
 
@@ -869,7 +818,7 @@ def unset_path_info():
         models.MemcacheManager.clear_readonly_cache()
     finally:
         try:
-            RequestScopedSingleton.clear_all()
+            common_utils.RequestScopedSingleton.clear_all()
         finally:
             try:
                 app_context = get_course_for_current_request()
@@ -1755,12 +1704,12 @@ def test_path_construction():
 
 def test_singleton():
 
-    class A(RequestScopedSingleton):
+    class A(common_utils.RequestScopedSingleton):
 
         def __init__(self, data):
             self.data = data
 
-    class B(RequestScopedSingleton):
+    class B(common_utils.RequestScopedSingleton):
 
         def __init__(self, data):
             self.data = data
@@ -1770,7 +1719,7 @@ def test_singleton():
     B('bbb')
 
     # using instance() creates and returns the same instance
-    RequestScopedSingleton.clear_all()
+    common_utils.RequestScopedSingleton.clear_all()
     a = A.instance('bar')
     b = A.instance('bar')
     assert a.data == 'bar'
@@ -1778,7 +1727,7 @@ def test_singleton():
     assert a is b
 
     # re-initialization fails if arguments differ
-    RequestScopedSingleton.clear_all()
+    common_utils.RequestScopedSingleton.clear_all()
     a = A.instance('dog')
     try:
         b = A.instance('cat')
@@ -1787,7 +1736,7 @@ def test_singleton():
         pass
 
     # clearing one keep others
-    RequestScopedSingleton.clear_all()
+    common_utils.RequestScopedSingleton.clear_all()
     a = A.instance('bar')
     b = B.instance('cat')
     a.clear()
@@ -1795,10 +1744,10 @@ def test_singleton():
     assert c is b
 
     # clearing all clears all
-    RequestScopedSingleton.clear_all()
+    common_utils.RequestScopedSingleton.clear_all()
     a = A.instance('bar')
     b = B.instance('cat')
-    RequestScopedSingleton.clear_all()
+    common_utils.RequestScopedSingleton.clear_all()
     c = A.instance('bar')
     d = B.instance('cat')
     assert a is not c
