@@ -18,6 +18,10 @@ FramedEditorControls.prototype = {
       value: 'Save',
       className: 'inputEx-Button inputEx-Button-Submit-Link gcb-pull-left',
       onClick: function() {
+        if (that._env.onSaveClick && that._env.onSaveClick() === false) {
+          return false;
+        }
+
         that._frameProxy.setValue(that._env.form.getValue());
         that._frameProxy.submit();
       }
@@ -31,6 +35,10 @@ FramedEditorControls.prototype = {
       value: 'Close',
       className: 'inputEx-Button inputEx-Button-Link gcb-pull-left',
       onClick: function() {
+        if (that._env.onCloseClick && that._env.onCloseClick() === false) {
+          return false;
+        }
+
         that._frameProxy.close();
       }
     };

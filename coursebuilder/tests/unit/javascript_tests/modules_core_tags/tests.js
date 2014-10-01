@@ -19,6 +19,8 @@ describe('core tags module', function() {
       }
     }
   };
+  window.disableAllControlButtons = function() {};
+  window.enableAllControlButtons = function() {};
 
   describe('parent and child frame tests', function() {
     // TODO(johncox): tests.

@@ -17,16 +17,27 @@
  * private.
  *
  * @param {jQuery} $ jQuery.
+ * @param {object} cb_global the globals object we're adding a save click
+ *     handler to. Ideally we'd pass the handler symbol, but it can be
+ *     undefined. Do not use this object to access other children; inject the
+ *     desired children directly (like form and schema).
+ * @param {function} disableAllControlButtons function that disables all InputEx
+ *     controls in the popup.
+ * @param {function} enableAllControlButtons function that enables all InputEx
+ *     controls in the popup.
  * @param {object} form the InputEx form displayed in the lightbox.
  * @param {object} schema the InputEx schema of that form.
  */
 
-window.GcbGoogleDriveTagChild = (function ($, form, schema) {
+window.GcbGoogleDriveTagChild = (function (
+    $, cb_global, disableAllControlButtons, enableAllControlButtons, form,
+    schema) {
   var module = {};
 
   module._pickElementId = 'gcb-google-drive-tag-lightbox-control';
   module._apiKey;
   module._clientId;
+  module._initializeHandled = false;
   module._typeId;
   module._xsrfToken;
 
@@ -36,17 +47,13 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     // itself up, which requires loading Google APIs via script tags. When all
     // of those are loaded hte parent signals to us that we're ready to run, and
     // we enable our UI.
-    if (!module._configured()) {
+    if (!module._isConfigured()) {
       return;
     }
 
     module._insertPickLink();
     module._disableControls();
     module._setUpFrames();
-  };
-
-  module._configured = function() {
-    return Boolean(module._getApiKey()) && Boolean(module._getClientId());
   };
 
   module._disableControls = function() {
@@ -62,17 +69,11 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     // Now, take care of Pick. Also, we register a custom click handler on Save
     // which we need to remove.
     module._disablePickButtonElement();
-    module._disableSaveButtonElement();
   };
 
   module._disablePickButtonElement = function() {
     module._getPickButtonElement()
       .addClass('inputEx-Button-disabled')
-      .off('click');
-  };
-
-  module._disableSaveButtonElement = function() {
-    module._getSaveButtonElement()
       .off('click');
   };
 
@@ -91,20 +92,13 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     enableAllControlButtons(form);
     // Enable Pick and put our Save click event back.
     module._enablePickButtonElement();
-    module._enableSaveButtonElement();
   };
 
   module._enablePickButtonElement = function() {
     module._getPickButtonElement()
       .removeClass('inputEx-Button-disabled')
-      .off('click')  // Ensure no duplicate events exist.
+      .off('click')  // Belt-and-suspenders: ensure no duplicate events exist.
       .on('click', module._pick);
-  };
-
-  module._enableSaveButtonElement = function() {
-    module._getSaveButtonElement()
-      .off('click')  // Ensure no duplicate events exist.
-      .on('click', module._save);
   };
 
   module._getApiKey = function() {
@@ -119,9 +113,9 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     return module._getParentElement().val();
   };
 
-  module._getSchemaProperties = function() {
-    var properties;
-  };
+  module._getInitializeHandled = function() {
+    return module._initializeHandled;
+  }
 
   module._getParentElement = function() {
     return $('[name="document-id"]');
@@ -129,10 +123,6 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
 
   module._getPickButtonElement = function() {
     return $('#' + module._pickElementId);
-  };
-
-  module._getSaveButtonElement = function() {
-    return $('a.inputEx-Button-Submit-Link > span');
   };
 
   module._getTypeId = function() {
@@ -144,7 +134,15 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
   };
 
   module._handleInitializedMessage = function() {
+    // Parent frame may send multiple messages; disregard after the first has
+    // been recieved and handled successfully.
+    if (module._isInitialized()) {
+      return;
+    }
+
     module._enableControls();
+    module._registerSaveHandler();
+    module._setInitializeHandled(true);
   };
 
   module._handlePickedMessage = function(data) {
@@ -163,6 +161,14 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     module._getParentElement().parent().append(element);
   };
 
+  module._isConfigured = function() {
+    return Boolean(module._getApiKey()) && Boolean(module._getClientId());
+  };
+
+  module._isInitialized = function() {
+    return Boolean(module._getInitializeHandled());
+  };
+
   module._pick = function() {
     top.postMessage(
       top.Dispatcher.makePickMessage(), top.Dispatcher.getOrigin());
@@ -174,6 +180,7 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     } else {
       var properties = schema.properties;
     }
+
     var extraValues = properties['document-id']['_inputex'];
     module._apiKey = extraValues['api-key'];
     module._clientId = extraValues['client-id'];
@@ -181,14 +188,24 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
     module._xsrfToken = extraValues['xsrf-token'];
   };
 
-  module._save = function(event) {
+  module._registerSaveHandler = function() {
+    // Adds our save handler to the oeditor save stack.
+    cb_global.onSaveClick = module._save;
+  }
+
+  module._save = function() {
     top.postMessage(
       top.Dispatcher.makeDownloadMessage(module._getDocumentId()),
       top.Dispatcher.getOrigin());
+    return true;
   };
 
   module._setDocumentId = function(value) {
     module._getParentElement().val(value);
+  };
+
+  module._setInitializeHandled = function(value) {
+    module._initializeHandled = value;
   };
 
   module._setUpFrames = function() {
@@ -212,5 +229,6 @@ window.GcbGoogleDriveTagChild = (function ($, form, schema) {
   };
 
   return module;
-}(jQuery, cb_global.form, cb_global.schema));
+}(jQuery, cb_global, disableAllControlButtons, enableAllControlButtons,
+  cb_global.form, cb_global.schema));
 window.GcbGoogleDriveTagChild._processExtraSchemaDictValues();
