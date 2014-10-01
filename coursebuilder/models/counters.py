@@ -47,6 +47,10 @@ class PerfCounter(object):
         self._value += increment
         incr_counter_global_value(self.name, increment)
 
+    def poll_value(self):
+        """Override this method to return the desired value directly."""
+        return None
+
     @property
     def name(self):
         return self._name
@@ -58,6 +62,9 @@ class PerfCounter(object):
     @property
     def value(self):
         """Value for this process only."""
+        value = self.poll_value()
+        if value:
+            return value
         return self._value
 
     @property

@@ -663,10 +663,12 @@ class ApplicationContext(object):
     def clear_per_process_cache(cls):
         """Clears all objects from global in-process cache."""
         cls._COURSE_INDEX_CACHE = {}
+        common_utils.ProcessScopedSingleton.clear_all()
 
     def clear_per_request_cache(self):
         """Clears all objects cached per request."""
         self._cached_environ = None
+        common_utils.RequestScopedSingleton.clear_all()
 
     @ property
     def raw(self):

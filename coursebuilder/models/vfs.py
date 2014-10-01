@@ -18,14 +18,37 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import datetime
 import os
+import sys
+import threading
+import unittest
 
+from config import ConfigProperty
+from counters import PerfCounter
 from entities import BaseEntity
 import jinja2
 
 from common import jinja_utils
+from common import utils
 
 from google.appengine.api import namespace_manager
 from google.appengine.ext import db
+
+
+# all caches must have limits
+MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
+
+# we don't track deletions; deleted item will hang around this long
+CACHE_ENTRY_TTL_SEC = 5 * 60
+
+DB_GET_ALL_BATCH_SIZE = 100
+
+# Global memcache controls.
+CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
+    'gcb_can_use_vfs_in_process_cache', bool, (
+        'Whether or not to cache content objects. For production this value '
+        'should be on to enable maximum performance. For development this '
+        'value should be off so you can see your changes to course content '
+        'instantaneously.'), default_value=True)
 
 
 class AbstractFileSystem(object):
@@ -260,9 +283,9 @@ class VirtualFileSystemTemplateLoader(jinja2.BaseLoader):
         for dir_name in self._dir_names:
             filename = AbstractFileSystem.normpath(
                 os.path.join(dir_name, template))
-            if self._fs.isfile(filename):
-                return self._fs.get(
-                    filename).read().decode('utf-8'), filename, True
+            stream = self._fs.open(filename)
+            if stream:
+                return stream.read().decode('utf-8'), filename, True
         raise jinja2.TemplateNotFound(template)
 
     def list_templates(self):
@@ -270,6 +293,234 @@ class VirtualFileSystemTemplateLoader(jinja2.BaseLoader):
         for dir_name in self._dir_names:
             all_templates += self._fs.list(dir_name)
         return all_templates
+
+
+VFS_CACHE_RESYNC = PerfCounter(
+    'gcb-models-vfs-cache-resync',
+    'A number of times an vfs cache was updated.')
+VFS_CACHE_PUT = PerfCounter(
+    'gcb-models-vfs-cache-put',
+    'A number of times an object was put into vfs cache.')
+VFS_CACHE_GET = PerfCounter(
+    'gcb-models-vfs-cache-get',
+    'A number of times an object was pulled from vfs cache.')
+VFS_CACHE_DELETE = PerfCounter(
+    'gcb-models-vfs-cache-delete',
+    'A number of times an object was deleted from vfs cache.')
+VFS_CACHE_HIT = PerfCounter(
+    'gcb-models-vfs-cache-hit',
+    'A number of times an object was found vfs cache.')
+VFS_CACHE_MISS = PerfCounter(
+    'gcb-models-vfs-cache-miss',
+    'A number of times an object was not found vfs cache.')
+VFS_CACHE_NO_METADATA = PerfCounter(
+    'gcb-models-vfs-cache-no-metadata',
+    'A number of times an object was requested, but was not found and had no '
+    'metadata.')
+VFS_CACHE_INHERITED = PerfCounter(
+    'gcb-models-vfs-cache-inherited',
+    'A number of times an object was obtained from the inherited vfs.')
+VFS_CACHE_NOT_FOUND = PerfCounter(
+    'gcb-models-vfs-cache-not-found',
+    'A number of times an object was requested, but was not found in this or '
+    'the vfs, inherited from.')
+VFS_CACHE_EVICT = PerfCounter(
+    'gcb-models-vfs-cache-evict',
+    'A number of times an object was evicted from vfs cache because it was '
+    'changed.')
+VFS_CACHE_EXPIRE = PerfCounter(
+    'gcb-models-vfs-cache-expire',
+    'A number of times an object has expired from vfs cache because it was '
+    'too old.')
+
+VFS_CACHE_LEN = PerfCounter(
+    'gcb-models-vfs-cache-len',
+    'A total number of items in vfs cache.')
+VFS_CACHE_SIZE_BYTES = PerfCounter(
+    'gcb-models-vfs-cache-bytes',
+    'A total size of items in vfs cache in bytes.')
+
+
+class ProcessScopedVfsCache(utils.ProcessScopedSingleton):
+    """This class holds in-process global cache of VFS objects."""
+
+    @classmethod
+    def get_vfs_cache_len(cls):
+        return len(ProcessScopedVfsCache.instance()._cache.items.keys())
+
+    @classmethod
+    def get_vfs_cache_size(cls):
+        return ProcessScopedVfsCache.instance()._cache.total_size
+
+    def __init__(self):
+        self._cache = utils.LRUCache(max_size_bytes=MAX_GLOBAL_CACHE_SIZE_BYTES)
+        self._cache.get_entry_size = self._get_entry_size
+
+    def _get_entry_size(self, key, value):
+        return sys.getsizeof(key) + value.getsizeof() if value else 0
+
+    @property
+    def cache(self):
+        return self._cache
+
+
+VFS_CACHE_LEN.poll_value = ProcessScopedVfsCache.get_vfs_cache_len
+VFS_CACHE_SIZE_BYTES.poll_value = ProcessScopedVfsCache.get_vfs_cache_size
+
+
+class CacheFileEntry(object):
+    """Cache entry representing a file."""
+
+    def __init__(self, filename, metadata, body):
+        self.filename = filename
+        self.metadata = metadata
+        self.body = body
+        self.created_on = datetime.datetime.utcnow()
+
+    def getsizeof(self):
+        return (
+            sys.getsizeof(self.filename) +
+            sys.getsizeof(self.metadata) +
+            sys.getsizeof(self.body) +
+            sys.getsizeof(self.created_on))
+
+    def has_expired(self):
+        age = (datetime.datetime.utcnow() - self.created_on).total_seconds()
+        return age > CACHE_ENTRY_TTL_SEC
+
+    def is_up_to_date(self, metadata):
+        if not self.metadata and not metadata:
+            return True
+        if self.metadata and metadata:
+            return (
+                metadata.updated_on == self.metadata.updated_on and
+                metadata.is_draft == self.metadata.is_draft)
+        return False
+
+
+class NoopCacheConnection(object):
+    """Connection to no-op cache that provides no caching."""
+
+    def put(self, unused_filename, unused_metadata, unused_data):
+        return None
+
+    def open(self, unused_filename):
+        return False, None
+
+    def delete(self, unused_filename):
+        return None
+
+
+class VfsCacheConnection(object):
+
+    @classmethod
+    def _make_key_prefix(cls, ns):
+        return 'vfs:%s' % ns
+
+    @classmethod
+    def make_key(cls, ns, filename):
+        return '%s:%s' % (cls._make_key_prefix(ns), filename)
+
+    @classmethod
+    def new_connection(cls, fs):
+        if not CAN_USE_VFS_IN_PROCESS_CACHE.value:
+            return NoopCacheConnection()
+        conn = cls(fs)
+        conn.apply_updates(conn._get_incremental_updates())
+        return conn
+
+    def __init__(self, fs):
+        self.fs = fs
+        self.cache = ProcessScopedVfsCache.instance().cache
+
+    def apply_updates(self, updates):
+        """Applies a list of global changes to the local cache."""
+        VFS_CACHE_RESYNC.inc()
+        for metadata in updates:
+            filename = metadata.key().name()
+            _key = self.make_key(self.fs.ns, filename)
+            found, entry = self.cache.get(_key)
+            if not found:
+                continue
+            if not entry.is_up_to_date(metadata):
+                VFS_CACHE_EVICT.inc()
+                self.cache.delete(_key)
+            elif entry.has_expired():
+                VFS_CACHE_EXPIRE.inc()
+                self.cache.delete(_key)
+
+    def _get_most_recent_updated_on(self):
+        """Get the most recent item cached. Datastore deletions are missed..."""
+        has_items = False
+        max_updated_on = None
+        prefix = self._make_key_prefix(self.fs.ns)
+        for key, entry in self.cache.items.iteritems():
+            if not key.startswith(prefix):
+                continue
+            has_items = True
+            if not entry:
+                continue
+            if max_updated_on is None or (
+                entry.metadata.updated_on > max_updated_on):
+                max_updated_on = entry.metadata.updated_on
+        return has_items, max_updated_on
+
+    def _get_incremental_updates(self):
+        """Gets a list of global changes older than the most recent item cached.
+
+        WARNING!!! We fetch the updates since the timestamp of the oldest item
+        we have cached so far. This will bring metadata of all objects that have
+        changed or were created since that time.
+
+        This will NOT bring the notifications about object deletions. Thus cache
+        will continue to serve deleted objects until they expire.
+
+        Returns:
+          an array of FileMetadataEntity objects that represent recent updates
+        """
+        has_items, updated_on = self._get_most_recent_updated_on()
+        if not has_items:
+            return []
+        q = FileMetadataEntity.all()
+        if updated_on:
+            q.filter('updated_on > ', updated_on)
+        return [metadata for metadata in self._get_all(q)]
+
+    def _get_all(self, q):
+        prev_cursor = None
+        any_records = True
+        while any_records:
+            any_records = False
+            query = q.with_cursor(prev_cursor)
+            for entity in query.fetch(DB_GET_ALL_BATCH_SIZE):
+                any_records = True
+                yield entity
+            prev_cursor = query.cursor()
+
+    def put(self, filename, metadata, data):
+        VFS_CACHE_PUT.inc()
+        entry = None
+        if metadata and data:
+            entry = CacheFileEntry(filename, metadata, data)
+        self.cache.put(self.make_key(self.fs.ns, filename), entry)
+
+    def open(self, filename):
+        VFS_CACHE_GET.inc()
+        _key = self.make_key(self.fs.ns, filename)
+        found, entry = self.cache.get(_key)
+        if not found:
+            return False, None
+        if not entry:
+            return True, None
+        if entry.has_expired():
+            VFS_CACHE_EXPIRE.inc()
+            self.cache.delete(_key)
+            return False, None
+        return True, FileStreamWrapped(entry.metadata, entry.body)
+
+    def delete(self, filename):
+        VFS_CACHE_DELETE.inc()
+        self.cache.delete(self.make_key(self.fs.ns, filename))
 
 
 class DatastoreBackedFileSystem(object):
@@ -306,11 +557,26 @@ class DatastoreBackedFileSystem(object):
             logical_home_folder)
         self._inherits_from = inherits_from
         self._inheritable_folders = []
+        self._cache = threading.local()
 
         if inheritable_folders:
             for folder in inheritable_folders:
                 self._inheritable_folders.append(AbstractFileSystem.normpath(
                     folder))
+
+    def __getstate__(self):
+        """Remove transient members that can't survive pickling."""
+        # TODO(psimakov): we need to properly pickle app_context so vfs is not
+        # being serialized at all
+        state = self.__dict__.copy()
+        if '_cache' in state:
+            del state['_cache']
+        return state
+
+    def __setstate__(self, state_dict):
+        """Set persistent members and re-initialize transient members."""
+        self.__dict__ = state_dict
+        self._cache = threading.local()
 
     def __getattribute__(self, name):
         attr = object.__getattribute__(self, name)
@@ -327,6 +593,9 @@ class DatastoreBackedFileSystem(object):
                 old_namespace = namespace_manager.get_namespace()
                 try:
                     namespace_manager.set_namespace(self._ns)
+                    if not hasattr(self._cache, 'connection'):
+                        self._cache.connection = (
+                            VfsCacheConnection.new_connection(self))
                     return attr(*args, **kwargs)
                 finally:
                     namespace_manager.set_namespace(old_namespace)
@@ -335,6 +604,14 @@ class DatastoreBackedFileSystem(object):
 
         # Don't intercept access to non-method attributes.
         return attr
+
+    @property
+    def ns(self):
+        return self._ns
+
+    @property
+    def cache(self):
+        return self._cache.connection
 
     def _logical_to_physical(self, filename):
         filename = AbstractFileSystem.normpath(filename)
@@ -388,18 +665,32 @@ class DatastoreBackedFileSystem(object):
         return False
 
     def get(self, afilename):
+        return self.open(afilename)
+
+    def open(self, afilename):
         """Gets a file from a datastore. Raw bytes stream, no encodings."""
         filename = self._logical_to_physical(afilename)
-        metadata = FileMetadataEntity.get_by_key_name(filename)
-        if metadata:
-            data = FileDataEntity.get_by_key_name(filename)
-            if data:
-                return FileStreamWrapped(metadata, data.data)
+        found, stream = self.cache.open(filename)
+        if found and stream:
+            VFS_CACHE_HIT.inc()
+            return stream
+        if not found:
+            metadata = FileMetadataEntity.get_by_key_name(filename)
+            if metadata:
+                data = FileDataEntity.get_by_key_name(filename)
+                if data:
+                    VFS_CACHE_MISS.inc()
+                    self.cache.put(filename, metadata, data.data)
+                    return FileStreamWrapped(metadata, data.data)
+            VFS_CACHE_NO_METADATA.inc()
+            self.cache.put(filename, None, None)
         result = None
         if self._inherits_from and self._can_inherit(filename):
             result = self._inherits_from.get(afilename)
         if result:
+            VFS_CACHE_INHERITED.inc()
             return FileStreamWrapped(None, result.read())
+        VFS_CACHE_NOT_FOUND.inc()
         return None
 
     @db.transactional(xg=True)
@@ -416,7 +707,7 @@ class DatastoreBackedFileSystem(object):
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if not metadata:
             metadata = FileMetadataEntity(key_name=filename)
-        metadata.updated_on = datetime.datetime.now()
+        metadata.updated_on = datetime.datetime.utcnow()
         metadata.is_draft = is_draft
 
         if not metadata_only:
@@ -430,6 +721,7 @@ class DatastoreBackedFileSystem(object):
             data.put()
 
         metadata.put()
+        self.cache.delete(filename)
 
     def put_multi_async(self, filedata_list):
         """Initiate an async put of the given files.
@@ -465,7 +757,7 @@ class DatastoreBackedFileSystem(object):
             if not metadata:
                 metadata = FileMetadataEntity(key_name=filename)
             metadata_list.append(metadata)
-            metadata.updated_on = datetime.datetime.now()
+            metadata.updated_on = datetime.datetime.utcnow()
 
             # We operate with raw bytes. The consumer must deal with encoding.
             raw_bytes = stream.read()
@@ -475,6 +767,8 @@ class DatastoreBackedFileSystem(object):
             data = FileDataEntity(key_name=filename)
             data_list.append(data)
             data.data = raw_bytes
+
+            self.cache.delete(filename)
 
         data_future = db.put_async(data_list)
         metadata_future = db.put_async(metadata_list)
@@ -488,13 +782,13 @@ class DatastoreBackedFileSystem(object):
     @db.transactional(xg=True)
     def delete(self, filename):
         filename = self._logical_to_physical(filename)
-
         metadata = FileMetadataEntity.get_by_key_name(filename)
         if metadata:
             metadata.delete()
         data = FileDataEntity(key_name=filename)
         if data:
             data.delete()
+        self.cache.delete(filename)
 
     def isfile(self, afilename):
         """Checks file existence by looking up the datastore row."""
@@ -544,8 +838,136 @@ class DatastoreBackedFileSystem(object):
         return True
 
 
+class VfsTests(unittest.TestCase):
+
+    def test_pickling(self):
+        # pylint: disable-msg=g-import-not-at-top
+        import pickle
+        pickle.dumps(NoopCacheConnection())
+        pickle.dumps(CacheFileEntry('foo.bar', 'file metadata', 'file data'))
+        pickle.dumps(DatastoreBackedFileSystem('/', 'ns_test'))
+        with self.assertRaises(TypeError):
+            pickle.dumps(VfsCacheConnection(LocalReadOnlyFileSystem()))
+
+    def _setup_cache_with_one_entry(self, is_draft=True, updated_on=None):
+        ProcessScopedVfsCache.clear_all()
+        fs = DatastoreBackedFileSystem('ns_test', '/')
+        conn = VfsCacheConnection(fs)
+
+        meta = FileMetadataEntity()
+        meta.is_draft = is_draft
+        meta.updated_on = updated_on
+        conn.put('sample.txt', meta, 'file data')
+        found, stream = conn.open('sample.txt')
+        self.assertTrue(found)
+        self.assertEquals(stream.metadata.is_draft, meta.is_draft)
+        return conn
+
+    def test_expire(self):
+        conn = self._setup_cache_with_one_entry()
+        entry = conn.cache.items.get(conn.make_key('ns_test', 'sample.txt'))
+        self.assertTrue(entry)
+        entry.created_on = datetime.datetime.utcnow() - datetime.timedelta(
+            0, CACHE_ENTRY_TTL_SEC + 1)
+        old_expire_count = VFS_CACHE_EXPIRE.value
+        found, stream = conn.open('sample.txt')
+        self.assertFalse(found)
+        self.assertEquals(stream, None)
+        self.assertEquals(VFS_CACHE_EXPIRE.value - old_expire_count, 1)
+
+    def test_updates_with_no_changes_dont_evict(self):
+        class _Key(object):
+
+            def name(self):
+                return 'sample.txt'
+
+        def _key():
+            return _Key()
+
+        for is_draft, updated_on in [
+            (True, None), (True, datetime.datetime.utcnow()),
+            (False, None), (False, datetime.datetime.utcnow())]:
+            conn = self._setup_cache_with_one_entry(
+                is_draft=is_draft, updated_on=updated_on)
+            _, stream = conn.open('sample.txt')
+            meta = FileMetadataEntity()
+            meta.key = _key
+            meta.is_draft = stream.metadata.is_draft
+            meta.updated_on = stream.metadata.updated_on
+
+            updates = [meta]
+            old_expire_count = VFS_CACHE_EVICT.value
+            conn.apply_updates(updates)
+            found, _ = conn.open('sample.txt')
+            self.assertTrue(found)
+            self.assertEquals(VFS_CACHE_EVICT.value - old_expire_count, 0)
+
+    def test_empty_updates_dont_evict(self):
+        conn = self._setup_cache_with_one_entry()
+        updates = []
+        old_expire_count = VFS_CACHE_EVICT.value
+        conn.apply_updates(updates)
+        found, _ = conn.open('sample.txt')
+        self.assertTrue(found)
+        self.assertEquals(VFS_CACHE_EVICT.value - old_expire_count, 0)
+
+    def test_updates_with_changes_do_evict(self):
+        class _Key(object):
+
+            def name(self):
+                return 'sample.txt'
+
+        def _key():
+            return _Key()
+
+        def set_is_draft(meta, value):
+            meta.is_draft = value
+
+        def set_updated_on(meta, value):
+            meta.updated_on = value
+
+        conn = self._setup_cache_with_one_entry()
+
+        mutations = [
+            (lambda meta: set_is_draft(meta, False)),
+            (lambda meta: set_updated_on(meta, datetime.datetime.utcnow()))]
+
+        for mutation in mutations:
+            meta = FileMetadataEntity()
+            meta.key = _key
+
+            mutation(meta)
+
+            updates = [meta]
+            conn.apply_updates(updates)
+            found, _ = conn.open('sample.txt')
+            self.assertFalse(found)
+
+    def test_apply_updates_expires_entries(self):
+        conn = self._setup_cache_with_one_entry()
+        entry = conn.cache.items.get(conn.make_key('ns_test', 'sample.txt'))
+        self.assertTrue(entry)
+        entry.created_on = datetime.datetime.utcnow() - datetime.timedelta(
+            0, CACHE_ENTRY_TTL_SEC + 1)
+        updates = []
+        conn.apply_updates(updates)
+
+        old_expire_count = VFS_CACHE_EXPIRE.value
+        found, stream = conn.open('sample.txt')
+        self.assertFalse(found)
+        self.assertEquals(stream, None)
+        self.assertEquals(VFS_CACHE_EXPIRE.value - old_expire_count, 1)
+
+
 def run_all_unit_tests():
-    """Runs all unit tests in the project."""
+    """Runs all unit tests in this module."""
+    suites_list = []
+    for test_class in [VfsTests]:
+        suite = unittest.TestLoader().loadTestsFromTestCase(test_class)
+        suites_list.append(suite)
+    result = unittest.TextTestRunner().run(unittest.TestSuite(suites_list))
+    if not result.wasSuccessful() or result.errors:
+        raise Exception(result)
 
 
 if __name__ == '__main__':

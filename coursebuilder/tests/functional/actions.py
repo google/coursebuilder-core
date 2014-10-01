@@ -39,6 +39,7 @@ from models import transforms
 from models import vfs
 from tests import suite
 
+from google.appengine.api import memcache
 from google.appengine.api import namespace_manager
 from google.appengine.api import users
 
@@ -147,6 +148,9 @@ class TestBase(suite.AppEngineTestBase):
 
     def setUp(self):  # pylint: disable-msg=g-bad-name
         super(TestBase, self).setUp()
+
+        memcache.flush_all()
+        sites.ApplicationContext.clear_per_process_cache()
 
         self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = (

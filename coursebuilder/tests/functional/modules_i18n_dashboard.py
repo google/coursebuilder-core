@@ -2059,9 +2059,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
             self.assertEquals(200, response.status_int)
             for text in texts:
                 self.assertIn(text, response.body)
-            # TODO(psimakov): test below must pass
-            # self.assertNoIn('gcb-translation-error', response.body)
 
+        # check selected pages
         check_all_in(self.get('sample/course'), [
             'dANIEL rUSSELL', 'pRE-COURSE ASSESSMENT', 'iNTRODUCTION',
             'hANG oUT WITH'])
@@ -2071,6 +2070,8 @@ class SampleCourseLocalizationTest(actions.TestBase):
         check_all_in(self.get('sample/unit?unit=14'), [
             'Unit 2 - iNTERPRETING RESULTS', 'wHEN SEARCH RESULTS SUGGEST',
             'lESSON 2.3 aCTIVITY'])
+        check_all_in(self.get('sample/unit?unit=2&lesson=9'), [
+            'lESSON 1.4 aCTIVITY'])
         check_all_in(self.get('sample/unit?unit=14&lesson=16'), [
             'hAVE YOU EVER PLAYED THE'])
         check_all_in(self.get('sample/unit?unit=47&lesson=53'), [
@@ -2078,6 +2079,33 @@ class SampleCourseLocalizationTest(actions.TestBase):
         check_all_in(self.get('sample/assessment?name=64'), [
             'sOLVE THE PROBLEM BELOW', 'hOW MANY pOWER sEARCH CONCEPTS',
             'lIST THE pOWER sEARCH CONCEPTS'])
+
+        # check
+        invalid_question = 0
+        translation_error = 0
+        course = courses.Course(None, sites.get_all_courses()[0])
+        for unit in course.get_units():
+            for lesson in course.get_lessons(unit.unit_id):
+                response = self.get('sample/unit?unit=%s&lesson=%s' % (
+                    unit.unit_id, lesson.lesson_id))
+
+                self.assertEquals(200, response.status_int)
+                self.assertIn(
+                    unit.title.swapcase(), response.body.decode('utf-8'))
+                self.assertIn(
+                    lesson.title.swapcase(), response.body.decode('utf-8'))
+
+                try:
+                    self.assertNotIn('[Invalid question]', response.body)
+                except AssertionError:
+                    invalid_question += 1
+                try:
+                    self.assertNotIn('gcb-translation-error', response.body)
+                except AssertionError:
+                    translation_error += 1
+
+        # TODO(psimakov): there should be no errors
+        self.assertEquals((invalid_question, translation_error), (3, 37))
 
     def test_course_with_one_common_unit_and_two_per_locale_units(self):
         # TODO(psimakov): incomplete
@@ -2160,9 +2188,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     if db_quota is not None and (db_quota < db_actual):
                         respects_quota = False
 
-                    # TODO(psimakov): enable quota enforcement before release
-                    enfore_quota = False
-                    if enfore_quota and not respects_quota:
+                    if not respects_quota:
                         over_quota[0] = True
                         lines.append(
                             'Request metrics %s exceed RPC quota '
@@ -2209,7 +2235,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 _profile(
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
-                _profile('sample/assets/css/main.css', 'main.css', quota=(2, 0))
+                _profile('sample/assets/css/main.css', 'main.css', quota=(0, 0))
                 _profile('sample/course', 'Home page', quota=(None, 0))
                 _profile(
                     'sample/announcements', 'Announcements', quota=(None, 0))
@@ -2222,7 +2248,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(3, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(1, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
@@ -2236,7 +2262,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(3, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(1, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')

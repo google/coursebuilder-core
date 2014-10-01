@@ -29,7 +29,7 @@ from models import models
 CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
     'gcb_can_use_jinja2_template_cache', bool, safe_dom.Text(
         'Whether jinja2 can cache bytecode of compiled templates in memcache.'),
-    default_value=True)
+    default_value=False)
 
 
 def finalize(x):

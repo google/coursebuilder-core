@@ -26,6 +26,7 @@ from controllers import sites
 from models import config
 from models import content
 from models import courses
+from models import vfs
 from modules.review import domain
 from tests import suite
 from tools import verify
@@ -188,6 +189,7 @@ class InvokeExistingUnitTest(suite.TestBase):
 
     def test_existing_unit_tests(self):
         """Run all units tests declared elsewhere."""
+        vfs.run_all_unit_tests()
         sites.run_all_unit_tests()
         config.run_all_unit_tests()
         verify.run_all_unit_tests()
