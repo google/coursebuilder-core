@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-23 12:15-0700\n"
-"PO-Revision-Date: 2014-09-23 09:58-0700\n"
+"POT-Creation-Date: 2014-09-30 17:24-0700\n"
+"PO-Revision-Date: 2014-09-30 08:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ar <LL@li.org>\n"
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n>=3 "
@@ -20,13 +20,13 @@ msgstr ""
 "Generated-By: Babel 0.9.6\n"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:203
+#: experimental/coursebuilder/controllers/utils.py:204
 #, python-format
 msgid "Unit %s - %s"
 msgstr "الوحدة %s - %s"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:215
+#: experimental/coursebuilder/controllers/utils.py:216
 msgid "Unit"
 msgstr "الوحدة"
 
@@ -260,6 +260,12 @@ msgstr "اسم جديد"
 #: experimental/coursebuilder/views/student_profile.html:53
 msgid "Change Name"
 msgstr "تغيير الاسم"
+
+#. Control allowing course administrator to edit a translated string in a
+#. course element.
+#: experimental/coursebuilder/modules/i18n_dashboard/templates/lazy_loader_error.html:7
+msgid "Edit the resource"
+msgstr ""
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:249
@@ -579,25 +585,25 @@ msgid "You have not received any peer reviews yet."
 msgstr "لم تتلقّ أية مراجعات خبراء إلى الآن."
 
 #. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/assessment_html_content.html:31
+#: experimental/coursebuilder/views/assessment_html_content.html:32
 #: experimental/coursebuilder/views/base.html:35
 msgid " Save Draft "
 msgstr " حفظ مسودة "
 
 #. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/assessment_html_content.html:34
+#: experimental/coursebuilder/views/assessment_html_content.html:35
 #: experimental/coursebuilder/views/base.html:47
 msgid " Submit Review "
 msgstr " إرسال المراجعة "
 
 #. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:42
+#: experimental/coursebuilder/views/assessment_html_content.html:43
 #: experimental/coursebuilder/views/base.html:23
 msgid " Check Answers "
 msgstr " التحقق من الإجابات "
 
 #. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:50
+#: experimental/coursebuilder/views/assessment_html_content.html:52
 #: experimental/coursebuilder/views/base.html:39
 msgid " Submit Answers "
 msgstr " إرسال الإجابات "
@@ -932,13 +938,13 @@ msgid "Assignment to review"
 msgstr "المهمة المطلوب مراجعتها"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:105
+#: experimental/coursebuilder/views/review.html:106
 msgid "Submitted review"
 msgstr "المهمة التي تم إرسالها"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:119
+#: experimental/coursebuilder/views/review.html:121
 msgid "Review form"
 msgstr "نموذج المراجعة"
 
@@ -1115,9 +1121,9 @@ msgid ""
 "assessment is %(score)s%%. If you wish, you may return to the assessment "
 "and take it again."
 msgstr ""
-"Thank you for taking the %(assessment_name)s. Your score for this "
-"assessment is %(score)s%%. If you wish, you may return to the assessment "
-"and take it again."
+"نشكرك لملء بيانات التقييم %(assessment_name)s. الدرجة التي حددتها لهذا "
+"التقييم هي %(score)s%%. يمكنك إن أردت العودة إلى التقييم وملء بياناته مرة"
+" أخرى."
 
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.

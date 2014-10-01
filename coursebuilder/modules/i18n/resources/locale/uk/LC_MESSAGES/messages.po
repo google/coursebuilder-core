@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-23 12:15-0700\n"
-"PO-Revision-Date: 2014-09-23 09:59-0700\n"
+"POT-Creation-Date: 2014-09-30 17:24-0700\n"
+"PO-Revision-Date: 2014-09-30 08:59-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: uk <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -20,13 +20,13 @@ msgstr ""
 "Generated-By: Babel 0.9.6\n"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:203
+#: experimental/coursebuilder/controllers/utils.py:204
 #, python-format
 msgid "Unit %s - %s"
 msgstr "Розділ %s – %s"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:215
+#: experimental/coursebuilder/controllers/utils.py:216
 msgid "Unit"
 msgstr "Модуль"
 
@@ -262,6 +262,12 @@ msgstr "Нове ім’я"
 #: experimental/coursebuilder/views/student_profile.html:53
 msgid "Change Name"
 msgstr "Змінити ім’я"
+
+#. Control allowing course administrator to edit a translated string in a
+#. course element.
+#: experimental/coursebuilder/modules/i18n_dashboard/templates/lazy_loader_error.html:7
+msgid "Edit the resource"
+msgstr ""
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:249
@@ -585,25 +591,25 @@ msgid "You have not received any peer reviews yet."
 msgstr "Ви ще не отримували рецензій від інших учасників."
 
 #. Text on the button for saving a draft answer.
-#: experimental/coursebuilder/views/assessment_html_content.html:31
+#: experimental/coursebuilder/views/assessment_html_content.html:32
 #: experimental/coursebuilder/views/base.html:35
 msgid " Save Draft "
 msgstr " Зберегти чернетку "
 
 #. Text on the button for submitting a peer review.
-#: experimental/coursebuilder/views/assessment_html_content.html:34
+#: experimental/coursebuilder/views/assessment_html_content.html:35
 #: experimental/coursebuilder/views/base.html:47
 msgid " Submit Review "
 msgstr " Надіслати рецензію "
 
 #. Text on the button for checking a set of answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:42
+#: experimental/coursebuilder/views/assessment_html_content.html:43
 #: experimental/coursebuilder/views/base.html:23
 msgid " Check Answers "
 msgstr " Перевірити відповіді "
 
 #. Text on the button for submitting answers.
-#: experimental/coursebuilder/views/assessment_html_content.html:50
+#: experimental/coursebuilder/views/assessment_html_content.html:52
 #: experimental/coursebuilder/views/base.html:39
 msgid " Submit Answers "
 msgstr " Надіслати відповіді "
@@ -945,13 +951,13 @@ msgid "Assignment to review"
 msgstr "Завдання на рецензію"
 
 #. Header text for a review the student has previously submitted.
-#: experimental/coursebuilder/views/review.html:105
+#: experimental/coursebuilder/views/review.html:106
 msgid "Submitted review"
 msgstr "Надіслана рецензія"
 
 #. Header text for a review form that a student has to complete when reviewing
 #. another student's assignment.
-#: experimental/coursebuilder/views/review.html:119
+#: experimental/coursebuilder/views/review.html:121
 msgid "Review form"
 msgstr "Автор рецензії:"
 
@@ -1128,9 +1134,9 @@ msgid ""
 "assessment is %(score)s%%. If you wish, you may return to the assessment "
 "and take it again."
 msgstr ""
-"Thank you for taking the %(assessment_name)s. Your score for this "
-"assessment is %(score)s%%. If you wish, you may return to the assessment "
-"and take it again."
+"Дякуємо, що взяли участь в оцінюванні \"%(assessment_name)s\". Ваш "
+"результат – %(score)s%%. Якщо хочете, можете повернутись і ще раз пройти "
+"оцінювання."
 
 #. Shown after the student has submitted an assessment in a unit that contains
 #. assessments and where all unit contents are shown on a single HTML page.
