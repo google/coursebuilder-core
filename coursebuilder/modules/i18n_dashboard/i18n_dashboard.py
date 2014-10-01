@@ -215,13 +215,14 @@ class ResourceKey(object):
             return question_editor.SaQuestionRESTHandler.get_schema()
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
             return question_group_editor.QuestionGroupRESTHandler.get_schema()
-        elif self.type == ResourceKey.LESSON_TYPE:
-            course = self._get_course(app_context)
+
+        course = self._get_course(app_context)
+        if self.type == ResourceKey.LESSON_TYPE:
             units = course.get_units()
             return unit_lesson_editor.LessonRESTHandler.get_schema(units)
         elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
-            return courses.Course.create_base_settings_schema(
-                ).clone_only_items_named([self.key])
+            return course.create_settings_schema().clone_only_items_named(
+                [self.key])
         else:
             raise ValueError('Unknown content type: %s' % self.type)
 
