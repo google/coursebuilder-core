@@ -4989,6 +4989,43 @@ var activity = [
         self.assertEqual(grader['response'], '/abc/i')
         self.assertEqual(grader['feedback'], 'Correct.')
 
+    def test_import_free_text_with_missing_fields(self):
+        # correctAnswerOutput and incorrectAnswerOutput are missing
+        text = """
+var activity = [
+  { questionType: 'freetext',
+    correctAnswerRegex: /abc/i,
+    showAnswerOutput: "A hint."
+  }
+];
+"""
+        content, noverify_text = verify.convert_javascript_to_python(
+            text, 'activity')
+        activity = verify.evaluate_python_expression_from_text(
+            content, 'activity', verify.Activity().scope, noverify_text)
+
+        qid, instance_id = models.QuestionImporter.import_question(
+            activity['activity'][0], self.unit, self.lesson.title, 1, ['task'])
+        assert qid and isinstance(qid, (int, long))
+        assert re.match(r'^[a-zA-Z0-9]{12}$', instance_id)
+
+        question = models.QuestionDAO.load(qid)
+        self.assertEqual(question.type, models.QuestionDTO.SHORT_ANSWER)
+        self.assertEqual(question.dict['version'], '1.5')
+        self.assertEqual(
+            question.dict['description'],
+            'Imported from unit "New Unit", lesson "New Lesson" (question #1)')
+        self.assertEqual(question.dict['question'], 'task')
+        self.assertEqual(question.dict['hint'], 'A hint.')
+        self.assertEqual(question.dict['defaultFeedback'], '')
+        self.assertEqual(len(question.dict['graders']), 1)
+
+        grader = question.dict['graders'][0]
+        self.assertEqual(grader['score'], 1.0)
+        self.assertEqual(grader['matcher'], 'regex')
+        self.assertEqual(grader['response'], '/abc/i')
+        self.assertEqual(grader['feedback'], '')
+
     def test_activity_import_unique_constraint(self):
         text = self.FREETEXT_QUESTION
         content, noverify_text = verify.convert_javascript_to_python(

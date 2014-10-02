@@ -2690,8 +2690,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 except AssertionError:
                     translation_error += 1
 
-        # TODO(psimakov): there should be no errors
-        self.assertEquals((invalid_question, translation_error), (3, 0))
+        self.assertEquals((invalid_question, translation_error), (0, 0))
 
     def test_course_with_one_common_unit_and_two_per_locale_units(self):
         # TODO(psimakov): incomplete

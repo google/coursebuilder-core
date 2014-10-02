@@ -1511,9 +1511,9 @@ class QuestionImporter(object):
                     'score': 1.0,
                     'matcher': 'regex',
                     'response': response,
-                    'feedback': question.get('correctAnswerOutput')
+                    'feedback': question.get('correctAnswerOutput', '')
                 }],
-                'defaultFeedback': question.get('incorrectAnswerOutput')}
+                'defaultFeedback': question.get('incorrectAnswerOutput', '')}
         except KeyError as e:
             raise ValidationError('Invalid question: %s, %s' % (description, e))
 
