@@ -40,8 +40,6 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
 # we don't track deletions; deleted item will hang around this long
 CACHE_ENTRY_TTL_SEC = 5 * 60
 
-DB_GET_ALL_BATCH_SIZE = 100
-
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
     'gcb_can_use_vfs_in_process_cache', bool, (
@@ -484,18 +482,7 @@ class VfsCacheConnection(object):
         q = FileMetadataEntity.all()
         if updated_on:
             q.filter('updated_on > ', updated_on)
-        return [metadata for metadata in self._get_all(q)]
-
-    def _get_all(self, q):
-        prev_cursor = None
-        any_records = True
-        while any_records:
-            any_records = False
-            query = q.with_cursor(prev_cursor)
-            for entity in query.fetch(DB_GET_ALL_BATCH_SIZE):
-                any_records = True
-                yield entity
-            prev_cursor = query.cursor()
+        return [metadata for metadata in utils.iter_all(q)]
 
     def put(self, filename, metadata, data):
         VFS_CACHE_PUT.inc()

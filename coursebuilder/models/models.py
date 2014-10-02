@@ -284,32 +284,43 @@ class MemcacheManager(object):
     @classmethod
     def set(cls, key, value, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets an item in memcache if memcache is enabled."""
-        if CAN_USE_MEMCACHE.value:
-            size = sys.getsizeof(value)
-            if size > MEMCACHE_MAX:
-                CACHE_PUT_TOO_BIG.inc()
-            else:
-                CACHE_PUT.inc()
-                _namespace = cls._get_namespace(namespace)
-                memcache.set(key, value, ttl, namespace=_namespace)
-                cls._local_cache_put(key, _namespace, value)
+        try:
+            if CAN_USE_MEMCACHE.value:
+                size = sys.getsizeof(value)
+                if size > MEMCACHE_MAX:
+                    CACHE_PUT_TOO_BIG.inc()
+                else:
+                    CACHE_PUT.inc()
+                    _namespace = cls._get_namespace(namespace)
+                    memcache.set(key, value, ttl, namespace=_namespace)
+                    cls._local_cache_put(key, _namespace, value)
+        except:  # pylint: disable-msg=bare-except
+            logging.exception(
+                'Failed to set: %s, %s', key, cls._get_namespace(namespace))
+            return None
 
     @classmethod
     def set_multi(cls, mapping, ttl=DEFAULT_CACHE_TTL_SECS, namespace=None):
         """Sets a dict of items in memcache if memcache is enabled."""
-        if CAN_USE_MEMCACHE.value:
-            if not mapping:
-                return
-            size = sum([
-                sys.getsizeof(key) + sys.getsizeof(value)
-                for key, value in mapping.items()])
-            if size > MEMCACHE_MULTI_MAX:
-                CACHE_PUT_TOO_BIG.inc()
-            else:
-                CACHE_PUT.inc()
-                _namespace = cls._get_namespace(namespace)
-                memcache.set_multi(mapping, time=ttl, namespace=_namespace)
-                cls._local_cache_put_multi(mapping, _namespace)
+        try:
+            if CAN_USE_MEMCACHE.value:
+                if not mapping:
+                    return
+                size = sum([
+                    sys.getsizeof(key) + sys.getsizeof(value)
+                    for key, value in mapping.items()])
+                if size > MEMCACHE_MULTI_MAX:
+                    CACHE_PUT_TOO_BIG.inc()
+                else:
+                    CACHE_PUT.inc()
+                    _namespace = cls._get_namespace(namespace)
+                    memcache.set_multi(mapping, time=ttl, namespace=_namespace)
+                    cls._local_cache_put_multi(mapping, _namespace)
+        except:  # pylint: disable-msg=bare-except
+            logging.exception(
+                'Failed to set_multi: %s, %s',
+                mapping, cls._get_namespace(namespace))
+            return None
 
     @classmethod
     def delete(cls, key, namespace=None):
@@ -1831,6 +1842,28 @@ class LabelDTO(object):
         return self.dict.get('type', self.LABEL_TYPE_GENERAL)
 
 
+class LabelManager(common_utils.RequestScopedSingleton):
+    """Class that manages optimized loading of I18N data from datastore."""
+
+    def __init__(self):
+        self._key_to_label = None
+
+    def _preload(self):
+        self._key_to_label = {}
+        for row in LabelDAO.get_all_iter():
+            self._key_to_label[row.id] = row
+
+    def _get_all(self):
+        if self._key_to_label is None:
+            self._preload()
+        return self._key_to_label.values()
+
+    @classmethod
+    def get_all(cls):
+      # pylint: disable-msg=protected-access
+      return cls.instance()._get_all()
+
+
 class LabelDAO(BaseJsonDao):
     DTO = LabelDTO
     ENTITY = LabelEntity
@@ -1838,21 +1871,7 @@ class LabelDAO(BaseJsonDao):
 
     @classmethod
     def get_all(cls):
-        """Get all Label objects.
-
-        The vast majority of the time, labels are read-only and all read all
-        at once.  It is only very occasionally that labels are created or
-        modified.  That being the case, the caching strategy is to cache all
-        labels all at once in memcache in LabelDAO.
-
-        Returns:
-          all Label entities as LabelDTO instances
-        """
-
-        items = MemcacheManager.get(LabelEntity.MEMCACHE_KEY)
-        if items is None:
-            items = super(LabelDAO, cls).get_all()
-            MemcacheManager.set(LabelEntity.MEMCACHE_KEY, items)
+        items = LabelManager.get_all()
         order = {lt.type: lt.menu_order for lt in LabelDTO.LABEL_TYPES}
         return sorted(items, key=lambda l: (order[l.type], l.title))
 

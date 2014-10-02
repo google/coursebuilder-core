@@ -2821,10 +2821,10 @@ class SampleCourseLocalizationTest(actions.TestBase):
                 _profile(
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
-                _profile('sample/assets/css/main.css', 'main.css', quota=(0, 0))
-                _profile('sample/course', 'Home page', quota=(None, 0))
+                _profile('sample/assets/css/main.css', 'main.css', quota=(6, 0))
+                _profile('sample/course', 'Home page', quota=(None, 1))
                 _profile(
-                    'sample/announcements', 'Announcements', quota=(None, 0))
+                    'sample/announcements', 'Announcements', quota=(None, 1))
 
                 actions.login('test_rpc_performance@example.com')
                 actions.register(self, 'test_rpc_performance', course='sample')
@@ -2834,7 +2834,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(1, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(3, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
@@ -2848,7 +2848,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     '/modules/oeditor/resources/butterbar.js',
                     'Butterbar', quota=(0, 0))
                 _profile(
-                    'sample/assets/css/main.css', 'main.css', quota=(1, 1))
+                    'sample/assets/css/main.css', 'main.css', quota=(3, 1))
                 _profile('sample/course', 'Home page')
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')

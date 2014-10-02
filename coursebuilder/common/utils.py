@@ -18,6 +18,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import collections
 import cStringIO
+import logging
 import random
 import re
 import string
@@ -56,6 +57,19 @@ def truncate(x, precision=2):
     assert isinstance(precision, int) and precision >= 0
     factor = 10 ** precision
     return int(x * factor) / float(factor)
+
+
+def iter_all(query, batch_size=100):
+    """Yields query results iterator. Proven method for large datasets."""
+    prev_cursor = None
+    any_records = True
+    while any_records:
+        any_records = False
+        query = query.with_cursor(prev_cursor)
+        for entity in query.run(batch_size=batch_size):
+            any_records = True
+            yield entity
+        prev_cursor = query.cursor()
 
 
 class Namespace(object):
@@ -188,8 +202,15 @@ class ZipAwareOpen(object):
         return False  # Don't suppress exceptions.
 
 
-class ScopedSingleton(object):
-    """A singleton object bound to and managed by a container."""
+class AbstractScopedSingleton(object):
+    """A singleton object bound to and managed by a container.
+
+    This singleton stores its instance inside the container. When container is
+    wiped, the singleton instance is garbage collected and  destroyed. You can
+    use a dict as a container and then wipe it yourself. You can use
+    threading.local as a container and it will be wiped automatically when
+    thread exits.
+    """
 
     CONTAINER = None
 
@@ -206,7 +227,14 @@ class ScopedSingleton(object):
         # pylint: disable-msg=protected-access
         _instance = cls._instances().get(cls)
         if not _instance:
-            _instance = cls(*args, **kwargs)
+            try:
+                _instance = cls(*args, **kwargs)
+            except:
+                logging.exception(
+                    'Failed to instantiate %s: %s, %s', cls, args, kwargs)
+                raise
+            appengine_config.log_appstats_event(
+                '%s.create.%s' % (cls.__name__, id(_instance)), {})
             _instance._init_args = (args, kwargs)
             cls._instances()[cls] = _instance
         else:
@@ -222,10 +250,14 @@ class ScopedSingleton(object):
     def clear_all(cls):
         """Clear all active instances."""
         if cls._instances():
+            for _instance in list(cls._instances().values()):
+                _instance.clear()
             del cls.CONTAINER['instances']
 
     def clear(self):
         """Destroys this object and its content."""
+        appengine_config.log_appstats_event(
+            '%s.destroy.%s' % (self.__class__.__name__, id(self)), {})
         _instance = self._instances().get(self.__class__)
         if _instance:
             del self._instances()[self.__class__]
@@ -234,13 +266,13 @@ _process_scoped_singleton = {}
 _request_scoped_singleton = threading.local()
 
 
-class ProcessScopedSingleton(ScopedSingleton):
+class ProcessScopedSingleton(AbstractScopedSingleton):
     """A singleton object bound to the process."""
 
     CONTAINER = _process_scoped_singleton
 
 
-class RequestScopedSingleton(ScopedSingleton):
+class RequestScopedSingleton(AbstractScopedSingleton):
     """A singleton object bound to the request scope."""
 
     CONTAINER = _request_scoped_singleton.__dict__

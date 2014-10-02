@@ -833,7 +833,7 @@ def unset_path_info():
                 del PATH_INFO_THREAD_LOCAL.path
 
 
-def _build_course_list_from(rules_text):
+def _build_course_list_from(rules_text, create_vfs=True):
     """Compute the list of contexts from the text rules."""
     if not rules_text:
         return []
@@ -910,10 +910,12 @@ def _build_course_list_from(rules_text):
                 'Namespace \'%s\' is already defined.' % (rule, namespace))
         namespaces[namespace] = True
 
+        vfs = None
+        if create_vfs:
+            vfs = AbstractFileSystem(create_fs(namespace))
+
         all_contexts.append(ApplicationContext(
-            site_type, slug, folder, namespace,
-            AbstractFileSystem(create_fs(namespace)),
-            raw=rule))
+            site_type, slug, folder, namespace, vfs, raw=rule))
 
     _validate_appcontext_list(all_contexts)
     return all_contexts
@@ -972,7 +974,7 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
     """Validates a textual definition of courses entries."""
     try:
         _validate_appcontext_list(
-            _build_course_list_from(rules_text=rules_text))
+            _build_course_list_from(rules_text, create_vfs=False))
         return True
     except Exception as e:  # pylint: disable-msg=broad-except
         if not expect_failures:

@@ -1141,12 +1141,10 @@ class AdminAspectTest(actions.TestBase):
         unused_course, course_b = course_b.import_from(src_app_context)
 
         # Rename courses.
-        dst_app_context_a.fs.put(
-            dst_app_context_a.get_config_filename(),
-            vfs.string_to_stream(u'course:\n  title: \'Course AAA\''))
-        dst_app_context_b.fs.put(
-            dst_app_context_b.get_config_filename(),
-            vfs.string_to_stream(u'course:\n  title: \'Course BBB\''))
+        with Namespace(dst_app_context_a.get_namespace_name()):
+            course_a.save_settings({'course': {'title': 'Course AAA'}})
+        with Namespace(dst_app_context_b.get_namespace_name()):
+            course_b.save_settings({'course': {'title': 'Course BBB'}})
 
         # Login.
         email = 'test_courses_page_for_multiple_courses@google.com'

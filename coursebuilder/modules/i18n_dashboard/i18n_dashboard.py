@@ -179,8 +179,7 @@ class ResourceKey(object):
             return course.create_settings_schema()
         elif self._type in [
                 ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
-            qu = models.QuestionDAO.load(self._key)
-            return qu
+            return I18nQuestionManager.get(self._key)
         elif self._type in ResourceKey.QUESTION_GROUP_TYPE:
             qgp = models.QuestionGroupDAO.load(self._key)
             return qgp
@@ -415,13 +414,11 @@ class ResourceBundleDAO(NamedJsonDAO):
 
     @classmethod
     def get_all_for_locale(cls, locale):
-        query = cls.ENTITY.all()
-        query.filter('locale = ', locale)
-        result = []
-        for e in query.run(batch_size=100):
-            result.append(
-                cls.DTO(e.key().id_or_name(), transforms.loads(e.data)))
-        return result
+        query = common_utils.iter_all(
+            cls.ENTITY.all().filter('locale = ', locale))
+        return [
+            cls.DTO(entity.key().id_or_name(), transforms.loads(entity.data))
+            for entity in query]
 
 
 class TableRow(object):
@@ -453,12 +450,16 @@ class ResourceRow(TableRow):
 
     def __init__(
             self, course, resource, type_str, key,
-            i18n_progress_dto=None):
+            i18n_progress_dto=None, resource_key=None):
         self._course = course
         self._resource = resource
         self._type = type_str
         self._key = key
-        self._i18n_progress_dto = i18n_progress_dto
+        if i18n_progress_dto is None:
+            assert resource_key
+            self._i18n_progress_dto = I18nProgressDAO.create_blank(resource_key)
+        else:
+            self._i18n_progress_dto = i18n_progress_dto
 
     @property
     def name(self):
@@ -768,8 +769,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
         translations = collections.defaultdict(
             lambda: collections.defaultdict(TranslationsAndLocations))
         transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.instance(
-                app_context).get_xcontent_configuration())
+            config=I18nTranslationContext.get(app_context))
         resource_key_map = _get_language_resource_keys(course)
 
         # Preload all I18N progress DTOs; we'll need all of them.
@@ -1105,8 +1105,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
     def update_translations(course, translations, messages):
         app_context = course.app_context
         transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.instance(
-                app_context).get_xcontent_configuration())
+            config=I18nTranslationContext.get(app_context))
         i18n_progress_dtos = I18nProgressDAO.get_all()
         progress_by_key = {p.id: p for p in i18n_progress_dtos}
         resource_key_map = _get_language_resource_keys(course)
@@ -1270,26 +1269,73 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             self, 200, 'Success.', payload_dict={'messages': messages})
 
 
-class I18nProgressManager(object):
-    """Class that manages optimized loading of I18N data from datastore."""
+class I18nProgressManager(common_utils.RequestScopedSingleton):
 
     def __init__(self, course):
         self._course = course
-        self._key_to_progress = {}
-        self._preload_progress()
+        self._key_to_progress = None
 
-    def _preload_progress(self):
+    def _preload(self):
+        self._key_to_progress = {}
         for row in I18nProgressDAO.get_all_iter():
             self._key_to_progress[str(ResourceKey.fromstring(row.id))] = row
 
-    def get_resource_row(self, resource, type_str, key):
+    def _get(self, resource, type_str, key):
+        if self._key_to_progress is None:
+            self._preload()
         resource_key = ResourceKey(type_str, key)
-        row = self._key_to_progress.get(str(resource_key))
-        if not row:
-            row = I18nProgressDAO.load_or_create(resource_key)
         return ResourceRow(
             self._course, resource, type_str, key,
-            i18n_progress_dto=row)
+            i18n_progress_dto=self._key_to_progress.get(str(resource_key)),
+            resource_key=resource_key)
+
+    @classmethod
+    def get(cls, course, resource, type_str, key):
+        # pylint: disable-msg=protected-access
+        return cls.instance(course)._get(resource, type_str, key)
+
+
+class I18nQuestionManager(common_utils.RequestScopedSingleton):
+
+    def __init__(self):
+        self._key_to_question = None
+
+    def _preload(self):
+        self._key_to_question = {}
+        for row in models.QuestionDAO.get_all_iter():
+            self._key_to_question[row.id] = row
+
+    def _get(self, key):
+        if self._key_to_question is None:
+            self._preload()
+        return self._key_to_question.get(key)
+
+    @classmethod
+    def get(cls, key):
+        # pylint: disable-msg=protected-access
+        return cls.instance()._get(key)
+
+
+class I18nResourceBundleManager(common_utils.RequestScopedSingleton):
+
+    def __init__(self, locale):
+        self._locale = locale
+        self._key_to_bundle = None
+
+    def _preload(self):
+        self._key_to_bundle = {}
+        for row in ResourceBundleDAO.get_all_for_locale(self._locale):
+            self._key_to_bundle[row.id] = row
+
+    def _get(self, key):
+        if self._key_to_bundle is None:
+            self._preload()
+        return self._key_to_bundle.get(str(key))
+
+    @classmethod
+    def get(cls, locale, key):
+        # pylint: disable-msg=protected-access
+        return cls.instance(locale)._get(key)
 
 
 class I18nTranslationContext(common_utils.RequestScopedSingleton):
@@ -1335,11 +1381,16 @@ class I18nTranslationContext(common_utils.RequestScopedSingleton):
             recomposable_attributes_map=recomposable_attributes_map,
             omit_empty_opaque_decomposable=False)
 
-    def get_xcontent_configuration(self):
-        if not self._xcontent_config:
+    def _get_xcontent_configuration(self):
+        if self._xcontent_config is None:
             self._xcontent_config = self._init_xcontent_configuration(
                 self.app_context)
         return self._xcontent_config
+
+    @classmethod
+    def get(cls, app_context):
+        # pylint: disable-msg=protected-access
+        return cls.instance(app_context)._get_xcontent_configuration()
 
 
 class I18nReverseCaseHandler(BaseDashboardExtension):
@@ -1479,7 +1530,6 @@ class I18nDashboardHandler(BaseDashboardExtension):
         all_locales = self.handler.app_context.get_all_locales()
         self.main_locale = all_locales[0]
         self.extra_locales = all_locales[1:]
-        self.rm = None
 
     def _make_table_section(self, data_rows, section_title):
         rows = []
@@ -1492,38 +1542,37 @@ class I18nDashboardHandler(BaseDashboardExtension):
         return rows
 
     def render(self):
-        self.rm = I18nProgressManager(self.course)
         rows = []
 
         # Course settings
         data_rows = []
         for resource, key in _get_course_resource_keys(self.course):
-            data_rows.append(self.rm.get_resource_row(
-                resource, key.type, key.key))
+            data_rows.append(I18nProgressManager.get(
+                self.course, resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Course Settings')
 
         # Run over units and lessons
         data_rows = []
         for resource, key in _get_course_component_keys(self.course):
             if key.type == ResourceKey.LESSON_TYPE:
-                data_rows.append(self.rm.get_resource_row(
-                    resource[1], key.type, key.key))
+                data_rows.append(I18nProgressManager.get(
+                    self.course, resource[1], key.type, key.key))
             else:  # Unit, Assessment or Link
-                data_rows.append(self.rm.get_resource_row(
-                    resource, key.type, key.key))
+                data_rows.append(I18nProgressManager.get(
+                    self.course, resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Course Outline')
 
         # Run over questions and question groups
         data_rows = []
         for resource, key in _get_question_keys():
-            data_rows.append(self.rm.get_resource_row(
-                resource, key.type, key.key))
+            data_rows.append(I18nProgressManager.get(
+                self.course, resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Questions')
 
         data_rows = []
         for resource, key in _get_question_group_keys():
-            data_rows.append(self.rm.get_resource_row(
-                resource, key.type, key.key))
+            data_rows.append(I18nProgressManager.get(
+                self.course, resource, key.type, key.key))
         rows += self._make_table_section(data_rows, 'Question Groups')
 
         if not [row for row in rows if type(row) is ResourceRow]:
@@ -1723,8 +1772,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
         resource_bundle_dto = ResourceBundleDAO.load(str(key))
         transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.instance(
-                self.app_context).get_xcontent_configuration())
+            config=I18nTranslationContext.get(self.app_context))
         binding, sections = self.build_sections_for_key(
             key, self.app_context, resource_bundle_dto, transformer)
         payload_dict = {
@@ -1997,8 +2045,7 @@ class LazyTranslator(object):
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
             transformer = xcontent.ContentTransformer(
-                config=I18nTranslationContext.instance(
-                    self._app_context).get_xcontent_configuration())
+                config=I18nTranslationContext.get(self._app_context))
             transformer.decompose(context)
 
             data_list = self.translation_dict['data']
@@ -2074,7 +2121,8 @@ def translate_lessons(course, locale):
             ResourceKey.LESSON_TYPE, lesson.lesson_id, locale))
         for lesson in lesson_list]
 
-    bundle_list = ResourceBundleDAO.bulk_load(key_list)
+    bundle_list = [
+        I18nResourceBundleManager.get(locale, key) for key in key_list]
 
     for key, lesson, bundle in zip(key_list, lesson_list, bundle_list):
         if bundle is not None:
@@ -2089,7 +2137,9 @@ def translate_units(course, locale):
         key = ResourceKey.for_unit(unit)
         key_list.append(ResourceBundleKey(key.type, key.key, locale))
 
-    bundle_list = ResourceBundleDAO.bulk_load([str(key) for key in key_list])
+    bundle_list = [I18nResourceBundleManager.get(
+        locale, key) for key in key_list]
+
     unit_tools = unit_lesson_editor.UnitTools(course)
 
     for key, unit, bundle in zip(key_list, unit_list, bundle_list):
@@ -2125,8 +2175,6 @@ def is_translation_required():
 def translate_course(course):
     if not is_translation_required():
         return
-    appengine_config.log_appstats_event(
-        'translate_course.begin_translate_course')
     models.MemcacheManager.begin_readonly()
     try:
         app_context = sites.get_course_for_current_request()
@@ -2134,21 +2182,20 @@ def translate_course(course):
         translate_lessons(course, app_context.get_current_locale())
     finally:
         models.MemcacheManager.end_readonly()
-        appengine_config.log_appstats_event(
-            'translate_course.end_translate_course')
 
 
 def translate_course_env(env):
     if not is_translation_required():
         return
     app_context = sites.get_course_for_current_request()
+    locale = app_context.get_current_locale()
     key_list = [
-        ResourceBundleKey(
-            ResourceKey.COURSE_SETTINGS_TYPE,
-            key, app_context.get_current_locale())
+        ResourceBundleKey(ResourceKey.COURSE_SETTINGS_TYPE, key, locale)
         for key in courses.Course.get_schema_sections()]
 
-    bundle_list = ResourceBundleDAO.bulk_load([str(key) for key in key_list])
+    bundle_list = [I18nResourceBundleManager.get(
+        locale, key) for key in key_list]
+
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
@@ -2169,14 +2216,13 @@ def translate_dto_list(dto_list, resource_key_list):
         return
 
     app_context = sites.get_course_for_current_request()
+    locale = app_context.get_current_locale()
     key_list = [
-        ResourceBundleKey(
-            key.type,
-            key.key, app_context.get_current_locale())
+        ResourceBundleKey(key.type, key.key, locale)
         for key in resource_key_list]
 
-    bundle_list = ResourceBundleDAO.bulk_load([
-        str(key) for key in key_list])
+    bundle_list = [I18nResourceBundleManager.get(
+        locale, key) for key in key_list]
 
     for key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:

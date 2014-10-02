@@ -1094,6 +1094,16 @@ class CourseModel13(object):
         fs = self.app_context.fs.impl
         filename = fs.physical_to_logical('/course.yaml')
         fs.put(filename, content_stream)
+
+        # clear cached settings
+        keys = [
+            Course.make_locale_environ_key(locale)
+            for locale in [None] + self.app_context.get_all_locales()]
+        models.MemcacheManager.delete_multi(
+            keys, namespace=self.app_context.get_namespace_name())
+
+        self._app_context.clear_per_request_cache()
+
         return True
 
     def _update_dirty_objects(self):
@@ -2035,14 +2045,28 @@ class Course(object):
         return ret
 
     @classmethod
+    def make_locale_environ_key(cls, locale):
+        """Returns key used to store localized settings in memcache."""
+        return 'course:environ:locale:%s:%s' % (
+            os.environ.get('CURRENT_VERSION_ID'), locale)
+
+    @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
         # pylint: disable-msg=protected-access
 
-        # use cached value if possible
+        # get from local cache
         env = app_context._cached_environ
         if env:
             return copy.deepcopy(env)
+
+        # get from global cache
+        _locale = app_context.get_current_locale()
+        _key = cls.make_locale_environ_key(_locale)
+        env = models.MemcacheManager.get(
+            _key, namespace=app_context.get_namespace_name())
+        if env:
+            return env
 
         models.MemcacheManager.begin_readonly()
         try:
@@ -2058,8 +2082,10 @@ class Course(object):
                 for hook in cls.COURSE_ENV_POST_LOAD_HOOKS:
                     hook(env)
 
-                # put into cache
+                # put into local and global cache
                 app_context._cached_environ = env
+                models.MemcacheManager.set(
+                    _key, env, namespace=app_context.get_namespace_name())
             finally:
                 # Restore the original method from monkey-patch
                 cls.get_environ = old_get_environ
@@ -2420,9 +2446,7 @@ class Course(object):
         return Course.create_common_settings_schema(self)
 
     def save_settings(self, course_settings):
-        result = self._model.save_settings(course_settings)
-        self._app_context.clear_per_request_cache()
-        return result
+        return self._model.save_settings(course_settings)
 
     def get_progress_tracker(self):
         if not self._tracker:
