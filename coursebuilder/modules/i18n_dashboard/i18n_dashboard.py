@@ -1590,7 +1590,7 @@ class I18nDashboardHandler(BaseDashboardExtension):
             'extra_locales': permitted_locales,
             'rows': rows,
             'num_columns': len(permitted_locales) + 1,
-            'is_readonly': self.is_readonly(self.course)
+            'is_readonly': self.is_readonly(self.course),
         }
 
         if roles.Roles.is_course_admin(self.handler.app_context):
@@ -1604,26 +1604,45 @@ class I18nDashboardHandler(BaseDashboardExtension):
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
         edit_actions = [
             {
+                'id': 'upload_translation_files',
+                'caption': 'Upload Translation Files',
+                'href': self.handler.get_action_url(
+                    I18nUploadHandler.ACTION),
+                },
+            {
+                'id': 'download_translation_files',
+                'caption': 'Download Translation Files',
+                'href': self.handler.get_action_url(
+                    I18nDownloadHandler.ACTION),
+                }]
+
+        translate_actions = [
+            {
                 'id': 'translate_to_reverse_case',
                 'caption': '"Translate" to rEVERSED cAPS',
                 'href': self.handler.get_action_url(
                     I18nReverseCaseHandler.ACTION),
                 },
-            {
-                'id': 'upload_translation_files',
-                'caption': 'Upload Translation Files',
-                'href': self.handler.get_action_url(I18nUploadHandler.ACTION),
-                },
-            {
-                'id': 'download_translation_files',
-                'caption': 'Download Translation Files',
-                'href': self.handler.get_action_url(I18nDownloadHandler.ACTION),
-                }]
-
+            ]
         actions = []
-        if (not self.is_readonly(self.course) and
-            len(self.course.all_locales) > 1):
+        if not self.is_readonly(self.course):
+            actions += translate_actions
+            if len(self.course.all_locales) > 1:
                 actions += edit_actions
+        if appengine_config.PRODUCTION_MODE:
+            message = (
+                'This operation takes a substantial amount of time, and '
+                'is very likely to time out when executed from a web '
+                'browser talking to a production server.  Alternatives '
+                'are to work with a development server or use the ETL '
+                'scripts to do translation upload/download.  See the '
+                'file .../tools/i18n/i18n.sh in your CourseBuilder '
+                'download for complete instructions on usage. ')
+            disabled_alert = 'javascript: alert("%s")' % message
+            for action in actions:
+                del action['href']
+                action['action'] = disabled_alert
+
         actions += [
             {
                 'id': 'edit_18n_settings',
