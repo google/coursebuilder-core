@@ -119,6 +119,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 
 import difflib
+import htmlentitydefs
 import re
 import StringIO
 import sys
@@ -153,6 +154,38 @@ DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES = ['UL', 'TABLE', 'IMG']
 # are not recomposable.
 DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP = {
     'ALT': set(['*']), 'TITLE': set(['*']), 'SRC': set(['IMG'])}
+
+# Regex that matches HTML entities (& followed by anything other than a ;, up to
+# a ;).
+_ENTITY_REGEX = re.compile('(&[a-z]+;)')
+# Items we don't want to change to codes when translating HTML entities in XML.
+_XML_ENTITY_NAMES = frozenset(['quot', 'amp', 'lt', 'gt', 'apos'])
+
+
+def _get_entity_map():
+    mappings = {}
+    html_and_xml_entities = dict(htmlentitydefs.entitydefs)
+    # Python is missing apos, which is part of XML.
+    html_and_xml_entities['apos'] = None  # Set below.
+    for name, code in html_and_xml_entities.iteritems():
+        if name in _XML_ENTITY_NAMES:
+            # In entitydefs, some codes are unicode chars and some are numeric
+            # references. Standardize on all numeric references for minidom
+            # compatibility.
+            code = '&%s;' % name
+        else:
+            if not code.startswith('&'):
+                code = '&#%s;' % str(ord(code))
+        mappings[name] = code
+    return mappings
+
+
+# Map of HTML entity name string ('copy') to ASCII, decimal code string
+# ('&#169;'). IMPORTANT: some entities are known to both HTML and XML (see
+# _XML_ENTITY_NAMES). In that case, we do not translate to a code because we're
+# processing XML. For those items, the value is the entity name (for example,
+# for the key 'quot' the value is '&quot;').
+_ENTITY_MAP = _get_entity_map()
 
 
 class ContentIO(object):
@@ -435,9 +468,14 @@ class TranslationIO(object):
     @classmethod
     def fromstring(cls, content):
         """Converts XML string content of the translation into an XML tree."""
+        translated_entities = _ENTITY_REGEX.sub(cls._match_to_code, content)
         return minidom.parseString(
-            ('<div>%s</div>' % cls._decode_tag_names(content)).encode(
+            '<div>%s</div>' % cls._decode_tag_names(translated_entities).encode(
                 XML_ENCODING))
+
+    @classmethod
+    def _match_to_code(cls, match):
+        return _ENTITY_MAP[match.group()[1:-1]]
 
     @classmethod
     def toxml(cls, tree):
@@ -1393,6 +1431,38 @@ class TestCasesForIO(unittest.TestCase):
         dom = TranslationIO.fromstring(translation)
         self.assertEqual(tree_as_text, TranslationIO.toxml(dom))
         self.assertEqual(translation, TranslationIO.tostring(dom))
+
+    def test_fromstring_translates_html_entities_for_minidom(self):
+        original = u'The skies&reg; are &copy; copyrighted.'
+        parsed = u'The skies\xae are \xa9 copyrighted.'
+        dom = TranslationIO.fromstring(original)
+        self.assertEqual(parsed, TranslationIO.toxml(dom))
+        self.assertEqual(parsed, TranslationIO.tostring(dom))
+
+    def test_fromstring_does_not_translate_xml_entities_for_minidom(self):
+        original = u'Hello, &quot; &amp; &lt; &gt; &apos; world.'
+        dom = TranslationIO.fromstring(original)
+        # We leave &apos; as &apos, but minidom turns it to '.
+        self.assertEqual(
+            u"Hello, &quot; &amp; &lt; &gt; ' world.",
+            TranslationIO.toxml(dom))
+        self.assertEqual(
+            u"Hello, &quot; &amp; &lt; &gt; ' world.",
+            TranslationIO.tostring(dom))
+
+    def test_entity_map_converts_all_html_codes_to_base_10_ascii(self):
+        for name, code in _ENTITY_MAP.iteritems():
+            if name not in _XML_ENTITY_NAMES:
+                int(code[2:-1], base=10)
+                self.assertTrue(code.startswith('&') and code.endswith(';'))
+
+        # Spot check a few values.
+        self.assertEqual('&#169;', _ENTITY_MAP.get('copy'))
+        self.assertEqual('&#174;', _ENTITY_MAP.get('reg'))
+
+    def test_entity_map_xml_entity_values_are_keynames_with_amp_and_semi(self):
+        for xml_entity in _XML_ENTITY_NAMES:
+            self.assertEqual('&%s;' % xml_entity, _ENTITY_MAP.get(xml_entity))
 
     def test_html_to_safedom(self):
         html = '''
