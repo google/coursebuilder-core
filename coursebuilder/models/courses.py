@@ -2401,6 +2401,18 @@ class Course(object):
     def app_context(self):
         return self._app_context
 
+    @property
+    def default_locale(self):
+        return self._app_context.default_locale
+
+    @property
+    def all_locales(self):
+        return self._app_context.get_all_locales()
+
+    @property
+    def title(self):
+        return self._app_context.get_title()
+
     def to_json(self):
         return self._model.to_json()
 

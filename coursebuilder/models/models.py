@@ -1216,26 +1216,6 @@ class BaseJsonDao(object):
     def get_all_iter(cls):
       """Return a generator that will produce all DTOs of a given type.
 
-      This is useful in situations where you are certain that you will have
-      few enough items in a table that you can complete processing within the
-      AppEngine timeout, but where there may be more than the "a few" items
-      defined by the constant in the get_all() method, or where the items in
-      question are enormous, and won't all fit in your chosen instance size
-      all at once.
-
-      Note that get_all() is appropriate for most use cases.  If you are in
-      any doubt that there may be more than 1K items in a table, or whether
-      you are memory-constrained, you are very likely in a situation where
-      your UX will be very laggy.  Further, this issue will not be apparent in
-      a dev instance, and will only rise up and bite users with real-world
-      amounts of data.
-
-      This function is meant for use cases where UX responsiveness is less
-      relevant or some lag is expected by the user, and where the operation
-      will certainly complete within the AppEngine interactive timeout.  E.g.,
-      a download of: all course content, all translations, all data for a
-      single student, etc.
-
       Yields:
         A DTO for each row in the Entity type's table.
       """
@@ -1362,7 +1342,7 @@ class BaseJsonDao(object):
         MemcacheManager.delete(cls._memcache_all_key())
         MemcacheManager.set(cls._memcache_key(entity.key().id_or_name()),
                             entity)
-        return entity.key().id()
+        return entity.key().id_or_name()
 
     @classmethod
     def save_all(cls, dtos):

@@ -34,6 +34,7 @@ from webapp2_extras import i18n
 
 import appengine_config
 from common import crypto
+from common import locales as common_locales
 from common import safe_dom
 from common import schema_fields
 from common import tags
@@ -83,6 +84,11 @@ TRANSLATABLE_FIELDS_FILTER = schema_fields.FieldFilter(
     hidden_values=[False],
     i18n_values=[None, True],
     editable_values=[True])
+
+# Here, using 'ln' because we need a language that Babel knows.
+# Lingala ( http://en.wikipedia.org/wiki/Lingala ) is not likely to be
+# a target language for courses hosted in CB in the next few years.
+PSEUDO_LANGUAGE = 'ln'
 
 
 custom_module = None
@@ -304,9 +310,13 @@ class NamedJsonDAO(models.BaseJsonDao):
     def load_or_create(cls, resource_key):
         dto = cls.load(str(resource_key))
         if not dto:
-            dto = cls.DTO(str(resource_key), {})
+            dto = cls.create_blank(resource_key)
             cls.save(dto)
         return dto
+
+    @classmethod
+    def create_blank(cls, resource_key):
+        return cls.DTO(str(resource_key), {})
 
 
 class I18nProgressEntity(models.BaseEntity):
@@ -614,6 +624,7 @@ class TranslationsAndLocations(object):
         self._translations = set()
         self._locations = []
         self._comments = []
+        self._previous_id = ''
 
     def add_translation(self, translation):
         # Don't add "translations" that are blank, unless we have no other
@@ -632,6 +643,9 @@ class TranslationsAndLocations(object):
         comment = str(comment)  # May be Node or NodeList.
         self._comments.append(comment)
 
+    def set_previous_id(self, previous_id):
+        self._previous_id = previous_id
+
     @property
     def locations(self):
         return self._locations
@@ -644,71 +658,224 @@ class TranslationsAndLocations(object):
     def comments(self):
         return self._comments
 
+    @property
+    def previous_id(self):
+        return self._previous_id
+
 
 class I18nDownloadHandler(BaseDashboardExtension):
     ACTION = 'i18n_download'
 
+    def render(self):
+        main_content = oeditor.ObjectEditor.get_html_for(
+            self.handler,
+            TranslationDownloadRestHandler.schema().get_json_schema(),
+            TranslationDownloadRestHandler.schema().get_schema_dict(),
+            '',
+            self.handler.canonicalize_url(TranslationDownloadRestHandler.URL),
+            self.handler.get_action_url(I18nDashboardHandler.ACTION),
+            required_modules=TranslationDownloadRestHandler.REQUIRED_MODULES,
+            save_button_caption='Download',
+            extra_js_files=['download_translations.js'],
+            additional_dirs=[TEMPLATES_DIR])
+        self.handler.render_page({
+            'page_title': self.handler.format_title(
+                'I18n Translation Download'),
+            'main_content': main_content})
+
+
+class TranslationDownloadRestHandler(utils.BaseRESTHandler):
+
+    URL = '/rest/modules/i18n_dashboard/i18n_download'
+    XSRF_TOKEN_NAME = 'translation_download'
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-hidden',
+        'inputex-checkbox', 'inputex-list', 'inputex-uneditable',
+        ]
+
+    @classmethod
+    def schema(cls):
+        schema = schema_fields.FieldRegistry('Translation Download')
+        schema.add_property(schema_fields.SchemaField(
+            'export_what', 'Export Items', 'string',
+            select_data=[
+                ('new',
+                 'Only items that are new or have out-of-date translations'),
+                ('all', 'All translatable items')],
+            description='Select what translation strings to export.'))
+
+        locales_schema = schema_fields.FieldRegistry(
+            None, description='locales')
+        locales_schema.add_property(schema_fields.SchemaField(
+            'locale', 'Locale', 'string', hidden=True, editable=False))
+        locales_schema.add_property(schema_fields.SchemaField(
+            'checked', None, 'boolean'))
+        locales_schema.add_property(schema_fields.SchemaField(
+            'title', None, 'string', optional=True, editable=False))
+
+        schema.add_property(schema_fields.FieldArray(
+            'locales', 'Languages', item_type=locales_schema,
+            description='Select the languages whose translations you '
+            'wish to export.',
+            extra_schema_dict_values={
+                'className': (
+                    'inputEx-Field inputEx-ListField '
+                    'label-group label-group-list')}))
+        schema.add_property(schema_fields.SchemaField(
+            'file_name', 'Download as File Named', 'string'))
+        return schema
+
+    def get(self):
+        course = self.get_course()
+        default_locale = course.default_locale
+        locales = []
+        for locale in course.all_locales:
+            if locale == default_locale or locale == PSEUDO_LANGUAGE:
+                continue
+            locales.append({
+                'locale': locale,
+                'checked': True,
+                'title': common_locales.get_locale_display_name(locale)})
+        payload_dict = {
+            'locales': locales,
+            'file_name': course.title.lower().replace(' ', '_') + '.zip'
+            }
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict=payload_dict,
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN_NAME))
+
     @staticmethod
-    def build_translations(handler, locales):
+    def build_translations(course, locales, export_what):
         """Build up a dictionary of all translated strings -> locale.
 
         For each {original-string,locale}, keep track of the course
         locations where this occurs, and each of the translations given.
 
         Args:
-          handler: webapp2 handler for looking up context and course.
+          course: The course for whose contents we are building translations.
           locales: Locales for which translations are desired.
+          export_what: A string that tells us what should be added to the
+            translations.  The value 'all' exports everything, translated
+            or not, stale or not.  The value 'new' emits only things
+            that have no translations, or whose translations are out-of-date
+            with respect to the resource.
         Returns:
-          Map of original-string -> locale -> TranslationsAndLocations.
+          Map of original-string -> locale -> TranslationsAndLocations instance.
         """
 
+        app_context = course.app_context
         translations = collections.defaultdict(
             lambda: collections.defaultdict(TranslationsAndLocations))
-
-        course = handler.get_course()
-        app_context = handler.app_context
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.instance(
                 app_context).get_xcontent_configuration())
         resource_key_map = _get_language_resource_keys(course)
 
+        # Preload all I18N progress DTOs; we'll need all of them.
+        i18n_progress_dtos = I18nProgressDAO.get_all()
+        progress_by_key = {p.id: p for p in i18n_progress_dtos}
         for locale in locales:
-
-            key2dto = {
-                dto.id: dto
-                for dto in ResourceBundleDAO.get_all_for_locale(locale)}
-
+            # Preload all resource bundles for this locale; we need all of them.
+            resource_bundle_dtos = ResourceBundleDAO.get_all_for_locale(locale)
+            bundle_by_key = {b.id: b for b in resource_bundle_dtos}
             for resource, resource_key in resource_key_map:
                 if resource_key.type == ResourceKey.ASSET_IMG_TYPE:
                     continue
                 key = ResourceBundleKey(
                     resource_key.type, resource_key.key, locale)
-                binding, sections = _build_sections_for_key_ex(
-                    key, app_context, key2dto.get(str(key)), transformer)
-                for section in sections:
-                    section_name = section['name']
-                    section_type = section['type']
-                    description = (
-                        binding.find_field(section_name).description or '')
 
-                    for translation in section['data']:
-                        message = unicode(translation['source_value'] or '')
-                        translated_message = translation['target_value'] or ''
-                        t_and_l = translations[message][locale]
-                        t_and_l.add_translation(translated_message)
-                        t_and_l.add_location('GCB-1|%s|%s|%s' % (
-                            section_name, section_type, str(key)))
-                        if not t_and_l.comments and message:
-                            t_and_l.add_comment(description)
-                            title = resource_key.get_resource_title(resource)
-                            if title:
-                                t_and_l.add_comment(title)
+                # If we don't already have a resource bundle, make it.
+                resource_bundle_dto = bundle_by_key.get(str(key))
+                if not resource_bundle_dto:
+                    resource_bundle_dto = ResourceBundleDAO.create_blank(key)
+                    resource_bundle_dtos.append(resource_bundle_dto)
+                    bundle_by_key[resource_bundle_dto.id] = resource_bundle_dto
+
+                # If we don't already have a progress record, make it.
+                i18n_progress_dto = progress_by_key.get(str(resource_key))
+                if not i18n_progress_dto:
+                    i18n_progress_dto = I18nProgressDAO.create_blank(
+                        resource_key)
+                    i18n_progress_dtos.append(i18n_progress_dto)
+                    progress_by_key[i18n_progress_dto.id] = i18n_progress_dto
+
+                # Act as though we are loading the interactive translation
+                # page and then clicking 'save'.  This has the side-effect of
+                # forcing us to have created the resource bundle and progress
+                # DTOs, and ensures that the operation here has identical
+                # behavior with manual operation, and there are thus fewer
+                # opportunities to go sideways and slip between the cracks.
+                binding, sections = (
+                    TranslationConsoleRestHandler.build_sections_for_key(
+                        key, app_context, resource_bundle_dto, transformer))
+                TranslationConsoleRestHandler.update_dtos_with_section_data(
+                    key, sections, resource_bundle_dto, i18n_progress_dto)
+
+                TranslationDownloadRestHandler._collect_section_translations(
+                    translations, sections, binding, export_what, locale, key,
+                    resource_key, resource)
+
+            ResourceBundleDAO.save_all(resource_bundle_dtos)
+        I18nProgressDAO.save_all(i18n_progress_dtos)
         return translations
 
     @staticmethod
-    def build_babel_catalog_for_locale(handler, translations, locale):
-        course = handler.get_course()
-        environ = course.get_environ(handler.app_context)
+    def _collect_section_translations(translations, sections, binding,
+                                      export_what, locale, key, resource_key,
+                                      resource):
+        # For each section in the translation, make a record of that
+        # in an internal data store which is used to generate .po
+        # files.
+        for section in sections:
+            section_name = section['name']
+            section_type = section['type']
+            description = (
+                binding.find_field(section_name).description or '')
+
+            for translation in section['data']:
+                message = unicode(translation['source_value'] or '')
+                translated_message = translation['target_value'] or ''
+                is_current = translation['verb'] == VERB_CURRENT
+                old_message = translation['old_source_value']
+
+                # Skip exporting blank items; pointless.
+                if not message:
+                    continue
+
+                # If not exporting everything, and the current
+                # translation is up-to-date, don't export it.
+                if export_what != 'all' and is_current:
+                    continue
+
+                # Set source string and location.
+                t_and_l = translations[message][locale]
+                t_and_l.add_location('GCB-1|%s|%s|%s' % (
+                    section_name, section_type, str(key)))
+
+                # Describe the location where the item is found.
+                t_and_l.add_comment(description)
+                title = resource_key.get_resource_title(resource)
+                if title:
+                    t_and_l.add_comment(title)
+
+                # Add either the current translation (if current)
+                # or the old translation as a remark (if we have one)
+                if is_current:
+                    t_and_l.add_translation(translated_message)
+                else:
+                    t_and_l.add_translation('')
+
+                    if old_message:
+                        t_and_l.set_previous_id(old_message)
+                        if translated_message:
+                            t_and_l.add_comment(
+                                'Previously translated as: "%s"' %
+                                translated_message)
+
+    @staticmethod
+    def build_babel_catalog_for_locale(course, translations, locale):
+        environ = course.get_environ(course.app_context)
         course_title = environ['course'].get('title')
         bugs_address = environ['course'].get('admin_user_emails')
         organization = environ['base'].get('nav_header')
@@ -728,20 +895,23 @@ class I18nDownloadHandler(BaseDashboardExtension):
                     locations=[(l, 0) for l in t_and_l.locations],
                     user_comments=t_and_l.comments,
                     auto_comments=['also translated as "%s"' % s
-                                   for s in t_and_l.translations])
+                                   for s in t_and_l.translations],
+                    previous_id=t_and_l.previous_id)
         return cat
 
     @staticmethod
-    def build_zip_file(handler, out_stream, translations):
+    def build_zip_file(course, out_stream, translations, locales):
         """Create a .zip file with one .po file for each translated language.
 
         Args:
-          handler: webapp2 handler for looking up course and app context
+          course: the Course object that we're building an export for.
           out_stream: An open file-like which can be written and seeked.
           translations: Map of string -> locale -> TranslationsAndLocations
             as returned from build_translations().
+          locales: The set of locales for which we want to build .po files
         """
-        original_locale = handler.app_context.default_locale
+        app_context = course.app_context
+        original_locale = app_context.default_locale
         with common_utils.ZipAwareOpen():
             # Load metadata for 'en', which Babel uses internally.
             localedata.load('en')
@@ -749,44 +919,102 @@ class I18nDownloadHandler(BaseDashboardExtension):
             localedata.load(original_locale)
         zf = zipfile.ZipFile(out_stream, 'w', allowZip64=True)
         try:
-            for locale in handler.app_context.get_all_locales():
-                if locale == original_locale:
-                    continue
-                cat = I18nDownloadHandler.build_babel_catalog_for_locale(
-                    handler, translations, locale)
+            for locale in locales:
+                cat = (
+                    TranslationDownloadRestHandler
+                    .build_babel_catalog_for_locale(
+                        course, translations, locale))
                 filename = os.path.join(
                     'locale', locale, 'LC_MESSAGES', 'messages.po')
                 content = cStringIO.StringIO()
                 try:
-                    pofile.write_po(content, cat)
+                    pofile.write_po(content, cat, include_previous=True)
                     zf.writestr(filename, content.getvalue())
                 finally:
                     content.close()
         finally:
             zf.close()
 
-    def _send_response(self, out_stream):
-        self.handler.response.headers.add(
-            'Content-Disposition', 'attachment; filename="translations.zip"')
-        self.handler.response.headers.add(
-            'Content-Type', 'application/octet-stream')
-        self.handler.response.write(out_stream.getvalue())
+    def _send_response(self, out_stream, filename):
+        self.response.content_type = 'application/octet-stream'
+        self.response.content_disposition = (
+            'attachment; filename="%s"' % filename)
+        self.response.out.write(out_stream.getvalue())
 
-    def render(self):
-        models.MemcacheManager.begin_readonly()
+    def _validate_inputs(self, course):
         try:
-            all_locales = self.handler.app_context.get_all_locales()
-            translations = self.build_translations(self.handler, all_locales)
-            out_stream = StringIO.StringIO()
-            # zip assumes stream has a real fp; fake it.
-            out_stream.fp = out_stream
-            try:
-                self.build_zip_file(self.handler, out_stream, translations)
-                self._send_response(out_stream)
-            finally:
-                out_stream.close()
+            request = models.transforms.loads(self.request.get('request'))
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed or missing "request" parameter.')
+            return None, None, None
+        try:
+            payload = models.transforms.loads(request.get('payload', ''))
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed or missing "payload" parameter.')
+            return None, None, None
+        if not self.assert_xsrf_token_or_fail(
+            request, self.XSRF_TOKEN_NAME, {}):
+            return None, None, None
+
+        try:
+            locales = [l['locale'] for l in payload.get('locales')
+                       if l.get('checked') and l['locale'] != PSEUDO_LANGUAGE]
+        except (TypeError, ValueError, KeyError):
+            transforms.send_json_response(
+                self, 400, 'Locales specification not as expected.')
+            return None, None, None
+        if not locales:
+            # Nice UI message when no locales selected.
+            transforms.send_json_response(
+                self, 400, 'Please select at least one language to export.')
+            return None, None, None
+        for locale in locales:
+            if not has_locale_rights(self.app_context, locale):
+                transforms.send_json_response(self, 401, 'Access denied.')
+                return None, None, None
+        export_what = payload.get('export_what', 'new')
+        file_name = payload.get(
+            'file_name', course.title.lower().replace(' ', '_') + '.zip')
+        return locales, export_what, file_name
+
+    def put(self):
+        """Verify inputs and return 200 OK to OEditor when all is well."""
+
+        course = self.get_course()
+        locales, _, _ = self._validate_inputs(course)
+        if not locales:
+            return
+        transforms.send_json_response(self, 200, 'Success.')
+
+    def post(self):
+        """Actually generate the download content.
+
+        This is a somewhat ugly solution to a somewhat ugly problem.
+        The problem is this: The OEdtior form expects to see JSON
+        responses, since it's meant for editing small well-structured
+        objects.  Here, we're perverting that intent, and just using
+        OEditor to present a form with options about the download.
+        On successful "save", we have a hook that re-submits a form
+        to hit the POST action, rather than the default PUT action,
+        and that triggers the download.
+        """
+
+        course = self.get_course()
+        locales, export_what, file_name = self._validate_inputs(course)
+        if not locales:
+            return
+
+        translations = self.build_translations(course, locales, export_what)
+        out_stream = StringIO.StringIO()
+        # zip assumes stream has a real fp; fake it.
+        out_stream.fp = out_stream
+        try:
+            self.build_zip_file(course, out_stream, translations, locales)
+            self._send_response(out_stream, file_name)
         finally:
-            models.MemcacheManager.end_readonly()
+            out_stream.close()
 
 
 class I18nUploadHandler(BaseDashboardExtension):
@@ -801,7 +1029,9 @@ class I18nUploadHandler(BaseDashboardExtension):
             self.handler.canonicalize_url(TranslationUploadRestHandler.URL),
             self.handler.get_action_url(I18nDashboardHandler.ACTION),
             required_modules=TranslationUploadRestHandler.REQUIRED_MODULES,
-            save_method='upload', save_button_caption='Upload')
+            save_method='upload', save_button_caption='Upload',
+            extra_js_files=['upload_translations.js'],
+            additional_dirs=[TEMPLATES_DIR])
         self.handler.render_page({
             'page_title': self.handler.format_title('I18n Translation Upload'),
             'main_content': main_content,
@@ -812,56 +1042,16 @@ def translation_upload_generate_schema():
     schema = schema_fields.FieldRegistry('Translation Upload')
     schema.add_property(schema_fields.SchemaField(
         'file', 'Translation File', 'file',
+        # Not really optional, but oeditor marks un-filled mandatory field as
+        # an error, and doesn't un-mark when the user has selected a file, so
+        # cleaner to just not mark as error and catch missing files on
+        # PUT/POST with a nice error message, which we had to do anyhow.
+        optional=True,
         description='Use this option to nominate a .po file containing '
         'translations for a single language, or a .zip file containing '
         'multiple translated languages.  The internal structure of the .zip '
         'file is unimportant; all files ending in ".po" will be considered.'))
     return schema
-
-
-def _recalculate_translation_progress(app_context):
-    transformer = xcontent.ContentTransformer(
-        config=I18nTranslationContext.instance(
-            app_context).get_xcontent_configuration())
-    course = courses.Course(None, app_context)
-    all_resource_keys = _get_language_resource_keys(course)
-    key2progress = {
-        resource_key: I18nProgressDAO.load_or_create(resource_key)
-        for _, resource_key in all_resource_keys}
-
-    for _, resource_key in all_resource_keys:
-        progress = key2progress[resource_key]
-        for locale in app_context.get_all_locales():
-            key = ResourceBundleKey(resource_key.type, resource_key.key, locale)
-            _, sections = _build_sections_for_key(
-                key, app_context, transformer=transformer)
-            partially_translated = False
-            fully_translated = True
-            for section in sections:
-                for translation in section['data']:
-                    if translation['source_value']:
-                        if translation['target_value']:
-                            partially_translated = True
-                        else:
-                            fully_translated = False
-
-            if fully_translated:
-                # NOTE: Yes, it's considered "fully translated" even if all
-                # the translatable items are blank.  What we want to show on
-                # the I18N console is whether any work remains be done.  The
-                # fact that there may be blanks in the source text is not
-                # something about which this module needs to be nanny-ing the
-                # admin.
-                new_state = I18nProgressDTO.DONE
-            elif partially_translated:
-                new_state = I18nProgressDTO.IN_PROGRESS
-            else:
-                new_state = I18nProgressDTO.NOT_STARTED
-            if progress.get_progress(locale) != new_state:
-                progress.set_progress(locale, new_state)
-
-    for _, progress in key2progress.items():
-        I18nProgressDAO.save(progress)
 
 
 class TranslationUploadRestHandler(utils.BaseRESTHandler):
@@ -882,96 +1072,178 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 self.XSRF_TOKEN_NAME))
 
     @staticmethod
-    def update_translation(data):
-        pseudo_file = cStringIO.StringIO(data)
+    def build_translations_defaultdict():
+        # Build up set of all incoming translations as a nested dict:
+        # locale -> bundle key -> {'original text': 'translated text'}
+        return collections.defaultdict(lambda: collections.defaultdict(dict))
+
+    @staticmethod
+    def parse_po_file(translations, po_file_content):
+        """Collect translations from .po file and group by bundle key."""
+
+        pseudo_file = cStringIO.StringIO(po_file_content)
         the_catalog = pofile.read_po(pseudo_file)
-        total_translations = 0
-        matched_translations = 0
-        updated_translations = 0
-        added_translations = 0
+        locale = None
         for message in the_catalog:
             for location, _ in message.locations:
-                total_translations += 1
-                protocol, component_name, ttype, key = location.split('|', 4)
+                protocol, _, _, key = location.split('|', 4)
                 if protocol != 'GCB-1':
                     raise TranslationUploadRestHandler.ProtocolError(
                         'Expected location format GCB-1, but had %s' % protocol)
-                dto = ResourceBundleDAO.load(key)
-                if not dto:
-                    dto = ResourceBundleDTO(key, {})
 
-                component = dto.dict.get(component_name)
-                if not component:
-                    component = {
-                        'type': ttype,
-                        'data': [],
-                        'source_value': None
-                        }
-                    dto.dict[component_name] = component
+                message_locale = ResourceBundleKey.fromstring(key).locale
+                if locale is None:
+                    locale = message_locale
+                elif locale != message_locale:
+                    raise TranslationUploadRestHandler.ProtocolError(
+                        'File has translations for both "%s" and "%s"' % (
+                            locale, message_locale))
 
-                dirty = False
-                found = False
-                for translation_item in component['data']:
-                    if translation_item['source_value'] == message.id:
-                        found = True
-                        matched_translations += 1
-                        if translation_item['target_value'] != message.string:
-                            dirty = True
-                            translation_item['target_value'] = message.string
-                            updated_translations += 1
-                if not found and message.id and message.string:
-                    component['data'].append({
-                        'source_value': message.id,
-                        'target_value': message.string,
-                        })
-                    dirty = True
-                    added_translations += 1
-                if dirty:
-                    ResourceBundleDAO.save(dto)
-        return (
-            total_translations,
-            matched_translations,
-            updated_translations,
-            added_translations)
+                translations[locale][key][message.id] = message.string
+
+    @staticmethod
+    def update_translations(course, translations, messages):
+        app_context = course.app_context
+        transformer = xcontent.ContentTransformer(
+            config=I18nTranslationContext.instance(
+                app_context).get_xcontent_configuration())
+        i18n_progress_dtos = I18nProgressDAO.get_all()
+        progress_by_key = {p.id: p for p in i18n_progress_dtos}
+        resource_key_map = _get_language_resource_keys(course)
+
+        for locale, resource_translations in translations.iteritems():
+            used_resource_translations = set()
+            num_resources = 0
+            num_replacements = 0
+            num_blank_translations = 0
+            resource_bundle_dtos = ResourceBundleDAO.get_all_for_locale(locale)
+            bundle_by_key = {b.id: b for b in resource_bundle_dtos}
+
+            for _, resource_key in resource_key_map:
+                num_resources += 1
+                key = ResourceBundleKey(
+                    resource_key.type, resource_key.key, locale)
+                key_str = str(key)
+
+                # Here, be permissive: just create the bundle or progress DTO
+                # if it does not currently exist.  Guaranteed we won't have
+                # translations for this resource, since we'd have created the
+                # bundle on export, but this makes us 1:1 with the behavior on
+                # manual edit and on export.
+                resource_bundle_dto = bundle_by_key.get(key_str)
+                if not resource_bundle_dto:
+                    resource_bundle_dto = ResourceBundleDAO.create_blank(key)
+                    resource_bundle_dtos.append(resource_bundle_dto)
+                    bundle_by_key[resource_bundle_dto.id] = resource_bundle_dto
+
+                i18n_progress_dto = progress_by_key.get(str(key.resource_key))
+                if not i18n_progress_dto:
+                    i18n_progress_dto = I18nProgressDAO.create_blank(
+                        resource_key)
+                    i18n_progress_dtos.append(i18n_progress_dto)
+                    progress_by_key[i18n_progress_dto.id] = i18n_progress_dto
+
+                translations = resource_translations.get(key_str)
+                if translations:
+                    used_resource_translations.add(key_str)
+                else:
+                    # Even though we don't have translations for this resource,
+                    # keep going; we want to update the progress DTO below.
+                    translations = {}
+
+                used_translations = set()
+                _, sections = (
+                    TranslationConsoleRestHandler.build_sections_for_key(
+                        key, app_context, resource_bundle_dto, transformer))
+                for section in sections:
+                    for item in section['data']:
+                        source_value = item['source_value']
+                        if source_value not in translations:
+                            messages.append(
+                                'Did not find translation for "%s"' %
+                                source_value)
+                        elif translations[source_value]:
+                            item['target_value'] = translations[source_value]
+                            item['changed'] = True
+                            used_translations.add(source_value)
+                            num_replacements += 1
+                        else:
+                            used_translations.add(source_value)
+                            num_blank_translations += 1
+
+                for unused_translation in set(translations) - used_translations:
+                    messages.append(
+                        'Translation for "%s" present but not used.' %
+                        unused_translation)
+
+                TranslationConsoleRestHandler.update_dtos_with_section_data(
+                    key, sections, resource_bundle_dto, i18n_progress_dto)
+
+            for unused in (
+                set(resource_translations) - used_resource_translations):
+                    messages.append(
+                        ('Translation file had %d items for resource "%s", but '
+                         'course had no such resource.') % (
+                         len(resource_translations[unused]), unused))
+            messages.append(
+                ('For %s, made %d total replacements in %d resources.  '
+                 '%d items in the uploaded file did not have translations.') % (
+                    common_locales.get_locale_display_name(locale),
+                    num_replacements, num_resources, num_blank_translations))
+            ResourceBundleDAO.save_all(resource_bundle_dtos)
+        I18nProgressDAO.save_all(i18n_progress_dtos)
 
     def post(self):
-        request = transforms.loads(self.request.get('request'))
-        if not self.assert_xsrf_token_or_fail(
-            request, self.XSRF_TOKEN_NAME, {'key': None}):
+        try:
+            request = models.transforms.loads(self.request.get('request'))
+        except ValueError:
+            transforms.send_file_upload_response(
+                self, 400, 'Malformed or missing "request" parameter.')
             return
-        if not roles.Roles.is_course_admin(self.app_context):
-            transforms.send_file_upload_response(self, 401, 'Access denied.')
+        token = request.get('xsrf_token')
+        if not token or not crypto.XsrfTokenManager.is_xsrf_token_valid(
+            token, self.XSRF_TOKEN_NAME):
+                transforms.send_file_upload_response(
+                    self, 403, 'Missing or invalid XSRF token.')
+                return
+        if 'file' not in self.request.POST:
+            transforms.send_file_upload_response(
+                self, 400, 'Must select a .zip or .po file to upload.')
             return
 
         upload = self.request.POST['file']
         if not isinstance(upload, cgi.FieldStorage):
             transforms.send_file_upload_response(
-                self, 400, 'Must provide a .zip or .po file to upload')
+                self, 400, 'Must select a .zip or .po file to upload')
             return
         file_content = upload.file.read()
-        if not isinstance(upload, cgi.FieldStorage):
+        if not file_content:
             transforms.send_file_upload_response(
                 self, 400, 'The .zip or .po file must not be empty.')
             return
 
-        # Get meta-data for supported locales loaded.
+        # Get meta-data for supported locales loaded.  Need to do this before
+        # attempting to parse .po file content.  Do this now, since we don't
+        # rely on file names to establish locale, just bundle keys.  Since
+        # bundle keys are in .po file content, and since we need locales
+        # loaded to parse file content, resolve recursion by pre-emptively
+        # just grabbing everything.
         for locale in self.app_context.get_all_locales():
             with common_utils.ZipAwareOpen():
                 localedata.load(locale)
 
-        stats_total = [0] * 4
+        # Build up set of all incoming translations as a nested dict:
+        # locale -> bundle key -> {'original text': 'translated text'}
+        translations = self.build_translations_defaultdict()
         try:
             try:
                 zf = zipfile.ZipFile(cStringIO.StringIO(file_content), 'r')
                 for item in zf.infolist():
                     if item.filename.endswith('.po'):
-                        # pylint: disable-msg=unpacking-non-sequence
-                        stats = self.update_translation(zf.read(item))
-                        stats_total = [
-                            i + j for i, j in zip(stats, stats_total)]
+                        self.parse_po_file(translations, zf.read(item))
             except zipfile.BadZipfile:
                 try:
-                    stats_total = self.update_translation(file_content)
+                    self.parse_po_file(translations, file_content)
                 except UnicodeDecodeError:
                     transforms.send_file_upload_response(
                         self, 400,
@@ -981,19 +1253,21 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
             transforms.send_file_upload_response(self, 400, str(ex))
             return
 
-        if stats_total[0] == 0:
-            # .PO file parser is pretty lenient; random text files don't
-            # necessarily result in exceptions, but count of total
-            # translations will be zero, so also consider that an error.
+        if not translations:
             transforms.send_file_upload_response(
                 self, 400, 'No translations found in provided file.')
             return
 
-        _recalculate_translation_progress(self.app_context)
+        for locale in translations:
+            if not has_locale_rights(self.app_context, locale):
+                transforms.send_file_upload_response(
+                    self, 401, 'Access denied.')
+                return
+
+        messages = []
+        self.update_translations(self.get_course(), translations, messages)
         transforms.send_file_upload_response(
-            self, 200,
-            '%d total, %d matched, %d changed, %d added translations' %
-            tuple(stats_total))
+            self, 200, 'Success.', payload_dict={'messages': messages})
 
 
 class I18nProgressManager(object):
@@ -1073,17 +1347,17 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
 
     ACTION = 'i18n_reverse_case'
 
-    def _add_reverse_case_locale(self, locale):
+    def _add_reverse_case_locale(self):
         course = self.handler.get_course()
         environ = course.get_environ(self.handler.app_context)
         extra_locales = environ.get('extra_locales', [])
-        if not any(l['locale'] == locale for l in extra_locales):
-            extra_locales.append({'locale': locale,
+        if not any(l['locale'] == PSEUDO_LANGUAGE for l in extra_locales):
+            extra_locales.append({'locale': PSEUDO_LANGUAGE,
                                   'availability': 'unavailable'})
             environ['extra_locales'] = extra_locales
             course.save_settings(environ)
 
-    def _add_reverse_case_translations(self, locale):
+    def _build_reverse_case_translations(self):
         original_locale = self.handler.app_context.default_locale
         with common_utils.ZipAwareOpen():
             # Load metadata for 'en', which Babel uses internally.
@@ -1091,11 +1365,12 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
             # Load metadata for base course language.
             localedata.load(original_locale)
 
-        translations = I18nDownloadHandler.build_translations(
-            self.handler, [locale])
-        cat = I18nDownloadHandler.build_babel_catalog_for_locale(
-            self.handler, translations, locale)
+        translations = TranslationDownloadRestHandler.build_translations(
+            self.handler.get_course(), [PSEUDO_LANGUAGE], 'all')
+        cat = TranslationDownloadRestHandler.build_babel_catalog_for_locale(
+            self.handler.get_course(), translations, PSEUDO_LANGUAGE)
         for message in cat:
+            # Flip the case of all text except for HTML named entities.
             message.string = re.sub(
                 r'&[a-zA-Z0-9]+;',
                 lambda m: m.group().swapcase(),
@@ -1103,18 +1378,25 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
         try:
             content = cStringIO.StringIO()
             pofile.write_po(content, cat)
-            TranslationUploadRestHandler.update_translation(content.getvalue())
+            return content.getvalue()
         finally:
             content.close()
 
+    def _set_reverse_case_translations(self, po_file_content):
+        translations = (
+            TranslationUploadRestHandler.build_translations_defaultdict())
+        TranslationUploadRestHandler.parse_po_file(
+            translations, po_file_content)
+        messages = []
+        TranslationUploadRestHandler.update_translations(
+            self.handler.get_course(), translations, messages)
+        for message in messages:
+            logging.warning(message)
+
     def render(self):
-        # Here, using 'ln' because we need a language that Babel knows.
-        # Lingala ( http://en.wikipedia.org/wiki/Lingala ) is not likely to be
-        # a target language for courses hosted in CB in the next few years.
-        locale = 'ln'
-        self._add_reverse_case_locale(locale)
-        self._add_reverse_case_translations(locale)
-        _recalculate_translation_progress(self.handler.app_context)
+        self._add_reverse_case_locale()
+        po_file_content = self._build_reverse_case_translations()
+        self._set_reverse_case_translations(po_file_content)
         self.handler.redirect(
             self.handler.get_action_url(I18nDashboardHandler.ACTION))
 
@@ -1290,8 +1572,9 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 }]
 
         actions = []
-        if not self.is_readonly(self.course):
-            actions += edit_actions
+        if (not self.is_readonly(self.course) and
+            len(self.course.all_locales) > 1):
+                actions += edit_actions
         actions += [
             {
                 'id': 'edit_18n_settings',
@@ -1438,7 +1721,12 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                 self, 401, 'Access denied.', {'key': str(key)})
             return
 
-        binding, sections = _build_sections_for_key(key, self.app_context)
+        resource_bundle_dto = ResourceBundleDAO.load(str(key))
+        transformer = xcontent.ContentTransformer(
+            config=I18nTranslationContext.instance(
+                self.app_context).get_xcontent_configuration())
+        binding, sections = self.build_sections_for_key(
+            key, self.app_context, resource_bundle_dto, transformer)
         payload_dict = {
             'key': str(key),
             'title': str(key.resource_key.get_title(self.app_context)),
@@ -1455,16 +1743,15 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
     def put(self):
         request = transforms.loads(self.request.get('request'))
-        key = request['key']
-        resource_bundle_key = ResourceBundleKey.fromstring(key)
+        key = ResourceBundleKey.fromstring(request['key'])
 
         if not self.assert_xsrf_token_or_fail(
-                request, self.XSRF_TOKEN_NAME, {'key': key}):
+                request, self.XSRF_TOKEN_NAME, {'key': str(key)}):
             return
 
-        if not has_locale_rights(self.app_context, resource_bundle_key.locale):
+        if not has_locale_rights(self.app_context, key.locale):
             transforms.send_json_response(
-                self, 401, 'Access denied.', {'key': key})
+                self, 401, 'Access denied.', {'key': str(key)})
             return
 
         payload = transforms.loads(request['payload'])
@@ -1472,11 +1759,22 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             payload, self.SCHEMA.get_json_schema_dict())
 
         # Update the resource bundle
-        resource_bundle_dto = ResourceBundleDAO.load(key)
+        resource_bundle_dto = ResourceBundleDAO.load_or_create(key)
+        i18n_progress_dto = I18nProgressDAO.load_or_create(key.resource_key)
+        self.update_dtos_with_section_data(
+            key, payload_dict['sections'], resource_bundle_dto,
+            i18n_progress_dto)
+        I18nProgressDAO.save(i18n_progress_dto)
+        ResourceBundleDAO.save(resource_bundle_dto)
+        transforms.send_json_response(self, 200, 'Saved.')
+
+    @staticmethod
+    def update_dtos_with_section_data(key, sections, resource_bundle_dto,
+                                      i18n_progress_dto):
         if not resource_bundle_dto:
             resource_bundle_dto = ResourceBundleDTO(key, {})
 
-        for section in payload_dict['sections']:
+        for section in sections:
             changed = False
             data = []
             for item in section['data']:
@@ -1506,145 +1804,157 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                     'source_value': source_value,
                     'data': data,
                 }
-        ResourceBundleDAO.save(resource_bundle_dto)
 
         # Update the progress
-        is_done = True
-        for section in payload_dict['sections']:
-            for item in section['data']:
-                if item['verb'] != VERB_CURRENT and not item['changed']:
-                    is_done = False
-
-        i18_progress_dto = I18nProgressDAO.load_or_create(
-            resource_bundle_key.resource_key)
-        i18_progress_dto.set_progress(
-            resource_bundle_key.locale,
-            I18nProgressDTO.DONE if is_done else I18nProgressDTO.IN_PROGRESS)
-        I18nProgressDAO.save(i18_progress_dto)
-
-        transforms.send_json_response(self, 200, 'Saved.')
-
-
-def _build_sections_for_key(
-    key, app_context, resource_bundle_dto=None, transformer=None):
-    if not resource_bundle_dto:
-        resource_bundle_dto = ResourceBundleDAO.load(str(key))
-    if not transformer:
-        transformer = xcontent.ContentTransformer(
-            config=I18nTranslationContext.instance(
-                app_context).get_xcontent_configuration())
-    return _build_sections_for_key_ex(
-        key, app_context, resource_bundle_dto, transformer=transformer)
-
-
-def _build_sections_for_key_ex(
-    key, app_context, resource_bundle_dto, transformer):
-
-    def add_known_translations_as_defaults(locale, sections):
-        translations = i18n.get_store().get_translations(locale)
+        any_done = False
+        all_done = True
         for section in sections:
             for item in section['data']:
-                if item['verb'] == VERB_NEW:
-                    # NOTE: The types of source values we are getting here
-                    # include: unicode, str, float, and None.  It appears to
-                    # be harmless to force a conversion to unicode so that we
-                    # are uniform in what we are asking for a translation for.
-                    source_value = unicode(item['source_value'] or '')
-                    if source_value:
-                        target_value = translations.gettext(source_value)
-
-                        # File under very weird: Mostly, the i18n library
-                        # hands back unicode instances.  However, sometimes
-                        # it will give back a string.  And sometimes, that
-                        # string is the UTF-8 encoding of a unicode string.
-                        # Convert it back to unicode, because trying to do
-                        # reasonable things on such values (such as casting
-                        # to unicode) will raise an exception.
-                        if type(target_value) == str:
-                            try:
-                                target_value = target_value.decode('utf-8')
-                            except UnicodeDecodeError:
-                                pass
-                        if target_value != source_value:
-                            item['target_value'] = target_value
-                            item['verb'] = VERB_CURRENT
-
-    schema = key.resource_key.get_schema(app_context)
-    values = key.resource_key.get_data_dict(app_context)
-    binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
-        values, schema)
-    allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
-        binding)
-
-    existing_mappings = []
-    if resource_bundle_dto:
-        for name, value in resource_bundle_dto.dict.items():
-            if value['type'] == TYPE_HTML:
-                source_value = value['source_value']
-                target_value = ''
-            else:
-                source_value = value['data'][0]['source_value']
-                target_value = value['data'][0]['target_value']
-
-            existing_mappings.append(xcontent.SourceToTargetMapping(
-                name, None, value['type'], source_value, target_value))
-
-    mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
-        binding, allowed_names=allowed_names,
-        existing_mappings=existing_mappings)
-
-    map_lists_source_to_target = (
-        xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
-
-    sections = []
-    for mapping in mappings:
-        if mapping.type == TYPE_HTML:
-            existing_mappings = []
-            if resource_bundle_dto:
-                field_dict = resource_bundle_dto.dict.get(mapping.name)
-                if field_dict:
-                    existing_mappings = field_dict['data']
-            context = xcontent.Context(
-                xcontent.ContentIO.fromstring(mapping.source_value))
-            transformer.decompose(context)
-
-            html_mappings = map_lists_source_to_target(
-                context.resource_bundle,
-                [m['source_value'] for m in existing_mappings])
-            source_value = mapping.source_value
-            data = []
-            for html_mapping in html_mappings:
-                if html_mapping.target_value_index is not None:
-                    target_value = existing_mappings[
-                        html_mapping.target_value_index]['target_value']
+                # In theory, 'both_blank' will never happen, but
+                # belt-and-suspenders.
+                both_blank = (not item['source_value'] and
+                              not item['target_value'])
+                has_up_to_date_translation = (item['target_value'] and
+                                              (item['verb'] == VERB_CURRENT or
+                                               item['changed']))
+                if both_blank or has_up_to_date_translation:
+                    any_done = True
                 else:
-                    target_value = ''
-                data.append({
-                    'source_value': html_mapping.source_value,
-                    'old_source_value': html_mapping.target_value,
-                    'target_value': target_value,
-                    'verb': html_mapping.verb,
-                    'changed': False})
+                    all_done = False
+
+                # If we have a stale translation, but there is a value for it,
+                # consider that to be in-progress.
+                if (item['verb'] == VERB_CHANGED and not item['changed'] and
+                    item['target_value']):
+                        any_done = True
+                        all_done = False
+
+        if all_done:
+            progress = I18nProgressDTO.DONE
+        elif any_done:
+            progress = I18nProgressDTO.IN_PROGRESS
         else:
-            source_value = ''
-            data = [{
-                'source_value': mapping.source_value,
-                'target_value': mapping.target_value,
-                'verb': mapping.verb,
-                'changed': False}]
+            progress = I18nProgressDTO.NOT_STARTED
+        i18n_progress_dto.set_progress(key.locale, progress)
 
-        if any([item['source_value'] for item in data]):
-            sections.append({
-                'name': mapping.name,
-                'label': mapping.label,
-                'type': mapping.type,
-                'source_value': source_value,
-                'data': data
-            })
+    @staticmethod
+    def build_sections_for_key(
+        key, app_context, resource_bundle_dto, transformer):
 
-    if key.locale != app_context.default_locale:
-        add_known_translations_as_defaults(key.locale, sections)
-    return binding, sections
+        def add_known_translations_as_defaults(locale, sections):
+            translations = i18n.get_store().get_translations(locale)
+            for section in sections:
+                for item in section['data']:
+                    if item['verb'] == VERB_NEW:
+                        # NOTE: The types of source values we are getting here
+                        # include: unicode, str, float, and None.  It appears
+                        # to be harmless to force a conversion to unicode so
+                        # that we are uniform in what we are asking for a
+                        # translation for.
+                        source_value = unicode(item['source_value'] or '')
+                        if source_value:
+                            target_value = translations.gettext(source_value)
+                            # File under very weird: Mostly, the i18n library
+                            # hands back unicode instances.  However,
+                            # sometimes it will give back a string.  And
+                            # sometimes, that string is the UTF-8 encoding of
+                            # a unicode string.  Convert it back to unicode,
+                            # because trying to do reasonable things on such
+                            # values (such as casting to unicode) will raise
+                            # an exception.
+                            if type(target_value) == str:
+                                try:
+                                    target_value = target_value.decode('utf-8')
+                                except UnicodeDecodeError:
+                                    pass
+                            if target_value != source_value:
+                                item['target_value'] = target_value
+                                item['verb'] = VERB_CURRENT
+
+        schema = key.resource_key.get_schema(app_context)
+        values = key.resource_key.get_data_dict(app_context)
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            values, schema)
+        allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
+            binding)
+        existing_mappings = []
+        if resource_bundle_dto:
+            for name, value in resource_bundle_dto.dict.items():
+                if value['type'] == TYPE_HTML:
+                    source_value = value['source_value']
+                    target_value = ''
+                else:
+                    source_value = value['data'][0]['source_value']
+                    target_value = value['data'][0]['target_value']
+
+                existing_mappings.append(xcontent.SourceToTargetMapping(
+                    name, None, value['type'], source_value, target_value))
+
+        mappings = xcontent.SourceToTargetDiffMapping.map_source_to_target(
+            binding, allowed_names=allowed_names,
+            existing_mappings=existing_mappings)
+
+        map_lists_source_to_target = (
+            xcontent.SourceToTargetDiffMapping.map_lists_source_to_target)
+
+        sections = []
+        for mapping in mappings:
+            if mapping.type == TYPE_HTML:
+                existing_mappings = []
+                if resource_bundle_dto:
+                    field_dict = resource_bundle_dto.dict.get(mapping.name)
+                    if field_dict:
+                        existing_mappings = field_dict['data']
+                context = xcontent.Context(
+                    xcontent.ContentIO.fromstring(mapping.source_value))
+                transformer.decompose(context)
+
+                html_mappings = map_lists_source_to_target(
+                    context.resource_bundle,
+                    [m['source_value'] for m in existing_mappings])
+                source_value = mapping.source_value
+                data = []
+                for html_mapping in html_mappings:
+                    if html_mapping.target_value_index is not None:
+                        target_value = existing_mappings[
+                            html_mapping.target_value_index]['target_value']
+                    else:
+                        target_value = ''
+                    data.append({
+                        'source_value': html_mapping.source_value,
+                        'old_source_value': html_mapping.target_value,
+                        'target_value': target_value,
+                        'verb': html_mapping.verb,
+                        'changed': False})
+            else:
+                old_source_value = ''
+                if mapping.verb == VERB_CHANGED:
+                    existing_mapping = (
+                        xcontent.SourceToTargetMapping.find_mapping(
+                            existing_mappings, mapping.name))
+                    if existing_mapping:
+                        old_source_value = existing_mapping.source_value
+
+                source_value = ''
+                data = [{
+                    'source_value': mapping.source_value,
+                    'old_source_value': old_source_value,
+                    'target_value': mapping.target_value,
+                    'verb': mapping.verb,
+                    'changed': False}]
+
+            if any([item['source_value'] for item in data]):
+                sections.append({
+                    'name': mapping.name,
+                    'label': mapping.label,
+                    'type': mapping.type,
+                    'source_value': source_value,
+                    'data': data
+                })
+
+        if key.locale != app_context.default_locale:
+            add_known_translations_as_defaults(key.locale, sections)
+        return binding, sections
 
 
 class LazyTranslator(object):
@@ -1969,6 +2279,7 @@ def register_module():
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
     namespaced_routes = [
         (TranslationConsoleRestHandler.URL, TranslationConsoleRestHandler),
+        (TranslationDownloadRestHandler.URL, TranslationDownloadRestHandler),
         (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
         (IsTranslatableRestHandler.URL, IsTranslatableRestHandler),]
 

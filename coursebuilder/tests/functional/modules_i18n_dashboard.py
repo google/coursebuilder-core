@@ -21,6 +21,7 @@ import cgi
 import cStringIO
 import StringIO
 import unittest
+import urllib
 import zipfile
 
 from babel.messages import pofile
@@ -45,6 +46,7 @@ from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
 from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
 from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from modules.i18n_dashboard.i18n_dashboard import ResourceRow
+from modules.i18n_dashboard.i18n_dashboard import TranslationConsoleRestHandler
 from modules.i18n_dashboard.i18n_dashboard import TranslationUploadRestHandler
 from modules.i18n_dashboard.i18n_dashboard import VERB_CHANGED
 from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
@@ -1148,6 +1150,7 @@ class TranslationImportExportTests(actions.TestBase):
         self.link.url = 'link url'
 
         self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.unit_id = self.unit.unit_id
         self.lesson.title = 'Lesson Title'
         self.lesson.objectives = 'lesson objectives'
         self.lesson.video_id = 'lesson video'
@@ -1215,6 +1218,467 @@ class TranslationImportExportTests(actions.TestBase):
         namespace_manager.set_namespace(self.old_namespace)
         super(TranslationImportExportTests, self).tearDown()
 
+    def _do_download(self, payload, method='put'):
+        request = {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                i18n_dashboard.TranslationDownloadRestHandler.XSRF_TOKEN_NAME),
+            'payload': transforms.dumps(payload),
+            }
+        if method == 'put':
+            fp = self.put
+        else:
+            fp = self.post
+        response = fp(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDownloadRestHandler.URL),
+            {'request': transforms.dumps(request)})
+        return response
+
+    def _do_upload(self, contents):
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {'request': transforms.dumps({'xsrf_token': xsrf_token})},
+            upload_files=[('file', 'doesntmatter', contents)])
+        return response
+
+    def test_upload_ui_no_request(self):
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {})
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'Malformed or missing "request" parameter.</message></response>',
+            response.body)
+
+    def test_upload_ui_no_xsrf(self):
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {'request': transforms.dumps({})})
+        self.assertEquals(
+            '<response><status>403</status><message>'
+            'Missing or invalid XSRF token.</message></response>',
+            response.body)
+
+    def test_upload_ui_no_file(self):
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {'request': transforms.dumps({'xsrf_token': xsrf_token})})
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'Must select a .zip or .po file to upload.</message></response>',
+            response.body)
+
+    def test_upload_ui_bad_file_param(self):
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
+        response = self.post(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationUploadRestHandler.URL),
+            {
+                'request': transforms.dumps({'xsrf_token': xsrf_token}),
+                'file': ''
+            })
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'Must select a .zip or .po file to upload</message></response>',
+            response.body)
+
+    def test_upload_ui_empty_file(self):
+        response = self._do_upload('')
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'The .zip or .po file must not be empty.</message></response>',
+            response.body)
+
+    def test_upload_ui_bad_content(self):
+        response = self._do_upload('23 skidoo')
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'No translations found in provided file.</message></response>',
+            response.body)
+
+    def test_upload_ui_no_permissions(self):
+        actions.login('foo@bar.com', is_admin=False)
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        self.assertEquals(
+            '<response><status>401</status><message>'
+            'Access denied.</message></response>',
+            response.body)
+
+    def test_upload_ui_bad_protocol(self):
+        actions.login('foo@bar.com', is_admin=False)
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-2|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'Expected location format GCB-1, but had GCB-2'
+            '</message></response>',
+            response.body)
+
+    def test_upload_ui_multiple_languages(self):
+        actions.login('foo@bar.com', is_admin=False)
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#: GCB-1|title|string|lesson:4:fr:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        self.assertEquals(
+            '<response><status>400</status><message>'
+            'File has translations for both "de" and "fr"'
+            '</message></response>',
+            response.body)
+
+    def test_upload_ui_one_item(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        self.assertIn(
+            '<response><status>200</status><message>Success.</message>',
+            response.body)
+        self.assertIn('made 1 total replacements', response.body)
+
+        # Verify uploaded translation makes it to lesson page when
+        # viewed with appropriate language preference.
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'de'
+        models.StudentPreferencesDAO.save(prefs)
+        response = self.get(
+            '/%s/unit?unit=%s&lesson=%s' % (
+                self.COURSE_NAME, self.unit.unit_id, self.lesson.lesson_id))
+        self.assertIn('Lektion Titel', response.body)
+
+    def _parse_messages(self, response):
+        dom = self.parse_html_string(response.body)
+        payload = dom.find('.//payload')
+        return transforms.loads(payload.text)['messages']
+
+    def test_upload_ui_no_bundles_created(self):
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        messages = self._parse_messages(response)
+
+        # Expect no messages other than the expected missing translations and
+        # the summary line indicating that we did something.
+        for message in messages:
+            self.assertTrue(
+                message.startswith('Did not find translation for') or
+                message.startswith('For Deutsch (de), made 1 total replacem'))
+
+    def test_upload_ui_with_bundles_created(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        messages = self._parse_messages(response)
+        # Expect no messages other than the expected missing translations and
+        # the summary line indicating that we did something.
+        for message in messages:
+            self.assertTrue(
+                message.startswith('Did not find translation for') or
+                message.startswith('For Deutsch (de), made 1 total replacem'))
+
+    def test_upload_ui_with_unexpected_resource(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:999:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr "Lektion Titel"\n')
+        messages = self._parse_messages(response)
+        self.assertIn('Translation file had 1 items for resource '
+                      '"lesson:999:de", but course had no such resource.',
+                      messages)
+
+    def test_upload_ui_with_unexpected_translation(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "FizzBuzz"\n'
+            'msgstr "Lektion Titel"\n')
+        messages = self._parse_messages(response)
+        self.assertIn('Translation for "FizzBuzz" present but not used.',
+                      messages)
+
+    def test_upload_ui_with_missing_translation(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "FizzBuzz"\n'
+            'msgstr "Lektion Titel"\n')
+        messages = self._parse_messages(response)
+        self.assertIn('Did not find translation for "Lesson Title"', messages)
+
+    def test_upload_ui_with_blank_translation(self):
+        # Do export to force creation of progress, bundle entities
+        self._do_download({'locales': [{'locale': 'de', 'checked': True}],
+                           'export_what': 'all'}, method='post')
+        # Upload one translation.
+        response = self._do_upload(
+            '# <span class="">1.1 Lesson Title</span>\n'
+            '#: GCB-1|title|string|lesson:4:de:0\n'
+            '#| msgid ""\n'
+            'msgid "Lesson Title"\n'
+            'msgstr ""\n')
+        messages = self._parse_messages(response)
+        self.assertIn(
+            'For Deutsch (de), made 0 total replacements in 14 resources.  '
+            '1 items in the uploaded file did not have translations.', messages)
+
+    def test_download_ui_no_request(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDownloadRestHandler.URL),
+            {})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(
+            rsp['message'], 'Malformed or missing "request" parameter.')
+
+    def test_download_ui_no_payload(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDownloadRestHandler.URL),
+            {'request': transforms.dumps({'foo': 'bar'})})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(
+            rsp['message'], 'Malformed or missing "payload" parameter.')
+
+    def test_download_ui_no_xsrf(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDownloadRestHandler.URL),
+            {'request': transforms.dumps({'payload': '{}'})})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 403)
+        self.assertEquals(
+            rsp['message'],
+            'Bad XSRF token. Please reload the page and try again')
+
+    def test_download_ui_no_locales(self):
+        rsp = transforms.loads(self._do_download({'locales': []}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(rsp['message'],
+                          'Please select at least one language to export.')
+
+    def test_download_ui_malformed_locales(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_download(
+            {'locales': [{'checked': True}]}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals('Locales specification not as expected.',
+                          rsp['message'])
+
+    def test_download_ui_no_selected_locales(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_download(
+            {'locales': [{'locale': 'de'}]}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals('Please select at least one language to export.',
+                          rsp['message'])
+
+    def test_download_ui_no_permissions(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_download(
+            {'locales': [{'locale': 'de', 'checked': True}]}).body)
+        self.assertEquals(401, rsp['status'])
+        self.assertEquals('Access denied.', rsp['message'])
+
+    def test_download_ui_file_name_default(self):
+        extra_env = {
+            'extra_locales': [{'locale': 'de', 'availability': 'available'}]
+            }
+        with actions.OverriddenEnvironment(extra_env):
+            rsp = self._do_download(
+                {'locales': [{'locale': 'de', 'checked': True}]}, method='post')
+            self.assertEquals('application/octet-stream', rsp.content_type)
+            self.assertEquals('attachment; filename="i18n_course.zip"',
+                              rsp.content_disposition)
+
+    def test_download_ui_file_name_set(self):
+        extra_env = {
+            'extra_locales': [{'locale': 'de', 'availability': 'available'}]
+            }
+        with actions.OverriddenEnvironment(extra_env):
+            rsp = self._do_download({
+                'locales': [{'locale': 'de', 'checked': True}],
+                'file_name': 'xyzzy.zip',
+                }, method='post')
+            self.assertEquals('application/octet-stream', rsp.content_type)
+            self.assertEquals('attachment; filename="xyzzy.zip"',
+                              rsp.content_disposition)
+
+    def _translated_value_swapcase(self, key, section_name):
+        get_response = self.get(
+            '/%s%s?%s' % (
+                self.COURSE_NAME,
+                i18n_dashboard.TranslationConsoleRestHandler.URL,
+                urllib.urlencode({'key': str(key)})))
+        response = transforms.loads(get_response.body)
+        payload = transforms.loads(response['payload'])
+        s = next(s for s in payload['sections'] if s['name'] == section_name)
+        s['data'][0]['changed'] = True
+        s['data'][0]['target_value'] = s['data'][0]['source_value'].swapcase()
+
+        response['payload'] = transforms.dumps(payload)
+        response['key'] = payload['key']
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationConsoleRestHandler.URL),
+            {'request': transforms.dumps(response)})
+
+    def _make_current_and_stale_translation(self):
+        # Provide translations for lesson title and assessment title.
+        self._translated_value_swapcase(
+            ResourceBundleKey(ResourceKey.LESSON_TYPE,
+                              self.lesson.lesson_id, 'de'),
+            'title')
+        self._translated_value_swapcase(
+            ResourceBundleKey(ResourceKey.ASSESSMENT_TYPE,
+                              self.assessment.unit_id, 'de'),
+            'assessment:title')
+
+        # Make assessment out-of-date by changing the assessment title
+        # via the course interface.
+        assessment = self.course.find_unit_by_id(self.assessment.unit_id)
+        assessment.title = 'Edited Assessment Title'
+        self.course.save()
+
+    def _parse_zip_response(self, response):
+        download_zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
+        out_stream = StringIO.StringIO()
+        out_stream.fp = out_stream
+        for item in download_zf.infolist():
+            file_data = download_zf.read(item)
+            catalog = pofile.read_po(cStringIO.StringIO(file_data))
+            yield catalog
+
+    def test_export_only_selected_languages(self):
+        extra_env = {
+            'extra_locales': [
+                {'locale': 'de', 'availability': 'available'},
+                {'locale': 'fr', 'availability': 'available'},
+                {'locale': 'es', 'availability': 'available'},
+                ]
+            }
+        with actions.OverriddenEnvironment(extra_env):
+            payload = {
+                'locales': [
+                    {'locale': 'de', 'checked': True},
+                    {'locale': 'fr', 'checked': True},
+                    {'locale': 'es'},
+                    ],
+                'export_what': 'all'}
+            response = self._do_download(payload, method='post')
+            zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
+            contents = [item.filename for item in zf.infolist()]
+            self.assertIn('locale/de/LC_MESSAGES/messages.po', contents)
+            self.assertIn('locale/fr/LC_MESSAGES/messages.po', contents)
+            self.assertNotIn('locale/es/LC_MESSAGES/messages.po', contents)
+
+    def _test_export(self, export_what, expect_lesson):
+        def find_message(catalog, the_id):
+            for message in catalog:
+                if message.id == the_id:
+                    return message
+            return None
+
+        extra_env = {
+            'extra_locales': [{'locale': 'de', 'availability': 'available'}]
+            }
+        with actions.OverriddenEnvironment(extra_env):
+            self._make_current_and_stale_translation()
+
+            payload = {
+                'locales': [{'locale': 'de', 'checked': True}],
+                'export_what': export_what,
+                }
+            response = self._do_download(payload)
+            rsp = transforms.loads(response.body)
+            self.assertEquals(200, rsp['status'])
+            self.assertEquals('Success.', rsp['message'])
+            response = self._do_download(payload, method='post')
+            for catalog in self._parse_zip_response(response):
+                unit = find_message(catalog, 'Unit Title')
+                self.assertEquals(1, len(unit.locations))
+                self.assertEquals('GCB-1|title|string|unit:1:de',
+                                  unit.locations[0][0])
+                self.assertEquals('', unit.string)
+
+                assessment = find_message(catalog, 'Edited Assessment Title')
+                self.assertEquals(1, len(assessment.locations))
+                self.assertEquals(
+                    'GCB-1|assessment:title|string|assessment:2:de',
+                    assessment.locations[0][0])
+                self.assertEquals('', assessment.string)
+
+                lesson = find_message(catalog, 'Lesson Title')
+                if expect_lesson:
+                    self.assertEquals(1, len(lesson.locations))
+                    self.assertEquals('GCB-1|title|string|lesson:4:de',
+                                      lesson.locations[0][0])
+                    self.assertEquals('lESSON tITLE', lesson.string)
+                    self.assertEquals([], lesson.previous_id)
+                else:
+                    self.assertIsNone(lesson)
+
+    def test_export_only_new(self):
+        self._test_export('new', False)
+
+    def test_export_all(self):
+        self._test_export('all', True)
+
     def test_added_items_appear_on_dashboard(self):
         """Ensure that all items added in setUp are present on dashboard.
 
@@ -1236,16 +1700,10 @@ class TranslationImportExportTests(actions.TestBase):
             'extra_locales': [{'locale': 'de', 'availability': 'available'}]
             }
         with actions.OverriddenEnvironment(extra_env):
-            response = self.get(self.URL)
-            response = self.click(response, 'Download Translation Files')
-            self.assertEquals(200, response.status_int)
-            download_zf = zipfile.ZipFile(
-                cStringIO.StringIO(response.body), 'r')
-            out_stream = StringIO.StringIO()
-            out_stream.fp = out_stream
-            for item in download_zf.infolist():
-                catalog = pofile.read_po(
-                    cStringIO.StringIO(download_zf.read(item)))
+            response = self._do_download(
+                {'locales': [{'locale': 'de', 'checked': True}],
+                 'export_what': 'all'}, method='post')
+            for catalog in self._parse_zip_response(response):
                 messages = [msg.id for msg in catalog]
                 self.assertIn('Unit Title', messages)
                 self.assertIn('unit description', messages)
@@ -1288,7 +1746,9 @@ class TranslationImportExportTests(actions.TestBase):
 
         # Download the course translations, and build a catalog containing
         # all the translations repeated.
-        response = self.get('dashboard?action=i18n_download')
+        response = self._do_download(
+            {'locales': [{'locale': 'el', 'checked': True}],
+             'export_what': 'all'}, method='post')
         download_zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
         out_stream = StringIO.StringIO()
         out_stream.fp = out_stream
@@ -1317,17 +1777,17 @@ class TranslationImportExportTests(actions.TestBase):
                   upload_files=[('file', 'doesntmatter', upload_contents)])
 
         # Download the translations; verify the doubling.
-        response = self.get('dashboard?action=i18n_download')
-        zf = zipfile.ZipFile(cStringIO.StringIO(response.body), 'r')
-        num_translations = 0
-        for item in zf.infolist():
-            catalog = pofile.read_po(cStringIO.StringIO(zf.read(item)))
+        response = self._do_download(
+            {'locales': [{'locale': 'el', 'checked': True}],
+             'export_what': 'all'}, method='post')
+        for catalog in self._parse_zip_response(response):
+            num_translations = 0
             for msg in catalog:
                 if msg.locations:  # Skip header pseudo-message entry
                     num_translations += 1
                     self.assertNotEquals(msg.id, msg.string)
                     self.assertEquals(msg.id.upper() * 2, msg.string)
-        self.assertEquals(30, num_translations)
+            self.assertEquals(30, num_translations)
 
         # And verify the presence of the translated versions on actual
         # course pages.
@@ -1343,6 +1803,132 @@ class TranslationImportExportTests(actions.TestBase):
         response = self.get('unit?unit=%s' % self.unit.unit_id)
         self.assertIn('uNIT tITLE', response.body)
         self.assertIn('lESSON tITLE', response.body)
+
+    def _test_progress_calculation(self, sections, expected_status):
+        key = i18n_dashboard.ResourceBundleKey.fromstring('assessment:1:de')
+        i18n_progress_dto = i18n_dashboard.I18nProgressDAO.create_blank(key)
+        for section in sections:
+            section['name'] = 'fred'
+            section['type'] = 'string'
+        TranslationConsoleRestHandler.update_dtos_with_section_data(
+            key, sections, None, i18n_progress_dto)
+        self.assertEquals(expected_status,
+                          i18n_progress_dto.get_progress(key.locale))
+
+    def test_progress_no_sections_is_done(self):
+        self._test_progress_calculation([], i18n_dashboard.I18nProgressDTO.DONE)
+
+    def test_progress_one_section_current_and_not_changed_is_done(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CURRENT,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.DONE)
+
+    def test_progress_one_section_current_and_changed_is_done(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CURRENT,
+                        'changed': True,
+                        'source_value': 'yes',
+                        'target_value': 'yup'}]}],
+            i18n_dashboard.I18nProgressDTO.DONE)
+
+    def test_progress_one_section_stale_and_not_changed_is_in_progress(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CHANGED,
+                        'changed': False,
+                        'old_source_value': 'yse',
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.IN_PROGRESS)
+
+    def test_progress_one_section_stale_but_changed_is_done(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CHANGED,
+                        'changed': True,
+                        'old_source_value': 'yse',
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.DONE)
+
+    def test_progress_one_section_new_and_not_translated_is_not_started(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_NEW,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': ''}]}],
+            i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_progress_one_section_new_and_translated_is_done(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_NEW,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_progress_one_section_current_but_changed_to_blank_unstarted(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CURRENT,
+                        'changed': True,
+                        'source_value': 'yes',
+                        'target_value': ''}]}],
+            i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_progress_one_section_changed_but_changed_to_blank_unstarted(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CHANGED,
+                        'changed': True,
+                        'source_value': 'yes',
+                        'target_value': ''}]}],
+            i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_progress_one_section_new_but_changed_to_blank_is_unstarted(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_NEW,
+                        'changed': True,
+                        'source_value': 'yes',
+                        'target_value': ''}]}],
+            i18n_dashboard.I18nProgressDTO.NOT_STARTED)
+
+    def test_progress_one_not_started_and_one_done_is_in_progress(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_NEW,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': ''},
+                       {'verb': i18n_dashboard.VERB_CURRENT,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.IN_PROGRESS)
+
+    def test_progress_one_stale_and_one_done_is_in_progress(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CHANGED,
+                        'changed': False,
+                        'old_source_value': 'yse',
+                        'source_value': 'yes',
+                        'target_value': 'ja'},
+                       {'verb': i18n_dashboard.VERB_CURRENT,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': 'ja'}]}],
+            i18n_dashboard.I18nProgressDTO.IN_PROGRESS)
+
+    def test_progress_one_stale_and_one_not_started_is_in_progress(self):
+        self._test_progress_calculation(
+            [{'data': [{'verb': i18n_dashboard.VERB_CHANGED,
+                        'changed': False,
+                        'old_source_value': 'yse',
+                        'source_value': 'yes',
+                        'target_value': 'ja'},
+                       {'verb': i18n_dashboard.VERB_NEW,
+                        'changed': False,
+                        'source_value': 'yes',
+                        'target_value': ''}]}],
+            i18n_dashboard.I18nProgressDTO.IN_PROGRESS)
 
 
 class TranslatorRoleTests(actions.TestBase):
@@ -2105,7 +2691,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
                     translation_error += 1
 
         # TODO(psimakov): there should be no errors
-        self.assertEquals((invalid_question, translation_error), (3, 37))
+        self.assertEquals((invalid_question, translation_error), (3, 0))
 
     def test_course_with_one_common_unit_and_two_per_locale_units(self):
         # TODO(psimakov): incomplete
