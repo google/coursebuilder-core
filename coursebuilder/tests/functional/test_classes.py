@@ -1901,7 +1901,47 @@ class StudentAspectTest(actions.TestBase):
             actions.logout()
             actions.Permissions.assert_logged_out(self)
 
+    def assert_locale_settings(self):
+        # Locale picker shown. Chooser shows only available locales.
+        course_page = self.parse_html_string(self.get('course').body)
+        locale_options = course_page.findall(
+            './/select[@id="locale-select"]/option')
+        self.assertEqual(2, len(locale_options))
+        self.assertEquals('en_US', locale_options[0].attrib['value'])
+        self.assertEquals('el', locale_options[1].attrib['value'])
+
+        # Set language prefs using the REST endoint
+
+        # A bad XSRF token is rejected
+        request = {'xsrf_token': '1234'}
+        response = transforms.loads(self.post(
+            'rest/locale', {'request': transforms.dumps(request)}).body)
+        self.assertEquals(403, response['status'])
+        self.assertIn('Bad XSRF token', response['message'])
+
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('locales')
+
+        # An unavailable locale is rejected
+        request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'fr'}}
+        response = transforms.loads(self.post(
+            'rest/locale', {'request': transforms.dumps(request)}).body)
+        self.assertEquals(401, response['status'])
+        self.assertIn('Bad locale', response['message'])
+
+        # An available locale is accepted
+        request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'el'}}
+        response = transforms.loads(self.post(
+            'rest/locale', {'request': transforms.dumps(request)}).body)
+        self.assertEquals(200, response['status'])
+        self.assertIn('OK', response['message'])
+
+        # After setting locale, visit course homepage and see new locale
+        course_page = self.parse_html_string(self.get('course').body)
+        self.assertEquals(
+            u'Εγγραφή', course_page.find('.//a[@href="register"]').text)
+
     def test_locale_settings(self):
+
         extra_environ = {
             'course': {'locale': 'en_US', 'can_student_change_locale': True},
             'extra_locales': [
@@ -1931,51 +1971,12 @@ class StudentAspectTest(actions.TestBase):
                 u'Registration',
                 course_page.find('.//a[@href="register"]').text)
 
-            # Locale picker not show for user out of session
-            locale_select = course_page.find('.//select[@id="locale-select"]')
-            self.assertIsNone(locale_select)
-
             actions.login('user@place.com')
+            self.assert_locale_settings()
 
-            # Locale picker shown for user in session. Chooser shows only
-            # available locales.
-            course_page = self.parse_html_string(self.get('course').body)
-            locale_options = course_page.findall(
-                './/select[@id="locale-select"]/option')
-            self.assertEqual(2, len(locale_options))
-            self.assertEquals('en_US', locale_options[0].attrib['value'])
-            self.assertEquals('el', locale_options[1].attrib['value'])
-
-            # Set language prefs using the REST endoint
-
-            # A bad XSRF token is rejected
-            request = {'xsrf_token': '1234'}
-            response = transforms.loads(self.post(
-                'rest/locale', {'request': transforms.dumps(request)}).body)
-            self.assertEquals(403, response['status'])
-            self.assertIn('Bad XSRF token', response['message'])
-
-            xsrf_token = crypto.XsrfTokenManager.create_xsrf_token('locales')
-
-            # An unavailable locale is rejected
-            request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'fr'}}
-            response = transforms.loads(self.post(
-                'rest/locale', {'request': transforms.dumps(request)}).body)
-            self.assertEquals(401, response['status'])
-            self.assertIn('Bad locale', response['message'])
-
-            # An available locale is accepted
-            request = {'xsrf_token': xsrf_token, 'payload': {'selected': 'el'}}
-            response = transforms.loads(self.post(
-                'rest/locale', {'request': transforms.dumps(request)}).body)
-            self.assertEquals(200, response['status'])
-            self.assertIn('OK', response['message'])
-
-            # After setting locale, visit course homepage and see new locale
-
-            course_page = self.parse_html_string(self.get('course').body)
-            self.assertEquals(
-                u'Εγγραφή', course_page.find('.//a[@href="register"]').text)
+            actions.logout()
+            self.assert_locale_settings()
+            self.assertEquals('el', self.testapp.cookies['cb-user-locale'])
 
     def test_lesson_activity_navigation(self):
         """Test navigation between lesson/activity pages."""

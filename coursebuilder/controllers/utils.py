@@ -51,6 +51,10 @@ COURSE_BASE_KEY = 'gcb_course_base'
 # The name of the template dict key that stores data from course.yaml.
 COURSE_INFO_KEY = 'course_info'
 
+# The name of the cookie used to store the locale prefs for users out of session
+GUEST_LOCALE_COOKIE = 'cb-user-locale'
+GUEST_LOCALE_COOKIE_MAX_AGE_SEC = 48 * 60 * 60  # 48 hours
+
 TRANSIENT_STUDENT = TransientStudent()
 
 # Whether to record page load/unload events in a database.
@@ -340,9 +344,137 @@ class ApplicationHandler(webapp2.RequestHandler):
                 (parts.scheme, parts.netloc, base, None, None, None))
         return base
 
+    def render_template_to_html(self, template_values, template_file,
+                                additional_dirs=None):
+        models.MemcacheManager.begin_readonly()
+        try:
+            template = self.get_template(template_file, additional_dirs)
+            return jinja2.utils.Markup(
+                template.render(template_values, autoescape=True))
+        finally:
+            models.MemcacheManager.end_readonly()
+
+    def get_template(self, template_file, additional_dirs=None):
+        raise NotImplementedError()
+
+    @classmethod
+    def canonicalize_url_for(cls, app_context, location):
+        """Adds the current namespace URL prefix to the relative 'location'."""
+        is_relative = (
+            not cls.is_absolute(location) and
+            not location.startswith(app_context.get_slug()))
+        has_slug = (
+            app_context.get_slug() and app_context.get_slug() != '/')
+        if is_relative and has_slug:
+            location = '%s%s' % (app_context.get_slug(), location)
+        return location
+
+    def canonicalize_url(self, location):
+        if hasattr(self, 'app_context'):
+            return self.canonicalize_url_for(self.app_context, location)
+        else:
+            return location
+
+    def redirect(self, location, normalize=True):
+        if normalize:
+            location = self.canonicalize_url(location)
+        super(ApplicationHandler, self).redirect(location)
+
+
+class CourseHandler(ApplicationHandler):
+    """Base handler that is aware of the current course."""
+
     def __init__(self, *args, **kwargs):
-        super(ApplicationHandler, self).__init__(*args, **kwargs)
+        super(CourseHandler, self).__init__(*args, **kwargs)
+        self.course = None
         self.template_value = {}
+
+    def get_user(self):
+        """Get the current user."""
+        return users.get_current_user()
+
+    def get_student(self):
+        """Get the current student."""
+        user = self.get_user()
+        if user is None:
+            return None
+        return Student.get_by_email(user.email())
+
+    def _pick_first_valid_locale_from_list(self, desired_locales):
+        available_locales = self.app_context.get_allowed_locales()
+        for lang in desired_locales:
+            for available_locale in available_locales:
+                if lang.lower() == available_locale.lower():
+                    return lang
+        return None
+
+    def get_locale_for(self, request, app_context):
+        """Returns a locale that should be used by this request."""
+
+        if self.get_user():
+            # check if student has any locale labels assigned
+            student = self.get_student()
+            if student and student.is_enrolled and not student.is_transient:
+                student_label_ids = student.get_labels_of_type(
+                    models.LabelDTO.LABEL_TYPE_LOCALE)
+                if student_label_ids:
+                    all_labels = models.LabelDAO.get_all_of_type(
+                        models.LabelDTO.LABEL_TYPE_LOCALE)
+                    student_locales = []
+                    for label in all_labels:
+                        if label.type != models.LabelDTO.LABEL_TYPE_LOCALE:
+                            continue
+                        if label.id in student_label_ids:
+                            student_locales.append(label.title)
+                    locale = self._pick_first_valid_locale_from_list(
+                        student_locales)
+                    if locale:
+                        return locale
+
+            # check if user preferences have been set
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            if prefs is not None and prefs.locale is not None:
+                return prefs.locale
+
+        locale_cookie = self.request.cookies.get(GUEST_LOCALE_COOKIE)
+        if locale_cookie and (
+                locale_cookie in self.app_context.get_allowed_locales()):
+            return locale_cookie
+
+        # check if accept language has been set
+        accept_langs = request.headers.get('Accept-Language')
+        locale = self._pick_first_valid_locale_from_list(
+            [lang for lang, _ in locales.parse_accept_language(accept_langs)])
+        if locale:
+            return locale
+
+        return app_context.default_locale
+
+    def get_course(self):
+        """Get current course."""
+        if not self.course:
+            self.course = Course(self)
+        return self.course
+
+    def get_track_matching_student(self, student):
+        """Gets units whose labels match those on the student."""
+        return self.get_course().get_track_matching_student(student)
+
+    def get_progress_tracker(self):
+        """Gets the progress tracker for the course."""
+        return self.get_course().get_progress_tracker()
+
+    def find_unit_by_id(self, unit_id):
+        """Gets a unit with a specific id or fails with an exception."""
+        return self.get_course().find_unit_by_id(unit_id)
+
+    def get_units(self):
+        """Gets all units in the course."""
+        return self.get_course().get_units()
+
+    def get_lessons(self, unit_id):
+        """Gets all lessons (in order) in the specific course unit."""
+        return self.get_course().get_lessons(unit_id)
 
     def init_template_values(self, environ):
         """Initializes template variables with common values."""
@@ -382,7 +514,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         can_student_change_locale = (
             self.get_course().get_course_setting('can_student_change_locale')
             or self.get_course().app_context.can_pick_all_locales())
-        if prefs is not None and can_student_change_locale:
+        if can_student_change_locale:
             self.template_value['available_locales'] = [
                 {
                     'name': locales.get_locale_display_name(loc),
@@ -391,7 +523,8 @@ class ApplicationHandler(webapp2.RequestHandler):
             self.template_value['locale_xsrf_token'] = (
                 XsrfTokenManager.create_xsrf_token(
                     StudentLocaleRESTHandler.XSRF_TOKEN_NAME))
-            self.template_value['selected_locale'] = prefs.locale
+            self.template_value['selected_locale'] = self.get_locale_for(
+                self.request, self.app_context)
 
     def get_template(self, template_file, additional_dirs=None):
         """Computes location of template files for the current namespace."""
@@ -410,127 +543,6 @@ class ApplicationHandler(webapp2.RequestHandler):
                 lambda unit, lesson: display_lesson_title(unit, lesson, _p))})
 
         return template_environ.get_template(template_file)
-
-    def render_template_to_html(self, template_values, template_file,
-                                additional_dirs=None):
-        models.MemcacheManager.begin_readonly()
-        try:
-            template = self.get_template(template_file, additional_dirs)
-            return jinja2.utils.Markup(
-                template.render(template_values, autoescape=True))
-        finally:
-            models.MemcacheManager.end_readonly()
-
-    @classmethod
-    def canonicalize_url_for(cls, app_context, location):
-        """Adds the current namespace URL prefix to the relative 'location'."""
-        is_relative = (
-            not cls.is_absolute(location) and
-            not location.startswith(app_context.get_slug()))
-        has_slug = (
-            app_context.get_slug() and app_context.get_slug() != '/')
-        if is_relative and has_slug:
-            location = '%s%s' % (app_context.get_slug(), location)
-        return location
-
-    def canonicalize_url(self, location):
-        if hasattr(self, 'app_context'):
-            return self.canonicalize_url_for(self.app_context, location)
-        else:
-            return location
-
-    def redirect(self, location, normalize=True):
-        if normalize:
-            location = self.canonicalize_url(location)
-        super(ApplicationHandler, self).redirect(location)
-
-
-class CourseHandler(ApplicationHandler):
-    """Base handler that is aware of the current course."""
-
-    def __init__(self, *args, **kwargs):
-        super(CourseHandler, self).__init__(*args, **kwargs)
-        self.course = None
-
-    def get_user(self):
-        """Get the current user."""
-        return users.get_current_user()
-
-    def get_student(self):
-        """Get the current student."""
-        user = self.get_user()
-        if user is None:
-            return None
-        return Student.get_by_email(user.email())
-
-    def _pick_first_valid_locale_from_list(self, desired_locales):
-        available_locales = self.app_context.get_allowed_locales()
-        for lang in desired_locales:
-            for available_locale in available_locales:
-                if lang.lower() == available_locale.lower():
-                    return lang
-        return None
-
-    def get_locale_for(self, request, app_context):
-        """Returns a locale that should be used by this request."""
-        # check if student has any locale labels assigned
-        student = self.get_student()
-        if student and student.is_enrolled and not student.is_transient:
-            student_label_ids = student.get_labels_of_type(
-                models.LabelDTO.LABEL_TYPE_LOCALE)
-            if student_label_ids:
-                all_labels = models.LabelDAO.get_all_of_type(
-                    models.LabelDTO.LABEL_TYPE_LOCALE)
-                student_locales = []
-                for label in all_labels:
-                    if label.type != models.LabelDTO.LABEL_TYPE_LOCALE:
-                        continue
-                    if label.id in student_label_ids:
-                        student_locales.append(label.title)
-                locale = self._pick_first_valid_locale_from_list(
-                    student_locales)
-                if locale:
-                    return locale
-
-        # check if user preferences have been set
-        prefs = models.StudentPreferencesDAO.load_or_create()
-        if prefs is not None and prefs.locale is not None:
-            return prefs.locale
-
-        # check if accept language has been set
-        accept_langs = request.headers.get('Accept-Language')
-        locale = self._pick_first_valid_locale_from_list(
-            [lang for lang, _ in locales.parse_accept_language(accept_langs)])
-        if locale:
-            return locale
-
-        return app_context.default_locale
-
-    def get_course(self):
-        """Get current course."""
-        if not self.course:
-            self.course = Course(self)
-        return self.course
-
-    def get_track_matching_student(self, student):
-        """Gets units whose labels match those on the student."""
-        return self.get_course().get_track_matching_student(student)
-
-    def get_progress_tracker(self):
-        """Gets the progress tracker for the course."""
-        return self.get_course().get_progress_tracker()
-
-    def find_unit_by_id(self, unit_id):
-        """Gets a unit with a specific id or fails with an exception."""
-        return self.get_course().find_unit_by_id(unit_id)
-
-    def get_units(self):
-        """Gets all units in the course."""
-        return self.get_course().get_units()
-
-    def get_lessons(self, unit_id):
-        """Gets all lessons (in order) in the specific course unit."""
-        return self.get_course().get_lessons(unit_id)
 
 
 class BaseHandler(CourseHandler):
@@ -973,17 +985,20 @@ class StudentLocaleRESTHandler(BaseRESTHandler):
                 request, self.XSRF_TOKEN_NAME, {}):
             return
 
-        prefs = models.StudentPreferencesDAO.load_or_create()
-        if prefs is None:
-            transforms.send_json_response(self, 200, 'OK')
-            return
-
         selected = request['payload']['selected']
         if selected not in self.app_context.get_allowed_locales():
             transforms.send_json_response(self, 401, 'Bad locale')
             return
 
-        prefs.locale = selected
-        models.StudentPreferencesDAO.save(prefs)
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        if prefs:
+            # Store locale in StudentPreferences for logged-in users
+            prefs.locale = selected
+            models.StudentPreferencesDAO.save(prefs)
+        else:
+            # Store locale in cookie for out-of-session users
+            self.response.set_cookie(
+                GUEST_LOCALE_COOKIE, selected,
+                max_age=GUEST_LOCALE_COOKIE_MAX_AGE_SEC)
 
         transforms.send_json_response(self, 200, 'OK')
