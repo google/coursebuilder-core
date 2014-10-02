@@ -264,10 +264,6 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
           textArea = this.el;
           rteDiv = textArea.previousSibling;
 
-      if (this._cbGetValue) {
-        this.getValue = this._cbGetValue;
-      }
-
       this._addResize();
 
       Dom.setStyle(rteDiv, 'position', 'static');
@@ -290,11 +286,6 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
 
       this._customTagManager.removeMarkerTags();
       editor.saveHTML();
-
-      this._cbGetValue = this.getValue;
-      this.getValue = function() {
-        return textArea.value;
-      };
 
       this._removeResize();
 
@@ -324,7 +315,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     },
 
     getValue: function() {
-      if (this.editor) {
+      if (this.isInRteMode) {
         // Clean the editor text before saving, and then restore markers
         this._customTagManager.removeMarkerTags();
         var value = this.editor.saveHTML();
