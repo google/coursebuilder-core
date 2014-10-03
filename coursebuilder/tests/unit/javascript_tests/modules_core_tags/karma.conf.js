@@ -11,15 +11,8 @@ files = [
   // Test files
   'tests/unit/javascript_tests/modules_core_tags/*.js',
 
-  // Test resources
-  {
-    pattern: 'tests/unit/javascript_tests/modules_core_tags/*.html',
-    watched: true,
-    included: false,
-    served: true
-  },
-
   // Files to test
+  'modules/core_tags/resources/drive_tag_script_manager.js',
   'modules/core_tags/resources/drive_tag_parent_frame.js',
   'modules/core_tags/resources/drive_tag_child_frame.js',
 ];

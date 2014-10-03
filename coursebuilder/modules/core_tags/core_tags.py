@@ -33,14 +33,20 @@ from controllers import utils
 from models import courses
 from models import custom_modules
 from models import models
+from models import roles
 from models import transforms
 from modules.oeditor import oeditor
 
 
 _RESOURCE_PREFIX = '/modules/core_tags'
 RESOURCE_FOLDER = _RESOURCE_PREFIX + '/resources/'
-PARENT_FRAME_SCRIPT = RESOURCE_FOLDER + 'drive_tag_parent_frame.js'
 _OEDITOR_RESOURCE_FOLDER = '/modules/oeditor/resources/'
+
+_DRIVE_TAG_REFRESH_SCRIPT = RESOURCE_FOLDER + 'drive_tag_refresh.js'
+_IFRAME_RESIZE_SCRIPT = _OEDITOR_RESOURCE_FOLDER + 'resize_iframes.js'
+_PARENT_FRAME_SCRIPT = RESOURCE_FOLDER + 'drive_tag_parent_frame.js'
+_SCRIPT_MANAGER_SCRIPT = RESOURCE_FOLDER + 'drive_tag_script_manager.js'
+
 _RESOURCE_ABSPATH = os.path.join(os.path.dirname(__file__), 'resources')
 _TEMPLATES_ABSPATH = os.path.join(os.path.dirname(__file__), 'templates')
 _GOOGLE_DRIVE_TAG_PATH = _RESOURCE_PREFIX + '/googledrivetag'
@@ -69,6 +75,9 @@ class _Runtime(object):
     def __init__(self, app_context):
         self._app_context = app_context
         self._environ = self._app_context.get_environ()
+
+    def can_edit(self):
+        return roles.Roles.is_course_admin(self._app_context)
 
     def courses_can_use_google_apis(self):
         return courses.COURSES_CAN_USE_GOOGLE_APIS.value
@@ -159,23 +168,6 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
     CONTENT_CHUNK_TYPE = 'google-drive'
 
     @classmethod
-    def on_unregister(cls):
-        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.remove(
-            cls._oeditor_extra_script_tags_urls)
-
-    @classmethod
-    def on_register(cls):
-        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.append(
-            cls._oeditor_extra_script_tags_urls)
-
-    @classmethod
-    def _oeditor_extra_script_tags_urls(cls):
-        script_urls = []
-        if courses.COURSES_CAN_USE_GOOGLE_APIS.value:
-            script_urls.append(PARENT_FRAME_SCRIPT)
-        return script_urls
-
-    @classmethod
     def additional_dirs(cls):
         return [_RESOURCE_ABSPATH]
 
@@ -190,6 +182,27 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
     @classmethod
     def name(cls):
         return 'Google Drive'
+
+    @classmethod
+    def on_register(cls):
+        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.append(
+            cls._oeditor_extra_script_tags_urls)
+
+    @classmethod
+    def on_unregister(cls):
+        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.remove(
+            cls._oeditor_extra_script_tags_urls)
+
+    @classmethod
+    def _oeditor_extra_script_tags_urls(cls):
+        script_urls = []
+        if courses.COURSES_CAN_USE_GOOGLE_APIS.value:
+            # Order matters here because scripts are inserted in the order they
+            # are found in this list, and later ones may refer to symbols from
+            # earlier ones.
+            script_urls.append(_SCRIPT_MANAGER_SCRIPT)
+            script_urls.append(_PARENT_FRAME_SCRIPT)
+        return script_urls
 
     def get_icon_url(self):
         return self.create_icon_url('drive.png')
@@ -224,32 +237,66 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
         resource_id = node.attrib.get('document-id')
         src = self._get_tag_renderer_url(
             runtime.get_slug(), self.CONTENT_CHUNK_TYPE, resource_id)
-        iframe = cElementTree.XML("""
-<iframe
-    class="google-drive gcb-needs-resizing"
-    frameborder="0"
-    title="Google Drive"
-    type="text/html"
-    width="100%">
-</iframe>""")
-        iframe.set('src', src)
+
+        tag = cElementTree.Element('div')
+        tag.set('class', 'google-drive google-drive-container')
+
+        if runtime.can_edit():
+            controls = cElementTree.Element('div')
+            controls.set('class', 'google-drive google-drive-controls')
+            controls.set('data-api-key', runtime.get_api_key())
+            controls.set('data-client-id', runtime.get_client_id())
+            controls.set('data-document-id', resource_id)
+            controls.set(
+                'data-xsrf-token', GoogleDriveRESTHandler.get_xsrf_token())
+            tag.append(controls)
+
+        iframe = cElementTree.Element('iframe')
+        iframe.set(
+            'class',
+            'google-drive google-drive-content-iframe gcb-needs-resizing')
+        iframe.set('frameborder', '0')
         iframe.set('scrolling', 'no')
-        return iframe
+        iframe.set('src', src)
+        iframe.set('title', 'Google Drive')
+        iframe.set('width', '100%')
+        tag.append(iframe)
+
+        return tag
 
     def rollup_header_footer(self, context):
-        header = tags.html_string_to_element_tree("""
-<script src="%s">
-</script>""" % self._get_iframe_resize_script_src())
-        footer = tags.html_string_to_element_tree('')
+        runtime = _Runtime(context.handler.app_context)
+        can_edit = runtime.can_edit()
+        srcs = [_IFRAME_RESIZE_SCRIPT]
+
+        if can_edit:  # Harmless but wasteful to give to non-admins.
+            srcs = [_SCRIPT_MANAGER_SCRIPT] + srcs
+
+        header = cElementTree.Element('div')
+
+        for src in srcs:
+            script = cElementTree.Element('script')
+            script.set('src', src)
+            header.append(script)
+
+        # Put in footer so other scripts will already be loaded when our main
+        # fires. Give script to admins only (though note that even if non-admins
+        # grab the script we won't give them the XSRF tokens they need to issue
+        # CB AJAX ops).
+
+        footer = cElementTree.Element('div')
+
+        if can_edit:
+            script = cElementTree.Element('script')
+            script.set('src', _DRIVE_TAG_REFRESH_SCRIPT)
+            footer.append(script)
+
         return (header, footer)
 
     def _get_tag_renderer_url(self, slug, type_id, resource_id):
         args = urllib.urlencode(
             {'type_id': type_id, 'resource_id': resource_id})
         return '%s%s?%s' % (slug, _GOOGLE_DRIVE_TAG_RENDERER_PATH, args)
-
-    def _get_iframe_resize_script_src(self):
-        return '%sresize_iframes.js' % _OEDITOR_RESOURCE_FOLDER
 
 
 class GoogleDriveRESTHandler(utils.BaseRESTHandler):

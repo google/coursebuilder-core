@@ -132,68 +132,6 @@ window.Dispatcher = (function() {
 }());
 
 /*
- * Inserts <script> tags for Google APIs and sets callbacks on them.
- */
-window.GoogleScriptManager = (function() {
-  var module = {};
-
-  module._googleApiScriptCallbackName = 'gcbGoogleClientOnApiLoad';
-  module._googleApiScriptId = "gcb-google-client-api";
-  module._googleApiScriptUrl = "https://apis.google.com/js/api.js";
-  module._googleClientScriptCallbackName = 'gcbGoogleClientOnClientLoad';
-  module._googleClientScriptUrl = "https://apis.google.com/js/client.js";
-  module._googleClientScriptId = "gcb-google-client-client";
-
-  module.insertAll = function() {
-    // Inserts api.js and client.js with the callbacks as named above.
-    var parent = module.getScriptParentElement();
-
-    if (module._exists(parent)) {
-      return;
-    }
-
-    parent = module._insertScriptParentElement();
-    var apiScript = module._createScriptElement(
-      module._googleApiScriptId, module._googleApiScriptUrl,
-      module._googleApiScriptCallbackName);
-    var clientScript = module._createScriptElement(
-      module._googleClientScriptId, module._googleClientScriptUrl,
-      module._googleClientScriptCallbackName);
-    parent.append(apiScript);
-    parent.append(clientScript);
-  };
-
-  module.getScriptParentElement = function() {
-    return $("#" + module._scriptParentElementId);
-  };
-
-  module._createScriptElement = function(id, url, onloadFnName) {
-    return element = $('<script>')
-      .attr('id', id)
-      .attr('src', url + '?onload=' + onloadFnName)
-      .attr('type', 'text/javascript');
-  };
-
-  module._createScriptParentElement = function() {
-    return $("<div>")
-      .attr('id', module._scriptParentElementId)
-      .css('display', 'none');
-  };
-
-  module._exists = function(jQueryResultArray) {
-    return jQueryResultArray.length > 0;
-  };
-
-  module._insertScriptParentElement = function() {
-    var element = module._createScriptParentElement();
-    $('body').append(element);
-    return element;
-  };
-
-  return module;
-}($));
-
-/*
  * Parent frame code for InputEx lightbox child for the Google Drive custom tag.
  *
  * The child is rendered in a lightbox and accepts user input. The child relays
@@ -202,8 +140,15 @@ window.GoogleScriptManager = (function() {
  * because major UX (the Drive picker) needs to be rendered at the parent level,
  * and you get better UX for error reporting (the admin butterbar) at the parent
  * level.
+ *
+ * @param {jQuery} $ jQuery object.
+ * @param {object} GoogleAPIClientTools GoogleAPIClient tools to use for common
+ *     functionality.
+ * @param {object} GoogleScriptManager GoogleScriptManager to use for loading
+ *     Google dependencies.
  */
-window.GcbGoogleDriveTagParent = (function($, JSON) {
+window.GcbGoogleDriveTagParent = (function(
+    $, GoogleApiClientTools, GoogleScriptManager) {
   var module = {};
 
   module._apiKey;
@@ -217,8 +162,6 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
   module._scopes = ["https://www.googleapis.com/auth/drive.readonly"];
   module._typeId;
   module._xsrfToken;
-  // XSSI prefix must be kept in sync with models/transforms.py.
-  module._xssiPrefix = ")]}'";
 
   module._PICKER_LOADED = 'loaded';
   module._PICKER_PICKED = 'picked'
@@ -272,10 +215,6 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     }, callback);
   };
 
-  module._authorized = function() {
-    return Boolean(module._getAuthToken());
-  };
-
   module._configured = function() {
     return (
       Boolean(module._getApiKey()) &&
@@ -285,12 +224,12 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
 
   module._downloadDocumentContents = function(documentId, url) {
     // Downloads Google drive document contents given their URL.
-    var handler = module._partial(
+    var handler = GoogleApiClientTools.partial(
       module._onDocumentContentsDownloaded, documentId);
     $.ajax({
       error: handler,
       headers: {
-        Authorization: 'Bearer ' + module._getAuthToken()
+        Authorization: 'Bearer ' + GoogleApiClientTools.getAuthToken()
       },
       success: handler,
       type: 'GET',
@@ -302,28 +241,12 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     return module._apiKey;
   };
 
-  module._getAuthToken = function() {
-    var token = top.gapi.auth.getToken();
-    if (token) {
-      return token.access_token;
-    }
-  };
-
   module._getClientId = function() {
     return module._clientId;
   };
 
-  module._getGoogleDriveTagUrl = function() {
-    var slug = top.window.location.pathname.split('/')[1];
-    return '/' + slug + '/modules/core_tags/googledrivetag';
-  };
-
   module._getInputExIframeWindow = function() {
     return $("#" + module._editorIframeId)[0].contentWindow;
-  };
-
-  module._getTypeId = function() {
-    return module._typeId;
   };
 
   module._getXsrfToken = function() {
@@ -362,10 +285,10 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     }
 
     cbShowMsg('Starting download...')
-    if (!module._authorized()) {
-      var callback = module._partial(
-        module._onAuthorizeResult,
-        module._partial(module._processDownload, documentId));
+    if (!GoogleApiClientTools.authorized()) {
+      var callback = GoogleApiClientTools.partial(
+        GoogleApiClientTools.onAuthorizeResult,
+        GoogleApiClientTools.partial(module._processDownload, documentId));
       module._authorize(callback);
     } else {
       module._processDownload(documentId);
@@ -382,9 +305,9 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
 
   module._handlePickMessage = function(unused_event) {
     // Handles child iframe message sent when user clicks Pick button.
-    if (!module._authorized()) {
-      var callback = module._partial(
-        module._onAuthorizeResult, module._showPicker);
+    if (!GoogleApiClientTools.authorized()) {
+      var callback = GoogleApiClientTools.partial(
+        GoogleApiClientTools.onAuthorizeResult, module._showPicker);
       module._authorize(callback);
     } else {
       module._showPicker();
@@ -396,15 +319,9 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     module._onGoogleApiLoaded();
   };
 
-  module._onAuthorizeResult = function(callback, authResult) {
-    if (authResult && !authResult.error) {
-      callback();
-    }
-  };
-
   module._onCbPost = function(response) {
     var defaultError = 'An error occurred; please try again.';
-    var json = module._parseJson(response);
+    var json = GoogleApiClientTools.parseJson(response);
 
     switch (json.status) {
       case 200:
@@ -432,17 +349,17 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     // patches to Array and Object in place, so we remove/restore them around
     // the call.
     module._removeInputExFunctions();
-    var request = JSON.stringify({
+    var request = GoogleApiClientTools.stringifyJson({
       contents: contents,
       document_id: documentId,
-      type_id: module._getTypeId(),
+      type_id: GoogleApiClientTools.getTypeId(),
       xsrf_token: module._getXsrfToken()
     });
     $.ajax({
       data: {request: request},
       dataType: 'text',
       type: 'PUT',
-      url: module._getGoogleDriveTagUrl()
+      url: GoogleApiClientTools.getGoogleDriveTagUrl()
     }).done(module._onCbPost);
     module._restoreInputExFunctions();
   };
@@ -505,22 +422,6 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
     }
   };
 
-  module._parseJson = function(s) {
-    return JSON.parse(s.replace(module._xssiPrefix, ''));
-  };
-
-  module._partial = function(fn, varArgs) {
-    // Partially binds a function. Same implementation as in Google Closure
-    // libraries: accept a fn and variadic args. Clone the args, then append
-    // additional args to existing ones.
-    var args = Array.prototype.slice.call(arguments, 1);
-    return function() {
-      var newArgs = args.slice();
-      newArgs.push.apply(newArgs, arguments);
-      return fn.apply(this, newArgs);
-    };
-  };
-
   module._processDownload = function(documentId) {
     // Runs a files.get request for the item with the given documentId string.
     var request = top.gapi.client.drive.files.get({fileId: documentId});
@@ -550,7 +451,7 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
       .setAppId(module._getClientId())
       .setCallback(module._onPick)
       .setDeveloperKey(module._getApiKey())
-      .setOAuthToken(module._getAuthToken())
+      .setOAuthToken(GoogleApiClientTools.getAuthToken())
       .setOrigin(window.Dispatcher.getOrigin())
       .build();
     module._removeInputExFunctions();
@@ -581,5 +482,5 @@ window.GcbGoogleDriveTagParent = (function($, JSON) {
   };
 
   return module;
-}($, JSON));
+}($, GoogleApiClientTools, GoogleScriptManager));
 window.GcbGoogleDriveTagParent._setUpParentFrame();

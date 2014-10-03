@@ -38,16 +38,27 @@ class ObjectEditorTest(actions.TestBase):
             '/admin?action=config_edit&name=gcb_admin_user_emails')
         return self.parse_html_string(response.body)
 
-    def test_get_drive_tag_parent_frame_script_src_empty_if_apis_enabled(self):
-        config.Registry.test_overrides[
-            courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
-        dom = self.get_oeditor_dom()
-        self.assertIsNotNone(dom.find(
-            './/script['
-            '@src="/modules/core_tags/resources/drive_tag_parent_frame.js"]'))
+    def get_script_tag_by_src(self, src):
+        return self.get_oeditor_dom().find('.//script[@src="%s"]' % src)
 
     def test_get_drive_tag_parent_frame_script_src_empty_if_apis_disabled(self):
-        dom = self.get_oeditor_dom()
-        self.assertIsNone(dom.find(
-            './/script['
-            '@src="/modules/core_tags/resources/drive_tag_parent_frame.js"]'))
+        self.assertIsNone(self.get_script_tag_by_src(
+            '/modules/core_tags/resources/drive_tag_parent_frame.js'))
+
+    def test_get_drive_tag_parent_frame_script_src_set_if_apis_enabled(self):
+        config.Registry.test_overrides[
+            courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
+        self.assertIsNotNone(self.get_script_tag_by_src(
+            '/modules/core_tags/resources/drive_tag_parent_frame.js'))
+
+    def test_get_drive_tag_script_manager_script_src_empty_if_apis_disabled(
+            self):
+        self.assertIsNone(self.get_script_tag_by_src(
+            '/modules/core_tags/resources/drive_tag_script_manager.js'))
+
+    def test_get_drive_tag_script_manager_script_src_set_if_apis_enabled(
+            self):
+        config.Registry.test_overrides[
+            courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
+        self.assertIsNotNone(self.get_script_tag_by_src(
+            '/modules/core_tags/resources/drive_tag_script_manager.js'))

@@ -91,10 +91,25 @@ class RuntimeTest(GoogleDriveTestBase):
         self.app_context = sites.get_all_courses()[0]
         self.api_key = 'api_key_value'
         self.client_id = 'client_id_value'
+        self.email = 'admin@example.com'
 
     def tearDown(self):
         config.Registry.test_overrides = {}
         super(RuntimeTest, self).tearDown()
+
+    def test_can_edit_false_if_user_is_not_logged_in(self):
+        self.assertFalse(core_tags._Runtime(self.app_context).can_edit())
+
+    def test_can_edit_false_if_user_is_not_admin(self):
+        actions.login(self.email, is_admin=False)
+
+        self.assertFalse(core_tags._Runtime(self.app_context).can_edit())
+
+    def test_can_edit_true_if_user_is_admin(self):
+        actions.login(self.email, is_admin=True)
+        runtime = core_tags._Runtime(self.app_context)
+
+        self.assertTrue(runtime.can_edit())
 
     def test_configured_false_when_courses_cannot_use_google_apis(self):
         with actions.OverriddenEnvironment(self.get_env(
