@@ -16,7 +16,7 @@ $(function() {
         .append('<hr>');
     for (var i = 0; i < payload.messages.length; i++) {
       $('#translation_messages')
-          .append($('<div/>').text(payload.messages[i]));
+          .append($('<p/>').text(payload.messages[i]));
     }
   };
 });
