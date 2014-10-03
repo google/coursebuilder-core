@@ -894,9 +894,10 @@ class PersistentCourse13(object):
         """Loads course from datastore."""
         fs = app_context.fs.impl
         filename = fs.physical_to_logical(cls.COURSES_FILENAME)
-        if app_context.fs.isfile(filename):
+        stream = app_context.fs.open(filename)
+        if stream:
             persistent = PersistentCourse13()
-            persistent.deserialize(app_context.fs.get(filename))
+            persistent.deserialize(stream.read())
             return CourseModel13(
                 app_context, next_id=persistent.next_id,
                 units=persistent.units, lessons=persistent.lessons)

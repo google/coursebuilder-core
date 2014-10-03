@@ -158,15 +158,17 @@ class QuestionTag(tags.BaseTag):
             progress=progress)
         return tags.html_string_to_element_tree(html_string)
 
-    def get_schema(self, unused_handler):
+    def get_schema(self, handler):
         """Get the schema for specifying the question."""
-        questions = m_models.QuestionDAO.get_all()
-        question_list = [(
-            unicode(q.id),  # q.id is a number but the schema requires a string
-            q.description) for q in questions]
+        question_list = []
+        if handler:
+            questions = m_models.QuestionDAO.get_all()
+            question_list = [(
+                unicode(q.id),  # q.id is an int; schema requires a string
+                q.description) for q in questions]
 
-        if not question_list:
-            return self.unavailable_schema('No questions available')
+            if not question_list:
+                return self.unavailable_schema('No questions available')
 
         reg = schema_fields.FieldRegistry('Question')
         reg.add_property(
@@ -240,15 +242,17 @@ class QuestionGroupTag(tags.BaseTag):
         html_string = template.render(template_values)
         return tags.html_string_to_element_tree(html_string)
 
-    def get_schema(self, unused_handler):
+    def get_schema(self, handler):
         """Get the schema for specifying the question group."""
-        question_groups = m_models.QuestionGroupDAO.get_all()
-        question_group_list = [(
-            unicode(q.id),  # q.id is a number but the schema requires a string
-            q.description) for q in question_groups]
+        question_group_list = []
+        if handler:
+            question_groups = m_models.QuestionGroupDAO.get_all()
+            question_group_list = [(
+                unicode(q.id),  # q.id is a number; schema requires a string
+                q.description) for q in question_groups]
 
-        if not question_group_list:
-            return self.unavailable_schema('No question groups available')
+            if not question_group_list:
+                return self.unavailable_schema('No question groups available')
 
         reg = schema_fields.FieldRegistry('Question Group')
         reg.add_property(

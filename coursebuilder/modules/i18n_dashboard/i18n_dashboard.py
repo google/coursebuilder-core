@@ -159,6 +159,7 @@ class ResourceKey(object):
         return ResourceKey(unit_type, unit.unit_id)
 
     def _get_course(self, app_context):
+        # TODO(course): make this class work off context, no app_context
         course = self._course
         if not course or course.app_context != app_context:
             course = courses.Course(None, app_context=app_context)
@@ -212,7 +213,7 @@ class ResourceKey(object):
         else:
             return None
 
-    def get_schema(self, app_context):
+    def get_schema(self, course):
         if self.type == ResourceKey.ASSESSMENT_TYPE:
             return unit_lesson_editor.AssessmentRESTHandler.SCHEMA
         elif self.type == ResourceKey.LINK_TYPE:
@@ -225,9 +226,7 @@ class ResourceKey(object):
             return question_editor.SaQuestionRESTHandler.get_schema()
         elif self.type == ResourceKey.QUESTION_GROUP_TYPE:
             return question_group_editor.QuestionGroupRESTHandler.get_schema()
-
-        course = self._get_course(app_context)
-        if self.type == ResourceKey.LESSON_TYPE:
+        elif self.type == ResourceKey.LESSON_TYPE:
             units = course.get_units()
             return unit_lesson_editor.LessonRESTHandler.get_schema(units)
         elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
@@ -236,8 +235,7 @@ class ResourceKey(object):
         else:
             raise ValueError('Unknown content type: %s' % self.type)
 
-    def get_data_dict(self, app_context):
-        course = self._get_course(app_context)
+    def get_data_dict(self, course):
         if self.type == ResourceKey.ASSESSMENT_TYPE:
             unit = course.find_unit_by_id(self.key)
             unit_dict = unit_lesson_editor.UnitTools(course).unit_to_dict(unit)
@@ -252,14 +250,14 @@ class ResourceKey(object):
             return unit_dict
         elif self.type == ResourceKey.LESSON_TYPE:
             lesson = course.find_lesson_by_id(None, self.key)
-            return unit_lesson_editor.LessonRESTHandler.get_lesson_dict(
-                app_context, lesson)
+            return unit_lesson_editor.LessonRESTHandler.get_lesson_dict_for(
+                course, lesson)
         elif self.type == ResourceKey.COURSE_SETTINGS_TYPE:
             schema = course.create_settings_schema().clone_only_items_named(
                 [self.key])
             json_entity = {}
             schema.convert_entity_to_json_entity(
-                course.get_environ(app_context), json_entity)
+                course.get_environ(course.app_context), json_entity)
             return json_entity[self.key]
         elif self.type in [
                 ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
@@ -975,7 +973,7 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
                 # opportunities to go sideways and slip between the cracks.
                 binding, sections = (
                     TranslationConsoleRestHandler.build_sections_for_key(
-                        key, app_context, resource_bundle_dto, transformer))
+                        key, course, resource_bundle_dto, transformer))
                 TranslationConsoleRestHandler.update_dtos_with_section_data(
                     key, sections, resource_bundle_dto, i18n_progress_dto)
 
@@ -1332,7 +1330,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 used_translations = set()
                 _, sections = (
                     TranslationConsoleRestHandler.build_sections_for_key(
-                        key, app_context, resource_bundle_dto, transformer))
+                        key, course, resource_bundle_dto, transformer))
                 for section in sections:
                     for item in section['data']:
                         source_value = item['source_value']
@@ -1565,6 +1563,11 @@ class ResourceBundleCacheEntry(caching.AbstractCacheEntry):
             return update.updated_on == self.entity.updated_on
         return not update and not self.entity
 
+    def updated_on(self):
+        if not self.entity:
+            return datetime.datetime.fromtimestamp(0)
+        return self.entity.updated_on
+
     @classmethod
     def externalize(cls, key, entry):
         entity = entry.entity
@@ -1666,11 +1669,7 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
         for tag_name, tag_cls in tags.Registry.get_all_tags().items():
             tag_schema = None
             try:
-                # TODO(jorr): refactor BaseTag.get_schema to work
-                # without handler
-                fake_handler = utils.BaseHandler()
-                fake_handler.app_context = app_context
-                tag_schema = tag_cls().get_schema(fake_handler)
+                tag_schema = tag_cls().get_schema(None)
             except Exception:  # pylint: disable-msg=broad-except
                 logging.exception('Cannot get schema for %s', tag_name)
                 continue
@@ -2127,7 +2126,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         transformer = xcontent.ContentTransformer(
             config=I18nTranslationContext.get(self.app_context))
         binding, sections = self.build_sections_for_key(
-            key, self.app_context, resource_bundle_dto, transformer)
+            key, self.get_course(), resource_bundle_dto, transformer)
         payload_dict = {
             'key': str(key),
             'title': str(key.resource_key.get_title(self.app_context)),
@@ -2240,7 +2239,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
     @staticmethod
     def build_sections_for_key(
-        key, app_context, resource_bundle_dto, transformer):
+        key, course, resource_bundle_dto, transformer):
 
         def add_known_translations_as_defaults(locale, sections):
             try:
@@ -2280,8 +2279,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                                 item['target_value'] = target_value
                                 item['verb'] = VERB_CURRENT
 
-        schema = key.resource_key.get_schema(app_context)
-        values = key.resource_key.get_data_dict(app_context)
+        schema = key.resource_key.get_schema(course)
+        values = key.resource_key.get_data_dict(course)
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             values, schema)
         allowed_names = TRANSLATABLE_FIELDS_FILTER.filter_value_to_type_binding(
@@ -2361,7 +2360,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                     'data': data
                 })
 
-        if key.locale != app_context.default_locale:
+        if key.locale != course.app_context.default_locale:
             add_known_translations_as_defaults(key.locale, sections)
         return binding, sections
 
@@ -2504,7 +2503,7 @@ def translate_units(course, locale):
         if bundle is None:
             continue
 
-        schema = key.resource_key.get_schema(course.app_context)
+        schema = key.resource_key.get_schema(course)
         data_dict = unit_tools.unit_to_dict(unit, keys=bundle.dict.keys())
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             data_dict, schema)
@@ -2552,11 +2551,12 @@ def translate_course_env(env):
         for key in courses.Course.get_schema_sections()]
     bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
 
+    course = courses.Course(None, app_context)
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
 
-        schema = key.resource_key.get_schema(app_context)
+        schema = key.resource_key.get_schema(course)
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             env, schema)
 
@@ -2567,7 +2567,7 @@ def translate_course_env(env):
                 app_context, key, source_value, translation_dict)
 
 
-def translate_dto_list(dto_list, resource_key_list):
+def translate_dto_list(course, dto_list, resource_key_list):
     if not is_translation_required():
         return
 
@@ -2581,7 +2581,7 @@ def translate_dto_list(dto_list, resource_key_list):
     for key, dto, bundle in zip(key_list, dto_list, bundle_list):
         if bundle is None:
             continue
-        schema = key.resource_key.get_schema(app_context)
+        schema = key.resource_key.get_schema(course)
         binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
             dto.dict, schema)
         for name, translation_dict in bundle.dict.items():
@@ -2591,18 +2591,28 @@ def translate_dto_list(dto_list, resource_key_list):
 
 
 def translate_question_dto(dto_list):
+    if not is_translation_required():
+        return
+
     key_list = []
+    app_context = sites.get_course_for_current_request()
+    course = courses.Course(None, app_context)
     for dto in dto_list:
         qu_type = ResourceKey.get_question_type(dto)
         key_list.append(ResourceKey(qu_type, dto.id))
-    translate_dto_list(dto_list, key_list)
+    translate_dto_list(course, dto_list, key_list)
 
 
 def translate_question_group_dto(dto_list):
+    if not is_translation_required():
+        return
+
+    app_context = sites.get_course_for_current_request()
+    course = courses.Course(None, app_context)
     key_list = [
         ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, dto.id)
         for dto in dto_list]
-    translate_dto_list(dto_list, key_list)
+    translate_dto_list(course, dto_list, key_list)
 
 
 def has_locale_rights(app_context, locale):

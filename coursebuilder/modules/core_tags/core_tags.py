@@ -208,14 +208,19 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
         return self.create_icon_url('drive.png')
 
     def get_schema(self, handler):
-        runtime = _Runtime(handler.app_context)
+        api_key = None
+        client_id = None
+        if handler:
+            runtime = _Runtime(handler.app_context)
+            if not runtime.configured():
+                return self.unavailable_schema(
+                    'Google Drive is not available. Please make sure the '
+                    'global gcb_courses_can_use_google_apis setting is True '
+                    'and set the Google API Key and Google Client ID in course '
+                    'settings in order to use this tag.')
 
-        if not runtime.configured():
-            return self.unavailable_schema(
-                'Google Drive is not available. Please make sure the global '
-                'gcb_courses_can_use_google_apis setting is True and set the '
-                'Google API Key and Google Client ID in course settings in '
-                'order to use this tag.')
+            api_key = runtime.get_api_key()
+            client_id = runtime.get_client_id()
 
         reg = schema_fields.FieldRegistry(GoogleDrive.name())
         reg.add_property(
@@ -224,8 +229,8 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
                 optional=True,  # Validation enforced by JS code.
                 description='The ID of the Google Drive item you want to '
                 'use', i18n=False, extra_schema_dict_values={
-                    'api-key': runtime.get_api_key(),
-                    'client-id': runtime.get_client_id(),
+                    'api-key': api_key,
+                    'client-id': client_id,
                     'type-id': self.CONTENT_CHUNK_TYPE,
                     'xsrf-token': GoogleDriveRESTHandler.get_xsrf_token(),
                 }))
@@ -680,13 +685,16 @@ class Include(CoreTag):
     def get_schema(self, handler):
         expected_prefix = os.path.join(appengine_config.BUNDLE_ROOT,
                                        'assets/html')
-        all_files = handler.app_context.fs.list(expected_prefix,
-                                                include_inherited=True)
+
         select_data = []
-        for name in all_files:
-            if name.startswith(expected_prefix):
-                name = name.replace(appengine_config.BUNDLE_ROOT, '')
-                select_data.append((name, name.replace('/assets/html/', '')))
+        if handler:
+            all_files = handler.app_context.fs.list(expected_prefix,
+                                                    include_inherited=True)
+            for name in all_files:
+                if name.startswith(expected_prefix):
+                    name = name.replace(appengine_config.BUNDLE_ROOT, '')
+                    select_data.append(
+                        (name, name.replace('/assets/html/', '')))
 
         reg = schema_fields.FieldRegistry(Include.name())
         reg.add_property(schema_fields.SchemaField(
@@ -725,7 +733,7 @@ class Markdown(tags.ContextAwareTag, CoreTag):
         footer = tags.html_string_to_element_tree('')
         return (header, footer)
 
-    def get_schema(self, handler):
+    def get_schema(self, unused_handler):
         reg = schema_fields.FieldRegistry(Markdown.name())
         reg.add_property(schema_fields.SchemaField(
             'markdown', 'Markdown', 'text', optional=False,

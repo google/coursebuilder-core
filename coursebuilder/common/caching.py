@@ -233,11 +233,11 @@ class AbstractCacheEntry(object):
 
     def is_up_to_date(self, unused_key, unused_update):
         """Compare entry and the update object to decide if entry is fresh."""
-        return False
+        raise NotImplementedError()
 
     def updated_on(self):
         """Return last update time for entity."""
-        return None
+        raise NotImplementedError()
 
 
 class AbstractCacheConnection(object):
@@ -273,6 +273,9 @@ class AbstractCacheConnection(object):
             'gcb-models-%s-cache-not-found' % name,
             'A number of times an object was requested, but was not found in '
             'the cache or underlying provider.')
+        cls.CACHE_UPDATE_COUNT = PerfCounter(
+            'gcb-models-%s-cache-update-count' % name,
+            'A number of update objects received.')
         cls.CACHE_EVICT = PerfCounter(
             'gcb-models-%s-cache-evict' % name,
             'A number of times an object was evicted from cache because it was '
@@ -284,7 +287,7 @@ class AbstractCacheConnection(object):
 
     @classmethod
     def make_key_prefix(cls, ns):
-        return '%s:%s' % (cls.__class__, ns)
+        return '%s:%s' % (cls.__name__, ns)
 
     @classmethod
     def make_key(cls, ns, entry_key):
@@ -328,7 +331,7 @@ class AbstractCacheConnection(object):
     def _get_most_recent_updated_on(self):
         """Get the most recent item cached. Datastore deletions are missed..."""
         has_items = False
-        max_updated_on = None
+        max_updated_on = datetime.datetime.fromtimestamp(0)
         prefix = self.make_key_prefix(self.namespace)
         for key, entry in self.cache.items.iteritems():
             if not key.startswith(prefix):
@@ -336,8 +339,7 @@ class AbstractCacheConnection(object):
             has_items = True
             if not entry:
                 continue
-            if max_updated_on is None or (
-                entry.updated_on() > max_updated_on):
+            if entry.updated_on() > max_updated_on:
                 max_updated_on = entry.updated_on()
         return has_items, max_updated_on
 
@@ -360,8 +362,10 @@ class AbstractCacheConnection(object):
         q = self.PERSISTENT_ENTITY.all()
         if updated_on:
             q.filter('updated_on > ', updated_on)
-        return {
+        result = {
             entity.key().name(): entity for entity in iter_all(q)}
+        self.CACHE_UPDATE_COUNT.inc(len(result.keys()))
+        return result
 
     def put(self, key, *args):
         self.CACHE_PUT.inc()

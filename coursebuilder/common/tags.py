@@ -139,6 +139,16 @@ SPB+uxAAAAAElFTkSuQmCC
         to have at most one field of type "text", and this is stored in the body
         of the tag, not as an attribute.
 
+        Args:
+          unused_handler: a request handler; if None is received, the request
+            is being made by the system and there is no user in session; the
+            minimal schema must be returned in this case; don't attempt to
+            access course, app_context, file system, datastore, etc. in this
+            case;  if a valid handler object is received, the request is being
+            made by a real user and schema can have additional data binding in
+            it; for example: 'select_data' can be computed and set by accessing
+            course, app_context, filesyste, datastore, etc.
+
         Returns:
           the list of fields to be displayed in the editor.
         """

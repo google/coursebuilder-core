@@ -27,6 +27,7 @@ import zipfile
 from babel.messages import pofile
 
 from common import crypto
+from common import tags
 from common import utils
 from common.utils import Namespace
 from controllers import sites
@@ -526,6 +527,10 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals('aa', header_section['data'][0]['old_source_value'])
         self.assertEquals('AA', header_section['data'][0]['target_value'])
         self.assertEquals(VERB_NEW, header_section['data'][1]['verb'])
+
+    def test_core_tags_handle_none_handler(self):
+        for _, tag_cls in tags.Registry.get_all_tags().items():
+            self.assertTrue(tag_cls().get_schema(None))
 
     def test_get_unit_content_with_custom_tag(self):
         unit = self.course.add_unit()
