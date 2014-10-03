@@ -93,17 +93,6 @@ class DeleteTranslationsTest(_JobTestBase):
         self.assert_dies_if_cannot_get_app_context_for_course_url_prefix(
             'DeleteTranslations')
 
-    def test_raises_not_implemented_error_if_args_passed_successfully(self):
-        # TODO(johncox): remove once delete is implemented in i18n_dashboard.
-        args = [
-            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080']
-
-        with self.assertRaises(NotImplementedError):
-            etl.main(
-                etl.PARSER.parse_args(args),
-                environment_class=testing.FakeEnvironment)
-
     # TODO(johncox): once delete is implemented, add a test for deleting all
     # locales.
 
@@ -138,18 +127,7 @@ class TranslateToReversedCapsTest(_JobTestBase):
 
     def test_dies_if_cannot_get_app_context_for_course_url_prefix(self):
         self.assert_dies_if_cannot_get_app_context_for_course_url_prefix(
-            'TranslateToReversedCaps')
-
-    def test_raises_not_implemented_error_if_args_passed_successfully(self):
-        # TODO(johncox): remove once i18n_dashboard implements translate.
-        args = [
-            'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCaps',
-            self.url_prefix, 'myapp', 'localhost:8080']
-
-        with self.assertRaises(NotImplementedError):
-            etl.main(
-                etl.PARSER.parse_args(args),
-                environment_class=testing.FakeEnvironment)
+            'TranslateToReversedCase')
 
     # TODO(johncox): once translate is implemented, add a test that calls and
     # verifies the delete.

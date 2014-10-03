@@ -104,10 +104,10 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
     'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 14,
     'tests.functional.modules_i18n_dashboard_jobs.BaseJobTest': 4,
-    'tests.functional.modules_i18n_dashboard_jobs.DeleteTranslationsTest': 2,
+    'tests.functional.modules_i18n_dashboard_jobs.DeleteTranslationsTest': 1,
     'tests.functional.modules_i18n_dashboard_jobs.DownloadTranslationsTest': 2,
     'tests.functional.modules_i18n_dashboard_jobs'
-        '.TranslateToReversedCapsTest': 2,
+        '.TranslateToReversedCapsTest': 1,
     'tests.functional.modules_i18n_dashboard_jobs.UploadTranslationsTest': 1,
     'tests.functional.modules_invitation.InvitationHandlerTests': 16,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,

@@ -184,24 +184,22 @@ class DownloadTranslations(_BaseJob):
             _LOG.info('Translations saved to ' + self.args.path)
 
 
-class TranslateToReversedCaps(_BaseJob):
-    """Translates a specified course to rEVERSED cAPS.
+class TranslateToReversedCase(_BaseJob):
+    """Translates a specified course to rEVERSED cASE.
 
     Usage.
 
       sh scripts/etl.sh run \
-        modules.i18n_dashboard.jobs.TranslateToReversedCaps \
+        modules.i18n_dashboard.jobs.TranslateToReversedCase \
         /target_course appid servername
     """
 
     def main(self):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
-        handler = self._get_fake_handler(app_context)
-
+        course = etl_lib.get_course(app_context)
         with common_utils.Namespace(app_context.get_namespace_name()):
-            i18n_dashboard.I18nReverseCaseHandler.translate_course(
-                handler.course, app_context)
+            i18n_dashboard.I18nReverseCaseHandler.translate_course(course)
 
 
 class UploadTranslations(_BaseJob):
@@ -209,7 +207,7 @@ class UploadTranslations(_BaseJob):
 
     Usage:
 
-      sh scripts/etl.sh run modules.i18n_dashboard.jobs.DownloadTranslations \
+      sh scripts/etl.sh run modules.i18n_dashboard.jobs.UploadTranslations \
         /target_course appid servername \
         --job_args='/tmp/file.zip'
     """
@@ -235,13 +233,26 @@ class UploadTranslations(_BaseJob):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         extension = self._get_file_extension(self.args.path)
-        self._configure_babel()
+        course = etl_lib.get_course(app_context)
+        self._configure_babel(course)
 
         with common_utils.Namespace(app_context.get_namespace_name()):
             if extension == self._PO_EXTENSION:
-                self._process_po_file(self.args.path)
+                translations = self._process_po_file(self.args.path)
             elif extension == self._ZIP_EXTENSION:
-                self._process_zip_file(self.args.path)
+                translations = self._process_zip_file(self.args.path)
+
+            # Add the locales being uploaded to the UI.
+            environ = course.get_environ(app_context)
+            extra_locales = environ.setdefault('extra_locales', [])
+            for locale in translations:
+                if not any(l['locale'] == locale for l in extra_locales):
+                    extra_locales.append({'locale': locale,
+                                          'availability': 'unavailable'})
+            course.save_settings(environ)
+
+            # Make updates to the translations
+            self._update_translations(course, translations)
 
     @classmethod
     def _check_file(cls, path):
@@ -254,32 +265,41 @@ class UploadTranslations(_BaseJob):
         cls._check_file_exists(path)
 
     @classmethod
-    def _configure_babel(cls):
-        # Internally, babel uses the 'en' locale, and we must configure it
-        # before we make babel calls.
+    def _configure_babel(cls, course):
         with common_utils.ZipAwareOpen():
+            # Internally, babel uses the 'en' locale, and we must configure it
+            # before we make babel calls.
             localedata.load('en')
+            # Also load the course's default language.
+            localedata.load(course.default_locale)
 
     @classmethod
     def _get_file_extension(cls, path):
         return os.path.splitext(path)[-1]
 
-    # TODO(johncox): currently this completes but appears to have no effect.
-    # Checking in now to get help from Mike and implement this fully.
     @classmethod
     def _process_po_file(cls, po_file_path):
         translations = cls._UPLOAD_HANDLER.build_translations_defaultdict()
         with open(po_file_path) as f:
             cls._UPLOAD_HANDLER.parse_po_file(translations, f.read())
+        return translations
 
     @classmethod
     def _process_zip_file(cls, zip_file_path):
         zf = zipfile.ZipFile(zip_file_path, 'r', allowZip64=True)
+        translations = cls._UPLOAD_HANDLER.build_translations_defaultdict()
         for zipinfo in zf.infolist():
             if cls._get_file_extension(zipinfo.filename) != cls._PO_EXTENSION:
                 continue
             _LOG.info('Processing ' + zipinfo.filename)
-            translations = cls._UPLOAD_HANDLER.build_translations_defaultdict()
             po_contents = zf.read(zipinfo.filename)
             cls._UPLOAD_HANDLER.parse_po_file(translations, po_contents)
         zf.close()
+        return translations
+
+    @classmethod
+    def _update_translations(cls, course, translations):
+        messages = []
+        cls._UPLOAD_HANDLER.update_translations(course, translations, messages)
+        for message in messages:
+            _LOG.info(message)

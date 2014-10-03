@@ -1559,30 +1559,32 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
     ACTION = 'i18n_reverse_case'
 
     @classmethod
-    def translate_course(cls, course, app_context):
+    def translate_course(cls, course):
         """Translates a course to rEVERSED cAPS.
 
         Args:
-          course: The course for whose contents we are deleting translations.
-          app_context: The application context for a request.
+          course: The course for whose contents we are making translations.
 
         Returns:
           None.
         """
-        raise NotImplementedError
 
-    def _add_reverse_case_locale(self):
-        course = self.handler.get_course()
-        environ = course.get_environ(self.handler.app_context)
-        extra_locales = environ.get('extra_locales', [])
+        cls._add_reverse_case_locale(course)
+        po_file_content = cls._build_reverse_case_translations(course)
+        cls._set_reverse_case_translations(course, po_file_content)
+
+    @staticmethod
+    def _add_reverse_case_locale(course):
+        environ = course.get_environ(course.app_context)
+        extra_locales = environ.setdefault('extra_locales', [])
         if not any(l['locale'] == PSEUDO_LANGUAGE for l in extra_locales):
             extra_locales.append({'locale': PSEUDO_LANGUAGE,
                                   'availability': 'unavailable'})
-            environ['extra_locales'] = extra_locales
             course.save_settings(environ)
 
-    def _build_reverse_case_translations(self):
-        original_locale = self.handler.app_context.default_locale
+    @staticmethod
+    def _build_reverse_case_translations(course):
+        original_locale = course.app_context.default_locale
         with common_utils.ZipAwareOpen():
             # Load metadata for 'en', which Babel uses internally.
             localedata.load('en')
@@ -1590,9 +1592,9 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
             localedata.load(original_locale)
 
         translations = TranslationDownloadRestHandler.build_translations(
-            self.handler.get_course(), [PSEUDO_LANGUAGE], 'all')
+            course, [PSEUDO_LANGUAGE], 'all')
         cat = TranslationDownloadRestHandler.build_babel_catalog_for_locale(
-            self.handler.get_course(), translations, PSEUDO_LANGUAGE)
+            course, translations, PSEUDO_LANGUAGE)
         for message in cat:
             # Flip the case of all text except for HTML named entities.
             message.string = re.sub(
@@ -1606,21 +1608,21 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
         finally:
             content.close()
 
-    def _set_reverse_case_translations(self, po_file_content):
+    @staticmethod
+    def _set_reverse_case_translations(course, po_file_content):
         translations = (
             TranslationUploadRestHandler.build_translations_defaultdict())
         TranslationUploadRestHandler.parse_po_file(
             translations, po_file_content)
         messages = []
-        TranslationUploadRestHandler.update_translations(
-            self.handler.get_course(), translations, messages)
+        TranslationUploadRestHandler.update_translations(course, translations,
+                                                         messages)
         for message in messages:
             logging.warning(message)
 
     def render(self):
-        self._add_reverse_case_locale()
-        po_file_content = self._build_reverse_case_translations()
-        self._set_reverse_case_translations(po_file_content)
+        course = self.handler.get_course()
+        self.translate_course(course)
         self.handler.redirect(
             self.handler.get_action_url(I18nDashboardHandler.ACTION))
 
