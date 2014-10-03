@@ -1157,6 +1157,8 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                 for section in sections:
                     for item in section['data']:
                         source_value = item['source_value']
+                        if not isinstance(source_value, basestring):
+                            source_value = str(source_value)  # convert numbers
                         if source_value not in translations:
                             messages.append(
                                 'Did not find translation for "%s"' %
@@ -2290,6 +2292,27 @@ def permissions_callback(app_context):
         )
 
 
+BABEL_ESCAPES = {
+    'n': '\n',
+    't': '\t',
+    'r': '\r'
+}
+
+
+def denormalize(s):
+    def reify_escapes(text):
+        ret = []
+        text_iter = iter(text)
+        for c in text_iter:
+            if c == '\\':
+                escaped_char = text_iter.next()
+                ret.append(BABEL_ESCAPES.get(escaped_char, escaped_char))
+            else:
+                ret.append(c)
+        return ''.join(ret)
+    return ''.join(reify_escapes(line[1:-1]) for line in s.splitlines())
+
+
 def notify_module_enabled():
     dashboard.DashboardHandler.nav_mappings.append(
         [I18nDashboardHandler.ACTION, 'I18N'])
@@ -2312,6 +2335,9 @@ def notify_module_enabled():
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
     transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.append(GLOBAL_CSS)
+
+    # Implementation in Babel 0.9.6 is buggy; replace with corrected version.
+    pofile.denormalize = denormalize
 
 
 def notify_module_disabled():
