@@ -11,6 +11,10 @@ $(function() {
 
 
   cb_global.onSaveComplete = function() {
+    cbShowMsgAutoHide(
+        'Download of .zip file started; open your browser\'s ' +
+        'Downloads window to track progress.')
+
     var requestData = JSON.stringify({
       'payload': JSON.stringify(cb_global.form.getValue()),
       'xsrf_token': cb_global.xsrf_token
