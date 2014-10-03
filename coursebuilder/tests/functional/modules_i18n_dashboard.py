@@ -51,6 +51,7 @@ from modules.i18n_dashboard.i18n_dashboard import TranslationUploadRestHandler
 from modules.i18n_dashboard.i18n_dashboard import VERB_CHANGED
 from modules.i18n_dashboard.i18n_dashboard import VERB_CURRENT
 from modules.i18n_dashboard.i18n_dashboard import VERB_NEW
+from modules.notifications import notifications
 from tests.functional import actions
 from tools import verify
 
@@ -1109,6 +1110,77 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertEquals(
             self.COURSE_TITLE,
             dom.find('.//h1[@class="gcb-product-headers-large"]').text.strip())
+
+    def test_invitations_are_translated(self):
+        student_name = 'A. Student'
+        sender_email = 'sender@foo.com'
+        recipient_email = 'recipient@foo.com'
+        translated_subject = 'EMAIL_FROM A. Student'
+
+        # The invitation email
+        email_env = {
+        'course': {
+            'invitation_email': {
+                'enabled': True,
+                'sender_email': sender_email,
+                'subject_template': 'Email from {{sender_name}}',
+                'body_template':
+                    'From {{sender_name}}. Unsubscribe: {{unsubscribe_url}}'}}}
+
+        # Translate the subject line of the email
+        invitation_bundle = {
+            'course:invitation_email:subject_template': {
+                'type': 'string',
+                'source_value': None,
+                'data': [{
+                    'source_value': 'Email from {{sender_name}}',
+                    'target_value': 'EMAIL_FROM {{sender_name}}'}]}}
+        key_el = ResourceBundleKey(
+            ResourceKey.COURSE_SETTINGS_TYPE, 'invitation', 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(key_el), invitation_bundle))
+
+        # Set up a spy to capture mails sent
+        send_async_call_log = []
+        def send_async_spy(unused_cls, *args, **kwargs):
+            send_async_call_log.append({'args': args, 'kwargs': kwargs})
+
+        # Patch the course env and the notifications sender
+        courses.Course.ENVIRON_TEST_OVERRIDES = email_env
+        old_send_async = notifications.Manager.send_async
+        notifications.Manager.send_async = classmethod(send_async_spy)
+        try:
+            # register a student
+            actions.login(self.STUDENT_EMAIL, is_admin=False)
+            actions.register(self, student_name)
+
+            # Set locale prefs
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.locale = 'el'
+            models.StudentPreferencesDAO.save(prefs)
+
+            # Read the sample email displayed to the student
+            self.assertIn(
+                translated_subject, self.get('modules/invitation').body)
+
+            # Post a request to the REST handler
+            request_dict = {
+                'xsrf_token': (
+                    crypto.XsrfTokenManager.create_xsrf_token('invitation')),
+                'payload': {'emailList': recipient_email}
+            }
+            response = transforms.loads(self.post(
+                'rest/modules/invitation',
+                {'request': transforms.dumps(request_dict)}).body)
+            self.assertEquals(200, response['status'])
+            self.assertEquals('OK, 1 messages sent', response['message'])
+
+            self.assertEquals(
+                translated_subject, send_async_call_log[0]['args'][4])
+
+        finally:
+            courses.Course.ENVIRON_TEST_OVERRIDES = []
+            notifications.Manager.send_async = old_send_async
 
 
 class TranslationImportExportTests(actions.TestBase):

@@ -111,6 +111,8 @@ class InvitationEmail(object):
         }
 
     def _render(self, template, env):
+        # Coerce template to unicode in case it is a LazyTranslator.
+        template = unicode(template)
         return jinja2.Template(template).render(env)
 
     @property
@@ -215,6 +217,18 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             'emailList': {'type': 'string', 'optional': 'true'}
         }
     }
+
+    def before_method(self, verb, path):
+        # Handler needs to be locale-aware because the messages must be
+        # localized.
+        self._old_locale = self.app_context.get_current_locale()
+        new_locale = self.get_locale_for(self.request, self.app_context)
+        self.app_context.set_current_locale(new_locale)
+
+    def after_method(self, verb, path):
+        # Handler needs to be locale-aware because the messages must be
+        # localized.
+        self.app_context.set_current_locale(self._old_locale)
 
     def post(self):
         """Handle POST requests."""

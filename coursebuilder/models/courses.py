@@ -100,8 +100,13 @@ CONFIG_KEY_GOOGLE_CLIENT_ID = '%s:%s:%s' % (
     _CONFIG_KEY_PART_CLIENT_ID)
 
 
-def deep_dict_merge(real_values_dict, default_values_dict):
+def deep_dict_merge(*args):
     """Merges default and real value dictionaries recursively."""
+    if len(args) > 2:
+        return deep_dict_merge(args[0], deep_dict_merge(*(args[1:])))
+
+    real_values_dict = args[0]
+    default_values_dict = args[1]
 
     def _deep_merge(real_values, default_values):
         """Updates real with default values recursively."""
@@ -2023,6 +2028,9 @@ class Course(object):
     # loaded, to perform any further processing on it.
     COURSE_ENV_POST_LOAD_HOOKS = []
 
+    # Data which is patched onto the course environment - for testing use only.
+    ENVIRON_TEST_OVERRIDES = {}
+
     SCHEMA_SECTION_COURSE = 'course'
     SCHEMA_SECTION_HOMEPAGE = 'homepage'
     SCHEMA_SECTION_REGISTRATION = 'registration'
@@ -2113,9 +2121,9 @@ class Course(object):
         if not course_yaml_dict:
             return deep_dict_merge(DEFAULT_COURSE_YAML_DICT,
                                    COURSE_TEMPLATE_DICT)
-        return deep_dict_merge(deep_dict_merge(
-            course_yaml_dict, DEFAULT_EXISTING_COURSE_YAML_DICT),
-                               COURSE_TEMPLATE_DICT)
+        return deep_dict_merge(
+            cls.ENVIRON_TEST_OVERRIDES, course_yaml_dict,
+            DEFAULT_EXISTING_COURSE_YAML_DICT, COURSE_TEMPLATE_DICT)
 
     @classmethod
     def create_base_settings_schema(cls):
