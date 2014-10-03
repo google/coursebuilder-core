@@ -34,6 +34,7 @@ from models import courses
 from models import custom_modules
 from models import models
 from models import transforms
+from modules.oeditor import oeditor
 
 
 _RESOURCE_PREFIX = '/modules/core_tags'
@@ -156,6 +157,23 @@ class GoogleDrive(CoreTag, tags.ContextAwareTag):
     """Custom tag for Google Drive items."""
 
     CONTENT_CHUNK_TYPE = 'google-drive'
+
+    @classmethod
+    def on_unregister(cls):
+        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.remove(
+            cls._oeditor_extra_script_tags_urls)
+
+    @classmethod
+    def on_register(cls):
+        oeditor.ObjectEditor.EXTRA_SCRIPT_TAG_URLS.append(
+            cls._oeditor_extra_script_tags_urls)
+
+    @classmethod
+    def _oeditor_extra_script_tags_urls(cls):
+        script_urls = []
+        if courses.COURSES_CAN_USE_GOOGLE_APIS.value:
+            script_urls.append(PARENT_FRAME_SCRIPT)
+        return script_urls
 
     @classmethod
     def additional_dirs(cls):
@@ -688,10 +706,16 @@ def register_module():
         for custom_tag in custom_tags:
             tags.Registry.remove_tag_binding(make_binding_name(custom_tag))
 
+        # Unregsiter extra libraries required by GoogleDrive
+        GoogleDrive.on_unregister()
+
     def on_module_enable():
         for custom_tag in custom_tags:
             tags.Registry.add_tag_binding(
                 make_binding_name(custom_tag), custom_tag)
+
+        # Register extra libraries required by GoogleDrive
+        GoogleDrive.on_register()
 
     global custom_module
 

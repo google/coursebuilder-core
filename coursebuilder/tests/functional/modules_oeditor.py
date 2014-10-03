@@ -20,8 +20,6 @@ __author__ = [
 
 from models import config
 from models import courses
-from modules.core_tags import core_tags
-from modules.oeditor import oeditor
 from tests.functional import actions
 
 
@@ -34,13 +32,22 @@ class ObjectEditorTest(actions.TestBase):
         config.Registry.test_overrides = {}
         super(ObjectEditorTest, self).tearDown()
 
+    def get_oeditor_dom(self):
+        actions.login('test@example.com', is_admin=True)
+        response = self.get(
+            '/admin?action=config_edit&name=gcb_admin_user_emails')
+        return self.parse_html_string(response.body)
+
     def test_get_drive_tag_parent_frame_script_src_empty_if_apis_enabled(self):
         config.Registry.test_overrides[
             courses.COURSES_CAN_USE_GOOGLE_APIS.name] = True
-        self.assertEqual(
-            core_tags.PARENT_FRAME_SCRIPT,
-            oeditor.ObjectEditor._get_drive_tag_parent_frame_script_src())
+        dom = self.get_oeditor_dom()
+        self.assertIsNotNone(dom.find(
+            './/script['
+            '@src="/modules/core_tags/resources/drive_tag_parent_frame.js"]'))
 
     def test_get_drive_tag_parent_frame_script_src_empty_if_apis_disabled(self):
-        self.assertEqual(
-            '', oeditor.ObjectEditor._get_drive_tag_parent_frame_script_src())
+        dom = self.get_oeditor_dom()
+        self.assertIsNone(dom.find(
+            './/script['
+            '@src="/modules/core_tags/resources/drive_tag_parent_frame.js"]'))

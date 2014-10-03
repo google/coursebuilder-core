@@ -27,11 +27,9 @@ from common import jinja_utils
 from common import schema_fields
 from common import tags
 from controllers import utils
-from models import courses
 from models import custom_modules
 from models import transforms
 from models.config import ConfigProperty
-from modules.core_tags import core_tags
 
 # a set of YUI and inputex modules required by the editor
 COMMON_REQUIRED_MODULES = [
@@ -56,6 +54,12 @@ CAN_HIGHLIGHT_CODE = ConfigProperty(
 
 class ObjectEditor(object):
     """Generic object editor powered by jsonschema."""
+
+    # Modules can add extra script tags to the oeditor page by registering a
+    # callback function here. The callback function will receive the app_context
+    # as an argument, and should return an iterable of strings, each of which is
+    # the URL of a script library.
+    EXTRA_SCRIPT_TAG_URLS = []
 
     @classmethod
     def get_html_for(
@@ -131,6 +135,11 @@ class ObjectEditor(object):
                 'name': tag,
                 'iconUrl': tag_class().get_icon_url()})
 
+        extra_script_tag_urls = []
+        for callback in cls.EXTRA_SCRIPT_TAG_URLS:
+            for url in callback():
+             extra_script_tag_urls.append(url)
+
         template_values = {
             'enabled': custom_module.enabled,
             'schema': schema_json,
@@ -151,8 +160,7 @@ class ObjectEditor(object):
             'custom_rte_tag_icons': transforms.dumps(custom_rte_tag_icons),
             'delete_message': delete_message,
             'can_highlight_code': CAN_HIGHLIGHT_CODE.value,
-            'drive_tag_parent_frame_script_src': (
-                cls._get_drive_tag_parent_frame_script_src()),
+            'extra_script_tag_urls': extra_script_tag_urls,
         }
 
         if delete_url and not read_only:
@@ -165,12 +173,6 @@ class ObjectEditor(object):
         return jinja2.utils.Markup(handler.get_template('oeditor.html', (
             [os.path.dirname(__file__)] + (additional_dirs or [])
         )).render(template_values))
-
-    @classmethod
-    def _get_drive_tag_parent_frame_script_src(cls):
-        if not courses.COURSES_CAN_USE_GOOGLE_APIS.value:
-            return ''
-        return core_tags.PARENT_FRAME_SCRIPT
 
 
 class PopupHandler(webapp2.RequestHandler, utils.ReflectiveRequestHandler):
