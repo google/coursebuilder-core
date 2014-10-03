@@ -1287,7 +1287,8 @@ class DashboardHandler(
                         labels_of_type_ul.add_child(li)
                         li.add_text(
                             label.title
-                        )
+                        ).add_attribute(
+                            title='id: %s, type: %s' % (label.id, label_type))
                         if label_type not in (
                             models.LabelDTO.SYSTEM_EDITABLE_LABEL_TYPES):
                                 li.add_child(

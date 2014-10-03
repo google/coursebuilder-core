@@ -31,6 +31,7 @@ import services
 import transforms
 
 import appengine_config
+from common import caching
 from common import utils as common_utils
 
 from google.appengine.api import memcache
@@ -1842,7 +1843,7 @@ class LabelDTO(object):
         return self.dict.get('type', self.LABEL_TYPE_GENERAL)
 
 
-class LabelManager(common_utils.RequestScopedSingleton):
+class LabelManager(caching.RequestScopedSingleton):
     """Class that manages optimized loading of I18N data from datastore."""
 
     def __init__(self):

@@ -119,8 +119,8 @@ import webapp2
 from webapp2_extras import i18n
 
 import appengine_config
+from common import caching
 from common import safe_dom
-from common import utils as common_utils
 from models import models
 from models import transforms
 from models.config import ConfigProperty
@@ -663,12 +663,12 @@ class ApplicationContext(object):
     def clear_per_process_cache(cls):
         """Clears all objects from global in-process cache."""
         cls._COURSE_INDEX_CACHE = {}
-        common_utils.ProcessScopedSingleton.clear_all()
+        caching.ProcessScopedSingleton.clear_all()
 
     def clear_per_request_cache(self):
         """Clears all objects cached per request."""
         self._cached_environ = None
-        common_utils.RequestScopedSingleton.clear_all()
+        caching.RequestScopedSingleton.clear_all()
 
     @ property
     def raw(self):
@@ -802,7 +802,7 @@ def set_path_info(path):
             ApplicationContext.get_namespace_name_for_request())
     finally:
         try:
-            common_utils.RequestScopedSingleton.clear_all()
+            caching.RequestScopedSingleton.clear_all()
         finally:
             models.MemcacheManager.clear_readonly_cache()
 
@@ -820,7 +820,7 @@ def unset_path_info():
         models.MemcacheManager.clear_readonly_cache()
     finally:
         try:
-            common_utils.RequestScopedSingleton.clear_all()
+            caching.RequestScopedSingleton.clear_all()
         finally:
             try:
                 app_context = get_course_for_current_request()
@@ -1708,58 +1708,6 @@ def test_path_construction():
                 os.path.normpath('/a/b/d'))
 
 
-def test_singleton():
-
-    class A(common_utils.RequestScopedSingleton):
-
-        def __init__(self, data):
-            self.data = data
-
-    class B(common_utils.RequestScopedSingleton):
-
-        def __init__(self, data):
-            self.data = data
-
-    # TODO(psimakov): prevent direct instantiation
-    A('aaa')
-    B('bbb')
-
-    # using instance() creates and returns the same instance
-    common_utils.RequestScopedSingleton.clear_all()
-    a = A.instance('bar')
-    b = A.instance('bar')
-    assert a.data == 'bar'
-    assert b.data == 'bar'
-    assert a is b
-
-    # re-initialization fails if arguments differ
-    common_utils.RequestScopedSingleton.clear_all()
-    a = A.instance('dog')
-    try:
-        b = A.instance('cat')
-        raise Exception('Expected to fail.')
-    except AssertionError:
-        pass
-
-    # clearing one keep others
-    common_utils.RequestScopedSingleton.clear_all()
-    a = A.instance('bar')
-    b = B.instance('cat')
-    a.clear()
-    c = B.instance('cat')
-    assert c is b
-
-    # clearing all clears all
-    common_utils.RequestScopedSingleton.clear_all()
-    a = A.instance('bar')
-    b = B.instance('cat')
-    common_utils.RequestScopedSingleton.clear_all()
-    c = A.instance('bar')
-    d = B.instance('cat')
-    assert a is not c
-    assert b is not d
-
-
 def run_all_unit_tests():
     assert not ApplicationRequestHandler.CAN_IMPERSONATE
 
@@ -1774,7 +1722,6 @@ def run_all_unit_tests():
     test_url_to_handler_mapping_for_course_type()
     test_path_construction()
     test_rule_validations()
-    test_singleton()
 
 if __name__ == '__main__':
     run_all_unit_tests()
