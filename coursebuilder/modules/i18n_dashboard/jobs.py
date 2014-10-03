@@ -123,7 +123,7 @@ class DeleteTranslations(_BaseJob):
             self.args.locales, app_context, self.etl_args.course_url_prefix)
 
         with common_utils.Namespace(app_context.get_namespace_name()):
-            i18n_dashboard.TranslationDeleteRestHandler.delete_translations(
+            i18n_dashboard.TranslationDeletionRestHandler.delete_locales(
                 handler.course, locales)
 
 

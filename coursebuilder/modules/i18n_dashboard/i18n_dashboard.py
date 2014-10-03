@@ -363,6 +363,9 @@ class I18nProgressDTO(object):
         progress_dict = self.dict.setdefault(self.PROGRESS_KEY, {})
         progress_dict[locale] = value
 
+    def clear_progress(self, locale):
+        self.dict.get(self.PROGRESS_KEY, {}).pop(locale, None)
+
 
 class I18nProgressDAO(NamedJsonDAO):
     """Access object for the i18n workflow data."""
@@ -427,6 +430,15 @@ class ResourceBundleDAO(NamedJsonDAO):
         return [
             cls.DTO(entity.key().id_or_name(), transforms.loads(entity.data))
             for entity in query]
+
+    @classmethod
+    def delete_all_for_locale(cls, locale):
+        # It would be nice if AppEngine DB had a query formulation that
+        # allowed for deletion, but apparently not so much.  Here, at least
+        # we are only round-tripping the keys, not the whole objects through
+        # memory.
+        db.delete(list(common_utils.iter_all(
+            cls.ENTITY.all(keys_only=True).filter('locale = ', locale))))
 
 
 class TableRow(object):
@@ -672,6 +684,153 @@ class TranslationsAndLocations(object):
         return self._previous_id
 
 
+class I18nDeletionHandler(BaseDashboardExtension):
+    ACTION = 'i18n_delete'
+
+    def render(self):
+        main_content = oeditor.ObjectEditor.get_html_for(
+            self.handler,
+            TranslationDeletionRestHandler.schema().get_json_schema(),
+            TranslationDeletionRestHandler.schema().get_schema_dict(),
+            '',
+            self.handler.canonicalize_url(TranslationDeletionRestHandler.URL),
+            self.handler.get_action_url(I18nDashboardHandler.ACTION),
+            save_button_caption='Delete', auto_return=True,
+            required_modules=TranslationDeletionRestHandler.REQUIRED_MODULES,
+            extra_js_files=['delete_translations.js'],
+            additional_dirs=[TEMPLATES_DIR])
+        self.handler.render_page({
+            'page_title': self.handler.format_title(
+                'I18n Translation Deletion'),
+            'main_content': main_content})
+
+
+class TranslationDeletionRestHandler(utils.BaseRESTHandler):
+
+    URL = '/rest/modules/i18n_dashboard/i18n_deletion'
+    XSRF_TOKEN_NAME = 'translation_deletion'
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-select', 'inputex-hidden',
+        'inputex-checkbox', 'inputex-list', 'inputex-uneditable',
+        ]
+
+    @classmethod
+    def schema(cls):
+        schema = schema_fields.FieldRegistry('Translation Deletion')
+        locales_schema = schema_fields.FieldRegistry(
+            None, description='locales')
+        locales_schema.add_property(schema_fields.SchemaField(
+            'locale', 'Locale', 'string', hidden=True, editable=False))
+        locales_schema.add_property(schema_fields.SchemaField(
+            'checked', None, 'boolean'))
+        locales_schema.add_property(schema_fields.SchemaField(
+            'title', None, 'string', optional=True, editable=False))
+
+        schema.add_property(schema_fields.FieldArray(
+            'locales', 'Languages', item_type=locales_schema,
+            description='Select the languages whose translations you '
+            'wish to delete.',
+            extra_schema_dict_values={
+                'className': (
+                    'inputEx-Field inputEx-ListField '
+                    'label-group label-group-list')}))
+        return schema
+
+    def get(self):
+        course = self.get_course()
+        default_locale = course.default_locale
+        locales = []
+        for locale in course.all_locales:
+            if locale == default_locale:
+                continue
+            locales.append({
+                'locale': locale,
+                'checked': False,
+                'title': common_locales.get_locale_display_name(locale)})
+        payload_dict = {
+            'locales': locales,
+            }
+        transforms.send_json_response(
+            self, 200, 'Success.', payload_dict=payload_dict,
+            xsrf_token=crypto.XsrfTokenManager.create_xsrf_token(
+                self.XSRF_TOKEN_NAME))
+
+    def _validate_inputs(self, course):
+        if appengine_config.PRODUCTION_MODE:
+            transforms.send_json_response(
+                self, 403, 'Not available in production.')
+            return []
+
+        try:
+            request = models.transforms.loads(self.request.get('request'))
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed or missing "request" parameter.')
+            return []
+        try:
+            payload = models.transforms.loads(request.get('payload', ''))
+        except ValueError:
+            transforms.send_json_response(
+                self, 400, 'Malformed or missing "payload" parameter.')
+            return []
+        if not self.assert_xsrf_token_or_fail(
+            request, self.XSRF_TOKEN_NAME, {}):
+            return []
+
+        try:
+            locales = [l['locale'] for l in payload.get('locales')
+                       if l.get('checked')]
+        except (TypeError, ValueError, KeyError):
+            transforms.send_json_response(
+                self, 400, 'Locales specification not as expected.')
+            return []
+        if not locales:
+            # Nice UI message when no locales selected.
+            transforms.send_json_response(
+                self, 400, 'Please select at least one language to delete.')
+            return []
+        for locale in locales:
+            if not has_locale_rights(self.app_context, locale):
+                transforms.send_json_response(self, 401, 'Access denied.')
+                return []
+        return locales
+
+    @staticmethod
+    def delete_locales(course, locales):
+        # First remove progress indications.  If this fails or times out,
+        # we haven't really lost any work; these can be rebuilt.
+        i18n_progress_dtos = I18nProgressDAO.get_all()
+        for i18n_progress_dto in i18n_progress_dtos:
+            for locale in locales:
+                i18n_progress_dto.clear_progress(locale)
+        I18nProgressDAO.save_all(i18n_progress_dtos)
+
+        # Now remove actual translations.
+        for locale in locales:
+            ResourceBundleDAO.delete_all_for_locale(locale)
+
+        # When all of the foregoing has completed, remove the course
+        # setting.  (Removing this earlier would be bad; removing this
+        # tells the UI the locale is gone.  If we removed this first,
+        # and then failed to remove locale items from the DB, confusion
+        # would likely ensue)
+        environ = course.get_environ(course.app_context)
+        extra_locales = environ.get('extra_locales', [])
+        for configured_locale in list(extra_locales):
+            if configured_locale['locale'] in locales:
+                extra_locales.remove(configured_locale)
+        course.save_settings(environ)
+
+    def put(self):
+        """Verify inputs and return 200 OK to OEditor when all is well."""
+        course = self.get_course()
+        locales = self._validate_inputs(course)
+        if not locales:
+            return
+        self.delete_locales(course, locales)
+        transforms.send_json_response(self, 200, 'Success.')
+
+
 class I18nDownloadHandler(BaseDashboardExtension):
     ACTION = 'i18n_download'
 
@@ -691,24 +850,6 @@ class I18nDownloadHandler(BaseDashboardExtension):
             'page_title': self.handler.format_title(
                 'I18n Translation Download'),
             'main_content': main_content})
-
-
-class TranslationDeleteRestHandler(utils.BaseRESTHandler):
-
-    @classmethod
-    def delete_translations(cls, course, locales):
-        """Deletes translations from a course for the given locales.
-
-        Args:
-          course: The course for whose contents we are deleting translations.
-          locales: Locales we are deleting translations from.
-        Returns:
-          None.
-        """
-        # Right now this is a stub that exists so we can write the associated
-        # ETL jobs. Eventually we need an implementation for ETL and exposed
-        # controls on the web.
-        raise NotImplementedError
 
 
 class TranslationDownloadRestHandler(utils.BaseRESTHandler):
@@ -975,6 +1116,11 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
         self.response.out.write(out_stream.getvalue())
 
     def _validate_inputs(self, course):
+        if appengine_config.PRODUCTION_MODE:
+            transforms.send_json_response(
+                self, 403, 'Not available in production.')
+            return None, None, None
+
         try:
             request = models.transforms.loads(self.request.get('request'))
         except ValueError:
@@ -1228,6 +1374,11 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         I18nProgressDAO.save_all(i18n_progress_dtos)
 
     def post(self):
+        if appengine_config.PRODUCTION_MODE:
+            transforms.send_json_response(
+                self, 403, 'Not available in production.')
+            return
+
         try:
             request = models.transforms.loads(self.request.get('request'))
         except ValueError:
@@ -1779,6 +1930,12 @@ class I18nDashboardHandler(BaseDashboardExtension):
             'i18n_dashboard.html', [TEMPLATES_DIR]).render(template_values)
         edit_actions = [
             {
+                'id': 'delete_translation',
+                'caption': 'Delete Translations',
+                'href': self.handler.get_action_url(
+                    I18nDeletionHandler.ACTION),
+                },
+            {
                 'id': 'upload_translation_files',
                 'caption': 'Upload Translation Files',
                 'href': self.handler.get_action_url(
@@ -1789,7 +1946,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'caption': 'Download Translation Files',
                 'href': self.handler.get_action_url(
                     I18nDownloadHandler.ACTION),
-                }]
+                },
+            ]
 
         translate_actions = [
             {
@@ -2500,6 +2658,7 @@ def notify_module_enabled():
     courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.add(I18nProgressEntity)
 
     I18nDashboardHandler.register()
+    I18nDeletionHandler.register()
     I18nDownloadHandler.register()
     I18nUploadHandler.register()
     I18nReverseCaseHandler.register()
@@ -2525,6 +2684,7 @@ def notify_module_disabled():
     courses.ADDITIONAL_ENTITIES_FOR_COURSE_IMPORT.pop(I18nProgressEntity)
 
     I18nDashboardHandler.unregister()
+    I18nDeletionHandler.unregister()
     I18nDownloadHandler.unregister()
     I18nUploadHandler.unregister()
     I18nReverseCaseHandler.unregister()
@@ -2545,6 +2705,7 @@ def register_module():
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
     namespaced_routes = [
         (TranslationConsoleRestHandler.URL, TranslationConsoleRestHandler),
+        (TranslationDeletionRestHandler.URL, TranslationDeletionRestHandler),
         (TranslationDownloadRestHandler.URL, TranslationDownloadRestHandler),
         (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
         (IsTranslatableRestHandler.URL, IsTranslatableRestHandler),]

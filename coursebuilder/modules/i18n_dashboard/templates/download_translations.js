@@ -3,8 +3,8 @@ $(function() {
       'Note: Downloading translation files will take several seconds, ' +
       'and may time out.  If this happens, you can try ' +
       'exporting fewer languages at a time, or use the command ' +
-      'line tool.  The tool and its instructions are in your ' +
-      'CourseBuilder download in the file tools/i18n/i18n.py.');
+      'line tool.  See .../modules/i18n_dashboard/jobs.py for ' +
+      'complete instructions and sample command lines.');
   $('#cb-oeditor-form > fieldset')
       .append('<hr>')
       .append($('<div/>').text(notes));

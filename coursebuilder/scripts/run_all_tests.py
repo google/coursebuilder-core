@@ -100,7 +100,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard'
         '.TranslationConsoleRestHandlerTests': 6,
-    'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 45,
+    'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 53,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
     'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 14,
     'tests.functional.modules_i18n_dashboard_jobs.BaseJobTest': 4,

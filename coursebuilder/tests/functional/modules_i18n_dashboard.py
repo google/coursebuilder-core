@@ -1306,6 +1306,18 @@ class TranslationImportExportTests(actions.TestBase):
             {'request': transforms.dumps(request)})
         return response
 
+    def _do_deletion(self, payload):
+        request = {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                i18n_dashboard.TranslationDeletionRestHandler.XSRF_TOKEN_NAME),
+            'payload': transforms.dumps(payload),
+            }
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDeletionRestHandler.URL),
+            params={'request': transforms.dumps(request)})
+        return response
+
     def _do_upload(self, contents):
         xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
             i18n_dashboard.TranslationUploadRestHandler.XSRF_TOKEN_NAME)
@@ -1315,6 +1327,92 @@ class TranslationImportExportTests(actions.TestBase):
             {'request': transforms.dumps({'xsrf_token': xsrf_token})},
             upload_files=[('file', 'doesntmatter', contents)])
         return response
+
+    def test_deletion_ui_no_request(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDeletionRestHandler.URL),
+            {})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(
+            rsp['message'], 'Malformed or missing "request" parameter.')
+
+    def test_deletion_ui_no_payload(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDeletionRestHandler.URL),
+            {'request': transforms.dumps({'foo': 'bar'})})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(
+            rsp['message'], 'Malformed or missing "payload" parameter.')
+
+    def test_deletion_ui_no_xsrf(self):
+        response = self.put(
+            '/%s%s' % (self.COURSE_NAME,
+                       i18n_dashboard.TranslationDeletionRestHandler.URL),
+            {'request': transforms.dumps({'payload': '{}'})})
+        rsp = transforms.loads(response.body)
+        self.assertEquals(rsp['status'], 403)
+        self.assertEquals(
+            rsp['message'],
+            'Bad XSRF token. Please reload the page and try again')
+
+    def test_deletion_ui_no_locales(self):
+        rsp = transforms.loads(self._do_deletion({'locales': []}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals(rsp['message'],
+                          'Please select at least one language to delete.')
+
+    def test_deletion_ui_malformed_locales(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_deletion(
+            {'locales': [{'checked': True}]}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals('Locales specification not as expected.',
+                          rsp['message'])
+
+    def test_deletion_ui_no_selected_locales(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_deletion(
+            {'locales': [{'locale': 'de'}]}).body)
+        self.assertEquals(rsp['status'], 400)
+        self.assertEquals('Please select at least one language to delete.',
+                          rsp['message'])
+
+    def test_deletion_ui_no_permissions(self):
+        actions.login('foo@bar.com', is_admin=False)
+        rsp = transforms.loads(self._do_deletion(
+            {'locales': [{'locale': 'de', 'checked': True}]}).body)
+        self.assertEquals(401, rsp['status'])
+        self.assertEquals('Access denied.', rsp['message'])
+
+    def test_deletion(self):
+        self.get('dashboard?action=i18n_reverse_case')
+
+        # Verify that there are translation bundle rows for 'ln',
+        # and progress items with settings for 'ln'.
+        bundles = ResourceBundleDAO.get_all_for_locale('ln')
+        self.assertGreater(len(bundles), 0)
+        progress = I18nProgressDAO.get_all()
+        self.assertGreater(len(progress), 0)
+        for p in progress:
+            self.assertEquals(I18nProgressDTO.DONE, p.get_progress('ln'))
+
+        rsp = transforms.loads(self._do_deletion(
+            {'locales': [{'locale': 'ln', 'checked': True}]}).body)
+        self.assertEquals(200, rsp['status'])
+        self.assertEquals('Success.', rsp['message'])
+
+        # Verify that there are no translation bundle rows for 'ln',
+        # and no progress items with settings for 'ln'.
+        bundles = ResourceBundleDAO.get_all_for_locale('ln')
+        self.assertEquals(len(bundles), 0)
+        progress = I18nProgressDAO.get_all()
+        self.assertGreater(len(progress), 0)
+        for p in progress:
+            self.assertEquals(I18nProgressDTO.NOT_STARTED, p.get_progress('ln'))
 
     def test_upload_ui_no_request(self):
         response = self.post(
