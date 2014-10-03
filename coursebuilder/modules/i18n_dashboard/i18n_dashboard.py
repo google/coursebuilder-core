@@ -19,6 +19,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import cgi
 import collections
 import cStringIO
+import datetime
 import logging
 import os
 import re
@@ -371,6 +372,8 @@ class ResourceBundleEntity(models.BaseEntity):
 
     data = db.TextProperty(indexed=False)
     locale = db.StringProperty(indexed=True)
+    created_on = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    updated_on = db.DateTimeProperty(indexed=True)
 
 
 class ResourceBundleDTO(object):
@@ -411,6 +414,7 @@ class ResourceBundleDAO(NamedJsonDAO):
     def before_put(cls, dto, entity):
         resource_bundle_key = ResourceBundleKey.fromstring(dto.id)
         entity.locale = resource_bundle_key.locale
+        entity.updated_on = datetime.datetime.utcnow()
 
     @classmethod
     def get_all_for_locale(cls, locale):

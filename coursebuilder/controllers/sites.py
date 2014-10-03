@@ -938,7 +938,9 @@ def get_course_index(rules_text=None):
     if course_index:
         return course_index
 
-    course_index = CourseIndex(_build_course_list_from(rules_text=rules_text))
+    appengine_config.log_appstats_event(
+        'ApplicationContext.rebuild_course_index', {'rules_text': rules_text})
+    course_index = CourseIndex(_build_course_list_from(rules_text))
 
     # pylint: disable-msg=protected-access
     ApplicationContext._COURSE_INDEX_CACHE = {rules_text: course_index}

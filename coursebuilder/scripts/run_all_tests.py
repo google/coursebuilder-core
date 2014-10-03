@@ -152,7 +152,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.TransformsEntitySchema': 1,
     'tests.functional.test_classes.TransformsJsonFileTestCase': 3,
     'tests.functional.test_classes.VirtualFileSystemTest': 44,
-    'tests.functional.test_classes.ImportActivityTests': 6,
+    'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
     'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 17,
     'tests.functional.unit_description.UnitDescriptionsTest': 1,

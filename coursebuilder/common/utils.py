@@ -28,7 +28,7 @@ import unittest
 import zipfile
 
 import appengine_config
-
+from models.counters import PerfCounter
 from google.appengine.api import namespace_manager
 
 BACKWARD_COMPATIBLE_SPLITTER = re.compile(r'[\[\] ,\t\n]+', flags=re.M)
@@ -357,6 +357,187 @@ class LRUCache(object):
             del self.items[key]
             return True
         return False
+
+
+class NoopCacheConnection(object):
+    """Connection to no-op cache that provides no caching."""
+
+    def put(self, unused_filename, unused_metadata, unused_data):
+        return None
+
+    def open(self, unused_filename):
+        return False, None
+
+    def delete(self, unused_filename):
+        return None
+
+
+class AbstractCacheEntry(object):
+    """Object representation while in cache."""
+
+    @classmethod
+    def internalize(cls, unused_key, *args, **kwargs):
+        """Converts incoming objects into cache entry object."""
+        return (args, kwargs)
+
+    @classmethod
+    def externalize(cls, unused_key, *args, **kwargs):
+        """Converts cache entry into external object."""
+        return (args, kwargs)
+
+    def is_up_to_date(self, unused_key, unused_update):
+        """Compare entry and the update object to decide if entry is fresh."""
+        return False
+
+    def has_expired(self):
+        """Override this method and check if this entry has expired."""
+        return True
+
+
+class AbstractCacheConnection(object):
+
+    PERSISTENT_ENTITY = None
+    CACHE_ENTRY = None
+
+    @classmethod
+    def init_counters(cls):
+        name = cls.__name__
+        cls.CACHE_RESYNC = PerfCounter(
+            'gcb-models-%s-cache-resync' % name,
+            'A number of times an vfs cache was updated.')
+        cls.CACHE_PUT = PerfCounter(
+            'gcb-models-%s-cache-put' % name,
+            'A number of times an object was put into cache.')
+        cls.CACHE_GET = PerfCounter(
+            'gcb-models-%s-cache-get' % name,
+            'A number of times an object was pulled from cache.')
+        cls.CACHE_DELETE = PerfCounter(
+            'gcb-models-%s-cache-delete' % name,
+            'A number of times an object was deleted from cache.')
+        cls.CACHE_HIT = PerfCounter(
+            'gcb-models-%s-cache-hit' % name,
+            'A number of times an object was found cache.')
+        cls.CACHE_MISS = PerfCounter(
+            'gcb-models-%s-cache-miss' % name,
+            'A number of times an object was not found cache.')
+        cls.CACHE_NO_METADATA = PerfCounter(
+            'gcb-models-%s-cache-no-metadata' % name,
+            'A number of times an object was requested, but was not found and '
+            'had no metadata.')
+        cls.CACHE_NOT_FOUND = PerfCounter(
+            'gcb-models-%s-cache-not-found' % name,
+            'A number of times an object was requested, but was not found in '
+            'this cache.')
+        cls.CACHE_EVICT = PerfCounter(
+            'gcb-models-%s-cache-evict' % name,
+            'A number of times an object was evicted from cache because it was '
+            'changed.')
+        cls.CACHE_EXPIRE = PerfCounter(
+            'gcb-models-%s-cache-expire' % name,
+            'A number of times an object has expired from cache because it was '
+            'too old.')
+
+    @classmethod
+    def make_key_prefix(cls, ns):
+        return '%s:%s' % (cls.__class__, ns)
+
+    @classmethod
+    def make_key(cls, ns, entry_key):
+        return '%s:%s' % (cls.make_key_prefix(ns), entry_key)
+
+    @classmethod
+    def is_enabled(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def new_connection(cls, fs):
+        if not cls.is_enabled():
+            return NoopCacheConnection()
+        conn = cls(fs)
+        conn.apply_updates(conn._get_incremental_updates())
+        return conn
+
+    def __init__(self, fs):
+        """Override this method and properly instantiate self.cache."""
+        self.fs = fs
+        self.cache = None
+
+    def apply_updates(self, updates):
+        """Applies a list of global changes to the local cache."""
+        self.CACHE_RESYNC.inc()
+        for key, update in updates.iteritems():
+            _key = self.make_key(self.fs.ns, key)
+            found, entry = self.cache.get(_key)
+            if not found:
+                continue
+            if not entry.is_up_to_date(key, update):
+                self.CACHE_EVICT.inc()
+                self.cache.delete(_key)
+            elif entry.has_expired():
+                self.CACHE_EXPIRE.inc()
+                self.cache.delete(_key)
+
+    def _get_most_recent_updated_on(self):
+        """Get the most recent item cached. Datastore deletions are missed..."""
+        has_items = False
+        max_updated_on = None
+        prefix = self.make_key_prefix(self.fs.ns)
+        for key, entry in self.cache.items.iteritems():
+            if not key.startswith(prefix):
+                continue
+            has_items = True
+            if not entry:
+                continue
+            if max_updated_on is None or (
+                entry.metadata.updated_on > max_updated_on):
+                max_updated_on = entry.metadata.updated_on
+        return has_items, max_updated_on
+
+    def _get_incremental_updates(self):
+        """Gets a list of global changes older than the most recent item cached.
+
+        WARNING!!! We fetch the updates since the timestamp of the oldest item
+        we have cached so far. This will bring all objects that have changed or
+        were created since that time.
+
+        This will NOT bring the notifications about object deletions. Thus cache
+        will continue to serve deleted objects until they expire.
+
+        Returns:
+          an dict of {key: update} objects that represent recent updates
+        """
+        has_items, updated_on = self._get_most_recent_updated_on()
+        if not has_items:
+            return {}
+        q = self.PERSISTENT_ENTITY.all()
+        if updated_on:
+            q.filter('updated_on > ', updated_on)
+        return {
+            metadata.key().name(): metadata for metadata in iter_all(q)}
+
+    def put(self, key, *args):
+        self.CACHE_PUT.inc()
+        self.cache.put(
+            self.make_key(self.fs.ns, key),
+            self.CACHE_ENTRY.internalize(key, *args))
+
+    def open(self, key):
+        self.CACHE_GET.inc()
+        _key = self.make_key(self.fs.ns, key)
+        found, entry = self.cache.get(_key)
+        if not found:
+            return False, None
+        if not entry:
+            return True, None
+        if entry.has_expired():
+            self.CACHE_EXPIRE.inc()
+            self.cache.delete(_key)
+            return False, None
+        return True, self.CACHE_ENTRY.externalize(key, entry)
+
+    def delete(self, key):
+        self.CACHE_DELETE.inc()
+        self.cache.delete(self.make_key(self.fs.ns, key))
 
 
 class LRUCacheTests(unittest.TestCase):
