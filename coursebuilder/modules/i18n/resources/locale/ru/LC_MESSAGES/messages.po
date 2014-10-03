@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-30 17:24-0700\n"
-"PO-Revision-Date: 2014-09-30 08:59-0700\n"
+"POT-Creation-Date: 2014-10-03 16:45-0700\n"
+"PO-Revision-Date: 2014-10-03 16:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ru <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -20,13 +20,13 @@ msgstr ""
 "Generated-By: Babel 0.9.6\n"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:204
+#: experimental/coursebuilder/controllers/utils.py:208
 #, python-format
 msgid "Unit %s - %s"
 msgstr "Раздел %s – %s"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:216
+#: experimental/coursebuilder/controllers/utils.py:220
 msgid "Unit"
 msgstr "Раздел"
 
@@ -269,86 +269,86 @@ msgstr "Изменить имя"
 #. course element.
 #: experimental/coursebuilder/modules/i18n_dashboard/templates/lazy_loader_error.html:7
 msgid "Edit the resource"
-msgstr ""
+msgstr "Edit the resource"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:249
+#: experimental/coursebuilder/modules/invitation/invitation.py:263
 msgid "Error: Empty email list"
 msgstr "Ошибка: пустой список рассылки."
 
 #. Error indicating not all invitations were sent due to
 #. exceeding the maximum number of emails allowed to be sent by
 #. this account.
-#: experimental/coursebuilder/modules/invitation/invitation.py:260
+#: experimental/coursebuilder/modules/invitation/invitation.py:274
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
 "messages sent."
 msgstr ""
-"This exceeds your email cap. Number of remaining invitations: %s. No "
-"messages sent."
+"В этом аккаунте достигнут предел количества исходящих писем. Сообщения не"
+" отправлены. Осталось приглашений: %s."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:269
+#: experimental/coursebuilder/modules/invitation/invitation.py:283
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "Ошибка: недействительный адрес электронной почты %s."
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:273
+#: experimental/coursebuilder/modules/invitation/invitation.py:287
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "Ошибка: вы уже отправили письмо с приглашением на адрес %s."
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:290
+#: experimental/coursebuilder/modules/invitation/invitation.py:304
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "Не все сообщения отправлены (%s из %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:298
+#: experimental/coursebuilder/modules/invitation/invitation.py:312
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "Отправлено сообщений: %s"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:351
+#: experimental/coursebuilder/modules/invitation/invitation.py:365
 msgid "Invite Friends"
 msgstr "Пригласите друзей"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:356
+#: experimental/coursebuilder/modules/invitation/invitation.py:370
 msgid "Click to send invitations to family and friends"
 msgstr "Нажмите, чтобы отправить приглашения своим друзьям."
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:360
+#: experimental/coursebuilder/modules/invitation/invitation.py:374
 msgid "Invitations not currently available"
 msgstr "Сейчас нельзя никого пригласить."
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:372
+#: experimental/coursebuilder/modules/invitation/invitation.py:386
 msgid "Subscribe/Unsubscribe"
 msgstr "Подписаться/отменить подписку"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:379
+#: experimental/coursebuilder/modules/invitation/invitation.py:393
 msgid "You are currently unsubscribed from invitations."
 msgstr "Подписка на приглашения отменена."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:383
+#: experimental/coursebuilder/modules/invitation/invitation.py:397
 msgid "Click here to re-subscribe."
 msgstr "Нажмите здесь, чтобы возобновить подписку."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:402
 msgid "You can currently receive invitations. "
 msgstr "Вы можете получать приглашения. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:391
+#: experimental/coursebuilder/modules/invitation/invitation.py:405
 msgid "Click here to unsubscribe."
 msgstr "Нажмите здесь, чтобы отменить подписку."
 
