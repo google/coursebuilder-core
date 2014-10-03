@@ -693,6 +693,24 @@ class I18nDownloadHandler(BaseDashboardExtension):
             'main_content': main_content})
 
 
+class TranslationDeleteRestHandler(utils.BaseRESTHandler):
+
+    @classmethod
+    def delete_translations(cls, course, locales):
+        """Deletes translations from a course for the given locales.
+
+        Args:
+          course: The course for whose contents we are deleting translations.
+          locales: Locales we are deleting translations from.
+        Returns:
+          None.
+        """
+        # Right now this is a stub that exists so we can write the associated
+        # ETL jobs. Eventually we need an implementation for ETL and exposed
+        # controls on the web.
+        raise NotImplementedError
+
+
 class TranslationDownloadRestHandler(utils.BaseRESTHandler):
 
     URL = '/rest/modules/i18n_dashboard/i18n_download'
@@ -863,9 +881,16 @@ class TranslationDownloadRestHandler(utils.BaseRESTHandler):
 
                 # Describe the location where the item is found.
                 t_and_l.add_comment(description)
-                title = resource_key.get_resource_title(resource)
-                if title:
-                    t_and_l.add_comment(title)
+
+                try:
+                    title = resource_key.get_resource_title(resource)
+                    if title:
+                        t_and_l.add_comment(title)
+                except AttributeError:
+                    # Under ETL, there is no real handler and title lookup
+                    # fails. In that case, we lose this data, which is non-
+                    # essential.
+                    pass
 
                 # Add either the current translation (if current)
                 # or the old translation as a remark (if we have one)
@@ -1533,6 +1558,19 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
 
     ACTION = 'i18n_reverse_case'
 
+    @classmethod
+    def translate_course(cls, course, app_context):
+        """Translates a course to rEVERSED cAPS.
+
+        Args:
+          course: The course for whose contents we are deleting translations.
+          app_context: The application context for a request.
+
+        Returns:
+          None.
+        """
+        raise NotImplementedError
+
     def _add_reverse_case_locale(self):
         course = self.handler.get_course()
         environ = course.get_environ(self.handler.app_context)
@@ -2045,7 +2083,15 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         key, app_context, resource_bundle_dto, transformer):
 
         def add_known_translations_as_defaults(locale, sections):
-            translations = i18n.get_store().get_translations(locale)
+            try:
+                translations = i18n.get_store().get_translations(locale)
+            except AssertionError:
+                # We're in an environment, like ETL, where we cannot get_store()
+                # because we're not in a request in the container so we don't
+                # have a WSGIApplication. In that case, we return here and
+                # accept some missing (nonessential) values in the output files.
+                return
+
             for section in sections:
                 for item in section['data']:
                     if item['verb'] == VERB_NEW:

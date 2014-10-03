@@ -23,6 +23,7 @@ import datetime
 import time
 
 from controllers import sites
+from models import courses
 
 
 def get_context(course_url_prefix):
@@ -40,6 +41,28 @@ def get_context(course_url_prefix):
             found = context
             break
     return found
+
+
+def get_course(app_context):
+    """Gets a courses.Course from the given sites.ApplicationContext.
+
+    Does not ensure the course exists on the backend; validation should be done
+    by the caller when getting the app_context object.
+
+    Args:
+        app_context: sites.ApplicationContext. The context we're getting the
+            course for.
+
+    Returns:
+        courses.Course.
+    """
+
+    class _Adapter(object):
+
+        def __init__(self, app_context):
+            self.app_context = app_context
+
+    return courses.Course(_Adapter(app_context))
 
 
 class Job(object):

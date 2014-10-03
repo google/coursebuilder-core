@@ -602,7 +602,7 @@ def _download(params):
     """Validates and dispatches to a specific download method."""
     archive_path = os.path.abspath(params.archive_path)
     context = _get_context_or_die(params.course_url_prefix)
-    course = _get_course_from(context)
+    course = etl_lib.get_course(context)
     with common_utils.Namespace(context.get_namespace_name()):
         if params.type == _TYPE_COURSE:
             _download_course(context, course, archive_path, params)
@@ -779,17 +779,6 @@ def _get_privacy_secret(privacy_secret):
     if secret is None:
         secret = random.getrandbits(128)
     return secret
-
-
-def _get_course_from(app_context):
-    """Gets a courses.Course from the given sites.ApplicationContext."""
-
-    class _Adapter(object):
-
-        def __init__(self, app_context):
-            self.app_context = app_context
-
-    return courses.Course(_Adapter(app_context))
 
 
 def _set_env_vars_from_app_yaml():
