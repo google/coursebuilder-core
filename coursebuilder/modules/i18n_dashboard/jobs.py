@@ -73,13 +73,15 @@ class _BaseJob(etl_lib.Job):
         return handler
 
     @classmethod
-    def _get_locales(cls, requested_locales, app_context, course_url_prefix):
+    def _get_locales(
+            cls, requested_locales, all_locales, default_locale,
+            course_url_prefix):
         # We do not want to include the base locale in this list, because
         # it is not something people can delete with this tool, and we do not
         # want it in the output .zipfile because we don't want users to upload
         # it.
-        all_locales = sorted(app_context.get_all_locales())
-        all_locales.remove(app_context.default_locale)
+        all_locales.remove(default_locale)
+        all_locales = sorted(all_locales)
         if not requested_locales:
             return all_locales
 
@@ -120,7 +122,8 @@ class DeleteTranslations(_BaseJob):
             self.etl_args.course_url_prefix)
         handler = self._get_fake_handler(app_context)
         locales = self._get_locales(
-            self.args.locales, app_context, self.etl_args.course_url_prefix)
+            self.args.locales, app_context.get_all_locales(),
+            app_context.default_locale, self.etl_args.course_url_prefix)
 
         with common_utils.Namespace(app_context.get_namespace_name()):
             i18n_dashboard.TranslationDeletionRestHandler.delete_locales(
@@ -172,10 +175,16 @@ class DownloadTranslations(_BaseJob):
 
         with common_utils.Namespace(app_context.get_namespace_name()):
             locales = self._get_locales(
-                self.args.locales, app_context, self.etl_args.course_url_prefix)
+                self.args.locales, app_context.get_all_locales(),
+                app_context.default_locale, self.etl_args.course_url_prefix)
             download_handler = i18n_dashboard.TranslationDownloadRestHandler
             translations = download_handler.build_translations(
                 handler.course, locales, 'all')
+
+            if not translations.keys():
+                _die(
+                    'No translations found for course at %s; exiting' % (
+                        self.etl_args.course_url_prefix))
 
             with open(self.args.path, 'w') as f:
                 i18n_dashboard.TranslationDownloadRestHandler.build_zip_file(
