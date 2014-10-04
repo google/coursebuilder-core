@@ -2281,7 +2281,8 @@ class StaticHandlerTest(actions.TestBase):
         assert_equals(response.status_int, 200)
         assert_contains('max-age=600', response.headers['Cache-Control'])
         assert_contains('public', response.headers['Cache-Control'])
-        assert_does_not_contain('no-cache', response.headers['Cache-Control'])
+        assert_does_not_contain('no-cache', str(response.headers))
+        assert_does_not_contain('must-revalidate', str(response.headers))
 
         # Check zip file handler.
         response = self.testapp.get(
@@ -2289,7 +2290,7 @@ class StaticHandlerTest(actions.TestBase):
         assert_equals(response.status_int, 200)
         assert_contains('max-age=600', response.headers['Cache-Control'])
         assert_contains('public', response.headers['Cache-Control'])
-        assert_does_not_contain('no-cache', response.headers['Cache-Control'])
+        assert_does_not_contain('no-cache', str(response.headers))
 
 
 class ActivityTest(actions.TestBase):

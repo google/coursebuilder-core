@@ -1289,7 +1289,9 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
             if not handler:
                 no_handler(path)
             else:
-                set_default_response_headers(handler)
+                if not isinstance(handler, AssetHandler):
+                    set_default_response_headers(handler)
+
                 self.before_method(handler, verb, path)
                 try:
                     getattr(handler, verb.lower())()
