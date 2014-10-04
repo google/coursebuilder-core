@@ -2144,6 +2144,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
     def put(self):
         request = transforms.loads(self.request.get('request'))
         key = ResourceBundleKey.fromstring(request['key'])
+        validate = request.get('validate', False)
 
         if not self.assert_xsrf_token_or_fail(
                 request, self.XSRF_TOKEN_NAME, {'key': str(key)}):
@@ -2164,9 +2165,30 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         self.update_dtos_with_section_data(
             key, payload_dict['sections'], resource_bundle_dto,
             i18n_progress_dto)
-        I18nProgressDAO.save(i18n_progress_dto)
-        ResourceBundleDAO.save(resource_bundle_dto)
-        transforms.send_json_response(self, 200, 'Saved.')
+        if validate:
+            report = self._get_validation_report(key, resource_bundle_dto)
+            transforms.send_json_response(self, 200, 'OK', payload_dict=report)
+        else:
+            I18nProgressDAO.save(i18n_progress_dto)
+            ResourceBundleDAO.save(resource_bundle_dto)
+            transforms.send_json_response(self, 200, 'Saved.')
+
+    def _get_validation_report(self, key, resource_bundle_dto):
+        report = {}
+        for name, section in resource_bundle_dto.dict.iteritems():
+            source_value = (
+                section['source_value'] if section['type'] == TYPE_HTML
+                else section['data'][0]['source_value'])
+            translator = LazyTranslator(
+                self.app_context, key, source_value, section)
+            output = unicode(translator)
+
+            report[name] = {
+                'status': translator.status,
+                'errm': translator.errm,
+                'output': output}
+
+        return report
 
     @staticmethod
     def update_dtos_with_section_data(key, sections, resource_bundle_dto,
@@ -2366,6 +2388,9 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
 
 
 class LazyTranslator(object):
+    NOT_STARTED_TRANSLATION = 0
+    VALID_TRANSLATION = 1
+    INVALID_TRANSLATION = 2
 
     @classmethod
     def json_encode(cls, obj):
@@ -2380,6 +2405,16 @@ class LazyTranslator(object):
         self.source_value = source_value
         self.target_value = None
         self.translation_dict = translation_dict
+        self._status = self.NOT_STARTED_TRANSLATION
+        self._errm = ''
+
+    @property
+    def status(self):
+        return self._status
+
+    @property
+    def errm(self):
+        return self._errm
 
     def __str__(self):
         if self.target_value is not None:
@@ -2388,7 +2423,7 @@ class LazyTranslator(object):
         if self.translation_dict['type'] == TYPE_HTML:
             self.target_value = self._translate_html()
         else:
-            self.target_value = self.translation_dict['data'][0]['target_value']
+            self.target_value = self._translate_text()
 
         return self.target_value
 
@@ -2400,7 +2435,12 @@ class LazyTranslator(object):
             return other + unicode(self)
         return super(LazyTranslator, self).__add__(other)
 
+    def _translate_text(self):
+        self._status = self.VALID_TRANSLATION
+        return self.translation_dict['data'][0]['target_value']
+
     def _translate_html(self):
+        self._status = self.INVALID_TRANSLATION
         try:
             context = xcontent.Context(xcontent.ContentIO.fromstring(
                 self.source_value))
@@ -2435,17 +2475,20 @@ class LazyTranslator(object):
             transformer.recompose(context, resource_bundle, errors)
             body = xcontent.ContentIO.tostring(context.tree)
             if count_misses == 0 and not errors:
+                self._status = self.VALID_TRANSLATION
                 return body
             else:
                 parts = 'part' if count_misses == 1 else 'parts'
                 are = 'is' if count_misses == 1 else 'are'
-                return self._detailed_error(
+                self._errm = (
                     'The content has changed and {n} {parts} of the '
                     'translation {are} out of date.'.format(
-                    n=count_misses, parts=parts, are=are), body)
+                    n=count_misses, parts=parts, are=are))
+                return self._detailed_error(self._errm, body)
 
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
+            self._errm = str(ex)
             if roles.Roles.is_user_allowed(
                     self._app_context, custom_module,
                     locale_to_permission(

@@ -53,7 +53,7 @@
 }
 
 /* Set the styling for the verb states. */
-.translation-item fieldset fieldset {
+.translation-item fieldset {
   position: relative;
 }
 .translation-item .status {
@@ -110,10 +110,41 @@ button.accept {
   -ms-transition: opacity 0.75s, left 0.75s step-end;
   transition: opacity 0.75s, left 0.75s step-end;
 }
-
 .verb-changed button.accept {
   opacity: 1;
   left: -106px;
+}
+
+div.validation-feedback {
+  position: absolute;
+  top: 65px;
+  left: 720px;
+}
+div.validation-feedback > div.icon {
+  width: 10px;
+  height: 10px;
+  border: solid 1px #888;
+  border-radius: 6px;
+  box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+}
+div.validation-feedback.valid > div.icon {
+  background-color: #6f6;
+}
+div.validation-feedback.invalid > div.icon {
+  background-color: #f66;
+}
+div.validation-feedback.stale > div.icon {
+  background-color: #ccc;
+}
+div.validation-feedback > div.errm {
+  margin-top: 10px;
+  width: 100px;
+}
+div.validation-feedback.valid > div.errm {
+  display:none;
+}
+div.validation-feedback.stale > div.errm {
+  color: #888;
 }
 
 div#formContainer .translation-item > fieldset {

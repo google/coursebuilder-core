@@ -589,6 +589,39 @@ class LazyTranslatorTests(actions.TestBase):
         self.assertEquals(
             '{"lt": "HELLO"}', transforms.dumps({'lt': lazy_translator}))
 
+    def test_lazy_translator_records_status(self):
+        source_value = 'hello'
+        translation_dict = {
+            'type': 'html',
+            'data': [
+                {'source_value': 'hello', 'target_value': 'HELLO'}]}
+        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+
+        lazy_translator = LazyTranslator(
+            self.app_context, key, source_value, translation_dict)
+        self.assertEquals(
+            LazyTranslator.NOT_STARTED_TRANSLATION, lazy_translator.status)
+
+        str(lazy_translator)
+        self.assertEquals(
+            LazyTranslator.VALID_TRANSLATION, lazy_translator.status)
+
+        # Monkey patch get_template_environ because the app_context is not
+        # fully setn up
+        def mock_get_template_environ(unused_locale, dirs):
+            return self.app_context.fs.get_jinja_environ(dirs)
+        self.app_context.get_template_environ = mock_get_template_environ
+
+        lazy_translator = LazyTranslator(
+            self.app_context, key, 'changed', translation_dict)
+        str(lazy_translator)
+        self.assertEquals(
+            LazyTranslator.INVALID_TRANSLATION, lazy_translator.status)
+        self.assertEquals(
+            'The content has changed and 1 part '
+            'of the translation is out of date.',
+            lazy_translator.errm)
+
 
 class CourseContentTranslationTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'

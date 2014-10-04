@@ -3,6 +3,10 @@ var VERB_CHANGED_CLASS = "verb-changed";
 var VERB_CURRENT_CLASS = "verb-current";
 var EDITED_CLASS = "edited";
 
+var NOT_STARTED_TRANSLATION = 0;
+var VALID_TRANSLATION = 1;
+var INVALID_TRANSLATION = 2;
+
 function getVerbClassName(verb) {
   switch (verb) {
     case "1":
@@ -22,20 +26,105 @@ function getVerbClassName(verb) {
  * Iterate over the items of the InputEx form.
  *
  * @param env The cb_global object
- * @param action A function which is passed the members of the item
+ * @param action A function which is passed the sections and items of the form
  */
 function iterateFormItems(env, action) {
   $.each(env.form.inputsNames.sections.subFields, function(i, section) {
     $.each(section.inputsNames.data.subFields, function(j, item) {
-      action(item.inputsNames);
+      action(section, item);
     })
   });
+}
+
+function getSectionByName(env, name){
+  var section = null;
+  $.each(env.form.inputsNames.sections.subFields, function(i, s){
+    if (s.inputsNames.name.getValue() == name) {
+      section = s;
+      return false;
+    }
+  });
+  return section;
 }
 
 function markAsEdited(item) {
   item.changed.setValue(true);
   $(item.changed.el).closest("fieldset")
       .removeClass().addClass(EDITED_CLASS);
+}
+
+function insertValidateButton() {
+  var button = new Y.inputEx.widget.Button({
+    type: "submit-link",
+    value: "Validate",
+    className: "inputEx-Button inputEx-Button-Submit-Link gcb-pull-left",
+    onClick: onClickValidate
+  });
+  button.render($("div.inputEx-Form-buttonBar")[0]);
+
+  // Button rendering will append the button at the end of the div, so we
+  // move it to the second position after it's been created.
+  $("div.inputEx-Form-buttonBar > a:first-child").after(button.el);
+  cb_global.form.buttons.splice(1, 0, button);
+}
+
+function onClickValidate() {
+  disableAllControlButtons(cb_global.form);
+  var request = {
+    key: cb_global.save_args.key,
+    xsrf_token:  cb_global.xsrf_token,
+    payload: JSON.stringify(cb_global.form.getValue()),
+    validate: true
+  }
+  Y.io(cb_global.save_url, {
+    method: "PUT",
+    data: {"request": JSON.stringify(request)},
+    on: {
+      complete: onValidateComplete
+    }
+  });
+  return false;
+}
+
+function onValidateComplete(transactionId, response, args) {
+  enableAllControlButtons(cb_global.form);
+  if (response.status != 200) {
+    cbShowMsg("Server error, please try again.");
+    return;
+  }
+
+  response = parseJson(response.responseText);
+  if (response.status != 200) {
+    cbShowMsg(response.message);
+  }
+
+  var payload = JSON.parse(response.payload || "{}");
+  for (var name in payload) {
+    if (payload.hasOwnProperty(name)) {
+      var section = getSectionByName(cb_global, name);
+      addValidationFeedbackTo(section.divEl.firstChild, payload[name]);
+    }
+  }
+}
+
+function addValidationFeedbackTo(fieldsetEl, feedback) {
+  $("div.validation-feedback", fieldsetEl).remove();
+  var feedbackDiv = $("<div/>").addClass("validation-feedback");
+  if (feedback.status == VALID_TRANSLATION) {
+    feedbackDiv.addClass("valid");
+  } else {
+    feedbackDiv.addClass("invalid");
+  }
+  feedbackDiv.append($("<div/>").addClass("icon"));
+  feedbackDiv.append($("<div/>").addClass("errm").text(feedback.errm));
+
+  $(fieldsetEl).append(feedbackDiv);
+}
+
+function markValidationFeedbackStale(sectionField) {
+  $("div.validation-feedback", sectionField.divEl)
+      .removeClass()
+      .addClass("validation-feedback stale");
 }
 
 $(function() {
@@ -50,13 +139,13 @@ $(function() {
       .append($("<div class=\"status\"></div>"));
 
   // Set up the accept buttons to appear when there is changed content
-  iterateFormItems(cb_global, function(item) {
+  iterateFormItems(cb_global, function(sectionField, itemField) {
     var button = $("<button class=\"accept inputEx-Button\">Accept</button>");
     button.click(function() {
-      markAsEdited(item);
+      markAsEdited(itemField.inputsNames);
       return false;
     });
-    $(item.changed.el.parentNode.parentNode).append(button);
+    $(itemField.divEl.firstChild).append(button);
   });
 
   $(".translation-console > fieldset > div:last-child").before($(
@@ -68,15 +157,17 @@ $(function() {
   $(".translation-header .source-locale").text(formValue['source_locale']);
   $(".translation-header .target-locale").text(formValue['target_locale']);
 
-  iterateFormItems(cb_global, function(item) {
-    $(item.target_value.el).on("input change", function() {
+  iterateFormItems(cb_global, function(sectionField, itemField) {
+    $(itemField.inputsNames.target_value.el).on("input change", function() {
       // Listen on "change" for older browser support
-      markAsEdited(item);
+      markAsEdited(itemField.inputsNames);
+      markValidationFeedbackStale(sectionField);
     });
   });
 
   cb_global.onSaveComplete = function() {
-    iterateFormItems(cb_global, function(item) {
+    iterateFormItems(cb_global, function(sectionField, itemField) {
+      var item = itemField.inputsNames;
       if (item.changed.getValue()) {
         $(item.changed.el).closest('fieldset')
             .removeClass().addClass(VERB_CURRENT_CLASS);
@@ -85,4 +176,6 @@ $(function() {
     });
     cb_global.lastSavedFormValue = cb_global.form.getValue();
   };
+
+  insertValidateButton();
 });
