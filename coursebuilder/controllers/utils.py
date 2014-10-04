@@ -247,8 +247,11 @@ def display_lesson_title(unit, lesson, course_properties=None):
 
 class HtmlHooks(object):
 
-    def __init__(self, course):
+    def __init__(self, course, prefs=None):
         self.course = course
+        self.prefs = prefs
+        if self.prefs is None:
+            self.prefs = models.StudentPreferencesDAO.load_or_create()
 
     def _has_visible_content(self, html_text):
 
@@ -284,11 +287,9 @@ class HtmlHooks(object):
         return parser.has_visible_content()
 
     def insert(self, name):
-
         # Do we want page markup to permit course admins to edit hooks?
         show_admin_content = False
-        prefs = models.StudentPreferencesDAO.load_or_create()
-        if (prefs and prefs.show_hooks and
+        if (self.prefs and self.prefs.show_hooks and
             Roles.is_course_admin(self.course.app_context)):
             show_admin_content = True
         if self.course.version == courses.CourseModel12.VERSION:
@@ -354,7 +355,7 @@ class ApplicationHandler(webapp2.RequestHandler):
         finally:
             models.MemcacheManager.end_readonly()
 
-    def get_template(self, template_file, additional_dirs=None):
+    def get_template(self, template_file, additional_dirs=None, prefs=None):
         raise NotImplementedError()
 
     @classmethod
@@ -408,12 +409,13 @@ class CourseHandler(ApplicationHandler):
                     return lang
         return None
 
-    def get_locale_for(self, request, app_context):
+    def get_locale_for(self, request, app_context, student=None, prefs=None):
         """Returns a locale that should be used by this request."""
 
         if self.get_user():
             # check if student has any locale labels assigned
-            student = self.get_student()
+            if student is None:
+                student = self.get_student()
             if student and student.is_enrolled and not student.is_transient:
                 student_label_ids = student.get_labels_of_type(
                     models.LabelDTO.LABEL_TYPE_LOCALE)
@@ -432,7 +434,8 @@ class CourseHandler(ApplicationHandler):
                         return locale
 
             # check if user preferences have been set
-            prefs = models.StudentPreferencesDAO.load_or_create()
+            if prefs is None:
+                prefs = models.StudentPreferencesDAO.load_or_create()
             if prefs is not None and prefs.locale is not None:
                 return prefs.locale
 
@@ -476,12 +479,13 @@ class CourseHandler(ApplicationHandler):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
 
-    def init_template_values(self, environ):
+    def init_template_values(self, environ, prefs=None):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
         self.template_value[
             'page_locale'] = self.app_context.get_current_locale()
-        self.template_value['html_hooks'] = HtmlHooks(self.get_course())
+        self.template_value['html_hooks'] = HtmlHooks(
+            self.get_course(), prefs=prefs)
         self.template_value['is_course_admin'] = Roles.is_course_admin(
             self.app_context)
         self.template_value['can_see_drafts'] = (
@@ -495,7 +499,8 @@ class CourseHandler(ApplicationHandler):
         for func in self.RIGHT_LINKS:
             self.template_value['right_links'].extend(func(self.app_context))
 
-        prefs = models.StudentPreferencesDAO.load_or_create()
+        if not prefs:
+            prefs = models.StudentPreferencesDAO.load_or_create()
         self.template_value['student_preferences'] = prefs
         if (Roles.is_course_admin(self.app_context) and
             not appengine_config.PRODUCTION_MODE and
@@ -524,12 +529,13 @@ class CourseHandler(ApplicationHandler):
                 XsrfTokenManager.create_xsrf_token(
                     StudentLocaleRESTHandler.XSRF_TOKEN_NAME))
             self.template_value['selected_locale'] = self.get_locale_for(
-                self.request, self.app_context)
+                self.request, self.app_context, prefs=prefs)
 
-    def get_template(self, template_file, additional_dirs=None):
+    def get_template(self, template_file, additional_dirs=None, prefs=None):
         """Computes location of template files for the current namespace."""
+
         _p = self.app_context.get_environ()
-        self.init_template_values(_p)
+        self.init_template_values(_p, prefs=prefs)
         template_environ = self.app_context.get_template_environ(
             self.app_context.get_current_locale(), additional_dirs)
         template_environ.filters[
@@ -641,10 +647,11 @@ class BaseHandler(CourseHandler):
     def render(self, template_file):
         """Renders a template."""
         appengine_config.log_appstats_event('BaseHandler.begin_render')
+        prefs = models.StudentPreferencesDAO.load_or_create()
         try:
             models.MemcacheManager.begin_readonly()
             try:
-                template = self.get_template(template_file)
+                template = self.get_template(template_file, prefs=prefs)
                 self.response.out.write(template.render(self.template_value))
             finally:
                 models.MemcacheManager.end_readonly()
@@ -660,7 +667,6 @@ class BaseHandler(CourseHandler):
             student = models.Student.get_enrolled_student_by_email(
                 user.email())
             if student:
-                prefs = models.StudentPreferencesDAO.load_or_create()
                 prefs.last_location = self.request.path_qs
                 models.StudentPreferencesDAO.save(prefs)
 

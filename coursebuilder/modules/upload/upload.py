@@ -43,11 +43,11 @@ _XSRF_TOKEN_NAME = 'user-upload-form-xsrf'
 
 class TextFileUploadHandler(utils.BaseHandler):
 
-    def get_template(self, template_file, additional_dirs=None):
+    def get_template(self, template_file, additional_dirs=None, prefs=None):
         dirs = additional_dirs if additional_dirs else []
         dirs.append(os.path.join(os.path.dirname(__file__), 'templates'))
         return super(TextFileUploadHandler, self).get_template(
-            template_file, additional_dirs=dirs)
+            template_file, additional_dirs=dirs, prefs=prefs)
 
     def post(self):
         """Creates or updates a student submission."""
