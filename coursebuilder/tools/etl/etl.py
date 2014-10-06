@@ -1156,7 +1156,7 @@ def _determine_type_names(params, included_type_names, archive):
         included_type_names = zipfile_type_names
 
     for type_name in included_type_names - zipfile_type_names:
-        _die('Included type "%s" not found in archive.' % type_name)
+        _LOG.error('Included type "%s" not found in archive.', type_name)
     included_type_names &= zipfile_type_names
     for type_name in excluded_type_names - zipfile_type_names:
         _LOG.warning('Excluded type "%s" not found in archive.', type_name)
