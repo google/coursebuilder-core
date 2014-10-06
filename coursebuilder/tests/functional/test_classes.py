@@ -2276,21 +2276,23 @@ class StaticHandlerTest(actions.TestBase):
     def test_static_files_cache_control(self):
         """Test static/zip handlers use proper Cache-Control headers."""
 
-        # Check static handler.
-        response = self.get('/assets/css/main.css')
-        assert_equals(response.status_int, 200)
-        assert_contains('max-age=600', response.headers['Cache-Control'])
-        assert_contains('public', response.headers['Cache-Control'])
-        assert_does_not_contain('no-cache', str(response.headers))
-        assert_does_not_contain('must-revalidate', str(response.headers))
+        def assert_response(response):
+            assert_equals(response.status_int, 200)
+            assert_contains('max-age=600', response.headers['Cache-Control'])
+            assert_contains('public', response.headers['Cache-Control'])
+            assert_does_not_contain('no-cache', str(response.headers))
+            assert_does_not_contain('must-revalidate', str(response.headers))
 
-        # Check zip file handler.
-        response = self.testapp.get(
-            '/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css')
-        assert_equals(response.status_int, 200)
-        assert_contains('max-age=600', response.headers['Cache-Control'])
-        assert_contains('public', response.headers['Cache-Control'])
-        assert_does_not_contain('no-cache', str(response.headers))
+        # static resourse on a namespaced route
+        assert_response(self.get('/assets/css/main.css'))
+
+        # static resource from the file system on a global route
+        assert_response(self.testapp.get(
+            '/modules/oeditor/resources/butterbar.js'))
+
+        # static resource from the zip file on a global route; it requires login
+        assert_response(self.testapp.get(
+            '/static/inputex-3.1.0/src/inputex/assets/skins/sam/inputex.css'))
 
 
 class ActivityTest(actions.TestBase):
@@ -3052,6 +3054,12 @@ class VirtualFileSystemTestBase(actions.TestBase):
         # Prepare course content.
         home_folder = os.path.join(GeneratedCourse.data_home, 'data-v')
         clone_canonical_course_data(self.bundle_root, home_folder)
+
+        # we also need resources in modules
+        modules_home = 'modules'
+        shutil.copytree(
+            os.path.join(self.bundle_root, modules_home),
+            os.path.join(GeneratedCourse.data_home, modules_home))
 
         # Configure course.
         self.namespace = 'nsv'

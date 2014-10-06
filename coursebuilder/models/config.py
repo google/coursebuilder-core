@@ -213,7 +213,6 @@ class Registry(object):
     @classmethod
     def _load_from_db(cls):
         """Loads dynamic properties from db."""
-        logging.info('Reloading properties.')
         overrides = {}
         drafts = set()
         for item in ConfigPropertyEntity.all().fetch(1000):

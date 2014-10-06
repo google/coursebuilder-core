@@ -23,6 +23,7 @@ import logging
 import os
 import pickle
 import sys
+import threading
 import config
 
 import messages
@@ -2039,6 +2040,9 @@ class Course(object):
     SCHEMA_SECTION_ASSESSMENT = 'assessment'
     SCHEMA_SECTION_I18N = 'i18n'
 
+    # here we keep current course available to thread
+    INSTANCE = threading.local()
+
     @classmethod
     def get_schema_sections(cls):
         ret = set([
@@ -2419,7 +2423,77 @@ class Course(object):
                 return model
         return cls.create_new_default_course(app_context)
 
+    @classmethod
+    def get(cls, app_context):
+        """Gets this thread current course instance or creates new instance.
+
+        Making a new instance of existing Course is expensive. It involves db
+        operations, CPU intensive transaltions and other things. Thus it's
+        better to avoid making new instances all the time and rather use cached
+        instance. In most cases when you need "any valid instance of current
+        Course" use Course.get(), which provides request scope caching. It will
+        return a cached instance or will create a new one for you if none yet
+        exists. Only create a fresh new instance of course via constructor
+        Course() when you are executing mutations and want to have the most up
+        to date instance.
+
+        Args:
+          app_context: an app_context of the Course, instance of which you need
+        Returns:
+          an instance of a course: cached or newly created if nothing cached
+        """
+        if cls.has_current():
+            _app_context, _course = cls.INSTANCE.current
+            # do import here to avoid circular dependency during initialiation
+            # pylint: disable-msg=g-import-not-at-top
+            from controllers import sites
+            if _course and sites.ApplicationContext.check_same(
+                app_context, _app_context):
+                return _course
+        _course = Course(None, app_context)
+        cls.set_current(_course)
+        return _course
+
+    @classmethod
+    def set_current(cls, course):
+        """Set current course for this thread."""
+        if course:
+            cls.INSTANCE.current = (course.app_context, course)
+        else:
+            cls.INSTANCE.current = (None, None)
+
+    @classmethod
+    def has_current(cls):
+        """Checks if this thread has current course set."""
+        return hasattr(cls.INSTANCE, 'current')
+
+    @classmethod
+    def clear_current(cls):
+        """Clears this thread current course."""
+        if cls.has_current():
+            del cls.INSTANCE.current
+
+    @appengine_config.timeandlog('Course.init')
     def __init__(self, handler, app_context=None):
+        """Makes an instance of brand new or loads existing course is exists.
+
+        Making a new instance of existing Course is expensive. It involves db
+        operations, CPU intensive transaltions and other things. Thus it's
+        better to avoid making new instances all the time and rather use cached
+        instance. In most cases when you need "any valid instance of current
+        Course" use Course.get(), which provides request scope caching. It will
+        return a cached instance or will create a new one for you if none yet
+        exists. Only create a fresh new instance of course via constructor
+        Course() when you are executing mutations and want to have the most up
+        to date instance.
+
+        Args:
+          handler: a request handler for the course
+          app_context: an app_context of the Course, instance of which you need
+        Returns:
+          an instance of a course: cached or newly created if nothing cached
+        """
+
         self._app_context = app_context if app_context else handler.app_context
         self._namespace = self._app_context.get_namespace_name()
         self._model = self._load(self._app_context)

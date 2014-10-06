@@ -72,8 +72,7 @@ class AbstractScopedSingleton(object):
                 logging.exception(
                     'Failed to instantiate %s: %s, %s', cls, args, kwargs)
                 raise
-            appengine_config.log_appstats_event(
-                '%s.create.%s' % (cls.__name__, id(_instance)), {})
+            appengine_config.log_appstats_event('%s.create' % cls.__name__, {})
             _instance._init_args = (args, kwargs)
             cls._instances()[cls] = _instance
         else:
@@ -96,7 +95,7 @@ class AbstractScopedSingleton(object):
     def clear(self):
         """Destroys this object and its content."""
         appengine_config.log_appstats_event(
-            '%s.destroy.%s' % (self.__class__.__name__, id(self)), {})
+            '%s.destroy' % self.__class__.__name__, {})
         _instance = self._instances().get(self.__class__)
         if _instance:
             del self._instances()[self.__class__]
@@ -120,7 +119,9 @@ class RequestScopedSingleton(AbstractScopedSingleton):
 class LRUCache(object):
     """A dict that supports capped size and LRU eviction of items."""
 
-    def __init__(self, max_item_count=None, max_size_bytes=None):
+    def __init__(
+        self, max_item_count=None,
+        max_size_bytes=None, max_item_size_bytes=None):
         assert max_item_count or max_size_bytes
         if max_item_count:
             assert max_item_count > 0
@@ -129,6 +130,7 @@ class LRUCache(object):
         self.total_size = 0
         self.max_item_count = max_item_count
         self.max_size_bytes = max_size_bytes
+        self.max_item_size_bytes = max_item_size_bytes
         self.items = collections.OrderedDict([])
 
     def get_entry_size(self, key, value):
@@ -143,13 +145,15 @@ class LRUCache(object):
 
     def _allocate_space(self, key, value):
         """Remove items in FIFO order until size constraints are met."""
+        entry_size = self.get_entry_size(key, value)
+        if self.max_item_size_bytes and entry_size > self.max_item_size_bytes:
+            return False
         while True:
             over_count = False
             over_size = False
             if self.max_item_count:
                 over_count = len(self.items) >= self.max_item_count
             if self.max_size_bytes:
-                entry_size = self.get_entry_size(key, value)
                 over_size = self.total_size + entry_size >= self.max_size_bytes
             if not (over_count or over_size):
                 if self.max_size_bytes:
@@ -201,13 +205,13 @@ class LRUCache(object):
 class NoopCacheConnection(object):
     """Connection to no-op cache that provides no caching."""
 
-    def put(self):
+    def put(self, *unused_args, **unused_kwargs):
         return None
 
-    def open(self):
+    def get(self, *unused_args, **unused_kwargs):
         return False, None
 
-    def delete(self):
+    def delete(self, *unused_args, **unused_kwargs):
         return None
 
 
@@ -310,8 +314,7 @@ class AbstractCacheConnection(object):
         self.namespace = namespace
         self.cache = None
         appengine_config.log_appstats_event(
-            '%s.connect.%s' % (self.__class__.__name__, id(self)),
-            {'namespace': namespace})
+            '%s.connect' % self.__class__.__name__, {'namespace': namespace})
 
     def apply_updates(self, updates):
         """Applies a list of global changes to the local cache."""
@@ -339,9 +342,16 @@ class AbstractCacheConnection(object):
             has_items = True
             if not entry:
                 continue
-            if entry.updated_on() > max_updated_on:
-                max_updated_on = entry.updated_on()
+            updated_on = entry.updated_on()
+            if not updated_on:  # old entities may be missing this field
+                updated_on = datetime.datetime.fromtimestamp(0)
+            if updated_on > max_updated_on:
+                max_updated_on = updated_on
         return has_items, max_updated_on
+
+    def get_updates_when_empty(self):
+        """Override this method to pre-load cache when it's completely empty."""
+        return {}
 
     def _get_incremental_updates(self):
         """Gets a list of global changes older than the most recent item cached.
@@ -358,7 +368,7 @@ class AbstractCacheConnection(object):
         """
         has_items, updated_on = self._get_most_recent_updated_on()
         if not has_items:
-            return {}
+            return self.get_updates_when_empty()
         q = self.PERSISTENT_ENTITY.all()
         if updated_on:
             q.filter('updated_on > ', updated_on)
@@ -453,6 +463,14 @@ class LRUCacheTests(unittest.TestCase):
         self.assertTrue(cache.put('d', bytearray(1000)))
         self.assertFalse(cache.contains('a'))
         self.assertTrue(cache.contains('b'))
+
+    def test_max_item_size(self):
+        cache = LRUCache(max_size_bytes=5000, max_item_size_bytes=1000)
+        self.assertFalse(cache.put('a', bytearray(4500)))
+        self.assertEquals(cache.get('a'), (False, None))
+        self.assertTrue(cache.put('a', bytearray(500)))
+        found, _ = cache.get('a')
+        self.assertTrue(found)
 
 
 class SingletonTests(unittest.TestCase):

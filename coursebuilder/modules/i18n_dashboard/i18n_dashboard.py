@@ -162,7 +162,7 @@ class ResourceKey(object):
         # TODO(course): make this class work off context, no app_context
         course = self._course
         if not course or course.app_context != app_context:
-            course = courses.Course(None, app_context=app_context)
+            course = courses.Course.get(app_context)
         return course
 
     def get_title(self, app_context):
@@ -379,6 +379,14 @@ class ResourceBundleEntity(models.BaseEntity):
     locale = db.StringProperty(indexed=True)
     created_on = db.DateTimeProperty(auto_now_add=True, indexed=False)
     updated_on = db.DateTimeProperty(indexed=True)
+
+    @classmethod
+    def getsizeof(cls, entity):
+        return (
+            sys.getsizeof(entity.data) +
+            sys.getsizeof(entity.locale) +
+            sys.getsizeof(entity.created_on) +
+            sys.getsizeof(entity.updated_on))
 
 
 class ResourceBundleDTO(object):
@@ -1519,13 +1527,13 @@ class ProcessScopedResourceBundleCache(caching.ProcessScopedSingleton):
     """This class holds in-process global cache of VFS objects."""
 
     @classmethod
-    def get_vfs_cache_len(cls):
+    def get_cache_len(cls):
         # pylint: disable-msg=protected-access
         return len(
             ProcessScopedResourceBundleCache.instance()._cache.items.keys())
 
     @classmethod
-    def get_vfs_cache_size(cls):
+    def get_cache_size(cls):
         # pylint: disable-msg=protected-access
         return ProcessScopedResourceBundleCache.instance()._cache.total_size
 
@@ -1551,7 +1559,7 @@ class ResourceBundleCacheEntry(caching.AbstractCacheEntry):
 
     def getsizeof(self):
         return (
-            sys.getsizeof(self.entity) +
+            ResourceBundleEntity.getsizeof(self.entity) +
             sys.getsizeof(self.created_on))
 
     def has_expired(self):
@@ -1564,9 +1572,9 @@ class ResourceBundleCacheEntry(caching.AbstractCacheEntry):
         return not update and not self.entity
 
     def updated_on(self):
-        if not self.entity:
-            return datetime.datetime.fromtimestamp(0)
-        return self.entity.updated_on
+        if self.entity:
+            return self.entity.updated_on
+        return None
 
     @classmethod
     def externalize(cls, key, entry):
@@ -1602,6 +1610,16 @@ class ResourceBundleCacheConnection(caching.AbstractCacheConnection):
         super(ResourceBundleCacheConnection, self).__init__(namespace)
         self.cache = ProcessScopedResourceBundleCache.instance().cache
 
+    def get_updates_when_empty(self):
+        """Load in all ResourceBundles when cache is empty."""
+        q = self.PERSISTENT_ENTITY.all()
+        for entity in caching.iter_all(q):
+            self.put(entity.key().name(), entity)
+            self.CACHE_UPDATE_COUNT.inc()
+
+        # we don't have any updates to apply; all items are new
+        return {}
+
 
 RB_CACHE_LEN = models.counters.PerfCounter(
     'gcb-models-ResourceBundleCacheConnection-cache-len',
@@ -1610,15 +1628,23 @@ RB_CACHE_SIZE_BYTES = PerfCounter(
     'gcb-models-ResourceBundleCacheConnection-cache-bytes',
     'A total size of items in cache in bytes.')
 
-RB_CACHE_LEN.poll_value = ProcessScopedResourceBundleCache.get_vfs_cache_len
+RB_CACHE_LEN.poll_value = ProcessScopedResourceBundleCache.get_cache_len
 RB_CACHE_SIZE_BYTES.poll_value = (
-    ProcessScopedResourceBundleCache.get_vfs_cache_size)
+    ProcessScopedResourceBundleCache.get_cache_size)
 
 
 ResourceBundleCacheConnection.init_counters()
 
 
 class I18nResourceBundleManager(caching.RequestScopedSingleton):
+    """Class that provides access to in-process ResourceBundle cache.
+
+    This class only supports get() and does not intercept put() or delete()
+    and is unaware of changes to ResourceBundles made in this very process.
+    When ResourceBundles change, the changes will be picked up when new instance
+    of this class is created. If you are watching perfomance counters, you will
+    see EVICT and EXPIRE being incremented, but not DELETE or PUT.
+    """
 
     def __init__(self, namespace):
         self._conn = ResourceBundleCacheConnection.new_connection(namespace)
@@ -1689,7 +1715,8 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
             inline_tag_names=inline_tag_names,
             opaque_decomposable_tag_names=opaque_decomposable_tag_names,
             recomposable_attributes_map=recomposable_attributes_map,
-            omit_empty_opaque_decomposable=False)
+            omit_empty_opaque_decomposable=False,
+            sort_attributes=True)
 
     def _get_xcontent_configuration(self):
         if self._xcontent_config is None:
@@ -1701,6 +1728,24 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
     def get(cls, app_context):
         # pylint: disable-msg=protected-access
         return cls.instance(app_context)._get_xcontent_configuration()
+
+
+def swapcase(text):
+    """Swap case for full words with only alpha/num and punctutation marks."""
+
+    text = text.swapcase()
+
+    # revert swap of entities
+    text = re.sub(
+        r'&[a-zA-Z0-9]+;',
+        lambda m: m.group().swapcase(), text)
+
+    # revert swap of anything between tags
+    text = re.sub(
+        r'\<(.*?)\>',
+        lambda m: m.group().swapcase(), text)
+
+    return text
 
 
 class I18nReverseCaseHandler(BaseDashboardExtension):
@@ -1746,11 +1791,7 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
         cat = TranslationDownloadRestHandler.build_babel_catalog_for_locale(
             course, translations, PSEUDO_LANGUAGE)
         for message in cat:
-            # Flip the case of all text except for HTML named entities.
-            message.string = re.sub(
-                r'&[a-zA-Z0-9]+;',
-                lambda m: m.group().swapcase(),
-                message.id.swapcase())
+            message.string = swapcase(message.id)
         try:
             content = cStringIO.StringIO()
             pofile.write_po(content, cat)
@@ -2517,6 +2558,19 @@ def set_attribute(course, key, thing, attribute_name, translation_dict):
         course.app_context, key, source_value, translation_dict))
 
 
+def is_translation_required():
+    """Returns True if current locale is different from the course default."""
+    app_context = sites.get_course_for_current_request()
+    if not app_context:
+        return False
+    default_locale = app_context.default_locale
+    current_locale = app_context.get_current_locale()
+    if not current_locale:
+        return False
+    return current_locale != default_locale
+
+
+@appengine_config.timeandlog('translate_lessons')
 def translate_lessons(course, locale):
     lesson_list = course.get_lessons_for_all_units()
     key_list = [
@@ -2532,6 +2586,7 @@ def translate_lessons(course, locale):
                 set_attribute(course, key, lesson, name, translation_dict)
 
 
+@appengine_config.timeandlog('translate_units')
 def translate_units(course, locale):
     unit_list = course.get_units()
     key_list = []
@@ -2560,18 +2615,7 @@ def translate_units(course, locale):
         unit_tools.apply_updates(unit, data_dict, errors)
 
 
-def is_translation_required():
-    """Returns True if current locale is different from the course default."""
-    app_context = sites.get_course_for_current_request()
-    if not app_context:
-        return False
-    default_locale = app_context.default_locale
-    current_locale = app_context.get_current_locale()
-    if not current_locale:
-        return False
-    return current_locale != default_locale
-
-
+@appengine_config.timeandlog('translate_course', duration_only=True)
 def translate_course(course):
     if not is_translation_required():
         return
@@ -2594,7 +2638,7 @@ def translate_course_env(env):
         for key in courses.Course.get_schema_sections()]
     bundle_list = I18nResourceBundleManager.get_multi(app_context, key_list)
 
-    course = courses.Course(None, app_context)
+    course = courses.Course.get(app_context)
     for key, bundle in zip(key_list, bundle_list):
         if bundle is None:
             continue
@@ -2639,7 +2683,7 @@ def translate_question_dto(dto_list):
 
     key_list = []
     app_context = sites.get_course_for_current_request()
-    course = courses.Course(None, app_context)
+    course = courses.Course.get(app_context)
     for dto in dto_list:
         qu_type = ResourceKey.get_question_type(dto)
         key_list.append(ResourceKey(qu_type, dto.id))
@@ -2651,7 +2695,7 @@ def translate_question_group_dto(dto_list):
         return
 
     app_context = sites.get_course_for_current_request()
-    course = courses.Course(None, app_context)
+    course = courses.Course.get(app_context)
     key_list = [
         ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, dto.id)
         for dto in dto_list]

@@ -320,12 +320,17 @@ def set_default_response_headers(handler):
     # handlers do not have a response attribute.
     if handler.response:
         # Only set the headers for dynamic responses. This happens precisely
-        # when the handler is an instance of utils.ApplicationHandler.
-        if isinstance(handler, utils.ApplicationHandler):
-            handler.response.cache_control.no_cache = True
-            handler.response.cache_control.must_revalidate = True
-            handler.response.expires = DEFAULT_EXPIRY_DATE
-            handler.response.pragma = DEFAULT_PRAGMA
+        # when the handler is an instance of utils.ApplicationHandler and not
+        # AssetsHandler
+        if isinstance(handler, AssetHandler):
+            return
+        if not isinstance(handler, utils.ApplicationHandler):
+            return
+
+        handler.response.cache_control.no_cache = True
+        handler.response.cache_control.must_revalidate = True
+        handler.response.expires = DEFAULT_EXPIRY_DATE
+        handler.response.pragma = DEFAULT_PRAGMA
 
 
 def make_zip_handler(zipfilename):
@@ -502,6 +507,7 @@ class CourseIndex(object):
 
     CAN_USE_INDEXED_GETTER = True
 
+    @appengine_config.timeandlog('CourseIndex.init', duration_only=True)
     def __init__(self, all_contexts):
         self._all_contexts = all_contexts
         self._namespace2app_context = {}
@@ -626,6 +632,20 @@ class ApplicationContext(object):
         if course:
             return course.namespace
         return appengine_config.DEFAULT_NAMESPACE_NAME
+
+    @classmethod
+    def check_same(cls, app_context_1, app_context_2):
+        """Checks if two ApplicationContexts are the same."""
+        if app_context_1 == app_context_2:
+            return True
+        if app_context_1 is None and app_context_2 is None:
+            return True
+        if app_context_1 and app_context_2 and (
+            app_context_1.get_namespace_name() ==
+            app_context_2.get_namespace_name()) == (
+            app_context_1.get_slug() and app_context_2.get_slug()):
+            return True
+        return False
 
     @classmethod
     def after_create(cls, instance):
@@ -938,8 +958,6 @@ def get_course_index(rules_text=None):
     if course_index:
         return course_index
 
-    appengine_config.log_appstats_event(
-        'ApplicationContext.rebuild_course_index', {'rules_text': rules_text})
     course_index = CourseIndex(_build_course_list_from(rules_text))
 
     # pylint: disable-msg=protected-access
@@ -1279,19 +1297,16 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         if hasattr(handler, 'after_method'):
             handler.after_method(verb, path)
 
+    @appengine_config.timeandlog('invoke_http_verb')
     def invoke_http_verb(self, verb, path, no_handler):
         """Sets up the environemnt and invokes HTTP verb on the self.handler."""
-        appengine_config.log_appstats_event(
-            'ApplicationRequestHandler:begin_invoke_http_verb')
         try:
             set_path_info(path)
             handler = self.get_handler()
             if not handler:
                 no_handler(path)
             else:
-                if not isinstance(handler, AssetHandler):
-                    set_default_response_headers(handler)
-
+                set_default_response_headers(handler)
                 self.before_method(handler, verb, path)
                 try:
                     getattr(handler, verb.lower())()
@@ -1300,8 +1315,6 @@ class ApplicationRequestHandler(webapp2.RequestHandler):
         finally:
             count_stats(self)
             unset_path_info()
-            appengine_config.log_appstats_event(
-                'ApplicationRequestHandler.end_invoke_http_verb')
 
     def _error_404(self, path):
         """Fail with 404."""

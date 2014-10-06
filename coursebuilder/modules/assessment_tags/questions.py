@@ -16,10 +16,12 @@
 
 __author__ = 'sll@google.com (Sean Lip)'
 
+import logging
 import os
 
 import jinja2
 
+import appengine_config
 from common import jinja_utils
 from common import schema_fields
 from common import tags
@@ -30,6 +32,7 @@ from models import transforms
 RESOURCES_PATH = '/modules/assessment_tags/resources'
 
 
+@appengine_config.timeandlog('render_question', duration_only=True)
 def render_question(
     quid, instanceid, locale, embedded=False, weight=None, progress=None):
     """Generates the HTML for a question.
@@ -56,6 +59,7 @@ def render_question(
     try:
         question_dto = m_models.QuestionDAO.load(quid)
     except Exception:  # pylint: disable-msg=broad-except
+        logging.exception('Invalid question: %s', quid)
         return '[Invalid question]'
 
     if not question_dto:

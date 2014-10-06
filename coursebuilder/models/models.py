@@ -107,12 +107,8 @@ class MemcacheManager(object):
         # pylint: disable-msg=g-import-not-at-top
         from controllers import sites
         app_context = sites.get_course_for_current_request()
-        same_slug = (
-            cls._READONLY_APP_CONTEXT.get_slug() == app_context.get_slug())
-        same_ns = (
-            cls._READONLY_APP_CONTEXT.get_namespace_name() ==
-            app_context.get_namespace_name())
-        return same_slug and same_ns
+        return sites.ApplicationContext.check_same(
+            cls._READONLY_APP_CONTEXT, app_context)
 
     @classmethod
     def _assert_true_clear_cache_and_raise_if_not(cls, value_to_assert, msg):
@@ -253,7 +249,6 @@ class MemcacheManager(object):
         if value is not None:
             CACHE_HIT.inc()
         else:
-            logging.info('Cache miss, key: %s. %s', key, Exception())
             CACHE_MISS.inc(context=key)
 
         cls._local_cache_put(key, _namespace, value)
@@ -1286,6 +1281,7 @@ class BaseJsonDao(object):
             return None
 
     @classmethod
+    @appengine_config.timeandlog('Models.bulk_load')
     def bulk_load(cls, obj_id_list):
         # fetch from memcache
         memcache_keys = [cls._memcache_key(obj_id) for obj_id in obj_id_list]

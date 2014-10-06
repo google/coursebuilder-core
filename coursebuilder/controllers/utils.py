@@ -347,6 +347,7 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     def render_template_to_html(self, template_values, template_file,
                                 additional_dirs=None):
+        courses.Course.set_current(self.get_course())
         models.MemcacheManager.begin_readonly()
         try:
             template = self.get_template(template_file, additional_dirs)
@@ -354,6 +355,7 @@ class ApplicationHandler(webapp2.RequestHandler):
                 template.render(template_values, autoescape=True))
         finally:
             models.MemcacheManager.end_readonly()
+            courses.Course.clear_current()
 
     def get_template(self, template_file, additional_dirs=None, prefs=None):
         raise NotImplementedError()
@@ -644,19 +646,19 @@ class BaseHandler(CourseHandler):
             return False
         return True
 
+    @appengine_config.timeandlog('BaseHandler.render')
     def render(self, template_file):
         """Renders a template."""
-        appengine_config.log_appstats_event('BaseHandler.begin_render')
         prefs = models.StudentPreferencesDAO.load_or_create()
+
+        courses.Course.set_current(self.get_course())
+        models.MemcacheManager.begin_readonly()
         try:
-            models.MemcacheManager.begin_readonly()
-            try:
-                template = self.get_template(template_file, prefs=prefs)
-                self.response.out.write(template.render(self.template_value))
-            finally:
-                models.MemcacheManager.end_readonly()
+            template = self.get_template(template_file, prefs=prefs)
+            self.response.out.write(template.render(self.template_value))
         finally:
-            appengine_config.log_appstats_event('BaseHandler.end_render')
+            models.MemcacheManager.end_readonly()
+            courses.Course.clear_current()
 
         # If the page displayed successfully, save the location for registered
         # students so future visits to the course's base URL sends the student

@@ -16,6 +16,7 @@
 
 __author__ = 'psimakov@google.com (Pavel Simakov)'
 
+import datetime
 import importlib
 import logging
 import os
@@ -148,6 +149,48 @@ def import_and_enable_modules():
     _import_and_enable_modules('GCB_REGISTERED_MODULES')
     _import_and_enable_modules('GCB_REGISTERED_MODULES_CUSTOM')
     _import_and_enable_modules('GCB_THIRD_PARTY_MODULES')
+
+
+def time_delta_to_millis(delta):
+    """Converts time delta into total number of milliseconds."""
+    millis = delta.days * 24 * 60 * 60 * 1000
+    millis += delta.seconds * 1000
+    millis += delta.microseconds / 1000
+    return millis
+
+
+def timeandlog(name, duration_only=False):
+    """Times and logs execution of decorated method."""
+
+    def timed_1(func):
+
+        def timed_2(*args, **kwargs):
+            _name = name
+            if args and isinstance(args[0], type):
+                _name += '.' + str(args[0].__name__)
+
+            before = datetime.datetime.utcnow()
+            if not duration_only:
+                log_appstats_event(_name + '.enter')
+
+            result = func(*args, **kwargs)
+
+            after = datetime.datetime.utcnow()
+            millis = time_delta_to_millis(after - before)
+            if duration_only:
+                logging.info(_name + ': duration=%sms' % millis)
+                log_appstats_event(_name, {'millis': millis})
+            else:
+                logging.info(_name + '.leave: duration=%sms' % millis)
+                log_appstats_event(_name + '.leave', {'millis': millis})
+            return result
+
+        if gcb_appstats_enabled():
+            return timed_2
+        else:
+            return func
+
+    return timed_1
 
 
 def log_appstats_event(label, data=None):

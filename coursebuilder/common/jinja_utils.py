@@ -16,20 +16,29 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
+import sys
 import traceback
 import jinja2
 import safe_dom
 import tags
+
 from webapp2_extras import i18n
 
+import appengine_config
+from common import caching
 from models import config
 from models import models
+from models.counters import PerfCounter
 
 
+# max size for in-process jinja template cache
+MAX_GLOBAL_CACHE_SIZE_BYTES = 8 * 1024 * 1024
+
+# this cache used to be memcache based; now it's in-process
 CAN_USE_JINJA2_TEMPLATE_CACHE = config.ConfigProperty(
     'gcb_can_use_jinja2_template_cache', bool, safe_dom.Text(
-        'Whether jinja2 can cache bytecode of compiled templates in memcache.'),
-    default_value=False)
+        'Whether jinja2 can cache bytecode of compiled templates in-process.'),
+    default_value=True)
 
 
 def finalize(x):
@@ -60,6 +69,8 @@ def js_string(data):
 
 
 def get_gcb_tags_filter(handler):
+
+    @appengine_config.timeandlog('get_gcb_tags_filter')
     def gcb_tags(data):
         """Apply GCB custom tags, if enabled. Otherwise pass as if by 'safe'."""
         data = unicode(data)
@@ -70,15 +81,62 @@ def get_gcb_tags_filter(handler):
     return gcb_tags
 
 
+class ProcessScopedJinjaCache(caching.ProcessScopedSingleton):
+    """This class holds in-process cache of Jinja compiled templates."""
+
+    @classmethod
+    def get_cache_len(cls):
+        return len(ProcessScopedJinjaCache.instance().cache.items.keys())
+
+    @classmethod
+    def get_cache_size(cls):
+        return ProcessScopedJinjaCache.instance().cache.total_size
+
+    def __init__(self):
+        self.cache = caching.LRUCache(
+            max_size_bytes=MAX_GLOBAL_CACHE_SIZE_BYTES)
+        self.cache.get_entry_size = self._get_entry_size
+
+    def _get_entry_size(self, key, value):
+        return sys.getsizeof(key) + sys.getsizeof(value)
+
+
+class JinjaBytecodeCache(jinja2.BytecodeCache):
+    """Jinja-compatible cache backed by global in-process Jinja cache."""
+
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def load_bytecode(self, bucket):
+        found, _bytes = ProcessScopedJinjaCache.instance().cache.get(
+            self.prefix + bucket.key)
+        if found and _bytes is not None:
+            bucket.bytecode_from_string(_bytes)
+
+    def dump_bytecode(self, bucket):
+        _bytes = bucket.bytecode_to_string()
+        ProcessScopedJinjaCache.instance().cache.put(
+            self.prefix + bucket.key, _bytes)
+
+
+JINJA_CACHE_LEN = PerfCounter(
+    'gcb-models-JinjaBytecodeCache-len',
+    'A total number of items in Jinja cache.')
+JINJA_CACHE_SIZE_BYTES = PerfCounter(
+    'gcb-models-JinjaBytecodeCache-bytes',
+    'A total size of items in Jinja cache in bytes.')
+
+JINJA_CACHE_LEN.poll_value = ProcessScopedJinjaCache.get_cache_len
+JINJA_CACHE_SIZE_BYTES.poll_value = ProcessScopedJinjaCache.get_cache_size
+
+
 def create_jinja_environment(loader, locale=None, autoescape=True):
     """Create proper jinja environment."""
 
     cache = None
     if CAN_USE_JINJA2_TEMPLATE_CACHE.value:
         prefix = 'jinja2:bytecode:%s:/' % models.MemcacheManager.get_namespace()
-        cache = jinja2.MemcachedBytecodeCache(
-            models.MemcacheManager, timeout=models.DEFAULT_CACHE_TTL_SECS,
-            prefix=prefix)
+        cache = JinjaBytecodeCache(prefix)
 
     jinja_environment = jinja2.Environment(
         autoescape=autoescape, finalize=finalize,

@@ -2843,6 +2843,22 @@ class SampleCourseLocalizationTest(actions.TestBase):
 
         self.assertNotEquals(ru_env, es_env)
 
+    def test_swapcase(self):
+        source = '<img alt="Hello!">W0rld</img>'
+        target = '<img alt="Hello!">w0RLD</img>'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
+
+        source = 'Hello W0rld!'
+        target = 'hELLO w0RLD!'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
+
+        source = 'Hello&apos;W0rld!'
+        target = 'hELLO&apos;w0RLD!'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
+
+        source = '12345'
+        self.assertEquals(source, i18n_dashboard.swapcase(source))
+
     def test_reverse_case(self):
         self._import_sample_course()
         actions.login('test_reverse_case@example.com', is_admin=True)

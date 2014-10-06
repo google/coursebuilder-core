@@ -371,7 +371,10 @@ class TranslationIO(object):
         tag_name = '%s#%s' % (element.tag_name.lower(), index)
 
         start_tag = tag_name
-        for attr in element.attributes:
+        _attributes = element.attributes
+        if config.sort_attributes:
+            _attributes = sorted(_attributes)
+        for attr in _attributes:
             tag_name_set = config.recomposable_attributes_map.get(attr.upper())
             if tag_name_set and (
                 element.tag_name.upper() in tag_name_set
@@ -553,7 +556,8 @@ class Configuration(object):
         opaque_tag_names=None,
         opaque_decomposable_tag_names=None,
         recomposable_attributes_map=None,
-        omit_empty_opaque_decomposable=True):
+        omit_empty_opaque_decomposable=True,
+        sort_attributes=False):
 
         if inline_tag_names is not None:
             self.inline_tag_names = inline_tag_names
@@ -578,6 +582,7 @@ class Configuration(object):
                 DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
 
         self.omit_empty_opaque_decomposable = omit_empty_opaque_decomposable
+        self.sort_attributes = sort_attributes
 
 
 class Context(object):
@@ -1751,10 +1756,28 @@ class TestCasesForContentDecompose(TestCasesBase):
         self._assert_decomposes(html, expected)
 
     def test_extract_decompose_opaque_translatable(self):
-        config = Configuration(omit_empty_opaque_decomposable=False)
+        config = Configuration(
+            omit_empty_opaque_decomposable=False,
+            sort_attributes=True)
         self.transformer = ContentTransformer(config)
         html = '<img src="foo" />'
         expected = ['<img#1 src="foo" />']
+        self._assert_decomposes(html, expected)
+
+        html = '<img src="foo" alt="bar"/>'
+        expected = ['<img#1 alt="bar" src="foo" />']
+        self._assert_decomposes(html, expected)
+
+        html = '<img alt="bar" src="foo" />'
+        expected = ['<img#1 alt="bar" src="foo" />']
+        self._assert_decomposes(html, expected)
+
+        html = '<img alt="bar" src="foo" title="baz"/>'
+        expected = ['<img#1 alt="bar" src="foo" title="baz" />']
+        self._assert_decomposes(html, expected)
+
+        html = '<img src="foo" alt="bar" title="baz"/>'
+        expected = ['<img#1 alt="bar" src="foo" title="baz" />']
         self._assert_decomposes(html, expected)
 
     def test_extract_decompose_custom_tag_with_attribute(self):

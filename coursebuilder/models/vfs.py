@@ -37,6 +37,9 @@ from google.appengine.ext import db
 # all caches must have limits
 MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
 
+# max size of each item; no point in storing images for example
+MAX_GLOBAL_CACHE_ITEM_SIZE_BYTES = 256 * 1024
+
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
     'gcb_can_use_vfs_in_process_cache', bool, (
@@ -303,7 +306,8 @@ class ProcessScopedVfsCache(caching.ProcessScopedSingleton):
 
     def __init__(self):
         self._cache = caching.LRUCache(
-            max_size_bytes=MAX_GLOBAL_CACHE_SIZE_BYTES)
+            max_size_bytes=MAX_GLOBAL_CACHE_SIZE_BYTES,
+            max_item_size_bytes=MAX_GLOBAL_CACHE_ITEM_SIZE_BYTES)
         self._cache.get_entry_size = self._get_entry_size
 
     def _get_entry_size(self, key, value):
@@ -637,6 +641,9 @@ class DatastoreBackedFileSystem(object):
             data_list.append(data)
             data.data = raw_bytes
 
+            # we do call delete here; so this instance will not increment EVICT
+            # counter value, but the DELETE value; other instance will not
+            # record DELETE, but EVICT when they query for updates
             self.cache.delete(filename)
 
         data_future = db.put_async(data_list)
