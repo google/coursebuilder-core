@@ -227,7 +227,7 @@ window.GcbGoogleDriveTagParent = (function(
     var handler = GoogleApiClientTools.partial(
       module._onDocumentContentsDownloaded, documentId);
     $.ajax({
-      error: handler,
+      error: module._onDocumentContentsDownloadError,
       headers: {
         Authorization: 'Bearer ' + GoogleApiClientTools.getAuthToken()
       },
@@ -362,6 +362,17 @@ window.GcbGoogleDriveTagParent = (function(
       url: GoogleApiClientTools.getGoogleDriveTagUrl()
     }).done(module._onCbPost);
     module._restoreInputExFunctions();
+  };
+
+  module._onDocumentContentsDownloadError = function(xhr, status, error) {
+    // Firefox throws a 'cross-origin request blocked' exception in the admin
+    // interface but not the refresh interface. It's not clear why; hint to the
+    // user that they can avoid these errors by using a different browser. This
+    // error will also display when the XHR fails for other reasons, so leave it
+    // somewhat general.
+    cbShowMsg(
+      'Unable to get document contents. If errors persist and you are using ' +
+      'a browser other than Chrome, try Chrome.');
   };
 
   module._onDriveApiLoaded = function() {

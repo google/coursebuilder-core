@@ -269,7 +269,14 @@ window.DriveTagControls = (function(
   };
 
   module._onDocumentContentsDownloadError = function(xhr, status, error) {
-    cbShowMsg('Unable to get document contents.');
+    // Firefox throws a 'cross-origin request blocked' exception in the admin
+    // interface but not this refresh interface. It's not clear why; hint to the
+    // user that they can avoid these errors by using a different browser. This
+    // error will also display when the XHR fails for other reasons, so leave it
+    // somewhat general.
+    cbShowMsg(
+      'Unable to get document contents. If errors persist and you are using ' +
+      'a browser other than Chrome, try Chrome.');
   };
 
   module._onDriveApiLoaded = function() {
