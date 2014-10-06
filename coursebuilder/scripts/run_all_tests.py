@@ -102,7 +102,7 @@ ALL_TEST_CLASSES = {
         '.TranslationConsoleRestHandlerTests': 7,
     'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 53,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
-    'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 14,
+    'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 15,
     'tests.functional.modules_i18n_dashboard_jobs.BaseJobTest': 9,
     'tests.functional.modules_i18n_dashboard_jobs.DeleteTranslationsTest': 1,
     'tests.functional.modules_i18n_dashboard_jobs.DownloadTranslationsTest': 3,
