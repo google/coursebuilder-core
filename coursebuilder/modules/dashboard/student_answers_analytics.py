@@ -87,6 +87,12 @@ class RawAnswersGenerator(jobs.MapReduceJob):
 
         if event.source == 'submit-assessment':
             answer_data = content.get('values', {})
+            # TODO(mgainer): handle assessment-as-form submissions.  Current
+            # implementation only understands Question and QuestionGroup;
+            # forms are simply submitted as lists of fields.
+            # TODO(mgainer): Handle peer-review scoring
+            if not isinstance(answer_data, dict):
+              return
             version = answer_data.get('version')
             if version == '1.5':
                 answers = event_transforms.unpack_student_answer_1_5(
