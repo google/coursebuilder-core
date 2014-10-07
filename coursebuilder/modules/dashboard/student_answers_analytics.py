@@ -143,7 +143,14 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
 
     @classmethod
     def get_default_chunk_size(cls):
-        return 100
+        # Selecting answers by student turns into a where-in clause, which
+        # in turn turns into N different '==' filters, and AppEngine supports
+        # at most 30.
+        # TODO(mgainer): Do something clever so that the students who have
+        # non-blank data here are returned in the earlier pages.
+        # TODO(mgainer): For students with no data, return blank items so
+        # we at least see rows for them in the UI, even if there are no scores.
+        return 25
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
