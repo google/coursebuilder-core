@@ -268,9 +268,12 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
         # Limit the number of emails a user can send, to prevent spamming
         if invitation_data.invited_list_size() + len(email_set) > MAX_EMAILS:
             missing_count = MAX_EMAILS - invitation_data.invited_list_size()
-            # I18N: Error indicating not all invitations were sent due to
-            # exceeding the maximum number of emails allowed to be sent by
-            # this account.
+            # I18N: Error indicating that the user cannot add the desired
+            # list of additional email addresses to the list of invitations;
+            # the total size of the list with the additions would be more
+            # than any single user is allowed to send.  No email addresses
+            # were added to the list to send, and no further email messages
+            # were sent.
             transforms.send_json_response(self, 200, gettext.gettext(
                 'This exceeds your email cap. Number of remaining '
                 'invitations: %s. No messages sent.' % missing_count))
