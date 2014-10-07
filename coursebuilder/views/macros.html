@@ -19,7 +19,7 @@
     {% if unit.now_available or can_see_drafts %}
       {% if unit.type == 'A' %}
         {% if (student_preferences and student_preferences.last_location and
-               target_url in student_preferences.last_location) %}
+               student_preferences.last_location.endswith(target_url)) %}
           {% set css_class = css_class + ' gcb-last-location' %}
         {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
@@ -96,8 +96,8 @@
 
       {% elif unit.type == 'U' %}
         {% if (student_preferences and student_preferences.last_location and
-               '/unit?unit=%s' % unit.unit_id in
-               student_preferences.last_location) %}
+               student_preferences.last_location.endswith(
+                '/unit?unit=%s' % unit.unit_id)) %}
           {% set css_class = css_class + ' gcb-last-location' %}
         {% endif %}
         <li class='{{ css_class }}'><p class="gcb-top-content">
