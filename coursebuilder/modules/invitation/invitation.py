@@ -177,7 +177,7 @@ class InvitationHandler(utils.BaseHandler):
         return jinja2.Template(template).render(self.email_vars)
 
     def get(self):
-        user = self.get_user()
+        user = self.personalize_page_and_get_user()
         if user is None:
             self.redirect('/course')
             return
