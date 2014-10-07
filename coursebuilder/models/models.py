@@ -338,7 +338,6 @@ class MemcacheManager(object):
     @classmethod
     def incr(cls, key, delta, namespace=None):
         """Incr an item in memcache if memcache is enabled."""
-        assert not cls._IS_READONLY
         if CAN_USE_MEMCACHE.value:
             memcache.incr(
                 key, delta,
