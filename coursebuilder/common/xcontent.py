@@ -147,13 +147,15 @@ DEFAULT_OPAQUE_TAG_NAMES = ['SCRIPT', 'STYLE']
 # These tags are inspected and are rendered inline without any content;
 # for example: <ul#1 />; their children are extracted and for translation as
 # independent items
-DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES = ['UL', 'TABLE', 'IMG']
+DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES = [
+    'UL', 'TABLE', 'IMG', 'INPUT', 'TEXTAREA']
 
 # The key is an attribute name. The value is a set of tag names, for which
 # this attribute can be recomposed from resource bundle. All other attributes
 # are not recomposable.
 DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP = {
-    'ALT': set(['*']), 'TITLE': set(['*']), 'SRC': set(['IMG'])}
+    'ALT': set(['*']), 'TITLE': set(['*']), 'SRC': set(['IMG']),
+    'PLACEHOLDER': set(['INPUT', 'TEXTAREA'])}
 
 # Regex that matches HTML entities (& followed by anything other than a ;, up to
 # a ;).
@@ -311,6 +313,8 @@ class TranslationIO(object):
     def _copy_node_content_from_minidom_to_safe_dom(
         cls, source_node, target_element):
         """Copies child nodes from source to target."""
+        if not source_node.childNodes:
+            return
         target_element._children = []
         for node in source_node.childNodes:
             if node.nodeType == minidom.Node.TEXT_NODE:
@@ -1437,6 +1441,17 @@ class TestCasesForIO(unittest.TestCase):
         self.assertEqual(tree_as_text, TranslationIO.toxml(dom))
         self.assertEqual(translation, TranslationIO.tostring(dom))
 
+    def test_minidom_is_casesensitive(self):
+        translation = 'The <SPAN#1>skies</SPAN#1>.'
+        TranslationIO.fromstring(translation)
+
+        translation = 'The <span#1>skies</SPAN#1>.'
+        with self.assertRaises(Exception):
+            TranslationIO.fromstring(translation)
+        translation = 'The <SPAN#1>skies</span#1>.'
+        with self.assertRaises(Exception):
+            TranslationIO.fromstring(translation)
+
     def test_fromstring_translates_html_entities_for_minidom(self):
         original = u'The skies&reg; are &copy; copyrighted.'
         parsed = u'The skies\xae are \xa9 copyrighted.'
@@ -1939,6 +1954,49 @@ class TestCasesForContentRecompose(TestCasesBase):
             ' ALWAYS <a href="bar">blue</a>.')
         self._assert_recomposes(translations, result)
 
+    def test_textarea_self_closing_fails_parse(self):
+        # TODO(psimakov): fix this
+        html = 'foo <textarea name="bar"/> baz'
+        expected = ['foo', 'baz']
+        with self.assertRaises(AssertionError):
+            self._assert_decomposes(html, expected)
+        unexpected = ['foo <textarea#1 />', 'baz&lt;/div&gt;']
+        self._assert_decomposes(html, unexpected)
+
+    def test_placeholder(self):
+        config = Configuration(omit_empty_opaque_decomposable=False)
+        self.transformer = ContentTransformer(config)
+        html = '<textarea class="foo" placeholder="bar">baz</textarea>'
+        expected = ['<textarea#1 placeholder="bar" />', 'baz']
+        self._assert_decomposes(html, expected)
+
+    def test_recompose_complex_ul(self):
+        config = Configuration(omit_empty_opaque_decomposable=False)
+        self.transformer = ContentTransformer(config)
+        html = '''
+            <ul class="foo">
+              <li>sss</li>
+              <li index="bar">ttt</li>
+              <li>xxx</li>
+              <li>yyy</li>
+              <li>zzz</li>
+            </ul>
+            '''
+        expected = ['<ul#1 />', 'sss', 'ttt', 'xxx', 'yyy', 'zzz']
+        self._assert_decomposes(html, expected)
+
+        translations = ['<ul#1 />', 'SSS', 'TTT', 'XXX', 'YYY', 'ZZZ']
+        result = '''
+            <ul class="foo">
+              <li>SSS</li>
+              <li index="bar">TTT</li>
+              <li>XXX</li>
+              <li>YYY</li>
+              <li>ZZZ</li>
+            </ul>
+            '''
+        self._assert_recomposes(translations, result)
+
     def test_recompose_complex_with_opaque_docomposable(self):
         config = Configuration(omit_empty_opaque_decomposable=False)
 
@@ -1965,7 +2023,7 @@ class TestCasesForContentRecompose(TestCasesBase):
         self._assert_decomposes(html, expected)
         translations = [
           '<table#1/>', '<i#1>TABLE</i#1>', '<ul#1/>', 'A', 'B']
-        unused_result = (
+        result = (
             '<table border="2">'
             '<tbody>'
             '<tr>'
@@ -1981,10 +2039,7 @@ class TestCasesForContentRecompose(TestCasesBase):
             '</tr>'
             '</tbody>'
             '</table>')
-        wrong_result = '<table border="2"></table>'
-
-        # TODO(jorr): This test should pass with "result", not "wrong_result"
-        self._assert_recomposes(translations, wrong_result)
+        self._assert_recomposes(translations, result)
 
     def test_recompose_empty_p_is_roundtripped(self):
         html = 'The skies are blue.<p></p>The roses are red.'
