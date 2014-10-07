@@ -589,6 +589,40 @@ class LazyTranslatorTests(actions.TestBase):
         self.assertEquals(
             '{"lt": "HELLO"}', transforms.dumps({'lt': lazy_translator}))
 
+    def test_lazy_translator_supports_addition(self):
+        source_value = 'hello, '
+        translation_dict = {
+            'type': 'string',
+            'data': [
+                {'source_value': 'hello, ', 'target_value': 'HELLO, '}]}
+        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        lazy_translator = LazyTranslator(
+            self.app_context, key, source_value, translation_dict)
+        self.assertEquals('HELLO, world', lazy_translator + 'world')
+
+    def test_lazy_translator_supports_interpolation(self):
+        source_value = 'hello, %s'
+        translation_dict = {
+            'type': 'string',
+            'data': [
+                {'source_value': 'hello, %s', 'target_value': 'HELLO, %s'}]}
+        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        lazy_translator = LazyTranslator(
+            self.app_context, key, source_value, translation_dict)
+        self.assertEquals('HELLO, world', lazy_translator % 'world')
+
+    def test_lazy_translator_supports_upper_and_lower(self):
+        source_value = 'Hello'
+        translation_dict = {
+            'type': 'string',
+            'data': [
+                {'source_value': 'Hello', 'target_value': 'Bonjour'}]}
+        key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
+        lazy_translator = LazyTranslator(
+            self.app_context, key, source_value, translation_dict)
+        self.assertEquals('BONJOUR', lazy_translator.upper())
+        self.assertEquals('bonjour', lazy_translator.lower())
+
     def test_lazy_translator_records_status(self):
         source_value = 'hello'
         translation_dict = {

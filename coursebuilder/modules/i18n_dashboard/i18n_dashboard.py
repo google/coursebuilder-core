@@ -2472,9 +2472,16 @@ class LazyTranslator(object):
         return len(unicode(self))
 
     def __add__(self, other):
-        if isinstance(other, basestring):
-            return other + unicode(self)
-        return super(LazyTranslator, self).__add__(other)
+        return unicode(self) + other
+
+    def __mod__(self, other):
+        return unicode(self) % other
+
+    def upper(self):
+        return unicode(self).upper()
+
+    def lower(self):
+        return unicode(self).lower()
 
     def _translate_text(self):
         self._status = self.VALID_TRANSLATION
@@ -2805,7 +2812,7 @@ def register_module():
         (TranslationDeletionRestHandler.URL, TranslationDeletionRestHandler),
         (TranslationDownloadRestHandler.URL, TranslationDownloadRestHandler),
         (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
-        (IsTranslatableRestHandler.URL, IsTranslatableRestHandler),]
+        (IsTranslatableRestHandler.URL, IsTranslatableRestHandler)]
 
     global custom_module
     custom_module = custom_modules.Module(
