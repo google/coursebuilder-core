@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-10-03 16:45-0700\n"
+"POT-Creation-Date: 2014-10-06 19:00-0700\n"
 "PO-Revision-Date: 2014-10-03 16:45-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: af <LL@li.org>\n"
@@ -261,12 +261,6 @@ msgstr "Nuwe naam"
 #: experimental/coursebuilder/views/student_profile.html:53
 msgid "Change Name"
 msgstr "Verander naam"
-
-#. Control allowing course administrator to edit a translated string in a
-#. course element.
-#: experimental/coursebuilder/modules/i18n_dashboard/templates/lazy_loader_error.html:7
-msgid "Edit the resource"
-msgstr "Edit the resource"
 
 #. Error indicating no email addresses were submitted.
 #: experimental/coursebuilder/modules/invitation/invitation.py:263
@@ -1224,4 +1218,5 @@ msgstr "Volgende bladsy"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Einde"
+
 
