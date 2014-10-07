@@ -162,8 +162,21 @@ def create_jinja_environment(loader, locale=None, autoescape=True):
 
 
 def get_template(
-    template_name, dirs, locale=None, handler=None, autoescape=True):
+    template_name, dirs, handler=None, autoescape=True):
     """Sets up an environment and gets jinja template."""
+
+    # Defer to avoid circular import.
+    # pylint: disable-msg=g-import-not-at-top
+    from controllers import sites
+
+    locale = None
+    app_context = sites.get_course_for_current_request()
+    if app_context:
+        locale = app_context.get_current_locale()
+        if not locale:
+            locale = app_context.default_locale
+    if not locale:
+        locale = 'en_US'
 
     jinja_environment = create_jinja_environment(
         jinja2.FileSystemLoader(dirs), locale=locale, autoescape=autoescape)

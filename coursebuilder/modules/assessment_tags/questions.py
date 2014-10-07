@@ -34,7 +34,7 @@ RESOURCES_PATH = '/modules/assessment_tags/resources'
 
 @appengine_config.timeandlog('render_question', duration_only=True)
 def render_question(
-    quid, instanceid, locale, embedded=False, weight=None, progress=None):
+    quid, instanceid, embedded=False, weight=None, progress=None):
     """Generates the HTML for a question.
 
     Args:
@@ -42,8 +42,6 @@ def render_question(
       instanceid: String. The unique reference id for the question instance
          (different instances of the same question in a page will have
          different instanceids).
-      locale: String. The locale for the Jinja environment that is used to
-          generate the question HTML.
       embedded: Boolean. Whether this question is embedded within a container
           object.
       weight: number. The weight to be used when grading the question in a
@@ -120,7 +118,7 @@ def render_question(
     template_values['js_data'] = transforms.dumps(js_data)
 
     template = jinja_utils.get_template(
-        template_file, [os.path.dirname(__file__)], locale=locale)
+        template_file, [os.path.dirname(__file__)])
     return jinja2.utils.Markup(template.render(template_values))
 
 
@@ -142,7 +140,6 @@ class QuestionTag(tags.BaseTag):
 
     def render(self, node, handler):
         """Renders a question."""
-        locale = handler.app_context.default_locale
 
         quid = node.attrib.get('quid')
         weight = node.attrib.get('weight')
@@ -158,7 +155,7 @@ class QuestionTag(tags.BaseTag):
                     instanceid)
 
         html_string = render_question(
-            quid, instanceid, locale, embedded=False, weight=weight,
+            quid, instanceid, embedded=False, weight=weight,
             progress=progress)
         return tags.html_string_to_element_tree(html_string)
 
@@ -206,8 +203,6 @@ class QuestionGroupTag(tags.BaseTag):
     def render(self, node, handler):
         """Renders a question."""
 
-        locale = handler.app_context.default_locale
-
         qgid = node.attrib.get('qgid')
         group_instanceid = node.attrib.get('instanceid')
         question_group_dto = m_models.QuestionGroupDAO.load(qgid)
@@ -233,7 +228,7 @@ class QuestionGroupTag(tags.BaseTag):
             quid = item['question']
             question_instanceid = '%s.%s.%s' % (group_instanceid, ind, quid)
             template_values['question_html_array'].append(render_question(
-                quid, question_instanceid, locale, weight=item['weight'],
+                quid, question_instanceid, weight=item['weight'],
                 embedded=True
             ))
             js_data[question_instanceid] = item
@@ -241,7 +236,7 @@ class QuestionGroupTag(tags.BaseTag):
 
         template_file = 'templates/question_group.html'
         template = jinja_utils.get_template(
-            template_file, [os.path.dirname(__file__)], locale=locale)
+            template_file, [os.path.dirname(__file__)])
 
         html_string = template.render(template_values)
         return tags.html_string_to_element_tree(html_string)

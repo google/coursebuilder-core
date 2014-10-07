@@ -203,8 +203,7 @@ class ProfileHandler(BaseStudentHandler):
         self.template_values['student_preferences'] = {}
 
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/profile.html', DIR,
-            self.get_locale_for_user())
+            '/modules/course_explorer/views/profile.html', DIR)
         self.response.write(template.render(self.template_values))
 
     def post(self):
@@ -246,8 +245,7 @@ class AllCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR,
-            self.get_locale_for_user())
+            '/modules/course_explorer/views/course_explorer.html', DIR)
         self.response.write(template.render(self.template_values))
 
 
@@ -272,8 +270,7 @@ class RegisteredCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR,
-            self.get_locale_for_user())
+            '/modules/course_explorer/views/course_explorer.html', DIR)
         self.response.write(template.render(self.template_values))
 
 

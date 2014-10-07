@@ -2602,6 +2602,34 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 False, False, True, True, True, 'es_ES')
             self.assertIn('Avisos', response.body)
 
+    def test_button_captions(self):
+        self._import_sample_course()
+        self._setup_locales(course='sample')
+
+        self._set_prefs_locale('ru', course='sample')
+
+        response = self.get('/sample/course')
+        # TODO(psimakov): 'Search' button caption must be localized; but it's
+        # in the hook and we don't curently support gettext() inside hook :(
+        self.assertIn('type="submit" value="Search"', response.body)
+
+        response = self.get('/sample/unit?unit=14&lesson=20')
+        self.assertIn('Проверить ответ', response.body)
+        self.assertIn('Подсказка', response.body)
+        self.assertIn('Баллов: 1', response.body)
+        self.assertIn('Предыдущая страница', response.body)
+        self.assertIn('Следующая страница', response.body)
+
+        response = self.get('/sample/assessment?name=1')
+        self.assertIn('Отправить ответы', response.body)
+
+        for url in [
+            '/sample/assessment?name=35', '/sample/assessment?name=65']:
+            response = self.get(url)
+            self.assertIn('Баллов: 1', response.body)
+            self.assertIn('Проверить ответы', response.body)
+            self.assertIn('Отправить ответы', response.body)
+
     def test_course_track_via_locale_labels(self):
         self._setup_locales()
         self._add_units(locale_labels=True)

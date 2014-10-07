@@ -125,9 +125,7 @@ class TextFileUploadTag(tags.BaseTag):
             supports_transient_student=True)
 
         template = jinja_utils.get_template(
-            'templates/form.html', os.path.dirname(__file__),
-            locale=handler.app_context.default_locale
-        )
+            'templates/form.html', os.path.dirname(__file__))
 
         already_submitted = False
         if not isinstance(student, models.TransientStudent):
