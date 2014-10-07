@@ -3056,10 +3056,16 @@ class VirtualFileSystemTestBase(actions.TestBase):
         clone_canonical_course_data(self.bundle_root, home_folder)
 
         # we also need resources in modules
+        def ignore_pyc(unused_dir, filenames):
+            return [
+                filename for filename in filenames
+                if filename.endswith('.pyc')]
+
         modules_home = 'modules'
         shutil.copytree(
             os.path.join(self.bundle_root, modules_home),
-            os.path.join(GeneratedCourse.data_home, modules_home))
+            os.path.join(GeneratedCourse.data_home, modules_home),
+            ignore=ignore_pyc)
 
         # Configure course.
         self.namespace = 'nsv'
