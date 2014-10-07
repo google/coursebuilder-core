@@ -2209,10 +2209,10 @@ class TranslatorRoleTests(actions.TestBase):
             self.assertEquals(transforms.loads(response.body)['status'], 200)
 
 
-class SampleCourseLocalizationTest(actions.TestBase):
+class CourseLocalizationTestBase(actions.TestBase):
 
     def setUp(self):
-        super(SampleCourseLocalizationTest, self).setUp()
+        super(CourseLocalizationTestBase, self).setUp()
         if sites.GCB_COURSES_CONFIG.name in sites.Registry.test_overrides:
             del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         self.auto_deploy = sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE
@@ -2223,7 +2223,7 @@ class SampleCourseLocalizationTest(actions.TestBase):
     def tearDown(self):
         del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
-        super(SampleCourseLocalizationTest, self).tearDown()
+        super(CourseLocalizationTestBase, self).tearDown()
 
     def _import_course(self):
         email = 'test_course_localization@google.com'
@@ -2242,6 +2242,9 @@ class SampleCourseLocalizationTest(actions.TestBase):
         response = self.get('first/dashboard')
         self.assertIn('My First Course', response.body)
         self.assertEquals(response.status_int, 200)
+
+
+class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
     def _import_sample_course(self):
         email = 'test_course_localization@google.com'

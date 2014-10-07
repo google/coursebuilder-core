@@ -21,17 +21,20 @@ __author__ = [
 import os
 import zipfile
 from modules.i18n_dashboard import jobs
+from tests.functional import modules_i18n_dashboard
 from tools.etl import etl
 from tools.etl import testing
 
 # Allow access to code under test. pylint: disable-msg=protected-access
 
 
-class _JobTestBase(testing.EtlTestBase):
+class _JobTestBase(
+        testing.EtlTestBase, modules_i18n_dashboard.CourseLocalizationTestBase):
 
     def setUp(self):
         super(_JobTestBase, self).setUp()
         self.filename = os.path.join(self.test_tempdir, 'filename')
+        self.zipfile_name = self.filename + '.zip'
 
     def assert_dies_if_cannot_get_app_context_for_course_url_prefix(
             self, job_name, job_args=None):
@@ -52,15 +55,62 @@ class _JobTestBase(testing.EtlTestBase):
             'Unable to find course with url prefix ' + bad_course_url_prefix,
             self.get_log())
 
+    def assert_ln_locale_in_course(self, response):
+        self.assertEqual(200, response.status_int)
+        self.assertIn('<th>ln</th>', response.body)
+
+    def assert_ln_locale_not_in_course(self, response):
+        self.assertEqual(200, response.status_int)
+        self.assertNotIn('<th>ln</th>', response.body)
+
+    def assert_zipfile_contains_only_ln_locale(self, filename):
+        with zipfile.ZipFile(filename) as zf:
+            files = zf.infolist()
+            self.assertEqual(
+                ['locale/ln/LC_MESSAGES/messages.po'],
+                [f.filename for f in files])
+
     def create_file(self, contents):
         with open(self.filename, 'w') as f:
             f.write(contents)
 
+    def run_job(self, name, job_args=None):
+        # Requires course at /first; use self._import_course().
+        args = ['run', name, '/first', 'myapp', 'localhost:8080']
+
+        if job_args:
+            args.append(job_args)
+
+        etl.main(
+            etl.PARSER.parse_args(args),
+            environment_class=testing.FakeEnvironment)
+
+    def run_delete_job(self, job_args=None):
+        self.run_job(
+            'modules.i18n_dashboard.jobs.DeleteTranslations', job_args=job_args)
+
+    def run_download_job(self, job_args=None):
+        if not job_args:
+            job_args = '--job_args=' + self.zipfile_name
+
+        self.run_job(
+            'modules.i18n_dashboard.jobs.DownloadTranslations',
+            job_args=job_args)
+
+    def run_translate_job(self, job_args=None):
+        self.run_job(
+            'modules.i18n_dashboard.jobs.TranslateToReversedCase',
+            job_args=job_args)
+
+    def run_upload_job(self, job_args=None):
+        if not job_args:
+            job_args = '--job_args=' + self.zipfile_name
+
+        self.run_job(
+            'modules.i18n_dashboard.jobs.UploadTranslations', job_args=job_args)
+
 
 class BaseJobTest(_JobTestBase):
-
-    def setUp(self):
-        super(BaseJobTest, self).setUp()
 
     def test_file_does_not_exist_when_file_does_not_exist(self):
         jobs._BaseJob._check_file_does_not_exist(self.filename)
@@ -129,7 +179,27 @@ class DeleteTranslationsTest(_JobTestBase):
         self.assert_dies_if_cannot_get_app_context_for_course_url_prefix(
             'DeleteTranslations')
 
-    # TODO(johncox): strengthen with tests of one locale, multiple locales.
+    def test_delete_all_locales(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_delete_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
+
+    def test_delete_specific_locales(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_delete_job(job_args='--job_args=--locales=ln')
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
 
 
 class DownloadTranslationsTest(_JobTestBase):
@@ -153,11 +223,10 @@ class DownloadTranslationsTest(_JobTestBase):
         self.assertIn('File already exists', self.get_log())
 
     def test_download_of_course_with_no_translations_dies(self):
-        filename = self.filename + '.zip'
         args = [
             'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
             self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % filename]
+            '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
             etl.main(
@@ -168,8 +237,25 @@ class DownloadTranslationsTest(_JobTestBase):
             'No translations found for course at %s; exiting' % self.url_prefix,
             self.get_log())
 
-    # TODO(johncox): strengthen with test of one locale, multiple locales,
-    # and downloading all vs. new.
+    def test_download_all_locales(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_download_job()
+        self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
+
+    def test_download_specific_locales(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_download_job('--job_args=%s --locales=ln' % self.zipfile_name)
+        self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
 
 
 class TranslateToReversedCaseTest(_JobTestBase):
@@ -181,19 +267,28 @@ class TranslateToReversedCaseTest(_JobTestBase):
 
 class UploadTranslationsTest(_JobTestBase):
 
-    def setUp(self):
-        super(UploadTranslationsTest, self).setUp()
-        self.filename += '.zip'
-
     def create_zip_file(self, contents):
-        with zipfile.ZipFile(self.filename, 'w') as zf:
+        with zipfile.ZipFile(self.zipfile_name, 'w') as zf:
             zf.writestr('filename', contents)
+
+    def extract_zipfile(self):
+        extracted = []
+        with zipfile.ZipFile(self.zipfile_name) as zf:
+            for zipinfo in zf.infolist():
+                path = os.path.join(self.test_tempdir, zipinfo.filename)
+                os.makedirs(os.path.dirname(path))
+                with open(path, 'w') as f:
+                    fromzip = zf.open(zipinfo.filename)
+                    f.write(fromzip.read())
+                    extracted.append(path)
+
+        return extracted
 
     def test_dies_if_path_does_not_exist(self):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
             self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.filename]
+            '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
             etl.main(
@@ -206,7 +301,7 @@ class UploadTranslationsTest(_JobTestBase):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
             self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.filename + '.bad']
+            '--job_args=%s' % self.zipfile_name + '.bad']
 
         with self.assertRaises(SystemExit):
             etl.main(
@@ -220,7 +315,7 @@ class UploadTranslationsTest(_JobTestBase):
         args = [
             'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
             '/bad' + self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=%s' % self.filename]
+            '--job_args=%s' % self.zipfile_name]
 
         with self.assertRaises(SystemExit):
             etl.main(
@@ -230,58 +325,63 @@ class UploadTranslationsTest(_JobTestBase):
         self.assertIn(
             'Unable to find course with url prefix', self.get_log())
 
-    # TODO(johncox): strengthen with tests of a .po file and a .zip containing
-    # both .po files and other files to ensure other files are filtered. Also,
-    # verify we've done the work to make the change show in the UI wihout adding
-    # locales that match the new locales uploaded.
+    def test_processes_pofile(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_download_job()
+        self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
+
+        self.run_delete_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
+
+        for po_file in self.extract_zipfile():
+            self.run_upload_job('--job_args=' + po_file)
+            response = self.get('first/dashboard?action=i18n_dashboard')
+            self.assert_ln_locale_in_course(response)
+
+    def test_processes_zipfile(self):
+        self._import_course()
+
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
+
+        self.run_download_job()
+        self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
+
+        self.run_delete_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
+
+        self.run_upload_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
 
 
 class RoundTripTest(_JobTestBase):
     """Tests translate -> download -> delete -> upload."""
 
     def test_round_trip(self):
-        filename = self.filename + '.zip'
+        self._import_course()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
 
-        # Translate to create something to download.
-        translate_args = [
-            'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCase',
-            self.url_prefix, 'myapp', 'localhost:8080']
-        etl.main(
-            etl.PARSER.parse_args(translate_args),
-            environment_class=testing.FakeEnvironment)
-        # TODO(johncox): strengthen by checking that the 'ln' locale is now
-        # present in the course.
+        self.run_translate_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
 
-        # Download into .zip.
-        download_args = [
-            'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=' + filename]
-        etl.main(
-            etl.PARSER.parse_args(download_args),
-            environment_class=testing.FakeEnvironment)
-        # TODO(johncox): strengthen by spot-checking .zip for .po containing
-        # 'ln' locale translations.
+        self.run_download_job()
+        self.assert_zipfile_contains_only_ln_locale(self.zipfile_name)
 
-        # Delete translations so we can verify upload.
-        delete_args = [
-            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080']
-        etl.main(
-            etl.PARSER.parse_args(delete_args),
-            environment_class=testing.FakeEnvironment)
-        # TODO(johncox): strengthen by checking that the 'ln' locale is no
-        # longer present in the course.
+        self.run_delete_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_not_in_course(response)
 
-        # Upload from .zip.
-        upload_args = [
-            'run', 'modules.i18n_dashboard.jobs.UploadTranslations',
-            self.url_prefix, 'myapp', 'localhost:8080',
-            '--job_args=' + filename]
-        etl.main(
-            etl.PARSER.parse_args(upload_args),
-            environment_class=testing.FakeEnvironment)
-        # TODO(johncox): strengthen by inspecting course contents to verify that
-        # the 'ln' locale is once again present.
-        self.assertIn(
-            'Processing locale/ln/LC_MESSAGES/messages.po', self.get_log())
+        self.run_upload_job()
+        response = self.get('first/dashboard?action=i18n_dashboard')
+        self.assert_ln_locale_in_course(response)
