@@ -324,12 +324,18 @@ class AbstractCacheConnection(object):
             found, entry = self.cache.get(_key)
             if not found:
                 continue
+            if entry is None:
+                self.CACHE_EVICT.inc()
+                self.cache.delete(_key)
+                continue
             if not entry.is_up_to_date(key, update):
                 self.CACHE_EVICT.inc()
                 self.cache.delete(_key)
-            elif entry.has_expired():
+                continue
+            if entry.has_expired():
                 self.CACHE_EXPIRE.inc()
                 self.cache.delete(_key)
+                continue
 
     def _get_most_recent_updated_on(self):
         """Get the most recent item cached. Datastore deletions are missed..."""

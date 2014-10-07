@@ -555,6 +555,11 @@ class DatastoreBackedFileSystem(object):
                 if data:
                     self.cache.put(filename, metadata, data.data)
                     return FileStreamWrapped(metadata, data.data)
+
+            # lets us cache the (None, None) so next time we asked for this key
+            # we fall right into the inherited section without trying to load
+            # the metadata/data from the datastore; if a new object with this
+            # key is added in the datastore, we will see it in the update list
             VfsCacheConnection.CACHE_NO_METADATA.inc()
             self.cache.put(filename, None, None)
         result = None
@@ -839,6 +844,39 @@ class VfsTests(unittest.TestCase):
         self.assertEquals(stream, None)
         self.assertEquals(
             VfsCacheConnection.CACHE_EXPIRE.value - old_expire_count, 1)
+
+    def test_no_metadata_and_no_data_is_evicted(self):
+        ProcessScopedVfsCache.clear_all()
+        conn = VfsCacheConnection('ns_test')
+
+        conn.put('sample.txt', None, None)
+
+        meta = FileMetadataEntity()
+        meta.key = 'sample/txt'
+        updates = {'sample.txt': meta}
+        conn.apply_updates(updates)
+
+        found, stream = conn.get('sample.txt')
+        self.assertFalse(found)
+        self.assertEquals(stream, None)
+
+    def test_metadata_but_no_data_is_evicted(self):
+        ProcessScopedVfsCache.clear_all()
+        conn = VfsCacheConnection('ns_test')
+
+        meta = FileMetadataEntity()
+        meta.is_draft = True
+        meta.updated_on = datetime.datetime.utcnow()
+        conn.put('sample.txt', meta, None)
+
+        meta = FileMetadataEntity()
+        meta.key = 'sample/txt'
+        updates = {'sample.txt': meta}
+        conn.apply_updates(updates)
+
+        found, stream = conn.get('sample.txt')
+        self.assertFalse(found)
+        self.assertEquals(stream, None)
 
 
 def run_all_unit_tests():
