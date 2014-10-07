@@ -400,9 +400,9 @@ class TranslationIO(object):
                             raise TypeError(
                                 'Unsupported node type: %s.' % child)
                         value = child.sanitized
-                        content.append(value.strip())
+                        content.append(value)
                 if content:
-                    content = ''.join(content).strip()
+                    content = ''.join(content)
                 else:
                     content = None
             has_content = content or not config.omit_empty_opaque_decomposable
@@ -451,7 +451,7 @@ class TranslationIO(object):
 
         if not has_content:
             return None
-        return ''.join(lines).strip()
+        return ''.join(lines)
 
     def new_tree(self):
         """Creates new empty tree."""
@@ -1545,7 +1545,8 @@ class TestCasesBase(unittest.TestCase):
                 parent = node.parent
             assert parent == node.parent
 
-    def _assert_decomposes(self, content, resource_bundle):
+    def _assert_decomposes(
+        self, content, resource_bundle, ignore_whitespace=True):
         self.context = Context(ContentIO.fromstring(content))
         self.transformer.decompose(self.context)
 
@@ -1553,7 +1554,19 @@ class TestCasesBase(unittest.TestCase):
             self._assert_collated_nodes_have_same_parent(collation)
 
         if resource_bundle is not None:
-            self.assertEqual(resource_bundle, self.context.resource_bundle)
+            self.assertEqual(
+                len(resource_bundle), len(self.context.resource_bundle))
+            for index, _ in enumerate(resource_bundle):
+                if ignore_whitespace:
+                    self.assertEqual(
+                        self._remove_whitespace(resource_bundle[index]),
+                        self._remove_whitespace(
+                            self.context.resource_bundle[index]))
+                else:
+                    self.assertEqual(
+                        resource_bundle[index],
+                        self.context.resource_bundle[index])
+
         if not self.context.resource_bundle:
             self.assertEqual(
                 {},
@@ -2062,14 +2075,22 @@ class TestCasesForContentRecompose(TestCasesBase):
         result = 'The <a class="foo">SKIES</a> are blue.'
         self._assert_recomposes(translation, result)
 
-    def test_some_new_tag_attributes_can_be_added_in_translations(self):
-        html = 'The <a class="foo" alt="bar">skies</a> are blue.'
+    def test_whitespace_is_preserved(self):
+        html = 'foo <b><i>bar</i></b>'
+
+        expected_no_whitespace = ['foo', '<i#1>bar</i#1>']
+        self._assert_decomposes(html, expected_no_whitespace)
+        translation_no_whitespace = ['FOO', '<i#1>BAR</i#1>']
+        result_no_whitespace = 'FOO<b><i>BAR</i></b>'
+        self._assert_recomposes(translation_no_whitespace, result_no_whitespace)
+
+        expected_with_whitespace = ['foo ', '<i#1>bar</i#1>']
         self._assert_decomposes(
-            html, ['The <a#1 alt="bar">skies</a#1> are blue.'])
-        translation = ['The <a#1 alt="BAR">SKIES</a#1> are blue.']
-        # TODO(psimakov): order of attributes is not preserved
-        result = 'The <a alt="BAR" class="foo">SKIES</a> are blue.'
-        self._assert_recomposes(translation, result)
+            html, expected_with_whitespace, ignore_whitespace=False)
+        translation_with_whitespace = ['FOO ', '<i#1>BAR</i#1>']
+        result_with_whitespace = 'FOO <b><i>BAR</i></b>'
+        self._assert_recomposes(
+            translation_with_whitespace, result_with_whitespace)
 
     def test_no_new_tags_can_be_added_in_translations(self):
         original = 'The <a class="foo">skies</a> are blue.'
