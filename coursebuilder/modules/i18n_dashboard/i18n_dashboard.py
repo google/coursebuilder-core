@@ -47,6 +47,7 @@ from controllers import sites
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import jobs
 from models import models
 from models import roles
 from models import transforms
@@ -301,6 +302,10 @@ class ResourceBundleKey(object):
     def fromstring(cls, key_str):
         type_str, key, locale = key_str.split(':', 2)
         return ResourceBundleKey(type_str, key, locale)
+
+    @classmethod
+    def from_resource_key(cls, resource_key, locale):
+        return cls(resource_key.type, resource_key.key, locale)
 
 
 class NamedJsonDAO(models.BaseJsonDao):
@@ -2371,23 +2376,23 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         sections = []
         for mapping in mappings:
             if mapping.type == TYPE_HTML:
-                existing_mappings = []
+                html_existing_mappings = []
                 if resource_bundle_dto:
                     field_dict = resource_bundle_dto.dict.get(mapping.name)
                     if field_dict:
-                        existing_mappings = field_dict['data']
+                        html_existing_mappings = field_dict['data']
                 context = xcontent.Context(
                     xcontent.ContentIO.fromstring(mapping.source_value))
                 transformer.decompose(context)
 
                 html_mappings = map_lists_source_to_target(
                     context.resource_bundle,
-                    [m['source_value'] for m in existing_mappings])
+                    [m['source_value'] for m in html_existing_mappings])
                 source_value = mapping.source_value
                 data = []
                 for html_mapping in html_mappings:
                     if html_mapping.target_value_index is not None:
-                        target_value = existing_mappings[
+                        target_value = html_existing_mappings[
                             html_mapping.target_value_index]['target_value']
                     else:
                         target_value = ''
@@ -2426,6 +2431,101 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         if key.locale != course.app_context.default_locale:
             add_known_translations_as_defaults(key.locale, sections)
         return binding, sections
+
+
+class I18nProgressDeferredUpdater(jobs.DurableJob):
+    """Deferred job to update progress state."""
+
+    @staticmethod
+    def _is_translatable_course():
+        app_context = sites.get_course_for_current_request()
+        if not app_context:
+            return False
+        environ = courses.Course.get_environ(app_context)
+        return environ.get('extra_locales', [])
+
+    @staticmethod
+    def on_lesson_changed(lesson):
+        if not I18nProgressDeferredUpdater._is_translatable_course():
+            return
+        key = ResourceKey(ResourceKey.LESSON_TYPE, lesson.lesson_id)
+        I18nProgressDeferredUpdater.update_resource(key)
+
+    @staticmethod
+    def on_unit_changed(unit):
+        if not I18nProgressDeferredUpdater._is_translatable_course():
+            return
+        key = ResourceKey.for_unit(unit)
+        I18nProgressDeferredUpdater.update_resource(key)
+
+    @staticmethod
+    def on_questions_changed(question_dto_list):
+        if not I18nProgressDeferredUpdater._is_translatable_course():
+            return
+        key_list = [
+            ResourceKey(
+                ResourceKey.get_question_type(question_dto), question_dto.id)
+            for question_dto in question_dto_list]
+        I18nProgressDeferredUpdater.update_resource_list(key_list)
+
+    @staticmethod
+    def on_question_groups_changed(question_group_dto_list):
+        if not I18nProgressDeferredUpdater._is_translatable_course():
+            return
+        key_list = [
+            ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, question_group_dto.id)
+            for question_group_dto in question_group_dto_list]
+        I18nProgressDeferredUpdater.update_resource_list(key_list)
+
+    @staticmethod
+    def on_course_settings_changed(course_settings):
+        if not I18nProgressDeferredUpdater._is_translatable_course():
+            return
+        app_context = sites.get_course_for_current_request()
+        course = courses.Course.get(app_context)
+        I18nProgressDeferredUpdater.update_resource_list([
+            key for _, key in _get_course_resource_keys(course)])
+
+    @classmethod
+    def update_resource(cls, resource_key):
+        cls.update_resource_list([resource_key])
+
+    @classmethod
+    def update_resource_list(cls, resource_key_list):
+        app_context = sites.get_course_for_current_request()
+        cls(app_context, resource_key_list).submit()
+
+    def __init__(self, app_context, resource_key_list):
+        super(I18nProgressDeferredUpdater, self).__init__(app_context)
+        self._resource_key_list = resource_key_list
+
+    def run(self):
+        # Fake a request URL to make sites.get_course_for_current_request work
+        sites.set_path_info(self._app_context.slug)
+
+        try:
+            for resource_key in self._resource_key_list:
+                self._update_progress_for_resource(resource_key)
+        finally:
+            sites.unset_path_info()
+
+    def _update_progress_for_resource(self, resource_key):
+        i18n_progress_dto = I18nProgressDAO.load_or_create(str(resource_key))
+        for locale in self._app_context.get_all_locales():
+            if locale != self._app_context.default_locale:
+                key = ResourceBundleKey.from_resource_key(resource_key, locale)
+                self._update_progress_for_locale(key, i18n_progress_dto)
+        I18nProgressDAO.save(i18n_progress_dto)
+
+    def _update_progress_for_locale(self, key, i18n_progress_dto):
+        course = courses.Course(None, app_context=self._app_context)
+        resource_bundle_dto = ResourceBundleDAO.load(str(key))
+        transformer = xcontent.ContentTransformer(
+            config=I18nTranslationContext.get(self._app_context))
+        _, sections = TranslationConsoleRestHandler.build_sections_for_key(
+            key, course, resource_bundle_dto, transformer)
+        TranslationConsoleRestHandler.update_dtos_with_section_data(
+            key, sections, resource_bundle_dto, i18n_progress_dto)
 
 
 class LazyTranslator(object):
@@ -2773,6 +2873,16 @@ def notify_module_enabled():
     models.QuestionGroupDAO.POST_LOAD_HOOKS.append(translate_question_group_dto)
     transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.append(GLOBAL_CSS)
+    unit_lesson_editor.LessonRESTHandler.POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_lesson_changed)
+    unit_lesson_editor.CommonUnitRESTHandler.POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_unit_changed)
+    models.QuestionDAO.POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_questions_changed)
+    models.QuestionGroupDAO.POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_question_groups_changed)
+    courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_course_settings_changed)
 
     # Implementation in Babel 0.9.6 is buggy; replace with corrected version.
     pofile.denormalize = denormalize
@@ -2799,6 +2909,16 @@ def notify_module_disabled():
     models.QuestionGroupDAO.POST_LOAD_HOOKS.remove(translate_question_group_dto)
     transforms.CUSTOM_JSON_ENCODERS.append(LazyTranslator.json_encode)
     utils.ApplicationHandler.EXTRA_GLOBAL_CSS_URLS.remove(GLOBAL_CSS)
+    unit_lesson_editor.LessonRESTHandler.POST_SAVE_HOOKS.remove(
+        I18nProgressDeferredUpdater.on_lesson_changed)
+    unit_lesson_editor.CommonUnitRESTHandler.POST_SAVE_HOOKS.remove(
+        I18nProgressDeferredUpdater.on_unit_changed)
+    models.QuestionDAO.POST_SAVE_HOOKS.remove(
+        I18nProgressDeferredUpdater.on_questions_changed)
+    models.QuestionGroupDAO.POST_SAVE_HOOKS.remove(
+        I18nProgressDeferredUpdater.on_question_groups_changed)
+    courses.Course.COURSE_ENV_POST_SAVE_HOOKS.append(
+        I18nProgressDeferredUpdater.on_course_settings_changed)
 
 
 def register_module():

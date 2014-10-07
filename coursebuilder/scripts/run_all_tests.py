@@ -94,9 +94,11 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 14,
     'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
+    'tests.functional.modules_i18n_dashboard'
+        '.I18nProgressDeferredUpdaterTests': 5,
     'tests.functional.modules_i18n_dashboard.LazyTranslatorTests': 5,
     'tests.functional.modules_i18n_dashboard.ResourceKeyTests': 3,
-    'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 1,
+    'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 2,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard'
         '.TranslationConsoleRestHandlerTests': 7,

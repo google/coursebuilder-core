@@ -99,6 +99,13 @@ class ResourceBundleKeyTests(unittest.TestCase):
         self.assertEquals(key1.resource_key.type, key2.resource_key.type)
         self.assertEquals(key1.resource_key.key, key2.resource_key.key)
 
+    def test_from_resource_key(self):
+        resource_key = ResourceKey(ResourceKey.ASSESSMENT_TYPE, '23')
+        key = ResourceBundleKey.from_resource_key(resource_key, 'el')
+        self.assertEquals(ResourceKey.ASSESSMENT_TYPE, key.resource_key.type)
+        self.assertEquals('23', key.resource_key.key)
+        self.assertEquals('el', key.locale)
+
 
 class ResourceRowTests(unittest.TestCase):
 
@@ -563,6 +570,378 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(1, len(data))
         self.assertEquals(
             '<gcb-markdown#1>*hello*</gcb-markdown#1>', data[0]['source_value'])
+
+
+class I18nProgressDeferredUpdaterTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'i18n_course'
+    COURSE_TITLE = 'I18N Course'
+
+    def setUp(self):
+        super(I18nProgressDeferredUpdaterTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, self.COURSE_TITLE)
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, self.app_context)
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.unit.unit_header = '<p>a</p><p>b</p>'
+        self.unit.now_available = True
+
+        self.lesson = self.course.add_lesson(self.unit)
+        self.lesson.title = 'Test Lesson'
+        self.lesson.objectives = '<p>c</p><p>d</p>'
+        self.lesson.now_available = True
+
+        self.course.save()
+
+        courses.Course.ENVIRON_TEST_OVERRIDES = {
+            'extra_locales': [
+                {'locale': 'el', 'availability': 'available'},
+                {'locale': 'ru', 'availability': 'available'}]
+        }
+
+        actions.login(self.ADMIN_EMAIL)
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        courses.Course.ENVIRON_TEST_OVERRIDES = {}
+        super(I18nProgressDeferredUpdaterTests, self).tearDown()
+
+    def _put_payload(self, url, xsrf_name, key, payload):
+        request_dict = {
+            'key': key,
+            'xsrf_token': (
+                crypto.XsrfTokenManager.create_xsrf_token(xsrf_name)),
+            'payload': transforms.dumps(payload)
+        }
+        response = transforms.loads(self.put(
+            url, {'request': transforms.dumps(request_dict)}).body)
+        self.assertEquals(200, response['status'])
+        self.assertEquals('Saved.', response['message'])
+        return response
+
+    def _assert_progress(self, key, el_progress=None, ru_progress=None):
+        progress_dto = I18nProgressDAO.load(str(key))
+        self.assertIsNotNone(progress_dto)
+        self.assertEquals(el_progress, progress_dto.get_progress('el'))
+        self.assertEquals(ru_progress, progress_dto.get_progress('ru'))
+
+    def test_on_lesson_changed(self):
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+
+        lesson = self.course.add_lesson(unit)
+        lesson.title = 'Test Lesson'
+        lesson.objectives = '<p>a</p><p>b</p>'
+        lesson.now_available = True
+
+        self.course.save()
+
+        lesson_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {
+                        'source_value': 'Test Lesson',
+                        'target_value': 'TEST LESSON'}]
+            },
+            'objectives': {
+                'type': 'html',
+                'source_value': '<p>a</p><p>b</p>',
+                'data': [
+                    {'source_value': 'a', 'target_value': 'A'},
+                    {'source_value': 'b', 'target_value': 'B'}]
+            }
+        }
+
+        lesson_key = ResourceKey(
+            ResourceKey.LESSON_TYPE, lesson.lesson_id)
+
+        lesson_key_el = ResourceBundleKey.from_resource_key(lesson_key, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(lesson_key_el), lesson_bundle))
+
+        progress_dto = I18nProgressDAO.load(str(lesson_key))
+        self.assertIsNone(progress_dto)
+
+        edit_lesson_payload = {
+            'key': lesson.lesson_id,
+            'unit_id': unit.unit_id,
+            'title': 'Test Lesson',
+            'objectives': '<p>a</p><p>b</p>',
+            'auto_index': True,
+            'is_draft': True,
+            'video': '',
+            'scored': 'not_scored',
+            'notes': '',
+            'activity_title': '',
+            'activity_listed': True,
+            'activity': '',
+            'manual_progress': False,
+        }
+        self._put_payload(
+            'rest/course/lesson', 'lesson-edit', lesson.lesson_id,
+            edit_lesson_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            lesson_key,
+            el_progress=I18nProgressDTO.DONE,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+        edit_lesson_payload['title'] = 'New Title'
+        self._put_payload(
+            'rest/course/lesson', 'lesson-edit', lesson.lesson_id,
+            edit_lesson_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            lesson_key,
+            el_progress=I18nProgressDTO.IN_PROGRESS,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+    def test_on_unit_changed(self):
+        unit = self.course.add_unit()
+        unit.title = 'Test Unit'
+        self.course.save()
+
+        unit_bundle = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Test Unit', 'target_value': 'TEST UNIT'}]
+            }
+        }
+
+        unit_key = ResourceKey(
+            ResourceKey.UNIT_TYPE, unit.unit_id)
+
+        unit_key_el = ResourceBundleKey.from_resource_key(unit_key, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(unit_key_el), unit_bundle))
+
+        progress_dto = I18nProgressDAO.load(str(unit_key))
+        self.assertIsNone(progress_dto)
+
+        edit_unit_payload = {
+            'key': unit.unit_id,
+            'type': 'Unit',
+            'title': 'Test Unit',
+            'description': '',
+            'label_groups': [],
+            'is_draft': True,
+            'unit_header': '',
+            'pre_assessment': -1,
+            'post_assessment': -1,
+            'show_contents_on_one_page': False,
+            'manual_progress': False,
+            'unit_footer': ''
+        }
+        self._put_payload(
+            'rest/course/unit', 'put-unit', unit.unit_id, edit_unit_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            unit_key,
+            el_progress=I18nProgressDTO.DONE,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+        edit_unit_payload['title'] = 'New Title'
+        self._put_payload(
+            'rest/course/unit', 'put-unit', unit.unit_id, edit_unit_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            unit_key,
+            el_progress=I18nProgressDTO.IN_PROGRESS,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+    def test_on_question_changed(self):
+        qu_payload = {
+            'version': '1.5',
+            'question': 'What is a question?',
+            'description': 'Test Question',
+            'hint': '',
+            'defaultFeedback': '',
+            'rows': '1',
+            'columns': '100',
+            'graders': [{
+                'score': '1.0',
+                'matcher': 'case_insensitive',
+                'response': 'yes',
+                'feedback': ''}]
+        }
+        response = self._put_payload(
+            'rest/question/sa', 'sa-question-edit', '', qu_payload)
+        key = transforms.loads(response['payload'])['key']
+        qu_key = ResourceKey(ResourceKey.QUESTION_SA_TYPE, key)
+
+        qu_bundle = {
+            'question': {
+                'type': 'html',
+                'source_value': 'What is a question?',
+                'data': [{
+                    'source_value': 'What is a question?',
+                    'target_value': 'WHAT IS A QUESTION?'}]
+            },
+            'description': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'Test Question',
+                    'target_value': 'TEST QUESTION'}]
+            },
+            'graders:[0]:response': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'yes',
+                    'target_value': 'YES'}]
+            }
+        }
+        qu_key_el = ResourceBundleKey.from_resource_key(qu_key, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(qu_key_el), qu_bundle))
+
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            qu_key,
+            el_progress=I18nProgressDTO.DONE,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+        qu_payload['description'] = 'New Description'
+        qu_payload['key'] = key
+        response = self._put_payload(
+            'rest/question/sa', 'sa-question-edit', key, qu_payload)
+
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            qu_key,
+            el_progress=I18nProgressDTO.IN_PROGRESS,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+    def test_on_question_group_changed(self):
+        qgp_payload = {
+            'version': '1.5',
+            'description': 'Test Question Group',
+            'introduction': 'Test introduction',
+            'items': []
+        }
+        response = self._put_payload(
+            'rest/question_group', 'question-group-edit', '', qgp_payload)
+        key = transforms.loads(response['payload'])['key']
+        qgp_key = ResourceKey(ResourceKey.QUESTION_GROUP_TYPE, key)
+
+        qgp_bundle = {
+            'description': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'Test Question Group',
+                    'target_value': 'TEST QUESTION GROUP'}]
+            },
+            'introduction': {
+                'type': 'html',
+                'source_value': 'Test introduction',
+                'data': [{
+                    'source_value': 'Test introduction',
+                    'target_value': 'TEST INTRODUCTION'}]
+            }
+        }
+        qgp_key_el = ResourceBundleKey.from_resource_key(qgp_key, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(qgp_key_el), qgp_bundle))
+
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            qgp_key,
+            el_progress=I18nProgressDTO.DONE,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+        qgp_payload['description'] = 'New Description'
+        qgp_payload['key'] = key
+        response = self._put_payload(
+            'rest/question_group', 'question-group-edit', key, qgp_payload)
+
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            qgp_key,
+            el_progress=I18nProgressDTO.IN_PROGRESS,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+    def test_on_course_settings_changed(self):
+        homepage_payload = {
+            'homepage': {
+                'base:show_gplus_button': True,
+                'base:nav_header': 'Search Education',
+                'course:title': 'My New Course',
+                'course:blurb': 'Awesome course',
+                'course:instructor_details': '',
+                'course:main_video:url': '',
+                'course:main_image:url': '',
+                'course:main_image:alt_text': '',
+                'base:privacy_terms_url': 'Privacy Policy'}
+        }
+
+        homepage_bundle = {
+            'course:title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'My New Course',
+                    'target_value': 'MY NEW COURSE'}]
+            },
+            'course:blurb': {
+                'type': 'html',
+                'source_value': 'Awesome course',
+                'data': [{
+                    'source_value': 'Awesome course',
+                    'target_value': 'AWESOME COURSE'}]
+            },
+            'base:nav_header': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'Search Education',
+                    'target_value': 'SEARCH EDUCATION'}]
+            },
+            'base:privacy_terms_url': {
+                'type': 'string',
+                'source_value': '',
+                'data': [{
+                    'source_value': 'Privacy Policy',
+                    'target_value': 'PRIVACY_POLICY'}]
+            }
+        }
+        homepage_key = ResourceKey(
+            ResourceKey.COURSE_SETTINGS_TYPE, 'homepage')
+        homepage_key_el = ResourceBundleKey.from_resource_key(
+            homepage_key, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(homepage_key_el), homepage_bundle))
+
+        self._put_payload(
+            'rest/course/settings', 'basic-course-settings-put',
+            '/course.yaml', homepage_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            homepage_key,
+            el_progress=I18nProgressDTO.DONE,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
+
+        homepage_payload['homepage']['course:title'] = 'New Title'
+        self._put_payload(
+            'rest/course/settings', 'basic-course-settings-put',
+            '/course.yaml', homepage_payload)
+        self.execute_all_deferred_tasks()
+        self._assert_progress(
+            homepage_key,
+            el_progress=I18nProgressDTO.IN_PROGRESS,
+            ru_progress=I18nProgressDTO.NOT_STARTED)
 
 
 class LazyTranslatorTests(actions.TestBase):

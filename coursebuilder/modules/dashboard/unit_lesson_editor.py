@@ -618,6 +618,10 @@ class UnitTools(object):
 class CommonUnitRESTHandler(BaseRESTHandler):
     """A common super class for all unit REST handlers."""
 
+    # These functions are called with an updated unit object whenever a
+    # change is saved.
+    POST_SAVE_HOOKS = []
+
     def unit_to_dict(self, unit):
         """Converts a unit to a dictionary representation."""
         return UnitTools(self.get_course()).unit_to_dict(unit)
@@ -683,6 +687,7 @@ class CommonUnitRESTHandler(BaseRESTHandler):
             course = courses.Course(self)
             assert course.update_unit(unit)
             course.save()
+            common_utils.run_hooks(self.POST_SAVE_HOOKS, unit)
             transforms.send_json_response(self, 200, 'Saved.')
         else:
             transforms.send_json_response(self, 412, '\n'.join(errors))
@@ -1151,6 +1156,10 @@ class LessonRESTHandler(BaseRESTHandler):
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
         'inputex-uneditable', 'inputex-checkbox', 'inputex-hidden']
 
+    # These functions are called with an updated lesson object whenever a
+    # change is saved.
+    POST_SAVE_HOOKS = []
+
     @classmethod
     def get_schema(cls, units):
         # Note GcbRte relies on the structure of this schema. Do not change
@@ -1320,6 +1329,7 @@ class LessonRESTHandler(BaseRESTHandler):
         if not errors:
             assert course.update_lesson(lesson)
             course.save()
+            common_utils.run_hooks(self.POST_SAVE_HOOKS, lesson)
             transforms.send_json_response(self, 200, 'Saved.')
         else:
             transforms.send_json_response(self, 412, '\n'.join(errors))

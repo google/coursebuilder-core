@@ -1238,7 +1238,7 @@ class BaseJsonDao(object):
         prev_cursor = query.cursor()
 
     @classmethod
-    def _maybe_apply_post_hooks(cls, dto_list):
+    def _maybe_apply_post_load_hooks(cls, dto_list):
         """Run any post-load processing hooks.
 
         Modules may insert post-load processing hooks (e.g. for i18n
@@ -1252,6 +1252,24 @@ class BaseJsonDao(object):
         if hasattr(cls, 'POST_LOAD_HOOKS'):
             for hook in cls.POST_LOAD_HOOKS:
                 hook(dto_list)
+
+    @classmethod
+    def _maybe_apply_post_save_hooks(cls, dto_and_id_list):
+        """Run any post-save processing hooks.
+
+        Modules may insert post-save processing hooks (e.g. for i18n
+        translation) into the list POST_SAVE_HOOKS defined on the DAO class.
+        If the class has this list and any hook functions are present, they
+        are passed the list of DTO's for in-place processing.
+
+        Args:
+            dto_and_id_list: list of pairs of (id, DTO) objects
+        """
+        dto_list = [
+            cls.DTO(dto_id, orig_dto.dict)
+            for dto_id, orig_dto in dto_and_id_list]
+        if hasattr(cls, 'POST_SAVE_HOOKS'):
+            common_utils.run_hooks(cls.POST_SAVE_HOOKS, dto_list)
 
     @classmethod
     def _load_entity(cls, obj_id):
@@ -1274,7 +1292,7 @@ class BaseJsonDao(object):
         entity = cls._load_entity(obj_id)
         if entity:
             dto = cls.DTO(obj_id, transforms.loads(entity.data))
-            cls._maybe_apply_post_hooks([dto])
+            cls._maybe_apply_post_load_hooks([dto])
             return dto
         else:
             return None
@@ -1321,7 +1339,7 @@ class BaseJsonDao(object):
                     ret.append(cls.DTO(obj_id, transforms.loads(entity.data)))
 
         # run hooks
-        cls._maybe_apply_post_hooks(dtos_for_post_hooks)
+        cls._maybe_apply_post_load_hooks(dtos_for_post_hooks)
 
         # put into memcache
         if datastore_entities:
@@ -1347,9 +1365,10 @@ class BaseJsonDao(object):
         cls.before_put(dto, entity)
         entity.put()
         MemcacheManager.delete(cls._memcache_all_key())
-        MemcacheManager.set(cls._memcache_key(entity.key().id_or_name()),
-                            entity)
-        return entity.key().id_or_name()
+        id_or_name = entity.key().id_or_name()
+        MemcacheManager.set(cls._memcache_key(id_or_name), entity)
+        cls._maybe_apply_post_save_hooks([(id_or_name, dto)])
+        return id_or_name
 
     @classmethod
     def save_all(cls, dtos):
@@ -1364,7 +1383,10 @@ class BaseJsonDao(object):
         MemcacheManager.delete(cls._memcache_all_key())
         for key, entity in zip(keys, entities):
             MemcacheManager.set(cls._memcache_key(key.id_or_name()), entity)
-        return [key.id() for key in keys]
+
+        id_or_name_list = [key.id_or_name() for key in keys]
+        cls._maybe_apply_post_save_hooks(zip(id_or_name_list, dtos))
+        return id_or_name_list
 
     @classmethod
     def delete(cls, dto):
@@ -1442,6 +1464,8 @@ class QuestionDAO(LastModfiedJsonDao):
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
     # Enable other modules to add post-load transformations
     POST_LOAD_HOOKS = []
+    # Enable other modules to add post-save transformations
+    POST_SAVE_HOOKS = []
 
     @classmethod
     def used_by(cls, question_id):
@@ -1750,6 +1774,8 @@ class QuestionGroupDAO(LastModfiedJsonDao):
     ENTITY_KEY_TYPE = BaseJsonDao.EntityKeyTypeId
     # Enable other modules to add post-load transformations
     POST_LOAD_HOOKS = []
+    # Enable other modules to add post-save transformations
+    POST_SAVE_HOOKS = []
 
     @classmethod
     def get_question_groups_descriptions(cls):

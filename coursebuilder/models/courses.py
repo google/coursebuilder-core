@@ -2026,9 +2026,13 @@ class Course(object):
     # methods in the order they were added to the list.
     POST_LOAD_HOOKS = []
 
-    # Holds callback functions which are passed the course env dict after it it
+    # Holds callback functions which are passed the course env dict after it is
     # loaded, to perform any further processing on it.
     COURSE_ENV_POST_LOAD_HOOKS = []
+
+    # Holds callback functions which are passed the course env dict after it is
+    # saved.
+    COURSE_ENV_POST_SAVE_HOOKS = []
 
     # Data which is patched onto the course environment - for testing use only.
     ENVIRON_TEST_OVERRIDES = {}
@@ -2447,8 +2451,8 @@ class Course(object):
             # do import here to avoid circular dependency during initialiation
             # pylint: disable-msg=g-import-not-at-top
             from controllers import sites
-            if _course and sites.ApplicationContext.check_same(
-                app_context, _app_context):
+            if _course and (sites.ApplicationContext.check_same(
+                app_context, _app_context) or app_context is None):
                 return _course
         _course = Course(None, app_context)
         cls.set_current(_course)
@@ -2529,7 +2533,9 @@ class Course(object):
         return Course.create_common_settings_schema(self)
 
     def save_settings(self, course_settings):
-        return self._model.save_settings(course_settings)
+        retval = self._model.save_settings(course_settings)
+        common_utils.run_hooks(self.COURSE_ENV_POST_SAVE_HOOKS, course_settings)
+        return retval
 
     def get_progress_tracker(self):
         if not self._tracker:

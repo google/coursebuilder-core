@@ -67,6 +67,20 @@ def iter_all(query, batch_size=100):
         prev_cursor = query.cursor()
 
 
+def run_hooks(hooks, *args, **kwargs):
+    """Run all the given callback hooks.
+
+    Args:
+        hooks: iterable. The callback functions to be invoked. Each function is
+            passed the remaining args and kwargs.
+        *args: List of arguments passed the hook functions.
+        **kwargs: Dict of keyword args passed to the hook functions.
+    """
+    for hook in hooks:
+        # TODO(jorr): Add configurable try-catch around call
+        hook(*args, **kwargs)
+
+
 class Namespace(object):
     """Save current namespace and reset it.
 
