@@ -24,7 +24,6 @@ import sys
 import zipfile
 from babel import localedata
 from common import utils as common_utils
-from controllers import utils
 from models import courses
 from modules.i18n_dashboard import i18n_dashboard
 from tools.etl import etl_lib
@@ -67,13 +66,6 @@ class _BaseJob(etl_lib.Job):
         return app_context
 
     @classmethod
-    def _get_fake_handler(cls, app_context):
-        handler = utils.BaseHandler()
-        handler.app_context = app_context
-        handler.course = etl_lib.get_course(app_context)
-        return handler
-
-    @classmethod
     def _get_locales(
             cls, requested_locales, all_locales, default_locale,
             course_url_prefix):
@@ -99,6 +91,25 @@ class _BaseJob(etl_lib.Job):
 
         return sorted(requested_locales)
 
+    def run(self):
+        """Override run() and setup app_context, course and a namespace."""
+        # ETL import model is complex; run this import here not to interfere
+        # pylint: disable-msg=g-import-not-at-top
+        from controllers import sites
+
+        app_context = self._get_app_context_or_die(
+            self.etl_args.course_url_prefix)
+        course = courses.Course(None, app_context=app_context)
+
+        sites.set_path_info(app_context.slug)
+        courses.Course.set_current(course)
+        try:
+            with common_utils.Namespace(app_context.get_namespace_name()):
+                super(_BaseJob, self).run()
+        finally:
+            courses.Course.clear_current()
+            sites.unset_path_info()
+
 
 class DeleteTranslations(_BaseJob):
     """Deletes translations from a course based on locales.
@@ -121,18 +132,11 @@ class DeleteTranslations(_BaseJob):
     def main(self):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
-        handler = self._get_fake_handler(app_context)
         locales = self._get_locales(
             self.args.locales, app_context.get_all_locales(),
             app_context.default_locale, self.etl_args.course_url_prefix)
-
-        try:
-            courses.Course.set_current(courses.Course.get(app_context))
-            with common_utils.Namespace(app_context.get_namespace_name()):
-                i18n_dashboard.TranslationDeletionRestHandler.delete_locales(
-                    handler.course, locales)
-        finally:
-            courses.Course.clear_current()
+        i18n_dashboard.TranslationDeletionRestHandler.delete_locales(
+            courses.Course.get(app_context), locales)
 
 
 class DownloadTranslations(_BaseJob):
@@ -176,26 +180,24 @@ class DownloadTranslations(_BaseJob):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         self._check_file_does_not_exist(self.args.path)
-        handler = self._get_fake_handler(app_context)
 
-        with common_utils.Namespace(app_context.get_namespace_name()):
-            locales = self._get_locales(
-                self.args.locales, app_context.get_all_locales(),
-                app_context.default_locale, self.etl_args.course_url_prefix)
-            download_handler = i18n_dashboard.TranslationDownloadRestHandler
-            translations = download_handler.build_translations(
-                handler.course, locales, 'all')
+        locales = self._get_locales(
+            self.args.locales, app_context.get_all_locales(),
+            app_context.default_locale, self.etl_args.course_url_prefix)
+        download_handler = i18n_dashboard.TranslationDownloadRestHandler
+        translations = download_handler.build_translations(
+            courses.Course.get(app_context), locales, 'all')
 
-            if not translations.keys():
-                _die(
-                    'No translations found for course at %s; exiting' % (
-                        self.etl_args.course_url_prefix))
+        if not translations.keys():
+            _die(
+                'No translations found for course at %s; exiting' % (
+                    self.etl_args.course_url_prefix))
 
-            with open(self.args.path, 'w') as f:
-                i18n_dashboard.TranslationDownloadRestHandler.build_zip_file(
-                    handler.course, f, translations, locales)
+        with open(self.args.path, 'w') as f:
+            i18n_dashboard.TranslationDownloadRestHandler.build_zip_file(
+                courses.Course.get(app_context), f, translations, locales)
 
-            _LOG.info('Translations saved to ' + self.args.path)
+        _LOG.info('Translations saved to ' + self.args.path)
 
 
 class TranslateToReversedCase(_BaseJob):
@@ -211,13 +213,8 @@ class TranslateToReversedCase(_BaseJob):
     def main(self):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
-        course = etl_lib.get_course(app_context)
-        try:
-            courses.Course.set_current(course)
-            with common_utils.Namespace(app_context.get_namespace_name()):
-                i18n_dashboard.I18nReverseCaseHandler.translate_course(course)
-        finally:
-            courses.Course.clear_current()
+        i18n_dashboard.I18nReverseCaseHandler.translate_course(
+            courses.Course.get(app_context))
 
 
 class UploadTranslations(_BaseJob):
@@ -251,31 +248,25 @@ class UploadTranslations(_BaseJob):
         app_context = self._get_app_context_or_die(
             self.etl_args.course_url_prefix)
         extension = self._get_file_extension(self.args.path)
-        course = etl_lib.get_course(app_context)
+
+        course = courses.Course.get(app_context)
         self._configure_babel(course)
+        if extension == self._PO_EXTENSION:
+            translations = self._process_po_file(self.args.path)
+        elif extension == self._ZIP_EXTENSION:
+            translations = self._process_zip_file(self.args.path)
 
-        try:
-            courses.Course.set_current(course)
+        # Add the locales being uploaded to the UI.
+        environ = course.get_environ(app_context)
+        extra_locales = environ.setdefault('extra_locales', [])
+        for locale in translations:
+            if not any(l['locale'] == locale for l in extra_locales):
+                extra_locales.append({'locale': locale,
+                                      'availability': 'unavailable'})
+        course.save_settings(environ)
 
-            with common_utils.Namespace(app_context.get_namespace_name()):
-                if extension == self._PO_EXTENSION:
-                    translations = self._process_po_file(self.args.path)
-                elif extension == self._ZIP_EXTENSION:
-                    translations = self._process_zip_file(self.args.path)
-
-                # Add the locales being uploaded to the UI.
-                environ = course.get_environ(app_context)
-                extra_locales = environ.setdefault('extra_locales', [])
-                for locale in translations:
-                    if not any(l['locale'] == locale for l in extra_locales):
-                        extra_locales.append({'locale': locale,
-                                              'availability': 'unavailable'})
-                course.save_settings(environ)
-
-                # Make updates to the translations
-                self._update_translations(course, translations)
-        finally:
-            courses.Course.clear_current()
+        # Make updates to the translations
+        self._update_translations(course, translations)
 
     @classmethod
     def _check_file(cls, path):
