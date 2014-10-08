@@ -129,7 +129,8 @@ class WelcomeHandler(object):
     def post_explore_sample(self):
         """Navigate to or import sample course."""
         uid = 'sample'
-        course = sites.get_course_index().get_course_for_path('/%s' % uid)
+        course = sites.get_course_index(
+            ).get_app_context_for_namespace('ns_%s' % uid)
         if course:
             self._redirect(course, '/dashboard')
             return
