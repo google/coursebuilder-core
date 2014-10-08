@@ -2448,11 +2448,7 @@ class Course(object):
         """
         if cls.has_current():
             _app_context, _course = cls.INSTANCE.current
-            # do import here to avoid circular dependency during initialiation
-            # pylint: disable-msg=g-import-not-at-top
-            from controllers import sites
-            if _course and (sites.ApplicationContext.check_same(
-                app_context, _app_context) or app_context is None):
+            if _course and (app_context == _app_context or app_context is None):
                 return _course
         _course = Course(None, app_context)
         cls.set_current(_course)

@@ -634,20 +634,6 @@ class ApplicationContext(object):
         return appengine_config.DEFAULT_NAMESPACE_NAME
 
     @classmethod
-    def check_same(cls, app_context_1, app_context_2):
-        """Checks if two ApplicationContexts are the same."""
-        if app_context_1 == app_context_2:
-            return True
-        if app_context_1 is None and app_context_2 is None:
-            return True
-        if app_context_1 and app_context_2 and (
-            app_context_1.get_namespace_name() ==
-            app_context_2.get_namespace_name()) == (
-            app_context_1.get_slug() and app_context_2.get_slug()):
-            return True
-        return False
-
-    @classmethod
     def after_create(cls, instance):
         """Override this method to manipulate freshly created instance."""
         pass
@@ -678,6 +664,26 @@ class ApplicationContext(object):
 
         self.clear_per_request_cache()
         self.after_create(self)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        """Two ApplicationContexts are the same if: same slug and namespace."""
+        if not isinstance(other, ApplicationContext):
+            return False
+
+        app_context_1 = self
+        app_context_2 = other
+        if app_context_1 is app_context_2:
+            return True
+        if app_context_1 and app_context_2:
+            same_ns = (
+                app_context_1.get_namespace_name() ==
+                app_context_2.get_namespace_name())
+            same_slug = app_context_1.get_slug() == app_context_2.get_slug()
+            return same_ns and same_slug
+        return False
 
     @classmethod
     def clear_per_process_cache(cls):

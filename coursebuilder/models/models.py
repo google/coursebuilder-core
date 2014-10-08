@@ -107,8 +107,7 @@ class MemcacheManager(object):
         # pylint: disable-msg=g-import-not-at-top
         from controllers import sites
         app_context = sites.get_course_for_current_request()
-        return sites.ApplicationContext.check_same(
-            cls._READONLY_APP_CONTEXT, app_context)
+        return cls._READONLY_APP_CONTEXT == app_context
 
     @classmethod
     def _assert_true_clear_cache_and_raise_if_not(cls, value_to_assert, msg):

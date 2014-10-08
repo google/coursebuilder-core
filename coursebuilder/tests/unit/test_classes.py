@@ -292,6 +292,76 @@ class InvokeExistingUnitTest(suite.TestBase):
         assert {'foo': [1, 2, 3], 'baz': [4, 5, 6]} == (
             courses.deep_dict_merge(real_values, default_values))
 
+    def test_app_context_equals(self):
+        # pylint: disable-msg=g-equals-none
+
+        app_context_a = sites.ApplicationContext(
+            'course', '/slug_a', '/', 'ns_a', None)
+        app_context_b = sites.ApplicationContext(
+            'course', '/slug_a', '/', 'ns_a', None)
+        app_context_c = sites.ApplicationContext(
+            'course', '/slug_c', '/', 'ns_c', None)
+        app_context_ad = sites.ApplicationContext(
+            'course', '/slug_d', '/', 'ns_a', None)
+        app_context_af = sites.ApplicationContext(
+            'course', '/slug_a', '/', 'ns_f', None)
+
+        self.assertFalse(app_context_a is app_context_b)
+
+        self.assertTrue(app_context_a == app_context_b)
+        self.assertFalse(app_context_a != app_context_b)
+
+        self.assertTrue(app_context_a != app_context_c)
+        self.assertFalse(app_context_a == app_context_c)
+
+        self.assertTrue(app_context_a != app_context_ad)
+        self.assertFalse(app_context_a == app_context_ad)
+
+        self.assertTrue(app_context_a != app_context_af)
+        self.assertFalse(app_context_a == app_context_af)
+
+        self.assertTrue(app_context_a != None)
+        self.assertFalse(app_context_a == None)
+
+    def test_app_context_affinity(self):
+        app_context_a = sites.ApplicationContext(
+            'course', '/slug_a', '/', 'ns_a', None)
+        app_context_b = sites.ApplicationContext(
+            'course', '/slug_a', '/', 'ns_a', None)
+        app_context_c = sites.ApplicationContext(
+            'course', '/slug_c', '/', 'ns_c', None)
+
+        class MySingleton(caching.RequestScopedSingleton):
+
+            def __init__(self, app_context):
+                self.app_context = app_context
+
+        # this tests creation of a fresh new singleton for an app_context
+        cache_a_1 = MySingleton.instance(app_context_a)
+        cache_a_2 = MySingleton.instance(app_context_a)
+        self.assertTrue(cache_a_1.app_context is app_context_a)
+        self.assertTrue(cache_a_2.app_context is app_context_a)
+
+        # this test finds a singleton using different instance of app_context;
+        # this app_context is compatible with the first one via __eq__()
+        cache_b_1 = MySingleton.instance(app_context_b)
+        cache_b_2 = MySingleton.instance(app_context_b)
+        self.assertTrue(cache_b_1.app_context is app_context_a)
+        self.assertTrue(cache_b_2.app_context is app_context_a)
+
+        # this raises because singleton is already bound to a specific
+        # app_context and an attempt to get the same singleton with another
+        # incompatible app_context must fail; we could handle this inside the
+        # cache, but the current decision is: this is not supported
+        with self.assertRaises(AssertionError):
+            MySingleton.instance(app_context_c)
+
+        # clear all singletons and try again; it works now
+        MySingleton.clear_all()
+        cache_c_1 = MySingleton.instance(app_context_c)
+        self.assertTrue(cache_c_1.app_context is app_context_c)
+
+
 if __name__ == '__main__':
     unittest.TextTestRunner().run(
         unittest.TestLoader().loadTestsFromTestCase(InvokeExistingUnitTest))
