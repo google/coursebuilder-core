@@ -2540,7 +2540,7 @@ class LazyTranslator(object):
         return None
 
     def __init__(self, app_context, key, source_value, translation_dict):
-        assert isinstance(source_value, basestring)
+        assert source_value is None or isinstance(source_value, basestring)
         self._app_context = app_context
         self._key = key
         self.source_value = source_value

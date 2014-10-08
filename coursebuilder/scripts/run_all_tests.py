@@ -91,7 +91,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_data_source_providers.CourseElementsTest': 11,
     'tests.functional.modules_data_source_providers.StudentScoresTest': 6,
     'tests.functional.modules_data_source_providers.StudentsTest': 5,
-    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 14,
+    'tests.functional.modules_i18n_dashboard.CourseContentTranslationTests': 15,
     'tests.functional.modules_i18n_dashboard.IsTranslatableRestHandlerTests': 3,
     'tests.functional.modules_i18n_dashboard.I18nDashboardHandlerTests': 4,
     'tests.functional.modules_i18n_dashboard'

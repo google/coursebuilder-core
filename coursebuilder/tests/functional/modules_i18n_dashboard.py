@@ -1456,6 +1456,49 @@ class CourseContentTranslationTests(actions.TestBase):
         self.assertIn('CHOICE 1', page_html)
         self.assertIn('CHOICE 2', page_html)
 
+    def test_legacy_questions_with_null_body(self):
+        # Create a question
+        qu_dict = {
+            'type': 0,
+            'question': None,
+            'description': 'description text',
+            'choices': [
+                {'text': 'choice 1', 'score': 0.0, 'feedback': ''},
+                {'text': 'choice 2', 'score': 1.0, 'feedback': ''}],
+            'multiple_selections': False,
+            'last_modified': 1410451682.042784,
+            'version': '1.5'
+        }
+        qu_dto = models.QuestionDTO(None, qu_dict)
+        qu_id = models.QuestionDAO.save(qu_dto)
+
+        assessment = self.course.add_assessment()
+        assessment.title = 'Test Assessment'
+        assessment.html_content = """
+            <question quid="%s" weight="1" instanceid="test_question"></question>
+        """ % qu_id
+        self.course.save()
+
+        # Store translation data for the question
+        qu_bundle = {
+            'question': {
+                'type': 'html',
+                'source_value': 'None',
+                'data': [
+                    {
+                        'source_value': 'None',
+                        'target_value': 'NONE'
+                    }]
+            }
+        }
+        key_el = ResourceBundleKey(
+            ResourceKey.QUESTION_MC_TYPE, qu_id, 'el')
+        ResourceBundleDAO.save(
+            ResourceBundleDTO(str(key_el), qu_bundle))
+
+        page_html = self.get('assessment?name=%s' % assessment.unit_id).body
+        self.assertIn('NONE', page_html)
+
     def test_question_groups_are_translated(self):
         # Create a question group with one question
         qgp_dict = {
