@@ -1750,6 +1750,12 @@ def swapcase(text):
         r'\<(.*?)\>',
         lambda m: m.group().swapcase(), text)
 
+    # revert swap of entities
+    text = re.sub(
+        r'\<(.*?)(&[a-zA-Z0-9]+;)(.*?)\>',
+        lambda m: '<' + m.group(1) + m.group(2).swapcase() + m.group(3) + '>',
+        text)
+
     return text
 
 
