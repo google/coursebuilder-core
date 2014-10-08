@@ -329,14 +329,14 @@ class TranslationIO(object):
     def _find_replace_for_tag_open(cls, source_delimiter, target_delimiter):
         """Returns regex pattern for replacing delimiter in the open tag."""
         return (
-            r'<([a-zA-Z_\-]+)%s([0-9]+)' % source_delimiter,
+            r'<([a-zA-Z0-9_\-]+)%s([0-9]+)' % source_delimiter,
             '<\\1%s\\2' % target_delimiter)
 
     @classmethod
     def _find_replace_for_tag_close(cls, source_delimiter, target_delimiter):
         """Returns regex pattern for replacing delimiter in the closing tag."""
         return (
-            r'</([a-zA-Z_\-]+)%s([0-9]+)>' % source_delimiter,
+            r'</([a-zA-Z0-9_\-]+)%s([0-9]+)>' % source_delimiter,
             '</\\1%s\\2>' % target_delimiter)
 
     @classmethod
@@ -2129,6 +2129,19 @@ class TestCasesForContentRecompose(TestCasesBase):
             'Expected to find the following tags: <a#1>, <a#2>.',
             _error.original_exception.message)
         self.assertEqual(0, _error.index)
+
+    def test_can_recompose_alphanum_tag_names(self):
+        config = Configuration(
+            inline_tag_names=['GCB-HTML5VIDEO'],
+            omit_empty_opaque_decomposable=False)
+        self.transformer = ContentTransformer(config)
+
+        html = 'video <gcb-html5video url="woo.mp4"></gcb-html5video>'
+        expected = ['video <gcb-html5video#1 />']
+        self._assert_decomposes(html, expected)
+        translation = ['VIDEO <gcb-html5video#1 />']
+        result = 'VIDEO <gcb-html5video url="woo.mp4"></gcb-html5video>'
+        self._assert_recomposes(translation, result)
 
     def test_recompose_called_multiple_times_fails(self):
         html = 'The <a class="foo">skies</a> are blue.'
