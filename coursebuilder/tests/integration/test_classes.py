@@ -19,11 +19,13 @@ __author__ = [
 ]
 
 import collections
-import os.path
+import os
 import random
+import subprocess
 import time
 import urllib
 import urllib2
+import zipfile
 
 import pageobjects
 from selenium import webdriver
@@ -148,6 +150,138 @@ class BaseIntegrationTest(suite.TestBase):
             'Active'
         ).click_save(
         ).click_close()
+
+
+class EtlTranslationRoundTripTest(BaseIntegrationTest):
+
+    def setUp(self):
+        super(EtlTranslationRoundTripTest, self).setUp()
+        self.archive_path = self._get_archive_path('translations.zip')
+
+    def _delete_archive_file(self):
+        os.remove(self.archive_path)
+
+    def _get_archive_path(self, name):
+        return os.path.join(self.test_tempdir, name)
+
+    def _get_etl_sh_abspath(self):
+        cb_home = os.environ.get('COURSEBUILDER_HOME')
+        if not cb_home:
+            raise Exception('Could not find COURSEBUILDER_HOME')
+
+        return os.path.join(cb_home, 'scripts/etl.sh')
+
+    def _get_ln_locale_element(self, page):
+        try:
+            return page.find_element_by_css_selector(
+                'thead > tr > th:nth-child(3)')
+        except exceptions.NoSuchElementException:
+            return None
+
+    def _load_sample_course(self):
+        return self.load_root_page(
+        ).load_welcome_page(
+            self.INTEGRATION_SERVER_BASE_URL
+        ).click_explore_sample_course()
+
+    def _run_download_course(self):
+        etl_command = [
+            'download', 'course', '/sample', 'mycourse', 'localhost:8081',
+            '--archive_path', self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_download_datastore(self):
+        etl_command = [
+            'download', 'datastore', '/sample', 'mycourse', 'localhost:8081',
+            '--archive_path', self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_delete_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.DeleteTranslations', '/sample',
+            'mycourse', 'localhost:8081']
+        self._run_etl_command(etl_command)
+
+    def _run_download_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.DownloadTranslations',
+            '/sample', 'mycourse', 'localhost:8081',
+            '--job_args=' + self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_translate_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.TranslateToReversedCase',
+            '/sample', 'mycourse', 'localhost:8081']
+        self._run_etl_command(etl_command)
+
+    def _run_upload_job(self):
+        etl_command = [
+            'run', 'modules.i18n_dashboard.jobs.UploadTranslations', '/sample',
+            'mycourse', 'localhost:8081', '--job_args=' + self.archive_path]
+        self._run_etl_command(etl_command)
+
+    def _run_etl_command(self, etl_command):
+        etl_command = (['sh', self._get_etl_sh_abspath()] + etl_command)
+        process = subprocess.Popen(
+            etl_command, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE)
+        process.stdin.write('anything@example.com\nany_password\n')
+        process.stdin.flush()
+        _, stderr = process.communicate()
+
+        if process.returncode:
+            raise Exception(
+                'Unable to run etl command "%s", stderr was %s' % (
+                    ' '.join(etl_command), stderr))
+
+    def assert_archive_file_exists(self):
+        self.assertTrue(os.path.exists(self.archive_path))
+
+    def assert_ln_locale_in_course(self, page):
+        self.assertTrue(self._get_ln_locale_element(page))
+
+    def assert_ln_locale_not_in_course(self, page):
+        self.assertFalse(self._get_ln_locale_element(page))
+
+    def assert_zipfile_contains_only_ln_locale(self):
+        self.assert_archive_file_exists()
+
+        with zipfile.ZipFile(self.archive_path) as zf:
+            files = zf.infolist()
+            self.assertEqual(
+                ['locale/ln/LC_MESSAGES/messages.po'],
+                [f.filename for f in files])
+
+    def test_full_round_trip_of_data_via_i18n_dashboard_module_jobs(self):
+        page = self._load_sample_course().click_i18n()
+        self.assert_ln_locale_not_in_course(page)
+
+        self._run_translate_job()
+        page.click_i18n()
+        self.assert_ln_locale_in_course(page)
+
+        self._run_download_job()
+        self.assert_zipfile_contains_only_ln_locale()
+
+        self._run_delete_job()
+        page.click_i18n()
+        self.assert_ln_locale_not_in_course(page)
+
+        self._run_upload_job()
+        page.click_i18n()
+        self.assert_ln_locale_in_course(page)
+
+        # As an additional sanity check, make sure we can download the course
+        # definitions and datastore data for a course with translations.
+
+        self._delete_archive_file()
+        self._run_download_course()
+        self.assert_archive_file_exists()
+
+        self._delete_archive_file()
+        self._run_download_datastore()
+        self.assert_archive_file_exists()
 
 
 class SampleCourseTests(BaseIntegrationTest):

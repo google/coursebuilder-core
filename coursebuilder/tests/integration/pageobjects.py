@@ -155,6 +155,14 @@ class RootPage(PageObject):
         self.get(base_url + '/')
         return self
 
+    def load_welcome_page(self, base_url):
+        self.click_login(
+        ).login(
+            'test@example.com', admin=True
+        )
+        self.get(base_url + '/admin?action=welcome')
+        return WelcomePage(self._tester)
+
     def click_login(self):
         self.find_element_by_link_text('Login').click()
         return LoginPage(self._tester)
@@ -174,6 +182,13 @@ class RootPage(PageObject):
     def click_register(self):
         self.find_element_by_link_text('Register').click()
         return RegisterPage(self._tester)
+
+
+class WelcomePage(PageObject):
+
+    def click_explore_sample_course(self):
+        self.find_element_by_id('explore').click()
+        return DashboardPage(self._tester)
 
 
 class RegisterPage(PageObject):
@@ -334,6 +349,10 @@ class DashboardPage(PageObject):
     def click_course(self):
         self.find_element_by_link_text('Course').click()
         return RootPage(self._tester)
+
+    def click_i18n(self):
+        self.find_element_by_link_text('I18N').click()
+        return self
 
 
 class CourseContentPage(RootPage):
