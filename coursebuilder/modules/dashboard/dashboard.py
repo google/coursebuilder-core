@@ -327,6 +327,14 @@ class DashboardHandler(
                     options.append((course.get_title(), option))
 
         picker = safe_dom.Element('select', id='gcb-course-picker')
+
+        # disable picker if we are on the well known page; we dont want picked
+        # on pages where edits or creation of new object can get triggered
+        safe_action = action and action in [
+            action for action, _ in self.nav_mappings]
+        if not safe_action:
+            picker.set_attribute('disabled', 'True')
+
         for title, option in sorted(
             options, key=lambda item: item[0].lower()):
             picker.append(option)
