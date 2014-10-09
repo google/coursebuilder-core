@@ -22,6 +22,7 @@ from datetime import datetime
 import logging
 import os
 import pickle
+import re
 import sys
 import threading
 import config
@@ -2307,16 +2308,24 @@ class Course(object):
             'Display Unit Title Without Index', 'boolean',
             description='Omit the unit number when displaying unit titles.'))
 
+        def must_contain_one_string_substitution(value, errors):
+            if value is not None and len(re.findall(r'%s', value)) != 1:
+                errors.append(
+                    'Value must contain exactly one string substitution '
+                    'marker "%s".')
+
         assessment_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_ASSESSMENT, 'Assessments')
         assessment_opts.add_property(schema_fields.SchemaField(
             'assessment_confirmations:result_text:pass', 'Pass', 'string',
             optional=True,
-            description='Text shown to the student on a passing result.'))
+            description='Text shown to the student on a passing result.',
+            validator=must_contain_one_string_substitution))
         assessment_opts.add_property(schema_fields.SchemaField(
             'assessment_confirmations:result_text:fail', 'Fail', 'string',
             optional=True,
-            description='Text shown to the student on a failing result.'))
+            description='Text shown to the student on a failing result.',
+            validator=must_contain_one_string_substitution))
 
         i18n_opts = reg.add_sub_registry(
             Course.SCHEMA_SECTION_I18N, 'I18N')
