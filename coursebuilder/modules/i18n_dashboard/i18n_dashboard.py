@@ -2212,16 +2212,20 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             key, payload_dict['sections'], resource_bundle_dto,
             i18n_progress_dto)
         if validate:
-            report = self._get_validation_report(key, resource_bundle_dto)
+            section_names = [
+                section['name'] for section in payload_dict['sections']]
+            report = self._get_validation_report(
+                key, section_names, resource_bundle_dto)
             transforms.send_json_response(self, 200, 'OK', payload_dict=report)
         else:
             I18nProgressDAO.save(i18n_progress_dto)
             ResourceBundleDAO.save(resource_bundle_dto)
             transforms.send_json_response(self, 200, 'Saved.')
 
-    def _get_validation_report(self, key, resource_bundle_dto):
+    def _get_validation_report(self, key, section_names, resource_bundle_dto):
         report = {}
-        for name, section in resource_bundle_dto.dict.iteritems():
+        for name in section_names:
+            section = resource_bundle_dto.dict[name]
             source_value = (
                 section['source_value'] if section['type'] == TYPE_HTML
                 else section['data'][0]['source_value'])
