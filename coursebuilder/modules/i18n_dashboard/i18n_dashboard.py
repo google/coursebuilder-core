@@ -2108,7 +2108,7 @@ def tc_generate_schema():
         'target_value', 'Translated', 'string', optional=True,
         extra_schema_dict_values={'_type': 'text', 'className': 'active'}))
     item.add_property(schema_fields.SchemaField(
-        'verb', 'Verb', 'string', hidden=True, optional=True))
+        'verb', 'Verb', 'number', hidden=True, optional=True))
     item.add_property(schema_fields.SchemaField(
         'old_source_value', 'Old Source Value', 'string', hidden=True,
         optional=True))

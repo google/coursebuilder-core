@@ -1,3 +1,7 @@
+var VERB_NEW = 1;
+var VERB_CHANGED = 2;
+var VERB_CURRENT = 3;
+
 var VERB_NEW_CLASS = "verb-new";
 var VERB_CHANGED_CLASS = "verb-changed";
 var VERB_CURRENT_CLASS = "verb-current";
@@ -9,13 +13,13 @@ var INVALID_TRANSLATION = 2;
 
 function getVerbClassName(verb) {
   switch (verb) {
-    case "1":
+    case VERB_NEW:
      // new source value added, no mapping to target exists
       return VERB_NEW_CLASS;
-    case "2":
+    case VERB_CHANGED:
       // source value changed, mapping to target likely invalid
       return VERB_CHANGED_CLASS;
-    case "3":
+    case VERB_CURRENT:
       // source value is mapped to valid target value
       return VERB_CURRENT_CLASS;
     default: return "";
@@ -128,8 +132,9 @@ function markValidationFeedbackStale(sectionField) {
 }
 
 $(function() {
-  $("input[name=\"verb\"]").each(function() {
-    $(this).closest("fieldset").addClass(getVerbClassName($(this).val()));
+  iterateFormItems(cb_global, function(sectionField, itemField) {
+    var verb = itemField.inputsNames.verb.getValue();
+    $(itemField.divEl.firstChild).addClass(getVerbClassName(verb));
   });
 
   $(".disabled textarea").prop("disabled", true);
@@ -169,6 +174,7 @@ $(function() {
     iterateFormItems(cb_global, function(sectionField, itemField) {
       var item = itemField.inputsNames;
       if (item.changed.getValue()) {
+        item.verb.setValue(VERB_CURRENT);
         $(item.changed.el).closest('fieldset')
             .removeClass().addClass(VERB_CURRENT_CLASS);
       }
