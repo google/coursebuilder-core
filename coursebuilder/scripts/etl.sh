@@ -107,4 +107,4 @@ $WEBOB_PATH:\
 $YAML_PATH:\
 $PYTHONPATH
 
-python $TOOLS_DIR/etl/etl.py "$@"
+python "$TOOLS_DIR/etl/etl.py" "$@"
