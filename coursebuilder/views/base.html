@@ -319,5 +319,10 @@
       {% endfor %}
       </div>
     {% endif %}
+    {% if debug_info %}
+<!-- gcb-debug-info-begin
+{{ debug_info }}
+gcb-debug-info-end //-->
+{% endif %}
  </body>
 </html>

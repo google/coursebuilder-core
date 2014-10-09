@@ -16,8 +16,10 @@
 
 __author__ = 'Saifu Angto (saifu@google.com)'
 
+import datetime
 import gettext
 import HTMLParser
+import os
 import re
 import urlparse
 
@@ -56,6 +58,13 @@ GUEST_LOCALE_COOKIE = 'cb-user-locale'
 GUEST_LOCALE_COOKIE_MAX_AGE_SEC = 48 * 60 * 60  # 48 hours
 
 TRANSIENT_STUDENT = TransientStudent()
+
+# Whether to output debug info into the page.
+CAN_PUT_DEBUG_INFO_INTO_PAGES = ConfigProperty(
+    'gcb_can_put_debug_info_into_pages', bool, (
+        'Whether or not to put debugging information into the web pages. '
+        'This may be useful for debugging purposes if you develop custom '
+        'Course Builder features or extensions.'), False)
 
 # Whether to record page load/unload events in a database.
 CAN_PERSIST_PAGE_EVENTS = ConfigProperty(
@@ -481,6 +490,39 @@ class CourseHandler(ApplicationHandler):
         """Gets all lessons (in order) in the specific course unit."""
         return self.get_course().get_lessons(unit_id)
 
+    @classmethod
+    def _cache_debug_info(cls, cache):
+        items = []
+        for key, entry in cache.items.iteritems():
+            updated_on = None
+            if entry:
+                updated_on = entry.updated_on()
+            items.append('entry: %s, %s' % (key, updated_on))
+        return items
+
+    @classmethod
+    def debug_info(cls):
+        """Generates a debug info for this request."""
+
+        # we only want to run import if this method is called; most of the
+        # it is not; we also have circular import dependencies if we were to
+        # put them at the top...
+        # pylint: disable-msg=g-import-not-at-top
+        from models import vfs
+        from modules.i18n_dashboard import i18n_dashboard
+        vfs_items = cls._cache_debug_info(
+            vfs.ProcessScopedVfsCache.instance().cache)
+        rb_items = cls._cache_debug_info(
+            i18n_dashboard.ProcessScopedResourceBundleCache.instance().cache)
+        return ''.join([
+              '\nDebug Info: %s' % datetime.datetime.utcnow(),
+              '\n\nServer Environment Variables: %s' % '\n'.join([
+                  'item: %s, %s'% (key, value)
+                  for key, value in os.environ.iteritems()]),
+              '\n\nVfsCacheKeys:\n%s' % '\n'.join(vfs_items),
+              '\n\nResourceBundlesCache:\n%s' % '\n'.join(rb_items),
+              ])
+
     def init_template_values(self, environ, prefs=None):
         """Initializes template variables with common values."""
         self.template_value[COURSE_INFO_KEY] = environ
@@ -504,6 +546,7 @@ class CourseHandler(ApplicationHandler):
         if not prefs:
             prefs = models.StudentPreferencesDAO.load_or_create()
         self.template_value['student_preferences'] = prefs
+
         if (Roles.is_course_admin(self.app_context) and
             not appengine_config.PRODUCTION_MODE and
             prefs and prefs.show_jinja_context):
@@ -511,6 +554,10 @@ class CourseHandler(ApplicationHandler):
                 def get_context(context):
                     return context
                 self.template_value['context'] = get_context
+
+        if CAN_PUT_DEBUG_INFO_INTO_PAGES.value:
+            self.template_value['debug_info'] = self.debug_info()
+
         self.template_value[
             'extra_global_css_urls'] = self.EXTRA_GLOBAL_CSS_URLS
         self.template_value[
