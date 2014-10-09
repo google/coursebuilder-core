@@ -1253,7 +1253,7 @@ class CourseContentTranslationTests(actions.TestBase):
 
         def assert_p_tags(dom, expected_content_list, expected_error_msg):
             # Ensure that the lesson body is a list of <p>..</p> tags with the
-            # expected content. All should be insider an error warning div.
+            # expected content. All should be inside an error warning div.
             p_tag_content_list = [
                 p_tag.text for p_tag in dom.findall(
                  './/div[@class="gcb-lesson-content"]'
@@ -1296,6 +1296,20 @@ class CourseContentTranslationTests(actions.TestBase):
         dom = self.parse_html_string(self.get('unit?unit=1').body)
         assert_p_tags(
             dom, ['cc', 'dd'], '2 parts of the translation are out of date')
+
+        # A student should see the partial translation but no error message
+        actions.logout()
+        actions.login(self.STUDENT_EMAIL, is_admin=False)
+        prefs = models.StudentPreferencesDAO.load_or_create()
+        prefs.locale = 'el'
+        models.StudentPreferencesDAO.save(prefs)
+
+        dom = self.parse_html_string(self.get('unit?unit=1').body)
+        self.assertEquals(
+            ['cc', 'dd'],
+            [p_tag.text for p_tag in dom.findall(
+                './/div[@class="gcb-lesson-content"]/p')])
+        self.assertIsNone(dom.find('.//div[@class="gcb-translation-error"]'))
 
     def test_custom_tag_expanded(self):
         source_video_id = 'Kdg2drcUjYI'

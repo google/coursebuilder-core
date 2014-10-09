@@ -2637,22 +2637,22 @@ class LazyTranslator(object):
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
             self._errm = str(ex)
-            if roles.Roles.is_user_allowed(
-                    self._app_context, custom_module,
-                    locale_to_permission(
-                        self._app_context.get_current_locale())):
-                return self._detailed_error(str(ex), self.source_value)
-            else:
-                return self.source_value
+            return self._detailed_error(str(ex), self.source_value)
 
     def _detailed_error(self, msg, body):
-        template_env = self._app_context.get_template_environ(
-            self._app_context.default_locale, [TEMPLATES_DIR])
-        template = template_env.get_template('lazy_loader_error.html')
-        return template.render({
-            'error_message': msg,
-            'edit_url': TranslationConsole.get_edit_url(self._key),
-            'body': body})
+        if roles.Roles.is_user_allowed(
+            self._app_context, custom_module,
+            locale_to_permission(self._app_context.get_current_locale())
+        ):
+            template_env = self._app_context.get_template_environ(
+                self._app_context.default_locale, [TEMPLATES_DIR])
+            template = template_env.get_template('lazy_loader_error.html')
+            return template.render({
+                'error_message': msg,
+                'edit_url': TranslationConsole.get_edit_url(self._key),
+                'body': body})
+        else:
+            return body
 
 
 def set_attribute(course, key, thing, attribute_name, translation_dict):
