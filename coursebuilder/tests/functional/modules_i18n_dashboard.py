@@ -3345,9 +3345,9 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
         source = '12345'
         self.assertEquals(source, i18n_dashboard.swapcase(source))
-        
+
         source = '<img src="http://a.b.com/foo?bar=baz&amp;cookie=sweet">'
-        self.assertEquals(source, i18n_dashboard.swapcase(source))        
+        self.assertEquals(source, i18n_dashboard.swapcase(source))
 
     def test_reverse_case(self):
         self._import_sample_course()
