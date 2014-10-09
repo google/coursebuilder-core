@@ -3345,6 +3345,9 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         self.assertNotEquals(ru_env, es_env)
 
     def test_swapcase(self):
+        source = '12345'
+        self.assertEquals(source, i18n_dashboard.swapcase(source))
+
         source = '<img alt="Hello!">W0rld</img>'
         target = '<img alt="Hello!">w0RLD</img>'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
@@ -3354,20 +3357,36 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         source = 'Hello&apos;W0rld!'
-        target = 'hELLO&apos;w0RLD!'
+        target = 'hELLO\'w0RLD!'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
-        source = '12345'
-        self.assertEquals(source, i18n_dashboard.swapcase(source))
+        # content inside tags must be preserved
+        source = (
+            'Hello<img src="http://a.b.com/'
+            'foo?bar=baz&amp;cookie=sweet"/>W0rld')
+        target = (
+            'hELLO<img src="http://a.b.com/'
+            'foo?bar=baz&amp;cookie=sweet"/>w0RLD')
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
 
-        # TODO(psimakov): fix this
-        source = '<img src="http://a.b.com/foo?bar=baz&amp;cookie=sweet">'
-        target = '<img src="http://a.b.com/foo?bar=baz&AMP;cookie=sweet">'
+        # %s and other formatting must be preserved
+        source = 'Hello%sW0rld!'
+        target = 'hELLO%sw0RLD!'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
+
+        source = 'Hello%(foo)sW0rld!'
+        target = 'hELLO%(foo)sw0RLD!'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
+
+        # we dont support {foo} type formatting
+        source = 'Hello{s}W0rld!'
+        target = 'hELLO{S}w0RLD!'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
     def test_reverse_case(self):
         self._import_sample_course()
         actions.login('test_reverse_case@example.com', is_admin=True)
+
         self.get('sample/dashboard?action=i18n_reverse_case')
         self._set_prefs_locale('ln', course='sample')
 
@@ -3395,6 +3414,17 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         check_all_in(self.get('sample/assessment?name=64'), [
             'sOLVE THE PROBLEM BELOW', 'hOW MANY pOWER sEARCH CONCEPTS',
             'lIST THE pOWER sEARCH CONCEPTS'])
+
+        # check assesment submition; it has fragile %s type complex formatting
+        # functions that we need to check
+        actions.register(self, 'test_reverse_case', course='sample')
+        response = self.post('sample/answer', {
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'assessment-post'),
+            'score': 0, 'assessment_type': 65, 'answers': {}})
+        self.assertEquals(200, response.status_int)
+        for text in ['for taking the pOST-COURSE', 'cERTIFICATE OR NOT, WE']:
+            self.assertIn(text, response.body)
 
         # check
         invalid_question = 0

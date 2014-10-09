@@ -26,6 +26,7 @@ import re
 import StringIO
 import sys
 import urllib
+from xml.dom import minidom
 import zipfile
 
 from babel import localedata
@@ -1738,19 +1739,28 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
 def swapcase(text):
     """Swap case for full words with only alpha/num and punctutation marks."""
 
-    text = text.swapcase()
+    def swap(root):
+        for node in root.childNodes:
+            if node.nodeType == minidom.Node.TEXT_NODE:
+                if node.nodeValue:
+                    text = node.nodeValue.swapcase()
 
-    # revert swap of entities
-    text = re.sub(
-        r'&[a-zA-Z0-9]+;',
-        lambda m: m.group().swapcase(), text)
+                    # revert swapping of formatting %(...){s, f, ...}
+                    text = re.sub(
+                        r'\%(\([a-zA-Z]*\))?[DIEeFfS]',
+                        lambda m: m.group().swapcase(), text)
 
-    # revert swap of anything between tags
-    text = re.sub(
-        r'\<(.*?)\>',
-        lambda m: m.group().swapcase(), text)
+                    node.nodeValue = text
+            if node.nodeType == minidom.Node.ELEMENT_NODE:
+                swap(node)
 
-    return text
+    try:
+        tree = xcontent.TranslationIO.fromstring(text)
+        swap(tree.documentElement)
+        return xcontent.TranslationIO.tostring(tree)
+    except:  # pylint: disable=bare-except
+        logging.exception('Failed swapcase() for: %s', text)
+        return text
 
 
 class I18nReverseCaseHandler(BaseDashboardExtension):
