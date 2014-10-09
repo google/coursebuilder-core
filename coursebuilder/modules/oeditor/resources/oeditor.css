@@ -253,7 +253,8 @@ div.mc-container a:hover {
 div.mc-container div.yui-editor-container {
   width: 550px;
 }
-div.mc-container textarea {
+div.mc-container textarea,
+div.mc-container div.CodeMirror {
   /* The question statement. */
   height: 45px;
   width: 550px;
@@ -351,7 +352,8 @@ div.sa-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
 div.sa-container a:hover {
   text-decoration: none;
 }
-div.sa-container textarea {
+div.sa-container textarea,
+div.sa-container div.CodeMirror {
   height: 75px;
   width: 510px;
   margin: 0;
@@ -512,7 +514,7 @@ div.label-none-in-group {
 }
 
 div.CodeMirror {
-  border: solid 2px #999999;
+  border: solid 1px #999999;
 }
 
 .hidden {
