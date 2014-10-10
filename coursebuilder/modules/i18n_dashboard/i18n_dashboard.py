@@ -2024,8 +2024,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'browser talking to a production server.  Alternatives '
                 'are to work with a development server or use the ETL '
                 'scripts to do translation upload/download.  See the '
-                'file .../tools/i18n/i18n.sh in your CourseBuilder '
-                'download for complete instructions on usage. ')
+                'file .../modules/i18n_dashboard/jobs.py in your Course '
+                'Builder download for complete instructions on usage. ')
             disabled_alert = 'javascript: alert("%s")' % message
             for action in actions:
                 del action['href']
