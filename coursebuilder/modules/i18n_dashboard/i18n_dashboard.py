@@ -673,7 +673,7 @@ class TranslationsAndLocations(object):
         self._locations.append(location)
 
     def add_comment(self, comment):
-        comment = str(comment)  # May be Node or NodeList.
+        comment = unicode(comment)  # May be Node or NodeList.
         self._comments.append(comment)
 
     def set_previous_id(self, previous_id):
@@ -1349,7 +1349,7 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
                     for item in section['data']:
                         source_value = item['source_value']
                         if not isinstance(source_value, basestring):
-                            source_value = str(source_value)  # convert numbers
+                            source_value = unicode(source_value)  # convert num
                         if source_value not in translations:
                             messages.append(
                                 'Did not find translation for "%s"' %
@@ -2185,7 +2185,7 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
             key, self.get_course(), resource_bundle_dto, transformer)
         payload_dict = {
             'key': str(key),
-            'title': str(key.resource_key.get_title(self.app_context)),
+            'title': unicode(key.resource_key.get_title(self.app_context)),
             'source_locale': self.app_context.default_locale,
             'target_locale': key.locale,
             'sections': sorted(sections, cmp=cmp_sections)
