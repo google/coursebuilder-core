@@ -1036,6 +1036,7 @@ def _run_custom(parsed_args):
                 parsed_args.type, etl_lib.Job.__name__),
             with_trace=True)
     job.run()
+    _LOG.info('Completed job %s', job_class.__name__)
 
 
 def _upload(params):
