@@ -1089,6 +1089,16 @@ class CourseModel13(object):
     def _validate_settings_content(self, content):
         yaml.safe_load(content)
 
+    def invalidate_cached_course_settings(self):
+        """Clear settings cached locally in-process and globally in memcache."""
+        keys = [
+            Course.make_locale_environ_key(locale)
+            for locale in [None] + self.app_context.get_all_locales()]
+        models.MemcacheManager.delete_multi(
+            keys, namespace=self.app_context.get_namespace_name())
+
+        self._app_context.clear_per_request_cache()
+
     def save_settings(self, course_settings):
         content = yaml.safe_dump(course_settings)
         try:
@@ -1103,15 +1113,7 @@ class CourseModel13(object):
         filename = fs.physical_to_logical('/course.yaml')
         fs.put(filename, content_stream)
 
-        # clear cached settings
-        keys = [
-            Course.make_locale_environ_key(locale)
-            for locale in [None] + self.app_context.get_all_locales()]
-        models.MemcacheManager.delete_multi(
-            keys, namespace=self.app_context.get_namespace_name())
-
-        self._app_context.clear_per_request_cache()
-
+        self.invalidate_cached_course_settings()
         return True
 
     def _update_dirty_objects(self):
@@ -2536,6 +2538,9 @@ class Course(object):
 
     def create_settings_schema(self):
         return Course.create_common_settings_schema(self)
+
+    def invalidate_cached_course_settings(self):
+        self._model.invalidate_cached_course_settings()
 
     def save_settings(self, course_settings):
         retval = self._model.save_settings(course_settings)

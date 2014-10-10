@@ -2230,6 +2230,10 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
         else:
             I18nProgressDAO.save(i18n_progress_dto)
             ResourceBundleDAO.save(resource_bundle_dto)
+
+            if key.resource_key.type == ResourceKey.COURSE_SETTINGS_TYPE:
+                self.get_course().invalidate_cached_course_settings()
+
             transforms.send_json_response(self, 200, 'Saved.')
 
     def _get_validation_report(self, key, section_names, resource_bundle_dto):
