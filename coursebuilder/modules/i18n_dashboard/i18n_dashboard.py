@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2014 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -1750,7 +1751,9 @@ def swapcase(text):
                         r'\%(\([a-zA-Z]*\))?[DIEeFfS]',
                         lambda m: m.group().swapcase(), text)
 
-                    node.nodeValue = text
+                    # add lambda character at the end to test all code paths
+                    # properly handle a multibyte character in the content
+                    node.nodeValue = text + u'λ'
             if node.nodeType == minidom.Node.ELEMENT_NODE:
                 swap(node)
 
@@ -2024,8 +2027,8 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'browser talking to a production server.  Alternatives '
                 'are to work with a development server or use the ETL '
                 'scripts to do translation upload/download.  See the '
-                'file .../modules/i18n_dashboard/jobs.py in your Course '
-                'Builder download for complete instructions on usage. ')
+                'file .../scripts/etl.sh in your Course Builder download for '
+                'complete instructions on usage. ')
             disabled_alert = 'javascript: alert("%s")' % message
             for action in actions:
                 del action['href']

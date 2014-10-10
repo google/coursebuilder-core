@@ -3500,18 +3500,19 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
 
     def test_swapcase(self):
         source = '12345'
-        self.assertEquals(source, i18n_dashboard.swapcase(source))
+        target = u'12345λ'
+        self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         source = '<img alt="Hello!">W0rld</img>'
-        target = '<img alt="Hello!">w0RLD</img>'
+        target = u'<img alt="Hello!">w0RLDλ</img>'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         source = 'Hello W0rld!'
-        target = 'hELLO w0RLD!'
+        target = u'hELLO w0RLD!λ'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         source = 'Hello&apos;W0rld!'
-        target = 'hELLO\'w0RLD!'
+        target = u'hELLO\'w0RLD!λ'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         # content inside tags must be preserved
@@ -3519,22 +3520,22 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
             'Hello<img src="http://a.b.com/'
             'foo?bar=baz&amp;cookie=sweet"/>W0rld')
         target = (
-            'hELLO<img src="http://a.b.com/'
-            'foo?bar=baz&amp;cookie=sweet"/>w0RLD')
+            u'hELLOλ<img src="http://a.b.com/'
+            u'foo?bar=baz&amp;cookie=sweet"/>w0RLDλ')
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         # %s and other formatting must be preserved
         source = 'Hello%sW0rld!'
-        target = 'hELLO%sw0RLD!'
+        target = u'hELLO%sw0RLD!λ'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         source = 'Hello%(foo)sW0rld!'
-        target = 'hELLO%(foo)sw0RLD!'
+        target = u'hELLO%(foo)sw0RLD!λ'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
         # we dont support {foo} type formatting
         source = 'Hello{s}W0rld!'
-        target = 'hELLO{S}w0RLD!'
+        target = u'hELLO{S}w0RLD!λ'
         self.assertEquals(target, i18n_dashboard.swapcase(source))
 
     def test_reverse_case(self):
@@ -3594,6 +3595,9 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                     unit.title.swapcase(), response.body.decode('utf-8'))
                 self.assertIn(
                     lesson.title.swapcase(), response.body.decode('utf-8'))
+
+                # check standard multibyte character is present
+                self.assertIn(u'λ', response.body.decode('utf-8'))
 
                 try:
                     self.assertNotIn('[Invalid question]', response.body)
