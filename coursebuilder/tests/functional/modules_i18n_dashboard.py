@@ -572,6 +572,160 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
             '<gcb-markdown#1>*hello*</gcb-markdown#1>', data[0]['source_value'])
 
 
+class TranslationConsoleValidationTests(actions.TestBase):
+    ADMIN_EMAIL = 'admin@foo.com'
+    COURSE_NAME = 'i18n_course'
+    URL = 'rest/modules/i18n_dashboard/translation_console'
+
+    INVALID = LazyTranslator.INVALID_TRANSLATION
+    VALID = LazyTranslator.VALID_TRANSLATION
+
+    def setUp(self):
+        super(TranslationConsoleValidationTests, self).setUp()
+
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'I18N Course')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+        self.unit = self.course.add_unit()
+        self.unit.title = 'Test Unit'
+        self.unit.unit_header = '<p>a</p><p>b</p>'
+        self.course.save()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+
+        self.key = ResourceBundleKey(
+            ResourceKey.UNIT_TYPE, self.unit.unit_id, 'el')
+        self.validation_payload = {
+            'key': str(self.key),
+            'title': 'Unit 1 - Test Unit',
+            'source_locale': 'en_US',
+            'target_locale': 'el',
+            'sections': [
+                {
+                    'name': 'title',
+                    'label': 'Title',
+                    'type': 'string',
+                    'source_value': '',
+                    'data': [
+                        {
+                            'source_value': 'Test Unit',
+                            'target_value': 'TEST UNIT',
+                            'verb': 1,  # verb NEW
+                            'old_source_value': '',
+                            'changed': True
+                        }
+                    ]
+                },
+                {
+                    'name': 'unit_header',
+                    'label': 'Unit Header',
+                    'type': 'html',
+                    'source_value': '<p>a</p><p>b</p>',
+                    'data': [
+                        {
+                            'source_value': 'a',
+                            'target_value': 'A',
+                            'verb': 1,  # verb NEW
+                            'old_source_value': 'a',
+                            'changed': True
+                        },
+                        {
+                            'source_value': 'b',
+                            'target_value': 'B',
+                            'verb': 1,  # verb NEW
+                            'old_source_value': 'b',
+                            'changed': True
+                        },
+                    ]
+                },
+            ]}
+
+        self.resource_bundle_dict = {
+            'title': {
+                'type': 'string',
+                'source_value': '',
+                'data': [
+                    {'source_value': 'Test Unit', 'target_value': 'TEST UNIT'}]
+            },
+            'unit_header': {
+                'type': 'html',
+                'source_value': '<p>a</p><p>b</p>',
+                'data': [
+                    {'source_value': 'a', 'target_value': 'A'},
+                    {'source_value': 'a', 'target_value': 'B'}]
+            }
+        }
+
+    def tearDown(self):
+        del sites.Registry.test_overrides[sites.GCB_COURSES_CONFIG.name]
+        namespace_manager.set_namespace(self.old_namespace)
+        super(TranslationConsoleValidationTests, self).tearDown()
+
+    def _validate(self):
+        request_dict = {
+            'key': str(self.key),
+            'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
+                'translation-console'),
+                  'payload': transforms.dumps(self.validation_payload),
+                  'validate': True}
+
+        response = self.put(
+            self.URL, {'request': transforms.dumps(request_dict)})
+        response = transforms.loads(response.body)
+        self.assertEquals(200, response['status'])
+        payload = transforms.loads(response['payload'])
+        self.assertEquals({'title', 'unit_header'}, set(payload.keys()))
+
+        return payload
+
+    def test_valid_content(self):
+        payload = self._validate()
+        self.assertEquals(self.VALID, payload['title']['status'])
+        self.assertEquals('', payload['title']['errm'])
+        self.assertEquals(self.VALID, payload['unit_header']['status'])
+        self.assertEquals('', payload['unit_header']['errm'])
+
+    def test_invalid_content(self):
+        self.validation_payload[
+            'sections'][1]['data'][0]['target_value'] = '<img#1/>'
+        payload = self._validate()
+        self.assertEquals(self.VALID, payload['title']['status'])
+        self.assertEquals('', payload['title']['errm'])
+        self.assertEquals(self.INVALID, payload['unit_header']['status'])
+        self.assertEquals(
+            'Unexpected tag: <img#1>.', payload['unit_header']['errm'])
+
+    def test_with_bundle(self):
+        dto = ResourceBundleDTO(str(self.key), self.resource_bundle_dict)
+        ResourceBundleDAO.save(dto)
+
+        payload = self._validate()
+        self.assertEquals(self.VALID, payload['title']['status'])
+        self.assertEquals('', payload['title']['errm'])
+        self.assertEquals(self.VALID, payload['unit_header']['status'])
+        self.assertEquals('', payload['unit_header']['errm'])
+
+    def test_with_bundle_with_extra_fields(self):
+        self.resource_bundle_dict['description'] = {
+            'type': 'string',
+            'source_value': '',
+            'data': [
+                {'source_value': 'descr', 'target_value': 'DESCR'}]
+        }
+        dto = ResourceBundleDTO(str(self.key), self.resource_bundle_dict)
+        ResourceBundleDAO.save(dto)
+
+        payload = self._validate()
+        self.assertEquals(self.VALID, payload['title']['status'])
+        self.assertEquals('', payload['title']['errm'])
+        self.assertEquals(self.VALID, payload['unit_header']['status'])
+        self.assertEquals('', payload['unit_header']['errm'])
+
+
 class I18nProgressDeferredUpdaterTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
     COURSE_NAME = 'i18n_course'
