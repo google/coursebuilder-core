@@ -713,6 +713,19 @@ class Markdown(tags.ContextAwareTag, CoreTag):
     def name(cls):
         return 'Markdown'
 
+    @classmethod
+    def extra_js_files(cls):
+        """Returns a list of JS files to be loaded in the editor lightbox."""
+        if oeditor.CAN_HIGHLIGHT_CODE.value:
+            return ['markdown_popup.js']
+        else:
+            return []
+
+    @classmethod
+    def additional_dirs(cls):
+        return [os.path.join(
+            appengine_config.BUNDLE_ROOT, 'modules', 'core_tags', 'resources')]
+
     def get_icon_url(self):
         return self.create_icon_url('markdown.png')
 

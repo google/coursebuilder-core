@@ -138,3 +138,60 @@ FrameProxy.prototype = {
     this._root.className = 'hidden';
   }
 };
+
+/**
+ * CodeEditorControl provide a bridge between textarea and code editor
+ *
+ * @param textArea the textarea node that you want to sync code editor with
+ */
+function CodeEditorControl(textArea) {
+  this.textArea = textArea;
+  this._init();
+}
+
+CodeEditorControl.prototype = {
+  _init: function() {
+    // div for scrollbar positional-correction
+    var cmDiv = document.createElement('div');
+    this.textArea.parentNode.appendChild(cmDiv);
+    $(cmDiv).css("overflow", "auto");
+    $(cmDiv).css("position", "relative");
+
+    var self = this;
+
+    cmDiv.className = 'codemirror-container-editable';
+
+    this.cmInstance = CodeMirror(cmDiv, {
+      value: self.textArea.value,
+      lineNumbers: true,
+      keyMap: "sublime",
+      // force code editor not to display random mode
+      mode: "",
+      extraKeys: {"Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }},
+      foldGutter: true,
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+    });
+
+    // update textArea whenever code editor context change
+    this.cmInstance.on("change", function(cm, change) {
+      self.textArea.value = self.cmInstance.getValue();
+    });
+
+    // hide textArea
+    this.textArea.setAttribute("style", "display:none;");
+
+    window.setTimeout(function(){
+      self.cmInstance.refresh();
+    }, 0);
+  },
+
+  setMode: function(mode) {
+    CodeMirror.modeURL = "/modules/code_tags/codemirror/mode/%N/%N.js";
+    this.cmInstance.setOption('mode', mode);
+    CodeMirror.autoLoadMode(this.cmInstance, mode);
+  },
+
+  syncToTextArea: function() {
+    this.textArea.value = this.cmInstance.getValue();
+  }
+};

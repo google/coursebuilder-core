@@ -11,6 +11,7 @@
       <script src="/static/codemirror/lib/codemirror.js"></script>
       <link rel="stylesheet" href="/static/codemirror/lib/codemirror.css">
       <script src="/static/codemirror/addon/mode/loadmode.js"></script>
+      <link rel="stylesheet" href="/modules/code_tags/resources/code_tags.css">
     {% endif %}
 
     <!-- import jQuery -->
@@ -86,7 +87,7 @@
         {% if section.pre %}
           {{ section.pre }}
         {% elif can_highlight_code and section.code %}
-          <div class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</div>
+          <code class="codemirror-container-readonly" mode={{section.mode}}>{{ section.code }}</code>
         {% else %}
           <ol>
             {% if not section.children %}

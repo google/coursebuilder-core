@@ -515,6 +515,7 @@ div.label-none-in-group {
 
 div.CodeMirror {
   border: solid 1px #999999;
+  height: 200px;
 }
 
 .hidden {

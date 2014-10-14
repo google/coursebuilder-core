@@ -78,6 +78,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.module_config_test.ModuleManifestTest': 7,
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
     'tests.functional.modules_certificate.CertificateCriteriaTestCase': 5,
+    'tests.functional.modules_code_tags.CodeTagTests': 4,
     'tests.functional.modules_core_tags.GoogleDriveRESTHandlerTest': 8,
     'tests.functional.modules_core_tags.GoogleDriveTagRendererTest': 6,
     'tests.functional.modules_core_tags.RuntimeTest': 13,

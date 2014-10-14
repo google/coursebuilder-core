@@ -1,0 +1,8 @@
+code.codemirror-container-readonly {
+  text-align: left;
+  padding-bottom: 1.5em;
+}
+
+code.codemirror-container-readonly div.CodeMirror {
+  height: auto!important;
+}

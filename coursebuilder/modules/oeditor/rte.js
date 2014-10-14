@@ -114,7 +114,12 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
               value: this.el.value,
               lineNumbers: true,
               keyMap: "sublime",
-              mode: "htmlmixed"
+              mode: "htmlmixed",
+              extraKeys: {
+                "Ctrl-Q": function(cm){ cm.foldCode(cm.getCursor()); }
+              },
+              foldGutter: true,
+              gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
             }
         );
         // Reference used for testing
