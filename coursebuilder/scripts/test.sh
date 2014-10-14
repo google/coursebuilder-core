@@ -52,7 +52,7 @@ fi
 # Reinstall AE runtime environment and CB-distributed libs if necessary.
 . "$(dirname "$0")/common.sh"
 
-PYTHONPATH=\
+export PYTHONPATH=\
 $SOURCE_DIR:\
 $GOOGLE_APP_ENGINE_HOME:\
 $JINJA_PATH:\
