@@ -283,7 +283,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
         ]
         self.assertEquals(len(expected_row_data), len(rows))
         for index, expected in enumerate(expected_row_data):
-            td_text = ''.join(rows[index].find('td').itertext())
+            td_text = (''.join(rows[index].find('td').itertext())).strip()
             self.assertEquals(expected, td_text)
 
     def test_multiple_locales(self):
@@ -338,7 +338,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             table = dom.find('.//table[@class="i18n-progress-table"]')
             lesson_row = table.findall('./tbody/tr')[lesson_row_index]
 
-            lesson_title = ''.join(lesson_row.find('td[1]').itertext())
+            lesson_title = ''.join(lesson_row.find('td[1]').itertext()).strip()
             self.assertEquals('1.1 Test Lesson', lesson_title)
             assert_progress('not-started', lesson_row, 2)
             assert_progress('not-started', lesson_row, 3)

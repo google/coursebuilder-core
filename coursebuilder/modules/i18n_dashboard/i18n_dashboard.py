@@ -533,25 +533,53 @@ class ResourceRow(TableRow):
         else:
             return self.DONE_CLASS
 
-    def view_url(self, unused_locale):
+    def view_url(self, locale):
         if self._type == ResourceKey.UNIT_TYPE:
-            return 'unit?unit=%s' % self._key
+            url = 'unit?unit=%s' % self._key
         elif self._type == ResourceKey.LESSON_TYPE:
-            return 'unit?unit=%s&lesson=%s' % (
+            url = 'unit?unit=%s&lesson=%s' % (
                 self._resource.unit_id, self._key)
         elif self._type == ResourceKey.ASSESSMENT_TYPE:
-            return 'assessment?name=%s' % self._key
+            url = 'assessment?name=%s' % self._key
         elif self._type in [
                 ResourceKey.COURSE_SETTINGS_TYPE, ResourceKey.LINK_TYPE,
                 ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE,
                 ResourceKey.QUESTION_GROUP_TYPE]:
             return None
+        else:
+            raise ValueError('Unknown type %s' % self._type)
 
-        raise ValueError('Unknown type %s' % self._type)
+        if locale:
+            url += '&hl=%s' % locale
+        return url
 
     def edit_url(self, locale):
         return TranslationConsole.get_edit_url(
             ResourceBundleKey(self._type, self._key, locale))
+
+    @property
+    def base_view_url(self):
+        return self.view_url(None)
+
+    @property
+    def base_edit_url(self):
+        if self._type == ResourceKey.UNIT_TYPE:
+            return 'dashboard?action=edit_unit&key=%s' % self._key
+        elif self._type == ResourceKey.LESSON_TYPE:
+            return 'dashboard?action=edit_lesson&key=%s' % self._key
+        elif self._type == ResourceKey.ASSESSMENT_TYPE:
+            return 'dashboard?action=edit_assessment&key=%s' % self._key
+        elif self._type in [
+                ResourceKey.QUESTION_MC_TYPE, ResourceKey.QUESTION_SA_TYPE]:
+            return 'dashboard?action=edit_question&key=%s' % self._key
+        elif self._type == ResourceKey.QUESTION_GROUP_TYPE:
+            return 'dashboard?action=edit_question_group&key=%s' % self._key
+        elif self._type == ResourceKey.LINK_TYPE:
+            return 'dashboard?action=edit_link&key=%s' % self._key
+        elif self._type == ResourceKey.COURSE_SETTINGS_TYPE:
+            return None
+
+        raise ValueError('Unknown type %s' % self._type)
 
 
 class SectionRow(TableRow):

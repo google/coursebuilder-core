@@ -422,6 +422,9 @@ class CourseHandler(ApplicationHandler):
 
     def get_locale_for(self, request, app_context, student=None, prefs=None):
         """Returns a locale that should be used by this request."""
+        hl = request.get('hl')
+        if hl and hl in self.app_context.get_allowed_locales():
+            return hl
 
         if self.get_user():
             # check if student has any locale labels assigned

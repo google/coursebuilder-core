@@ -19,7 +19,17 @@
         {% if row.spans_all_columns %}
           <td colspan="{{ num_columns }}">{{ row.name }}</td>
         {% else %}
-          <td>{{ row.name }}</td>
+          <td>
+            {% if row.base_view_url %}
+              <a href="{{ row.base_view_url }}" target="_blank">
+                <img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
+            {% endif %}
+            {% if row.base_edit_url %}
+              <a href="{{ row.base_edit_url }}">
+                <img src="/modules/i18n_dashboard/resources/images/pencil.png"></a>
+            {% endif %}
+            {{ row.name }}
+          </td>
           {% if main_locale %}
             <td>
               <label>
@@ -31,7 +41,7 @@
           {% for locale in extra_locales %}
             <td class="resource-locale-entry {{row.status_class(locale)}}">
               {% if row.view_url(locale): %}
-                <a href="{{ row.view_url(locale) }}">
+                <a href="{{ row.view_url(locale) }}" target="_blank">
                   <img src="/modules/i18n_dashboard/resources/images/eye.png"></a>
               {% endif %}
               {% if not is_readonly %}
