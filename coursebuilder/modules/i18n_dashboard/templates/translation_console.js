@@ -131,6 +131,17 @@ function markValidationFeedbackStale(sectionField) {
       .addClass("validation-feedback stale");
 }
 
+function resizeTogether() {
+  $("div.active > div > textarea").each(function() {
+    var height = $(this).height();
+
+    if (height !== this._gcbLastHeight) {
+      $(this).closest("fieldset").find("div.disabled > div > textarea").height(height);
+    }
+    this._gcbLastHeight = height;
+  });
+}
+
 $(function() {
   iterateFormItems(cb_global, function(sectionField, itemField) {
     var verb = itemField.inputsNames.verb.getValue();
@@ -184,4 +195,5 @@ $(function() {
   };
 
   insertValidateButton();
+  setInterval(resizeTogether, 10);
 });

@@ -45,11 +45,12 @@
   overflow-x: auto;
   overflow-y: auto;
   white-space: normal;
-  resize:vertical;
+  resize: vertical;
 }
 .translation-console .inputEx-Field textarea:disabled {
   background-color: #f8f8f8;
   color: #008;
+  resize: none;
 }
 
 /* Set the styling for the verb states. */
