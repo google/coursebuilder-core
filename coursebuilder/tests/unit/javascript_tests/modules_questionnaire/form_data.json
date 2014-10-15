@@ -1,0 +1,24 @@
+{
+  "form_data": [
+    {"name": "fname", "value": "A. Student"},
+    {"name": "age", "value": "100"},
+    {"name": "date", "value": "2014-09-17"},
+    {"name": "color", "value": "#000000"},
+    {"name": "week", "value": "2014-W37"},
+    {"name": "datetime", "value": "test-date-time"},
+    {"name": "local", "value": "2014-09-11T14:21"},
+    {"name": "month", "value": "2014-09"},
+    {"name": "email", "value": "test@example.com"},
+    {"name": "range", "value": "5"},
+    {"name": "search", "value": "test-search"},
+    {"name": "url", "value": "http://www.google.com"},
+    {"name": "tel", "value": "012334545"},
+    {"name": "time", "value": "12:02"},
+    {"name": "select", "value": "Apple"},
+    {"name": "radio", "value": "male"},
+    {"name": "checkbox", "value": "Bike"},
+    {"name": "checkbox", "value": "Walk"},
+    {"name": "datalist", "value": "Peas"},
+    {"name": "textarea", "value": "A student."}
+  ]
+}

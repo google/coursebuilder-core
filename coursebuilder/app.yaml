@@ -26,6 +26,7 @@ env_variables:
     modules.math.math
     modules.notifications.notifications
     modules.oeditor.oeditor
+    modules.questionnaire.questionnaire
     modules.review.review
     modules.search.search
     modules.unsubscribe.unsubscribe

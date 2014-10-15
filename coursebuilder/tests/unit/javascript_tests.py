@@ -38,3 +38,6 @@ class AllJavaScriptTests(unittest.TestCase):
 
     def test_oeditor(self):
         self.karma_test('modules_oeditor')
+
+    def test_questionnaire(self):
+        self.karma_test('modules_questionnaire')

@@ -1,0 +1,18 @@
+<link rel="stylesheet" type="text/css"
+    href="/modules/questionnaire/resources/css/button.css">
+<div class="gcb-questionnaire">
+  <button
+      {% if not enabled %}disabled="disabled"{% endif %}
+      class="questionnaire-button"
+      data-form-id="{{ form_id }}"
+      data-xsrf-token="{{ xsrf_token }}"
+      data-enabled="{% if enabled %}enabled{% else %}disabled{% endif %}">
+    {% if button_label %}
+      {{ button_label }}
+    {% else %}
+      {# I18N: Button label to submit the responses to a questionnaire. #}
+      {{ gettext('Submit answers') }}
+    {% endif %}
+  </button>
+</div>
+
