@@ -39,59 +39,39 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       toggle.appendChild(toggleText);
       toggle.className = "rte-control inputEx-Button";
 
-      var self = this;
+      var that = this;
       toggle.onclick = function() {
-        showRteFlag = !showRteFlag;
+        showRteFlag = ! showRteFlag;
         if (showRteFlag) {
-          if (self.editor) {
-            self.showExistingRte();
+          if (that.editor) {
+            that.showExistingRte();
           } else {
-            self.showNewRte();
+            that.showNewRte();
           }
           toggleText.nodeValue = hideRteText;
-          self.isInRteMode = true;
+          that.isInRteMode = true;
         } else {
-          self.hideRte();
+          that.hideRte();
           toggleText.nodeValue = showRteText;
-          self.isInRteMode = false;
+          that.isInRteMode = false;
         }
       };
       this.divEl.appendChild(toggle);
-    },
 
-    _addResize: function() {
-      var that = this;
-      var editor = this.editor;
-      var currentValue;
-      this.resize = new Resize(this.editor.get('element_cont').get('element'),
-          {
-            handles: ['br'],
-            minHeight: 300,
-            minWidth: 400,
-            proxy: true,
-            setSize: false
-          }
-      );
-      this.resize.on('startResize', function() {
-        currentValue = that.getValue();
-        editor.hide();
-        editor.set('disabled', true);
-      });
-      this.resize.on('resize', function(args) {
-        that.setValue(currentValue);
-        var h = args.height;
-        var th = (editor.toolbar.get('element').clientHeight + 2);
-        editor.set('width', args.width + 'px');
-        editor.set('height', (h - th) + 'px');
-        editor.set('disabled', false);
-        editor.show();
-      });
-    },
-
-    _removeResize: function() {
-      if (this.resize) {
-        this.resize.destroy();
+      if (! env.can_highlight_code) {
+        this._monitorResizeOfTextArea();
       }
+    },
+
+    _monitorResizeOfTextArea: function() {
+      var that = this, width = 0, height = 0;
+      setInterval(function() {
+        if (that.el.offsetWidth != width || that.el.offsetHeight != height) {
+          width = that.el.offsetWidth;
+          height = that.el.offsetHeight;
+          that._resizeEditorsExceptTextArea(width, height);
+        }
+      }, 100);
     },
 
     _replaceTextAreaWithCodeMirror: function() {
@@ -113,6 +93,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
             {
               value: this.el.value,
               lineNumbers: true,
+              lineWrapping: true,
               keyMap: "sublime",
               mode: "htmlmixed",
               extraKeys: {
@@ -134,7 +115,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
               setSize: false
             }
         ).on("resize", function(args) {
-          that.cmInstance.setSize(args.width, args.height);
+          that._resizeEditors(args.width, args.height);
         });
       } else {
         this.cmInstance.setValue(this.el.value);
@@ -171,25 +152,51 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       }
     },
 
+    _resizeEditors: function(width, height) {
+      this._resizeEditorsExceptTextArea(width, height);
+
+      // Resize the text area
+      this.el.style.width = width + "px";
+      this.el.style.height = height + "px";
+    },
+
+    _resizeEditorsExceptTextArea: function(width, height) {
+      if (this.editor) {
+        var toolbarHeight = this.editor.toolbar.get('element').clientHeight + 2;
+        this.editor.set('width', width + 'px');
+        this.editor.set('height', (height - toolbarHeight) + 'px');
+      }
+      if (this.cmInstance) {
+        this.cmInstance.setSize(width, height);
+      }
+      this._lastResizeDimensions = {width: width, height: height};
+    },
+
     showNewRte: function() {
       this._replaceCodeMirrorWithTextArea();
 
       var that = this;
-      var options = this.options;
+
+      var extraCss =
+        "::-webkit-scrollbar {" +
+        "  width: 10px;" +
+        "}" +
+        "::-webkit-scrollbar:horizontal {" +
+        "  height: 10px;" +
+        "}" +
+        "::-webkit-scrollbar-track {" +
+        "  background-color: #f5f5f5;" +
+        "}" +
+        "::-webkit-scrollbar-thumb {" +
+        "  background-color: #c0c0c0;" +
+        "  border: solid 1px #b4b4b4;" +
+        "}";
       var _def = {
-        autoHeight: true,
-        focusAtStart: true,
-      };
-      // TODO(emichael,jorr): Remove browser sniffing
-      if (navigator.userAgent.match(/MSIE/)) {
-        _def.autoHeight = false;
-        _def.height = '300px';
+        extracss: extraCss
       }
-      // Merge options.opts into the default options
-      var opts = options.opts;
-      for (var i in opts) {
-        if (opts.hasOwnProperty(i)) {
-          _def[i] = opts[i];
+      for (var i in this.options.opts) {
+        if (this.options.opts.hasOwnProperty(i)) {
+          _def[i] = this.options.opts[i];
         }
       }
 
@@ -210,11 +217,26 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       editor._fixNodes = function() {};
 
       editor.on('editorContentLoaded', function() {
-        that._addResize();
+        new Resize(editor.get('element_cont').get('element'),
+          {
+            handles: ['br'],
+            minHeight: 300,
+            minWidth: 400,
+            proxy: true,
+            setSize: false
+          }
+        ).on('resize', function(args) {
+          that._resizeEditors(args.width, args.height);
+        });
+        if (that._lastResizeDimensions) {
+          that._resizeEditors(
+              that._lastResizeDimensions.width,
+              that._lastResizeDimensions.height);
+        }
       });
 
       // Set up a button to add custom tags
-      if (options.supportCustomTags) {
+      if (this.options.supportCustomTags) {
         editor.on('toolbarLoaded', function() {
           var button = {
             type: 'push',
@@ -266,18 +288,16 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       this._replaceCodeMirrorWithTextArea();
 
       var editor = this.editor,
-          textArea = this.el;
-          rteDiv = textArea.previousSibling;
+          textArea = this.el,
+          rteDiv = textArea.previousSibling,
+          resizeDiv = textArea.nextSibling;
 
-      this._addResize();
-
-      Dom.setStyle(rteDiv, 'position', 'static');
-      Dom.setStyle(rteDiv, 'top', '0');
-      Dom.setStyle(rteDiv, 'left', '0');
       Dom.setStyle(textArea, 'visibility', 'hidden');
       Dom.setStyle(textArea, 'top', '-9999px');
       Dom.setStyle(textArea, 'left', '-9999px');
       Dom.setStyle(textArea, 'position', 'absolute');
+      Dom.removeClass(rteDiv, "hidden");
+      Dom.removeClass(resizeDiv, "hidden");
       editor.get('element_cont').addClass('yui-editor-container');
       editor._setDesignMode('on');
       editor.setEditorHTML(textArea.value);
@@ -286,17 +306,15 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
 
     hideRte: function() {
       var editor = this.editor,
-          textArea = this.el;
-          rteDiv = textArea.previousSibling;
+          textArea = this.el,
+          rteDiv = textArea.previousSibling,
+          resizeDiv = textArea.nextSibling;
 
       this._customTagManager.removeMarkerTags();
       editor.saveHTML();
 
-      this._removeResize();
-
-      Dom.setStyle(rteDiv, 'position', 'absolute');
-      Dom.setStyle(rteDiv, 'top', '-9999px');
-      Dom.setStyle(rteDiv, 'left', '-9999px');
+      Dom.addClass(rteDiv, "hidden");
+      Dom.addClass(resizeDiv, "hidden");
       editor.get('element_cont').removeClass('yui-editor-container');
       Dom.setStyle(textArea, 'visibility', 'visible');
       Dom.setStyle(textArea, 'top', '');

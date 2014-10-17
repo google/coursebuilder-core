@@ -518,6 +518,8 @@ div.CodeMirror {
   height: 200px;
 }
 
+/* Styling for YUI and InputEx components. */
+
 .hidden {
   visibility: hidden;
   top: -9999px;
@@ -527,4 +529,10 @@ div.CodeMirror {
 
 .yui-resize .yui-resize-handle-br {
   z-index: 10;
+}
+
+div#formContainer div.yui-toolbar-container > fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
 }

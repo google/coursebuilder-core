@@ -164,6 +164,7 @@ CodeEditorControl.prototype = {
     this.cmInstance = CodeMirror(cmDiv, {
       value: self.textArea.value,
       lineNumbers: true,
+      lineWrapping: true,
       keyMap: "sublime",
       // force code editor not to display random mode
       mode: "",

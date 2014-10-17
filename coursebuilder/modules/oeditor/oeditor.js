@@ -180,7 +180,7 @@ function onPageLoad(env) {
   YUI.add("gcb-rte",
     function(Y) {
       Y.extend(GcbRteField, Y.inputEx.Field, getGcbRteDefs(
-          env, Y.DOM, Y.YUI2.widget.SimpleEditor, Y.YUI2.util.Resize));
+          env, Y.DOM, Y.YUI2.widget.Editor, Y.YUI2.util.Resize));
       Y.inputEx.registerType("html", GcbRteField, []);
     },
     '3.1.0',
