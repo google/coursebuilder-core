@@ -27,6 +27,7 @@ from config import ConfigProperty
 import counters
 from counters import PerfCounter
 from entities import BaseEntity
+import jinja2
 import services
 import transforms
 
@@ -770,11 +771,11 @@ class StudentProfileDAO(object):
         assert is_valid_student, (
             'Student\'s email and user id do not match.')
 
-        cls._add_new_student_for_current_user(
+        student = cls._add_new_student_for_current_user(
             user.user_id(), user.email(), nick_name, additional_fields, labels)
 
         try:
-            cls._send_welcome_notification(handler, user.email())
+            cls._send_welcome_notification(handler, student)
         except Exception, e:  # On purpose. pylint: disable-msg=broad-except
             logging.error(
                 'Unable to send welcome notification; error was: ' + str(e))
@@ -809,39 +810,51 @@ class StudentProfileDAO(object):
         cls._put_profile(profile)
         student.put()
 
+        return student
+
     @classmethod
-    def _send_welcome_notification(cls, handler, email):
+    def _send_welcome_notification(cls, handler, student):
         if not cls._can_send_welcome_notifications(handler):
             return
 
-        if services.unsubscribe.has_unsubscribed(email):
+        if services.unsubscribe.has_unsubscribed(student.email):
             return
 
-        # Imports don't resolve at top.
-        # pylint: disable-msg=g-import-not-at-top
-        from controllers import sites
-
-        context = sites.get_course_for_current_request()
-        course_title = handler.app_context.get_environ()['course']['title']
+        course_settings = handler.app_context.get_environ()['course']
+        course_title = course_settings['title']
         sender = cls._get_welcome_notifications_sender(handler)
 
         assert sender, 'Must set welcome_notifications_sender in course.yaml'
 
-        subject = 'Welcome to ' + course_title
         context = {
+            'student_name': student.name,
             'course_title': course_title,
             'course_url': handler.get_base_href(handler),
             'unsubscribe_url': services.unsubscribe.get_unsubscribe_url(
-                handler, email)
+                handler, student.email)
         }
-        jinja_environment = handler.app_context.fs.get_jinja_environ(
-            [os.path.join(
-                appengine_config.BUNDLE_ROOT, 'views', 'notifications')],
-            autoescape=False)
-        template = jinja_environment.get_template('welcome.txt')
+
+        if course_settings.get('welcome_notifications_subject'):
+            subject = jinja2.Template(unicode(
+                course_settings['welcome_notifications_subject']
+            )).render(context)
+        else:
+            subject = 'Welcome to ' + course_title
+
+        if course_settings.get('welcome_notifications_body'):
+            body = jinja2.Template(unicode(
+                course_settings['welcome_notifications_body']
+            )).render(context)
+        else:
+            jinja_environment = handler.app_context.fs.get_jinja_environ(
+                [os.path.join(
+                    appengine_config.BUNDLE_ROOT, 'views', 'notifications')],
+                autoescape=False)
+            body = jinja_environment.get_template('welcome.txt').render(context)
+
         services.notifications.send_async(
-            email, sender, WELCOME_NOTIFICATION_INTENT,
-            template.render(context), subject, audit_trail=context,
+            student.email, sender, WELCOME_NOTIFICATION_INTENT,
+            body, subject, audit_trail=context,
         )
 
     @classmethod

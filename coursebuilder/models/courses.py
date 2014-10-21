@@ -2283,6 +2283,22 @@ class Course(object):
             'messages will fail. Note that you cannot use the user in session. '
             'See https://developers.google.com/appengine/docs/python/mail/'
             'emailmessagefields for details'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'course:welcome_notifications_subject',
+            'Welcome notifications subject', 'string', optional=True,
+            description='The subject line in welcome notifications emails for '
+            'this course. Use the string {{student_name}} to include the name '
+            'of the student in the subject line and {{course_title}} to '
+            'include the course title.'))
+        registration_opts.add_property(schema_fields.SchemaField(
+            'course:welcome_notifications_body',
+            'Welcome notifications body', 'text', optional=True,
+            description='The body of welcome emails to this course. Use the '
+            'string {{student_name}} to include the name of the student in the '
+            'message and use {{course_title}} to include the course title. To '
+            'avoid spamming, you should always include the string '
+            '{{unsubscribe_url}} in your message to include a link which the '
+            'recipient can use to unsubscribe from future mailings.'))
 
         # Course-level Google API configuration settings.
         if COURSES_CAN_USE_GOOGLE_APIS.value:

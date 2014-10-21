@@ -587,9 +587,11 @@ class StudentProfileDAOTestCase(actions.ExportTestBase):
             models.StudentProfileDAO._get_send_welcome_notifications(handler))
 
     def test_send_welcome_notification_enqueues_and_sends(self):
+        nick_name = 'No Body'
         email = 'user@example.com'
         sender = 'sender@example.com'
         title = 'title'
+        student = models.Student(key_name=email, name=nick_name)
         self.swap(services.notifications, 'enabled', lambda: True)
         self.swap(services.unsubscribe, 'enabled', lambda: True)
         handler = actions.MockHandler(
@@ -600,7 +602,7 @@ class StudentProfileDAOTestCase(actions.ExportTestBase):
                     'welcome_notifications_sender': sender,
                 },
             }))
-        models.StudentProfileDAO._send_welcome_notification(handler, email)
+        models.StudentProfileDAO._send_welcome_notification(handler, student)
         self.execute_all_deferred_tasks()
         notification = notifications.Notification.all().get()
         payload = notifications.Payload.all().get()
