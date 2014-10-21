@@ -1602,6 +1602,7 @@ def register_module():
 
     tabs.Registry.register('settings', 'course', 'Course', 'course')
     tabs.Registry.register('settings', 'homepage', 'Homepage', 'homepage')
+    # TODO(jorr): Remove the dependency on the invitations module in this line
     tabs.Registry.register('settings', 'registration', 'Registration',
                            'registration,invitation')
     tabs.Registry.register('settings', 'units', 'Units and Lessons',

@@ -19,6 +19,7 @@ env_variables:
     modules.courses.courses
     modules.data_source_providers.data_source_providers
     modules.dashboard.dashboard
+    modules.extra_tabs.extra_tabs
     modules.i18n_dashboard.i18n_dashboard
     modules.invitation.invitation
     modules.manual_progress.manual_progress

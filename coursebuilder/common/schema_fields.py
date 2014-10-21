@@ -484,20 +484,22 @@ class FieldRegistryIndex(object):
     def _inspect_registry(self, parent_names, registry):
         """Inspects registry and adds its items to the index."""
         for field in registry._properties:  # pylint: disable=protected-access
-            name = field.name
-            if isinstance(field, FieldArray):
-                self._inspect_registry(
-                    parent_names + [name, '[]'], field.item_type)
             if registry.is_complex_name(field.name):
                 complex_name = field.name
                 if complex_name in self._complex_name_to_field:
                     raise KeyError('Field already defined: %s.' % complex_name)
+                if isinstance(field, FieldArray):
+                    self._inspect_registry(
+                        [complex_name, '[]'], field.item_type)
                 self._complex_name_to_field[complex_name] = field
                 self._names_in_order.append(complex_name)
             else:
                 computed_name = ':'.join(parent_names + [field.name])
                 if computed_name in self._computed_name_to_field:
                     raise KeyError('Field already defined: %s.' % computed_name)
+                if isinstance(field, FieldArray):
+                    self._inspect_registry(
+                        parent_names + [field.name, '[]'], field.item_type)
                 self._computed_name_to_field[computed_name] = field
                 self._names_in_order.append(computed_name)
 

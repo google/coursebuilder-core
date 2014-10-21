@@ -6,3 +6,10 @@ div.cc-criterion div.inputEx-description {
 div.cc-criterion input {
   width: 30px;
 }
+div.settings-list-item div.pass-percent input[type="text"] {
+  width: 30px;
+}
+div.settings-list-item div.assessment-dropdown div.inputEx-description {
+  display: none;
+  margin-top: 10px;
+}

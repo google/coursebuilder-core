@@ -332,6 +332,7 @@ class HtmlHooks(object):
 class ApplicationHandler(webapp2.RequestHandler):
     """A handler that is aware of the application context."""
 
+    LEFT_LINKS = []
     RIGHT_LINKS = []
     EXTRA_GLOBAL_CSS_URLS = []
     EXTRA_GLOBAL_JS_URLS = []
@@ -541,6 +542,9 @@ class CourseHandler(ApplicationHandler):
             'is_read_write_course'] = self.app_context.fs.is_read_write()
         self.template_value['is_super_admin'] = Roles.is_super_admin()
         self.template_value[COURSE_BASE_KEY] = self.get_base_href(self)
+        self.template_value['left_links'] = []
+        for func in self.LEFT_LINKS:
+            self.template_value['left_links'].extend(func(self.app_context))
         self.template_value['right_links'] = (
             [('/admin', 'Admin')] if Roles.is_super_admin() else [])
         for func in self.RIGHT_LINKS:
@@ -697,14 +701,15 @@ class BaseHandler(CourseHandler):
         return True
 
     @appengine_config.timeandlog('BaseHandler.render')
-    def render(self, template_file):
+    def render(self, template_file, additional_dirs=None):
         """Renders a template."""
         prefs = models.StudentPreferencesDAO.load_or_create()
 
         courses.Course.set_current(self.get_course())
         models.MemcacheManager.begin_readonly()
         try:
-            template = self.get_template(template_file, prefs=prefs)
+            template = self.get_template(
+                template_file, additional_dirs=additional_dirs, prefs=prefs)
             self.response.out.write(template.render(self.template_value))
         finally:
             models.MemcacheManager.end_readonly()

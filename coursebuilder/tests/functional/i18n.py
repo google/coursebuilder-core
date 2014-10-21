@@ -197,6 +197,40 @@ class I18NCourseSettingsTests(actions.TestBase):
         self.assertEqual(
             'POWER SEARCHING WITH Google (old)', mapping.target_value)
 
+    def test_schema_with_array_element_type(self):
+        self.course_yaml['course']['extra_tabs'] = [
+        {
+            'label': 'FAQ',
+            'position': 'left',
+            'visibility': 'student',
+            'url': '',
+            'content': 'Frequently asked questions'},
+        {
+            'label': 'Resources',
+            'position': 'right',
+            'visibility': 'student',
+            'url': '',
+            'content': 'Links to resources'}]
+        binding = schema_fields.ValueToTypeBinding.bind_entity_to_schema(
+            self.course_yaml, self.schema)
+
+        expected_names = [
+            ('course:extra_tabs', None),
+            ('course:extra_tabs:[0]:label', 'FAQ'),
+            ('course:extra_tabs:[0]:position', 'left'),
+            ('course:extra_tabs:[0]:visibility', 'student'),
+            ('course:extra_tabs:[0]:url', ''),
+            ('course:extra_tabs:[0]:content', 'Frequently asked questions'),
+            ('course:extra_tabs:[1]:label', 'Resources'),
+            ('course:extra_tabs:[1]:position', 'right'),
+            ('course:extra_tabs:[1]:visibility', 'student'),
+            ('course:extra_tabs:[1]:url', ''),
+            ('course:extra_tabs:[1]:content', 'Links to resources')]
+        for name, value in expected_names:
+            self.assertIn(name, binding.name_to_field.keys())
+            if value is not None:
+                self.assertEquals(value, binding.name_to_value[name].value)
+
 
 class I18NMultipleChoiceQuestionTests(actions.TestBase):
     """Tests for multiple choice object transformations I18N relies upon."""

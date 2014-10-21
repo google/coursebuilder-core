@@ -208,7 +208,7 @@ def get_criteria_editor_schema(course):
             'and the minimum of peer reviews.',
         select_data=select_data,
         extra_schema_dict_values={
-            'className': 'assessment-dropdown'}))
+            'className': 'inputEx-Field assessment-dropdown'}))
 
     criterion_type.add_property(schema_fields.SchemaField(
         'pass_percent', 'Passing Percentage', 'string', optional=True,

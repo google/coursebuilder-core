@@ -40,6 +40,10 @@ MAX_GLOBAL_CACHE_SIZE_BYTES = 16 * 1024 * 1024
 # max size of each item; no point in storing images for example
 MAX_GLOBAL_CACHE_ITEM_SIZE_BYTES = 256 * 1024
 
+# The maximum size allowed in a file. The datastore limit of 1Mb with a fudge
+# factor shaved off.
+MAX_FILE_SIZE = 1024 * 1024 - 10 * 1024
+
 # Global memcache controls.
 CAN_USE_VFS_IN_PROCESS_CACHE = ConfigProperty(
     'gcb_can_use_vfs_in_process_cache', bool, (

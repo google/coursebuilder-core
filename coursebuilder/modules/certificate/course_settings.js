@@ -9,6 +9,9 @@ $(function() {
 
 
 function init() {
+  isPeerAssessmentTable = cb_global.schema.properties.course.properties
+      .certificate_criteria._inputex.is_peer_assessment_table;
+
   var criterionDivs = $(".settings-list-item");
 
   //Initial setup
@@ -30,9 +33,6 @@ function init() {
     onCustomCriteriaDropdownChanged($(this));
   });
   cb_global.onSaveClick = onCourseSettingsSave;
-
-  isPeerAssessmentTable = cb_global.schema.properties.course.properties
-      .certificate_criteria._inputex.is_peer_assessment_table;
 }
 
 /**

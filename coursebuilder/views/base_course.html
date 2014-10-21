@@ -48,6 +48,22 @@
             <a href="forum">{{ gettext('Forum') }}</a>
           </li>
         {% endif %}
+        {% if not transient_student %}
+          <li {% if navbar.progress %}class='active'{% endif %}>
+            {# I18N: Navbar tab. #}
+            <a href="student/home">{{ gettext('Progress') }}</a>
+          </li>
+        {% elif can_register %}
+          <li {% if navbar.registration %}class='active'{% endif %}>
+            {# I18N: Navbar tab. #}
+            <a href="register">{{ gettext('Registration') }}</a>
+          </li>
+        {% endif %}
+        {% for href, link in left_links %}
+          <li>
+            <a href="{{ href }}">{{ link }}</a>
+          </li>
+        {% endfor %}
 
         <!-- right-aligned links are in order -->
         {% for href, link in right_links %}
@@ -66,17 +82,6 @@
               <a href="/explorer/profile">{{ gettext('Profile') }}</a>
             </li>
           {% endif %}
-        {% endif %}
-        {% if not transient_student %}
-          <li {% if navbar.progress %}class='active'{% endif %}>
-            {# I18N: Navbar tab. #}
-            <a href="student/home">{{ gettext('Progress') }}</a>
-          </li>
-        {% elif can_register %}
-          <li {% if navbar.registration %}class='active'{% endif %}>
-            {# I18N: Navbar tab. #}
-            <a href="register">{{ gettext('Registration') }}</a>
-          </li>
         {% endif %}
         {{ html_hooks.insert('base:before_navbar_ends') }}
       </ul>
