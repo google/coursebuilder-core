@@ -10,6 +10,8 @@ describe("questionnaire library", function () {
     this.key = "This-form-id"
     cbShowMsg = jasmine.createSpy("cbShowMsg");
     cbShowMsgAutoHide = jasmine.createSpy("cbShowMsgAutoHide");
+    $.ajax = jasmine.createSpy("$.ajax");
+    gcbTagEventAudit = jasmine.createSpy("gcbTagEventAudit");
   });
 
   it("populates the form from JSON blob", function() {
@@ -53,5 +55,29 @@ describe("questionnaire library", function () {
     var data = ')]}\' {"status": 403, "message": "Permission denied"}';
     onAjaxPostFormData(data);
     expect(cbShowMsg).toHaveBeenCalled();
+  });
+
+  it("Send the right AJAX data", function() {
+    setFormData(this.payload.form_data || {}, this.key);
+    onSubmitButtonClick(this.key, "my-xsrf-token");
+
+    expect($.ajax).toHaveBeenCalled();
+    expect($.ajax.mostRecentCall.args.length).toBe(1);
+    var ajaxArg = $.ajax.mostRecentCall.args[0];
+    expect(ajaxArg.type).toBe("POST");
+    expect(ajaxArg.url).toBe("rest/modules/questionnaire");
+    expect(ajaxArg.dataType).toBe("text");
+    expect(ajaxArg.data.request).toBe(JSON.stringify({
+      xsrf_token: "my-xsrf-token",
+      key: this.key,
+      payload: {
+        form_data: this.payload.form_data
+      }
+    }));
+
+    expect(gcbTagEventAudit).toHaveBeenCalledWith({
+      key: this.key,
+      form_data: this.payload.form_data
+    }, "questionnaire");
   });
 });

@@ -1,18 +1,15 @@
-// This object holds the student form response data
-var form_data = {};
-
 function parseJson(s) {
   var XSSI_PREFIX = ")]}'";
   return JSON.parse(s.replace(XSSI_PREFIX, ""));
 }
 
 function onSubmitButtonClick(key, xsrfToken) {
-
+  var formData = $("#" + key).serializeArray();
   var request = JSON.stringify({
     "xsrf_token": xsrfToken,
     "key": key,
     "payload": {
-      "form_data": $("#" + key).serializeArray()
+      "form_data": formData
     }
   });
 
@@ -25,7 +22,7 @@ function onSubmitButtonClick(key, xsrfToken) {
       onAjaxPostFormData(data);
     }
   });
-  gcbTagEventAudit({key: key, form_data: form_data}, "questionnaire");
+  gcbTagEventAudit({key: key, form_data: formData}, "questionnaire");
 }
 
 function onAjaxPostFormData(data) {
