@@ -88,11 +88,11 @@ class UnsubscribeHandlerTests(BaseUnsubscribeTests):
 
     def setUp(self):
         super(UnsubscribeHandlerTests, self).setUp()
-        self.slug = 'a'
+        self.base = '/a'
         self.namespace = 'ns_a'
-        sites.setup_courses('course:/%s::%s' % (self.slug, self.namespace))
+        sites.setup_courses('course:/a::ns_a')
         self.app_context = actions.MockAppContext(
-            namespace=self.namespace, slug=self.slug)
+            namespace=self.namespace, slug='a')
         self.handler = actions.MockHandler(
             base_href='http://localhost/',
             app_context=self.app_context)
@@ -139,7 +139,40 @@ class UnsubscribeHandlerTests(BaseUnsubscribeTests):
 
     def test_bad_signature_rejected_with_401(self):
         response = self.get(
-            'http://localhost/' + self.slug + '/modules/unsubscribe'
+            'modules/unsubscribe'
             '?email=test%40example.com&s=bad_signature',
             expect_errors=True)
         self.assertEquals(401, response.status_code)
+
+    def test_unsubscribe_request_with_no_email_prompts_for_login(self):
+        actions.logout()
+        response = self.get('modules/unsubscribe')
+        self.assertEquals(302, response.status_int)
+        self.assertEquals(
+            'https://www.google.com/accounts/Login'
+            '?continue=http%3A//localhost/a/modules/unsubscribe',
+            response.headers['Location'])
+
+    def test_unsubscribe_with_no_email_and_in_session(self):
+        response = self.get('modules/unsubscribe')
+
+        # Confirm the user has unsubscribed
+        self.assertUnsubscribed(self.email, self.namespace)
+
+        # Confirm the page content of the response
+        root = self.parse_html_string(response.body).find(
+            './/*[@id="unsubscribe-message"]')
+
+        confirm_elt = root.find('./p[1]')
+        self.assertTrue('has been unsubscribed' in confirm_elt.text)
+
+        email_elt = root.find('.//div[1]')
+        self.assertEquals(self.email, email_elt.text.strip())
+
+        resubscribe_url = root.find('.//div[2]/button').attrib[
+            'data-resubscribe-url']
+
+        response = self.get(resubscribe_url)
+
+        # Confirm the user has now resubscribed
+        self.assertSubscribed(self.email, self.namespace)

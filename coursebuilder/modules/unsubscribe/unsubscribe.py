@@ -27,6 +27,7 @@ from models import custom_modules
 from models import entities
 from models import services
 
+from google.appengine.api import users
 from google.appengine.ext import db
 
 
@@ -116,13 +117,25 @@ class UnsubscribeHandler(utils.BaseHandler):
 
     def get(self):
         email = self.request.get('email')
-        signature = self.request.get('s')
+        if email:
+            signature = self.request.get('s')
+            if signature != _get_signature(self, email):
+                self.error(401)
+                return
+        else:
+            # If no email and signature is provided, unsubscribe will prompt
+            # for login. NOTE: This is only intended to support access by users
+            # who are known to have already registered with Course Builder. In
+            # general subscription management should use the encoded email and
+            # signature as this places the minimum burden on the user when
+            # unsubscribing (ie no need for Google account, no need for login).
+            user = self.get_user()
+            if user is None:
+                self.redirect(users.create_login_url(self.request.uri))
+                return
+            email = user.email()
+
         action = self.request.get('action')
-
-        if signature != _get_signature(self, email):
-            self.error(401)
-            return
-
         if action == self.RESUBSCRIBE_ACTION:
             set_subscribed(email, True)
             template_file = 'resubscribe.html'
@@ -180,17 +193,17 @@ def register_module():
 
     class Service(services.Unsubscribe):
 
-      def enabled(self):
-        return custom_module.enabled
+        def enabled(self):
+            return custom_module.enabled
 
-      def get_unsubscribe_url(self, handler, email):
-        return get_unsubscribe_url(handler, email)
+        def get_unsubscribe_url(self, handler, email):
+            return get_unsubscribe_url(handler, email)
 
-      def  has_unsubscribed(self, email):
-        return has_unsubscribed(email)
+        def  has_unsubscribed(self, email):
+            return has_unsubscribed(email)
 
-      def set_subscribed(self, email, is_subscribed):
-        return set_subscribed(email, is_subscribed)
+        def set_subscribed(self, email, is_subscribed):
+            return set_subscribed(email, is_subscribed)
 
     services.unsubscribe = Service()
     return custom_module
