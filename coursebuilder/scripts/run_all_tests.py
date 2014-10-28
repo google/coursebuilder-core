@@ -203,6 +203,15 @@ ALL_TEST_CLASSES = {
     'tests.unit.test_classes.InvokeExistingUnitTest': 5,
     'tests.unit.test_classes.ReviewModuleDomainTests': 1,
     'tests.unit.test_classes.SuiteTestCaseTest': 3,
+    'tests.unit.gift_parser.SampleQuestionsTest': 1,
+    'tests.unit.gift_parser.TestEssayAndNumericalQuestion': 2,
+    'tests.unit.gift_parser.TestMatchQuestion': 2,
+    'tests.unit.gift_parser.TestMissingWordQuestion': 2,
+    'tests.unit.gift_parser.TestSaQuestion': 3,
+    'tests.unit.gift_parser.TestTrueFalseQuestion': 2,
+    'tests.unit.gift_parser.TestMcmaQuestion': 3,
+    'tests.unit.gift_parser.TestHead': 2,
+    'tests.unit.gift_parser.TestMcQuestion': 5
 }
 EXPENSIVE_TESTS = ['tests.integration.test_classes']
 
