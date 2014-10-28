@@ -27,6 +27,10 @@ from models import courses
 from models import custom_modules
 from models import models
 from modules.announcements import announcements
+from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDAO
+from modules.i18n_dashboard.i18n_dashboard import ResourceBundleDTO
+from modules.i18n_dashboard.i18n_dashboard import ResourceBundleKey
+from modules.i18n_dashboard.i18n_dashboard import ResourceKey
 from modules.search import search
 from tests.unit import modules_search as search_unit_test
 
@@ -390,3 +394,81 @@ class SearchTest(search_unit_test.SearchTestBase):
         self.assertNotIn('Absolute', response.body)
         response = self.get('/test/search?query=lemon')  # Don't see video refs
         self.assertNotIn('v=glados', response.body)
+
+    def test_localized_search(self):
+        def _text(elt):
+            return ''.join(elt.itertext())
+
+        dogs_page = """
+          <html>
+            <body>
+              A page about dogs.
+            </body>
+          </html>"""
+        dogs_link = 'http://dogs.null/'
+        self.pages[dogs_link + '$'] = (dogs_page, 'text/html')
+
+        dogs_page_fr = """
+          <html>
+            <body>
+              A page about French dogs.
+            </body>
+          </html>"""
+        dogs_link_fr = 'http://dogs_fr.null/'
+        self.pages[dogs_link_fr + '$'] = (dogs_page_fr, 'text/html')
+
+        self.base = '/test'
+        context = actions.simple_add_course(
+            'test', 'admin@google.com', 'Test Course')
+        course = courses.Course(None, context)
+        actions.login('admin@google.com')
+        actions.register(self, 'Some Admin')
+
+        unit = course.add_unit()
+        unit.now_available = True
+        lesson = course.add_lesson(unit)
+        lesson.objectives = 'A lesson about <a href="%s">dogs</a>' % dogs_link
+        lesson.now_available = True
+        course.save()
+
+        lesson_bundle = {
+            'objectives': {
+                'type': 'html',
+                'source_value': (
+                    'A lesson about <a href="%s">dogs</a>' % dogs_link),
+                'data': [{
+                    'source_value': (
+                        'A lesson about <a#1 href="%s">dogs</a#1>' % dogs_link),
+                    'target_value': (
+                        'A lesson about French <a#1 href="%s">'
+                        'dogs</a#1>' % dogs_link_fr)}]
+            }
+        }
+        lesson_key_fr = ResourceBundleKey(
+            ResourceKey.LESSON_TYPE, lesson.lesson_id, 'fr')
+        with common_utils.Namespace('ns_test'):
+            ResourceBundleDAO.save(
+                ResourceBundleDTO(str(lesson_key_fr), lesson_bundle))
+
+        extra_locales = [{'locale': 'fr', 'availability': 'available'}]
+        with actions.OverriddenEnvironment({'extra_locales': extra_locales}):
+
+            self.index_test_course()
+
+            dom = self.parse_html_string(self.get('search?query=dogs').body)
+            snippets = dom.findall('.//div[@class="gcb-search-result-snippet"]')
+            self.assertEquals(2, len(snippets))  # Expect no French hits
+            self.assertIn('page about dogs', _text(snippets[0]))
+            self.assertIn('lesson about dogs', _text(snippets[1]))
+
+            # Switch locale to 'fr'
+            with common_utils.Namespace('ns_test'):
+                prefs = models.StudentPreferencesDAO.load_or_create()
+                prefs.locale = 'fr'
+                models.StudentPreferencesDAO.save(prefs)
+
+            dom = self.parse_html_string(self.get('search?query=dogs').body)
+            snippets = dom.findall('.//div[@class="gcb-search-result-snippet"]')
+            self.assertEquals(2, len(snippets))  # Expect no Engish hits
+            self.assertIn('page about French dogs', _text(snippets[0]))
+            self.assertIn('lesson about French dogs', _text(snippets[1]))

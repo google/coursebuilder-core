@@ -64,7 +64,7 @@ SEARCH_FAILURES = counters.PerfCounter(
     'The number of search failure messages returned across all student '
     'queries.')
 
-INDEX_NAME = 'gcb_search_index'
+INDEX_NAME = 'gcb_search_index_loc_%s'
 RESULTS_LIMIT = 10
 GCB_SEARCH_FOLDER_NAME = os.path.normpath('/modules/search/')
 
@@ -79,9 +79,9 @@ class ModuleDisabledException(Exception):
     pass
 
 
-def get_index(course):
-    return search.Index(name=INDEX_NAME,
-                        namespace=course.app_context.get_namespace_name())
+def get_index(namespace, locale):
+    assert locale, 'Must have a non-null locale'
+    return search.Index(name=INDEX_NAME % locale, namespace=namespace)
 
 
 def index_all_docs(course, incremental):
@@ -107,7 +107,9 @@ def index_all_docs(course, incremental):
         raise ModuleDisabledException('The search module is disabled.')
 
     start_time = time.time()
-    index = get_index(course)
+    index = get_index(
+        course.app_context.get_namespace_name(),
+        course.app_context.get_current_locale())
     timestamps, doc_types = (_get_index_metadata(index) if incremental
                              else ({}, {}))
     for doc in resources.generate_all_documents(course, timestamps):
@@ -129,22 +131,21 @@ def index_all_docs(course, incremental):
                     logging.error('Failed to index doc_id: %s', doc.doc_id)
                     break
 
-    total_time = '%.2f' % (time.time() - start_time)
     indexed_doc_types = collections.Counter()
     for type_name in doc_types.values():
         indexed_doc_types[type_name] += 1
     return {'num_indexed_docs': len(timestamps),
             'doc_types': indexed_doc_types,
-            'indexing_time_secs': total_time}
+            'indexing_time_secs': time.time() - start_time}
 
 
-def clear_index(course):
+def clear_index(namespace, locale):
     """Delete all docs in the index for a given models.Course object."""
 
     if not custom_module.enabled:
         raise ModuleDisabledException('The search module is disabled.')
 
-    index = get_index(course)
+    index = get_index(namespace, locale)
     doc_ids = [document.doc_id for document in index.get_range(ids_only=True)]
     total_docs = len(doc_ids)
     while doc_ids:
@@ -194,7 +195,9 @@ def fetch(course, query_string, offset=0, limit=RESULTS_LIMIT):
     if not custom_module.enabled:
         raise ModuleDisabledException('The search module is disabled.')
 
-    index = get_index(course)
+    index = get_index(
+        course.app_context.get_namespace_name(),
+        course.app_context.get_current_locale())
 
     try:
         # TODO(emichael): Don't compute these for every query
@@ -492,8 +495,26 @@ class IndexCourse(jobs.DurableJob):
         logging.info('Running indexing job for namespace %s. Incremental: %s',
                      namespace_manager.get_namespace(), self.incremental)
         app_context = sites.get_app_context_for_namespace(namespace)
-        course = courses.Course(None, app_context=app_context)
-        return index_all_docs(course, self.incremental)
+
+        # Make a request URL to make sites.get_course_for_current_request work
+        sites.set_path_info(app_context.slug)
+
+        indexing_stats = {
+            'num_indexed_docs': 0,
+            'doc_types': collections.Counter(),
+            'indexing_time_secs': 0,
+            'locales': []
+        }
+        for locale in app_context.get_allowed_locales():
+            app_context.set_current_locale(locale)
+            course = courses.Course(None, app_context=app_context)
+            stats = index_all_docs(course, self.incremental)
+            indexing_stats['num_indexed_docs'] += stats['num_indexed_docs']
+            indexing_stats['doc_types'] += stats['doc_types']
+            indexing_stats['indexing_time_secs'] += stats['indexing_time_secs']
+            indexing_stats['locales'].append(locale)
+
+        return indexing_stats
 
 
 class ClearIndex(jobs.DurableJob):
@@ -508,8 +529,17 @@ class ClearIndex(jobs.DurableJob):
         namespace = namespace_manager.get_namespace()
         logging.info('Running clearing job for namespace %s.', namespace)
         app_context = sites.get_app_context_for_namespace(namespace)
-        course = courses.Course(None, app_context=app_context)
-        return clear_index(course)
+
+        clear_stats = {
+            'deleted_docs': 0,
+            'locales': []
+        }
+        for locale in app_context.get_allowed_locales():
+            stats = clear_index(namespace, locale)
+            clear_stats['deleted_docs'] += stats['deleted_docs']
+            clear_stats['locales'].append(locale)
+
+        return clear_stats
 
 
 # Module registration

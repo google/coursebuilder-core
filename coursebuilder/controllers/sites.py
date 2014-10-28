@@ -798,7 +798,8 @@ class ApplicationContext(object):
         return [default_locale] + [
             loc['locale'] for loc in extra_locales
             if loc['locale'] != default_locale and (
-                loc['availability'] == 'available'
+                loc[Course.SCHEMA_LOCALE_AVAILABILITY] == (
+                    Course.SCHEMA_LOCALE_AVAILABILITY_AVAILABLE)
                 or self.can_pick_all_locales())]
 
     def get_all_locales(self):

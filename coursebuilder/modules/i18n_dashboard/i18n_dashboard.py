@@ -1726,6 +1726,7 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
             xcontent.DEFAULT_OPAQUE_DECOMPOSABLE_TAG_NAMES)
         recomposable_attributes_map = dict(
             xcontent.DEFAULT_RECOMPOSABLE_ATTRIBUTES_MAP)
+        recomposable_attributes_map['HREF'] = {'A'}
 
         for tag_name, tag_cls in tags.Registry.get_all_tags().items():
             tag_schema = None
@@ -1818,9 +1819,13 @@ class I18nReverseCaseHandler(BaseDashboardExtension):
     def _add_reverse_case_locale(course):
         environ = course.get_environ(course.app_context)
         extra_locales = environ.setdefault('extra_locales', [])
-        if not any(l['locale'] == PSEUDO_LANGUAGE for l in extra_locales):
-            extra_locales.append({'locale': PSEUDO_LANGUAGE,
-                                  'availability': 'unavailable'})
+        if not any(
+                l[courses.Course.SCHEMA_LOCALE_LOCALE] == PSEUDO_LANGUAGE
+                for l in extra_locales):
+            extra_locales.append({
+                courses.Course.SCHEMA_LOCALE_LOCALE: PSEUDO_LANGUAGE,
+                courses.Course.SCHEMA_LOCALE_AVAILABILITY: (
+                    courses.Course.SCHEMA_LOCALE_AVAILABILITY_UNAVAILABLE)})
             course.save_settings(environ)
 
     @staticmethod

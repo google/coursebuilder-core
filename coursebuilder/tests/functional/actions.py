@@ -250,6 +250,27 @@ class TestBase(suite.AppEngineTestBase):
             namespaceHTMLElements=False)
         return parser.parse(html_str)
 
+    def execute_all_deferred_tasks(self, queue_name='default',
+                                   iteration_limit=None):
+        """Executes all pending deferred tasks."""
+
+        # Outer loop here because some tasks (esp. map/reduce) will enqueue
+        # more tasks as part of their operation.
+        while iteration_limit is None or iteration_limit > 0:
+            tasks = self.taskq.GetTasks(queue_name)
+            if not tasks:
+                break
+            for task in tasks:
+                old_namespace = namespace_manager.get_namespace()
+                try:
+                    self.task_dispatcher.dispatch_task(task)
+                finally:
+                    if sites.has_path_info():
+                        sites.unset_path_info()
+                    namespace_manager.set_namespace(old_namespace)
+            if iteration_limit:
+                iteration_limit -= 1
+
     def get(self, url, previous_response=None, **kwargs):
         url = self.canonicalize(url, response=previous_response)
         logging.info('HTTP Get: %s', url)

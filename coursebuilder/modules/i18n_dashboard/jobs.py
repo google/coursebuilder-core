@@ -260,9 +260,13 @@ class UploadTranslations(_BaseJob):
         environ = course.get_environ(app_context)
         extra_locales = environ.setdefault('extra_locales', [])
         for locale in translations:
-            if not any(l['locale'] == locale for l in extra_locales):
-                extra_locales.append({'locale': locale,
-                                      'availability': 'unavailable'})
+            if not any(
+                    l[courses.Course.SCHEMA_LOCALE_LOCALE] == locale
+                    for l in extra_locales):
+                extra_locales.append({
+                    courses.Course.SCHEMA_LOCALE_LOCALE: locale,
+                    courses.Course.SCHEMA_LOCALE_AVAILABILITY: (
+                        courses.Course.SCHEMA_LOCALE_AVAILABILITY_UNAVAILABLE)})
         course.save_settings(environ)
 
         # Make updates to the translations

@@ -34,6 +34,7 @@ import jinja2
 
 import appengine_config
 from common import jinja_utils
+from models import models
 from modules.announcements import announcements
 
 from google.appengine.api import search
@@ -170,6 +171,17 @@ def _url_allows_robots(url):
         return rp.can_fetch('*', url)
 
 
+def get_locale_filtered_announcement_list(course):
+    # TODO(jorr): Restrict search in announcements by all tracking labels,
+    # not just locale.
+    announcement_list = (
+        announcements.AnnouncementEntity.get_announcements())
+    # pylint: disable-msg=protected-access
+    return models.LabelDAO._apply_locale_labels_to_locale(
+        course.app_context.get_current_locale(), announcement_list)
+    # pylint: enable-msg=protected-access
+
+
 class Resource(object):
     """Abstract superclass for a resource."""
 
@@ -304,14 +316,14 @@ class LessonResource(Resource):
 
         self.unit_id = lesson.unit_id
         self.lesson_id = lesson.lesson_id
-        self.title = lesson.title
+        self.title = unicode(lesson.title)
         if lesson.notes:
             self.notes = urlparse.urljoin(PROTOCOL_PREFIX, lesson.notes)
         else:
             self.notes = ''
         if lesson.objectives:
             parser = ResourceHTMLParser(PROTOCOL_PREFIX)
-            parser.feed(lesson.objectives)
+            parser.feed(unicode(lesson.objectives))
             self.content = parser.get_content()
             self.links = parser.get_links()
         else:
@@ -489,7 +501,7 @@ class YouTubeFragmentResource(Resource):
                     lesson.unit_id, lesson.video, lesson_url):
                     yield fragment
 
-            match = re.search(youtube_ct_regex, lesson.objectives)
+            match = re.search(youtube_ct_regex, unicode(lesson.objectives))
             if match:
                 for video_id in match.groups():
                     if not cls._indexed_within_num_days(
@@ -499,7 +511,7 @@ class YouTubeFragmentResource(Resource):
                             yield fragment
 
         if announcements.custom_module.enabled:
-            for entity in announcements.AnnouncementEntity.get_announcements():
+            for entity in get_locale_filtered_announcement_list(course):
                 if entity.is_draft:
                     continue
                 announcement_url = 'announcements#%s' % entity.key()
@@ -663,7 +675,7 @@ class AnnouncementResource(Resource):
     @classmethod
     def generate_all(cls, course, timestamps):
         if announcements.custom_module.enabled:
-            for entity in announcements.AnnouncementEntity.get_announcements():
+            for entity in get_locale_filtered_announcement_list(course):
                 doc_id = cls._get_doc_id(entity.key())
                 if not(entity.is_draft or cls._indexed_within_num_days(
                         timestamps, doc_id, cls.FRESHNESS_THRESHOLD_DAYS)):

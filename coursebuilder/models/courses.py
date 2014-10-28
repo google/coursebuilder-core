@@ -2052,6 +2052,11 @@ class Course(object):
     SCHEMA_SECTION_ASSESSMENT = 'assessment'
     SCHEMA_SECTION_I18N = 'i18n'
 
+    SCHEMA_LOCALE_AVAILABILITY = 'availability'
+    SCHEMA_LOCALE_AVAILABILITY_AVAILABLE = 'available'
+    SCHEMA_LOCALE_AVAILABILITY_UNAVAILABLE = 'unvailable'
+    SCHEMA_LOCALE_LOCALE = 'locale'
+
     # here we keep current course available to thread
     INSTANCE = threading.local()
 
@@ -2377,10 +2382,13 @@ class Course(object):
             'locale', 'Locale', 'string', optional=True, i18n=False,
             select_data=locale_data_for_select))
         select_data = [
-            ('unavailable', 'Unavailable'), ('available', 'Available')]
+            (
+                cls.SCHEMA_LOCALE_AVAILABILITY_UNAVAILABLE, 'Unavailable'),
+            (
+                cls.SCHEMA_LOCALE_AVAILABILITY_AVAILABLE, 'Available')]
         locale_type.add_property(schema_fields.SchemaField(
-            'availability', 'Availability', 'boolean', optional=True,
-            select_data=select_data))
+            cls.SCHEMA_LOCALE_AVAILABILITY, 'Availability',
+            'boolean', optional=True, select_data=select_data))
         i18n_opts.add_property(schema_fields.FieldArray(
             'extra_locales', 'Extra locales',
             item_type=locale_type,
