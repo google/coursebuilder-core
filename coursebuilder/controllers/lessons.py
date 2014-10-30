@@ -332,6 +332,11 @@ class CourseHandler(BaseHandler):
 class UnitHandler(BaseHandler):
     """Handler for generating unit page."""
 
+    # A list of callback functions which modules can use to add extra content
+    # panels at the bottom of the page. Each function receives the app_context
+    # as its single arg, and should return a string or None.
+    EXTRA_CONTENT = []
+
     class UnitLeftNavElements(object):
 
         def __init__(self, course, unit):
@@ -414,6 +419,11 @@ class UnitHandler(BaseHandler):
                 self._show_all_contents(student, unit)
             else:
                 self._show_single_element(student, unit, lesson, assessment)
+
+            for extra_content_hook in self.EXTRA_CONTENT:
+                extra_content = extra_content_hook(self.app_context)
+                if extra_content is not None:
+                    self.template_value['display_content'].append(extra_content)
 
             self._set_gcb_html_element_class()
         finally:

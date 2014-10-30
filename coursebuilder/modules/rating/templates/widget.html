@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="/modules/rating/resources/css/widget.css">
+<div class="gcb-ratings-widget" data-xsrf-token="{{ xsrf_token }}">
+  <h4>Rate this lesson:</h4>
+  <div class="gcb-ratings-container">
+    <ul class="gcb-ratings">
+      <li><button data-value="0">{{ gettext('Not at all useful') }}</button></li>
+      <li><button data-value="1">{{ gettext('Not very useful') }}</button></li>
+      <li><button data-value="2">{{ gettext('Somewhat useful') }}</button></li>
+      <li><button data-value="3">{{ gettext('Very useful') }}</button></li>
+      <li><button data-value="4">{{ gettext('Extremely useful') }}</button></li>
+    </ul>
+  </div>
+  <div class="gcb-extra-feedback hidden">
+    <textarea placeholder="Additional comments..."></textarea>
+    <button>Submit</button>
+  </div>
+</div>
+<script src="/modules/rating/resources/js/widget.js"></script>

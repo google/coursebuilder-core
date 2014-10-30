@@ -1091,7 +1091,7 @@ class EventEntity(BaseEntity):
     def record(cls, source, user, data):
         """Records new event into a datastore."""
 
-        event = EventEntity()
+        event = cls()
         event.source = source
         event.user_id = user.user_id()
         event.data = data

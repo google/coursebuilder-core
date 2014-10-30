@@ -28,6 +28,7 @@ env_variables:
     modules.notifications.notifications
     modules.oeditor.oeditor
     modules.questionnaire.questionnaire
+    modules.rating.rating
     modules.review.review
     modules.search.search
     modules.unsubscribe.unsubscribe
