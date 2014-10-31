@@ -2615,6 +2615,12 @@ class LazyTranslator(object):
         if self.target_value is not None:
             return self.target_value
 
+        # Empty source strings will not be translated because they cannot be
+        # edited in the TranslationConsole. If a translation for an empty string
+        # is really required, the source string should be set to a I18N comment.
+        if self.source_value is None or not self.source_value.strip():
+            return ''
+
         if self.translation_dict['type'] == TYPE_HTML:
             self.target_value = self._translate_html()
         else:

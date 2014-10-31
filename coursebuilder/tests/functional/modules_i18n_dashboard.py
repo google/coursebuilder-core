@@ -1664,8 +1664,9 @@ class CourseContentTranslationTests(actions.TestBase):
         ResourceBundleDAO.save(
             ResourceBundleDTO(str(key_el), qu_bundle))
 
-        page_html = self.get('assessment?name=%s' % assessment.unit_id).body
-        self.assertIn('NONE', page_html)
+        dom = self.parse_html_string(
+            self.get('assessment?name=%s' % assessment.unit_id).body)
+        self.assertIsNone(dom.find('.//div[@class="qt-question"]').text)
 
     def test_question_groups_are_translated(self):
         # Create a question group with one question
