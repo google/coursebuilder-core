@@ -1,18 +1,49 @@
 <link rel="stylesheet" href="/modules/rating/resources/css/widget.css">
 <div class="gcb-ratings-widget" data-xsrf-token="{{ xsrf_token }}">
-  <h4>Rate this lesson:</h4>
+  <h4>
+    {# I18N: Header on 5-point scale for student feedback on the lesson. #}
+    {{ gettext('Rate this lesson:') }}
+  </h4>
   <div class="gcb-ratings-container">
     <ul class="gcb-ratings">
-      <li><button data-value="0">{{ gettext('Not at all useful') }}</button></li>
-      <li><button data-value="1">{{ gettext('Not very useful') }}</button></li>
-      <li><button data-value="2">{{ gettext('Somewhat useful') }}</button></li>
-      <li><button data-value="3">{{ gettext('Very useful') }}</button></li>
-      <li><button data-value="4">{{ gettext('Extremely useful') }}</button></li>
+      <li>
+        <button data-value="0">
+          {# I18N: Lowest rating on a 5-point scale. #}
+          {{ gettext('Not at all useful') }}
+        </button>
+      </li>
+      <li>
+        <button data-value="1">
+          {# I18N: Second-lowest rating on a 5-point scale. #}
+          {{ gettext('Not very useful') }}
+        </button>
+      </li>
+      <li>
+        <button data-value="2">
+          {# I18N: Middle rating on a 5-point scale. #}
+          {{ gettext('Somewhat useful') }}
+        </button>
+      </li>
+      <li>
+        <button data-value="3">
+          {# I18N: Second-highest rating on a 5-point scale. #}
+          {{ gettext('Very useful') }}
+        </button>
+      </li>
+      <li>
+        <button data-value="4">
+          {# I18N: Highest rating on a 5-point scale. #}
+          {{ gettext('Extremely useful') }}
+        </button>
+      </li>
     </ul>
   </div>
   <div class="gcb-extra-feedback hidden">
-    <textarea placeholder="Additional comments..."></textarea>
-    <button>Submit</button>
+    <textarea placeholder="{# I18N: Indicate location to type additional comments #}{{ gettext('Additional comments...') }}"></textarea>
+    <button>
+      {# I18N: Label on a button to submit feedback. #}
+      {{ gettext('Submit') }}
+    </button>
   </div>
 </div>
 <script src="/modules/rating/resources/js/widget.js"></script>

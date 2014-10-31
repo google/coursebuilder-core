@@ -41,8 +41,9 @@ XSRF_TOKEN_NAME = 'rating'
 # The "source" field to identify events recorded by this module
 EVENT_SRC = 'rating-event'
 
-# Messages shown to the user. Must be internationalized.
+# I18N: Message displayed when user submits written comments
 MSG_THANK_YOU = gettext.gettext('Thank you for your feedback.')
+# I18N: Message displayed when non-logged inuser tries to access system
 MSG_ACCESS_DENIED = gettext.gettext('Access denied.')
 
 TEMPLATES_DIR = os.path.join(
