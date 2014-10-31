@@ -2705,7 +2705,7 @@ class LazyTranslator(object):
             locale_to_permission(self._app_context.get_current_locale())
         ):
             template_env = self._app_context.get_template_environ(
-                self._app_context.default_locale, [TEMPLATES_DIR])
+                self._app_context.get_current_locale(), [TEMPLATES_DIR])
             template = template_env.get_template('lazy_loader_error.html')
             return template.render({
                 'error_message': msg,
