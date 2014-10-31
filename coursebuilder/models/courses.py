@@ -2337,7 +2337,7 @@ class Course(object):
             description='Omit the unit number when displaying unit titles.'))
 
         def must_contain_one_string_substitution(value, errors):
-            if value is not None and len(re.findall(r'%s', value)) != 1:
+            if value and len(re.findall(r'%s', value)) != 1:
                 errors.append(
                     'Value must contain exactly one string substitution '
                     'marker "%s".')
