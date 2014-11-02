@@ -3,7 +3,7 @@ function parseJson(s) {
   return JSON.parse(s.replace(XSSI_PREFIX, ""));
 }
 
-function onSubmitButtonClick(key, xsrfToken) {
+function onSubmitButtonClick(key, xsrfToken, button) {
   var formData = $("#" + key).serializeArray();
   var request = JSON.stringify({
     "xsrf_token": xsrfToken,
@@ -19,16 +19,17 @@ function onSubmitButtonClick(key, xsrfToken) {
     data: {"request": request},
     dataType: "text",
     success: function(data) {
-      onAjaxPostFormData(data);
+      onAjaxPostFormData(data, button);
     }
   });
   gcbTagEventAudit({key: key, form_data: formData}, "questionnaire");
 }
 
-function onAjaxPostFormData(data) {
+function onAjaxPostFormData(data, button) {
   var data = parseJson(data);
   if (data.status == 200) {
     cbShowMsgAutoHide(data.message);
+    $(button).parent().find("div.post-message").removeClass("hidden");
   } else {
     cbShowMsg(data.message);
   }
@@ -49,7 +50,7 @@ function ajaxGetFormData(xsrfToken, key) {
 function onAjaxGetFormData(data, key) {
   var data = parseJson(data);
   if (data.status == 200) {
-    var payload = JSON.parse(data.payload);
+    var payload = JSON.parse(data.payload || "{}");
     setFormData(payload.form_data || {}, key);
   }
   else {
@@ -92,21 +93,32 @@ function setFormData(data, key) {
   }
 }
 
+function disableForm(button, key) {
+  $("#" + key).find("input,select,textarea").prop("disabled", true);
+  $(button).prop("disabled", true);
+}
+
 function init() {
   $("div.gcb-questionnaire > button.questionnaire-button").each(function(i, button) {
     button = $(button);
     var xsrfToken = button.data("xsrf-token");
     var key = button.data("form-id");
-    var enabled = button.data("enabled");
+    var disabled = button.data("disabled");
+    var registered = button.data("registered");
 
-    if (enabled == "enabled") {
-      button.click(function() {
-        onSubmitButtonClick(key, xsrfToken);
-        return false;
-      });
-      ajaxGetFormData(xsrfToken, key);
-    } else {
+    if (! registered) {
       cbShowMsg("Only registered students can submit answers.");
+      disableForm(button, key);
+    } else {
+      ajaxGetFormData(xsrfToken, key);
+      if (disabled) {
+        disableForm(button, key);
+      } else {
+        button.click(function() {
+          onSubmitButtonClick(key, xsrfToken, button);
+          return false;
+        });
+      }
     }
   });
 }

@@ -90,20 +90,20 @@ class QuestionnaireTagTests(BaseQuestionnaireTests):
     def test_submit_answers_button_out_of_session(self):
         button = self.get_button()
         self.assertEquals(UNIQUE_FORM_ID, button.attrib['data-form-id'])
-        self.assertEquals('disabled', button.attrib['disabled'])
+        self.assertEquals('false', button.attrib['data-registered'])
 
     def test_submit_answers_button_in_session_no_student(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
         button = self.get_button()
         self.assertEquals(UNIQUE_FORM_ID, button.attrib['data-form-id'])
-        self.assertEquals('disabled', button.attrib['disabled'])
+        self.assertEquals('false', button.attrib['data-registered'])
 
     def test_submit_answers_button_student_in_session(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
         actions.register(self, STUDENT_NAME)
         button = self.get_button()
         self.assertEquals(UNIQUE_FORM_ID, button.attrib['data-form-id'])
-        self.assertIsNone(button.attrib.get('disabled'))
+        self.assertEquals('true', button.attrib.get('data-registered'))
 
 
 class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):

@@ -76,17 +76,21 @@ class QuestionnaireTag(tags.ContextAwareTag):
             QUESTIONNAIRE_XSRF_TOKEN_NAME)
         form_id = node.attrib.get('form-id')
         button_label = node.attrib.get('button-label')
+        disabled = (node.attrib.get('disabled') == 'true')
+        post_message = node.text
 
         user = context.handler.get_user()
-        enabled = False
+        registered = False
         if user and models.Student.get_enrolled_student_by_email(user.email()):
-            enabled = True
+            registered = True
 
         template_vals = {
             'xsrf_token': xsrf_token,
             'form_id': form_id,
             'button_label': button_label,
-            'enabled': enabled,
+            'disabled': disabled,
+            'registered': registered,
+            'post_message': post_message,
         }
         template = jinja_utils.get_template(
             'questionnaire.html', [TEMPLATES_DIR])
@@ -107,6 +111,19 @@ class QuestionnaireTag(tags.ContextAwareTag):
                 'button-label', 'Button Label', 'string', optional=True,
                 i18n=True, description=(
                     'Text to be shown on submit button.')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'disabled', 'Disabled', 'boolean', optional=True,
+                description=(
+                    'Use this option to render the form with data but leave '
+                    'all the fields disabled. This is used to display the '
+                    'results of a questionnaire on a different page.')))
+        reg.add_property(
+            schema_fields.SchemaField(
+                'post-message', 'Post Message', 'text', optional=True,
+                i18n=True, description=(
+                    'Text shown to the student after they submit their '
+                    'responses.')))
         return reg
 
     def rollup_header_footer(self, context):

@@ -2,11 +2,11 @@
     href="/modules/questionnaire/resources/css/button.css">
 <div class="gcb-questionnaire">
   <button
-      {% if not enabled %}disabled="disabled"{% endif %}
       class="questionnaire-button"
       data-form-id="{{ form_id }}"
       data-xsrf-token="{{ xsrf_token }}"
-      data-enabled="{% if enabled %}enabled{% else %}disabled{% endif %}">
+      data-disabled="{% if disabled %}true{% else %}false{% endif %}"
+      data-registered="{% if registered %}true{% else %}false{% endif %}">
     {% if button_label %}
       {{ button_label }}
     {% else %}
@@ -14,5 +14,10 @@
       {{ gettext('Submit answers') }}
     {% endif %}
   </button>
+  {% if post_message %}
+  <div class="post-message hidden">
+    <div>{{post_message}}</div>
+  </div>
+  {% endif %}
 </div>
 

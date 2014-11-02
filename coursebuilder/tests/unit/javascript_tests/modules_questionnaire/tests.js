@@ -6,6 +6,7 @@ describe("questionnaire library", function () {
         "fixture.html");
     this.payload = JSON.parse(readFixtures(
         "tests/unit/javascript_tests/modules_questionnaire/form_data.json"));
+    this.button = $("button.questionnaire-button");
     this.form = $("#standard-form form");
     this.key = "This-form-id"
     cbShowMsg = jasmine.createSpy("cbShowMsg");
@@ -44,22 +45,28 @@ describe("questionnaire library", function () {
   });
 
   it("executes the correct logic when data status is 200", function() {
+    var postMessageDiv = $(this.button).parent().find("div.post-message");
+
     setFormData(this.payload.form_data || {}, this.key);
+    expect(postMessageDiv.hasClass("hidden")).toBe(true);
     var data = ')]}\' {"status": 200, "message": "Response submitted"}';
-    onAjaxPostFormData(data);
+    onAjaxPostFormData(data, this.button);
     expect(cbShowMsgAutoHide).toHaveBeenCalled();
+    expect(postMessageDiv.hasClass("hidden")).toBe(false);
   });
 
   it("shows an error message on failure", function() {
+    var postMessageDiv = $(this.button).parent().find("div.post-message");
     setFormData(this.payload.form_data || {}, this.key);
     var data = ')]}\' {"status": 403, "message": "Permission denied"}';
-    onAjaxPostFormData(data);
+    onAjaxPostFormData(data, this.button);
     expect(cbShowMsg).toHaveBeenCalled();
+    expect(postMessageDiv.hasClass("hidden")).toBe(true);
   });
 
   it("Send the right AJAX data", function() {
     setFormData(this.payload.form_data || {}, this.key);
-    onSubmitButtonClick(this.key, "my-xsrf-token");
+    onSubmitButtonClick(this.key, "my-xsrf-token", this.button);
 
     expect($.ajax).toHaveBeenCalled();
     expect($.ajax.mostRecentCall.args.length).toBe(1);
@@ -79,5 +86,16 @@ describe("questionnaire library", function () {
       key: this.key,
       form_data: this.payload.form_data
     }, "questionnaire");
+  });
+
+  it("can disable the form", function() {
+    setFormData(this.payload.form_data || {}, this.key);
+    this.form.find('input,select,textarea').each(function() {
+      expect($(this).prop("disabled")).toBe(false);
+    });
+    disableForm(this.button, this.key);
+    this.form.find('input,select,textarea').each(function() {
+      expect($(this).prop("disabled")).toBe(true);
+    });
   });
 });
