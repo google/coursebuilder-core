@@ -259,7 +259,9 @@ describe('CustomTagManager', function() {
       }
     };
     editor = {
-      execCommand: function() {}
+      execCommand: function() {},
+      getEditorHTML: function() { return ''; },
+      _putUndo: function() {}
     };
     customRteTagIcons = [
       {name: 'tag_1', iconUrl: 'http://www.icon.com/foo_1.png'},
@@ -315,8 +317,9 @@ describe('CustomTagManager', function() {
   it('restores tags from marker images', function() {
     // Mocking
     var tag = {};
+    customTagManager._markerTagElements.push(tag);
     var img = {
-      gcbTag: tag,
+      id: 'markerTag-0',
       parentNode: {
         replaceChild: function() {}
       }

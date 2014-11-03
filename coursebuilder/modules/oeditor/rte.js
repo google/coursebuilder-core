@@ -395,6 +395,13 @@ function CustomTagManager(win, editor, customRteTagIcons, excludedCustomTags,
 CustomTagManager.prototype = {
   _init: function() {
     var that = this;
+
+    // List of elements which have been replaced by marker tags. This is
+    // populated by insertMarkerTags and read by removeMarkerTags. We store the
+    // original CB custom tag elements rather than rebuilding them because older
+    // IE can't create non-HTML elements in JS.
+    this._markerTagElements = [];
+
     this.insertMarkerTags();
 
     // Refresh the marker images after a paste
@@ -524,6 +531,7 @@ CustomTagManager.prototype = {
   insertMarkerTags: function() {
     var editorDoc = this._win.document;
     var that = this;
+    this.markerTags = [];
     for (var k = 0; k < this._customRteTagIcons.length; k++) {
       var tag = this._customRteTagIcons[k];
       var elts = editorDoc.getElementsByTagName(tag.name);
@@ -548,11 +556,17 @@ CustomTagManager.prototype = {
         img.onmousedown = img.onmouseup = img.onclick = function(event) {
           that._sinkEvent(event);
         };
-        img.gcbTag = elt;
+        var index = that._markerTagElements.push(elt);
+        img.id = 'markerTag-' + (index - 1);
         that._styleMarkerTag(img);
         elt.parentNode.replaceChild(img, elt);
       }
     }
+    // Make sure that YUI Editor doesn't keep a copy of the original HTML
+    // content on its undo stack
+    this._editor._undoLevel = 0;
+    this._editor._undoCache = [];
+    this._editor._putUndo(this._editor.getEditorHTML());
   },
 
   _styleMarkerTag: function(img) {
@@ -580,8 +594,10 @@ CustomTagManager.prototype = {
     var elts = this._win.document.querySelectorAll('.gcbMarker');
     for (var i = 0; i < elts.length; i++) {
       var img = elts[i];
-      if (img.gcbTag) {
-        img.parentNode.replaceChild(img.gcbTag, img);
+      var match = (img.id || '').match(/markerTag-(\d+)/);
+      if (match) {
+        var index = Number(match[1]);
+        img.parentNode.replaceChild(this._markerTagElements[index], img);
       } else {
         img.parentNode.removeChild(img);
       }
