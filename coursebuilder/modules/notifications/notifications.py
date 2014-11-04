@@ -761,6 +761,18 @@ class _IntentProperty(db.StringProperty):
 class _SerializedProperty(db.Property):
   """Custom property that stores JSON-serialized data."""
 
+  def __init__(self, *args, **kwargs):
+    # Disallow indexing and explicitly set indexed=False. If indexed is unset it
+    # defaults to True; if True, it imposes a 500 byte limit on the value, and
+    # longer values throw during db.put(). We want to support larger values
+    # rather than searching, and we do not want this to be a TextProperty
+    # because the underlying type is not db.Text.
+    if kwargs.get('indexed'):
+      raise ValueError('_SerializedProperty does not support indexing')
+
+    kwargs['indexed'] = False
+    super(_SerializedProperty, self).__init__(*args, **kwargs)
+
   def get_value_for_datastore(self, model_instance):
     return transforms.dumps(super(
         _SerializedProperty, self

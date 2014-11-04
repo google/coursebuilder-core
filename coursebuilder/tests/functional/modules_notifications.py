@@ -1021,6 +1021,25 @@ class ManagerTest(actions.TestBase):
     self.assertEqual(1, notifications.COUNTER_SEND_MAIL_TASK_SUCCESS.value)
 
 
+class SerializedPropertyTest(actions.TestBase):
+
+  def test_supports_values_longer_than_500_bytes(self):
+
+    class Model(db.Model):
+      prop = notifications._SerializedProperty()
+
+    db.put(Model(prop='a' * 501))
+
+  def test_indexed_true_raises_value_error(self):
+    with self.assertRaisesRegexp(
+        ValueError, '_SerializedProperty does not support indexing'):
+
+      # The declaration causes the code under test to run; no need to use.
+      # pylint: disable-msg=unused-variable
+      class Model(db.Model):
+        prop = notifications._SerializedProperty(indexed=True)
+
+
 class ModelTestBase(actions.TestBase):
 
   def setUp(self):
