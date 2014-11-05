@@ -32,6 +32,12 @@ from google.appengine.api import namespace_manager
 from google.appengine.ext import db
 
 
+class MockHandler(object):
+
+    def gettext(self, text):
+        return text
+
+
 class CertificateHandlerTestCase(actions.TestBase):
     """Tests for the handler which presents the certificate."""
 
@@ -99,7 +105,7 @@ class CertificateHandlerTestCase(actions.TestBase):
 
         # If the student is qualified, a link is shown
         self.is_qualified = True
-        mock_handler = object()
+        mock_handler = MockHandler()
         table_entry = certificate.get_certificate_table_entry(
             mock_handler, student, course)
         self.assertEquals('Certificate', table_entry[0])

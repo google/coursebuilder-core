@@ -35,7 +35,6 @@ __author__ = [
     'John Orr (jorr@google.com)']
 
 
-import gettext
 import os
 
 import appengine_config
@@ -168,22 +167,22 @@ def student_is_qualified(student, course):
     return True
 
 
-def get_certificate_table_entry(unused_handler, student, course):
+def get_certificate_table_entry(handler, student, course):
     # I18N: Title of section on page showing certificates for course completion.
-    title = gettext.gettext('Certificate')
+    title = handler.gettext('Certificate')
 
     if student_is_qualified(student, course):
         link = safe_dom.A(
             CERTIFICATE_HANDLER_PATH
         ).add_text(
             # I18N: Label on control to navigate to page showing certificate.
-            gettext.gettext('Click for certificate'))
+            handler.gettext('Click for certificate'))
         return (title, link)
     else:
         return (
             title,
             # I18N: Text indicating student has not yet completed a course.
-            gettext.gettext(
+            handler.gettext(
                 'You have not yet met the course requirements for a '
                 'certificate of completion.'))
 

@@ -468,6 +468,9 @@ class CourseHandler(ApplicationHandler):
 
         return app_context.default_locale
 
+    def gettext(self, text):
+        return self.app_context.gettext(text)
+
     def get_course(self):
         """Get current course."""
         if not self.course:

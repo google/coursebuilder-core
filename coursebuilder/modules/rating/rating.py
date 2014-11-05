@@ -16,7 +16,6 @@
 
 __author__ = 'John Orr (jorr@google.com)'
 
-import gettext
 import os
 
 import jinja2
@@ -41,10 +40,8 @@ XSRF_TOKEN_NAME = 'rating'
 # The "source" field to identify events recorded by this module
 EVENT_SRC = 'rating-event'
 
-# I18N: Message displayed when user submits written comments
-MSG_THANK_YOU = gettext.gettext('Thank you for your feedback.')
-# I18N: Message displayed when non-logged inuser tries to access system
-MSG_ACCESS_DENIED = gettext.gettext('Access denied.')
+MSG_THANK_YOU = 'Thank you for your feedback.'
+MSG_ACCESS_DENIED = 'Access denied.'
 
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'rating', 'templates')
@@ -96,7 +93,9 @@ class RatingHandler(utils.BaseRESTHandler):
 
     def _get_payload_and_student(self):
         if not _rating__is_enabled_in_course_settings(self.app_context):
-            transforms.send_json_response(self, 401, MSG_ACCESS_DENIED, {})
+            # I18N: Message displayed to non-logged in user
+            transforms.send_json_response(
+                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
             return (None, None)
 
         request = transforms.loads(self.request.get('request'))
@@ -106,12 +105,16 @@ class RatingHandler(utils.BaseRESTHandler):
 
         user = users.get_current_user()
         if user is None:
-            transforms.send_json_response(self, 401, MSG_ACCESS_DENIED, {})
+            # I18N: Message displayed to non-logged in user
+            transforms.send_json_response(
+                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
             return (None, None)
 
         student = models.Student.get_enrolled_student_by_email(user.email())
         if student is None:
-            transforms.send_json_response(self, 401, MSG_ACCESS_DENIED, {})
+            # I18N: Message displayed to non-logged in user
+            transforms.send_json_response(
+                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
             return (None, None)
 
         return (transforms.loads(request.get('payload')), student)
@@ -152,7 +155,9 @@ class RatingHandler(utils.BaseRESTHandler):
             'additional_comments': additional_comments
         }))
 
-        transforms.send_json_response(self, 200, MSG_THANK_YOU, {})
+        # I18N: Message displayed when user submits written comments
+        transforms.send_json_response(
+            self, 200, self.gettext(MSG_THANK_YOU), {})
 
 
 def _rating__is_enabled_in_course_settings(app_context):

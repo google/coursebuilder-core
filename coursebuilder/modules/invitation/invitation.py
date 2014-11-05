@@ -36,7 +36,6 @@ Setup:
 
 __author__ = 'John Orr (jorr@google.com)'
 
-import gettext
 import logging
 import os
 import re
@@ -260,7 +259,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
         if not email_set:
             transforms.send_json_response(
                 # I18N: Error indicating no email addresses were submitted.
-                self, 400, gettext.gettext('Error: Empty email list'))
+                self, 400, self.gettext('Error: Empty email list'))
             return
 
         invitation_data = InvitationStudentProperty.load_or_create(student)
@@ -274,7 +273,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             # than any single user is allowed to send.  No email addresses
             # were added to the list to send, and no further email messages
             # were sent.
-            transforms.send_json_response(self, 200, gettext.gettext(
+            transforms.send_json_response(self, 200, self.gettext(
                 'This exceeds your email cap. Number of remaining '
                 'invitations: %s. No messages sent.' % missing_count))
             return
@@ -283,11 +282,11 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
         for email in email_set:
             if not is_email_valid(email):
                 # I18N: Error indicating an email addresses is not well-formed.
-                messages.append(gettext.gettext(
+                messages.append(self.gettext(
                     'Error: Invalid email "%s"' % email))
             elif invitation_data.is_in_invited_list(email):
                 # I18N: Error indicating an email addresses is already known.
-                messages.append(gettext.gettext(
+                messages.append(self.gettext(
                     'Error: You have already sent an invitation email to "%s"'
                     % email))
             elif unsubscribe.has_unsubscribed(email):
@@ -304,7 +303,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
 
         if messages:
             # I18N: Error indicating not all email messages were sent.
-            messages.insert(0, gettext.gettext(
+            messages.insert(0, self.gettext(
                 'Not all messages were sent (%s / %s):') % (
                     len(email_set) - len(messages), len(email_set)))
             transforms.send_json_response(self, 400, '\n'.join(messages))
@@ -312,7 +311,7 @@ class InvitationRESTHandler(utils.BaseRESTHandler):
             transforms.send_json_response(
                 self, 200,
                 # I18N: Success message indicating number of emails sent.
-                gettext.gettext('OK, %s messages sent' % len(email_set)))
+                self.gettext('OK, %s messages sent' % len(email_set)))
 
 
 def get_course_settings_fields():
@@ -365,16 +364,16 @@ def get_student_profile_invitation_link(handler, unused_student, unused_course):
         return (None, None)
 
     # I18N: Title encouraging user to invite friends to join a course
-    invitation_title = gettext.gettext('Invite Friends')
+    invitation_title = handler.gettext('Invite Friends')
     if InvitationEmail.is_available(handler):
         invitation_link = safe_dom.A(
                 InvitationHandler.URL
                 # I18N: Label on control asking user to invite friends to join.
-            ).add_text(gettext.gettext(
+            ).add_text(handler.gettext(
                 'Click to send invitations to family and friends'))
     else:
         # I18N: Inviting friends to join a course is not currently enabled.
-        invitation_link = safe_dom.Text(gettext.gettext(
+        invitation_link = safe_dom.Text(handler.gettext(
                 'Invitations not currently available'))
 
     return (
@@ -386,26 +385,26 @@ def get_student_profile_sub_unsub_link(handler, student, unused_course):
     is_unsubscribed = unsubscribe.has_unsubscribed(email)
 
     # I18N: Control allowing user to subscribe/unsubscribe from email invitation
-    sub_unsub_title = gettext.gettext('Subscribe/Unsubscribe')
+    sub_unsub_title = handler.gettext('Subscribe/Unsubscribe')
     sub_unsub_message = safe_dom.NodeList()
 
     if is_unsubscribed:
         resubscribe_url = unsubscribe.get_resubscribe_url(handler, email)
         sub_unsub_message.append(safe_dom.Text(
             # I18N: Message - user has unsubscribed from email invitations.
-            gettext.gettext(
+            handler.gettext(
                 'You are currently unsubscribed from invitations.')))
         sub_unsub_message.append(safe_dom.A(resubscribe_url).add_text(
             # I18N: Control allowing user to re-subscribe to email invitations.
-            gettext.gettext('Click here to re-subscribe.')))
+            handler.gettext('Click here to re-subscribe.')))
     else:
         unsubscribe_url = unsubscribe.get_unsubscribe_url(handler, email)
         sub_unsub_message.append(safe_dom.Text(
             # I18N: Text indicating user has opted in to email invitations.
-            gettext.gettext('You can currently receive invitations. ')))
+            handler.gettext('You can currently receive invitations. ')))
         sub_unsub_message.append(safe_dom.A(unsubscribe_url).add_text(
             # I18N: Control allowing user to unsubscribe from email invitations.
-            gettext.gettext('Click here to unsubscribe.')))
+            handler.gettext('Click here to unsubscribe.')))
 
     return (
         sub_unsub_title, sub_unsub_message)

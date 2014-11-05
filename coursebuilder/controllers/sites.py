@@ -773,6 +773,22 @@ class ApplicationContext(object):
         path = abspath(self.get_home_folder(), GCB_DATA_FOLDER_NAME)
         return path
 
+    def gettext(self, text):
+        """Render localized text in the default locale.
+
+        This method should be used in place of gettext.gettext, as it will
+        set the locale correctly.
+
+        Args:
+            text: str. The text to be localized.
+
+        Returns:
+            Localized text, or the original string, if no localization exists.
+        """
+        translator = i18n.get_i18n()
+        translator.set_locale(self.get_current_locale())
+        return translator.gettext(text)
+
     def get_template_environ(self, locale, additional_dirs):
         """Create and configure jinja template evaluation environment."""
         template_dir = self.get_template_home()
