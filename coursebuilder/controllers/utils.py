@@ -469,7 +469,13 @@ class CourseHandler(ApplicationHandler):
         return app_context.default_locale
 
     def gettext(self, text):
-        return self.app_context.gettext(text)
+        old_locale = self.app_context.get_current_locale()
+        try:
+            new_locale = self.get_locale_for(self.request, self.app_context)
+            self.app_context.set_current_locale(new_locale)
+            return self.app_context.gettext(text)
+        finally:
+            self.app_context.set_current_locale(old_locale)
 
     def get_course(self):
         """Get current course."""

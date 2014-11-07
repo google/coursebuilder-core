@@ -40,9 +40,6 @@ XSRF_TOKEN_NAME = 'rating'
 # The "source" field to identify events recorded by this module
 EVENT_SRC = 'rating-event'
 
-MSG_THANK_YOU = 'Thank you for your feedback.'
-MSG_ACCESS_DENIED = 'Access denied.'
-
 TEMPLATES_DIR = os.path.join(
     appengine_config.BUNDLE_ROOT, 'modules', 'rating', 'templates')
 
@@ -92,10 +89,11 @@ class RatingHandler(utils.BaseRESTHandler):
     URL = '/rest/modules/rating'
 
     def _get_payload_and_student(self):
+        # I18N: Message displayed to non-logged in user
+        access_denied_msg = self.gettext('Access denied.')
+
         if not _rating__is_enabled_in_course_settings(self.app_context):
-            # I18N: Message displayed to non-logged in user
-            transforms.send_json_response(
-                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
+            transforms.send_json_response(self, 401, access_denied_msg, {})
             return (None, None)
 
         request = transforms.loads(self.request.get('request'))
@@ -105,16 +103,12 @@ class RatingHandler(utils.BaseRESTHandler):
 
         user = users.get_current_user()
         if user is None:
-            # I18N: Message displayed to non-logged in user
-            transforms.send_json_response(
-                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
+            transforms.send_json_response(self, 401, access_denied_msg, {})
             return (None, None)
 
         student = models.Student.get_enrolled_student_by_email(user.email())
         if student is None:
-            # I18N: Message displayed to non-logged in user
-            transforms.send_json_response(
-                self, 401, self.gettext(MSG_ACCESS_DENIED), {})
+            transforms.send_json_response(self, 401, access_denied_msg, {})
             return (None, None)
 
         return (transforms.loads(request.get('payload')), student)
@@ -156,8 +150,9 @@ class RatingHandler(utils.BaseRESTHandler):
         }))
 
         # I18N: Message displayed when user submits written comments
-        transforms.send_json_response(
-            self, 200, self.gettext(MSG_THANK_YOU), {})
+        thank_you_msg = self.gettext('Thank you for your feedback.')
+
+        transforms.send_json_response(self, 200, thank_you_msg, {})
 
 
 def _rating__is_enabled_in_course_settings(app_context):
