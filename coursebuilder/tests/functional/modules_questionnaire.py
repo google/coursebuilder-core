@@ -82,7 +82,7 @@ class BaseQuestionnaireTests(actions.TestBase):
     def get_button(self):
         dom = self.parse_html_string(self.get('unit?unit=%s&lesson=%s' % (
             self.unit_id, self.lesson_id)).body)
-        return dom.find('.//button[@class="questionnaire-button"]')
+        return dom.find('.//button[@class="gcb-button questionnaire-button"]')
 
 
 class QuestionnaireTagTests(BaseQuestionnaireTests):
