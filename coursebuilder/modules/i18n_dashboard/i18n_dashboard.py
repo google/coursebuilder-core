@@ -1782,7 +1782,7 @@ def swapcase(text):
 
                     # add lambda character at the end to test all code paths
                     # properly handle a multibyte character in the content
-                    node.nodeValue = text + u'λ'
+                    node.nodeValue = text + unichr(0x03BB)
             if node.nodeType == minidom.Node.ELEMENT_NODE:
                 swap(node)
 

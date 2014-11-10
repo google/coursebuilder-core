@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-10-06 19:00-0700\n"
-"PO-Revision-Date: 2014-10-03 16:45-0700\n"
+"POT-Creation-Date: 2014-11-10 12:08-0800\n"
+"PO-Revision-Date: 2014-11-10 12:09-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_CN <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -19,13 +19,13 @@ msgstr ""
 "Generated-By: Babel 0.9.6\n"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:208
+#: experimental/coursebuilder/controllers/utils.py:217
 #, python-format
 msgid "Unit %s - %s"
 msgstr "%s - %s单元"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:220
+#: experimental/coursebuilder/controllers/utils.py:229
 msgid "Unit"
 msgstr "单元"
 
@@ -122,17 +122,17 @@ msgid " Hint "
 msgstr " 提示 "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:173
+#: experimental/coursebuilder/modules/certificate/certificate.py:172
 msgid "Certificate"
 msgstr "证书"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:180
+#: experimental/coursebuilder/modules/certificate/certificate.py:179
 msgid "Click for certificate"
 msgstr "点击查看证书"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:186
+#: experimental/coursebuilder/modules/certificate/certificate.py:185
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -168,13 +168,13 @@ msgstr "浏览课程"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:33
-#: experimental/coursebuilder/views/base_course.html:61
+#: experimental/coursebuilder/views/base_course.html:77
 msgid "My Courses"
 msgstr "我的课程"
 
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/base_explorer.html:38
-#: experimental/coursebuilder/views/base_course.html:66
+#: experimental/coursebuilder/views/base_course.html:82
 msgid "Profile"
 msgstr "个人资料"
 
@@ -235,7 +235,7 @@ msgstr "已注册的课程"
 #. Text for representing student progress in a course.
 #. Navbar tab.
 #: experimental/coursebuilder/modules/course_explorer/views/profile.html:44
-#: experimental/coursebuilder/views/base_course.html:73
+#: experimental/coursebuilder/views/base_course.html:54
 msgid "Progress"
 msgstr "进度"
 
@@ -261,14 +261,17 @@ msgid "Change Name"
 msgstr "更改名称"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:263
+#: experimental/coursebuilder/modules/invitation/invitation.py:262
 msgid "Error: Empty email list"
 msgstr "错误：电子邮件地址列表为空"
 
-#. Error indicating not all invitations were sent due to
-#. exceeding the maximum number of emails allowed to be sent by
-#. this account.
-#: experimental/coursebuilder/modules/invitation/invitation.py:274
+#. Error indicating that the user cannot add the desired
+#. list of additional email addresses to the list of invitations;
+#. the total size of the list with the additions would be more
+#. than any single user is allowed to send.  No email addresses
+#. were added to the list to send, and no further email messages
+#. were sent.
+#: experimental/coursebuilder/modules/invitation/invitation.py:276
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -276,66 +279,66 @@ msgid ""
 msgstr "您要发送的电子邮件数量超出上限（剩余邀请数量为%s），因此系统无法发送出您的邮件。"
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:283
+#: experimental/coursebuilder/modules/invitation/invitation.py:285
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "错误：电子邮件地址“%s”无效"
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:287
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "错误：您之前已向“%s”发送过邀请电子邮件"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:304
+#: experimental/coursebuilder/modules/invitation/invitation.py:306
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "部分邮件未能成功发送(%s/%s)："
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:312
+#: experimental/coursebuilder/modules/invitation/invitation.py:314
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "%s封邮件已成功发送"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:365
+#: experimental/coursebuilder/modules/invitation/invitation.py:367
 msgid "Invite Friends"
 msgstr "邀请好友"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:370
+#: experimental/coursebuilder/modules/invitation/invitation.py:372
 msgid "Click to send invitations to family and friends"
 msgstr "点击可向亲朋好友发送邀请"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:374
+#: experimental/coursebuilder/modules/invitation/invitation.py:376
 msgid "Invitations not currently available"
 msgstr "目前无法发送邀请"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:386
+#: experimental/coursebuilder/modules/invitation/invitation.py:388
 msgid "Subscribe/Unsubscribe"
 msgstr "订阅/退订"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:393
+#: experimental/coursebuilder/modules/invitation/invitation.py:395
 msgid "You are currently unsubscribed from invitations."
 msgstr "您目前已退订邀请。"
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:397
+#: experimental/coursebuilder/modules/invitation/invitation.py:399
 msgid "Click here to re-subscribe."
 msgstr "点击此处重新订阅。"
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:402
+#: experimental/coursebuilder/modules/invitation/invitation.py:404
 msgid "You can currently receive invitations. "
 msgstr "您目前可接收邀请。 "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:405
+#: experimental/coursebuilder/modules/invitation/invitation.py:407
 msgid "Click here to unsubscribe."
 msgstr "点击此处退订。"
 
@@ -380,15 +383,70 @@ msgstr "电子邮件示例"
 msgid "Subject:"
 msgstr "主题："
 
+#. Button label to submit the responses to a questionnaire.
+#: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
+msgid "Submit answers"
+msgstr ""
+
+#. Message displayed to non-logged in user
+#: experimental/coursebuilder/modules/rating/rating.py:93
+msgid "Access denied."
+msgstr ""
+
+#. Message displayed when user submits written comments
+#: experimental/coursebuilder/modules/rating/rating.py:153
+msgid "Thank you for your feedback."
+msgstr ""
+
+#. Header on 5-point scale for student feedback on the lesson.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:5
+msgid "Rate this lesson:"
+msgstr ""
+
+#. Lowest rating on a 5-point scale.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:12
+msgid "Not at all useful"
+msgstr ""
+
+#. Second-lowest rating on a 5-point scale.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:18
+msgid "Not very useful"
+msgstr ""
+
+#. Middle rating on a 5-point scale.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:24
+msgid "Somewhat useful"
+msgstr ""
+
+#. Second-highest rating on a 5-point scale.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:30
+msgid "Very useful"
+msgstr ""
+
+#. Highest rating on a 5-point scale.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:36
+msgid "Extremely useful"
+msgstr ""
+
+#. Indicate location to type additional comments
+#: experimental/coursebuilder/modules/rating/templates/widget.html:42
+msgid "Additional comments..."
+msgstr ""
+
+#. Label on a button to submit feedback.
+#: experimental/coursebuilder/modules/rating/templates/widget.html:45
+msgid "Submit"
+msgstr ""
+
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/modules/search/resources.py:349
+#: experimental/coursebuilder/modules/search/resources.py:361
 #: experimental/coursebuilder/views/unit.html:74
 msgid "Lesson"
 msgstr "课"
 
 #. Displayed in search results; denotes an announcement link.
-#: experimental/coursebuilder/modules/search/resources.py:715
+#: experimental/coursebuilder/modules/search/resources.py:727
 msgid "Announcement"
 msgstr "公告"
 
@@ -708,7 +766,7 @@ msgid "Forum"
 msgstr "论坛"
 
 #. Navbar tab.
-#: experimental/coursebuilder/views/base_course.html:78
+#: experimental/coursebuilder/views/base_course.html:59
 msgid "Registration"
 msgstr "注册"
 
@@ -1164,5 +1222,4 @@ msgstr "下一页"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "结束"
-
 
