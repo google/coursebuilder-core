@@ -21,10 +21,14 @@ import copy
 import messages
 
 from common import schema_fields
+from models import roles
 from models import transforms
+from models.models import CollisionError
 from models.models import QuestionDAO
 from models.models import QuestionDTO
+from models.models import QuestionGroupDAO
 from models.models import SaQuestionConstants
+from modules.assessment_tags import gift
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
 
@@ -32,13 +36,14 @@ from modules.dashboard import utils as dashboard_utils
 class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     """An editor for editing and managing questions."""
 
-    def qmae_prepare_template(self, rest_handler, key=''):
+    def qmae_prepare_template(self, rest_handler, key='', auto_return=False):
         """Build the Jinja template for adding a question."""
         template_values = {}
         template_values['page_title'] = self.format_title('Edit Question')
         template_values['main_content'] = self.get_form(
             rest_handler, key,
-            dashboard_utils.build_assets_url('questions'))
+            dashboard_utils.build_assets_url('questions'),
+            auto_return=auto_return)
 
         return template_values
 
@@ -49,6 +54,12 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     def get_add_sa_question(self):
         self.render_page(self.qmae_prepare_template(SaQuestionRESTHandler),
                          'assets', 'questions')
+
+    def get_import_gift_questions(self):
+        self.render_page(
+            self.qmae_prepare_template(
+                GiftQuestionRESTHandler, auto_return=True),
+            'assets', 'questions')
 
     def get_edit_question(self):
         key = self.request.get('key')
@@ -375,3 +386,121 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             except ValueError:
                 errors.append(
                     'Answer %s must have a numeric score.' % (index + 1))
+
+
+class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
+    """REST handler for importing gift questions."""
+
+    URI = '/rest/question/gift'
+
+    REQUIRED_MODULES = [
+        'inputex-string', 'inputex-hidden', 'inputex-textarea']
+    EXTRA_JS_FILES = []
+
+    XSRF_TOKEN = 'import-gift-questions'
+
+    @classmethod
+    def get_schema(cls):
+        """Get the InputEx schema for the short answer question editor."""
+        gift_questions = schema_fields.FieldRegistry(
+            'GIFT Questions',
+            description='One or more GIFT-formatted questions',
+            extra_schema_dict_values={'className': 'gift-container'})
+
+        gift_questions.add_property(schema_fields.SchemaField(
+            'version', '', 'string', optional=True, hidden=True))
+        gift_questions.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string', optional=True,
+            extra_schema_dict_values={'className': 'gift-description'}))
+        gift_questions.add_property(schema_fields.SchemaField(
+            'questions', 'Questions', 'text', optional=True,
+            description=(
+                'List of <a href="https://docs.moodle.org/23/en/GIFT_format" '
+                'target="_blank"> GIFT question-types</a> supported by Course '
+                'Builder: Multiple choice, True-false, Short answer, and '
+                'Numerical.'),
+            extra_schema_dict_values={'className': 'gift-questions'}))
+        return gift_questions
+
+    def validate_question_descriptions(self, questions, errors):
+        descriptions = [q.description for q in QuestionDAO.get_all()]
+        for question in questions:
+            if question['description'] in descriptions:
+                errors.append(
+                    ('The description must be different '
+                     'from existing questions.'))
+
+    def validate_group_description(self, group_description, errors):
+        descriptions = [gr.description for gr in QuestionGroupDAO.get_all()]
+        if group_description in descriptions:
+            errors.append('Non-unique group description.')
+
+    def get_default_content(self):
+        return {
+            'questions': '',
+            'description': ''}
+
+    def convert_to_dtos(self, questions):
+        dtos = []
+        for question in questions:
+            question['version'] = QuestionDAO.VERSION
+            dto = QuestionDTO(None, question)
+            if dto.type == 'multi_choice':
+                dto.type = QuestionDTO.MULTIPLE_CHOICE
+            else:
+                dto.type = QuestionDTO.SHORT_ANSWER
+            dtos.append(dto)
+        return dtos
+
+    def create_group(self, description, question_ids):
+        group = {
+            'version': QuestionDAO.VERSION,
+            'description': description,
+            'introduction': '',
+            'items': [{
+                'question': str(x),
+                'weight': 1.0} for x in question_ids]}
+        return QuestionGroupDAO.create_question_group(group)
+
+    def put(self):
+        """Store a QuestionGroupDTO and QuestionDTO in the datastore."""
+        request = transforms.loads(self.request.get('request'))
+
+        if not self.assert_xsrf_token_or_fail(
+                request, self.XSRF_TOKEN, {'key': None}):
+            return
+
+        if not roles.Roles.is_course_admin(self.app_context):
+            transforms.send_json_response(self, 401, 'Access denied.')
+            return
+
+        payload = request.get('payload')
+        json_dict = transforms.loads(payload)
+
+        errors = []
+        try:
+            python_dict = transforms.json_to_dict(
+                json_dict, self.get_schema().get_json_schema_dict())
+            questions = gift.GiftParser.parse_questions(
+                python_dict['questions'])
+            self.validate_question_descriptions(questions, errors)
+            self.validate_group_description(
+                python_dict['description'], errors)
+            if not errors:
+                dtos = self.convert_to_dtos(questions)
+                question_ids = QuestionDAO.save_all(dtos)
+                self.create_group(python_dict['description'], question_ids)
+        except ValueError as e:
+            errors.append(str(e))
+        except gift.ParseError as e:
+            errors.append(str(e))
+        except CollisionError as e:
+            errors.append(str(e))
+        if errors:
+            self.validation_error('\n'.join(errors))
+            return
+
+        msg = 'Saved: %s.' % python_dict['description']
+        transforms.send_json_response(self, 200, msg)
+        return
+

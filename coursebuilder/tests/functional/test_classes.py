@@ -5139,6 +5139,33 @@ var activity = [
         self.assertEqual(choices[1]['score'], 0.5)
 
 
+class ImportGiftQuestionsTests(DatastoreBackedCourseTest):
+    """Functional tests for importing GIFT-formatted questions."""
+
+    def test_import_gift_questions(self):
+        # get import gift questions
+        email = 'gift@google.com'
+        actions.login(email, is_admin=True)
+        response = self.get('dashboard?action=import_gift_questions')
+        assert_equals(200, response.status_int)
+        assert_contains('GIFT Questions', response.body)
+
+        # put import gift questions
+        payload_dict = {
+            'description': 'gift group',
+            'questions':
+                '::title mc::q1? {=c ~w}\n\n ::title: true/false:: q2? {T}'}
+        request = {}
+        request['payload'] = transforms.dumps(payload_dict)
+        request[
+            'xsrf_token'] = XsrfTokenManager.create_xsrf_token(
+            'import-gift-questions')
+        response = self.testapp.put('/rest/question/gift?%s' % urllib.urlencode(
+            {'request': transforms.dumps(request)}), {})
+        assert_equals(response.status_int, 200)
+        assert_contains('gift group', response.body)
+
+
 class NamespaceTest(actions.TestBase):
 
     def test_namespace_context_manager(self):

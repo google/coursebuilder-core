@@ -405,6 +405,34 @@ div.sa-grader-score input {
 }
 
 /*
+ * CSS for GIFT questions creation.
+ */
+div.gift-container > fieldset > div.inputEx-fieldWrapper > div.inputEx-label {
+  width: 80px;
+}
+div.gift-container a:hover {
+  text-decoration: none;
+}
+div.gift-container textarea {
+  height: 375px;
+  width: 510px;
+  margin: 0;
+  padding: 0;
+}
+div.gift-questions,
+div.gift-description {
+  margin-left: 87px;
+}
+div.gift-questions,
+div.gift-description {
+  margin-top: 10px;
+}
+div.gift-description input {
+  width: 506px;  /* allow for 2px padding */
+  margin: 0;
+}
+
+/*
  * CSS for question group creation.
  */
 

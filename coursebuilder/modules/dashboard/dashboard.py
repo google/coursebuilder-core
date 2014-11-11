@@ -36,6 +36,7 @@ from label_editor import LabelManagerAndEditor
 from label_editor import LabelRestHandler
 import messages
 from peer_review import AssignmentManager
+from question_editor import GiftQuestionRESTHandler
 from question_editor import McQuestionRESTHandler
 from question_editor import QuestionManagerAndEditor
 from question_editor import SaQuestionRESTHandler
@@ -109,7 +110,8 @@ class DashboardHandler(
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
-        'clone_question', 'roles', 'add_role', 'edit_role']
+        'clone_question', 'roles', 'add_role', 'edit_role',
+        'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
     post_actions = [
@@ -140,6 +142,7 @@ class DashboardHandler(
             (UnitLessonTitleRESTHandler.URI, UnitLessonTitleRESTHandler),
             (UnitRESTHandler.URI, UnitRESTHandler),
             (McQuestionRESTHandler.URI, McQuestionRESTHandler),
+            (GiftQuestionRESTHandler.URI, GiftQuestionRESTHandler),
             (SaQuestionRESTHandler.URI, SaQuestionRESTHandler),
             (TextAssetRESTHandler.URI, TextAssetRESTHandler),
             (QuestionGroupRESTHandler.URI, QuestionGroupRESTHandler),
@@ -1104,6 +1107,11 @@ class DashboardHandler(
                 'a', className='gcb-button gcb-pull-right',
                 href='dashboard?action=add_sa_question'
             ).add_text('Add Short Answer')
+        ).append(
+            safe_dom.Element(
+                'a', className='gcb-button gcb-pull-right',
+                href='dashboard?action=import_gift_questions'
+            ).add_text('Import GIFT Questions')
         ).append(self._create_filter()).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
         ).append(safe_dom.Element('h3').add_text(

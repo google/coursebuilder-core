@@ -172,6 +172,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.test_classes.VirtualFileSystemTest': 44,
     'tests.functional.test_classes.ImportActivityTests': 7,
     'tests.functional.test_classes.ImportAssessmentTests': 3,
+    'tests.functional.test_classes.ImportGiftQuestionsTests': 1,
     'tests.functional.unit_assessment.UnitPrePostAssessmentTest': 17,
     'tests.functional.unit_description.UnitDescriptionsTest': 1,
     'tests.functional.unit_header_footer.UnitHeaderFooterTest': 11,
@@ -206,15 +207,16 @@ ALL_TEST_CLASSES = {
     'tests.unit.test_classes.InvokeExistingUnitTest': 5,
     'tests.unit.test_classes.ReviewModuleDomainTests': 1,
     'tests.unit.test_classes.SuiteTestCaseTest': 3,
-    'tests.unit.gift_parser.SampleQuestionsTest': 1,
-    'tests.unit.gift_parser.TestEssayAndNumericalQuestion': 2,
-    'tests.unit.gift_parser.TestMatchQuestion': 2,
-    'tests.unit.gift_parser.TestMissingWordQuestion': 2,
-    'tests.unit.gift_parser.TestSaQuestion': 3,
-    'tests.unit.gift_parser.TestTrueFalseQuestion': 2,
-    'tests.unit.gift_parser.TestMcmaQuestion': 3,
-    'tests.unit.gift_parser.TestHead': 2,
-    'tests.unit.gift_parser.TestMcQuestion': 5
+    'tests.unit.gift_parser_tests.SampleQuestionsTest': 1,
+    'tests.unit.gift_parser_tests.TestEssayAndNumericQuestion': 4,
+    'tests.unit.gift_parser_tests.TestMatchQuestion': 3,
+    'tests.unit.gift_parser_tests.TestMissingWordQuestion': 2,
+    'tests.unit.gift_parser_tests.TestShortAnswerQuestion': 3,
+    'tests.unit.gift_parser_tests.TestTrueFalseQuestion': 2,
+    'tests.unit.gift_parser_tests.TestMultiChoiceMultipleSelectionQuestion': 3,
+    'tests.unit.gift_parser_tests.TestHead': 2,
+    'tests.unit.gift_parser_tests.TestMultiChoiceQuestion': 5,
+    'tests.unit.gift_parser_tests.TestCreateManyGiftQuestion': 1
 }
 EXPENSIVE_TESTS = ['tests.integration.test_classes']
 

@@ -32,7 +32,9 @@ from modules.oeditor import oeditor
 
 class BaseDatastoreAssetEditor(utils.ApplicationHandler):
 
-    def get_form(self, rest_handler, key, exit_url, deletable=True):
+    def get_form(
+            self, rest_handler, key, exit_url, deletable=True,
+            auto_return=False):
         """Build the Jinja template for the editor form."""
         rest_url = self.canonicalize_url(rest_handler.URI)
         exit_url = self.canonicalize_url(exit_url)
@@ -54,6 +56,7 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
             schema.get_json_schema(),
             schema.get_schema_dict(),
             key, rest_url, exit_url,
+            auto_return=auto_return,
             delete_url=delete_url, delete_method='delete',
             required_modules=rest_handler.REQUIRED_MODULES,
             extra_js_files=rest_handler.EXTRA_JS_FILES)
