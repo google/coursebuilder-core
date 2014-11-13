@@ -473,12 +473,63 @@ class TranslationIO(object):
                 'like <a#1>.' % node.tagName)
 
     @classmethod
+    def extract_line_column_from_parse_error(cls, error):
+        """Try to extract line, column from the text of parsing error."""
+        try:
+            msg = error.message
+            match = re.match(r'.*\: line ([0-9]+), column ([0-9]+).*', msg)
+            if match is not None:
+                return int(match.group(1)), int(match.group(2))
+        except:  # pylint: disable=bare-except
+            pass
+        return None, None
+
+    @classmethod
+    def get_text_fragment(cls, text, line_num, col_num, clip_len=16):
+        """Makes an clip_len long excerpt of the text using line and column.
+
+        Args:
+          text: text to make a fragment of
+          line_num: one-based line number of excerpt start
+          col_num: one-based column number of excerpt start
+          clip_len: number of character to leave on both sides of start position
+        Returns:
+           tuple clipped text fragment of the entire text if clipping failed
+        """
+        assert clip_len > 0
+        lines = text.split('\n')
+        if (line_num is not None
+            and col_num is not None
+            and line_num > 0
+            and line_num <= len(lines)):
+            line = lines[line_num - 1]
+            if col_num < 0 or col_num >= len(line):
+                return text
+            from_col_num = max(col_num - clip_len, 0)
+            to_col_num = min(col_num + clip_len, len(line))
+
+            result = ''
+            if from_col_num < col_num:
+                result += line[from_col_num:col_num]
+            result += '[%s]' % line[col_num]
+            if to_col_num > col_num:
+              result += line[col_num + 1:to_col_num]
+            return result
+        return text
+
+    @classmethod
     def fromstring(cls, content):
         """Converts XML string content of the translation into an XML tree."""
         translated_entities = _ENTITY_REGEX.sub(cls._match_to_code, content)
-        return minidom.parseString(
-            '<div>%s</div>' % cls._decode_tag_names(translated_entities).encode(
-                XML_ENCODING))
+        xml_text = '<div>%s</div>' % cls._decode_tag_names(
+            translated_entities).encode(XML_ENCODING)
+        try:
+            tree = minidom.parseString(xml_text)
+        except Exception as e:  # pylint: disable=broad-except
+            line_num, col_num = cls.extract_line_column_from_parse_error(e)
+            raise Exception(
+                e.message, cls.get_text_fragment(xml_text, line_num, col_num))
+        return tree
 
     @classmethod
     def _match_to_code(cls, match):
@@ -1516,6 +1567,38 @@ class TestCasesForIO(unittest.TestCase):
         self.assertEqual(
             tree_as_text,
             ContentIO.tostring(ContentIO.fromstring(html)))
+
+    def test_parse_error_interpretation(self):
+        # test expected error message
+        error = Exception('not well-formed (invalid token): line 66, column 99')
+        line_num, col_num = TranslationIO.extract_line_column_from_parse_error(
+            error)
+        self.assertEquals(66, line_num)
+        self.assertEquals(99, col_num)
+
+        # test text that does not have line & column
+        self.assertEquals(
+            (None, None),
+            TranslationIO.extract_line_column_from_parse_error('Some text.'))
+
+        # test clipping
+        text = 'The sky is blue!'
+        self.assertEquals(
+            '[T]he s',
+            TranslationIO.get_text_fragment(text, 1, 0, clip_len=5))
+        self.assertEquals(
+            'The s[k]y is',
+            TranslationIO.get_text_fragment(text, 1, 5, clip_len=5))
+
+        # text out of bounds conditions
+        self.assertEquals(
+            text,
+            TranslationIO.get_text_fragment(text, 1, 16, clip_len=5))
+        self.assertEquals(
+            text, TranslationIO.get_text_fragment(text, 1, 99))
+        self.assertEquals(
+            text, TranslationIO.get_text_fragment(text, 1, -1))
+        self.assertEquals(text, TranslationIO.get_text_fragment(text, -1, -1))
 
 
 class TestCasesBase(unittest.TestCase):
