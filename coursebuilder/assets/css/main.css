@@ -229,7 +229,7 @@ th, td {
   min-height: 4px;
 }
 
-/* Support for the optional "Show/Hide Schedule" button. */
+/* Support for the optional "Show/Hide Syllabus" button. */
 #gcb-left-nav-toggle {
   float: right;
   display: none;
@@ -620,15 +620,15 @@ a.gcb-button-action, button.gcb-button-action {
   float: right;
 }
 
-/* Style for the course schedule header. */
-.gcb-schedule-headers {
+/* Style for the course syllabus header. */
+.gcb-syllabus-headers {
   font-size: 20px;
   font-weight: normal;
   margin: 10px 7px;
 }
 
 /*
-  Styles for textual content (mostly in the course schedule and various
+  Styles for textual content (mostly in the course syllabus and various
   confirmation pages).
 */
 .gcb-top-content {
