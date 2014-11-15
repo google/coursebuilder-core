@@ -35,7 +35,7 @@ function getVerbClassName(verb) {
 function iterateFormItems(env, action) {
   $.each(env.form.inputsNames.sections.subFields, function(i, section) {
     $.each(section.inputsNames.data.subFields, function(j, item) {
-      action(section, item);
+      action(j, section, item);
     })
   });
 }
@@ -143,9 +143,12 @@ function resizeTogether() {
 }
 
 $(function() {
-  iterateFormItems(cb_global, function(sectionField, itemField) {
+  iterateFormItems(cb_global, function(index, sectionField, itemField) {
     var verb = itemField.inputsNames.verb.getValue();
     $(itemField.divEl.firstChild).addClass(getVerbClassName(verb));
+
+    var caption = $("<p class=\"caption\">chunk " + (index + 1) + "</p>");
+    $(itemField.divEl.firstChild).append(caption);
   });
 
   $(".disabled textarea").prop("disabled", true);
@@ -155,7 +158,7 @@ $(function() {
       .append($("<div class=\"status\"></div>"));
 
   // Set up the accept buttons to appear when there is changed content
-  iterateFormItems(cb_global, function(sectionField, itemField) {
+  iterateFormItems(cb_global, function(index, sectionField, itemField) {
     var button = $("<button class=\"accept inputEx-Button\">Accept</button>");
     button.click(function() {
       markAsEdited(itemField.inputsNames);
@@ -173,7 +176,7 @@ $(function() {
   $(".translation-header .source-locale").text(formValue['source_locale']);
   $(".translation-header .target-locale").text(formValue['target_locale']);
 
-  iterateFormItems(cb_global, function(sectionField, itemField) {
+  iterateFormItems(cb_global, function(index, sectionField, itemField) {
     $(itemField.inputsNames.target_value.el).on("input change", function() {
       // Listen on "change" for older browser support
       markAsEdited(itemField.inputsNames);
@@ -182,7 +185,7 @@ $(function() {
   });
 
   cb_global.onSaveComplete = function() {
-    iterateFormItems(cb_global, function(sectionField, itemField) {
+    iterateFormItems(cb_global, function(index, sectionField, itemField) {
       var item = itemField.inputsNames;
       if (item.changed.getValue()) {
         item.verb.setValue(VERB_CURRENT);

@@ -57,6 +57,19 @@
 .translation-item fieldset {
   position: relative;
 }
+.translation-item .caption {
+  position: absolute;
+  left: -100px;
+  top: -20px;
+  font-size: 12px;
+  width: 70px;
+  height: 30px;
+  line-height: 30px;
+  vertical-align: middle;
+  text-align: center;
+  border: none;
+}
+
 .translation-item .status {
   position: absolute;
   left: -100px;
@@ -174,7 +187,7 @@ div#formContainer div:first-child > .translation-item > fieldset {
   font-weight: bold;
 }
 
-/* Hide the label on the item list */ 
+/* Hide the label on the item list */
 .translation-item > fieldset > div:first-child + div + div + div + div > div:first-child {
   display: none;
 }
@@ -186,7 +199,7 @@ div#formContainer fieldset > div:first-child + div + div + div + div fieldset {
   padding: 0;
 }
 
-/* Align the Original and Translated textareas on a single line. */ 
+/* Align the Original and Translated textareas on a single line. */
 .translation-item > fieldset fieldset > div:first-child {
   display: inline-block;
   float: left;
