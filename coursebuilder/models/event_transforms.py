@@ -172,8 +172,9 @@ def _add_questions_from_html(
                 'sequence': sequence_counter,
                 'id': component['qgid'],
                 }
-            sequence_counter += (
-                question_group_lengths[component['qgid']])
+            if component['qgid'] in question_group_lengths:
+                sequence_counter += (
+                    question_group_lengths[component['qgid']])
 
 
 def get_questions_by_usage_id(app_context):

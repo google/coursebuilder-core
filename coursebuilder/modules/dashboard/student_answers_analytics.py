@@ -266,8 +266,10 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
                 if component['cpt_name'] == 'question':
                     question_ids.append(int(component['quid']))
                 elif component['cpt_name'] == 'question-group':
-                    for question_id in groups[int(component['qgid'])]:
-                        question_ids.append(int(question_id))
+                    qgid = int(component['qgid'])
+                    if qgid in groups:
+                        for question_id in groups[qgid]:
+                            question_ids.append(int(question_id))
             return question_ids
 
         def _look_up_questions(questions, question_ids):
