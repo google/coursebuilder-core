@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
 "PO-Revision-Date: 2012-12-12 15:10-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en_US <LL@li.org>\n"
@@ -783,11 +783,10 @@ msgstr ""
 msgid "Registrations for this course are not open."
 msgstr ""
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
+msgid "Syllabus"
 msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
@@ -1191,14 +1190,14 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
+msgid "Show Syllabus"
 msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
+msgid "Hide Syllabus"
 msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
@@ -1222,4 +1221,7 @@ msgstr ""
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr ""
+
+
+
 

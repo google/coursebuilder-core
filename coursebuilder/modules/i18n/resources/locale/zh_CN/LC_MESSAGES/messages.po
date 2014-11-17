@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:09-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: zh_CN <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -386,57 +386,57 @@ msgstr "主题："
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "提交回答"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "访问被拒了。"
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "感谢您提交反馈。"
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "请对本课程进行评分："
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "毫无用处"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "不太有用"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "有一点用"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "很有用"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "非常有用"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "其他意见…"
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "提交"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -783,12 +783,11 @@ msgstr "感谢您注册该课程，点击“公告”标签即可查看重要信
 msgid "Registrations for this course are not open."
 msgstr "此课程尚未开始注册。"
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "课程表"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1191,15 +1190,15 @@ msgstr "是"
 msgid "No"
 msgstr "否"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "显示课程表"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "隐藏课程表"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1222,4 +1221,7 @@ msgstr "下一页"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "结束"
+
+
+
 

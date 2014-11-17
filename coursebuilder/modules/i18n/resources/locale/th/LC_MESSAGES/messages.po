@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: th <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -393,57 +393,57 @@ msgstr "เรื่อง:"
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "ส่งคำตอบ"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "การเข้าถึงถูกปฏิเสธ"
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "ขอขอบคุณสำหรับความคิดเห็นของคุณ"
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "ให้คะแนนบทเรียนนี้:"
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "ไม่มีประโยชน์เลย"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "มีประโยชน์น้อย"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "ค่อนข้างมีประโยชน์"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "มีประโยชน์มาก"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "มีประโยชน์สูงสุด"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "ความคิดเห็นเพิ่มเติม..."
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "ส่ง"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -799,12 +799,11 @@ msgstr "ขอขอบคุณสำหรับการลงทะเบี
 msgid "Registrations for this course are not open."
 msgstr "หลักสูตรนี้ไม่เปิดให้ลงทะเบียน"
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "กำหนดการ"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1224,15 +1223,15 @@ msgstr "ใช่"
 msgid "No"
 msgstr "ไม่"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "แสดงกำหนดการ"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "ซ่อนกำหนดการ"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1255,4 +1254,7 @@ msgstr "หน้าถัดไป"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "สิ้นสุด"
+
+
+
 

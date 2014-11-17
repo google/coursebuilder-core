@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: iw <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -284,7 +284,7 @@ msgstr ""
 #: experimental/coursebuilder/modules/invitation/invitation.py:285
 #, python-format
 msgid "Error: Invalid email \"%s\""
-msgstr "שגיאה: כתובת דוא\"ל לא חוקית ‎\"%s\"‎"
+msgstr "שגיאה: כתובת אימייל לא חוקית ‎\"%s\"‎"
 
 #. Error indicating an email addresses is already known.
 #: experimental/coursebuilder/modules/invitation/invitation.py:289
@@ -363,7 +363,7 @@ msgid ""
 " you with the text shown below."
 msgstr ""
 "האם אתה מכיר אנשים אחרים שעשויים לרצות להצטרף לקורס הזה? הזן בהמשך את "
-"כתובות הדוא\"ל שלהם ולחץ על 'שלח'. הם יקבלו ממך דוא\"ל עם הטקסט שמופיע "
+"כתובות האימייל שלהם ולחץ על 'שלח'. הם יקבלו ממך דוא\"ל עם הטקסט שמופיע "
 "בהמשך."
 
 #. Instructions on how to fill out email addresses in a form.
@@ -372,7 +372,7 @@ msgid ""
 "Enter recipients' email addresses separated by commas. E.g., "
 "alice@gmail.com, ben@gmail.com"
 msgstr ""
-"הזן את כתובות הדוא\"ל של הנמענים, והפרד ביניהן בפסיק. לדוגמה, "
+"הזן את כתובות האימייל של הנמענים, והפרד ביניהן בפסיק. לדוגמה, "
 "alice@gmail.com‏,‏ ben@gmail.com"
 
 #. Label on control submitting a form with email addresses
@@ -393,57 +393,57 @@ msgstr "נושא:"
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "שלח תשובות"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "הגישה נדחתה."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "תודה על המשוב שלך."
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "דרג את השיעור הזה:"
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "כלל לא מועיל"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "לא מועיל מאוד"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "מועיל במידה מסוימת"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "מועיל מאוד"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "מועיל ביותר"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "הערות נוספות..."
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "שלח"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -507,14 +507,14 @@ msgstr "החיפוש אינו זמין כעת."
 msgid ""
 "The following email address has been subscribed to receive emails for "
 "this course:"
-msgstr "כתובת האימייל הבאה נרשמה לקבלת הודעות דוא\"ל עבור קורס זה:"
+msgstr "כתובת האימייל הבאה נרשמה לקבלת הודעות אימייל עבור קורס זה:"
 
 #. Indicates that a user will no longer recieve email about a course
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:25
 msgid ""
 "The following email address has been unsubscribed from emails for this "
 "course:"
-msgstr "כתובת האימייל הבאה ביטלה את הרישום לקבלת הודעות דוא\"ל עבור קורס זה:"
+msgstr "כתובת האימייל הבאה ביטלה את הרישום לקבלת הודעות אימייל עבור קורס זה:"
 
 #. After a user has unsubscribed from email notifications, indicate that
 #. re-subscribing is possible using a control lower on the page.
@@ -797,12 +797,11 @@ msgstr "תודה שנרשמת לקורס. לחץ על הכרטיסייה 'הוד
 msgid "Registrations for this course are not open."
 msgstr "ההרשמה לקורס הזה לא פתוחה."
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "לוח זמנים"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1215,15 +1214,15 @@ msgstr "כן"
 msgid "No"
 msgstr "לא"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "הצג סדר יום"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "הסתר סדר יום"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1246,4 +1245,7 @@ msgstr "הדף הבא"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "סיום"
+
+
+
 

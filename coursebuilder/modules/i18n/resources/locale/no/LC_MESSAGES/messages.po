@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: no <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -393,57 +393,57 @@ msgstr "Emne:"
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "Send inn svar"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "Ingen tilgang"
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "Takk for tilbakemeldingen."
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "Vurder denne undervisningstimen:"
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "Ikke nyttig i det hele tatt"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "Ikke spesielt nyttig"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "Litt nyttig"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "Veldig nyttig"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "Ekstremt nyttig"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "Tilleggskommentarer"
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "Send inn"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -810,12 +810,11 @@ msgstr ""
 msgid "Registrations for this course are not open."
 msgstr "Påmelding til dette kurset er ikke mulig."
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "Kursplan"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1242,15 +1241,15 @@ msgstr "Ja"
 msgid "No"
 msgstr "Nei"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "Vis timeplanen"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "Skjul timeplanen"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1273,4 +1272,7 @@ msgstr "Neste side"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Slutt"
+
+
+
 

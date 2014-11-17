@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: lv <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 :"
@@ -396,57 +396,57 @@ msgstr "Temats:"
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "Iesniegt atbildes"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "Piekļuve liegta."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "Paldies par atsauksmēm!"
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "Novērtējiet šo nodarbību:"
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "Pavisam nenoderīga"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "Ne visai noderīga"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "Daļēji noderīga"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "Ļoti noderīga"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "Ārkārtīgi noderīga"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "Papildu komentāri..."
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "Iesniegt"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -815,12 +815,11 @@ msgstr ""
 msgid "Registrations for this course are not open."
 msgstr "Reģistrācijas pieteikumi šim kursam netiek pieņemti."
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "Grafiks"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1250,15 +1249,15 @@ msgstr "Jā"
 msgid "No"
 msgstr "Nē"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "Rādīt grafiku"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "Slēpt grafiku"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1281,4 +1280,7 @@ msgstr "Nākamā lapa"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Beigas"
+
+
+
 

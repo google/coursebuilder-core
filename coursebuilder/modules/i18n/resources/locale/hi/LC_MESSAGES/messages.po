@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-10 12:08-0800\n"
-"PO-Revision-Date: 2014-11-10 12:08-0800\n"
+"POT-Creation-Date: 2014-11-17 09:43-0800\n"
+"PO-Revision-Date: 2014-11-17 09:43-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: hi <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -395,57 +395,57 @@ msgstr "विषय:"
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
-msgstr ""
+msgstr "उत्तर सबमिट करें"
 
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr ""
+msgstr "एक्सेस अस्वीकार किया गया."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
 msgid "Thank you for your feedback."
-msgstr ""
+msgstr "आपके फ़ीडबैक के लिए धन्यवाद."
 
 #. Header on 5-point scale for student feedback on the lesson.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:5
 msgid "Rate this lesson:"
-msgstr ""
+msgstr "इस अध्याय का मुल्यांकन करे:"
 
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr ""
+msgstr "बिल्‍कुल भी उपयोगी नहीं"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
 msgid "Not very useful"
-msgstr ""
+msgstr "बहुत उपयोगी नहीं"
 
 #. Middle rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:24
 msgid "Somewhat useful"
-msgstr ""
+msgstr "कुछ-कुछ उपयोगी"
 
 #. Second-highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:30
 msgid "Very useful"
-msgstr ""
+msgstr "बहुत उपयोगी"
 
 #. Highest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:36
 msgid "Extremely useful"
-msgstr ""
+msgstr "अत्यंत उपयोगी"
 
 #. Indicate location to type additional comments
 #: experimental/coursebuilder/modules/rating/templates/widget.html:42
 msgid "Additional comments..."
-msgstr ""
+msgstr "अतिरिक्त टिप्पणियां..."
 
 #. Label on a button to submit feedback.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:45
 msgid "Submit"
-msgstr ""
+msgstr "सबमिट करें"
 
 #. Displayed in search results; denotes a lesson link.
 #. Navigation breadcrumb.
@@ -529,13 +529,13 @@ msgid ""
 "If you prefer to continue receiving notifications, please click below to "
 "resubscribe."
 msgstr ""
-"अगर आप नोटिफिकेशन प्राप्त करते रहना चाहते हैं, तो कृपया पुनः सदस्य बनने "
-"के लिए नीचे क्लिक करें."
+"अगर आप नोटिफिकेशन प्राप्त करते रहना चाहते हैं, तो कृपया फिर से सदस्य बनने"
+" के लिए नीचे क्लिक करें."
 
 #. Button at the bottom of the page to resubscribe to notifications.
 #: experimental/coursebuilder/modules/unsubscribe/templates/unsubscribe.html:44
 msgid "Resubscribe"
-msgstr "पुनः सदस्यता लें"
+msgstr "फिर से सदस्यता लें"
 
 #. Message shown to the user telling them they have already submitted an item,
 #. and submitting a new item will overwrite their previous item.
@@ -704,7 +704,7 @@ msgstr " आपके द्वारा सही उत्तर दिए ग
 #. Text appearing after the student has submitted an assessment.
 #: experimental/coursebuilder/views/base.html:63
 msgid " You received a score on this assessment of "
-msgstr " आपको निम्न के इस आंकलन हेतु अंक प्राप्त हुआ है "
+msgstr " आपको निम्न के इस आंकलन के लिए अंक प्राप्त हुआ है "
 
 #. Text appearing after the student has checked his/her answers to an
 #. assessment.
@@ -813,12 +813,11 @@ msgstr ""
 msgid "Registrations for this course are not open."
 msgstr "इस पाठ्यक्रम के लिए पंजीकरण खुले नहीं हैं."
 
-#. This should be interpreted as a noun. It is the title for the course
-#. schedule on the main contents page.
+#. Title for the course syllabus on the main contents page.
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
-msgid "Schedule"
-msgstr "शेड्यूल"
+msgid "Syllabus"
+msgstr ""
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -893,7 +892,7 @@ msgstr "YouTube Video Player"
 #. Link to a text version of a lesson video.
 #: experimental/coursebuilder/views/lesson_common.html:24
 msgid "Text Version"
-msgstr "लेख संस्करण"
+msgstr "लेख वर्शन"
 
 #. Text shown for a lesson that has not been made public.
 #: experimental/coursebuilder/views/lesson_common.html:44
@@ -1082,7 +1081,7 @@ msgstr "असाइनमेंट %(index)s"
 #. Text shown after an assignment whose review is still in draft state.
 #: experimental/coursebuilder/views/review_dashboard.html:61
 msgid "Draft"
-msgstr "ड्रॉफ़्ट"
+msgstr "अधूरा ईमेल"
 
 #. Button that a student can click to request a new assignment to review.
 #: experimental/coursebuilder/views/review_dashboard.html:78
@@ -1251,15 +1250,15 @@ msgstr "हां"
 msgid "No"
 msgstr "नहीं"
 
-#. Label on a control to show a class schedule.
+#. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
-msgid "Show Schedule"
-msgstr "शेड्यूल दिखाएं"
+msgid "Show Syllabus"
+msgstr ""
 
-#. Label on a control to hide a class schedule.
+#. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
-msgid "Hide Schedule"
-msgstr "शेड्यूल छिपाएं"
+msgid "Hide Syllabus"
+msgstr ""
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1282,4 +1281,7 @@ msgstr "अगला पृष्ठ"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "समाप्त"
+
+
+
 
