@@ -11,12 +11,12 @@
 {% block top_content %}
   <script>
     {# I18N: This is shown to the student in a popup after registration. #}
-    var regConfirmationMsg = "{{ gettext('Thank you for registering for the course. Click the Announcements tab for important information.') }}";
+    var regConfirmationMsg = "{{ gettext('Thank you for registering for the course. Click the Announcements tab for important information.') | js_string }}";
     if(window.location.hash == '#registration_confirmation') {
       cbShowMsgAutoHide(regConfirmationMsg);
     }
     {# I18N: This is shown to the student in a popup if registrations for the course are not open. #}
-    var regClosedMsg = "{{ gettext('Registrations for this course are not open.') }}";
+    var regClosedMsg = "{{ gettext('Registrations for this course are not open.') | js_string }}";
     if(window.location.hash == '#registration_closed') {
       cbShowMsgAutoHide(regClosedMsg);
     }
