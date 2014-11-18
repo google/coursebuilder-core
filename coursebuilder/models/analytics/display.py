@@ -146,7 +146,7 @@ def _get_generator_status_message(generator_class, job):
         message.append(safe_dom.Text(
             'Statistics for %s were last updated at %s in about %s sec.' % (
                 generator_description,
-                job.updated_on.strftime(utils.HUMAN_READABLE_TIME_FORMAT),
+                job.updated_on.strftime(utils.HUMAN_READABLE_DATETIME_FORMAT),
                 job.execution_time_sec)))
     elif job.status_code == jobs.STATUS_CODE_FAILED:
         message.append(safe_dom.Text(
@@ -163,7 +163,7 @@ def _get_generator_status_message(generator_class, job):
         message.append(safe_dom.Text(
             'Job for %s statistics started at %s and is running now.' % (
                generator_description,
-               job.updated_on.strftime(utils.HUMAN_READABLE_TIME_FORMAT))))
+               job.updated_on.strftime(utils.HUMAN_READABLE_DATETIME_FORMAT))))
     return message
 
 
