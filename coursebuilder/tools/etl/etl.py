@@ -212,6 +212,8 @@ _EXCLUDE_TYPES = set([
     '_AE_Pipeline_Record',
     '_AE_Pipeline_Slot',
     '_AE_Pipeline_Status',
+    # AppEngine internal background jobs queue
+    '_DeferredTaskEntity',
     ])
 # Function that takes one arg and returns it.
 _IDENTITY_TRANSFORM = lambda x: x
