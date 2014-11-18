@@ -3,6 +3,8 @@ div.gcb-questionnaire > div.post-message {
   overflow: hidden;
   max-height: 50em;
   -webkit-transition: max-height 2000ms;
+  -moz-transition: max-height 2000ms;
+  transition: max-height 2000ms;
 }
 div.gcb-questionnaire > div.post-message.hidden {
   display: block;
@@ -13,4 +15,5 @@ div.gcb-questionnaire > div.post-message > div {
   border: solid 1px #ccc;
   border-radius: 2px;
   padding: 0.2em 1.0em;
+  margin-bottom: 10px;
 }
