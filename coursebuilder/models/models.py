@@ -2076,7 +2076,7 @@ class StudentPreferencesDAO(BaseJsonDao):
             prefs = StudentPreferencesDTO(
                 user_id, {
                     'version': cls.CURRENT_VERSION,
-                    'show_hooks': True,
+                    'show_hooks': False,
                     'show_jinja_context': False
                 })
             cls.save(prefs)

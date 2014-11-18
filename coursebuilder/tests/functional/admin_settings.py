@@ -53,18 +53,18 @@ class AdminSettingsTests(actions.TestBase):
 
     def test_defaults(self):
         prefs = models.StudentPreferencesDAO.load_or_create()
-        self.assertEquals(True, prefs.show_hooks)
+        self.assertEquals(False, prefs.show_hooks)
 
     def test_settings_page(self):
         response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: True', response.body)
+        self.assertIn('Show hook edit buttons: False', response.body)
 
         with common_utils.Namespace(NAMESPACE):
             prefs = models.StudentPreferencesDAO.load_or_create()
-            prefs.show_hooks = False
+            prefs.show_hooks = True
             models.StudentPreferencesDAO.save(prefs)
         response = self.get(SETTINGS_URL)
-        self.assertIn('Show hook edit buttons: False', response.body)
+        self.assertIn('Show hook edit buttons: True', response.body)
 
 
 class WelcomePageTests(actions.TestBase):
@@ -380,10 +380,19 @@ class HtmlHookTest(actions.TestBase):
 
     def test_student_admin_hook_visibility(self):
         actions.login(STUDENT_EMAIL, is_admin=False)
+        with common_utils.Namespace(NAMESPACE):
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.show_hooks = True
+            models.StudentPreferencesDAO.save(prefs)
+
         response = self.get(BASE_URL)
         self.assertNotIn('gcb-html-hook-edit', response.body)
 
         actions.login(ADMIN_EMAIL, is_admin=True)
+        with common_utils.Namespace(NAMESPACE):
+            prefs = models.StudentPreferencesDAO.load_or_create()
+            prefs.show_hooks = True
+            models.StudentPreferencesDAO.save(prefs)
         response = self.get(BASE_URL)
         self.assertIn('gcb-html-hook-edit', response.body)
 
