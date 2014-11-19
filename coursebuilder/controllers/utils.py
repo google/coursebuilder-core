@@ -17,7 +17,6 @@
 __author__ = 'Saifu Angto (saifu@google.com)'
 
 import datetime
-import gettext
 import HTMLParser
 import os
 import re
@@ -213,8 +212,10 @@ def display_unit_title(unit, course_properties=None):
     if course_properties['course'].get('display_unit_title_without_index'):
         return unit.title
     else:
+        app_context = sites.get_course_for_current_request()
         # I18N: Message displayed as title for unit within a course.
-        return gettext.gettext('Unit %s - %s' % (unit.index, unit.title))
+        unit_title = app_context.gettext('Unit %s - %s')
+        return unit_title % (unit.index, unit.title)
 
 
 def display_short_unit_title(unit, course_properties=None):
@@ -225,8 +226,10 @@ def display_short_unit_title(unit, course_properties=None):
         return unit.title
     if unit.type != 'U':
         return unit.title
+    app_context = sites.get_course_for_current_request()
     # I18N: Message displayed as title for unit within a course.
-    return '%s %s' % (gettext.gettext('Unit'), unit.index)
+    unit_title = app_context.gettext('Unit %s')
+    return unit_title % unit.index
 
 
 def display_lesson_title(unit, lesson, course_properties=None):

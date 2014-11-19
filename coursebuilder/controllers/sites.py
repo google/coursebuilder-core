@@ -785,9 +785,13 @@ class ApplicationContext(object):
         Returns:
             Localized text, or the original string, if no localization exists.
         """
-        translator = i18n.get_i18n()
-        translator.set_locale(self.get_current_locale())
-        return translator.gettext(text)
+        try:
+            translator = i18n.get_i18n()
+            translator.set_locale(self.get_current_locale())
+            return translator.gettext(text)
+        except Exception:  # pylint: disable-msg=broad-except
+            logging.exception('Unable to translate %s', text)
+            return text
 
     def get_template_environ(self, locale, additional_dirs):
         """Create and configure jinja template evaluation environment."""

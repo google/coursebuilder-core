@@ -22,7 +22,6 @@ import time
 import actions
 from common import crypto
 from common.utils import Namespace
-from controllers import utils
 from models import courses
 from models import models
 from models import transforms
@@ -406,7 +405,7 @@ class CourseOutlineTestCase(actions.TestBase):
         unit_li = lis[2]
         self._check_list_item(
             unit_li, 'unit?unit=%s' % unit.unit_id,
-            utils.display_unit_title(unit, {'course': {}}), 'unit',
+            'Unit 1 - Test Unit', 'unit',
             unit.unit_id, 'icon-unlocked'
         )
 
