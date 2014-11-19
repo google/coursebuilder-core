@@ -2692,12 +2692,30 @@ class LazyTranslator(object):
                     'The content has changed and {n} {parts} of the '
                     'translation {are} out of date.'.format(
                     n=count_misses, parts=parts, are=are))
-                return self._detailed_error(self._errm, body)
+                return self._detailed_error(self._errm, self._fallback(body))
 
         except Exception as ex:  # pylint: disable-msg=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
             self._errm = str(ex)
-            return self._detailed_error(str(ex), self.source_value)
+            return self._detailed_error(
+                str(ex), self._fallback(self.source_value))
+
+    def _fallback(self, default_body):
+        """Try to fallback to the last known good translation."""
+        source_value = self.translation_dict['source_value']
+        try:
+            resource_bundle = [
+                item['target_value'] for item in self.translation_dict['data']]
+            context = xcontent.Context(
+                xcontent.ContentIO.fromstring(source_value))
+            transformer = xcontent.ContentTransformer(
+                config=I18nTranslationContext.get(self._app_context))
+            transformer.decompose(context)
+            transformer.recompose(context, resource_bundle, [])
+            return xcontent.ContentIO.tostring(context.tree)
+        except Exception:  # pylint: disable-msg=broad-except
+            logging.exception('Unable to fallback translate: %s', source_value)
+            return default_body
 
     def _detailed_error(self, msg, body):
         if roles.Roles.is_user_allowed(

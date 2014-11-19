@@ -697,7 +697,8 @@ class TranslationConsoleValidationTests(actions.TestBase):
         self.assertEquals('', payload['title']['errm'])
         self.assertEquals(self.INVALID, payload['unit_header']['status'])
         self.assertEquals(
-            'Unexpected tag: <img#1>.', payload['unit_header']['errm'])
+            'Error in chunk 1. Unexpected tag: <img#1>.',
+            payload['unit_header']['errm'])
 
     def test_with_bundle(self):
         dto = ResourceBundleDTO(str(self.key), self.resource_bundle_dict)
@@ -1160,6 +1161,7 @@ class LazyTranslatorTests(actions.TestBase):
         source_value = 'hello'
         translation_dict = {
             'type': 'html',
+            'source_value': 'hello',
             'data': [
                 {'source_value': 'hello', 'target_value': 'HELLO'}]}
         key = ResourceBundleKey(ResourceKey.LESSON_TYPE, '23', 'el')
@@ -1365,7 +1367,7 @@ class CourseContentTranslationTests(actions.TestBase):
         dom = self.parse_html_string(self.get('unit?unit=1').body)
 
         self.assertEquals(
-            'Unexpected tag: <b#1>.',
+            'Error in chunk 2. Unexpected tag: <b#1>.',
             dom.find('.//div[@class="gcb-translation-error-body"]/p[1]').text)
 
         edit_link = dom.find(
@@ -1426,30 +1428,32 @@ class CourseContentTranslationTests(actions.TestBase):
         # Delete first para from lesson
         update_lesson_objectives('<p>d</p>')
         dom = self.parse_html_string(self.get('unit?unit=1').body)
-        assert_p_tags(dom, ['D'], '1 part of the translation is out of date')
+        assert_p_tags(
+            dom, ['C', 'D'], '1 part of the translation is out of date')
 
         # Delete second para from lesson
         update_lesson_objectives('<p>c</p>')
         dom = self.parse_html_string(self.get('unit?unit=1').body)
-        assert_p_tags(dom, ['C'], '1 part of the translation is out of date')
+        assert_p_tags(
+            dom, ['C', 'D'], '1 part of the translation is out of date')
 
         # Add para to lesson
         update_lesson_objectives('<p>c</p><p>d</p><p>e</p>')
         dom = self.parse_html_string(self.get('unit?unit=1').body)
         assert_p_tags(
-            dom, ['C', 'D', 'e'], '1 part of the translation is out of date')
+            dom, ['C', 'D'], '1 part of the translation is out of date')
 
         # Change para in lesson
         update_lesson_objectives('<p>cc</p><p>d</p>')
         dom = self.parse_html_string(self.get('unit?unit=1').body)
         assert_p_tags(
-            dom, ['cc', 'D'], '1 part of the translation is out of date')
+            dom, ['C', 'D'], '1 part of the translation is out of date')
 
         # Change two paras
         update_lesson_objectives('<p>cc</p><p>dd</p>')
         dom = self.parse_html_string(self.get('unit?unit=1').body)
         assert_p_tags(
-            dom, ['cc', 'dd'], '2 parts of the translation are out of date')
+            dom, ['C', 'D'], '2 parts of the translation are out of date')
 
         # A student should see the partial translation but no error message
         actions.logout()
@@ -1460,7 +1464,7 @@ class CourseContentTranslationTests(actions.TestBase):
 
         dom = self.parse_html_string(self.get('unit?unit=1').body)
         self.assertEquals(
-            ['cc', 'dd'],
+            ['C', 'D'],
             [p_tag.text for p_tag in dom.findall(
                 './/div[@class="gcb-lesson-content"]/p')])
         self.assertIsNone(dom.find('.//div[@class="gcb-translation-error"]'))

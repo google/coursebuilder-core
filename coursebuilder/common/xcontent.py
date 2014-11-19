@@ -580,7 +580,8 @@ class ResourceBundleItemError(Exception):
     """An error related to a specific string in a resource bundle."""
 
     def __init__(self, exc_info, original_exception, index):
-        Exception.__init__(self, original_exception.message)
+        Exception.__init__(self, 'Error in chunk %s. %s' % (
+            index + 1, original_exception))
         self._exc_info = exc_info
         self._original_exception = original_exception
         self._index = index
@@ -599,7 +600,7 @@ class ResourceBundleItemError(Exception):
 
     def reraise(self):
         """Re-raises an exception preserving original stack trace."""
-        raise self._exc_info[0], self._exc_info[1], self._exc_info[2]
+        raise self._exc_info[0], self, self._exc_info[2]
 
 
 class Configuration(object):
