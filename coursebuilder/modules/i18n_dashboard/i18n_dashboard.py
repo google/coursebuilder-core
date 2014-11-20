@@ -2275,7 +2275,12 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
     def _get_validation_report(self, key, section_names, resource_bundle_dto):
         report = {}
         for name in section_names:
-            section = resource_bundle_dto.dict[name]
+            section = resource_bundle_dto.dict.get(name)
+            if section is None:
+                report[name] = {
+                    'status': LazyTranslator.NOT_STARTED_TRANSLATION,
+                    'errm': 'No translation saved yet'}
+                continue
             source_value = (
                 section['source_value'] if section['type'] == TYPE_HTML
                 else section['data'][0]['source_value'])
@@ -2399,7 +2404,8 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                                     pass
                             if target_value != source_value:
                                 item['target_value'] = target_value
-                                item['verb'] = VERB_CURRENT
+                                # Flag the text as needing accepted
+                                item['verb'] = VERB_CHANGED
 
         schema = key.resource_key.get_schema(course)
         values = key.resource_key.get_data_dict(course)

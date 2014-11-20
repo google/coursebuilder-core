@@ -571,6 +571,20 @@ class TranslationConsoleRestHandlerTests(actions.TestBase):
         self.assertEquals(
             '<gcb-markdown#1>*hello*</gcb-markdown#1>', data[0]['source_value'])
 
+    def test_defaults_to_known_translations(self):
+        unit = self.course.add_unit()
+
+        # Make the unit title be a string which is part of CB's i18n data
+        unit.title = 'Registration'
+        self.course.save()
+
+        key = ResourceBundleKey(ResourceKey.UNIT_TYPE, unit.unit_id, 'el')
+        response = self._get_by_key(key)
+        payload = transforms.loads(response['payload'])
+        data = payload['sections'][0]['data']
+        self.assertEqual(VERB_CHANGED, data[0]['verb'])
+        self.assertEqual(u'Εγγραφή', data[0]['target_value'])
+
 
 class TranslationConsoleValidationTests(actions.TestBase):
     ADMIN_EMAIL = 'admin@foo.com'
@@ -678,7 +692,9 @@ class TranslationConsoleValidationTests(actions.TestBase):
         response = transforms.loads(response.body)
         self.assertEquals(200, response['status'])
         payload = transforms.loads(response['payload'])
-        self.assertEquals({'title', 'unit_header'}, set(payload.keys()))
+        expected_keys = {
+            section['name'] for section in self.validation_payload['sections']}
+        self.assertEquals(expected_keys, set(payload.keys()))
 
         return payload
 
@@ -725,6 +741,34 @@ class TranslationConsoleValidationTests(actions.TestBase):
         self.assertEquals('', payload['title']['errm'])
         self.assertEquals(self.VALID, payload['unit_header']['status'])
         self.assertEquals('', payload['unit_header']['errm'])
+
+    def test_untranslated_section(self):
+        # Add a section to the unit which has no translation in the bundle
+        self.unit.unit_footer = 'footer'
+        self.course.save()
+
+        self.validation_payload['sections'].append(
+            {
+                'name': 'unit_footer',
+                'label': 'Unit Footer',
+                'type': 'html',
+                'source_value': 'footer',
+                'data': [
+                    {
+                        'source_value': 'footer',
+                        'target_value': '',
+                        'verb': 1,  # verb NEW
+                        'old_source_value': None,
+                        'changed': False
+                    }
+                ]
+            })
+
+        payload = self._validate()
+        footer_data = payload['unit_footer']
+        self.assertEqual(
+            LazyTranslator.NOT_STARTED_TRANSLATION, footer_data['status'])
+        self.assertEqual('No translation saved yet', footer_data['errm'])
 
 
 class I18nProgressDeferredUpdaterTests(actions.TestBase):

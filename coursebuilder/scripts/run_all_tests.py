@@ -103,9 +103,9 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard.ResourceBundleKeyTests': 2,
     'tests.functional.modules_i18n_dashboard.ResourceRowTests': 6,
     'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleRestHandlerTests': 7,
+        '.TranslationConsoleRestHandlerTests': 8,
     'tests.functional.modules_i18n_dashboard'
-        '.TranslationConsoleValidationTests': 4,
+        '.TranslationConsoleValidationTests': 5,
     'tests.functional.modules_i18n_dashboard.TranslationImportExportTests': 53,
     'tests.functional.modules_i18n_dashboard.TranslatorRoleTests': 2,
     'tests.functional.modules_i18n_dashboard.SampleCourseLocalizationTest': 16,
