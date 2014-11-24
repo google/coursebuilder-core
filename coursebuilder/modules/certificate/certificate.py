@@ -37,15 +37,23 @@ __author__ = [
 
 import os
 
+from mapreduce import context
+
 import appengine_config
 from common import safe_dom
 from common import schema_fields
 from common import tags
+from controllers import sites
 from controllers import utils
+from models import analytics
 from models import courses
 from models import custom_modules
+from models import data_sources
+from models import jobs
+from models import models
 from modules.certificate import custom_criteria
 from modules.dashboard import course_settings
+from modules.dashboard import tabs
 
 CERTIFICATE_HANDLER_PATH = 'certificate'
 RESOURCES_PATH = '/modules/certificate/resources'
@@ -241,6 +249,95 @@ def get_criteria_editor_schema(course):
             'listRemoveLabel': 'Delete criterion'})
 
 
+TOTAL_CERTIFICATES = 'total_certificates'
+TOTAL_ACTIVE_STUDENTS = 'total_active_students'
+TOTAL_STUDENTS = 'total_students'
+
+
+class CertificatesEarnedGenerator(jobs.AbstractCountingMapReduceJob):
+
+    @staticmethod
+    def get_description():
+        return 'certificates earned'
+
+    def build_additional_mapper_params(self, app_context):
+        return {'course_namespace': app_context.get_namespace_name()}
+
+    @staticmethod
+    def entity_class():
+        return models.Student
+
+    @staticmethod
+    def map(student):
+        params = context.get().mapreduce_spec.mapper.params
+        ns = params['course_namespace']
+        app_context = sites.get_course_index().get_app_context_for_namespace(ns)
+        course = courses.Course(None, app_context=app_context)
+        if student_is_qualified(student, course):
+            yield(TOTAL_CERTIFICATES, 1)
+        if student.scores:
+            yield(TOTAL_ACTIVE_STUDENTS, 1)
+        yield(TOTAL_STUDENTS, 1)
+
+
+class CertificatesEarnedDataSource(data_sources.SynchronousQuery):
+
+    @staticmethod
+    def required_generators():
+        return [CertificatesEarnedGenerator]
+
+    @classmethod
+    def get_name(cls):
+        return 'certificates_earned'
+
+    @classmethod
+    def get_title(cls):
+        return 'Certificates Earned'
+
+    @classmethod
+    def get_schema(cls, unused_app_context, unused_catch_and_log):
+        reg = schema_fields.FieldRegistry(
+            'Certificates Earned',
+            description='Scalar values aggregated over entire course giving '
+            'counts of certificates earned/not-yet-earned.  Only one row will '
+            'ever be returned from this data source.')
+        reg.add_property(schema_fields.SchemaField(
+            TOTAL_STUDENTS, 'Total Students', 'integer',
+            description='Total number of students in course'))
+        reg.add_property(schema_fields.SchemaField(
+            TOTAL_CERTIFICATES, 'Total Certificates', 'integer',
+            description='Total number of certificates earned'))
+        reg.add_property(schema_fields.SchemaField(
+            TOTAL_ACTIVE_STUDENTS, 'Total Active Students', 'integer',
+            description='Number of "active" students.  These are students who '
+            'have taken at least one assessment.  Note that it is not likely '
+            'that a student has achieved a certificate without also being '
+            'considered "active".'))
+        return reg.get_json_schema_dict()['properties']
+
+    @staticmethod
+    def fill_values(app_context, template_values, certificates_earned_job):
+        # Set defaults
+        template_values.update({
+            TOTAL_CERTIFICATES: 0,
+            TOTAL_ACTIVE_STUDENTS: 0,
+            TOTAL_STUDENTS: 0,
+            })
+        # Override with actual values from m/r job, if present.
+        template_values.update(
+            jobs.MapReduceJob.get_results(certificates_earned_job))
+
+
+def register_analytic():
+    data_sources.Registry.register(CertificatesEarnedDataSource)
+    name = 'certificates_earned'
+    title = 'Certificates Earned'
+    certificates_earned = analytics.Visualization(
+        name, title, 'certificates_earned.html',
+        data_source_classes=[CertificatesEarnedDataSource])
+    tabs.Registry.register('analytics', name, title, [certificates_earned])
+
+
 custom_module = None
 
 
@@ -248,6 +345,7 @@ def register_module():
     """Registers this module in the registry."""
 
     def on_module_enabled():
+        register_analytic()
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.append(
             'inputex-list')
         courses.Course.OPTIONS_SCHEMA_PROVIDERS[

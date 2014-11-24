@@ -127,13 +127,16 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
     COURSE_NAME = 'certificate_criteria'
     STUDENT_EMAIL = 'foo@foo.com'
+    ADMIN_EMAIL = 'admin@foo.com'
+    ANALYTICS_URL = ('/' + COURSE_NAME +
+                     '/dashboard?action=analytics&tab=certificates_earned')
 
     def setUp(self):
         super(CertificateCriteriaTestCase, self).setUp()
 
         self.base = '/' + self.COURSE_NAME
         context = actions.simple_add_course(
-            self.COURSE_NAME, 'admin@foo.com', 'Certificate Criteria')
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Certificate Criteria')
 
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
@@ -172,6 +175,30 @@ class CertificateCriteriaTestCase(actions.TestBase):
         response = self.get('certificate')
         self._assert_redirect_to_course_landing_page(response)
 
+    def _run_analytic_and_expect(self, expected_students,
+                                 expected_active_students,
+                                 expected_certificates):
+        actions.login(self.ADMIN_EMAIL)
+        response = self.get(self.ANALYTICS_URL)
+        self.submit(response.forms['gcb-run-visualization-certificates_earned'],
+                    response)
+        self.execute_all_deferred_tasks()
+
+        dom = self.parse_html_string(self.get(self.ANALYTICS_URL).body)
+        total_students = int(
+            dom.find('.//span[@id="total_students"]').text)
+        total_active_students = int(
+            dom.find('.//span[@id="total_active_students"]').text)
+        total_certificates = int(
+            dom.find('.//span[@id="total_certificates"]').text)
+        self.assertEquals(expected_students, total_students)
+        self.assertEquals(expected_active_students, total_active_students)
+        self.assertEquals(expected_certificates, total_certificates)
+        actions.login(self.STUDENT_EMAIL)
+
+    def test_no_criteria_analytic(self):
+        self._run_analytic_and_expect(1, 0, 0)
+
     def test_machine_graded(self):
         assessment = self.course.add_assessment()
         assessment.title = 'Assessment'
@@ -185,6 +212,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
         # Student has not yet completed assessment, expect redirect to home page
         response = self.get('certificate')
         self._assert_redirect_to_course_landing_page(response)
+        self._run_analytic_and_expect(1, 0, 0)  # 1 student, 0 active, no cert.
 
         # Submit assessment with low score
         actions.submit_assessment(
@@ -197,6 +225,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
         response = self.get('certificate')
         self._assert_redirect_to_course_landing_page(response)
+        self._run_analytic_and_expect(1, 1, 0)  # 1 student, 1 active, no cert
 
         # Submit assessment with expected score
         actions.submit_assessment(
@@ -209,6 +238,7 @@ class CertificateCriteriaTestCase(actions.TestBase):
 
         response = self.get('certificate')
         self.assertEquals(200, response.status_code)
+        self._run_analytic_and_expect(1, 1, 1)  # 1 student, 1 active, 1 cert
 
     def _submit_review(self, assessment):
         """Submits a review by the current student.

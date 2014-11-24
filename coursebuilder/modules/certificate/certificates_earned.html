@@ -1,0 +1,28 @@
+<p>
+Total Students:
+<span id ="total_students">{{ total_students }}</span>
+</p>
+
+<p>
+Total Active Students:
+<span id="total_active_students">{{ total_active_students }}</span>
+</p>
+
+<p>
+Total Certificates:
+<span id="total_certificates">{{ total_certificates }}</span>
+</p>
+
+<!-- Use "or 1" to avoid division-by-zero errors.  Note that when the
+     denominator is zero, then the numerator must also be zero, so
+     the displayed value will correctly be zero, despite the denominator
+     being a little white lie. -->
+<p>
+% Total Students with Certificate:
+{{ total_certificates * 100 / (total_students or 1) }}
+</p>
+
+<p>
+% Active Students with Certificate:
+{{ total_certificates * 100 / (total_active_students or 1) }}
+</p>
