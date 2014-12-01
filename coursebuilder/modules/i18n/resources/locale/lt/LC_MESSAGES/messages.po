@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-17 09:43-0800\n"
-"PO-Revision-Date: 2014-11-17 09:43-0800\n"
+"POT-Creation-Date: 2014-11-24 08:36-0800\n"
+"PO-Revision-Date: 2014-11-24 08:36-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: lt <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -26,9 +26,10 @@ msgid "Unit %s - %s"
 msgstr "%s skyrius – „%s“"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:229
-msgid "Unit"
-msgstr "Vienetas"
+#: experimental/coursebuilder/controllers/utils.py:231
+#, python-format
+msgid "Unit %s"
+msgstr ""
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -813,7 +814,7 @@ msgstr "Registracija į šį kursą neprasidėjo."
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
 msgid "Syllabus"
-msgstr ""
+msgstr "Kurso programa"
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1244,12 +1245,12 @@ msgstr "Ne"
 #. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Syllabus"
-msgstr ""
+msgstr "Rodyti kurso programą"
 
 #. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Syllabus"
-msgstr ""
+msgstr "Slėpti kurso programą"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1272,7 +1273,5 @@ msgstr "Kitas puslapis"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Pabaiga"
-
-
 
 

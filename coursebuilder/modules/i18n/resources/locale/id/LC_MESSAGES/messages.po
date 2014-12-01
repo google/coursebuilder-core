@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-17 09:43-0800\n"
-"PO-Revision-Date: 2014-11-17 09:43-0800\n"
+"POT-Creation-Date: 2014-11-24 08:36-0800\n"
+"PO-Revision-Date: 2014-11-24 08:36-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: id <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -25,9 +25,10 @@ msgid "Unit %s - %s"
 msgstr "Unit %s - %s"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:229
-msgid "Unit"
-msgstr "Unit"
+#: experimental/coursebuilder/controllers/utils.py:231
+#, python-format
+msgid "Unit %s"
+msgstr ""
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -812,7 +813,7 @@ msgstr "Pendaftaran untuk program ini belum dibuka."
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
 msgid "Syllabus"
-msgstr ""
+msgstr "Silabus"
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1243,12 +1244,12 @@ msgstr "Tidak"
 #. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Syllabus"
-msgstr ""
+msgstr "Tampilkan Silabus"
 
 #. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Syllabus"
-msgstr ""
+msgstr "Sembunyikan Silabus"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1271,7 +1272,5 @@ msgstr "Laman Berikutnya"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Akhir"
-
-
 
 

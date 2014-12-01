@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-17 09:43-0800\n"
-"PO-Revision-Date: 2014-11-17 09:43-0800\n"
+"POT-Creation-Date: 2014-11-24 08:36-0800\n"
+"PO-Revision-Date: 2014-11-24 08:36-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sw <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -25,9 +25,10 @@ msgid "Unit %s - %s"
 msgstr "Somo %s -%s"
 
 #. Message displayed as title for unit within a course.
-#: experimental/coursebuilder/controllers/utils.py:229
-msgid "Unit"
-msgstr "Kitengo"
+#: experimental/coursebuilder/controllers/utils.py:231
+#, python-format
+msgid "Unit %s"
+msgstr ""
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -398,7 +399,7 @@ msgstr "Wasilisha majibu"
 #. Message displayed to non-logged in user
 #: experimental/coursebuilder/modules/rating/rating.py:93
 msgid "Access denied."
-msgstr "Umenyimwa idhini ya kufikia."
+msgstr "Huna idhini ya kufikia."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
@@ -413,7 +414,7 @@ msgstr "Kadiria somo hili:"
 #. Lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:12
 msgid "Not at all useful"
-msgstr "Si muhimu kabisa"
+msgstr "Si muhimu hata kidogo"
 
 #. Second-lowest rating on a 5-point scale.
 #: experimental/coursebuilder/modules/rating/templates/widget.html:18
@@ -810,7 +811,7 @@ msgstr "Usajili katika kozi hii haujafunguliwa."
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
 msgid "Syllabus"
-msgstr ""
+msgstr "Muhtasari wa masomo"
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1240,12 +1241,12 @@ msgstr "La"
 #. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Syllabus"
-msgstr ""
+msgstr "Onyesha Muhtasari wa masomo"
 
 #. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Syllabus"
-msgstr ""
+msgstr "Ficha Muhtasari wa masomo"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1268,7 +1269,5 @@ msgstr "Ukurasa Unaofuata"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Mwisho"
-
-
 
 
