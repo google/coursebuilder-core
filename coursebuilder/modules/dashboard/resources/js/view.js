@@ -56,6 +56,22 @@ function onDraftStatusClick() {
   );
 }
 
+function onCloneQuestionClick(event) {
+  event.preventDefault();
+  $.post(
+    "dashboard",
+    {
+      action: "clone_question",
+      key: $(this).data("key"),
+      xsrf_token: $("#question-table").data("clone-question-token"),
+    },
+    function(data) {
+      // On successful POST, reload page to show new clone.
+      document.location.reload();
+    }
+  );
+}
+
 function openModal() {
   // Bind Esc press to close window
   $(document).on("keyup.modal", function(e) {
@@ -208,6 +224,10 @@ function appendOptions(select, data) {
  */
 function setUpDraftStatus() {
   $(".icon-draft-status:not(.inactive)").on("click", onDraftStatusClick);
+}
+
+function setUpCloneQuestion() {
+  $(".icon-clone").on("click", onCloneQuestionClick);
 }
 
 /**
@@ -505,6 +525,7 @@ function setUpCoursePicker(){
 
 function init() {
   setUpDraftStatus();
+  setUpCloneQuestion();
   setUpLocalTimes();
   setUpModalWindow();
   setUpQuestionPreview();

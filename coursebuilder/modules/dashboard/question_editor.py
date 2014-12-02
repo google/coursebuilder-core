@@ -79,12 +79,11 @@ class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
         else:
             raise Exception('Unknown question type: %s' % question.type)
 
-    def get_clone_question(self):
+    def post_clone_question(self):
         original_question = QuestionDAO.load(self.request.get('key'))
         cloned_question = QuestionDAO.clone(original_question)
         cloned_question.description += ' (clone)'
         QuestionDAO.save(cloned_question)
-        self.redirect(self.get_action_url('assets', {'tab': 'questions'}))
 
 
 class BaseQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
@@ -503,4 +502,3 @@ class GiftQuestionRESTHandler(dto_editor.BaseDatastoreRestHandler):
         msg = 'Saved: %s.' % python_dict['description']
         transforms.send_json_response(self, 200, msg)
         return
-

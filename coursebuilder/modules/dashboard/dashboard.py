@@ -110,7 +110,7 @@ class DashboardHandler(
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
-        'clone_question', 'roles', 'add_role', 'edit_role',
+        'roles', 'add_role', 'edit_role',
         'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
@@ -119,7 +119,8 @@ class DashboardHandler(
         'add_link', 'add_assessment', 'add_lesson', 'index_course',
         'clear_index', 'edit_course_settings', 'add_reviewer',
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
-        'add_to_question_group', 'course_availability', 'course_browsability']
+        'add_to_question_group', 'course_availability', 'course_browsability',
+        'clone_question']
     nav_mappings = [
         ('outline', 'Outline'),
         ('assets', 'Assets'),
@@ -1011,12 +1012,13 @@ class DashboardHandler(
             alt='Preview'
         )
 
-    def _create_clone_button(self, clone_url):
+    def _create_clone_button(self, question_id):
         return safe_dom.A(
-            href=clone_url,
+            href='#',
             className='icon icon-clone',
             title='Clone',
             alt='Clone',
+            data_key=str(question_id)
         )
 
     def _add_assets_table(self, output, table_id, columns):
@@ -1126,6 +1128,8 @@ class DashboardHandler(
         )
         self._attach_filter_data(table)
         table.add_attribute(
+            data_clone_question_token=self.create_xsrf_token('clone_question'))
+        table.add_attribute(
             data_qg_xsrf_token=self.create_xsrf_token('add_to_question_group'))
         tbody = safe_dom.Element('tbody')
         table.add_child(tbody)
@@ -1146,9 +1150,7 @@ class DashboardHandler(
             td.add_child(self._create_edit_button(
                 'dashboard?action=edit_question&key=%s' % question.id))
             td.add_child(self._create_preview_button())
-            td.add_child(self._create_clone_button(
-                'dashboard?action=clone_question&key=%s' % question.id))
-
+            td.add_child(self._create_clone_button(question.id))
             td.add_text(question.description)
 
             # Add containing question groups

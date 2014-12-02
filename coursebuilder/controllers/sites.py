@@ -890,6 +890,7 @@ def _build_course_list_from(rules_text, create_vfs=True):
     slugs = {}
     namespaces = {}
     all_contexts = []
+    folder = None
     for rule in rules:
         rule = rule.strip()
         if not rule or rule.startswith('#'):

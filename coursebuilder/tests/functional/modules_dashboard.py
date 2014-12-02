@@ -261,7 +261,16 @@ class QuestionDashboardTestCase(actions.TestBase):
         response = self.get(self.URL)
         dom = self.parse_html_string(self.get(self.URL).body)
         clone_link = dom.find('.//a[@class="icon icon-clone"]')
-        response = self.get(clone_link.get('href'), response).follow()
+        question_key = clone_link.get('data-key')
+        xsrf_token = dom.find('.//table[@id="question-table"]'
+                              ).get('data-clone-question-token')
+        self.post(
+            'dashboard?action=clone_question',
+            {
+                'key': question_key,
+                'xsrf_token': xsrf_token
+            })
+        response = self.get(self.URL)
         self.assertIn(mc_question_description + ' (clone)', response.body)
 
     def _call_add_to_question_group(self, qu_id, qg_id, weight, xsrf_token):
