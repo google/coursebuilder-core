@@ -61,7 +61,8 @@ STATUS_ANNOTATION = oeditor.create_bool_select_annotation(
 
 
 def generate_common_schema(title):
-    common = FieldRegistry(title)
+    common = FieldRegistry(title, extra_schema_dict_values={
+        'className': 'inputEx-Group new-form-layout'})
     common.add_property(SchemaField(
         'key', 'ID', 'string', editable=False,
         extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))
@@ -940,7 +941,8 @@ def workflow_key(key):
 def create_assessment_registry():
     """Create the registry for course properties."""
 
-    reg = FieldRegistry('Assessment Entity', description='Assessment')
+    reg = FieldRegistry('Assessment Entity', description='Assessment',
+        extra_schema_dict_values={'className': 'inputEx-Group new-form-layout'})
 
     # Course level settings.
     course_opts = generate_common_schema('Assessment Config')
@@ -1170,7 +1172,9 @@ class LessonRESTHandler(BaseRESTHandler):
                 unit_list.append(
                     (unit.unit_id, cgi.escape(utils.display_unit_title(unit))))
 
-        lesson = FieldRegistry('Lesson', description='Lesson')
+        lesson = FieldRegistry(
+            'Lesson', description='Lesson', extra_schema_dict_values={
+                'className': 'inputEx-Group new-form-layout'})
         lesson.add_property(SchemaField(
             'key', 'ID', 'string', editable=False,
              extra_schema_dict_values={'className': 'inputEx-Field keyHolder'}))

@@ -89,7 +89,7 @@ def options_schema_provider(unused_course):
         description=(
             'Extra tabs to appear on the course navbar.'),
         extra_schema_dict_values={
-            'className': 'settings-list',
+            'className': 'settings-list wide',
             'listAddLabel': 'Add a tab',
             'listRemoveLabel': 'Delete tab'})
 

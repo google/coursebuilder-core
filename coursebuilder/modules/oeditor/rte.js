@@ -2,12 +2,19 @@
  * Define the methods of the GCB rich text editor here.
  */
 function getGcbRteDefs(env, Dom, Editor, Resize) {
+  var IS_NEW_FORM_LAYOUT = false;
+
   return {
     setOptions: function(options) {
       GcbRteField.superclass.setOptions.call(this, options);
       this.options.opts = options.opts || {};
       this.options.excludedCustomTags = options.excludedCustomTags || [];
       this.options.supportCustomTags = options.supportCustomTags || false;
+
+      if (env.schema._inputex && env.schema._inputex.className
+          && env.schema._inputex.className.indexOf('new-form-layout') > -1) {
+        IS_NEW_FORM_LAYOUT = true;
+      }
     },
 
     renderComponent: function() {
@@ -21,6 +28,7 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
       // Insert the text area for plain text editing
       this.el = document.createElement('textarea');
       this.el.setAttribute('id', this.id);
+      this.el.setAttribute('class', 'gcb-rte-textarea');
       if(this.options.name) {
         this.el.setAttribute('name', this.options.name);
       }
@@ -163,11 +171,13 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
     _resizeEditorsExceptTextArea: function(width, height) {
       if (this.editor) {
         var toolbarHeight = this.editor.toolbar.get('element').clientHeight + 2;
-        this.editor.set('width', width + 'px');
+        if (! IS_NEW_FORM_LAYOUT) {
+          this.editor.set('width', width + 'px');
+        }
         this.editor.set('height', (height - toolbarHeight) + 'px');
       }
       if (this.cmInstance) {
-        this.cmInstance.setSize(width, height);
+        this.cmInstance.setSize(IS_NEW_FORM_LAYOUT ? null : width, height);
       }
       this._lastResizeDimensions = {width: width, height: height};
     },
@@ -232,6 +242,9 @@ function getGcbRteDefs(env, Dom, Editor, Resize) {
           that._resizeEditors(
               that._lastResizeDimensions.width,
               that._lastResizeDimensions.height);
+        }
+        if (IS_NEW_FORM_LAYOUT) {
+          editor.set('width', null);
         }
       });
 

@@ -2,11 +2,10 @@ div#oeditor-container {
   position: relative;
 }
 
-div.form {
+div.form > div {
   width: 700px;
   margin: 20px;
   padding: 15px;
-  display: none;
   text-align: left;
 }
 div#formContainer fieldset {
@@ -68,26 +67,6 @@ div.inputEx-CheckBox input {
 }
 div.inputEx-DateField {
   width: 480px;
-}
-
-div.inputex-form-buttonbar {
-  margin: 0px;
-  padding-left: 8px;
-  padding-top: 18px;
-  border-top: solid 1px #9999FF;
-  text-align: center;
-}
-div.inputex-form-buttonbar a {
-  text-decoration: none;
-  padding: 4px;
-  padding-left: 16px;
-  padding-right: 16px;
-  margin-right: 16px;
-  font-weight: bold;
-  color: #000000;
-}
-a.inputex-list-link {
-  float: right;
 }
 button.oeditor-control,
 a.inputEx-Button,
@@ -563,4 +542,114 @@ div#formContainer div.yui-toolbar-container > fieldset {
   padding: 0;
   margin: 0;
   border: 0;
+}
+
+/*
+ * Styles for the "new form layout".
+ */
+
+div#formContainer > div.inputEx-Group.new-form-layout {
+  width: 100%;
+  min-width: 750px;
+  margin: 0;
+  padding: 0;
+}
+div#formContainer > div.inputEx-Group.new-form-layout > form > fieldset {
+  border: none;
+  margin: 0 0 16px 0;
+  padding: 0;
+}
+div#formContainer > div.inputEx-Group.new-form-layout > form > fieldset > legend > span {
+  font-size: 20px;
+}
+div#formContainer > div.inputEx-Group.new-form-layout > form > fieldset > div > fieldset {
+  /* For nested groups. */
+  border: none;
+  margin: 0 0 16px 0;
+  padding: 0;
+}
+div#formContainer > div.inputEx-Group.new-form-layout > form > fieldset > div > fieldset > legend {
+  /* For nested groups. */
+  font-size: 15px;
+  padding: 40px 0 0 0;
+}
+div.new-form-layout div.split-from-main-group-parent {
+  margin: 0 0 20px 0 !important;
+}
+div.new-form-layout div.inputEx-Field {
+  width: auto;
+}
+div.new-form-layout div.inputEx-label {
+  text-align: left;
+  padding: 0;
+  margin-top: 3px;
+  margin-right: 10px;
+}
+div.new-form-layout div.inputEx-label > label {
+  font-weight: bold !important;
+  font-size: 12px;
+  color: rgb(47, 105, 107);
+}
+div.new-form-layout div.inputEx-fieldWrapper.gcb-text-input > div.inputEx-label {
+  margin-top: 13px;
+}
+div.new-form-layout div.inputEx-fieldWrapper.gcb-checkbox-input > div.inputEx-label {
+  margin-top: 6px;
+}
+div.new-form-layout div.inputEx-fieldWrapper.gcb-select > div.inputEx-label {
+  margin-top: 5px;
+}
+div.new-form-layout > form > fieldset > div.inputEx-fieldWrapper,
+div.new-form-layout > form > fieldset > div > fieldset > div.inputEx-fieldWrapper,
+div.split-from-main-group-parent {
+  margin: 20px 0 0 0;
+  padding: 20px 20px 20px 20px;
+  background-color: #f8f8f8;
+  border-radius: 5px;
+  border: solid #D7D7D7 1px;
+}
+div.new-form-layout div.inputEx-description {
+  margin-top: 6px;
+  max-width: 500px;
+}
+div.new-form-layout div.inputEx-Field.inputEx-CheckBox > div.inputEx-description {
+  display: inline-block;
+  margin-left: 5px;
+}
+div.new-form-layout div.inputEx-Field input[type=checkbox] {
+  vertical-align: top;
+}
+div.new-form-layout div.inputEx-Field input[type=text],
+div.new-form-layout div.inputEx-Field textarea {
+  width: 500px;
+  padding: 7px 8px;
+  border: solid 1px #999;
+  border-radius: 3px;
+  font-size: 12px;
+}
+div#formContainer  > div.inputEx-Group.new-form-layout div.label-group-list {
+  background-color: #fff;
+  border-radius: 3px;
+  border: solid 1px #999;
+  padding: 5px 15px;;
+}
+div.new-form-layout div.inputEx-Form-buttonBar {
+  max-width: 500px;
+  margin: 20px 0 0 0;
+}
+div.new-form-layout div.rte-control.inputEx-Button {
+  left: 146px;
+}
+div.new-form-layout div.rte-control + div.inputEx-Field {
+  margin-top: 25px;
+  width: inherit;
+  float: none;
+  margin-left: 129px;
+}
+div.new-form-layout textarea.gcb-rte-textarea,
+div.new-form-layout div.CodeMirror {
+  height: 400px;
+}
+div.new-form-layout div.inputEx-Field > div.yui-editor-container {
+  width: inherit;
 }

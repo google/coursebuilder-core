@@ -610,6 +610,24 @@ TopLevelEditorControls.prototype = {
     var payload = parseJson(json.payload);
     this._env.form.setValue(payload);
 
+    // Put some hints on the field wrapper divs about what type of input field
+    // is being used.
+    var FIELD_WRAPPER_SEL = 'div.new-form-layout div.inputEx-fieldWrapper';
+    var TEXT_INPUT_SEL = '> div.inputEx-Field ' +
+        '> div.inputEx-StringField-wrapper > input[type=text]';
+    var CHECKBOX_SEL = '> div.inputEx-Field.inputEx-CheckBox ' +
+        '> input[type=checkbox]';
+    var SELECT_SEL = '> div.inputEx-Field > select';
+    this._Y.all(FIELD_WRAPPER_SEL).each(function(node) {
+      if (node.one(TEXT_INPUT_SEL)) {
+        node.addClass('gcb-text-input');
+      } else if (node.one(CHECKBOX_SEL)) {
+        node.addClass('gcb-checkbox-input');
+      } else if (node.one(SELECT_SEL)) {
+        node.addClass('gcb-select');
+      }
+    });
+
     // record xsrf token if provided
     if (json.xsrf_token) {
       this._env.xsrf_token = json.xsrf_token;

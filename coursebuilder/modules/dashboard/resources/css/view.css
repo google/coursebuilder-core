@@ -145,6 +145,18 @@ div.settings-list {
   width: 500px;
   float: left;
 }
+div.new-form-layout div.settings-list.wide {
+  width: inherit;
+  float: none;
+  margin-left: 90px;
+  min-width: 700px;
+}
+div.new-form-layout div.settings-list.wide > span:first-child {
+  display: none;
+}
+div.settings-list > div.inputEx-ListField-childContainer > div {
+  margin-top: 15px;
+}
 div.settings-list a.inputEx-List-link {
   color: #000;
   background-color: #f2f2f2;
@@ -154,10 +166,15 @@ div.settings-list a.inputEx-List-link {
   font-size: 10px;
   margin-left: 0px;
 }
+div.new-form-layout div.settings-list a.inputEx-List-link {
+  color: #fff;
+  background-color: #666;
+  font-weight: normal;
+  border-radius: 3px;
+  padding: 3px 10px;
+}
 div.settings-list a:hover {
   text-decoration: none;
-}
-div.settings-list-item div.inputEx-fieldWrapper {
 }
 div.settings-list-item {
   margin-left: 0px;
@@ -167,6 +184,15 @@ div.settings-list-item + a {
   float: right;
   margin-top: -10px;
   margin-right: 7px;
+}
+div.new-form-layout div.settings-list-item > fieldset > div.inputEx-fieldWrapper {
+  padding: 15px 0 0 0;
+}
+div.new-form-layout div.settings-list-item div.rte-control.inputEx-Button {
+ left: 137px;
+}
+div.new-form-layout div.settings-list-item div.rte-control + div.inputEx-Field {
+  margin-left: 140px;
 }
 div.settings-list-item > fieldset > div > div.inputEx-Field {
   width: auto;
@@ -185,11 +211,13 @@ div.settings-list-item div.inputEx-description {
 div.settings-list > div.inputEx-description {
   margin-top: 10px;
 }
-
-
 div#formContainer div.settings-list-item fieldset {
   border: solid #999 1px;
   margin-left: 0px;
+}
+div#formContainer div.new-form-layout div.settings-list-item fieldset {
+  border: solid #ddd 1px;
+  border-radius: 3px;
 }
 div#formContainer div.settings-list-item fieldset legend span {
   font-weight: normal;
