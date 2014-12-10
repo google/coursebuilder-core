@@ -72,13 +72,15 @@ class ShowCertificateHandler(utils.BaseHandler):
             self.redirect('/')
             return
 
+        environ = self.app_context.get_environ()
+
         templates_dir = os.path.join(
             appengine_config.BUNDLE_ROOT, 'modules', 'certificate', 'templates')
         template = self.get_template('certificate.html', [templates_dir])
         self.response.out.write(template.render({
             'student': student,
-            'course': courses.Course.get_environ(
-                self.app_context)['course']['title']
+            'course': environ['course']['title'],
+            'google_analytics_id': environ['course'].get('google_analytics_id')
         }))
 
 

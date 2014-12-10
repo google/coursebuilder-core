@@ -38,5 +38,9 @@
     <div id="print-button-div">
       <input type="button" onClick="window.print()" class="printbutton" value="Print Certificate"/>
     </div>
+
+    {% import 'ga.html' as ga %}
+    {{ ga.render_google_analytics_script(google_analytics_id) }}
+
   </body>
 </html>

@@ -17,6 +17,7 @@
 __author__ = 'Rahul Singal (rahulsingal@google.com)'
 
 import mimetypes
+import os
 
 import course_explorer
 import webapp2
@@ -35,7 +36,12 @@ from models.roles import Roles
 from google.appengine.api import users
 
 # We want to use views file in both /views and /modules/course_explorer/views.
-DIR = appengine_config.BUNDLE_ROOT
+TEMPLATE_DIRS = [
+    os.path.join(appengine_config.BUNDLE_ROOT, 'views'),
+    os.path.join(
+        appengine_config.BUNDLE_ROOT, 'modules', 'course_explorer', 'views'),
+]
+
 STUDENT_RENAME_GLOBAL_XSRF_TOKEN_ID = 'rename-student-global'
 
 # Int. Maximum number of bytes App Engine's db.StringProperty can store.
@@ -203,7 +209,7 @@ class ProfileHandler(BaseStudentHandler):
         self.template_values['student_preferences'] = {}
 
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/profile.html', DIR)
+            'profile.html', TEMPLATE_DIRS)
         self.response.write(template.render(self.template_values))
 
     def post(self):
@@ -245,7 +251,7 @@ class AllCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR)
+            'course_explorer.html', TEMPLATE_DIRS)
         self.response.write(template.render(self.template_values))
 
 
@@ -270,7 +276,7 @@ class RegisteredCoursesHandler(BaseStudentHandler):
         self.template_values['html_hooks'] = NullHtmlHooks()
         self.template_values['student_preferences'] = {}
         template = jinja_utils.get_template(
-            '/modules/course_explorer/views/course_explorer.html', DIR)
+            'course_explorer.html', TEMPLATE_DIRS)
         self.response.write(template.render(self.template_values))
 
 
