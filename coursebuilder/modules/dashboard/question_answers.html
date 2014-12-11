@@ -116,7 +116,7 @@ function question_answers(data) {
       crossfilters[div_id] = xf;
       var chart = dc.rowChart('#' + div_id)
           .width(600)
-          .height(200)
+          .height(50)
           .dimension(dimension)
           .group(grouping)
           .ordering(function(item){
@@ -139,6 +139,7 @@ function question_answers(data) {
       colors.push('#000000');
       chart.colors(colors);
     }
+    chart.height(chart.height() + 25);
     answerIndex++;
   }
   dc.renderAll();
