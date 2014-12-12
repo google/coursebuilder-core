@@ -42,6 +42,13 @@ STATUS_CODE_STARTED = 1
 STATUS_CODE_COMPLETED = 2
 STATUS_CODE_FAILED = 3
 
+STATUS_CODE_DESCRIPTION = {
+    STATUS_CODE_QUEUED: 'Queued',
+    STATUS_CODE_STARTED: 'Started',
+    STATUS_CODE_COMPLETED: 'Completed',
+    STATUS_CODE_FAILED: 'Failed',
+}
+
 # The methods in DurableJobEntity are module-level protected
 # pylint: disable=protected-access
 
@@ -94,8 +101,9 @@ class DurableJobBase(object):
         job = self.load()
         if job and not job.has_finished:
             user = users.get_current_user()
-            message = 'Canceled by %s' % (
-                user.nickname() if user else 'default')
+            message = 'Canceled by %s at %s' % (
+                user.nickname() if user else 'default',
+                datetime.datetime.now().strftime('%Y-%m-%d, %H:%M UTC'))
             duration = int((datetime.datetime.now() - job.updated_on)
                            .total_seconds())
 

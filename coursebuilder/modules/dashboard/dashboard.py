@@ -640,13 +640,15 @@ class DashboardHandler(
             }
         self.render_page(template_values)
 
-    def get_action_url(self, action, key=None, extra_args=None):
+    def get_action_url(self, action, key=None, extra_args=None, fragment=None):
         args = {'action': action}
         if key:
             args['key'] = key
         if extra_args:
             args.update(extra_args)
         url = '/dashboard?%s' % urllib.urlencode(args)
+        if fragment:
+          url += '#' + fragment
         return self.canonicalize_url(url)
 
     def get_settings(self):
@@ -1527,6 +1529,8 @@ def register_module():
         student_answers_analytics.CourseQuestionsDataSource)
     data_sources.Registry.register(
         student_answers_analytics.CourseUnitsDataSource)
+    data_sources.Registry.register(
+        student_answers_analytics.AnswersDataSource)
     data_sources.Registry.register(
         student_answers_analytics.RawAnswersDataSource)
     data_sources.Registry.register(

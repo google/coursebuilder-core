@@ -42,22 +42,23 @@ class AssessmentsDataSource(data_sources.AbstractSmallRestDataSource):
             'Analytics',
             description='Sets of questions determining student skill')
         reg.add_property(schema_fields.SchemaField(
-            'unit_id', 'Unit ID', 'integer',
+            'unit_id', 'Unit ID', 'string',
             description='Key uniquely identifying this particular assessment'))
         reg.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string',
             description='Human-readable title describing the assessment'))
         reg.add_property(schema_fields.SchemaField(
             'weight', 'Weight', 'number',
-            'Scalar indicating how the results of this assessment are '
-            'to be weighted versus the results of peer assessments.'))
+            description='Scalar indicating how the results of this assessment '
+            'are to be weighted versus the results of peer assessments.'))
         reg.add_property(schema_fields.SchemaField(
             'html_check_answers', 'Check Answers', 'boolean',
-            'Whether students may check their answers before submitting '
-            'the assessment.'))
+            description='Whether students may check their answers before '
+            'submitting the assessment.'))
         reg.add_property(schema_fields.SchemaField(
-            'properties', 'Properties', 'object',
-            'Set of key/value additional properties, not further defined.'))
+            'props', 'Properties', 'string',
+            description='JSON string containing key/value additional '
+            'properties, not further defined.'))
         return reg.get_json_schema_dict()['properties']
 
     @classmethod
@@ -67,11 +68,11 @@ class AssessmentsDataSource(data_sources.AbstractSmallRestDataSource):
         ret = []
         for assessment in assessments:
             ret.append({
-                'unit_id': assessment.unit_id,
+                'unit_id': str(assessment.unit_id),
                 'title': assessment.title,
                 'weight': assessment.weight,
                 'html_check_answers': assessment.html_check_answers,
-                'properties': assessment.properties})
+                'props': transforms.dumps(assessment.properties)})
         return ret, 0
 
 
@@ -91,13 +92,13 @@ class UnitsDataSource(data_sources.AbstractSmallRestDataSource):
             'Units',
             description='Sets of lessons providing course content')
         reg.add_property(schema_fields.SchemaField(
-            'unit_id', 'Unit ID', 'integer',
+            'unit_id', 'Unit ID', 'string',
             description='Key uniquely identifying this particular unit'))
         reg.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string',
             description='Human-readable title describing the unit'))
         reg.add_property(schema_fields.SchemaField(
-            'properties', 'Properties', 'object',
+            'props', 'Properties', 'object',
             'Set of key/value additional properties, not further defined.'))
         return reg.get_json_schema_dict()['properties']
 
@@ -108,9 +109,9 @@ class UnitsDataSource(data_sources.AbstractSmallRestDataSource):
         ret = []
         for unit in units:
             ret.append({
-                'unit_id': unit.unit_id,
+                'unit_id': str(unit.unit_id),
                 'title': unit.title,
-                'properties': unit.properties,
+                'props': unit.properties,
             })
         return ret, 0
 
@@ -126,28 +127,33 @@ class LessonsDataSource(data_sources.AbstractSmallRestDataSource):
         return 'Lessons'
 
     @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
         reg = schema_fields.FieldRegistry(
             'Lessons',
             description='Sets of lessons providing course content')
         reg.add_property(schema_fields.SchemaField(
-            'lesson_id', 'Unit ID', 'integer',
+            'lesson_id', 'Unit ID', 'string',
             description='Key uniquely identifying which lesson this is'))
         reg.add_property(schema_fields.SchemaField(
-            'unit_id', 'Unit ID', 'integer',
+            'unit_id', 'Unit ID', 'string',
             description='Key uniquely identifying unit lesson is in'))
         reg.add_property(schema_fields.SchemaField(
             'title', 'Title', 'string',
             description='Human-readable title describing the unit'))
         reg.add_property(schema_fields.SchemaField(
             'scored', 'Scored', 'boolean',
-            'Boolean: Whether questions in this lesson count for scoring.'))
+            description='Boolean: Whether questions in this lesson count '
+            'for scoring.'))
         reg.add_property(schema_fields.SchemaField(
             'has_activity', 'Has Activity', 'boolean',
-            'Boolean: does this lesson contain an activity?'))
+            description='Boolean: does this lesson contain an activity?'))
         reg.add_property(schema_fields.SchemaField(
             'activity_title', 'Activity Title', 'string',
-            'Title of the activity (if lesson has an activity)'))
+            description='Title of the activity (if lesson has an activity)'))
         return reg.get_json_schema_dict()['properties']
 
     @classmethod
@@ -157,8 +163,8 @@ class LessonsDataSource(data_sources.AbstractSmallRestDataSource):
         ret = []
         for lesson in lessons:
             ret.append({
-                'lesson_id': lesson.unit_id,
-                'unit_id': lesson.unit_id,
+                'lesson_id': str(lesson.unit_id),
+                'unit_id': str(lesson.unit_id),
                 'title': lesson.title,
                 'scored': lesson.scored,
                 'has_activity': lesson.has_activity,
@@ -190,6 +196,10 @@ class StudentAssessmentScoresDataSource(
         return data_sources.DbTableContext
 
     @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
         reg = schema_fields.FieldRegistry('Unit',
                                           description='Course sub-components')
@@ -206,14 +216,28 @@ class StudentAssessmentScoresDataSource(
             'score', 'Score', 'integer',
             description='Value from 0 to 100 indicating % correct.'))
         reg.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'integer',
-            description='Value from 0 to 100 indicating % correct.'))
+            'weight', 'Weight', 'number',
+            description='Weight applied to the score for computing total '
+            'grade.'))
+        reg.add_property(schema_fields.SchemaField(
+            'attempted', 'Attempted', 'boolean',
+            description='Whether the assessment was attempted.'))
         reg.add_property(schema_fields.SchemaField(
             'completed', 'Completed', 'boolean',
             description='Whether the assessment was completed.'))
         reg.add_property(schema_fields.SchemaField(
             'human_graded', 'Human Graded', 'boolean',
             description='Score is from a human (vs. automatic) grading.'))
+        reg.add_property(schema_fields.SchemaField(
+            'assessment_rank', 'Assessment Rank', 'integer',
+            description='Rank of assessment from zero to number of assessments '
+            '- 1, in order by total score achieved by all students taking that '
+            'assessment.'))
+        reg.add_property(schema_fields.SchemaField(
+            'user_rank', 'User Rank', 'integer',
+            description='Rank of student from zero to number of students '
+            '- 1, in order by total score achieved on all assessments taken '
+            'by that student.'))
         return reg.get_json_schema_dict()['properties']
 
     @classmethod
@@ -273,6 +297,74 @@ class StudentAssessmentScoresDataSource(
             return student_scores
 
 
+class LabelsDataSource(data_sources.AbstractSmallRestDataSource):
+
+    @classmethod
+    def get_name(cls):
+        return 'labels'
+
+    @classmethod
+    def get_title(cls):
+        return 'Labels'
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, app_context, log):
+        reg = schema_fields.FieldRegistry(
+            'Labels',
+            description='All labels used in course')
+        reg.add_property(schema_fields.SchemaField(
+            'label_id', 'Label ID', 'string',
+            description='Key uniquely identifying this particular label'))
+        reg.add_property(schema_fields.SchemaField(
+            'title', 'Title', 'string',
+            description='Human-readable title for the label'))
+        reg.add_property(schema_fields.SchemaField(
+            'description', 'Description', 'string',
+            description='Description for the label.'))
+        reg.add_property(schema_fields.SchemaField(
+            'type', 'Type', 'string',
+            description='Sub-type of label indicating what this kind of '
+            'label is used for.  E.g., setting track through a course or '
+            'selecting a display language.'))
+        reg.add_property(schema_fields.SchemaField(
+            'user_editable', 'User Editable', 'boolean',
+            description='Set to true if regular users are permitted to '
+            'set/remove labels of this type.'))
+        reg.add_property(schema_fields.SchemaField(
+            'system_editable', 'System Editable', 'boolean',
+            description='Set to true if only admin users are permitted to '
+            'set/remove labels of this type.'))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def fetch_values(cls, app_context, source_context, schema, log,
+                     page_number):
+        ret = []
+        for label in models.LabelDAO.get_all_iter():
+            label_type = None
+            for label_type in models.LableDTO.LABEL_TYPES:
+                if label_type.type == label.type:
+                    break
+            user_editable = (
+                label_type in models.LabelDTO.USER_EDITABLE_LABEL_TYPES)
+            system_editable = (
+                label_type in models.LabelDTO.SYSTEM_EDITABLE_LABEL_TYPES)
+
+            ret.append({
+                'label_id': str(label.id),
+                'title': label.title,
+                'description': label.description,
+                'type': label_type.name,
+                'user_editable': user_editable,
+                'system_editable': system_editable,
+                })
+        return ret, 0
+
+
 class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
 
     @classmethod
@@ -288,6 +380,50 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         return 'Students'
 
     @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, app_context, log):
+        """Override default entity-based schema to reflect our upgrades.
+
+        In the entity, labels are stored as a single string property,
+        rather than an arraylist of string or integer for backward
+        compatibility.  Current (2014-12-05) usage is that the 'labels'
+        property is a stringified representation of a list of IDs
+        to LabelEntity.  On export, we convert the string to an array
+        of string to permit easier correlation from student labels to
+        exported LabelEntity items.
+
+        We provide external references to labels in preference to simply
+        resolving the labels, because of potential data bloat (minor) and
+        to avoid any future complications due to expansion of the role
+        of labels (as was seen when labels-as-language-indicator was
+        added).
+
+        Args:
+          app_context: Standard CB application context object
+          log: a catch_and_log object for reporting any exceptions.
+             Not used here, but useful for data source types that are
+             dynamically generated, rather than statically coded.
+        Returns:
+          A JSON schema describing contents.  A dict as produced by
+          FieldRegistry.get_json_schema_dict().
+        """
+        clazz = cls.get_entity_class()
+        registry = transforms.get_schema_for_entity(clazz)
+        ret = registry.get_json_schema_dict()['properties']
+
+        ret['labels'] = schema_fields.FieldArray(
+          'labels', 'Labels',
+          description='Labels on students',
+          item_type=schema_fields.SchemaField(
+            'label', 'Label', 'string',
+            description='ID of a LabelEntity applied to a student')
+          ).get_json_schema_dict()
+        return ret
+
+    @classmethod
     def _postprocess_rows(cls, app_context, source_context, schema,
                           log, page_number, rows):
         ret = super(StudentsDataSource, cls)._postprocess_rows(
@@ -298,12 +434,8 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         for item in ret:
             del item['key']
             del item['key_by_user_id']
-            if 'additional_fields' not in item or not item['additional_fields']:
-                item['additional_fields'] = {}
-            else:
-                item['additional_fields'] = (
-                    transforms.nested_lists_as_string_to_dict(
-                        item['additional_fields']))
+            item['labels'] = (
+              [x for x in utils.text_to_list(item['labels'])])
         return ret
 
 

@@ -137,4 +137,4 @@ class CatchAndLogTests(unittest.TestCase):
             actual_time = datetime.datetime.strptime(
                 actual['timestamp'], catch_and_log._LOG_DATE_FORMAT)
             self.assertAlmostEqual(
-                0, abs((expected_time - actual_time).total_seconds()), 2)
+                0, abs((expected_time - actual_time).total_seconds()), 1)

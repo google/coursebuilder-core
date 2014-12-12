@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import datetime
+import logging
 import traceback
 
 import appengine_config
@@ -111,15 +112,19 @@ class CatchAndLog(object):
 
     def critical(self, message):
         self._log(_CRITICAL, message)
+        logging.critical(message)
 
     def warning(self, message):
         self._log(_WARNING, message)
+        logging.warning(message)
 
     def warn(self, message):
         self._log(_WARNING, message)
+        logging.warning(message)
 
     def info(self, message):
         self._log(_INFO, message)
+        logging.info(message)
 
     def get(self):
         return self._messages

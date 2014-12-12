@@ -91,7 +91,7 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
             if not job.has_finished:
                 any_generator_still_running = True
         generator_status_messages.append(
-            _get_generator_status_message(generator_class, job).append(
+            get_generator_status_message(generator_class, job).append(
                 _get_pipeline_link(xsrf, app_context, generator_class, job)))
 
     # <h3> title block.
@@ -134,7 +134,7 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
     return html_sections
 
 
-def _get_generator_status_message(generator_class, job):
+def get_generator_status_message(generator_class, job):
     message = safe_dom.NodeList()
 
     generator_description = generator_class.get_description()

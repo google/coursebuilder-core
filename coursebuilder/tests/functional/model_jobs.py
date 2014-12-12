@@ -148,7 +148,7 @@ class JobOperationsTest(actions.TestBase):
         self.test_job.submit()
         self.test_job.cancel()
         self.assertFalse(self.test_job.is_active())
-        self.assertEquals('Canceled by default', self.test_job.load().output)
+        self.assertIn('Canceled by default', self.test_job.load().output)
         self.assertEquals(jobs.STATUS_CODE_FAILED,
                           self.test_job.load().status_code)
 
@@ -183,7 +183,7 @@ class JobOperationsTest(actions.TestBase):
         sequence_num = self.test_job.submit()
         self.test_job.force_start_job(sequence_num)
         self.test_job.cancel()
-        self.assertEquals('Canceled by default', self.test_job.load().output)
+        self.assertIn('Canceled by default', self.test_job.load().output)
         self.assertEquals(jobs.STATUS_CODE_FAILED,
                           self.test_job.load().status_code)
 

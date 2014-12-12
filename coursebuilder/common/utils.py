@@ -17,6 +17,7 @@
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cStringIO
+import datetime
 import random
 import re
 import string
@@ -209,3 +210,14 @@ class ZipAwareOpen(object):
         """Reset open() to be the Python internal version."""
         sys.modules['zipfile'].__builtins__['open'] = self._real_open
         return False  # Don't suppress exceptions.
+
+
+def parse_timedelta_string(timedelta_string):
+    keys = ['weeks', 'days', 'hours', 'minutes', 'seconds']
+    regex = r'\s*,?\s*'.join([r'((?P<%s>\d+)\s*%s(%s)?s?)?' %
+                        (k, k[0], k[1:-1]) for k in keys])
+    kwargs = {}
+    for k, v in re.match(regex,
+                         timedelta_string).groupdict(default='0').items():
+        kwargs[k] = int(v)
+    return datetime.timedelta(**kwargs)

@@ -265,6 +265,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             'Course Settings',
             'Assessments',
             'Course',
+            'Data Pump',
             'Homepage',
             'I18N',
             'Invitation',
@@ -327,7 +328,7 @@ class I18nDashboardHandlerTests(actions.TestBase):
             td = row.findall('td')[index]
             self.assertIn(class_name, td.get('class').split())
 
-        lesson_row_index = 12
+        lesson_row_index = 13
         extra_env = {
             'extra_locales': [
                 {'locale': 'el', 'availability': 'unavailable'},
@@ -2353,7 +2354,7 @@ class TranslationImportExportTests(actions.TestBase):
             'msgstr ""\n')
         messages = self._parse_messages(response)
         self.assertIn(
-            'For Deutsch (de), made 0 total replacements in 14 resources.  '
+            'For Deutsch (de), made 0 total replacements in 15 resources.  '
             '1 items in the uploaded file did not have translations.', messages)
 
     def test_download_ui_no_request(self):

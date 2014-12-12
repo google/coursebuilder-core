@@ -16,6 +16,7 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import datetime
 import os
 import unittest
 
@@ -183,3 +184,83 @@ class ZipAwareOpenTests(unittest.TestCase):
         with utils.ZipAwareOpen():
             data = open(path).read()
             self.assertEquals(12, len(data))
+
+
+class ParseTimedeltaTests(unittest.TestCase):
+
+    def test_parse_empty_string(self):
+        self.assertEquals(
+            utils.parse_timedelta_string(''),
+            datetime.timedelta())
+
+    def test_parse_zero(self):
+        self.assertEquals(
+            utils.parse_timedelta_string('0'),
+            datetime.timedelta())
+
+    def test_parse_gibberish(self):
+        self.assertEquals(
+            utils.parse_timedelta_string('Amidst the mists and coldest frosts'),
+            datetime.timedelta())
+
+    def test_parse_leading_valid_partial_gibberish(self):
+        self.assertEquals(
+            utils.parse_timedelta_string(
+                '5 days and a partridge in a pear tree'),
+            datetime.timedelta(days=5))
+
+    def test_parse_trailing_valid_partial_gibberish(self):
+        self.assertEquals(
+            utils.parse_timedelta_string('we will leave in 5 days'),
+            datetime.timedelta(days=0))
+
+    def test_parse_units(self):
+        for unit in ('week', 'day', 'hour', 'minute', 'second'):
+            self._test_parse_units(unit)
+
+    def _test_parse_units(self, unit):
+        expected1 = datetime.timedelta(**{unit + 's': 1})
+        expected2 = datetime.timedelta(**{unit + 's': 2})
+        self.assertEquals(
+            utils.parse_timedelta_string('1%s' % unit[0]), expected1)
+        self.assertEquals(
+            utils.parse_timedelta_string('1%s' % unit), expected1)
+        self.assertEquals(
+            utils.parse_timedelta_string('2%ss' % unit), expected2)
+        self.assertEquals(
+            utils.parse_timedelta_string('2 %s' % unit[0]), expected2)
+        self.assertEquals(
+            utils.parse_timedelta_string('1 %s' % unit), expected1)
+        self.assertEquals(
+            utils.parse_timedelta_string('2 %s' % unit), expected2)
+        self.assertEquals(
+            utils.parse_timedelta_string('2    \t\t\n   %ss' % unit), expected2)
+
+    def test_parse_out_of_bounds_handled_successfully(self):
+        self.assertEquals(
+            utils.parse_timedelta_string('86400s'),
+            datetime.timedelta(days=1))
+        self.assertEquals(
+            utils.parse_timedelta_string('19d, 86400s'),
+            datetime.timedelta(weeks=2, days=6))
+
+    def test_parse_combinations(self):
+        self.assertEquals(
+            utils.parse_timedelta_string('3w1d3m'),
+            datetime.timedelta(weeks=3, days=1, minutes=3))
+
+        self.assertEquals(
+            utils.parse_timedelta_string('3w,  1d,  3m'),
+            datetime.timedelta(weeks=3, days=1, minutes=3))
+
+        self.assertEquals(
+            utils.parse_timedelta_string('3 w 1 d 3 m'),
+            datetime.timedelta(weeks=3, days=1, minutes=3))
+
+        self.assertEquals(
+            utils.parse_timedelta_string('3 weeks 1 day 3 minutes'),
+            datetime.timedelta(weeks=3, days=1, minutes=3))
+
+        self.assertEquals(
+            utils.parse_timedelta_string('3 weeks, 1 day, 3 minutes'),
+            datetime.timedelta(weeks=3, days=1, minutes=3))

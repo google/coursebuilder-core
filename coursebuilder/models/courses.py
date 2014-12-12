@@ -2418,7 +2418,8 @@ class Course(object):
             sub_registry = reg.get_sub_registry(schema_section)
             if not sub_registry:
                 sub_registry = reg.add_sub_registry(
-                    schema_section, schema_section.capitalize())
+                    schema_section,
+                    schema_section.replace('_', ' ').title())
             for schema_provider in cls.OPTIONS_SCHEMA_PROVIDERS[schema_section]:
                 sub_registry.add_property(schema_provider(course))
         return reg

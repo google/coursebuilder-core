@@ -27,6 +27,10 @@ class Property(object):
     def __init__(
         self, name, label, property_type, select_data=None, description=None,
         optional=False, extra_schema_dict_values=None):
+        if name == 'properties':
+            raise ValueError('Cannot name a field "properties"; this conflicts '
+                             'with the use of "properties" in generating JSON '
+                             'schema dictionaries.')
         self._name = name
         self._label = label
         self._property_type = property_type

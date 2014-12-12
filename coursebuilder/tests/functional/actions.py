@@ -256,6 +256,7 @@ class TestBase(suite.AppEngineTestBase):
 
         # Outer loop here because some tasks (esp. map/reduce) will enqueue
         # more tasks as part of their operation.
+        tasks_executed = 0
         while iteration_limit is None or iteration_limit > 0:
             tasks = self.taskq.GetTasks(queue_name)
             if not tasks:
@@ -264,12 +265,14 @@ class TestBase(suite.AppEngineTestBase):
                 old_namespace = namespace_manager.get_namespace()
                 try:
                     self.task_dispatcher.dispatch_task(task)
+                    tasks_executed += 1
                 finally:
                     if sites.has_path_info():
                         sites.unset_path_info()
                     namespace_manager.set_namespace(old_namespace)
             if iteration_limit:
                 iteration_limit -= 1
+        return tasks_executed
 
     def get(self, url, previous_response=None, **kwargs):
         url = self.canonicalize(url, response=previous_response)

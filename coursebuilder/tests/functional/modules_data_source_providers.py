@@ -43,14 +43,14 @@ class CourseElementsTest(actions.TestBase):
         self.assertIn('title', response['schema'])
         self.assertIn('weight', response['schema'])
         self.assertIn('html_check_answers', response['schema'])
-        self.assertIn('properties', response['schema'])
+        self.assertIn('props', response['schema'])
 
     def test_units_schema(self):
         response = transforms.loads(self.get(
             '/test/rest/data/units/items').body)
         self.assertIn('unit_id', response['schema'])
         self.assertIn('title', response['schema'])
-        self.assertIn('properties', response['schema'])
+        self.assertIn('props', response['schema'])
 
     def test_lessons_schema(self):
         response = transforms.loads(self.get(
@@ -96,7 +96,8 @@ class CourseElementsTest(actions.TestBase):
         self.assertEquals(weight, response['data'][0]['weight'])
         self.assertEquals(html_check_answers,
                           response['data'][0]['html_check_answers'])
-        self.assertEquals(properties, response['data'][0]['properties'])
+        self.assertEquals(transforms.dumps(properties),
+                          response['data'][0]['props'])
 
     def test_one_unit_in_course(self):
         title = 'Plugh'
@@ -110,7 +111,7 @@ class CourseElementsTest(actions.TestBase):
             '/test/rest/data/units/items').body)
         self.assertEquals(1, len(response['data']))
         self.assertEquals(title, response['data'][0]['title'])
-        self.assertEquals(properties, response['data'][0]['properties'])
+        self.assertEquals(properties, response['data'][0]['props'])
 
     def test_one_lesson_in_course(self):
         title = 'Plover'
@@ -128,7 +129,7 @@ class CourseElementsTest(actions.TestBase):
         response = transforms.loads(self.get(
             '/test/rest/data/lessons/items').body)
         self.assertEquals(1, len(response['data']))
-        self.assertEquals(unit1.unit_id, response['data'][0]['unit_id'])
+        self.assertEquals(str(unit1.unit_id), response['data'][0]['unit_id'])
         self.assertEquals(title, response['data'][0]['title'])
         self.assertEquals(scored, response['data'][0]['scored'])
         self.assertEquals(has_activity, response['data'][0]['has_activity'])
@@ -168,7 +169,7 @@ class CourseElementsTest(actions.TestBase):
 
         response = transforms.loads(self.get(
             '/test/rest/data/units/items').body)
-        self.assertListEqual([2, 4, 6, 8, 10, 14],
+        self.assertListEqual(['2', '4', '6', '8', '10', '14'],
                              [u['unit_id'] for u in response['data']])
 
         self._course.delete_unit(unit2)
@@ -176,7 +177,7 @@ class CourseElementsTest(actions.TestBase):
 
         response = transforms.loads(self.get(
             '/test/rest/data/units/items').body)
-        self.assertListEqual([4, 6, 8, 10, 14],
+        self.assertListEqual(['4', '6', '8', '10', '14'],
                              [u['unit_id'] for u in response['data']])
 
 
@@ -266,7 +267,7 @@ class StudentsTest(actions.TestBase):
                 user_id='123456', additional_fields=additional_fields).put()
             response = transforms.loads(self.get(
                 '/test/rest/data/students/items').body)
-        self.assertEquals({k: v for k, v in permitted_fields},
+        self.assertEquals(transforms.dumps(permitted_fields),
                           response['data'][0]['additional_fields'])
         models.Student._PROPERTY_EXPORT_BLACKLIST = save_blacklist
 

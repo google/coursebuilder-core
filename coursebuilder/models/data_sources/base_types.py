@@ -143,6 +143,10 @@ class _AbstractRestDataSource(_DataSource):
             'context of controls to select a particular page.')
 
     @classmethod
+    def exportable(cls):
+        return False
+
+    @classmethod
     def get_default_chunk_size(cls):
         """Tell what the recommended number of items per page is.
 

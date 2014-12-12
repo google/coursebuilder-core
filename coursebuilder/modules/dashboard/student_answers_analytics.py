@@ -21,6 +21,7 @@ import datetime
 
 from mapreduce import context
 
+from common import crypto
 from common import schema_fields
 from common import tags
 from models import courses
@@ -52,7 +53,7 @@ class RawAnswersGenerator(jobs.MapReduceJob):
 
     @staticmethod
     def get_description():
-        return 'question answers'
+        return 'raw question answers'
 
     @staticmethod
     def entity_class():
@@ -160,8 +161,11 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
             'questions (excludes self-check non-graded questions in lessons) '
             'in the course.')
         reg.add_property(schema_fields.SchemaField(
-            'user_name', 'User ID', 'string',
-            description='Name of the student for this question.'))
+            'user_id', 'User ID', 'string',
+            description='ID of the student providing this answer.'))
+        reg.add_property(schema_fields.SchemaField(
+            'user_name', 'User Name', 'string',
+            description='Name of the student providing this answer.'))
         reg.add_property(schema_fields.SchemaField(
             'unit_id', 'Unit ID', 'string',
             description='ID of unit or assessment for this score.'))
@@ -181,12 +185,15 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
         reg.add_property(schema_fields.SchemaField(
             'timestamp', 'Question ID', 'integer',
             description='Seconds since 1970-01-01 in GMT when answer given.'))
-        reg.add_property(schema_fields.SchemaField(
-            'answers', 'Answers', 'string',
+        choice_type = schema_fields.SchemaField(
+            'answer', 'Answer', 'string',
+            description='An answer to the question')
+        reg.add_property(schema_fields.FieldArray(
+            'answers', 'Answers', item_type=choice_type,
             description='The answer from the student.  Note that '
             'this may be an array for questions permitting multiple answers.'))
         reg.add_property(schema_fields.SchemaField(
-            'score', 'Score', 'integer',
+            'score', 'Score', 'number',
             description='Value from the Question indicating the score for '
             'this answer or set of answers.'))
         reg.add_property(schema_fields.SchemaField(
@@ -228,20 +235,67 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
                     given_answers = [choices[i] for i in answer.answers]
                 else:
                     given_answers = answer.answers
+                    if not isinstance(given_answers, list):
+                        given_answers = [given_answers]
                 ret.append({
                     'user_id': student.user_id,
                     'user_name': student.name,
-                    'unit_id': answer.unit_id,
-                    'lesson_id': answer.lesson_id,
+                    'unit_id': str(answer.unit_id),
+                    'lesson_id': str(answer.lesson_id),
                     'sequence': answer.sequence,
-                    'question_id': answer.question_id,
+                    'question_id': str(answer.question_id),
                     'question_type': answer.question_type,
                     'timestamp': answer.timestamp,
                     'answers': given_answers,
-                    'score': answer.score,
+                    'score': float(answer.score),
                     'tallied': answer.tallied,
                     })
+        for row in ret:
+            print '########### row', row
         return ret
+
+
+class AnswersDataSource(RawAnswersDataSource):
+    """Exposes user-ID-obscured versions of all answers to all questions.
+
+    This data source is meant to be used for aggregation or export to
+    BigQuery (in contrast to RawAnswersDataSource, which should only ever
+    be used within CourseBuilder, as that class exposes un-obscured user
+    IDs and names).
+    """
+
+    @classmethod
+    def get_name(cls):
+        return 'answers'
+
+    @classmethod
+    def get_title(cls):
+        return 'Answers'
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_default_chunk_size(cls):
+        return 1000
+
+    @classmethod
+    def get_schema(cls, app_context, log):
+        schema = super(AnswersDataSource, cls).get_schema(app_context, log)
+        schema.pop('user_name')
+        return schema
+
+    @classmethod
+    def _postprocess_rows(cls, app_context, source_context, schema, log,
+                          page_number, rows):
+        items = super(AnswersDataSource, cls)._postprocess_rows(
+            app_context, source_context, schema, log, page_number, rows)
+        for item in items:
+            item.pop('user_name')
+            item['user_id'] = crypto.hmac_sha_2_256_transform(
+                source_context.pii_secret, item['user_id'])
+        return items
 
 
 class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
@@ -295,7 +349,7 @@ class OrderedQuestionsDataSource(data_sources.SynchronousQuery):
             return ret
 
         def _q_key(unit_id, lesson_id, question_id):
-            return '%s.%s.%s' % (unit_id, lesson_id or 'null', question_id)
+            return '%s.%s.%s' % (unit_id, lesson_id, question_id)
 
         def _add_assessment(unit):
             q_ids = _find_q_ids(unit.html_content, groups)
@@ -502,11 +556,11 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         def build_reduce_dict(unit_id, sequence, question_id, is_valid,
                               answer, count):
             # NOTE: maintain members in parallel with get_schema() below.
-            return ({'unit_id': unit_id,
+            return ({'unit_id': str(unit_id),
                      'sequence': sequence,
-                     'question_id': question_id,
+                     'question_id': str(question_id),
                      'is_valid': is_valid,
-                     'answer': answer,
+                     'answer': str(answer),
                      'count': count})
 
         # Emit tuples for each of the correct answers.
@@ -542,6 +596,10 @@ class QuestionAnswersDataSource(data_sources.AbstractSmallRestDataSource):
     @classmethod
     def get_title(cls):
         return 'Question Answers'
+
+    @classmethod
+    def exportable(cls):
+        return True
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
@@ -603,8 +661,11 @@ class CourseQuestionsDataSource(data_sources.AbstractSmallRestDataSource):
         return 'Course Questions'
 
     @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
-        # NOTE: maintain members in parallel with build_reduce_dict() above.
         reg = schema_fields.FieldRegistry(
             'Course Questions',
             description='Facts about each usage of each question in a course.')
@@ -614,6 +675,9 @@ class CourseQuestionsDataSource(data_sources.AbstractSmallRestDataSource):
         reg.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string',
             description='User-entered description of question.'))
+        reg.add_property(schema_fields.SchemaField(
+            'text', 'Text', 'string',
+            description='Text of the question.'))
 
         # pylint: disable-msg=unused-variable
         arrayMember = schema_fields.SchemaField(
@@ -632,7 +696,7 @@ class CourseQuestionsDataSource(data_sources.AbstractSmallRestDataSource):
         questions = []
         for question in models.QuestionDAO.get_all():
             item = {
-                'question_id': question.id,
+                'question_id': str(question.id),
                 'description': question.dict['description'],
                 'text': question.dict['question'],
                 }
@@ -655,11 +719,21 @@ class CourseUnitsDataSource(data_sources.AbstractSmallRestDataSource):
         return 'Course Units'
 
     @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log):
         # NOTE: maintain members in parallel with build_reduce_dict() above.
         reg = schema_fields.FieldRegistry(
             'Units',
             description='Units (units, assessments, links) in a course')
+        reg.add_property(schema_fields.SchemaField(
+            'unit_id', 'Unit ID', 'string',
+            description='ID of unit in which question appears.  Key to Unit'))
+        reg.add_property(schema_fields.SchemaField(
+            'now_available', 'Now Available', 'boolean',
+            description='Whether the unit is publicly available'))
         reg.add_property(schema_fields.SchemaField(
             'type', 'Type', 'string',
             description='Type of unit. "U":unit, "A":assessment, "L":link'))
@@ -670,10 +744,10 @@ class CourseUnitsDataSource(data_sources.AbstractSmallRestDataSource):
             'release_date', 'Release Date', 'string',
             description='Date the unit is to be made publicly available'))
         reg.add_property(schema_fields.SchemaField(
-            'properties', 'Properties', 'string',
+            'props', 'Properties', 'string',
             description='Site-specific additional properties added to unit'))
         reg.add_property(schema_fields.SchemaField(
-            'weight', 'Weight', 'integer',
+            'weight', 'Weight', 'number',
             description='Weight to give to the unit when scoring.'))
         return reg.get_json_schema_dict()['properties']
 
@@ -685,12 +759,12 @@ class CourseUnitsDataSource(data_sources.AbstractSmallRestDataSource):
         units = []
         for unit in courses.Course(None, app_context).get_units():
             units.append({
-                'unit_id': unit.unit_id,
+                'unit_id': str(unit.unit_id),
                 'type': unit.type,
                 'title': unit.title,
                 'release_date': unit.release_date,
                 'now_available': unit.now_available,
-                'properties': unit.properties,
-                'weight': unit.weight
+                'props': str(unit.properties),
+                'weight': float(unit.weight)
                 })
         return units, 0
