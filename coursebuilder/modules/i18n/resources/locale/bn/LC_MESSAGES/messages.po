@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-24 08:36-0800\n"
-"PO-Revision-Date: 2014-11-24 08:36-0800\n"
+"POT-Creation-Date: 2014-12-08 08:51-0800\n"
+"PO-Revision-Date: 2014-12-08 08:51-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: bn <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -28,7 +28,7 @@ msgstr "ইউনিট %s - %s"
 #: experimental/coursebuilder/controllers/utils.py:231
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "%s ইউনিট"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -123,17 +123,17 @@ msgid " Hint "
 msgstr " ইঙ্গিত "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:172
+#: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Certificate"
 msgstr "শংসাপত্র"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:179
+#: experimental/coursebuilder/modules/certificate/certificate.py:187
 msgid "Click for certificate"
 msgstr "শংসাপত্রের জন্য ক্লিক করুন"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:185
+#: experimental/coursebuilder/modules/certificate/certificate.py:193
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -820,7 +820,7 @@ msgstr "এই পাঠ্যক্রমে নিবন্ধীকরণ ব
 #: experimental/coursebuilder/views/course.html:44
 #: experimental/coursebuilder/views/preview.html:31
 msgid "Syllabus"
-msgstr "সিলেবাস"
+msgstr "পাঠক্রম"
 
 #. Error text for when a student has submitted a review after the deadline.
 #: experimental/coursebuilder/views/error.html:16
@@ -1257,12 +1257,12 @@ msgstr "না"
 #. Label on a control to show a class syllabus.
 #: experimental/coursebuilder/views/unit.html:38
 msgid "Show Syllabus"
-msgstr "সিলেবাস দেখান"
+msgstr "পাঠক্রম দেখান"
 
 #. Label on a control to hide a class syllabus.
 #: experimental/coursebuilder/views/unit.html:42
 msgid "Hide Syllabus"
-msgstr "সিলেবাস লুকান"
+msgstr "পাঠক্রম লুকান"
 
 #. Text shown for a unit that contains no assessments, lessons, header or
 #. footer.
@@ -1285,5 +1285,4 @@ msgstr "পরবর্তী পৃষ্ঠা"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "শেষ"
-
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-24 08:36-0800\n"
-"PO-Revision-Date: 2014-11-24 08:36-0800\n"
+"POT-Creation-Date: 2014-12-08 08:51-0800\n"
+"PO-Revision-Date: 2014-12-08 08:51-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ru <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -29,7 +29,7 @@ msgstr "Раздел %s – %s"
 #: experimental/coursebuilder/controllers/utils.py:231
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "Раздел \"%s\""
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -126,17 +126,17 @@ msgid " Hint "
 msgstr " Подсказка "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:172
+#: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Certificate"
 msgstr "Сертификат"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:179
+#: experimental/coursebuilder/modules/certificate/certificate.py:187
 msgid "Click for certificate"
 msgstr "Показать сертификат"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:185
+#: experimental/coursebuilder/modules/certificate/certificate.py:193
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -1264,5 +1264,4 @@ msgstr "Следующая страница"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "Завершить"
-
 

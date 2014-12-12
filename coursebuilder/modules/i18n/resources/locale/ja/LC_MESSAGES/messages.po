@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-11-24 08:36-0800\n"
-"PO-Revision-Date: 2014-11-24 08:36-0800\n"
+"POT-Creation-Date: 2014-12-08 08:51-0800\n"
+"PO-Revision-Date: 2014-12-08 08:51-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ja <LL@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -28,7 +28,7 @@ msgstr "ユニット %s - %s"
 #: experimental/coursebuilder/controllers/utils.py:231
 #, python-format
 msgid "Unit %s"
-msgstr ""
+msgstr "ユニット %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -123,17 +123,17 @@ msgid " Hint "
 msgstr " ヒント "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:172
+#: experimental/coursebuilder/modules/certificate/certificate.py:180
 msgid "Certificate"
 msgstr "証明書"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:179
+#: experimental/coursebuilder/modules/certificate/certificate.py:187
 msgid "Click for certificate"
 msgstr "証明書を見るにはクリック"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:185
+#: experimental/coursebuilder/modules/certificate/certificate.py:193
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -1226,5 +1226,4 @@ msgstr "次のページ"
 #: experimental/coursebuilder/views/unit.html:132
 msgid "End"
 msgstr "最後"
-
 
