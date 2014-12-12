@@ -16,6 +16,8 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
+import logging
+
 from models import jobs
 from models.data_sources import base_types
 
@@ -23,6 +25,7 @@ from models.data_sources import base_types
 class _Registry(object):
 
     _data_source_classes = []
+    _data_source_names = {}
 
     @classmethod
     def register(cls, clazz):
@@ -32,9 +35,34 @@ class _Registry(object):
                 'All registered data sources must ultimately inherit '
                 'from models.data_source.data_types._DataSource; '
                 '"%s" does not.' % clazz.__name__)
+        if hasattr(clazz, 'get_name'):
+            if clazz.get_name() in cls._data_source_names:
+                raise ValueError(
+                    'Cannot register class with name "%s"; class %s has '
+                    'already registered that name.' % (
+                        clazz.get_name(),
+                        cls._data_source_names[clazz.get_name()]))
+            cls._data_source_names[clazz.get_name()] = clazz
 
         clazz.verify_on_registration()
         cls._data_source_classes.append(clazz)
+
+    @classmethod
+    def unregister(cls, clazz):
+        if clazz in cls._data_source_classes:
+            cls._data_source_classes.remove(clazz)
+            if hasattr(clazz, 'get_name'):
+                try:
+                    del cls._data_source_names[clazz.get_name()]
+                except KeyError:
+                    logging.critical(
+                        'Trying to unregister name "%s" for source class %s, '
+                        'but this name was not registered when the class was.',
+                        clazz.get_name(), clazz.__name__)
+        else:
+            logging.error('Trying to unregister data source class %s, '
+                          'but this class is not currently registered',
+                          clazz.__name__)
 
     @classmethod
     def get_rest_data_source_classes(cls):

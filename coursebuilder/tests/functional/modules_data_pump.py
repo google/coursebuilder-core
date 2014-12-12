@@ -123,6 +123,9 @@ class SchemaConversionTests(actions.TestBase):
         self.job = data_pump.DataPumpJob(self.app_context,
                                          TrivialDataSource.__name__)
 
+    def tearDown(self):
+        data_sources.Registry.unregister(TrivialDataSource)
+
     def test_complex_conversion(self):
         reg = schema_fields.FieldRegistry('Complex')
         reg.add_property(schema_fields.SchemaField(
@@ -263,6 +266,9 @@ class PiiTests(actions.TestBase):
         self.job = data_pump.DataPumpJob(self.app_context,
                                          TrivialDataSource.__name__)
 
+    def tearDown(self):
+        data_sources.Registry.unregister(TrivialDataSource)
+
     def test_cannot_push_unregistered_class(self):
         class NotRegistered(data_sources.AbstractSmallRestDataSource):
             pass
@@ -287,6 +293,7 @@ class PiiTests(actions.TestBase):
         data_sources.Registry.register(NotExportable)
         with self.assertRaises(ValueError):
             data_pump.DataPumpJob(self.app_context, NotExportable.__name__)
+        data_sources.Registry.unregister(NotExportable)
 
     def test_get_pii_secret_with_blank_settings(self):
         # pylint: disable-msg=protected-access
@@ -468,6 +475,7 @@ class InteractionTests(actions.TestBase):
 
     def tearDown(self):
         super(InteractionTests, self).tearDown()
+        data_sources.Registry.unregister(TrivialDataSource)
         # pylint: disable-msg=protected-access
         data_pump.DataPumpJob._get_bigquery_service = (
             self.save_bigquery_service_function)

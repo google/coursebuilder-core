@@ -41,7 +41,7 @@ function scoring(data) {
     pie_div.removeChild(pie_div.children[0])
   }
 
-  var by_name = data.answers.crossfilter.dimension(
+  var by_name = data.fake_answers.crossfilter.dimension(
       function(score) { return score.name; })
   var score_by_name = by_name.group().reduceSum(
       function(score) { return score.score; })

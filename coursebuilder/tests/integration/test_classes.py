@@ -890,7 +890,7 @@ class VisualizationsTest(BaseIntegrationTest):
 
     def test_dimension_gc(self):
         page = self.load_dashboard(self._name).click_analytics('Scoring')
-        self._wait_for_page_number(page, 'answers', 0)
+        self._wait_for_page_number(page, 'fake_answers', 0)
 
         # Scoring page has a pie chart.
         self.assertTrue(page.answers_pie_chart_present())
@@ -899,37 +899,37 @@ class VisualizationsTest(BaseIntegrationTest):
         # we hit 32, crossfilter will pitch a fit and the chart won't
         # display.
         for _ in range(32):
-            page.click('answers', 'minusone')
+            page.click('fake_answers', 'minusone')
         self.assertTrue(page.answers_pie_chart_present())
 
     def test_data_sources_independent(self):
         page = self.load_dashboard(self._name).click_analytics('Scoring')
         self._wait_for_page_number(page, 'pupils', 0)
-        self._wait_for_page_number(page, 'answers', 0)
+        self._wait_for_page_number(page, 'fake_answers', 0)
 
-        self._force_response_log_critical('answers')
+        self._force_response_log_critical('fake_answers')
         self._force_response_exception('pupils')
 
         page.click('pupils', 'plusone')
         self._wait_for_page_number(page, 'pupils', 0)
-        self._wait_for_page_number(page, 'answers', 0)
+        self._wait_for_page_number(page, 'fake_answers', 0)
         self.assertRegexpMatches(
             page.get_data_source_logs('pupils'),
             'critical: Fetching results data: ValueError: Error for testing')
-        self.assertEquals('', page.get_data_source_logs('answers'))
+        self.assertEquals('', page.get_data_source_logs('fake_answers'))
 
         page.click('pupils', 'plusone')
         self._wait_for_page_number(page, 'pupils', 1)
-        self._wait_for_page_number(page, 'answers', 0)
+        self._wait_for_page_number(page, 'fake_answers', 0)
         self.assertEquals('', page.get_data_source_logs('pupils'))
-        self.assertEquals('', page.get_data_source_logs('answers'))
+        self.assertEquals('', page.get_data_source_logs('fake_answers'))
 
-        page.click('answers', 'plusone')
+        page.click('fake_answers', 'plusone')
         self._wait_for_page_number(page, 'pupils', 1)
-        self._wait_for_page_number(page, 'answers', 1)
+        self._wait_for_page_number(page, 'fake_answers', 1)
         self.assertEquals('', page.get_data_source_logs('pupils'))
         self.assertEquals('critical: Error for testing',
-                          page.get_data_source_logs('answers'))
+                          page.get_data_source_logs('fake_answers'))
 
 
 class EventsTest(BaseIntegrationTest):

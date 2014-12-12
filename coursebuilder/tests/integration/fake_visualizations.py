@@ -112,11 +112,11 @@ class AnswersDataSource(FakeDataSource):
 
     @classmethod
     def get_name(cls):
-        return 'answers'
+        return 'fake_answers'
 
     @classmethod
     def get_title(cls):
-        return 'Answers'
+        return 'Fake Answers'
 
 
 class ForceResponseHandler(utils.ApplicationHandler):
@@ -136,7 +136,7 @@ class ForceResponseHandler(utils.ApplicationHandler):
         data_source_classes = {
             'exams': ExamsDataSource,
             'pupils': PupilsDataSource,
-            'answers': AnswersDataSource,
+            'fake_answers': AnswersDataSource,
         }
 
         data_source = data_source_classes[
