@@ -830,6 +830,21 @@ class ApplicationContext(object):
         extra_locales = environ.get('extra_locales', [])
         return [default_locale] + [loc['locale'] for loc in extra_locales]
 
+    @classmethod
+    def is_absolute_url(cls, url):
+        return bool(urlparse.urlparse(url).scheme)
+
+    def canonicalize_url(self, location):
+        """Adds the current namespace URL prefix to the relative 'location'."""
+        is_relative = (
+            not self.is_absolute_url(location) and
+            not location.startswith(self.get_slug()))
+        has_slug = (
+            self.get_slug() and self.get_slug() != '/')
+        if is_relative and has_slug:
+            location = '%s%s' % (self.get_slug(), location)
+        return location
+
 
 def has_path_info():
     """Checks if PATH_INFO is defined for the thread local."""

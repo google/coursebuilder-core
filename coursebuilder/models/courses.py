@@ -26,6 +26,7 @@ import re
 import sys
 import threading
 import config
+import custom_units
 
 import messages
 import progress
@@ -461,6 +462,9 @@ class Unit12(object):
     def needs_human_grader(self):
         return self.workflow.get_grader() == HUMAN_GRADER
 
+    def is_custom_unit(self):
+        return None
+
 
 class Lesson12(object):
     """An object to represent a Lesson (version 1.2)."""
@@ -685,6 +689,7 @@ class Unit13(object):
         'description': None,
         'unit_header': None,
         'unit_footer': None,
+        'custom_unit_type': None,
         }
 
     def __init__(self):
@@ -750,6 +755,10 @@ class Unit13(object):
         # for each contained element within a unit, when unit shows
         # its elements on separate pages.
 
+        # If this is a custom unit. We use this field to identify the type of
+        # custom unit.
+        self.custom_unit_type = None
+
     @property
     def index(self):
         assert verify.UNIT_TYPE_UNIT == self.type
@@ -758,12 +767,24 @@ class Unit13(object):
     @property
     def workflow(self):
         """Returns the workflow as an object."""
-        assert self.is_assessment()
+        assert self.is_assessment() or self.is_custom_unit()
         workflow = Workflow(self.workflow_yaml)
         return workflow
 
+    @property
+    def custom_unit_url(self):
+        if hasattr(self, '_custom_unit_url'):
+            return self._custom_unit_url
+        return None
+
+    def set_custom_unit_url(self, url):
+        self._custom_unit_url = url
+
     def is_assessment(self):
         return verify.UNIT_TYPE_ASSESSMENT == self.type
+
+    def is_custom_unit(self):
+        return verify.UNIT_TYPE_CUSTOM == self.type
 
     def is_old_style_assessment(self, course):
         content = self.html_content
@@ -1047,6 +1068,28 @@ class CourseModel13(object):
             self._lessons)
         index_units_and_lessons(self)
 
+    def get_file_content(self, filename):
+        fs = self.app_context.fs
+        path = fs.impl.physical_to_logical(filename)
+        if fs.isfile(path):
+            return fs.get(path)
+        return None
+
+    def set_file_content(self, filename, content, metadata_only=None,
+                          is_draft=None):
+        fs = self.app_context.fs
+        path = fs.impl.physical_to_logical(filename)
+        fs.put(path,
+               content, metadata_only=metadata_only, is_draft=is_draft)
+
+    def delete_file(self, filename):
+        fs = self.app_context.fs
+        path = fs.impl.physical_to_logical(filename)
+        if fs.isfile(path):
+            fs.delete(path)
+            return True
+        return False
+
     def is_dirty(self):
         """Checks if course object has been modified and needs to be saved."""
         return self._dirty_units or self._dirty_lessons
@@ -1076,6 +1119,11 @@ class CourseModel13(object):
             for unit in self._deleted_units:
                 if unit.is_assessment():
                     self._delete_assessment(unit)
+                elif unit.is_custom_unit():
+                    cu = custom_units.UnitTypeRegistry.get(
+                        unit.custom_unit_type)
+                    if cu:
+                        cu.delete_unit(self, unit)
 
             # Delete owned activities.
             for lesson in self._deleted_lessons:
@@ -1114,9 +1162,7 @@ class CourseModel13(object):
         content_stream = vfs.string_to_stream(unicode(content))
 
         # Store settings.
-        fs = self.app_context.fs.impl
-        filename = fs.physical_to_logical('/course.yaml')
-        fs.put(filename, content_stream)
+        self.set_file_content('/course.yaml', content_stream)
 
         self.invalidate_cached_course_settings()
         return True
@@ -1131,11 +1177,11 @@ class CourseModel13(object):
             unit = self.find_unit_by_id(unit.unit_id)
             if not unit or verify.UNIT_TYPE_ASSESSMENT != unit.type:
                 continue
-            path = fs.impl.physical_to_logical(
-                self.get_assessment_filename(unit.unit_id))
+            filename = self.get_assessment_filename(unit.unit_id)
+            path = fs.impl.physical_to_logical(filename)
             if fs.isfile(path):
-                fs.put(
-                    path, None, metadata_only=True,
+                self.set_file_content(
+                    filename, None, metadata_only=True,
                     is_draft=not unit.now_available)
 
         # Update state of owned activities.
@@ -1223,15 +1269,21 @@ class CourseModel13(object):
         # Nope, no other kinds of parentage; no parent.
         return None
 
-    def add_unit(self, unit_type, title):
+    def add_unit(self, unit_type, title, custom_unit_type=None):
         """Adds a brand new unit."""
         assert unit_type in verify.UNIT_TYPES
+        if verify.UNIT_TYPE_CUSTOM == unit_type:
+            assert custom_unit_type
+        else:
+           assert not custom_unit_type
 
         unit = Unit13()
         unit.type = unit_type
         unit.unit_id = self._get_next_id()
         unit.title = title
         unit.now_available = False
+        if verify.UNIT_TYPE_CUSTOM == unit_type:
+            unit.custom_unit_type = custom_unit_type
 
         self._units.append(unit)
         self._index()
@@ -1351,6 +1403,8 @@ class CourseModel13(object):
         existing_unit.description = unit.description
         existing_unit.unit_header = unit.unit_header
         existing_unit.unit_footer = unit.unit_footer
+        existing_unit.properties = unit.properties
+        existing_unit.custom_unit_type = unit.custom_unit_type
 
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href
@@ -1482,9 +1536,8 @@ class CourseModel13(object):
                 root_name, ex.message or ''))
             return
 
-        fs = self.app_context.fs
-        fs.put(
-            path, vfs.string_to_stream(assessment_content),
+        self.set_file_content(
+            dest_filename, vfs.string_to_stream(assessment_content),
             is_draft=not unit.now_available)
 
     def set_assessment_content(self, unit, assessment_content, errors=None):
@@ -1510,8 +1563,8 @@ class CourseModel13(object):
         if errors is None:
             errors = []
 
-        path = self._app_context.fs.impl.physical_to_logical(
-            self.get_activity_filename(lesson.unit_id, lesson.lesson_id))
+        filename = self.get_activity_filename(lesson.unit_id, lesson.lesson_id)
+        path = self._app_context.fs.impl.physical_to_logical(filename)
         root_name = 'activity'
 
         try:
@@ -1533,10 +1586,8 @@ class CourseModel13(object):
                 root_name, ex.message or ''))
             return
 
-        fs = self.app_context.fs
-        fs.put(
-            path, vfs.string_to_stream(activity_content),
-            is_draft=not lesson.now_available)
+        self.set_file_content(filename, vfs.string_to_stream(activity_content),
+                               is_draft=not lesson.now_available)
 
     def import_from(self, src_course, errors):
         """Imports a content of another course into this course."""
@@ -2590,7 +2641,14 @@ class Course(object):
         return self._reviews_processor
 
     def get_units(self):
-        return self._model.get_units()
+        units = self._model.get_units()
+        for unit in units:
+            if unit.is_custom_unit():
+                cu = custom_units.UnitTypeRegistry.get(unit.custom_unit_type)
+                if cu:
+                    unit.set_custom_unit_url(self.app_context.canonicalize_url(
+                        cu.visible_url(unit)))
+        return units
 
     def get_units_of_type(self, unit_type):
         return [unit for unit in self.get_units() if unit_type == unit.type]
@@ -2658,6 +2716,16 @@ class Course(object):
 
     def add_lesson(self, unit):
         return self._model.add_lesson(unit, 'New Lesson')
+
+    def add_custom_unit(self, unit_type):
+        """Adds new custom unit to a course."""
+        cu = custom_units.UnitTypeRegistry.get(unit_type)
+        assert cu
+        unit = self._model.add_unit(
+            verify.UNIT_TYPE_CUSTOM, 'New %s' % cu.name,
+            custom_unit_type=unit_type)
+        cu.add_unit(self, unit)
+        return unit
 
     def update_unit(self, unit):
         return self._model.update_unit(unit)
@@ -2962,6 +3030,15 @@ class Course(object):
     def reorder_units(self, order_data):
         return self._model.reorder_units(order_data)
 
+    def get_file_content(self, filename):
+        return self._model.get_file_content(filename)
+
+    def set_file_content(self, filename, content):
+        self._model.set_file_content(filename, content)
+
+    def delete_file(self, filename):
+        return self._model.delete_file(filename)
+
     def get_assessment_content(self, unit):
         """Returns the schema for an assessment as a Python dict."""
         return self._model.get_assessment_content(unit)
@@ -2988,6 +3065,11 @@ class Course(object):
         """Tests whether the given assessment id is valid."""
         return any(x for x in self.get_units() if x.is_assessment() and str(
             assessment_id) == str(x.unit_id))
+
+    def is_valid_custom_unit(self, unit_id):
+        """Tests whether the given assessment id is valid."""
+        return any(x for x in self.get_units() if x.is_custom_unit() and str(
+            unit_id) == str(x.unit_id))
 
     def is_valid_unit_lesson_id(self, unit_id, lesson_id):
         """Tests whether the given unit id and lesson id are valid."""

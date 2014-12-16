@@ -151,10 +151,44 @@
               </span>
             {% endif %}
       {% else %}
-        <li class='{{ css_class }}'>
-          <p class="gcb-top-content">
+        {% if (student_preferences and student_preferences.last_location and
+               unit._custom_unit_url in student_preferences.last_location) %}
+          {% set css_class = css_class + ' gcb-last-location' %}
+        {% endif %}
+        <li class='{{ css_class }}'><p class="gcb-top-content">
+          {% if not transient_student %}
+            {% if progress[unit.unit_id] == 2 %}
+              <img src="assets/img/completed.png"
+                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Completed') }}"
+                   class="gcb-progress-icon"
+                   id="progress-completed-review-{{unit.unit_id}}">
+            {% elif progress[unit.unit_id] == 1 %}
+              <img src="assets/img/in_progress.png"
+                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('In progress') }}"
+                   class="gcb-progress-icon"
+                   id="progress-inprogress-review-{{unit.unit_id}}">
+            {% else %}
+              <img src="assets/img/not_started.png"
+                   alt="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                   title="{# I18N: Alt text for image representing student progress. #}{{ gettext('Not yet submitted') }}"
+                   class="gcb-progress-icon"
+                   id="progress-notstarted-review-{{unit.unit_id}}">
+            {% endif %}
+          {% else %}
             <span class="{{ progress_class }}"></span>
-            Error: unit type not recognized.
+          {% endif %}
+          {% if include_link %}
+            <a href="{{ unit.custom_unit_url }}"> {{ unit.title }}</a>
+          {% else %}
+            {{ unit.title }}
+          {% endif %}
+          {% if include_description and unit.description %}
+            <span class="gcb-unit-description">
+              {{ unit.description }}
+            </span>
+          {% endif %}
       {% endif %}
           {% if not unit.now_available and can_see_drafts %}
             (Private)

@@ -342,7 +342,7 @@ class ApplicationHandler(webapp2.RequestHandler):
 
     @classmethod
     def is_absolute(cls, url):
-        return bool(urlparse.urlparse(url).scheme)
+        return sites.ApplicationContext.is_absolute_url(url)
 
     @classmethod
     def get_base_href(cls, handler):
@@ -352,7 +352,7 @@ class ApplicationHandler(webapp2.RequestHandler):
             base = '%s/' % base
 
         # For IE to work with the <base> tag, its href must be an absolute URL.
-        if not cls.is_absolute(base):
+        if not sites.ApplicationContext.is_absolute_url(base):
             parts = urlparse.urlparse(handler.request.url)
             base = urlparse.urlunparse(
                 (parts.scheme, parts.netloc, base, None, None, None))
@@ -376,18 +376,11 @@ class ApplicationHandler(webapp2.RequestHandler):
     @classmethod
     def canonicalize_url_for(cls, app_context, location):
         """Adds the current namespace URL prefix to the relative 'location'."""
-        is_relative = (
-            not cls.is_absolute(location) and
-            not location.startswith(app_context.get_slug()))
-        has_slug = (
-            app_context.get_slug() and app_context.get_slug() != '/')
-        if is_relative and has_slug:
-            location = '%s%s' % (app_context.get_slug(), location)
-        return location
+        return app_context.canonicalize_url(location)
 
     def canonicalize_url(self, location):
         if hasattr(self, 'app_context'):
-            return self.canonicalize_url_for(self.app_context, location)
+            return self.app_context.canonicalize_url(location)
         else:
             return location
 

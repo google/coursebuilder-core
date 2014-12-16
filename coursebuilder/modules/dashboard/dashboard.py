@@ -70,6 +70,7 @@ from models import analytics
 from models import config
 from models import courses
 from models import custom_modules
+from models import custom_units
 from models import data_sources
 from models import models
 from models import roles
@@ -110,7 +111,7 @@ class DashboardHandler(
         'edit_assignment', 'add_mc_question', 'add_sa_question',
         'edit_question', 'add_question_group', 'edit_question_group',
         'add_label', 'edit_label', 'edit_html_hook', 'question_preview',
-        'roles', 'add_role', 'edit_role',
+        'roles', 'add_role', 'edit_role', 'edit_custom_unit',
         'import_gift_questions']
     # Requests to these handlers automatically go through an XSRF token check
     # that is implemented in ReflectiveRequestHandler.
@@ -120,7 +121,7 @@ class DashboardHandler(
         'clear_index', 'edit_course_settings', 'add_reviewer',
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
         'add_to_question_group', 'course_availability', 'course_browsability',
-        'clone_question']
+        'clone_question', 'add_custom_unit']
     nav_mappings = [
         ('outline', 'Outline'),
         ('assets', 'Assets'),
@@ -321,8 +322,7 @@ class DashboardHandler(
         for course in sorted(sites.get_all_courses()):
             with Namespace(course.namespace):
                 if self.current_user_has_access(course):
-                    url = ApplicationHandler.canonicalize_url_for(
-                        course, destination)
+                    url = course.canonicalize_url(destination)
                     title = '%s (%s)' % (course.get_title(), course.get_slug())
                     option = safe_dom.Element(
                         'option', value=url).add_text(title)
@@ -384,6 +384,8 @@ class DashboardHandler(
                 lines.add_child(self._render_link_li(unit))
             elif unit.type == verify.UNIT_TYPE_UNIT:
                 lines.add_child(self._render_unit_li(course, unit))
+            elif unit.type == verify.UNIT_TYPE_CUSTOM:
+                lines.add_child(self._render_custom_unit_li(unit))
             else:
                 raise Exception('Unknown unit type: %s.' % unit.type)
         return lines
@@ -438,6 +440,22 @@ class DashboardHandler(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_link',
                     'key': unit.unit_id})
+            li.add_child(self._create_edit_button(url))
+        return li
+
+    def _render_custom_unit_li(self, unit):
+        li = safe_dom.Element('li').add_child(
+            safe_dom.Element(
+                'a', href=unit.custom_unit_url, className='strong'
+            ).add_text(unit.title)
+        )
+        self._render_status_icon(li, unit, unit.unit_id, 'unit')
+        if self.app_context.is_editable_fs():
+            url = self.canonicalize_url(
+                '/dashboard?%s') % urllib.urlencode({
+                    'action': 'edit_custom_unit',
+                    'key': unit.unit_id,
+                    'unit_type': unit.type})
             li.add_child(self._create_edit_button(url))
         return li
 
@@ -601,6 +619,16 @@ class DashboardHandler(
                 'caption': 'Add Assessment',
                 'action': self.get_action_url('add_assessment'),
                 'xsrf_token': self.create_xsrf_token('add_assessment')})
+
+            for custom_type in custom_units.UnitTypeRegistry.list():
+                outline_actions.append({
+                    'id': 'add_custom_unit_%s' % custom_type.identifier,
+                    'caption': 'Add %s' % custom_type.name,
+                    'action': self.get_action_url(
+                            'add_custom_unit',
+                            extra_args={'unit_type': custom_type.identifier}),
+                    'xsrf_token': self.create_xsrf_token('add_custom_unit')})
+
             if not courses.Course(self).get_units():
                 outline_actions.append({
                     'id': 'import_course',

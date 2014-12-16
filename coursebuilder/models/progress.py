@@ -88,13 +88,15 @@ class UnitLessonCompletionTracker(object):
         'block': 'b',
         'assessment': 's',
         'component': 'c',
+        'custom_unit': 'x'
     }
     COMPOSITE_ENTITIES = [
         EVENT_CODE_MAPPING['course'],
         EVENT_CODE_MAPPING['unit'],
         EVENT_CODE_MAPPING['lesson'],
         EVENT_CODE_MAPPING['activity'],
-        EVENT_CODE_MAPPING['html']
+        EVENT_CODE_MAPPING['html'],
+        EVENT_CODE_MAPPING['custom_unit']
     ]
 
     def __init__(self, course):
@@ -123,6 +125,9 @@ class UnitLessonCompletionTracker(object):
 
     def _get_unit_key(self, unit_id):
         return '%s.%s' % (self.EVENT_CODE_MAPPING['unit'], unit_id)
+
+    def _get_custom_unit_key(self, unit_id):
+        return '%s.%s' % (self.EVENT_CODE_MAPPING['custom_unit'], unit_id)
 
     def _get_lesson_key(self, unit_id, lesson_id):
         return '%s.%s.%s.%s' % (
@@ -631,6 +636,18 @@ class UnitLessonCompletionTracker(object):
         # Record that all blocks in this activity have been completed.
         self._set_entity_value(progress, event_key, self.COMPLETED_STATE)
 
+    def _update_custom_unit(self, student, event_key, state):
+        """Update custom unit."""
+        if student.is_transient:
+            return
+        progress = self.get_or_create_progress(student)
+        current_state = self._get_entity_value(progress, event_key)
+        if current_state == state or current_state == self.COMPLETED_STATE:
+            return
+        self._set_entity_value(progress, event_key, state)
+        progress.updated_on = datetime.datetime.now()
+        progress.put()
+
     UPDATER_MAPPING = {
         'activity': _update_activity,
         'course': _update_course,
@@ -751,6 +768,22 @@ class UnitLessonCompletionTracker(object):
         self._put_event(
             student, 'assessment', self._get_assessment_key(assessment_id))
 
+    def put_custom_unit_completed(self, student, unit_id):
+        """Records that the student has completed the given custom_unit."""
+        if not self._get_course().is_valid_custom_unit(unit_id):
+            return
+        self._update_custom_unit(
+            student, self._get_custom_unit_key(unit_id),
+            self.COMPLETED_STATE)
+
+    def put_custom_unit_in_progress(self, student, unit_id):
+        """Records that the given student has started the given custom_unit."""
+        if not self._get_course().is_valid_custom_unit(unit_id):
+            return
+        self._update_custom_unit(
+            student, self._get_custom_unit_key(unit_id),
+            self.IN_PROGRESS_STATE)
+
     def put_activity_accessed(self, student, unit_id, lesson_id):
         """Records that the given student has accessed this activity."""
         # This method currently exists because we need to mark activities
@@ -832,6 +865,10 @@ class UnitLessonCompletionTracker(object):
     def get_unit_status(self, progress, unit_id):
         return self._get_entity_value(progress, self._get_unit_key(unit_id))
 
+    def get_custom_unit_status(self, progress, unit_id):
+        return self._get_entity_value(
+            progress, self._get_custom_unit_key(unit_id))
+
     def get_lesson_status(self, progress, unit_id, lesson_id):
         return self._get_entity_value(
             progress, self._get_lesson_key(unit_id, lesson_id))
@@ -897,6 +934,9 @@ class UnitLessonCompletionTracker(object):
                     progress, unit.unit_id)
             elif unit.type == verify.UNIT_TYPE_UNIT:
                 value = self.get_unit_status(progress, unit.unit_id)
+                result[unit.unit_id] = value or 0
+            elif unit.type == verify.UNIT_TYPE_CUSTOM:
+                value = self.get_custom_unit_status(progress, unit.unit_id)
                 result[unit.unit_id] = value or 0
 
         return result

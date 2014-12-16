@@ -34,6 +34,7 @@ from controllers.utils import ApplicationHandler
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import courses
+from models import custom_units
 from models import messages as m_messages
 from models import models as m_models
 from models import review
@@ -223,6 +224,17 @@ class UnitLessonEditor(ApplicationHandler):
             'edit_assessment', key=assessment.unit_id,
             extra_args={'is_newly_created': 1}))
 
+    def post_add_custom_unit(self):
+          """Adds a custom unit to a course."""
+          course = courses.Course(self)
+          custom_unit_type = self.request.get('unit_type')
+          custom_unit = course.add_custom_unit(custom_unit_type)
+          course.save()
+          self.redirect(self.get_action_url(
+              'edit_custom_unit', key=custom_unit.unit_id,
+              extra_args={'is_newly_created': 1,
+                          'unit_type': custom_unit_type}))
+
     def post_set_draft_status(self):
         """Sets the draft status of a course component.
 
@@ -327,6 +339,18 @@ class UnitLessonEditor(ApplicationHandler):
             page_description=messages.UNIT_EDITOR_DESCRIPTION,
             annotations_dict=UnitRESTHandler.get_annotations_dict(
                 courses.Course(self), int(self.request.get('key'))))
+
+    def get_edit_custom_unit(self):
+        """Shows custom_unit_editor."""
+        custom_unit_type = self.request.get('unit_type')
+        custom_unit = custom_units.UnitTypeRegistry.get(custom_unit_type)
+        rest_handler = custom_unit.rest_handler
+        self._render_edit_form_for(
+            rest_handler,
+            custom_unit.name,
+            page_description=rest_handler.DESCRIPTION,
+            annotations_dict=rest_handler.get_schema_annotations_dict(
+                courses.Course(self)))
 
     def get_edit_link(self):
         """Shows link editor."""
