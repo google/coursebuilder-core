@@ -6,6 +6,7 @@ function ButterBar(popup, message, close) {
 ButterBar.prototype.showMessage = function(text) {
   this.message.textContent = text;  // FF, Chrome
   this.message.innerText = text;    // IE
+  ButterBar.keepInView();
   if (! $(this.popup).hasClass("shown")) {
     $(this.popup).addClass("shown");
   }
