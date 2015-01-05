@@ -162,6 +162,19 @@ class InvitationStudentProperty(models.StudentPropertyEntity):
     def invited_list_size(self):
         return len(transforms.loads(self.value))
 
+    def for_export(self, transform_fn):
+        """Return a sanitized version of the model, with anonymized data."""
+
+        # Anonymize the email adresses in the email list and drop any
+        # additional data in the data value field.
+
+        model = super(InvitationStudentProperty, self).for_export(transform_fn)
+        value_dict = transforms.loads(model.value)
+        email_list = value_dict.get(self.EMAIL_LIST_KEY, [])
+        clean_email_list = [transform_fn(email) for email in email_list]
+        model.value = transforms.dumps({self.EMAIL_LIST_KEY: clean_email_list})
+        return model
+
 
 class InvitationHandler(utils.BaseHandler):
     """Renders the student invitation panel."""

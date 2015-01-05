@@ -122,6 +122,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_i18n_dashboard_jobs.UploadTranslationsTest': 5,
     'tests.functional.modules_invitation.InvitationHandlerTests': 16,
     'tests.functional.modules_invitation.ProfileViewInvitationTests': 5,
+    'tests.functional.modules_invitation.SantitationTests': 1,
     'tests.functional.modules_manual_progress.ManualProgressTest': 24,
     'tests.functional.modules_math.MathTagTests': 3,
     'tests.functional.modules_notifications.CronTest': 9,

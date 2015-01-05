@@ -381,3 +381,16 @@ class ProfileViewInvitationTests(BaseInvitationTests):
         query = urlparse.parse_qs(unsubscribe_url.query)
         self.assertEquals(self.STUDENT_EMAIL, query['email'][0])
         self.assertEquals('resubscribe', query['action'][0])
+
+
+class SantitationTests(BaseInvitationTests):
+
+    def transform(self, x):
+        return 'tr_' + x
+
+    def test_for_export_transforms_value_for_invitation_student_property(self):
+        orig_model = invitation.InvitationStudentProperty.load_or_create(
+            models.Student())
+        orig_model.append_to_invited_list(['a@foo.com'])
+        safe_model = orig_model.for_export(self.transform)
+        self.assertEquals('{"email_list": ["tr_a@foo.com"]}', safe_model.value)
