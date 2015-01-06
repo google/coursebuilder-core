@@ -23,13 +23,45 @@ import os
 import random
 import time
 
-from Crypto.Cipher import AES
-
 import appengine_config
 from common import utils
 from models import config
 
 from google.appengine.api import users
+
+try:
+    # pylint: disable-msg=g-import-not-at-top
+    from Crypto.Cipher import AES
+except ImportError:
+    if appengine_config.PRODUCTION_MODE:
+        raise
+
+    class AES(object):
+        """No-op crypto class to permit running on MacOS in dev mode."""
+
+        MODE_CBC = 2
+
+        @staticmethod
+        def new(unused_1, unused_2, unused_3):
+            return AES()
+
+        def __init__(self):
+            pass
+
+        def _reverse(self, message):
+            # "Encrypt" by reversing.  Just want to ensure that the encrypted
+            # version differs from the plaintext so that nothing accidentally
+            # relies on being able to read the nominally-encrypted value.
+            m_list = list(message)
+            m_list.reverse()
+            return ''.join(m_list)
+
+        def encrypt(self, message):
+            return self._reverse(message)
+
+        def decrypt(self, message):
+            return self._reverse(message)
+
 
 XSRF_SECRET_LENGTH = 20
 

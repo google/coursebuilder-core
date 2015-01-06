@@ -60,7 +60,7 @@ echo Using GAE from $GOOGLE_APP_ENGINE_HOME
 if [ ! -d "$GOOGLE_APP_ENGINE_HOME" ]; then
   echo Installing GAE
   mkdir -p $RUNTIME_HOME
-  wget https://storage.googleapis.com/appengine-sdks/deprecated/199/google_appengine_1.9.9.zip -O google_appengine_1.9.9.zip
+  curl --location --silent https://storage.googleapis.com/appengine-sdks/deprecated/199/google_appengine_1.9.9.zip -o google_appengine_1.9.9.zip
   unzip google_appengine_1.9.9.zip -d $RUNTIME_HOME/
   mv $RUNTIME_HOME/google_appengine $GOOGLE_APP_ENGINE_HOME
   rm google_appengine_1.9.9.zip
@@ -93,7 +93,7 @@ function need_install() {
 }
 
 if need_install webtest PKG-INFO Version: 2.0.14 ; then
-  wget https://pypi.python.org/packages/source/W/WebTest/WebTest-2.0.14.zip -O webtest-download.zip
+  curl --location --silent https://pypi.python.org/packages/source/W/WebTest/WebTest-2.0.14.zip -o webtest-download.zip
   unzip webtest-download.zip -d $RUNTIME_HOME
   rm webtest-download.zip
   mv $RUNTIME_HOME/WebTest-2.0.14 $RUNTIME_HOME/webtest
@@ -101,7 +101,7 @@ fi
 
 if need_install six PKG-INFO Version: 1.5.2 ; then
   echo Installing six '(a Python 2.x/3.x compatibility bridge)'
-  wget https://pypi.python.org/packages/source/s/six/six-1.5.2.tar.gz -O six-1.5.2.tar.gz
+  curl --location --silent https://pypi.python.org/packages/source/s/six/six-1.5.2.tar.gz -o six-1.5.2.tar.gz
   tar --gunzip --extract --verbose --directory $RUNTIME_HOME --file six-1.5.2.tar.gz
   rm six-1.5.2.tar.gz
   mv $RUNTIME_HOME/six-1.5.2 $RUNTIME_HOME/six
@@ -109,7 +109,7 @@ fi
 
 if need_install beautifulsoup4 PKG-INFO Version: 4.3.2 ; then
   echo Installing Beautiful Soup HTML processing library
-  wget https://pypi.python.org/packages/source/b/beautifulsoup4/beautifulsoup4-4.3.2.tar.gz -O beautifulsoup4-4.3.2.tar.gz
+  curl --location --silent https://pypi.python.org/packages/source/b/beautifulsoup4/beautifulsoup4-4.3.2.tar.gz -o beautifulsoup4-4.3.2.tar.gz
   tar --gunzip --extract --verbose --directory $RUNTIME_HOME --file beautifulsoup4-4.3.2.tar.gz
   rm beautifulsoup4-4.3.2.tar.gz
   mv $RUNTIME_HOME/beautifulsoup4-4.3.2 $RUNTIME_HOME/beautifulsoup4
@@ -117,7 +117,7 @@ fi
 
 if need_install selenium PKG-INFO Version: 2.35.0 ; then
   echo Installing Selenium
-  wget https://pypi.python.org/packages/source/s/selenium/selenium-2.35.0.tar.gz -O selenium-download.tgz
+  curl --location --silent https://pypi.python.org/packages/source/s/selenium/selenium-2.35.0.tar.gz -o selenium-download.tgz
   tar xzf selenium-download.tgz --directory $RUNTIME_HOME
   rm selenium-download.tgz
   mv $RUNTIME_HOME/selenium-2.35.0 $RUNTIME_HOME/selenium
@@ -125,7 +125,7 @@ fi
 
 if [ ! -x $CHROMEDRIVER_DIR/chromedriver ] ; then
   echo Installing Chromedriver
-  wget http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/$CHROMEDRIVER_ZIP -O chromedriver-download.zip
+  curl --location --silent http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/$CHROMEDRIVER_ZIP -o chromedriver-download.zip
   unzip chromedriver-download.zip -d $CHROMEDRIVER_DIR
   chmod a+x $CHROMEDRIVER_DIR/chromedriver
   rm chromedriver-download.zip
@@ -133,7 +133,7 @@ fi
 
 if need_install node ChangeLog Version 0.10.1 ; then
   echo Installing Node.js
-  wget http://nodejs.org/dist/v0.10.1/$NODE_DOWNLOAD_FOLDER.tar.gz -O node-download.tgz
+  curl --location --silent http://nodejs.org/dist/v0.10.1/$NODE_DOWNLOAD_FOLDER.tar.gz -o node-download.tgz
   tar xzf node-download.tgz --directory $RUNTIME_HOME
   mv $RUNTIME_HOME/$NODE_DOWNLOAD_FOLDER $RUNTIME_HOME/node
   rm node-download.tgz
@@ -143,7 +143,7 @@ fi
 
 if need_install phantomjs ChangeLog Version 1.9.0 ; then
   echo Installing PhantomJs
-  wget https://phantomjs.googlecode.com/files/phantomjs-1.9.0-linux-x86_64.tar.bz2 -O phantomjs-download.bz2
+  curl --location --silent https://phantomjs.googlecode.com/files/phantomjs-1.9.0-linux-x86_64.tar.bz2 -o phantomjs-download.bz2
   tar xjf phantomjs-download.bz2 --directory $RUNTIME_HOME
   mv $RUNTIME_HOME/phantomjs-1.9.0-linux-x86_64 $RUNTIME_HOME/phantomjs
   rm phantomjs-download.bz2
@@ -152,7 +152,7 @@ fi
 if need_install karma_lib 'jasmine-jquery*.js' Version 1.5.2 ; then
   echo Installing required karma lib files
   mkdir -p $RUNTIME_HOME/karma_lib
-  wget $CB_ARCHIVE_URL/jasmine-jquery-1.5.2.js
+  curl --location --silent $CB_ARCHIVE_URL/jasmine-jquery-1.5.2.js --create-dirs -o jasmine-jquery-1.5.2.js
   mv jasmine-jquery-1.5.2.js $RUNTIME_HOME/karma_lib
 fi
 
@@ -192,7 +192,7 @@ done
 for lib in $DISTRIBUTED_LIBS ; do
   if [ ! -f "$DISTRIBUTED_LIBS_DIR/$lib" ]; then
     echo "Adding CB distribution runtime library $lib to $DISTRIBUTED_LIBS_DIR"
-    wget $CB_ARCHIVE_URL/$lib -P "$DISTRIBUTED_LIBS_DIR"
+    curl --location --silent $CB_ARCHIVE_URL/$lib -o "$DISTRIBUTED_LIBS_DIR/$lib"
   fi
 done
 
