@@ -126,6 +126,7 @@ class BaseIntegrationTest(suite.TestBase):
         ).click_login(
         ).login(
             self.LOGIN, admin=True
+        ).click_dashboard(
         ).click_admin(
         ).click_add_course(
         ).set_fields(
@@ -140,6 +141,7 @@ class BaseIntegrationTest(suite.TestBase):
         """Configure a property on Admin setting page."""
 
         self.load_root_page(
+        ).click_dashboard(
         ).click_admin(
         ).click_settings(
         ).click_override(
@@ -320,6 +322,7 @@ class SampleCourseTests(BaseIntegrationTest):
         ).click_login(
         ).login(
             login, admin=True
+        ).click_dashboard(
         ).click_admin(
         ).click_settings(
         ).click_override_admin_user_emails(
@@ -939,6 +942,7 @@ class EventsTest(BaseIntegrationTest):
 
         # Set gcb_can_persist_tag_events so we will track video events.
         self.load_root_page(
+        ).click_dashboard(
         ).click_admin(
         ).click_settings(
         ).click_override(

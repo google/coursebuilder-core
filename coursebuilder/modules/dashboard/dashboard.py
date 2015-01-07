@@ -237,7 +237,9 @@ class DashboardHandler(
 
         if roles.Roles.is_super_admin():
             nav.append(safe_dom.Element(
-                'a', href='/admin').add_text('Admin'))
+                'a', href='admin?action=admin',
+                className=('selected' if current_action == 'admin' else '')
+            ).add_text('Site Admin'))
 
         nav.append(safe_dom.Element(
             'a',
@@ -268,11 +270,14 @@ class DashboardHandler(
             tab_name = in_tab or self.request.get('tab') or tab_group[0].name
             sub_nav = safe_dom.NodeList()
             for tab in tab_group:
+                href = tab.href or 'dashboard?action=%s&tab=%s' % (
+                        current_action, tab.name)
+                target = tab.target or '_self'
                 sub_nav.append(
                     safe_dom.A(
-                        'dashboard?action=%s&tab=%s' % (
-                            current_action, tab.name),
-                        className=('selected' if tab.name == tab_name else ''))
+                        href,
+                        className=('selected' if tab.name == tab_name else ''),
+                        target=target)
                     .add_text(tab.title))
             nav_bars.append(sub_nav)
         return nav_bars
@@ -335,7 +340,7 @@ class DashboardHandler(
         # disable picker if we are on the well known page; we dont want picked
         # on pages where edits or creation of new object can get triggered
         safe_action = action and action in [
-            action for action, _ in self.nav_mappings]
+            action for action, _ in self.nav_mappings] + ['admin']
         if not safe_action:
             picker.set_attribute('disabled', 'True')
 
@@ -528,7 +533,7 @@ class DashboardHandler(
         course_actions = [
             {'id': 'add_course',
              'caption': 'Add Course',
-             'href': '/admin?action=add_course'}]
+             'href': 'admin?action=add_course'}]
 
         course_info.append(
             'Course Title: %s' % self.app_context.get_environ()['course'][

@@ -84,16 +84,16 @@ class WelcomePageTests(actions.TestBase):
         self.assertEqual(response.status_int, 302)
         self.assertEqual(
             response.headers['location'],
-            'http://localhost/admin?action=welcome')
-        response = self.get('/admin?action=welcome')
+            'http://localhost/admin/welcome')
+        response = self.get('/admin/welcome?action=welcome')
         assert_contains('Welcome to Course Builder', response.body)
-        assert_contains('/admin?action=add_first_course', response.body)
-        assert_contains('/admin?action=explore_sample', response.body)
+        assert_contains('/admin/welcome?action=add_first_course', response.body)
+        assert_contains('/admin/welcome?action=explore_sample', response.body)
 
     def test_explore_sample_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
         response = self.post(
-            '/admin?action=explore_sample',
+            '/admin/welcome?action=explore_sample',
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'explore_sample')})
         self.assertEqual(response.status_int, 302)
@@ -107,7 +107,7 @@ class WelcomePageTests(actions.TestBase):
     def test_create_new_course(self):
         actions.login(ADMIN_EMAIL, is_admin=True)
         response = self.post(
-            '/admin?action=add_first_course',
+            '/admin/welcome?action=add_first_course',
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'add_first_course')})
         self.assertEqual(response.status_int, 302)
@@ -116,7 +116,7 @@ class WelcomePageTests(actions.TestBase):
             'http://localhost/first/dashboard')
         response = self.get('/first/dashboard')
         assert_contains('My First Course', response.body)
-        response = self.get('/admin?action=welcome')
+        response = self.get('/admin/welcome?action=welcome')
         assert_does_not_contain('add_first_course', response.body)
 
     def test_explore_sample_course_idempotent(self):

@@ -172,7 +172,7 @@ class CourseExplorerDisabledTest(actions.TestBase):
         response = self.get('/')
         assert_equals(response.status_int, 302)
         assert_contains(
-            'http://localhost/admin?action=welcome', response.location)
+            'http://localhost/admin/welcome', response.location)
 
         response = self.get('/assets/img/your_logo_here.png')
         assert_equals(response.status_int, 302)

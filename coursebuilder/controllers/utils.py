@@ -526,7 +526,7 @@ class CourseHandler(ApplicationHandler):
         return ''.join([
               '\nDebug Info: %s' % datetime.datetime.utcnow(),
               '\n\nServer Environment Variables: %s' % '\n'.join([
-                  'item: %s, %s'% (key, value)
+                  'item: %s, %s' % (key, value)
                   for key, value in os.environ.iteritems()]),
               '\n\nVfsCacheKeys:\n%s' % '\n'.join(vfs_items),
               '\n\nResourceBundlesCache:\n%s' % '\n'.join(rb_items),
@@ -550,8 +550,7 @@ class CourseHandler(ApplicationHandler):
         self.template_value['left_links'] = []
         for func in self.LEFT_LINKS:
             self.template_value['left_links'].extend(func(self.app_context))
-        self.template_value['right_links'] = (
-            [('/admin', 'Admin')] if Roles.is_super_admin() else [])
+        self.template_value['right_links'] = []
         for func in self.RIGHT_LINKS:
             self.template_value['right_links'].extend(func(self.app_context))
 

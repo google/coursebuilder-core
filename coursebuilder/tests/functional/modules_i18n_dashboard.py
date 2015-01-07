@@ -2903,10 +2903,10 @@ class CourseLocalizationTestBase(actions.TestBase):
         email = 'test_course_localization@google.com'
         actions.login(email, is_admin=True)
 
-        response = self.get('/admin?action=welcome')
+        response = self.get('/admin/welcome')
         self.assertEquals(response.status_int, 200)
         response = self.post(
-            '/admin?action=add_first_course',
+            '/admin/welcome?action=add_first_course',
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'add_first_course')})
         self.assertEquals(response.status_int, 302)
@@ -2924,10 +2924,10 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
         email = 'test_course_localization@google.com'
         actions.login(email, is_admin=True)
 
-        response = self.get('/admin?action=welcome')
+        response = self.get('/admin/welcome')
         self.assertEquals(response.status_int, 200)
         response = self.post(
-            '/admin?action=explore_sample',
+            '/admin/welcome?action=explore_sample',
             params={'xsrf_token': crypto.XsrfTokenManager.create_xsrf_token(
                 'explore_sample')})
         self.assertEquals(response.status_int, 302)
@@ -3820,8 +3820,8 @@ class SampleCourseLocalizationTest(CourseLocalizationTestBase):
                 _profile('sample/announcements', 'Announcements')
                 _profile('sample/unit?unit=14&lesson=17', 'Lesson 2.2')
                 _profile('sample/assessment?name=35', 'Mid-term exam')
-                _profile('admin', 'Admin home')
-                _profile('admin?action=settings', 'Settings')
+                _profile('sample/admin', 'Admin home')
+                _profile('sample/admin?action=settings', 'Settings')
                 _profile('sample/dashboard', 'Dashboard')
                 _profile('sample/dashboard?action=assets', 'Questions')
                 _profile(

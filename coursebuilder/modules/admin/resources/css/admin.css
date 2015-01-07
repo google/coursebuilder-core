@@ -1,0 +1,9 @@
+span.gcb-db-diff, td.gcb-db-diff {
+  background-color: #A0FFA0;
+}
+span.gcb-db-draft, td.gcb-db-draft {
+  background-color: #FFFFA0;
+}
+span.gcb-env-diff, td.gcb-env-diff {
+  background-color: #A0A0FF;
+}

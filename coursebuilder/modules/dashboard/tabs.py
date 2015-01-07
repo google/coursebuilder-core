@@ -23,7 +23,8 @@ class Registry(object):
 
     class _Tab(object):
 
-        def __init__(self, group, name, title, contents):
+        def __init__(
+                self, group, name, title, contents, href=None, target=None):
             if not re.match('^[a-z0-9_]+$', name):
                 raise ValueError('Sub-tabs under Dashboard must '
                                  'have names consisting only of lowercase '
@@ -32,6 +33,8 @@ class Registry(object):
             self._name = name
             self._title = title
             self._contents = contents
+            self._href = href
+            self._target = target
 
         @property
         def group(self):
@@ -49,16 +52,31 @@ class Registry(object):
         def contents(self):
             return self._contents
 
+        @property
+        def href(self):
+            return self._href
+
+        @property
+        def target(self):
+            return self._target
+
     _tabs_by_group = {}
 
     @classmethod
-    def register(cls, group_name, tab_name, tab_title, contents=None):
+    def register(
+            cls, group_name, tab_name, tab_title, contents=None, href=None,
+            target=None):
         if cls.get_tab(group_name, tab_name):
             raise ValueError(
                 'There is already a sub-tab named "%s" ' % tab_name +
                 'registered in group %s.' % group_name)
-        tab = cls._Tab(group_name, tab_name, tab_title, contents)
+        tab = cls._Tab(group_name, tab_name, tab_title, contents, href, target)
         cls._tabs_by_group.setdefault(group_name, []).append(tab)
+
+    @classmethod
+    def unregister_group(cls, group_name):
+        if group_name in cls._tabs_by_group:
+            del cls._tabs_by_group[group_name]
 
     @classmethod
     def get_tab(cls, group_name, tab_name):

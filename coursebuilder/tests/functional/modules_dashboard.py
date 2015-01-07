@@ -620,7 +620,7 @@ class DashboardAccessTestCase(actions.TestBase):
         self.old_nav_mappings = DashboardHandler.nav_mappings
         DashboardHandler.nav_mappings = [(self.ACTION, 'outline')]
         DashboardHandler.map_action_to_permission(
-            'get_%s'% self.ACTION, self.PERMISSION)
+            'get_%s' % self.ACTION, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):
@@ -684,11 +684,3 @@ class DashboardAccessTestCase(actions.TestBase):
         self.assertEquals(len(links), 1)
         self.assertEquals(links[0].find('a').get('href'), 'dashboard')
         self.assertEquals(links[0].find('a').text, 'Dashboard')
-        # Sign in super admin => dashboard and admin link visible
-        actions.login('dummy@email.com', is_admin=True)
-        links = self._get_right_nav_links()
-        self.assertEquals(len(links), 2)
-        self.assertEquals(links[0].find('a').get('href'), '/admin')
-        self.assertEquals(links[0].find('a').text, 'Admin')
-        self.assertEquals(links[1].find('a').get('href'), 'dashboard')
-        self.assertEquals(links[1].find('a').text, 'Dashboard')

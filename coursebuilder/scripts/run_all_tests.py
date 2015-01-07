@@ -76,6 +76,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.module_config_test.ManipulateAppYamlFileTest': 8,
     'tests.functional.module_config_test.ModuleIncorporationTest': 8,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
+    'tests.functional.modules_admin.AdminDashboardTabTests': 4,
     'tests.functional.modules_certificate.CertificateHandlerTestCase': 4,
     'tests.functional.modules_certificate.CertificateCriteriaTestCase': 6,
     'tests.functional.modules_code_tags.CodeTagTests': 4,

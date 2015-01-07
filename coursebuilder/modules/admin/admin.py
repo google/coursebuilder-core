@@ -1,4 +1,4 @@
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright 2015 Google Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,9 +42,16 @@ from models import roles
 from models.config import ConfigProperty
 import modules.admin.config
 from modules.admin.config import ConfigPropertyEditor
+from modules.dashboard import dashboard
+from modules.dashboard import tabs
+from modules.oeditor import oeditor
 
 from google.appengine.api import users
 import google.appengine.api.app_identity as app
+
+RESOURCES_PATH = '/modules/admin/resources'
+
+TEMPLATE_DIR = os.path.join(appengine_config.BUNDLE_ROOT, 'modules', 'admin')
 
 DIRECT_CODE_EXECUTION_UI_ENABLED = False
 
@@ -75,7 +82,7 @@ def evaluate_python_code(code):
         try:
             compiled_code = compile(code, '<string>', 'exec')
             exec(compiled_code, globals())  # pylint: disable-msg=exec-statement
-        except Exception as e:              # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable-msg=broad-except
             results_io.write('Error: %s' % e)
             return results_io.getvalue(), False
     finally:
@@ -83,7 +90,39 @@ def evaluate_python_code(code):
     return results_io.getvalue(), True
 
 
-class WelcomeHandler(object):
+class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
+    default_action = 'welcome'
+    get_actions = [default_action]
+    post_actions = ['explore_sample', 'add_first_course']
+
+    def get_template(self, template_name):
+        return jinja_utils.get_template(template_name, [TEMPLATE_DIR])
+
+    def can_view(self):
+        """Checks if current user has viewing rights."""
+        action = self.request.get('action')
+        if action == 'add_first_course':
+            return modules.admin.config.CoursesPropertyRights.can_add()
+        return roles.Roles.is_super_admin()
+
+    def can_edit(self):
+        """Checks if current user has editing rights."""
+        return self.can_view()
+
+    def get(self):
+        user = users.get_current_user()
+        if not user:
+            self.redirect(
+                users.create_login_url('/admin/welcome'), normalize=False)
+            return
+        if not self.can_view():
+            return
+        super(WelcomeHandler, self).get()
+
+    def post(self):
+        if not self.can_edit():
+            return
+        super(WelcomeHandler, self).post()
 
     def _redirect(self, app_context, url):
         self.app_context = app_context
@@ -97,8 +136,9 @@ class WelcomeHandler(object):
             'add_first_course')
         template_values['explore_sample_xsrf'] = self.create_xsrf_token(
             'explore_sample')
+        template_values['global_admin_url'] = GlobalAdminHandler.LINK_URL
         self.response.write(
-            self.get_template('welcome.html', []).render(template_values))
+            self.get_template('welcome.html').render(template_values))
 
     def _make_new_course(self, uid, title):
         """Make a new course entry."""
@@ -148,153 +188,112 @@ class WelcomeHandler(object):
         self._redirect(course, '/dashboard')
 
 
-class AdminHandler(
-    ApplicationHandler, ReflectiveRequestHandler, ConfigPropertyEditor,
-    WelcomeHandler):
-    """Handles all pages and actions required for administration of site."""
+class BaseAdminHandler(ConfigPropertyEditor):
+    """Base class holding methods required for administration of site."""
 
-    default_action = 'courses'
+    ACTION = 'admin'
+    DEFAULT_TAB = 'courses'
 
-    @property
-    def get_actions(self):
-        actions = [
-            self.default_action, 'settings', 'deployment', 'perf',
-            'config_edit', 'add_course', 'welcome']
+    default_tab_action = 'admin'
+
+    @classmethod
+    def bind_tabs(cls):
+
+        def bind(key, label, handler, href=None):
+            if href:
+                target = '_blank'
+            else:
+                href = 'admin?action=admin&tab=%s' % key
+                target = None
+
+            tabs.Registry.register(
+                cls.ACTION, key, label, contents=handler, href=href,
+                target=target)
+
+        bind('courses', 'Courses', cls.get_courses)
+        bind('settings', 'Site Settings', cls.get_settings)
+        bind('perf', 'Metrics', cls.get_perf)
+        bind('deployment', 'Deployment', cls.get_deployment)
+
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
-            actions.append('console')
-        return actions
+            bind('console', 'Console', cls.get_console)
 
-    @property
-    def post_actions(self):
-        actions = [
-            'config_reset', 'config_override', 'explore_sample',
-            'add_first_course']
+        if appengine_config.gcb_appstats_enabled():
+            bind('stats', 'Appstats', None, href='/admin/stats/')
+
+        if appengine_config.PRODUCTION_MODE:
+            app_id = app.get_application_id()
+            href = (
+                'https://appengine.google.com/'
+                'dashboard?app_id=s~%s' % app_id)
+            bind('gae', 'Google App Engine', None, href=href)
+        else:
+            bind(
+                 'gae', 'Google App Engine', None,
+                 href='http://localhost:8000/')
+        bind('welcome', 'Welcome', None, href='/admin/welcome')
+        bind(
+             'help', 'Site Help', None,
+             href='https://code.google.com/p/course-builder/wiki/AdminPage')
+        bind(
+             'news', 'News', None,
+             href=(
+                'https://groups.google.com/forum/'
+                '?fromgroups#!forum/course-builder-announce'))
+
+    @classmethod
+    def unbind_tabs(cls):
+        tabs.Registry.unregister_group(cls.ACTION)
+
+    @classmethod
+    def bind_get_actions(cls):
+        cls.get_actions.append(cls.ACTION)
+        cls.get_actions.append('add_course')
+        cls.get_actions.append('config_edit')
+
+    @classmethod
+    def unbind_get_actions(cls):
+        cls.get_actions.remove(cls.ACTION)
+        cls.get_actions.remove('add_course')
+        cls.get_actions.remove('config_edit')
+
+    @classmethod
+    def bind_post_actions(cls):
+        cls.post_actions.append('config_override')
+        cls.post_actions.append('config_reset')
+
         if DIRECT_CODE_EXECUTION_UI_ENABLED:
-            actions.append('console_run')
-        return actions
+            cls.post_actions.append('console_run')
 
-    def can_view(self):
+    @classmethod
+    def unbind_post_actions(cls):
+        cls.post_actions.remove('config_override')
+        cls.post_actions.remove('config_reset')
+
+        if DIRECT_CODE_EXECUTION_UI_ENABLED:
+            cls.post_actions.remove('console_run')
+
+    def can_view(self, unused_action):
         """Checks if current user has viewing rights."""
+        # Overrides method in DashboardHandler
         action = self.request.get('action')
-        if action in ['add_course', 'add_first_course']:
+        if action == 'add_course':
             return modules.admin.config.CoursesPropertyRights.can_add()
         return roles.Roles.is_super_admin()
 
     def can_edit(self):
         """Checks if current user has editing rights."""
-        return self.can_view()
+        # Overrides method in DashboardHandler
+        return self.can_view(self.ACTION)
 
-    def get(self):
-        """Enforces rights to all GET operations."""
-        action = self.request.get('action')
-
-        if action in self.get_actions:
-            destination = '/admin?action=%s' % action
+    def get_admin(self):
+        """The main entry point to the admin console."""
+        tab = tabs.Registry.get_tab(
+            self.ACTION, self.request.get('tab') or self.DEFAULT_TAB)
+        if tab:
+            tab.contents(self)
         else:
-            destination = '/admin'
-
-        user = users.get_current_user()
-        if not user:
-            self.redirect(users.create_login_url(destination), normalize=False)
-            return
-        if not self.can_view():
-            if appengine_config.PRODUCTION_MODE:
-                self.error(403)
-            else:
-                self.redirect(
-                    users.create_login_url(destination), normalize=False)
-            return
-        if not sites.get_all_courses() and not action:
-            self.redirect('/admin?action=welcome', normalize=False)
-            return
-
-        # Force reload of properties. It's expensive, but admin deserves it!
-        config.Registry.get_overrides(force_update=True)
-
-        return super(AdminHandler, self).get()
-
-    def post(self):
-        """Enforces rights to all POST operations."""
-        if not self.can_edit():
-            self.redirect('/', normalize=False)
-            return
-        return super(AdminHandler, self).post()
-
-    def get_template(self, template_name, dirs):
-        """Sets up an environment and Gets jinja template."""
-        return jinja_utils.get_template(
-            template_name, dirs + [os.path.dirname(__file__)])
-
-    def _get_user_nav(self):
-        current_action = self.request.get('action')
-        nav_mappings = [
-            ('welcome', 'Welcome'),
-            ('courses', 'Courses'),
-            ('settings', 'Settings'),
-            ('perf', 'Metrics'),
-            ('deployment', 'Deployment')]
-        if DIRECT_CODE_EXECUTION_UI_ENABLED:
-            nav_mappings.append(('console', 'Console'))
-        nav = safe_dom.NodeList()
-        for action, title in nav_mappings:
-            if action == current_action:
-                elt = safe_dom.Element(
-                    'a', href='/admin?action=%s' % action,
-                    className='selected')
-            else:
-                elt = safe_dom.Element('a', href='/admin?action=%s' % action)
-            elt.add_text(title)
-            nav.append(elt).append(safe_dom.Text(' '))
-
-        if appengine_config.gcb_appstats_enabled():
-            nav.append(safe_dom.Element(
-                'a', target='_blank', href='/admin/stats/'
-            ).add_text('Appstats')).append(safe_dom.Text(' '))
-
-        if appengine_config.PRODUCTION_MODE:
-            app_id = app.get_application_id()
-            nav.append(safe_dom.Element(
-                'a', target='_blank',
-                href=(
-                    'https://appengine.google.com/'
-                    'dashboard?app_id=s~%s' % app_id)
-            ).add_text('Google App Engine'))
-        else:
-            nav.append(safe_dom.Element(
-                'a', target='_blank', href='http://localhost:8000/'
-            ).add_text('Google App Engine')).append(safe_dom.Text(' '))
-
-        nav.append(safe_dom.Element(
-            'a', target='_blank',
-            href='https://code.google.com/p/course-builder/wiki/AdminPage'
-        ).add_text('Help'))
-
-        nav.append(safe_dom.Element(
-            'a',
-            href=(
-                'https://groups.google.com/forum/'
-                '?fromgroups#!forum/course-builder-announce'),
-            target='_blank'
-        ).add_text('News'))
-
-        return nav
-
-    def render_page(self, template_values):
-        """Renders a page using provided template values."""
-
-        template_values['top_nav'] = self._get_user_nav()
-        template_values['user_nav'] = safe_dom.NodeList().append(
-            safe_dom.Text('%s | ' % users.get_current_user().email())
-        ).append(
-            safe_dom.Element(
-                'a', href=users.create_logout_url(self.request.uri)
-            ).add_text('Logout')
-        )
-        template_values[
-            'page_footer'] = 'Created on: %s' % datetime.datetime.now()
-
-        self.response.write(
-            self.get_template('view.html', []).render(template_values))
+            self.error(404)
 
     def render_dict(self, source_dict, title):
         """Renders a dictionary ordered by keys."""
@@ -311,19 +310,6 @@ class AdminHandler(
             ol.add_child(
                 safe_dom.Element('li').add_text('%s: %s' % (key, value)))
         return content
-
-    def format_title(self, text):
-        """Formats standard title."""
-        return safe_dom.NodeList().append(
-            safe_dom.Text('Course Builder ')
-        ).append(
-            safe_dom.Entity('&gt;')
-        ).append(
-            safe_dom.Text(' Admin ')
-        ).append(
-            safe_dom.Entity('&gt;')
-        ).append(
-            safe_dom.Text(' %s' % text))
 
     def get_perf(self):
         """Shows server performance counters page."""
@@ -458,6 +444,9 @@ class AdminHandler(
         template_values['page_description'] = messages.SETTINGS_DESCRIPTION
 
         content = safe_dom.NodeList()
+        content.append(safe_dom.Element(
+            'link', rel='stylesheet',
+            href='/modules/admin/resources/css/admin.css'))
         table = safe_dom.Element('table', className='gcb-config').add_child(
             safe_dom.Element('tr').add_child(
                 safe_dom.Element('th').add_text('Name')
@@ -482,7 +471,8 @@ class AdminHandler(
         def get_action_html(caption, args, onclick=None, idName=None):
             """Formats actions <a> link."""
             a = safe_dom.Element(
-                'a', href='/admin?%s' % urllib.urlencode(args),
+                'a', href='%s?%s' % (
+                    self.LINK_URL, urllib.urlencode(args)),
                 className='gcb-button'
             ).add_text(caption)
             if onclick:
@@ -499,8 +489,10 @@ class AdminHandler(
             else:
                 return safe_dom.Element(
                     'form',
-                    action='/admin?%s' % urllib.urlencode(
-                        {'action': 'config_override', 'name': name}),
+                    action='%s?%s' % (
+                        self.LINK_URL,
+                        urllib.urlencode(
+                            {'action': 'config_override', 'name': name})),
                     method='POST'
                 ).add_child(
                     safe_dom.Element(
@@ -633,7 +625,7 @@ class AdminHandler(
         content.append(
             safe_dom.Element(
                 'a', id='add_course', className='gcb-button gcb-pull-right',
-                role='button', href='admin?action=add_course'
+                role='button', href='%s?action=add_course' % self.LINK_URL
             ).add_text('Add Course')
         ).append(
             safe_dom.Element('div', style='clear: both; padding-top: 2px;')
@@ -723,7 +715,9 @@ Input your Python code below and press "Run Program" to execute.""")
             )
         ).append(
             safe_dom.Element(
-                'form', action='/admin?action=console_run', method='POST'
+                'form',
+                action='%s?action=console_run' % self.LINK_URL,
+                method='POST'
             ).add_child(
                 safe_dom.Element(
                     'input', type='hidden', name='xsrf_token',
@@ -789,7 +783,174 @@ Input your Python code below and press "Run Program" to execute.""")
         )
 
         template_values['main_content'] = content
-        self.render_page(template_values)
+        self.render_page(template_values, in_tab='console')
+
+
+class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
+    """Handler to present admin settings in namespaced context."""
+
+    # The binding URL for this handler
+    URL = '/admin'
+
+    # The URL used in relative addreses of this handler
+    LINK_URL = 'admin'
+
+    def format_title(self, text):
+        return super(AdminHandler, self).format_title(
+            'Admin > %s' % text)
+
+    def get_template(self, template_name, dirs):
+        return super(BaseAdminHandler, self).get_template(
+            template_name, [TEMPLATE_DIR] + dirs)
+
+    def render_page(self, template_values, in_action=None, in_tab=None):
+        in_action = in_action or self.ACTION
+        in_tab = in_tab or self.request.get('tab') or self.DEFAULT_TAB
+
+        super(BaseAdminHandler, self).render_page(
+            template_values, in_action=in_action, in_tab=in_tab)
+
+
+class GlobalAdminHandler(
+        BaseAdminHandler, ApplicationHandler, ReflectiveRequestHandler):
+    """Handler to present admin settings in global context."""
+
+    # The binding URL for this handler
+    URL = '/admin/global'
+
+    # The URL used in relative addreses of this handler
+    LINK_URL = '/admin/global'
+
+    default_action = 'admin'
+    get_actions = [default_action]
+    post_actions = []
+
+    def format_title(self, text):
+        return 'Course Builder > Admin > %s' % text
+
+    def _get_top_nav(self, in_action, in_tab):
+        nav_bars = []
+
+        nav = safe_dom.NodeList()
+
+        nav.append(safe_dom.Element(
+            'a', href=self.URL, className='selected'
+        ).add_text('Site Admin'))
+
+        nav.append(safe_dom.Element(
+            'a',
+            href='https://code.google.com/p/course-builder/wiki/Dashboard',
+            target='_blank'
+        ).add_text('Help'))
+
+        nav.append(safe_dom.Element(
+            'a',
+            href=(
+                'https://groups.google.com/forum/?fromgroups#!categories/'
+                'course-builder-forum/general-troubleshooting'),
+            target='_blank'
+        ).add_text('Support'))
+        nav_bars.append(nav)
+
+        tab_name = in_tab or self.request.get('tab')
+        sub_nav = safe_dom.NodeList()
+        tab_group = tabs.Registry.get_tab_group(self.default_action)
+        for tab in tab_group:
+            if tab.contents:
+                href = '%s?tab=%s' % (self.LINK_URL, tab.name)
+            else:
+                href = tab.href
+            target = tab.target or '_self'
+            sub_nav.append(
+                safe_dom.A(
+                    href,
+                    className=('selected' if tab.name == tab_name else ''),
+                    target=target)
+                .add_text(tab.title))
+        nav_bars.append(sub_nav)
+
+        return nav_bars
+
+    def get(self):
+        tab = self.request.get('tab')
+
+        if tab:
+            destination = '%s?tab=%s' % (self.LINK_URL, tab)
+        else:
+            destination = self.LINK_URL
+
+        user = users.get_current_user()
+        if not user:
+            self.redirect(users.create_login_url(destination), normalize=False)
+            return
+        if not self.can_view(self.ACTION):
+            if appengine_config.PRODUCTION_MODE:
+                self.error(403)
+            else:
+                self.redirect(
+                    users.create_login_url(destination), normalize=False)
+            return
+
+        # Force reload of properties. It's expensive, but admin deserves it!
+        config.Registry.get_overrides(force_update=True)
+
+        super(GlobalAdminHandler, self).get()
+
+    def post(self):
+        if not self.can_edit():
+            self.redirect('/', normalize=False)
+            return
+        return super(GlobalAdminHandler, self).post()
+
+    def get_template(self, template_name, dirs):
+        """Sets up an environment and Gets jinja template."""
+        dashboard_template_dir = os.path.join(
+            appengine_config.BUNDLE_ROOT, 'modules', 'dashboard')
+        return jinja_utils.get_template(
+            template_name, dirs + [dashboard_template_dir], handler=self)
+
+    def render_page(self, template_values, in_action=None, in_tab=None):
+        page_title = template_values['page_title']
+        template_values['header_title'] = page_title
+        template_values['breadcrumbs'] = page_title
+
+        template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
+        template_values['gcb_course_base'] = '/'
+        template_values['user_nav'] = safe_dom.NodeList().append(
+            safe_dom.Text('%s | ' % users.get_current_user().email())
+        ).append(
+            safe_dom.Element(
+                'a', href=users.create_logout_url(self.request.uri)
+            ).add_text('Logout'))
+        template_values[
+            'page_footer'] = 'Page created on: %s' % datetime.datetime.now()
+        template_values['coursebuilder_version'] = (
+            os.environ['GCB_PRODUCT_VERSION'])
+        template_values['application_id'] = app.get_application_id()
+        template_values['application_version'] = (
+            os.environ['CURRENT_VERSION_ID'])
+        template_values['can_highlight_code'] = oeditor.CAN_HIGHLIGHT_CODE.value
+        if not template_values.get('sections'):
+            template_values['sections'] = []
+
+        self.response.write(
+            self.get_template('view.html', []).render(template_values))
+
+
+def notify_module_enabled():
+    BaseAdminHandler.bind_tabs()
+    AdminHandler.bind_get_actions()
+    AdminHandler.bind_post_actions()
+    GlobalAdminHandler.bind_get_actions()
+    GlobalAdminHandler.bind_post_actions()
+
+
+def notify_module_disabled():
+    BaseAdminHandler.unbind_tabs()
+    AdminHandler.unbind_get_actions()
+    AdminHandler.unbind_post_actions()
+    GlobalAdminHandler.unbind_get_actions()
+    GlobalAdminHandler.unbind_post_actions()
 
 
 custom_module = None
@@ -798,15 +959,21 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    admin_handlers = [
-        ('/admin', AdminHandler),
+    global_handlers = [
+        (GlobalAdminHandler.URL, GlobalAdminHandler),
+        ('/admin/welcome', WelcomeHandler),
         ('/rest/config/item', (
             modules.admin.config.ConfigPropertyItemRESTHandler)),
-        ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler)]
+        ('/rest/courses/item', modules.admin.config.CoursesItemRESTHandler),
+        (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
+
+    namespaced_handlers = [(AdminHandler.URL, AdminHandler)]
 
     global custom_module
     custom_module = custom_modules.Module(
         'Site Admin',
         'A set of pages for Course Builder site administrator.',
-        admin_handlers, [])
+        global_handlers, namespaced_handlers,
+        notify_module_enabled=notify_module_enabled,
+        notify_module_disabled=notify_module_disabled)
     return custom_module

@@ -65,7 +65,7 @@ class IndexPageHandler(webapp2.RequestHandler):
             self.redirect(ApplicationHandler.canonicalize_url_for(
                 course, '/course?use_last_location=true'))
         else:
-            self.redirect('/admin?action=welcome')
+            self.redirect('/admin/welcome')
 
 
 class BaseStudentHandler(webapp2.RequestHandler):

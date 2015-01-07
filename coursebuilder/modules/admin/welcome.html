@@ -79,24 +79,24 @@
       {% endif %}
       {% if course_count %}
       <p>
-        <form action='/admin?action=explore_sample' method='POST'>
+        <form action='/admin/welcome?action=explore_sample' method='POST'>
           <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
           <button id='explore' type='submit'>Explore Sample Course</button>
         </form>
       </p>
       {% else %}
       <p>
-        <form action='/admin?action=add_first_course' method='POST'>
+        <form action='/admin/welcome?action=add_first_course' method='POST'>
           <input name='xsrf_token' value='{{ add_first_xsrf }}' type='hidden'>
           <button id='create_new' type='submit'>Create Empty Course</button>
         </form>
-        <form action='/admin?action=explore_sample' method='POST'>
+        <form action='/admin/welcome?action=explore_sample' method='POST'>
           <input name='xsrf_token' value='{{ explore_sample_xsrf }}' type='hidden'>
           <button id='explore' type='submit'>Explore Sample Course</button>
         </form>
       </p>
       {% endif %}
-      <p>Or go directly to a <a href='/admin?action=courses'>control panel</a>.
+      <p>Or go directly to a <a href='{{global_admin_url}}'>control panel</a>.
       </p>
     </div>
   </body>

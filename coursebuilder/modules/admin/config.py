@@ -18,6 +18,9 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 
 import cgi
 import urllib
+
+import appengine_config
+from common.utils import Namespace
 from controllers import sites
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
@@ -115,14 +118,13 @@ class ConfigPropertyEditor(object):
         """Handles 'add_course' action and renders new course entry editor."""
 
         if roles.Roles.is_super_admin():
-            exit_url = '/admin?action=courses'
+            exit_url = '%s?tab=courses' % self.LINK_URL
         else:
             exit_url = self.request.referer
         rest_url = CoursesItemRESTHandler.URI
 
         template_values = {}
-        template_values[
-            'page_title'] = 'Course Builder - Add Course'
+        template_values['page_title'] = self.format_title('Add Course')
         template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, CoursesItemRESTHandler.SCHEMA_JSON,
             CoursesItemRESTHandler.SCHEMA_ANNOTATIONS_DICT,
@@ -137,29 +139,31 @@ class ConfigPropertyEditor(object):
 
         key = self.request.get('name')
         if not key:
-            self.redirect('/admin?action=settings')
+            self.redirect('%s?action=settings' % self.URL)
 
         item = config.Registry.registered[key]
         if not item:
-            self.redirect('/admin?action=settings')
+            self.redirect('%s?action=settings' % self.URL)
 
         template_values = {}
-        template_values[
-            'page_title'] = 'Course Builder - Edit Settings'
+        template_values['page_title'] = self.format_title('Edit Settings')
 
-        exit_url = '/admin?action=settings#%s' % cgi.escape(key)
+        exit_url = '%s?tab=settings#%s' % (self.LINK_URL, cgi.escape(key))
         rest_url = '/rest/config/item'
-        delete_url = '/admin?%s' % urllib.urlencode({
-            'action': 'config_reset',
-            'name': key,
-            'xsrf_token': cgi.escape(self.create_xsrf_token('config_reset'))})
+        delete_url = '%s?%s' % (
+            self.LINK_URL,
+            urllib.urlencode({
+                'action': 'config_reset',
+                'name': key,
+                'xsrf_token': cgi.escape
+                    (self.create_xsrf_token('config_reset'))}))
 
         template_values['main_content'] = oeditor.ObjectEditor.get_html_for(
             self, ConfigPropertyEditor.get_schema_json(item),
             ConfigPropertyEditor.get_schema_annotations(item),
             key, rest_url, exit_url, delete_url=delete_url)
 
-        self.render_page(template_values)
+        self.render_page(template_values, in_tab='settings')
 
     def post_config_override(self):
         """Handles 'override' property action."""
@@ -170,25 +174,27 @@ class ConfigPropertyEditor(object):
         if name and name in config.Registry.registered.keys():
             item = config.Registry.registered[name]
         if not item:
-            self.redirect('/admin?action=settings')
+            self.redirect('?tab=settings' % self.LINK_URL)
 
-        # Add new entity if does not exist.
-        try:
-            entity = config.ConfigPropertyEntity.get_by_key_name(name)
-        except db.BadKeyError:
-            entity = None
-        if not entity:
-            entity = config.ConfigPropertyEntity(key_name=name)
-            entity.value = str(item.value)
-            entity.is_draft = True
-            entity.put()
+        with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            # Add new entity if does not exist.
+            try:
+                entity = config.ConfigPropertyEntity.get_by_key_name(name)
+            except db.BadKeyError:
+                entity = None
+            if not entity:
+                entity = config.ConfigPropertyEntity(key_name=name)
+                entity.value = str(item.value)
+                entity.is_draft = True
+                entity.put()
 
-        models.EventEntity.record(
-            'override-property', users.get_current_user(), transforms.dumps({
-                'name': name, 'value': str(entity.value)}))
+            models.EventEntity.record(
+                'override-property', users.get_current_user(),
+                transforms.dumps({
+                    'name': name, 'value': str(entity.value)}))
 
-        self.redirect('/admin?%s' % urllib.urlencode(
-            {'action': 'config_edit', 'name': name}))
+        self.redirect('%s?%s' % (self.URL, urllib.urlencode(
+            {'action': 'config_edit', 'name': name})))
 
     def post_config_reset(self):
         """Handles 'reset' property action."""
@@ -199,24 +205,25 @@ class ConfigPropertyEditor(object):
         if name and name in config.Registry.registered.keys():
             item = config.Registry.registered[name]
         if not item:
-            self.redirect('/admin?action=settings')
+            self.redirect('%s?tab=settings' % self.LINK_URL)
 
-        # Delete if exists.
-        try:
-            entity = config.ConfigPropertyEntity.get_by_key_name(name)
-            if entity:
-                old_value = entity.value
-                entity.delete()
+        with Namespace(appengine_config.DEFAULT_NAMESPACE_NAME):
+            # Delete if exists.
+            try:
+                entity = config.ConfigPropertyEntity.get_by_key_name(name)
+                if entity:
+                    old_value = entity.value
+                    entity.delete()
 
-                models.EventEntity.record(
-                    'delete-property', users.get_current_user(),
-                    transforms.dumps({
-                        'name': name, 'value': str(old_value)}))
+                    models.EventEntity.record(
+                        'delete-property', users.get_current_user(),
+                        transforms.dumps({
+                            'name': name, 'value': str(old_value)}))
 
-        except db.BadKeyError:
-            pass
+            except db.BadKeyError:
+                pass
 
-        self.redirect('/admin?action=settings')
+        self.redirect('%s?tab=settings' % self.URL)
 
 
 class CoursesPropertyRights(object):
