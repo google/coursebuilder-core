@@ -584,13 +584,12 @@ class GoogleGroup(CoreTag):
         if (appengine_config.PRODUCTION_MODE or
             not netloc.startswith('localhost')):
             parent_url_suffix = (
-                '&parenturl=%s' % urllib.quote(handler.request.uri, safe=''))
+                '?parenturl=%s' % urllib.quote(handler.request.uri, safe=''))
 
         group_name = node.attrib.get('group')
         category_name = node.attrib.get('category')
         embedded_forum_url = (
-            'https://groups.google.com/forum/embed/?hl=en%s'
-            '#!categories/%s/%s' % (
+            'https://groups.google.com/forum/embed/%s#!categories/%s/%s' % (
                 parent_url_suffix,
                 urllib.quote(group_name),
                 urllib.quote(category_name)
