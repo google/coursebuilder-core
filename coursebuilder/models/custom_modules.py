@@ -28,15 +28,17 @@ class Module(object):
         self._global_routes = global_routes
         self._namespaced_routes = namespaced_routes
         self._notify_module_enabled = notify_module_enabled
-        self._notify_module_disabled = notify_module_disabled
+        self._notify_module_disabled = (
+            notify_module_disabled or Module.module_disabling_is_deprecated)
 
         Registry.registered_modules[self._name] = self
 
     def disable(self):
-        if self.name in Registry.enabled_module_names:
-            Registry.enabled_module_names.remove(self.name)
-            if self._notify_module_disabled:
-                self._notify_module_disabled()
+        raise NotImplementedError('Disabling modules is not supported.')
+
+    @staticmethod
+    def module_disabling_is_deprecated():
+        raise NotImplementedError('Disabling modules is not supported.')
 
     def enable(self):
         Registry.enabled_module_names.add(self.name)

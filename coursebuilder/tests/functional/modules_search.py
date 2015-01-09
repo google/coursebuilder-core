@@ -50,12 +50,6 @@ class SearchTest(search_unit_test.SearchTestBase):
         assert search.custom_module.enabled
 
     @classmethod
-    def disable_module(cls):
-        custom_modules.Registry.registered_modules[
-            search.MODULE_NAME].disable()
-        assert not search.custom_module.enabled
-
-    @classmethod
     def get_xsrf_token(cls, body, form_name):
         match = re.search(form_name + r'.+[\n\r].+value="([^"]+)"', body)
         assert match
@@ -78,20 +72,6 @@ class SearchTest(search_unit_test.SearchTestBase):
         def error_report(string, *args, **unused_kwargs):
             self.logged_error = string % args
         self.error_report = error_report
-
-    def test_module_disabled(self):
-        email = 'admin@google.com'
-        actions.login(email, is_admin=True)
-
-        self.disable_module()
-
-        response = self.get('/search?query=lorem', expect_errors=True)
-        self.assertEqual(response.status_code, 404)
-
-        response = self.get('dashboard?action=search')
-        self.assertIn('Google &gt; Dashboard &gt; Search', response.body)
-        self.assertNotIn('Index Course', response.body)
-        self.assertNotIn('Clear Index', response.body)
 
     def test_module_enabled(self):
         email = 'admin@google.com'

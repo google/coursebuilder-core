@@ -50,10 +50,6 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
         self.xsrf_token = utils.XsrfTokenManager.create_xsrf_token(
             upload._XSRF_TOKEN_NAME)
 
-    def tearDown(self):
-        upload.custom_module.disable()
-        super(TextFileUploadHandlerTestCase, self).tearDown()
-
     def configure_environ_for_current_user(self):
         os.environ['USER_EMAIL'] = self.email
         os.environ['USER_ID'] = self.user_id

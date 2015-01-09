@@ -2271,20 +2271,6 @@ class StudentUnifiedProfileTest(StudentAspectTest):
 class StaticHandlerTest(actions.TestBase):
     """Check serving of static resources."""
 
-    def test_disabled_modules_has_no_routes(self):
-        """Test that disabled modules has no routes."""
-        assert modules.oeditor.oeditor.custom_module.enabled
-        assert modules.oeditor.oeditor.custom_module.global_routes
-        assert modules.oeditor.oeditor.custom_module.namespaced_routes
-
-        modules.oeditor.oeditor.custom_module.disable()
-        try:
-            assert not modules.oeditor.oeditor.custom_module.enabled
-            assert not modules.oeditor.oeditor.custom_module.global_routes
-            assert not modules.oeditor.oeditor.custom_module.namespaced_routes
-        finally:
-            modules.oeditor.oeditor.custom_module.enable()
-
     def test_static_files_cache_control(self):
         """Test static/zip handlers use proper Cache-Control headers."""
 
