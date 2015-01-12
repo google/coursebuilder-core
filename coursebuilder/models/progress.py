@@ -904,6 +904,10 @@ class UnitLessonCompletionTracker(object):
             progress, self._get_assessment_key(assessment_id))
         return value is not None and value > 0
 
+    def is_custom_unit_completed(self, progress, unit_id):
+        value = self.get_custom_unit_status(progress, unit_id)
+        return self.COMPLETED_STATE == value
+
     @classmethod
     def get_or_create_progress(cls, student):
         progress = StudentPropertyEntity.get(student, cls.PROPERTY_KEY)

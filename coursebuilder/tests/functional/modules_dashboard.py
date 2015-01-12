@@ -29,6 +29,7 @@ from models.custom_modules import Module
 from models.roles import Permission
 from models.roles import Roles
 from modules.dashboard import dashboard
+from modules.dashboard import tabs
 from modules.dashboard.dashboard import DashboardHandler
 from modules.dashboard.question_group_editor import QuestionGroupRESTHandler
 from modules.dashboard.role_editor import RoleRESTHandler
@@ -617,14 +618,17 @@ class DashboardAccessTestCase(actions.TestBase):
 
         self.course_without_access = courses.Course(None, context)
 
-        self.old_nav_mappings = DashboardHandler.nav_mappings
-        DashboardHandler.nav_mappings = [(self.ACTION, 'outline')]
+        # pylint: disable=W0212
+        self.old_nav_mappings = DashboardHandler._nav_mappings
+        # pylint: disable=W0212
+        DashboardHandler._nav_mappings = {self.ACTION: 'outline'}
         DashboardHandler.map_action_to_permission(
             'get_%s' % self.ACTION, self.PERMISSION)
         actions.logout()
 
     def tearDown(self):
-        DashboardHandler.nav_mappings = self.old_nav_mappings
+        # pylint: disable=W0212
+        DashboardHandler._nav_mappings = self.old_nav_mappings
         super(DashboardAccessTestCase, self).tearDown()
 
     def test_dashboard_access_method(self):
@@ -684,3 +688,73 @@ class DashboardAccessTestCase(actions.TestBase):
         self.assertEquals(len(links), 1)
         self.assertEquals(links[0].find('a').get('href'), 'dashboard')
         self.assertEquals(links[0].find('a').text, 'Dashboard')
+
+
+class DashboardCustomNavTestCase(actions.TestBase):
+    """Tests Assets > Questions."""
+    COURSE_NAME = 'custom_dashboard'
+    ADMIN_EMAIL = 'admin@foo.com'
+    URL = 'dashboard?action=custom_mod'
+    ACTION = 'custom_mod'
+    CONTENT_PATH = './/div[@id="gcb-main-area"]/div[@id="gcb-main-content"]'
+
+    def setUp(self):
+        super(DashboardCustomNavTestCase, self).setUp()
+
+        actions.login(self.ADMIN_EMAIL, is_admin=True)
+        self.base = '/' + self.COURSE_NAME
+        context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'Custom Dashboard')
+        self.old_namespace = namespace_manager.get_namespace()
+        namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
+
+        self.course = courses.Course(None, context)
+
+    def tearDown(self):
+        namespace_manager.set_namespace(self.old_namespace)
+        super(DashboardCustomNavTestCase, self).tearDown()
+
+    def test_custom_top_nav(self):
+        # Add a new top level navigation action
+        DashboardHandler.add_nav_mapping(self.ACTION, 'CUSTOM_MOD')
+
+        class CustomNavHandler(object):
+
+          @classmethod
+          def show_page(cls, dashboard_handler):
+              dashboard_handler.render_page({
+                  'page_title': dashboard_handler.format_title('CustomNav'),
+                  'main_content': 'MainContent'})
+        DashboardHandler.add_custom_get_action(
+                        self.ACTION, CustomNavHandler.show_page)
+
+        dom = self.parse_html_string(self.get('dashboard').body)
+        selected_nav_path = ('.//div[@class="gcb-nav-bar gcb-nav-bar-level-1"]'
+                             '/a[@class="selected"]')
+        self.assertEquals('Outline', dom.find(selected_nav_path).text)
+        dom = self.parse_html_string(self.get(self.URL).body)
+
+        self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
+        self.assertEquals(
+            'MainContent', dom.find(self.CONTENT_PATH).text.strip())
+
+        DashboardHandler.remove_custom_get_action(self.ACTION)
+
+        # Add a new tab under the new navigation action
+        class CustomTabHandler(object):
+
+          @classmethod
+          def display_html(cls, unused_dashboard_handler):
+             return 'MainTabContent'
+
+        tabs.Registry.register(
+            self.ACTION, 'cu_tab', 'CustomTab', CustomTabHandler)
+        DashboardHandler.add_custom_get_action(self.ACTION, None)
+        dom = self.parse_html_string(self.get(self.URL).body)
+        self.assertEquals('CUSTOM_MOD', dom.find(selected_nav_path).text)
+        self.assertEquals(
+            'MainTabContent', dom.find(self.CONTENT_PATH).text.strip())
+
+        selected_tab_path = ('.//div[@class="gcb-nav-bar gcb-nav-bar-level-2"]'
+                             '/a[@class="selected"]')
+        self.assertEquals('CustomTab', dom.find(selected_tab_path).text)

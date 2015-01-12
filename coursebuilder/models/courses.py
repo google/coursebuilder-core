@@ -1409,7 +1409,7 @@ class CourseModel13(object):
         if verify.UNIT_TYPE_LINK == existing_unit.type:
             existing_unit.href = unit.href
 
-        if verify.UNIT_TYPE_ASSESSMENT == existing_unit.type:
+        if existing_unit.is_assessment() or existing_unit.is_custom_unit():
             existing_unit.weight = unit.weight
             existing_unit.html_content = unit.html_content
             existing_unit.html_check_answers = unit.html_check_answers
@@ -2745,11 +2745,12 @@ class Course(object):
     def delete_lesson(self, lesson):
         return self._model.delete_lesson(lesson)
 
-    def get_score(self, student, assessment_id):
+    def get_score(self, student, unit_id):
         """Gets a student's score for a particular assessment."""
-        assert self.is_valid_assessment_id(assessment_id)
+        assert (self.is_valid_assessment_id(unit_id) or
+                self.is_valid_custom_unit(unit_id))
         scores = transforms.loads(student.scores) if student.scores else {}
-        return scores.get(assessment_id) if scores else None
+        return scores.get(unit_id)
 
     def get_overall_score(self, student):
         """Gets the overall course score for a student."""
@@ -2790,7 +2791,7 @@ class Course(object):
 
         # This can be replaced with a custom definition for an overall result
         # string.
-        return 'pass' if self.get_overall_score(student) >= 70 else 'fail'
+        return 'pass' if score >= 70 else 'fail'
 
     def get_all_scores(self, student):
         """Gets all score data for a student.
@@ -2805,13 +2806,20 @@ class Course(object):
             contributed by the assessment to the final score, and the
             assessment score.
         """
-        assessment_list = self.get_assessment_list()
+        unit_list = self.get_units()
         scores = transforms.loads(student.scores) if student.scores else {}
 
-        unit_progress = self.get_progress_tracker().get_unit_progress(student)
+        progress_tracker = self.get_progress_tracker()
+        student_progress = progress_tracker.get_or_create_progress(student)
 
         assessment_score_list = []
-        for unit in assessment_list:
+        for unit in unit_list:
+            if unit.is_custom_unit():
+                cu = custom_units.UnitTypeRegistry.get(unit.custom_unit_type)
+                if not cu or not cu.is_graded:
+                    continue
+            elif not unit.is_assessment():
+                continue
             # Compute the weight for this assessment.
             weight = 0
             if hasattr(unit, 'weight'):
@@ -2819,7 +2827,13 @@ class Course(object):
             elif unit.unit_id in DEFAULT_LEGACY_ASSESSMENT_WEIGHTS:
                 weight = DEFAULT_LEGACY_ASSESSMENT_WEIGHTS[unit.unit_id]
 
-            completed = unit_progress[unit.unit_id]
+            completed = False
+            if unit.is_assessment():
+                completed = progress_tracker.is_assessment_completed(
+                    student_progress, unit.unit_id)
+            else:
+                completed = progress_tracker.is_custom_unit_completed(
+                    student_progress, unit.unit_id)
 
             # If a human-reviewed assessment is completed, ensure that the
             # required reviews have also been completed.

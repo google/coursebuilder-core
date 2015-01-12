@@ -44,12 +44,21 @@ class UnitTypeRegistry(object):
     def list(cls):
         return cls.registered_unit_types.values()
 
+    @classmethod
+    def i18n_resource_key(cls, course, unit):
+        assert unit.is_custom_unit()
+        cu = cls.get(unit.custom_unit_type)
+        if not cu:
+            return None
+        return cu.i18n_resource_key(course, unit)
+
 
 class CustomUnit(object):
     """A class that holds unit information."""
 
     def __init__(self, identifier, name, rest_handler_cls, visible_url_fn,
-                 extra_js_files=None, create_helper=None, cleanup_helper=None):
+                 extra_js_files=None, create_helper=None, cleanup_helper=None,
+                 is_graded=False, i18n_resource_key_fn=None):
         self.name = name
         self.identifier = identifier
         self.rest_handler = rest_handler_cls
@@ -65,6 +74,12 @@ class CustomUnit(object):
         # Delete helper function should take Course and Unit object as parameter
         self.cleanup_helper = cleanup_helper
 
+        # Is this custom unit graded.
+        self.is_graded = is_graded
+
+        # Function to generate i18n resource keys
+        self._i18n_resource_key_fn = i18n_resource_key_fn
+
         UnitTypeRegistry.register_type(self)
 
     def visible_url(self, unit):
@@ -77,3 +92,8 @@ class CustomUnit(object):
     def delete_unit(self, course, unit):
         if self.cleanup_helper:
             self.cleanup_helper(course, unit)
+
+    def i18n_resource_key(self, course, unit):
+        if self._i18n_resource_key_fn is not None:
+            return self._i18n_resource_key_fn(course, unit)
+        return None

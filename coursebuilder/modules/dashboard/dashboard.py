@@ -19,6 +19,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import copy
 import datetime
 import HTMLParser
+import logging
 import os
 import urllib
 
@@ -122,14 +123,14 @@ class DashboardHandler(
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
         'add_to_question_group', 'course_availability', 'course_browsability',
         'clone_question', 'add_custom_unit']
-    nav_mappings = [
-        ('outline', 'Outline'),
-        ('assets', 'Assets'),
-        ('settings', 'Settings'),
-        ('roles', 'Roles'),
-        ('analytics', 'Analytics'),
-        ('search', 'Search'),
-        ('edit_assignment', 'Peer Review')]
+    _nav_mappings = {
+        'outline': 'Outline',
+        'assets': 'Assets',
+        'settings': 'Settings',
+        'roles': 'Roles',
+        'analytics': 'Analytics',
+        'search': 'Search',
+        'edit_assignment': 'Peer Review'}
     child_routes = [
             (AdminPreferencesRESTHandler.URI, AdminPreferencesRESTHandler),
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
@@ -160,6 +161,81 @@ class DashboardHandler(
     # of DashboardHandler as an argument.
     contrib_asset_listers = []
 
+    _custom_nav_mappings = {}
+
+    _custom_get_actions = {}
+    _custom_post_actions = {}
+
+    @classmethod
+    def add_nav_mapping(cls, action, nav_title):
+        """Add a Nav mapping for Dashboard."""
+        cls._custom_nav_mappings[action] = nav_title
+
+    @classmethod
+    def remove_nav_mapping(cls, action):
+        """Add a Nav mapping for Dashboard."""
+        if action in cls._custom_nav_mappings:
+            cls._custom_nav_mappings.pop(action)
+
+    @classmethod
+    def get_nav_mappings(cls):
+        return (cls._nav_mappings.items() +
+                sorted(cls._custom_nav_mappings.items()))
+
+    @classmethod
+    def get_nav_title(cls, action):
+        if action in cls._nav_mappings:
+            return cls._nav_mappings[action]
+        if action in cls._custom_nav_mappings:
+            return cls._custom_nav_mappings[action]
+        return None
+
+    @classmethod
+    def add_custom_get_action(cls, action, handler, in_action=None,
+                              overwrite=False):
+        if not action:
+            logging.critical('Action not specified. Ignoring.')
+            return
+
+        if not handler:
+            tab_list = tabs.Registry.get_tab_group(action)
+            if not tab_list:
+                logging.critical('For action : ' + action +
+                    ' handler can not be null.')
+                return
+
+        if ((action in cls._custom_get_actions or action in cls.get_actions)
+            and not overwrite):
+            logging.critical('action : ' + action +
+                             ' already exists. Ignoring the custom get action.')
+            return
+
+        cls._custom_get_actions[action] = (handler, in_action)
+
+    @classmethod
+    def remove_custom_get_action(cls, action):
+        if action in cls._custom_get_actions:
+            cls._custom_get_actions.pop(action)
+
+    @classmethod
+    def add_custom_post_action(cls, action, handler, overwrite=False):
+        if not handler or not action:
+            logging.critical('Action or handler can not be null.')
+            return
+
+        if ((action in cls._custom_post_actions or action in cls.post_actions)
+            and not overwrite):
+            logging.critical('action : ' + action +
+                             ' already exists. Ignoring the custom get action.')
+            return
+
+        cls._custom_post_actions[action] = handler
+
+    @classmethod
+    def remove_custom_post_action(cls, action):
+        if action in cls._custom_post_actions:
+            cls._custom_post_actions.pop(action)
+
     @classmethod
     def get_child_routes(cls):
         """Add child handlers for REST."""
@@ -180,7 +256,7 @@ class DashboardHandler(
         """Set the default or first active navigation tab as default action."""
         if self.can_view(self.default_tab_action):
             return self.default_tab_action
-        for nav in self.nav_mappings:
+        for nav in self.get_nav_mappings():
             if self.can_view(nav[0]):
                 return nav[0]
 
@@ -197,6 +273,9 @@ class DashboardHandler(
             self.redirect(self.app_context.get_slug())
             return
 
+        if action in self._custom_get_actions:
+            return self.custom_get_handler()
+
         # Force reload of properties. It is expensive, but admin deserves it!
         config.Registry.get_overrides(force_update=True)
         return super(DashboardHandler, self).get()
@@ -206,6 +285,17 @@ class DashboardHandler(
         if not self.can_edit():
             self.redirect(self.app_context.get_slug())
             return
+        action = self.request.get('action')
+        if action in self._custom_post_actions:
+            # Each POST request must have valid XSRF token.
+            xsrf_token = self.request.get('xsrf_token')
+            if not crypto.XsrfTokenManager.is_xsrf_token_valid(
+                xsrf_token, action):
+                self.error(403)
+                return
+            self.custom_post_handler()
+            return
+
         return super(DashboardHandler, self).post()
 
     def get_template(self, template_name, dirs):
@@ -226,7 +316,7 @@ class DashboardHandler(
             'action') or self.default_action
         nav_bars = []
         nav = safe_dom.NodeList()
-        for action, title in self.nav_mappings:
+        for action, title in self.get_nav_mappings():
             if not self.can_view(action):
                 continue
             class_name = 'selected' if action == current_action else ''
@@ -340,7 +430,7 @@ class DashboardHandler(
         # disable picker if we are on the well known page; we dont want picked
         # on pages where edits or creation of new object can get triggered
         safe_action = action and action in [
-            action for action, _ in self.nav_mappings] + ['admin']
+            action for action, _ in self.get_nav_mappings()] + ['admin']
         if not safe_action:
             picker.set_attribute('disabled', 'True')
 
@@ -460,7 +550,7 @@ class DashboardHandler(
                 '/dashboard?%s') % urllib.urlencode({
                     'action': 'edit_custom_unit',
                     'key': unit.unit_id,
-                    'unit_type': unit.type})
+                    'unit_type': unit.custom_unit_type})
             li.add_child(self._create_edit_button(url))
         return li
 
@@ -672,6 +762,29 @@ class DashboardHandler(
             'sections': sections,
             }
         self.render_page(template_values)
+
+    def custom_get_handler(self):
+        """Renders Enabled Custom Units view."""
+        action = self.request.get('action')
+        in_action = self._custom_get_actions[action][1]
+        tab = tabs.Registry.get_tab(action, self.request.get('tab'))
+        if not tab:
+            tab_list = tabs.Registry.get_tab_group(action)
+            if not tab_list:
+                self._custom_get_actions[action][0](self)
+                return
+            tab = tab_list[0]
+
+        template_values = {
+            'page_title': self.format_title('Custom Modules > %s' % tab.title),
+            'main_content': tab.contents.display_html(self),
+            }
+        self.render_page(template_values, in_action=in_action)
+
+    def custom_post_handler(self):
+        """Edit Custom Unit Settings view."""
+        action = self.request.get('action')
+        self._custom_post_actions[action](self)
 
     def get_action_url(self, action, key=None, extra_args=None, fragment=None):
         args = {'action': action}
@@ -1527,7 +1640,7 @@ class DashboardHandler(
 
     @classmethod
     def current_user_has_access(cls, app_context):
-        for action, _ in cls.nav_mappings:
+        for action, _ in cls.get_nav_mappings():
             if roles.Roles.is_user_allowed(
                 app_context, custom_module,
                 cls._action_to_permission.get('get_%s' % action, '')

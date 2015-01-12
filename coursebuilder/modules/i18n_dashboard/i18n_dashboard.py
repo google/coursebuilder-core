@@ -49,6 +49,7 @@ from controllers import sites
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import custom_units
 from models import jobs
 from models import models
 from models import roles
@@ -656,17 +657,13 @@ class BaseDashboardExtension(object):
     def register(cls):
         def get_action(handler):
             cls(handler).render()
-
-        dashboard.DashboardHandler.get_actions.append(cls.ACTION)
-        setattr(
-            dashboard.DashboardHandler, 'get_%s' % cls.ACTION, get_action)
+        dashboard.DashboardHandler.add_custom_get_action(cls.ACTION, get_action)
         dashboard.DashboardHandler.map_action_to_permission(
             'get_%s' % cls.ACTION, ACCESS_PERMISSION)
 
     @classmethod
     def unregister(cls):
-        dashboard.DashboardHandler.get_actions.remove(cls.ACTION)
-        setattr(dashboard.DashboardHandler, 'get_%s' % cls.ACTION, None)
+        dashboard.DashboardHandler.remove_custom_get_action(cls.ACTION)
         dashboard.DashboardHandler.unmap_action_to_permission(
             'get_%s' % cls.ACTION)
 
@@ -1884,24 +1881,30 @@ def _get_course_component_keys(course):
     for unit in course.get_units():
         if course.get_parent_unit(unit):
             continue
-        ret.append((unit, ResourceKey.for_unit(unit)))
-        if unit.type == verify.UNIT_TYPE_UNIT:
-            if unit.pre_assessment:
-                assessment = course.find_unit_by_id(unit.pre_assessment)
-                ret.append(
-                    (assessment,
-                     ResourceKey(
-                         ResourceKey.ASSESSMENT_TYPE, unit.pre_assessment)))
-            for lesson in course.get_lessons(unit.unit_id):
-                ret.append(((unit, lesson),
-                            ResourceKey(
-                                ResourceKey.LESSON_TYPE, lesson.lesson_id)))
-            if unit.post_assessment:
-                assessment = course.find_unit_by_id(unit.pre_assessment)
-                ret.append(
-                    (assessment,
-                     ResourceKey(
-                         ResourceKey.ASSESSMENT_TYPE, unit.post_assessment)))
+        if unit.is_custom_unit():
+            key = custom_units.UnitTypeRegistry.i18n_resource_key(course, unit)
+            if key:
+                ret.append((unit, key))
+        else:
+            ret.append((unit, ResourceKey.for_unit(unit)))
+            if unit.type == verify.UNIT_TYPE_UNIT:
+                if unit.pre_assessment:
+                    assessment = course.find_unit_by_id(unit.pre_assessment)
+                    ret.append(
+                        (assessment,
+                         ResourceKey(
+                             ResourceKey.ASSESSMENT_TYPE, unit.pre_assessment)))
+                for lesson in course.get_lessons(unit.unit_id):
+                    ret.append(((unit, lesson),
+                                ResourceKey(
+                                    ResourceKey.LESSON_TYPE, lesson.lesson_id)))
+                if unit.post_assessment:
+                    assessment = course.find_unit_by_id(unit.pre_assessment)
+                    ret.append(
+                        (assessment,
+                         ResourceKey(
+                             ResourceKey.ASSESSMENT_TYPE,
+                             unit.post_assessment)))
     return ret
 
 
@@ -2935,8 +2938,8 @@ def denormalize(s):
 
 
 def notify_module_enabled():
-    dashboard.DashboardHandler.nav_mappings.append(
-        [I18nDashboardHandler.ACTION, 'I18N'])
+    dashboard.DashboardHandler.add_nav_mapping(
+        I18nDashboardHandler.ACTION, 'I18N')
     dashboard.DashboardHandler.add_external_permission(
         ACCESS_PERMISSION, ACCESS_PERMISSION_DESCRIPTION)
     roles.Roles.register_permissions(
@@ -2973,8 +2976,8 @@ def notify_module_enabled():
 
 
 def notify_module_disabled():
-    dashboard.DashboardHandler.nav_mappings.remove(
-        [I18nDashboardHandler.ACTION, 'I18N'])
+    dashboard.DashboardHandler.remove_nav_mapping(
+        I18nDashboardHandler.ACTION, 'I18N')
     dashboard.DashboardHandler.remove_external_permission(ACCESS_PERMISSION)
     roles.Roles.unregister_permissions(custom_module)
 
