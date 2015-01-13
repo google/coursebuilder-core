@@ -3821,7 +3821,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         # The maximum size for any file in the zipfile is 1 GB.
         byte = '.'
         gig = byte * (2 ** 30)
-        archive = etl._Archive(self.archive_path)
+        archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('w')
         archive.add(os.path.join(self.test_tempdir, 'first'), gig)
         archive.add(os.path.join(self.test_tempdir, 'second'), gig)
@@ -3979,7 +3979,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
         etl.main(
             download_datastore_args, environment_class=testing.FakeEnvironment)
-        archive = etl._Archive(self.archive_path)
+        archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         self.assertEqual(
             ['Student.json', 'StudentPropertyEntity.json'],
@@ -4027,7 +4027,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
         etl.main(
             download_datastore_args, environment_class=testing.FakeEnvironment)
-        archive = etl._Archive(self.archive_path)
+        archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         self.assertEqual(
             ['EventEntity.json', 'Student.json'],
@@ -4100,7 +4100,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             SystemExit, etl.main, bad_args,
             environment_class=testing.FakeEnvironment)
         bad_args = etl.PARSER.parse_args(
-            ['run', 'tools.etl.etl._Archive'] + self.common_args)
+            ['run', 'tools.etl.etl._ZipArchive'] + self.common_args)
         self.assertRaises(
             SystemExit, etl.main, bad_args,
             environment_class=testing.FakeEnvironment)
@@ -4199,7 +4199,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.create_empty_course(self.raw)
         zip_archive = zipfile.ZipFile(self.archive_path, 'a')
         zip_archive.writestr(
-            etl._Archive.get_internal_path(etl._COURSE_JSON_PATH_SUFFIX),
+            etl._AbstractArchive.get_internal_path(
+                etl._COURSE_JSON_PATH_SUFFIX),
             'garbage')
         zip_archive.close()
         self.assertRaises(
@@ -4211,7 +4212,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.create_empty_course(self.raw)
         zip_archive = zipfile.ZipFile(self.archive_path, 'a')
         zip_archive.writestr(
-            etl._Archive.get_internal_path(etl._COURSE_YAML_PATH_SUFFIX),
+            etl._AbstractArchive.get_internal_path(
+                etl._COURSE_YAML_PATH_SUFFIX),
             '{')
         zip_archive.close()
         self.assertRaises(
@@ -4262,7 +4264,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             self.upload_course_args, environment_class=testing.FakeEnvironment)
 
         # check archive content
-        archive = etl._Archive(self.archive_path)
+        archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
 
@@ -4290,7 +4292,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
                 continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,
-                etl._Archive.get_external_path(entity.path))
+                etl._AbstractArchive.get_external_path(entity.path))
             stream = context.fs.impl.get(full_path)
             self.assertEqual(entity.is_draft, context.fs.is_draft(stream))
 
@@ -4312,7 +4314,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         etl.main(
             force_overwrite_args,
             environment_class=testing.FakeEnvironment)
-        archive = etl._Archive(self.archive_path)
+        archive = etl._init_archive(self.archive_path, etl.ARCHIVE_TYPE_ZIP)
         archive.open('r')
         context = etl_lib.get_context(self.upload_course_args.course_url_prefix)
         filesystem_contents = context.fs.impl.list(appengine_config.BUNDLE_ROOT)
@@ -4331,7 +4333,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
                 continue
             full_path = os.path.join(
                 appengine_config.BUNDLE_ROOT,
-                etl._Archive.get_external_path(entity.path))
+                etl._AbstractArchive.get_external_path(entity.path))
             stream = context.fs.impl.get(full_path)
             self.assertEqual(entity.is_draft, stream.metadata.is_draft)
 

@@ -166,6 +166,7 @@ import logging
 import os
 import random
 import re
+import shutil
 import sys
 import time
 import traceback
@@ -243,6 +244,8 @@ _MODE_RUN = 'run'
 _MODE_UPLOAD = 'upload'
 # List of all modes.
 _MODES = [_MODE_DELETE, _MODE_DOWNLOAD, _MODE_RUN, _MODE_UPLOAD]
+# List of modes where --force_overwrite is supported:
+_FORCE_OVERWRITE_MODES = [_MODE_DOWNLOAD, _MODE_UPLOAD]
 # Int. The number of times to retry remote_api calls.
 _RETRIES = 3
 # String. Identifier for type corresponding to course definition data.
@@ -251,6 +254,18 @@ _TYPE_COURSE = 'course'
 _TYPE_DATASTORE = 'datastore'
 # Number of items upon which to emit upload rate statistics.
 _UPLOAD_CHUNK_SIZE = 1000
+# We support .zip files as one archive format.
+ARCHIVE_TYPE_ZIP = 'zip'
+# We support plain UNIX directory structure as an archive format
+ARCHIVE_TYPE_DIRECTORY = 'directory'
+# The list of all supported archive formats
+_ARCHIVE_TYPES = [
+    ARCHIVE_TYPE_ZIP,
+    ARCHIVE_TYPE_DIRECTORY,
+]
+# Name of flag used to gate access to less-generally-useful features.
+INTERNAL_FLAG_NAME = '--internal'
+
 
 # Command-line argument configuration.
 PARSER = argparse.ArgumentParser()
@@ -346,9 +361,51 @@ PARSER.add_argument(
 PARSER.add_argument(
     '--verbose', action='store_true',
     help='Tell about each item uploaded/downloaded.')
+PARSER.add_argument(
+    INTERNAL_FLAG_NAME, action='store_true',
+    help=('Enable control flags needed only by developers.  '
+          'Use %s --help to see documentation on these extra flags.' %
+          INTERNAL_FLAG_NAME))
 
 
-class _Archive(object):
+def add_internal_args_support():
+    """Enable features only suitable for CourseBuilder developers.
+
+    This is present as a public function so that functional tests and utilities
+    that are only for developers to enable internal-only features from Python
+    code directly.
+    """
+
+    PARSER.add_argument(
+        '--archive_type', default='zip', choices=_ARCHIVE_TYPES,
+        help=(
+            'By default, uploads and downloads are done using a single .zip '
+            'for the archived form of the data.  This is convenient, as only '
+            'that single file needs to be retained and protected.  When making '
+            'functional tests that depend on a constellation of several entity '
+            'types in complex relationships, it is often much more convenient '
+            'to create the entities by direct interaction with CourseBuilder, '
+            'rather than writing code to achieve the same effect.  Saving this '
+            'data out for later use in unit tests is easily accomplished via '
+            'ETL.  However, as code changes, modifications to the stored test '
+            'values is occasionally necessary.  Rather than store the test '
+            'values as a monolithic opaque binary blob (hard to edit), '
+            'one may specify --archive_type=directory. This treats the '
+            '--archive_path argument as a directory, and stores individual '
+            'files in that directory.'))
+
+
+def _init_archive(path, archive_type=ARCHIVE_TYPE_ZIP):
+    if archive_type == ARCHIVE_TYPE_ZIP:
+        return _ZipArchive(path)
+    elif archive_type == ARCHIVE_TYPE_DIRECTORY:
+        return _DirectoryArchive(path)
+    else:
+        raise ValueError('Archive type "%s" not one of "zip", "directory".' %
+                         archive_type)
+
+
+class _AbstractArchive(object):
     """Manager for local archives of Course Builder data.
 
     The internal format of the archive may change from version to version; users
@@ -371,7 +428,6 @@ class _Archive(object):
             path: string. Absolute path where the archive will be written.
         """
         self._path = path
-        self._zipfile = None
 
     @classmethod
     def get_external_path(cls, internal_path, prefix=_ARCHIVE_PATH_PREFIX):
@@ -401,6 +457,61 @@ class _Archive(object):
         assert not external_path.startswith(prefix)
         return os.path.join(
             prefix, _remove_bundle_root(external_path))
+
+    def add(self, filename, contents):
+        """Adds contents to the archive.
+
+        Args:
+            filename: string. Path of the contents to add.
+            contents: bytes. Contents to add.
+        """
+        raise NotImplementedError()
+
+    def add_local_file(self, local_filename, internal_filename):
+        """Adds a file from local disk to the archive.
+
+        Args:
+            local_filename: string. Path on disk of file to add.
+            internal_filename: string. Internal archive path to write to.
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """Closes archive and test for integrity; must close before read."""
+        raise NotImplementedError()
+
+    def get(self, path):
+        """Return the raw bytes of the archive entity found at path.
+
+        Returns None if path is not in the archive.
+
+        Args:
+            path: string. Path of file to retrieve from the archive.
+
+        Returns:
+            Bytes of file contents.
+        """
+        raise NotImplementedError()
+
+    def open(self, mode):
+        """Opens archive in the mode given by mode string ('r', 'w', 'a')."""
+        raise NotImplementedError()
+
+    @property
+    def manifest(self):
+        """Returns the archive's manifest."""
+        return _Manifest.from_json(self.get(_MANIFEST_FILENAME))
+
+    @property
+    def path(self):
+        return self._path
+
+
+class _ZipArchive(_AbstractArchive):
+
+    def __init__(self, path):
+        super(_ZipArchive, self).__init__(path)
+        self._zipfile = None
 
     def add(self, filename, contents):
         """Adds contents to the archive.
@@ -447,14 +558,36 @@ class _Archive(object):
         assert not self._zipfile
         self._zipfile = zipfile.ZipFile(self._path, mode, allowZip64=True)
 
-    @property
-    def manifest(self):
-        """Returns the archive's manifest."""
-        return _Manifest.from_json(self.get(_MANIFEST_FILENAME))
 
-    @property
-    def path(self):
-        return self._path
+class _DirectoryArchive(_AbstractArchive):
+
+    def _ensure_directory(self, filename):
+        dir_path = os.path.join(self.path, os.path.dirname(filename))
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+    def add(self, filename, contents):
+        self._ensure_directory(filename)
+        with open(os.path.join(self.path, filename), 'wb') as fp:
+            fp.write(contents)
+
+    def add_local_file(self, local_filename, filename):
+        self._ensure_directory(filename)
+        shutil.copyfile(local_filename, os.path.join(self.path, filename))
+
+    def close(self):
+        pass
+
+    def get(self, filename):
+        with open(os.path.join(self.path, filename), 'rb') as fp:
+            return fp.read()
+
+    def open(self, mode):
+        if mode in ('w', 'a'):
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+        elif not os.path.isdir(self.path):
+            raise ValueError('"%s" is not a directory.' % self.path)
 
 
 class _Manifest(object):
@@ -618,7 +751,8 @@ def _download_course(context, course, archive_path, params):
         _die(
             'Cannot export course made with Course Builder version < %s' % (
                 courses.COURSE_MODEL_VERSION_1_3))
-    archive = _Archive(archive_path)
+    archive = _init_archive(archive_path,
+                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
 
@@ -630,7 +764,7 @@ def _download_course(context, course, archive_path, params):
 
     _LOG.info('Adding files from datastore')
     for external_path in datastore_files:
-        internal_path = _Archive.get_internal_path(external_path)
+        internal_path = _AbstractArchive.get_internal_path(external_path)
         if params.verbose:
             _LOG.info('Adding ' + internal_path)
         stream = _get_stream(context, external_path)
@@ -644,7 +778,7 @@ def _download_course(context, course, archive_path, params):
     _LOG.info('Adding files from filesystem')
     for external_path in filesystem_files:
         with open(external_path) as f:
-            internal_path = _Archive.get_internal_path(external_path)
+            internal_path = _AbstractArchive.get_internal_path(external_path)
             if params.verbose:
                 _LOG.info('Adding ' + internal_path)
             archive.add(internal_path, f.read())
@@ -681,7 +815,8 @@ def _download_datastore(context, course, archive_path, params):
         params.privacy, privacy_secret)
 
     found_types = requested_types & available_types
-    archive = _Archive(archive_path)
+    archive = _init_archive(archive_path,
+                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
     archive.open('w')
     manifest = _Manifest(context.raw, course.version)
     for found_type in found_types:
@@ -708,7 +843,7 @@ def _download_type(
         db.class_for_kind(model_class), batch_size,
         model_map_fn=model_map_fn)
     json_file.close()
-    internal_path = _Archive.get_internal_path(
+    internal_path = _AbstractArchive.get_internal_path(
         os.path.basename(json_file.name), prefix=_ARCHIVE_PATH_PREFIX_MODELS)
 
     _LOG.info('Adding %s to archive', internal_path)
@@ -1072,13 +1207,14 @@ def _upload_course(context, params):
              'You can override this behavior via the --force_overwrite flag.' %
              params.course_url_prefix)
 
-    archive = _Archive(params.archive_path)
+    archive = _init_archive(params.archive_path,
+                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
     try:
         archive.open('r')
     except IOError:
         _die('Cannot open archive_path ' + params.archive_path)
     course_json = archive.get(
-        _Archive.get_internal_path(_COURSE_JSON_PATH_SUFFIX))
+        _AbstractArchive.get_internal_path(_COURSE_JSON_PATH_SUFFIX))
 
     if course_json:
         try:
@@ -1089,7 +1225,7 @@ def _upload_course(context, params):
                 'course.json') % params.archive_path)
 
     course_yaml = archive.get(
-        _Archive.get_internal_path(_COURSE_YAML_PATH_SUFFIX))
+        _AbstractArchive.get_internal_path(_COURSE_YAML_PATH_SUFFIX))
     if course_yaml:
         try:
             yaml.safe_load(course_yaml)
@@ -1104,7 +1240,7 @@ def _upload_course(context, params):
         if not _can_upload_entity_to_course(entity):
             _LOG.info('Skipping file ' + entity.path)
             continue
-        external_path = _Archive.get_external_path(entity.path)
+        external_path = _AbstractArchive.get_external_path(entity.path)
         _put(
             context, _ReadWrapper(archive.get(entity.path)), external_path,
             entity.is_draft, params.force_overwrite, params.verbose)
@@ -1179,7 +1315,8 @@ def _determine_type_names(params, included_type_names, archive):
 
 
 def _upload_datastore(params, included_type_names):
-    archive = _Archive(params.archive_path)
+    archive = _init_archive(params.archive_path,
+                            vars(params).get('archive_type', ARCHIVE_TYPE_ZIP))
     try:
         archive.open('r')
     except IOError:
@@ -1194,7 +1331,7 @@ def _upload_datastore(params, included_type_names):
         _LOG.info('Adding entities of type %s', entity_class.__name__)
 
         # Get JSON contents from .zip file
-        json_path = _Archive.get_internal_path(
+        json_path = _AbstractArchive.get_internal_path(
             '%s.json' % entity_class.__name__,
             prefix=_ARCHIVE_PATH_PREFIX_MODELS)
         _LOG.info('Fetching data from .zip archive')
@@ -1353,18 +1490,18 @@ def _validate_arguments(parsed_args):
     if parsed_args.batch_size < 1:
         _die('--batch_size must be a positive value')
     if (parsed_args.mode == _MODE_DOWNLOAD and
-        os.path.exists(parsed_args.archive_path)):
+        os.path.exists(parsed_args.archive_path) and
+        not parsed_args.force_overwrite):
         _die(
             'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
     if parsed_args.disable_remote and parsed_args.mode != _MODE_RUN:
         _die('--disable_remote supported only if mode is ' + _MODE_RUN)
-    if parsed_args.force_overwrite and not (
-            parsed_args.mode == _MODE_UPLOAD or
-            parsed_args.type == _TYPE_COURSE):
+    if (parsed_args.force_overwrite and
+        parsed_args.mode not in _FORCE_OVERWRITE_MODES):
         _die(
-            '--force_overwrite supported only if mode is %s and type is %s' % (
-                _MODE_UPLOAD, _TYPE_COURSE))
+            '--force_overwrite supported only if mode is one of %s' % (
+                ', '.join(_FORCE_OVERWRITE_MODES)))
     if parsed_args.privacy and not (
             parsed_args.mode == _MODE_DOWNLOAD and
             parsed_args.type == _TYPE_DATASTORE):
@@ -1424,4 +1561,6 @@ def main(parsed_args, environment_class=None):
 
 
 if __name__ == '__main__':
+    if INTERNAL_FLAG_NAME in sys.argv:
+        add_internal_args_support()
     main(PARSER.parse_args())
