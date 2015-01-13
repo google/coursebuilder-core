@@ -79,10 +79,11 @@ function need_install() {
     echo "No directory found for $package_name; installing."
     return 0
   fi
+
   local version=$( grep "$version_finder" $version_file \
     | grep -v Meta \
     | head -1 \
-    | sed -e "s/.*$version_finder* //" -e 's/ .*//' )
+    | sed -e "s/.*$version_finder* *//" -e 's/ .*//' )
   if [ "$version" != "$expected_version" ] ; then
     echo "Expected version '$expected_version' for $package_name, but" \
       "instead had '$version'.  Removing and reinstalling."
@@ -155,6 +156,44 @@ if need_install karma_lib 'jasmine-jquery*.js' Version 1.5.2 ; then
   curl --location --silent $CB_ARCHIVE_URL/jasmine-jquery-1.5.2.js --create-dirs -o jasmine-jquery-1.5.2.js
   mv jasmine-jquery-1.5.2.js $RUNTIME_HOME/karma_lib
 fi
+
+if need_install logilab/pylint ChangeLog " -- " 1.4.0 ; then
+  echo "Installing logilab/pylint"
+  mkdir -p $RUNTIME_HOME/logilab
+  rm -rf $RUNTIME_HOME/logilab/pylint
+  curl --location --silent https://bitbucket.org/logilab/pylint/get/pylint-1.4.tar.gz -o pylint-1.4.tar.gz
+  tempdir=$( mktemp -d /tmp/cb.XXXXXXXX )
+  tar xzf pylint-1.4.tar.gz --directory $tempdir
+  mv $tempdir/logilab-pylint-6224a61f7491 $RUNTIME_HOME/logilab/pylint
+  rm pylint-1.4.tar.gz
+  rm -rf $tempdir
+fi
+
+if need_install logilab/astroid ChangeLog " -- " 1.3.2 ; then
+  echo "Installing logilab/astroid"
+  mkdir -p $RUNTIME_HOME/logilab
+  rm -rf $RUNTIME_HOME/logilab/astroid
+  curl --location --silent https://bitbucket.org/logilab/astroid/get/astroid-1.3.2.tar.gz -o astroid-1.3.2.tar.gz
+  tempdir=$( mktemp -d /tmp/cb.XXXXXXXX )
+  tar xzf astroid-1.3.2.tar.gz --directory $tempdir
+  mv $tempdir/logilab-astroid-16369edfbc89 $RUNTIME_HOME/logilab/astroid
+  rm astroid-1.3.2.tar.gz
+  rm -rf $tempdir
+fi
+
+if need_install logilab/logilab/common ChangeLog " -- " 0.62.0 ; then
+  echo "Installing logilab/logilab/common"
+  mkdir -p $RUNTIME_HOME/logilab/logilab
+  rm -rf $RUNTIME_HOME/logilab/logilab/common
+  curl --location --silent https://bitbucket.org/logilab/logilab-common/get/logilab-common-version-0.62.0.tar.gz -o logilab-common-0.62.0.tar.gz
+  tempdir=$( mktemp -d /tmp/cb.XXXXXXXX )
+  tar xzf logilab-common-0.62.0.tar.gz --directory $tempdir
+  mv $tempdir/logilab-logilab-common-4797b86b800e $RUNTIME_HOME/logilab/logilab/common
+  touch $RUNTIME_HOME/logilab/logilab/__init__.py
+  rm logilab-common-0.62.0.tar.gz
+  rm -rf $tempdir
+fi
+
 
 DISTRIBUTED_LIBS="\
   babel-0.9.6.zip \

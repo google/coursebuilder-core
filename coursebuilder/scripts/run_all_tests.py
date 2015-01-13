@@ -26,6 +26,7 @@ __author__ = 'Pavel Simakov (psimakov@google.com)'
 import datetime
 import os
 import subprocess
+import sys
 import threading
 import time
 import yaml
@@ -485,7 +486,20 @@ def run_all_tests(skip_expensive_tests, verbose, setup_deps=True):
         total_count, len(tasks), int(time.time() - start)))
 
 
+def run_lint(source_dir=None):
+    # Wire outputs to our own stdout/stderr so messages appear immediately,
+    # rather than batching up and waiting for the end (linting takes a while)
+    path = 'scripts/pylint.sh'
+    if source_dir:
+        path = os.path.join(source_dir, path)
+    status = subprocess.call(path, stdin=None, stdout=sys.stdout,
+                             stderr=sys.stderr)
+    return status == 0
+
+
 def main():
+    if not run_lint():
+        raise RuntimeError('Lint checks failed; tests not run.')
     run_all_tests(False, True)
 
 
