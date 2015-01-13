@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A module that adds the ability to do ajax requests to coursebuilder server"""
+"""A module that adds the ability to do ajax requests."""
 
 __author__ = 'Abhinav Khandelwal (abhinavk@google.com)'
 
