@@ -469,6 +469,7 @@ class AssetHandler(utils.BaseHandler):
     """Handles serving of static resources located on the file system."""
 
     def __init__(self, app_context, filename):
+        super(AssetHandler, self).__init__()
         self.app_context = app_context
         self.filename = filename
 

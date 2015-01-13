@@ -1154,7 +1154,7 @@ class StudentPropertyEntity(BaseEntity):
 
     def delete(self):
         """Do the normal delete() and also remove the object from memcache."""
-        super(Student, self).delete()
+        super(StudentPropertyEntity, self).delete()
         MemcacheManager.delete(self._memcache_key(self.key().name()))
 
     @classmethod

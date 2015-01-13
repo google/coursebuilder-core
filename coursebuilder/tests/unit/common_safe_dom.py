@@ -9,6 +9,7 @@ from common import safe_dom
 class MockNode(safe_dom.Node):
 
     def __init__(self, value):
+        super(MockNode, self).__init__()
         self._value = value
 
     @property

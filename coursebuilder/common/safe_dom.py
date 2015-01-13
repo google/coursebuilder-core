@@ -275,6 +275,8 @@ class ScriptElement(Element):
         class Script(Text):
 
             def __init__(self, script):
+                # Pylint is just plain wrong about warning here; suppressing.
+                # pylint: disable=bad-super-call
                 super(Script, self).__init__(None)
                 self._script = script
 

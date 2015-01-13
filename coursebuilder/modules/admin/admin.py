@@ -800,14 +800,14 @@ class AdminHandler(BaseAdminHandler, dashboard.DashboardHandler):
             'Admin > %s' % text)
 
     def get_template(self, template_name, dirs):
-        return super(BaseAdminHandler, self).get_template(
+        return super(AdminHandler, self).get_template(
             template_name, [TEMPLATE_DIR] + dirs)
 
     def render_page(self, template_values, in_action=None, in_tab=None):
         in_action = in_action or self.ACTION
         in_tab = in_tab or self.request.get('tab') or self.DEFAULT_TAB
 
-        super(BaseAdminHandler, self).render_page(
+        super(AdminHandler, self).render_page(
             template_values, in_action=in_action, in_tab=in_tab)
 
 
