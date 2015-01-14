@@ -16,6 +16,7 @@
 
 __author__ = 'Pavel Simakov (psimakov@google.com)'
 
+import collections
 import copy
 import datetime
 import HTMLParser
@@ -123,14 +124,14 @@ class DashboardHandler(
         'delete_reviewer', 'edit_admin_preferences', 'set_draft_status',
         'add_to_question_group', 'course_availability', 'course_browsability',
         'clone_question', 'add_custom_unit']
-    _nav_mappings = {
-        'outline': 'Outline',
-        'assets': 'Assets',
-        'settings': 'Settings',
-        'roles': 'Roles',
-        'analytics': 'Analytics',
-        'search': 'Search',
-        'edit_assignment': 'Peer Review'}
+    _nav_mappings = collections.OrderedDict([
+        ('outline', 'Outline'),
+        ('assets', 'Assets'),
+        ('settings', 'Settings'),
+        ('roles', 'Roles'),
+        ('analytics', 'Analytics'),
+        ('search', 'Search'),
+        ('edit_assignment', 'Peer Review')])
     child_routes = [
             (AdminPreferencesRESTHandler.URI, AdminPreferencesRESTHandler),
             (AssessmentRESTHandler.URI, AssessmentRESTHandler),
@@ -161,7 +162,7 @@ class DashboardHandler(
     # of DashboardHandler as an argument.
     contrib_asset_listers = []
 
-    _custom_nav_mappings = {}
+    _custom_nav_mappings = collections.OrderedDict()
 
     _custom_get_actions = {}
     _custom_post_actions = {}
