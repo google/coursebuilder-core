@@ -33,9 +33,9 @@ class ManagerTest(actions.TestBase):
     """Tests for review.Manager."""
 
     # Don't require documentation for self-describing test methods.
-    # pylint: disable-msg=g-missing-docstring
+    # pylint: disable=g-missing-docstring
 
-    def setUp(self):  # Name set by parent. pylint: disable-msg=g-bad-name
+    def setUp(self):  # Name set by parent. pylint: disable=g-bad-name
         super(ManagerTest, self).setUp()
         self.reviewee = models.Student(key_name='reviewee@example.com')
         self.reviewee_key = self.reviewee.put()

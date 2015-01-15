@@ -679,7 +679,7 @@ class CourseQuestionsDataSource(data_sources.AbstractSmallRestDataSource):
             'text', 'Text', 'string',
             description='Text of the question.'))
 
-        # pylint: disable-msg=unused-variable
+        # pylint: disable=unused-variable
         arrayMember = schema_fields.SchemaField(
             'option_text', 'Option Text', 'string',
             description='Text of the multiple-choice option')

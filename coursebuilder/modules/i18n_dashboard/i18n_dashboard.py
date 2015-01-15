@@ -1515,7 +1515,7 @@ class I18nProgressManager(caching.RequestScopedSingleton):
 
     @classmethod
     def get(cls, course, resource, type_str, key):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return cls.instance(course)._get(resource, type_str, key)
 
 
@@ -1536,7 +1536,7 @@ class I18nQuestionManager(caching.RequestScopedSingleton):
 
     @classmethod
     def get(cls, key):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return cls.instance()._get(key)
 
 
@@ -1560,13 +1560,13 @@ class ProcessScopedResourceBundleCache(caching.ProcessScopedSingleton):
 
     @classmethod
     def get_cache_len(cls):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return len(
             ProcessScopedResourceBundleCache.instance()._cache.items.keys())
 
     @classmethod
     def get_cache_size(cls):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return ProcessScopedResourceBundleCache.instance()._cache.total_size
 
     def __init__(self):
@@ -1700,12 +1700,12 @@ class I18nResourceBundleManager(caching.RequestScopedSingleton):
 
     @classmethod
     def get(cls, app_context, key):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return cls.instance(app_context.get_namespace_name())._get(key)
 
     @classmethod
     def get_multi(cls, app_context, keys):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return cls.instance(
             app_context.get_namespace_name())._get_multi(keys)
 
@@ -1729,7 +1729,7 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
             tag_schema = None
             try:
                 tag_schema = tag_cls().get_schema(None)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 logging.exception('Cannot get schema for %s', tag_name)
                 continue
 
@@ -1759,7 +1759,7 @@ class I18nTranslationContext(caching.RequestScopedSingleton):
 
     @classmethod
     def get(cls, app_context):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return cls.instance(app_context)._get_xcontent_configuration()
 
 
@@ -2703,7 +2703,7 @@ class LazyTranslator(object):
                     n=count_misses, parts=parts, are=are))
                 return self._detailed_error(self._errm, self._fallback(body))
 
-        except Exception as ex:  # pylint: disable-msg=broad-except
+        except Exception as ex:  # pylint: disable=broad-except
             logging.exception('Unable to translate: %s', self.source_value)
             self._errm = str(ex)
             return self._detailed_error(
@@ -2722,7 +2722,7 @@ class LazyTranslator(object):
             transformer.decompose(context)
             transformer.recompose(context, resource_bundle, [])
             return xcontent.ContentIO.tostring(context.tree)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             logging.exception('Unable to fallback translate: %s', source_value)
             return default_body
 

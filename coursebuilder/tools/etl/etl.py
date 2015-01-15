@@ -926,9 +926,9 @@ def _set_env_vars_from_app_yaml():
     appengine_config.import_and_enable_modules() will work properly.
     """
 
-    # pylint: disable-msg=g-import-not-at-top
+    # pylint: disable=g-import-not-at-top
     from google.appengine.api import appinfo_includes
-    import appengine_config  # pylint: disable-msg=redefined-outer-name
+    import appengine_config  # pylint: disable=redefined-outer-name
     cb_home = os.environ.get(
         'COURSEBUILDER_HOME', appengine_config.BUNDLE_ROOT)
     app_yaml = appinfo_includes.Parse(
@@ -945,8 +945,8 @@ def _import_entity_modules():
     does not import all required classes, import them here explicitly.
     """
 
-    # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
-    # pylint: disable-msg=redefined-outer-name,unused-variable
+    # pylint: disable=g-import-not-at-top,global-variable-not-assigned,
+    # pylint: disable=redefined-outer-name,unused-variable
     try:
         import main
     except ImportError, e:
@@ -957,8 +957,8 @@ def _import_entity_modules():
 
 def _import_modules_into_global_scope():
     """Import helper; run after _set_up_sys_path() for imports to resolve."""
-    # pylint: disable-msg=g-import-not-at-top,global-variable-not-assigned,
-    # pylint: disable-msg=redefined-outer-name,unused-variable
+    # pylint: disable=g-import-not-at-top,global-variable-not-assigned,
+    # pylint: disable=redefined-outer-name,unused-variable
     global appengine_config
     global memcache
     global db
@@ -1027,7 +1027,7 @@ def _retry(message=None, times=_RETRIES):
                 try:
                     return fn(*args, **kwargs)
                 # We can't be more specific by default.
-                # pylint: disable-msg=broad-except
+                # pylint: disable=broad-except
                 except Exception as e:
                     if message:
                         _LOG.info(message)
@@ -1167,7 +1167,7 @@ def _run_custom(parsed_args):
         job_class = getattr(module, job_class_name)
         assert issubclass(job_class, etl_lib.Job)
         job = job_class(parsed_args)
-    except:  # Any error means death. pylint: disable-msg=bare-except
+    except:  # Any error means death. pylint: disable=bare-except
         _die(
             'Unable to import and instantiate %s, or not of type %s' % (
                 parsed_args.type, etl_lib.Job.__name__),
@@ -1229,7 +1229,7 @@ def _upload_course(context, params):
     if course_yaml:
         try:
             yaml.safe_load(course_yaml)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             _die((
                 'Cannot upload archive at %s containing malformed '
                 'course.yaml') % params.archive_path)
@@ -1404,7 +1404,7 @@ def _upload_entities_for_class(entity_class, schema, entities, params):
                       num_entities)
 
     # Proceed to end of entities (starting from 0 if not resuming)
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     progress = etl_lib._ProgressReporter(
         _LOG, 'Uploaded', entity_class.__name__, _UPLOAD_CHUNK_SIZE,
         len(entities) - i)

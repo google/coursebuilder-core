@@ -81,8 +81,8 @@ def evaluate_python_code(code):
         sys.stdout = results_io
         try:
             compiled_code = compile(code, '<string>', 'exec')
-            exec(compiled_code, globals())  # pylint: disable-msg=exec-statement
-        except Exception as e:  # pylint: disable-msg=broad-except
+            exec(compiled_code, globals())  # pylint: disable=exec-statement
+        except Exception as e:  # pylint: disable=broad-except
             results_io.write('Error: %s' % e)
             return results_io.getvalue(), False
     finally:

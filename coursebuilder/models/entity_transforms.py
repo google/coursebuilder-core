@@ -81,7 +81,7 @@ def _get_schema_field(property_type):
 def get_schema_for_entity(clazz):
     assert issubclass(clazz, entities.BaseEntity)  # Must have blacklist.
     available_properties = clazz.properties()
-    # Treating as module-protected. pylint: disable-msg=protected-access
+    # Treating as module-protected. pylint: disable=protected-access
     suppressed = clazz._get_export_blacklist()
     registry = schema_fields.FieldRegistry(clazz.__name__)
     for property_type in available_properties.values():

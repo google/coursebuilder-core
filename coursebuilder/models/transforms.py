@@ -29,7 +29,7 @@ from google.appengine.api import datastore_types
 from google.appengine.ext import db
 
 # Leave tombstones pointing to moved functions
-# pylint: disable-msg=unused-import,g-bad-import-order
+# pylint: disable=unused-import,g-bad-import-order
 from entity_transforms import dict_to_entity
 from entity_transforms import entity_to_dict
 from entity_transforms import get_schema_for_entity
@@ -179,7 +179,7 @@ def _json_to_datetime(value, date_only=False):
 
     # We cannot get here without an exception.
     # The linter thinks we might still have 'None', but is mistaken.
-    # pylint: disable-msg=raising-bad-type
+    # pylint: disable=raising-bad-type
     raise exception
 
 
@@ -484,7 +484,7 @@ def convert_dict_to_xml(element, python_object):
         try:
             loaded_python_object = loads(python_object)
             convert_dict_to_xml(element, loaded_python_object)
-        except:  # pylint: disable-msg=bare-except
+        except:  # pylint: disable=bare-except
             element.text = unicode(python_object)
             return
 

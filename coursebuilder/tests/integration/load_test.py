@@ -257,7 +257,7 @@ class TaskThread(threading.Thread):
     def run(self):
         try:
             self.func()
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error('Error in %s: %s', self.name, e)
             self.exc_info = sys.exc_info()
             raise self.exc_info[1], None, self.exc_info[2]
@@ -284,10 +284,10 @@ class LoadTest(object):
     def get_hidden_field(self, name, body):
         # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
         # across multiple lines in the HTML.
-        # pylint: disable-msg=anomalous-backslash-in-string
+        # pylint: disable=anomalous-backslash-in-string
         reg = re.compile(
             '<input type="hidden" name="%s"\s* value="([^"]*)">' % name)
-        # pylint: enable-msg=anomalous-backslash-in-string
+        # pylint: enable=anomalous-backslash-in-string
         return reg.search(body).group(1)
 
     def register_if_has_to(self):
@@ -331,10 +331,10 @@ class PeerReviewLoadTest(LoadTest):
         """Returns the URL of a draft review on the review dashboard."""
         # The "\s*" denotes arbitrary whitespace; sometimes, this tag is split
         # across multiple lines in the HTML.
-        # pylint: disable-msg=anomalous-backslash-in-string
+        # pylint: disable=anomalous-backslash-in-string
         reg = re.compile(
             '<a href="([^"]*)">Assignment [0-9]+</a>\s*\(Draft\)')
-        # pylint: enable-msg=anomalous-backslash-in-string
+        # pylint: enable=anomalous-backslash-in-string
         result = reg.search(body)
         if result is None:
             return None

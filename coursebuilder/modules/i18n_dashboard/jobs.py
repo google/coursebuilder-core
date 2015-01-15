@@ -94,7 +94,7 @@ class _BaseJob(etl_lib.Job):
     def run(self):
         """Override run() and setup app_context, course and a namespace."""
         # ETL import model is complex; run this import here not to interfere
-        # pylint: disable-msg=g-import-not-at-top
+        # pylint: disable=g-import-not-at-top
         from controllers import sites
 
         app_context = self._get_app_context_or_die(

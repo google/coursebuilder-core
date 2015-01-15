@@ -504,7 +504,7 @@ def test_activity_free_text():
 
 def test_assessment():
     """Test assessment parsing."""
-    # pylint: disable-msg=anomalous-backslash-in-string
+    # pylint: disable=anomalous-backslash-in-string
     assessment_text = (
         """assessment = {
   assessmentName: '12345',
@@ -536,7 +536,7 @@ def test_assessment():
 
   };
 """)
-    # pylint: enable-msg=anomalous-backslash-in-string
+    # pylint: enable=anomalous-backslash-in-string
     verify_assessment(assessment_text)
 
 
@@ -597,7 +597,7 @@ def test_activity_ast():
         current_ast.get('activity') == expected_ast.get('activity') and
         current_ast == expected_ast)
     if not same:
-        import pprint  # # pylint: disable-msg=g-import-not-at-top
+        import pprint  # # pylint: disable=g-import-not-at-top
         pprint.pprint(current_ast.get('activity'))
         pprint.pprint(expected_ast.get('activity'))
     assert same
@@ -605,7 +605,7 @@ def test_activity_ast():
 
 def test_assessment_ast():
     """Test a mix of various activities using legacy and new parser."""
-    # pylint: disable-msg=anomalous-backslash-in-string
+    # pylint: disable=anomalous-backslash-in-string
     assessment_text = (
         """assessment = {
   preamble: '<p>This is text.</p>',
@@ -630,7 +630,7 @@ def test_assessment_ast():
   checkAnswers: false
 }
 """)
-    # pylint: enable-msg=anomalous-backslash-in-string
+    # pylint: enable=anomalous-backslash-in-string
 
     verify_assessment(assessment_text)
 
@@ -645,7 +645,7 @@ def test_assessment_ast():
         current_ast.get('assessment') == expected_ast.get('assessment') and
         current_ast == expected_ast)
     if not same:
-        import pprint  # # pylint: disable-msg=g-import-not-at-top
+        import pprint  # # pylint: disable=g-import-not-at-top
         pprint.pprint(current_ast.get('assessment'))
         pprint.pprint(expected_ast.get('assessment'))
     assert same

@@ -564,7 +564,7 @@ class UnitHandler(BaseHandler):
             self.get_course(), unit)
 
         # need 'activity' to be True or False, and not the string 'true' or None
-        # pylint: disable-msg=g-explicit-bool-comparison
+        # pylint: disable=g-explicit-bool-comparison
         is_activity = (self.request.get('activity') != '' or
                        '/activity' in self.request.path)
         display_content = []
@@ -680,7 +680,7 @@ class UnitHandler(BaseHandler):
 class AssessmentHandler(BaseHandler):
     """Handler for generating assessment page."""
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled(
@@ -990,7 +990,7 @@ class ReviewDashboardHandler(BaseHandler):
                 'unit': unit.unit_id,
             }
             self.redirect('/review?%s' % urllib.urlencode(redirect_params))
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             review_steps = rp.get_review_steps_by(
                 unit.unit_id, student.get_key())
             self._populate_template(course, unit, review_steps)
@@ -1000,7 +1000,7 @@ class ReviewDashboardHandler(BaseHandler):
 class ReviewHandler(BaseHandler):
     """Handler for generating the submission page for individual reviews."""
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def get(self):
         """Handles GET requests."""
         student = self.personalize_page_and_get_enrolled()
@@ -1024,7 +1024,7 @@ class ReviewHandler(BaseHandler):
             review_step_key = db.Key(encoded=review_step_key)
             review_step = rp.get_review_steps_by_keys(
                 unit.unit_id, [review_step_key])[0]
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             self.error(404)
             return
 
@@ -1155,7 +1155,7 @@ class ReviewHandler(BaseHandler):
             review_step_key = db.Key(encoded=review_step_key)
             review_step = rp.get_review_steps_by_keys(
                 unit.unit_id, [review_step_key])[0]
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             self.error(404)
             return
 

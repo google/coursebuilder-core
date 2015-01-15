@@ -174,7 +174,7 @@ class SchemaConversionTests(actions.TestBase):
         reg.add_property(schema_fields.FieldArray(
             'complex_array', 'Complex Array', description='complex array',
             item_type=complex_array_type))
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         actual_schema = self.job._json_schema_to_bigquery_schema(
             reg.get_json_schema_dict()['properties'])
 
@@ -296,7 +296,7 @@ class PiiTests(actions.TestBase):
         data_sources.Registry.unregister(NotExportable)
 
     def test_get_pii_secret_with_blank_settings(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         secret, end_date = data_pump.DataPumpJob._parse_pii_encryption_token(
             data_pump.DataPumpJob._get_pii_token(self.app_context))
         self.assertEqual(len(secret), data_pump.PII_SECRET_LENGTH)
@@ -309,7 +309,7 @@ class PiiTests(actions.TestBase):
         self.assertLessEqual(expected_sec - actual_sec, 1.0)
 
     def test_pii_secret_expiration(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         token = data_pump.DataPumpJob._build_new_pii_encryption_token('1s')
         self.assertTrue(
             data_pump.DataPumpJob._is_pii_encryption_token_valid(token))
@@ -326,7 +326,7 @@ class PiiTests(actions.TestBase):
         course = courses.Course(None, app_context=self.app_context)
         course.save_settings(course_settings)
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         old_token = data_pump.DataPumpJob._get_pii_token(self.app_context)
         time.sleep(2)
         new_token = data_pump.DataPumpJob._get_pii_token(self.app_context)
@@ -344,7 +344,7 @@ class PiiTests(actions.TestBase):
 
         job = data_pump.DataPumpJob(self.app_context,
                                     rest_providers.StudentsDataSource.__name__)
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         data_source_context = job._build_data_source_context()
         data_source_context.pii_secret = job._get_pii_secret(self.app_context)
         data, is_last_page = job._fetch_page_data(self.app_context,
@@ -455,7 +455,7 @@ class InteractionTests(actions.TestBase):
         # affect the references already held by compiled @classmethod
         # functions.
         self.save_registered_sources = []
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.save_registered_sources.extend(
             data_sources.Registry._data_source_classes)
         del data_sources.Registry._data_source_classes[:]
@@ -476,7 +476,7 @@ class InteractionTests(actions.TestBase):
     def tearDown(self):
         super(InteractionTests, self).tearDown()
         data_sources.Registry.unregister(TrivialDataSource)
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         data_pump.DataPumpJob._get_bigquery_service = (
             self.save_bigquery_service_function)
         del data_sources.Registry._data_source_classes[:]
@@ -488,7 +488,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_does_not_create_dataset_when_already_exists(self):
         self.mock_http.add_response({'status': 200})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.job._maybe_create_course_dataset(self.mock_service_client,
                                               self.bigquery_settings)
         self.assertEqual(
@@ -499,7 +499,7 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 404}), ''))
         self.mock_http.add_response({'status': 200})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.job._maybe_create_course_dataset(self.mock_service_client,
                                               self.bigquery_settings)
         self.assertEqual(
@@ -510,14 +510,14 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 500}), ''))
         with self.assertRaises(apiclient.errors.HttpError):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             self.job._maybe_create_course_dataset(self.mock_service_client,
                                                   self.bigquery_settings)
 
     def test_delete_table_ignores_404(self):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 404}), ''))
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.job._maybe_delete_previous_table(self.mock_service_client,
                                               self.bigquery_settings)
         self.assertEqual(
@@ -526,7 +526,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_delete_table_accepts_200(self):
         self.mock_http.add_response({'status': 200})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.job._maybe_delete_previous_table(self.mock_service_client,
                                               self.bigquery_settings)
         self.assertEqual(
@@ -537,13 +537,13 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 500}), ''))
         with self.assertRaises(apiclient.errors.HttpError):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             self.job._maybe_delete_previous_table(self.mock_service_client,
                                                   self.bigquery_settings)
 
     def test_create_data_table_accepts_200(self):
         self.mock_http.add_response({'status': 200})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         self.job._create_data_table(self.mock_service_client,
                                     self.bigquery_settings, None)
 
@@ -551,13 +551,13 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 404}), ''))
         with self.assertRaises(apiclient.errors.HttpError):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             self.job._create_data_table(self.mock_service_client,
                                         self.bigquery_settings, None)
 
     def test_create_upload_job_accepts_200(self):
         self.mock_http.add_response({'status': 200, 'location': 'there'})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         location = self.job._create_upload_job(self.mock_http,
                                                self.bigquery_settings)
         self.assertEqual(location, 'there')
@@ -565,13 +565,13 @@ class BigQueryInteractionTests(InteractionTests):
     def test_create_upload_receiving_response_without_location_is_error(self):
         self.mock_http.add_response({'status': 200})
         with self.assertRaises(Exception):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             self.job._create_upload_job(self.mock_http, self.bigquery_settings)
 
     def test_create_upload_receiving_non_200_response_is_error(self):
         self.mock_http.add_response({'status': 204, 'location': 'there'})
         with self.assertRaises(Exception):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             self.job._create_upload_job(self.mock_http, self.bigquery_settings)
 
     def test_initiate_upload_job(self):
@@ -579,7 +579,7 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 200})
         self.mock_http.add_response({'status': 200})
         self.mock_http.add_response({'status': 200, 'location': 'there'})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         location = self.job._initiate_upload_job(
             self.mock_service_client, self.bigquery_settings, self.mock_http,
             self.app_context)
@@ -587,7 +587,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_just_started(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         self.mock_http.add_response({'status': 308})
         next_page, next_status = self.job._check_upload_state(
@@ -598,7 +598,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_last_page_not_recieved(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 6
         job_context[data_pump.LAST_START_OFFSET] = 5
@@ -612,7 +612,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_last_page_received(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 6
         job_context[data_pump.LAST_START_OFFSET] = 5
@@ -626,7 +626,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_last_page_has_bad_range_too_low(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 6
         job_context[data_pump.LAST_START_OFFSET] = 5
@@ -637,7 +637,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_last_page_has_bad_range_too_high(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 6
         job_context[data_pump.LAST_START_OFFSET] = 5
@@ -648,7 +648,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_completed(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         self.mock_http.add_response({'status': 200})
         next_page, next_status = self.job._check_upload_state(
@@ -659,10 +659,10 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_disappeared(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         self.mock_http.add_response({'status': 404})
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         next_page, next_status = self.job._check_upload_state(
             self.mock_http, job_context)
         self.assertEqual(next_page, None)
@@ -671,7 +671,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_server_error(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         self.mock_http.add_response({'status': 503})
         next_page, next_status = self.job._check_upload_state(
@@ -682,7 +682,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_unexpected_code(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         self.mock_http.add_response({'status': 400})
         with self.assertRaises(ValueError):
@@ -690,7 +690,7 @@ class BigQueryInteractionTests(InteractionTests):
 
     def test_check_state_recoverable_failure_then_success(self):
         self.job.submit()  # Saves state, but does not run queued item.
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 6
         job_context[data_pump.LAST_START_OFFSET] = 5
@@ -708,7 +708,7 @@ class BigQueryInteractionTests(InteractionTests):
     def test_send_first_page_as_last_page(self):
         self.job.submit()  # Saves state, but does not run queued item.
         job_status_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         data_source_context = self.job._build_data_source_context()
         self.mock_http.add_response({'status': 308, 'range': '0-1'})
@@ -725,7 +725,7 @@ class BigQueryInteractionTests(InteractionTests):
     def test_send_first_page_as_non_last_page(self):
         self.job.submit()  # Saves state, but does not run queued item.
         job_status_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         data_source_context = self.job._build_data_source_context()
         self.mock_http.add_response({'status': 308, 'range': '0-1'})
@@ -742,7 +742,7 @@ class BigQueryInteractionTests(InteractionTests):
     def test_resend_first_page_as_last_page(self):
         self.job.submit()  # Saves state, but does not run queued item.
         job_status_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 0
         job_context[data_pump.LAST_START_OFFSET] = 0
@@ -762,7 +762,7 @@ class BigQueryInteractionTests(InteractionTests):
     def test_send_subsequent_page_as_last_page(self):
         self.job.submit()  # Saves state, but does not run queued item.
         job_status_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         job_context[data_pump.LAST_PAGE_SENT] = 0
         job_context[data_pump.LAST_START_OFFSET] = 0
@@ -782,7 +782,7 @@ class BigQueryInteractionTests(InteractionTests):
     def test_send_failure_then_success(self):
         self.job.submit()  # Saves state, but does not run queued item.
         job_status_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context = self.job._build_job_context('unused', 'unused')
         data_source_context = self.job._build_data_source_context()
 
@@ -822,7 +822,7 @@ class BigQueryInteractionTests(InteractionTests):
             self.mock_http.add_response({'status': 500})
             self.execute_all_deferred_tasks(iteration_limit=1)
             job_object = self.job.load()
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             job_context, _ = self.job._load_state(job_object,
                                                   job_object.sequence_num)
             self.assertEqual(job_object.status_code, jobs.STATUS_CODE_STARTED)
@@ -889,7 +889,7 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         job_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context, _ = self.job._load_state(job_object,
                                               job_object.sequence_num)
         self.assertEqual(job_object.status_code, jobs.STATUS_CODE_STARTED)
@@ -970,7 +970,7 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         job_object = self.job.load()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         job_context, _ = self.job._load_state(job_object,
                                               job_object.sequence_num)
         self.assertEqual(job_object.status_code, jobs.STATUS_CODE_STARTED)

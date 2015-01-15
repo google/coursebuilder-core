@@ -393,7 +393,7 @@ def html_to_safe_dom(html_string, handler, render_custom_tags=True):
                 node_list.append(safe_dom.Text(original_elt.tail))
             return node_list
 
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.exception('Error handling tag: %s', elt.tag)
             return _generate_error_message_node_list(
                 original_elt, '%s: %s' % (INVALID_HTML_TAG_MESSAGE, e))

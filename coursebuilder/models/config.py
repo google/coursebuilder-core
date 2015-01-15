@@ -115,7 +115,7 @@ class ConfigProperty(object):
             try:
                 return True, transforms.string_to_value(
                     os.environ[name], self.value_type)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 logging.error(
                     'Property %s failed to cast to type %s; removing.',
                     self._name, self._type)
@@ -198,7 +198,7 @@ class Registry(object):
                     cls._load_from_db()
                 finally:
                     namespace_manager.set_namespace(old_namespace)
-            except Exception as e:  # pylint: disable-msg=broad-except
+            except Exception as e:  # pylint: disable=broad-except
                 logging.error(
                     'Failed to load properties from a database: %s.', str(e))
             finally:
@@ -245,7 +245,7 @@ class Registry(object):
             try:
                 value = transforms.string_to_value(
                     item.value, target.value_type)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 logging.error(
                     'Property %s failed to cast to a type %s; removing.',
                     target.name, target.value_type)
@@ -256,7 +256,7 @@ class Registry(object):
                 errors = []
                 try:
                     target.validator(value, errors)
-                except Exception as e:  # pylint: disable-msg=broad-except
+                except Exception as e:  # pylint: disable=broad-except
                     errors.append(
                         'Error validating property %s.\n%s',
                         (target.name, e))
@@ -285,7 +285,7 @@ class ConfigPropertyEntity(entities.BaseEntity):
         # instances; they will pick it up in due course after
         # UPDATE_INTERVAL_SEC has elapsed.
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         Registry._config_property_entity_changed(self)
 
 

@@ -418,7 +418,7 @@ class CsvGenerator(MapReduceBase):
                     master_list.append(key)
         try:
             # Convert integer keys from unicode to ints to be sorted correctly.
-            # pylint: disable-msg=unnecessary-lambda
+            # pylint: disable=unnecessary-lambda
             master_list = sorted(master_list, key=lambda item: int(item))
         except ValueError:
             # String keys cannot be converted into integers..

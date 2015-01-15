@@ -273,7 +273,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         progress_stats = ProgressStats(course)
         unit1 = course.add_unit()
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         assert_equals(
             progress_stats._get_unit_ids_of_type_unit(), [unit1.unit_id])
         assessment1 = course.add_assessment()
@@ -300,7 +300,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         progress_stats = ProgressStats(course)
         unit1 = course.add_unit()
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         assert_equals(
             progress_stats._get_unit_label(unit1.unit_id),
             'Unit %s' % unit1.index)
@@ -349,7 +349,7 @@ class ProgressAnalyticsTest(actions.TestBase):
         unit1 = course.add_unit()
         assessment1 = course.add_assessment()
         progress_stats = ProgressStats(course)
-        # pylint: disable-msg=g-inconsistent-quotes
+        # pylint: disable=g-inconsistent-quotes
         assert_equals(
             progress_stats.compute_entity_dict('course', []),
             {'label': 'UNTITLED COURSE', 'u': {unit1.unit_id: {
@@ -530,7 +530,7 @@ class QuestionAnalyticsTest(actions.TestBase):
 
         event_payload_dict = transforms.loads(event_payloads)
         for event_info in event_payload_dict.values():
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             questions = question_aggregator._process_event(
                 event_info['event_source'], event_info['event_data'])
             assert_equals(questions, event_info['transformed_dict_list'])
@@ -613,7 +613,7 @@ COURSE_TWO = 'course_two'
 
 
 class CronCleanupTest(actions.TestBase):
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
 
     def setUp(self):
         super(CronCleanupTest, self).setUp()

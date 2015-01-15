@@ -25,7 +25,7 @@ custom_module = None
 MODULE_NAME = 'Manual Progress'
 XSRF_ACTION = 'manual_progress'
 
-# pylint: disable-msg=unbalanced-tuple-unpacking
+# pylint: disable=unbalanced-tuple-unpacking
 
 
 class ProgressRESTBase(utils.BaseRESTHandler):

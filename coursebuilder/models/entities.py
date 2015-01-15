@@ -151,7 +151,7 @@ class BaseEntity(db.Model):
         for klass in cls.__mro__:
             if hasattr(klass, '_PROPERTY_EXPORT_BLACKLIST'):
                 # Treat as module-protected.
-                # pylint: disable-msg=protected-access
+                # pylint: disable=protected-access
                 blacklist.extend(klass._PROPERTY_EXPORT_BLACKLIST)
 
         for index, item in enumerate(blacklist):

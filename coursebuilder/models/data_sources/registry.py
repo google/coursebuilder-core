@@ -29,7 +29,7 @@ class _Registry(object):
 
     @classmethod
     def register(cls, clazz):
-        # Package private: pylint: disable-msg=protected-access
+        # Package private: pylint: disable=protected-access
         if not issubclass(clazz, base_types._DataSource):
             raise ValueError(
                 'All registered data sources must ultimately inherit '
@@ -67,7 +67,7 @@ class _Registry(object):
     @classmethod
     def get_rest_data_source_classes(cls):
         return [c for c in cls._data_source_classes
-                # Package private: pylint: disable-msg=protected-access
+                # Package private: pylint: disable=protected-access
                 if issubclass(c, base_types._AbstractRestDataSource)]
 
     @classmethod

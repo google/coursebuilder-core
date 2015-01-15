@@ -63,7 +63,7 @@ class AbstractScopedSingleton(object):
     @classmethod
     def instance(cls, *args, **kwargs):
         """Creates new or returns existing instance of the object."""
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         _instance = cls._instances().get(cls)
         if not _instance:
             try:

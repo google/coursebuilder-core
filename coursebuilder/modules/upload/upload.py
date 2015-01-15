@@ -74,7 +74,7 @@ class TextFileUploadHandler(utils.BaseHandler):
                 success = bool(student_work.Submission.write(
                     unit_id, student.get_key(), contents))
             # All write errors are treated equivalently.
-            # pylint: disable-msg=broad-except
+            # pylint: disable=broad-except
             except Exception as e:
                 self.error(400)
                 logging.warn(

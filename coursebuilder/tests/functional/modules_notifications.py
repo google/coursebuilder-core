@@ -34,7 +34,7 @@ from google.appengine.ext import db
 from google.appengine.ext import deferred
 
 
-# Allow access to code under test. pylint: disable-msg=protected-access
+# Allow access to code under test. pylint: disable=protected-access
 
 
 class UnregisteredRetentionPolicy(notifications.RetentionPolicy):
@@ -1035,7 +1035,7 @@ class SerializedPropertyTest(actions.TestBase):
         ValueError, '_SerializedProperty does not support indexing'):
 
       # The declaration causes the code under test to run; no need to use.
-      # pylint: disable-msg=unused-variable
+      # pylint: disable=unused-variable
       class Model(db.Model):
         prop = notifications._SerializedProperty(indexed=True)
 
@@ -1072,7 +1072,7 @@ class ModelTestBase(actions.TestBase):
 class ModelTestSpec(object):
   """Tests that must be executed against each child of notifications._Model."""
 
-  # Require children replace with a callable. pylint: disable-msg=not-callable
+  # Require children replace with a callable. pylint: disable=not-callable
   ENTITY_CLASS = None
 
   def test_constructor_raises_value_error_if_intent_contains_delimiter(self):

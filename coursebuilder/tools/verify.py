@@ -137,9 +137,9 @@ LESSON_CSV_TO_DB_CONVERTER = {
     'lesson_notes': ('notes', unicode)
 }
 
-# pylint: disable-msg=anomalous-backslash-in-string
+# pylint: disable=anomalous-backslash-in-string
 NO_VERIFY_TAG_NAME_OPEN = '<gcb-no-verify>\s*\n'
-# pylint: enable-msg=anomalous-backslash-in-string
+# pylint: enable=anomalous-backslash-in-string
 NO_VERIFY_TAG_NAME_CLOSE = '</gcb-no-verify>'
 
 OUTPUT_FINE_LOG = False
@@ -613,9 +613,9 @@ class SchemaHelper(object):
         context = Context().new(name)
         self.parse_log.append('  ROOT %s' % context.format_path())
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         values_class = values.__class__
-        # pylint: enable-msg=protected-access
+        # pylint: enable=protected-access
 
         # handle {..} containers
         if isinstance(types, dict):
@@ -755,7 +755,7 @@ def is_integer_list(s):
 def is_integer(s):
     try:
         return int(s) == float(s)
-    except Exception:  # pylint: disable-msg=broad-except
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -893,10 +893,10 @@ def remove_javascript_single_line_comment(text):
 
 
 def remove_javascript_multi_line_comment(text):
-    # pylint: disable-msg=anomalous-backslash-in-string
+    # pylint: disable=anomalous-backslash-in-string
     return re.sub(
         re.compile('/\*(.*)\*/', re.MULTILINE + re.DOTALL), r'', text)
-    # pylint: enable-msg=anomalous-backslash-in-string
+    # pylint: enable=anomalous-backslash-in-string
 
 
 def parse_content_marked_no_verify(content):
@@ -950,9 +950,9 @@ def legacy_eval_python_expression_for_test(content, scope, unused_root_name):
     restricted_scope.update({'__builtins__': {}})
     code = compile(content, '<string>', 'exec')
 
-    # pylint: disable-msg=exec-statement
+    # pylint: disable=exec-statement
     exec code in restricted_scope
-    # pylint: enable-msg=exec-statement
+    # pylint: enable=exec-statement
 
     return restricted_scope
 
@@ -1364,7 +1364,7 @@ class Verifier(object):
 def run_all_regex_unit_tests():
     """Executes all tests related to regular expressions."""
 
-    # pylint: disable-msg=anomalous-backslash-in-string
+    # pylint: disable=anomalous-backslash-in-string
     assert escape_javascript_regex(
         'correctAnswerRegex: /site:bls.gov?/i, blah') == (
             'correctAnswerRegex: regex(\"/site:bls.gov?/i\"), blah')
@@ -1389,7 +1389,7 @@ def run_all_regex_unit_tests():
     assert parse_content_marked_no_verify(
         'blah1\n// <gcb-no-verify>\n/blah2\n// </gcb-no-verify>\nblah3')[0] == (
             'blah1\n// \nblah3')
-    # pylint: enable-msg=anomalous-backslash-in-string
+    # pylint: enable=anomalous-backslash-in-string
 
     assert Verifier.encode_regex('/white?/i') == """gcb_regex('white?', 'i')"""
     assert (Verifier.encode_regex('/jane austen (book|books) \\-price/i') ==
@@ -1402,7 +1402,7 @@ def run_all_regex_unit_tests():
             r"""gcb_regex('354\\s*[+]\\s*651', '')""")
 
 
-# pylint: disable-msg=too-many-statements
+# pylint: disable=too-many-statements
 def run_all_schema_helper_unit_tests():
     """Executes all tests related to schema validation."""
 
@@ -1625,9 +1625,9 @@ foo = [
     restricted_scope.update({'__builtins__': {}})
     code = compile(content, '<string>', 'exec')
 
-    # pylint: disable-msg=exec-statement
+    # pylint: disable=exec-statement
     exec code in restricted_scope
-    # pylint: enable-msg=exec-statement
+    # pylint: enable=exec-statement
 
     assert 'isinstance' in restricted_scope.get('foo')
 

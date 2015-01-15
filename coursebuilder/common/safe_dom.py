@@ -31,7 +31,7 @@ class Node(object):
         return self.sanitized
 
 
-# pylint: disable-msg=incomplete-protocol
+# pylint: disable=incomplete-protocol
 class NodeList(object):
     """Holds a list of Nodes and can bulk sanitize them."""
 

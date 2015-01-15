@@ -364,7 +364,7 @@ class UnitLessonCompletionTracker(object):
                     q_id, label, link, num_choices)
             else:
                 return {}
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, cpt)
@@ -389,7 +389,7 @@ class UnitLessonCompletionTracker(object):
                     questions.update(self._create_v15_question_dict(
                         q_id, label, link, num_choices))
             return questions
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, cpt)
@@ -413,7 +413,7 @@ class UnitLessonCompletionTracker(object):
                         self._create_v15_question_dict(
                             q_id, label, link, num_choices))
             return questions
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, cpt)
@@ -432,7 +432,7 @@ class UnitLessonCompletionTracker(object):
                     q_id, label, link, num_choices)
             else:
                 return {}
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, cpt)
@@ -462,7 +462,7 @@ class UnitLessonCompletionTracker(object):
                     'num_attempts': 0
                 }
             }
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, block)
@@ -487,7 +487,7 @@ class UnitLessonCompletionTracker(object):
                         }
                     )
             return questions
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to process the question data. '
                 'Error: %s, data: %s', e, content)
@@ -1169,7 +1169,7 @@ class ProgressStats(object):
             self, *parent_ids)
 
     def _get_course_label(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         return courses.Course.get_environ(self._get_course().app_context)[
             'course']['title']
 

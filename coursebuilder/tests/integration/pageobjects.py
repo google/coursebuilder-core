@@ -1153,7 +1153,7 @@ class AnalyticsPage(PageObject):
     def answers_pie_chart_present(self):
         div = self.find_element_by_id('answers_pie_chart')
         svgs = div.find_elements_by_tag_name('svg')
-        # pylint: disable-msg=g-explicit-length-test
+        # pylint: disable=g-explicit-length-test
         return len(svgs) > 0
 
 

@@ -26,7 +26,7 @@ from tests.functional import actions
 class ObjectEditorTest(actions.TestBase):
 
     # Allow access to protected code under test.
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
 
     def tearDown(self):
         config.Registry.test_overrides = {}

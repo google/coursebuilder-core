@@ -104,5 +104,5 @@ class ExpireOldAssignedReviewsHandler(utils.BaseHandler):
                      total_expired_count, total_exception_count, total_count))
             _LOG.info(end_message)
             self.response.write('OK\n')
-        except:  # Hide all errors. pylint: disable-msg=bare-except
+        except:  # Hide all errors. pylint: disable=bare-except
             pass

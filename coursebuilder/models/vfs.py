@@ -185,7 +185,7 @@ class LocalReadOnlyFileSystem(object):
 
     # Need argument to be named exactly 'include_inherited' to match
     # keyword-parameter names from derived/related classes.
-    # pylint: disable-msg=unused-argument
+    # pylint: disable=unused-argument
     def list(self, root_dir, include_inherited=False):
         """Lists all files in a directory."""
         files = []
@@ -726,7 +726,7 @@ class DatastoreBackedFileSystem(object):
 class VfsTests(unittest.TestCase):
 
     def test_pickling(self):
-        # pylint: disable-msg=g-import-not-at-top
+        # pylint: disable=g-import-not-at-top
         import pickle
         pickle.dumps(caching.NoopCacheConnection())
         pickle.dumps(caching.AbstractCacheConnection(None))

@@ -521,7 +521,7 @@ class Manager(object):
         def map_fn(review_step_key, expired_keys, exception_keys):
             try:
                 expired_keys.append(cls.expire_review(review_step_key))
-            except:  # All errors are the same. pylint: disable-msg=bare-except
+            except:  # All errors are the same. pylint: disable=bare-except
                 # Skip. Either the entity was updated between the query and
                 # the update, meaning we don't need to expire it; or we ran into
                 # a transient datastore error, meaning we'll expire it next
@@ -1059,7 +1059,7 @@ def register_module():
     """Registers this module in the registry."""
 
     # Avert circular dependency
-    from modules.review import cron  # pylint: disable-msg=g-import-not-at-top
+    from modules.review import cron  # pylint: disable=g-import-not-at-top
 
     stats.register_analytic()
 

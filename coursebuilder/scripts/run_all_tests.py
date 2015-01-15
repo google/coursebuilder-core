@@ -369,7 +369,7 @@ class TaskThread(threading.Thread):
     def run(self):
         try:
             self.func()
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             self.exception = e
 
 

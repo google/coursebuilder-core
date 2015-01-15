@@ -239,7 +239,7 @@ class DataPumpJob(jobs.DurableJobBase):
                      self._job_name, str(job_context), str(data_source_context))
 
         # Using _update in DurableJobEntity
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         if use_transaction:
             xg_on = db.create_transaction_options(xg=True)
             db.run_in_transaction_options(
@@ -1001,7 +1001,7 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
           ds for ds in data_sources.Registry.get_rest_data_source_classes()
           if ds.exportable()]
         source_classes.sort(key=lambda c: c.__name__)
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         template_values['pumps'] = []
         for source_class in source_classes:
             job = DataPumpJob(app_context, source_class.__name__)

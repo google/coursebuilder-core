@@ -273,13 +273,13 @@ def index_units_and_lessons(course):
     unit_index = 1
     for unit in course.get_units():
         if verify.UNIT_TYPE_UNIT == unit.type:
-            unit._index = unit_index  # pylint: disable-msg=protected-access
+            unit._index = unit_index  # pylint: disable=protected-access
             unit_index += 1
 
             lesson_index = 1
             for lesson in course.get_lessons(unit.unit_id):
                 if lesson.auto_index:
-                    lesson._index = (  # pylint: disable-msg=protected-access
+                    lesson._index = (  # pylint: disable=protected-access
                         lesson_index)
                     lesson_index += 1
 
@@ -349,7 +349,7 @@ class AbstractCachedObject(object):
                 memento = cls.new_memento()
                 memento.deserialize(binary_data)
                 return cls.instance_from_memento(app_context, memento)
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error(
                 'Failed to load object \'%s\' from memcache. %s',
                 cls._make_key(), e)
@@ -501,7 +501,7 @@ class Lesson12(object):
 
     @property
     def has_activity(self):
-        # pylint: disable-msg=g-explicit-bool-comparison
+        # pylint: disable=g-explicit-bool-comparison
         return self.activity != ''
 
     @property
@@ -1522,7 +1522,7 @@ class CourseModel13(object):
                 assessment_content, root_name)
             assessment = verify.evaluate_python_expression_from_text(
                 content, root_name, verify.Assessment().scope, noverify_text)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             errors.append('Unable to parse %s:\n%s' % (
                 root_name,
                 str(sys.exc_info()[1])))
@@ -1572,7 +1572,7 @@ class CourseModel13(object):
                 activity_content, root_name)
             activity = verify.evaluate_python_expression_from_text(
                 content, root_name, verify.Activity().scope, noverify_text)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             errors.append('Unable to parse %s:\n%s' % (
                 root_name,
                 str(sys.exc_info()[1])))
@@ -1708,7 +1708,7 @@ class CourseModel13(object):
                     lesson_w_activity.objectives = (
                         ('<script>\n// This script is inserted by 1.2 to 1.3 '
                          'import function\n%s\n</script>\n') % noverify_text)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 errors.append(
                     'Unable to parse activity: %s.' % lesson_title)
                 return False
@@ -1999,7 +1999,7 @@ class Workflow(object):
                 try:
                     submission_due_date = self._convert_date_string_to_datetime(
                         workflow_dict[SUBMISSION_DUE_DATE_KEY])
-                except Exception as e:  # pylint: disable-msg=broad-except
+                except Exception as e:  # pylint: disable=broad-except
                     workflow_errors.append(
                         'dates should be formatted as YYYY-MM-DD hh:mm '
                         '(e.g. 1997-07-16 19:20) and be specified in the UTC '
@@ -2041,7 +2041,7 @@ class Workflow(object):
                         workflow_errors.append(
                             'submission due date should be earlier than '
                             'review due date')
-                except Exception as e:  # pylint: disable-msg=broad-except
+                except Exception as e:  # pylint: disable=broad-except
                     workflow_errors.append(
                         'dates should be formatted as YYYY-MM-DD hh:mm '
                         '(e.g. 1997-07-16 19:20) and be specified in the UTC '
@@ -2051,7 +2051,7 @@ class Workflow(object):
                     raise Exception('%s.' % '; '.join(workflow_errors))
 
             return True
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             errors.append('Error validating workflow specification: %s' % e)
             return False
 
@@ -2134,7 +2134,7 @@ class Course(object):
     @classmethod
     def get_environ(cls, app_context):
         """Returns currently defined course settings as a dictionary."""
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
 
         # get from local cache
         env = app_context._cached_environ
@@ -2186,7 +2186,7 @@ class Course(object):
         try:
             course_yaml_dict = yaml.safe_load(
                 course_yaml.read().decode('utf-8'))
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.info(
                 'Error: course.yaml file at %s not accessible, '
                 'loading defaults. %s', course_data_filename, e)
@@ -2597,7 +2597,7 @@ class Course(object):
         for hook in self.POST_LOAD_HOOKS:
             try:
                 hook(self)
-            except Exception:  # pylint: disable-msg=broad-except
+            except Exception:  # pylint: disable=broad-except
                 logging.exception('Error in post-load hook')
 
     @property
@@ -2924,7 +2924,7 @@ class Course(object):
             logging.error('Unable to validate %s %s: %s', kind, unit.unit_id, e)
             errors.append(
                 'Unable to validate %s: %s' % (kind, unit.unit_id))
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.error('Unable to parse %s: %s.', kind, str(e))
             errors.append(
                 'Unable to parse %s: %s' % (kind, unit.unit_id))

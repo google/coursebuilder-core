@@ -38,7 +38,7 @@ SynchronousQuery = base_types._SynchronousQuery
 
 def _generate_rest_handler(rest_data_source_class):
 
-    # (Package protected) pylint: disable-msg=protected-access
+    # (Package protected) pylint: disable=protected-access
     class CurriedRestHandler(source_handler._AbstractRestDataSourceHandler):
         """Web handler class curried with class of rest data source."""
 

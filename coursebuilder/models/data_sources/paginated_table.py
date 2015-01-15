@@ -29,7 +29,7 @@ from models.data_sources import utils as data_sources_utils
 from google.appengine.ext import db
 
 
-# Package-protected pylint: disable-msg=protected-access
+# Package-protected pylint: disable=protected-access
 class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
     """Implements a paged view against a single DB table."""
 
@@ -187,7 +187,7 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                                  context.pii_secret)
 
 
-# Package-protected pylint: disable-msg=protected-access
+# Package-protected pylint: disable=protected-access
 class _DbTableContext(base_types._AbstractContextManager):
     """Save/restore interface for context specific to DbTableRestDataSource.
 

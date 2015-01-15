@@ -25,7 +25,7 @@ from tests.functional import modules_i18n_dashboard
 from tools.etl import etl
 from tools.etl import testing
 
-# Allow access to code under test. pylint: disable-msg=protected-access
+# Allow access to code under test. pylint: disable=protected-access
 
 
 class _JobTestBase(

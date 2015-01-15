@@ -137,6 +137,6 @@ def parse_accept_language(accept_language_str):
             lang = lang.replace('-', '_')
             parsed.append((lang, q))
         return sorted(parsed, None, lambda x: -x[1])
-    except Exception:  # pylint: disable-msg=broad-except
+    except Exception:  # pylint: disable=broad-except
         logging.exception('Bad Accept-Languager: %s', accept_language_str)
     return []

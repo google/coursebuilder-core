@@ -341,7 +341,7 @@ class GoogleDriveRESTHandler(utils.BaseRESTHandler):
         key = None
         try:
             key = self._save_content_chunk(contents, type_id, document_id)
-        except Exception, e:  # On purpose. pylint: disable-msg=broad-except
+        except Exception, e:  # On purpose. pylint: disable=broad-except
             transforms.send_json_response(
                 self, 500, 'Error when saving: %s' % e)
             return

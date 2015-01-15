@@ -166,7 +166,7 @@ def get_template(
     """Sets up an environment and gets jinja template."""
 
     # Defer to avoid circular import.
-    # pylint: disable-msg=g-import-not-at-top
+    # pylint: disable=g-import-not-at-top
     from controllers import sites
 
     locale = None

@@ -32,7 +32,7 @@ _SERIALIZED_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 class _Result(object):
 
-  # Treating as module-protected. pylint: disable-msg=protected-access
+  # Treating as module-protected. pylint: disable=protected-access
 
   def __init__(self, now):
     self.now = now
@@ -68,7 +68,7 @@ class _Result(object):
 class _Bin(object):
 
   def __init__(self, name, cutoff):
-    # Treating as module-protected. pylint: disable-msg=protected-access
+    # Treating as module-protected. pylint: disable=protected-access
     self._data = {state: 0 for state in notifications.Status._STATES}
     self.cutoff = cutoff
     self.name = name
@@ -102,7 +102,7 @@ class CountsGenerator(jobs.MapReduceJob):
   def map(notification):
     yield (
         notifications.Status.from_notification(notification).state,
-        # Treating as module-protected. pylint: disable-msg=protected-access
+        # Treating as module-protected. pylint: disable=protected-access
         notification._enqueue_date
     )
 

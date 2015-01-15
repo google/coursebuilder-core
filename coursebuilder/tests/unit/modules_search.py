@@ -172,7 +172,7 @@ class SearchTestBase(actions.TestBase):
              (BANNED_PAGE_ROBOTS, 'text/html'),
             }
 
-    def setUp(self):  # Name set by parent. pylint: disable-msg=g-bad-name
+    def setUp(self):  # Name set by parent. pylint: disable=g-bad-name
         """Do all of the necessary monkey patching to test search."""
         super(SearchTestBase, self).setUp()
 

@@ -41,7 +41,7 @@ def process_notification(notification, now, stats):
   policy = None
   stats.started += 1
 
-  # Treat as module-protected. pylint: disable-msg=protected-access
+  # Treat as module-protected. pylint: disable=protected-access
   if notification._done_date:
     _LOG.info(
         'Skipping offline processing of notification with key %s; already '
@@ -168,7 +168,7 @@ class ProcessPendingNotificationsHandler(controllers_utils.BaseHandler):
 
   def _process_records(self, namespace, now, stats):
     with common_utils.Namespace(namespace):
-      # Treating as module-protected. pylint: disable-msg=protected-access
+      # Treating as module-protected. pylint: disable=protected-access
       mapper = model_utils.QueryMapper(
           notifications.Manager._get_in_process_notifications_query())
       mapper.run(process_notification, now, stats)

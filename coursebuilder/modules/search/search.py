@@ -291,7 +291,7 @@ class SearchHandler(utils.BaseHandler):
                 self.template_value['search_error'] = SEARCH_ERROR_TEXT
                 logging.error('Error rendering the search page: %s. %s',
                               e, traceback.format_exc())
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             SEARCH_FAILURES.inc()
             self.template_value['search_error'] = SEARCH_ERROR_TEXT
             logging.error('Error rendering the search page: %s. %s',

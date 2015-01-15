@@ -221,7 +221,7 @@ class ReviewStep(student_work.BaseEntity):
         safe_reviewer_key = models.Student.safe_key(
             unsafe_reviewer_key, transform_fn)
 
-        # Treating as module-protected. pylint: disable-msg=protected-access
+        # Treating as module-protected. pylint: disable=protected-access
         _, unit_id, unsafe_reviewee_key_name = (
             student_work.Submission._split_key(unsafe_submission_key_name))
         unsafe_reviewee_key = db.Key.from_path(

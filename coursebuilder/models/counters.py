@@ -42,7 +42,7 @@ class PerfCounter(object):
         self._value = 0
 
     def inc(
-        self, increment=1, context=None):  # pylint: disable-msg=unused-argument
+        self, increment=1, context=None):  # pylint: disable=unused-argument
         """Increments value by a given increment."""
         self._value += increment
         incr_counter_global_value(self.name, increment)
@@ -81,4 +81,4 @@ class Registry(object):
     def _clear_all(cls):
         """Clears all counters for tests."""
         for counter in cls.registered.values():
-            counter._clear()  # pylint: disable-msg=protected-access
+            counter._clear()  # pylint: disable=protected-access

@@ -234,7 +234,7 @@ def count_stats(handler):
         # Record response bytes out.
         if handler.response and handler.response.content_length:
             HTTP_BYTES_OUT.inc(handler.response.content_length)
-    except Exception as e:  # pylint: disable-msg=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         logging.error(
             'Failed to count_stats(): %s\n%s', e, traceback.format_exc())
 
@@ -521,7 +521,7 @@ class CourseIndex(object):
         if path in ['/', '']:
             return None
         _parts = path.split('/')
-        assert _parts[0] == ''  # pylint: disable-msg=g-explicit-bool-comparison
+        assert _parts[0] == ''  # pylint: disable=g-explicit-bool-comparison
         _parts.pop(0)
         return _parts
 
@@ -531,7 +531,7 @@ class CourseIndex(object):
         if path in ['/', '']:
             return True, None
         _parts = path.split('/')
-        if _parts[0] != '':  # pylint: disable-msg=g-explicit-bool-comparison
+        if _parts[0] != '':  # pylint: disable=g-explicit-bool-comparison
             return False, None
         _parts.pop(0)
         return True, _parts
@@ -790,7 +790,7 @@ class ApplicationContext(object):
             translator = i18n.get_i18n()
             translator.set_locale(self.get_current_locale())
             return translator.gettext(text)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             logging.exception('Unable to translate %s', text)
             return text
 
@@ -941,12 +941,12 @@ def _build_course_list_from(rules_text, create_vfs=True):
         # validate folder name
         if parts[2]:
             folder = parts[2]
-            # pylint: disable-msg=g-long-lambda
+            # pylint: disable=g-long-lambda
             create_fs = lambda unused_ns: LocalReadOnlyFileSystem(
                 logical_home_folder=folder)
         else:
             folder = '/'
-            # pylint: disable-msg=g-long-lambda
+            # pylint: disable=g-long-lambda
             create_fs = lambda ns: DatastoreBackedFileSystem(
                 ns=ns,
                 logical_home_folder=appengine_config.BUNDLE_ROOT,
@@ -997,14 +997,14 @@ def get_course_index(rules_text=None):
 
     rules_text = rules_text.replace(',', '\n')
 
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     course_index = ApplicationContext._COURSE_INDEX_CACHE.get(rules_text)
     if course_index:
         return course_index
 
     course_index = CourseIndex(_build_course_list_from(rules_text))
 
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     ApplicationContext._COURSE_INDEX_CACHE = {rules_text: course_index}
     return course_index
 
@@ -1040,7 +1040,7 @@ def _courses_config_validator(rules_text, errors, expect_failures=True):
         _validate_appcontext_list(
             _build_course_list_from(rules_text, create_vfs=False))
         return True
-    except Exception as e:  # pylint: disable-msg=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         if not expect_failures:
             logging.error('%s\n%s', e, traceback.format_exc())
         errors.append(str(e))
@@ -1127,7 +1127,7 @@ def add_new_course_entry(unique_name, title, admin_email, errors):
     raw = 'course:/%s::ns_%s' % (unique_name, unique_name)
     try:
         get_all_courses(rules_text=raw)
-    except Exception as e:  # pylint: disable-msg=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         errors.append('Failed to add entry: %s.\n%s' % (raw, e))
     if errors:
         return
@@ -1557,7 +1557,7 @@ def build_index_for_rules_text(rules_text):
 
 
 def test_get_course_for_path_impl():
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     courses, index = build_index_for_rules_text('course:/::ns_x')
     expected = {None: courses[0]}
     assert expected == index._slug_parts2app_context
@@ -1605,7 +1605,7 @@ def test_get_course_for_path_impl():
     try:
         courses, index = build_index_for_rules_text(
             'course:/a::ns_x\ncourse:/a/b::ns_y')
-    except Exception as e:  # pylint: disable-msg=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         assert 'reorder course entries' in e.message
 
     courses, index = build_index_for_rules_text(
@@ -1618,7 +1618,7 @@ def test_get_course_for_path_impl():
         assert courses[1] == get_course_for_path(path)
     for path in ['/', '/course', '/b']:
         assert not get_course_for_path(path)
-    # pylint: enable-msg=protected-access
+    # pylint: enable=protected-access
 
 
 def test_get_course_for_path():

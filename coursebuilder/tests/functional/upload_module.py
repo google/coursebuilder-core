@@ -32,11 +32,11 @@ class TextFileUploadHandlerTestCase(actions.TestBase):
     """Tests for TextFileUploadHandler."""
 
     # Name inherited from parent.
-    # pylint: disable-msg=g-bad-name
+    # pylint: disable=g-bad-name
     # Treating code under test as module-protected.
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     # Don't write repetative docstrings for well-named tests.
-    # pylint: disable-msg=g-missing-docstring
+    # pylint: disable=g-missing-docstring
     def setUp(self):
         super(TextFileUploadHandlerTestCase, self).setUp()
         self.contents = 'contents'

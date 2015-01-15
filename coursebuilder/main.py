@@ -21,7 +21,7 @@ import os
 import webapp2
 
 # The following import is needed in order to add third-party libraries.
-import appengine_config  # pylint: disable-msg=unused-import
+import appengine_config  # pylint: disable=unused-import
 
 from controllers import sites
 from models import analytics
@@ -51,9 +51,9 @@ app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 # enable Appstats handlers if requested
 appstats_routes = []
 if appengine_config.gcb_appstats_enabled():
-    # pylint: disable-msg=g-import-not-at-top
+    # pylint: disable=g-import-not-at-top
     import google.appengine.ext.appstats.ui as appstats_ui
-    # pylint: enable-msg=g-import-not-at-top
+    # pylint: enable=g-import-not-at-top
 
     # add all Appstats URL's to /admin/stats basepath
     for path, handler in appstats_ui.URLMAP:

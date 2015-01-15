@@ -176,10 +176,10 @@ def get_locale_filtered_announcement_list(course):
     # not just locale.
     announcement_list = (
         announcements.AnnouncementEntity.get_announcements())
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     return models.LabelDAO._apply_locale_labels_to_locale(
         course.app_context.get_current_locale(), announcement_list)
-    # pylint: enable-msg=protected-access
+    # pylint: enable=protected-access
 
 
 class Resource(object):
@@ -204,7 +204,7 @@ class Resource(object):
 
     @classmethod
     def generate_all(
-        cls, course, timestamps):  # pylint: disable-msg=unused-argument
+        cls, course, timestamps):  # pylint: disable=unused-argument
         """A generator returning objects of type cls in the course.
 
         This generator should yield resources based on the last indexed time in
@@ -221,7 +221,7 @@ class Resource(object):
         # implementations in subclasses must also be generators for memory-
         # management reasons.
         return
-        yield  # pylint: disable-msg=unreachable
+        yield  # pylint: disable=unreachable
 
     @classmethod
     def _get_doc_id(cls, *unused_vargs):

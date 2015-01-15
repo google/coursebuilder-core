@@ -166,7 +166,7 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
     @classmethod
     def _collect_blobstore_paths(cls, root_key):
         paths = set()
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         for model, field_name in ((pipeline_models._SlotRecord, 'value'),
                                   (pipeline_models._PipelineRecord, 'params')):
             prev_cursor = None
@@ -246,7 +246,7 @@ class CronMapreduceCleanupHandler(utils.BaseHandler):
                             # Pipeline cleanup, oddly, does not go clean up
                             # relevant blobstore items.  They have a TODO,
                             # but it has not been addressed as of Sep 2014.
-                            # pylint: disable-msg=protected-access
+                            # pylint: disable=protected-access
                             root_key = db.Key.from_path(
                                 pipeline_models._PipelineRecord.kind(),
                                 pipeline_id)

@@ -30,7 +30,7 @@ from models import config
 from google.appengine.api import users
 
 try:
-    # pylint: disable-msg=g-import-not-at-top
+    # pylint: disable=g-import-not-at-top
     from Crypto.Cipher import AES
 except ImportError:
     if appengine_config.PRODUCTION_MODE:

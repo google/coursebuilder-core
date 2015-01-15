@@ -119,9 +119,9 @@ def webapp_add_wsgi_middleware(app):
     """Enable AppStats if requested."""
     if gcb_appstats_enabled():
         logging.info('Enabling AppStats.')
-        # pylint: disable-msg=g-import-not-at-top
+        # pylint: disable=g-import-not-at-top
         from google.appengine.ext.appstats import recording
-        # pylint: enable-msg=g-import-not-at-top
+        # pylint: enable=g-import-not-at-top
         app = recording.appstats_wsgi_middleware(app)
     return app
 
@@ -139,7 +139,7 @@ def _import_and_enable_modules(env_var, reraise=False):
             if option is 'enabled':
                 operation = 'enabling'
                 custom_module.enable()
-        except Exception, ex:  # pylint: disable-msg=broad-except
+        except Exception, ex:  # pylint: disable=broad-except
             logging.exception('Problem %s module "%s"', operation, module_name)
             if reraise:
                 raise ex
@@ -196,13 +196,13 @@ def timeandlog(name, duration_only=False):
 def log_appstats_event(label, data=None):
     if gcb_appstats_enabled():
         try:
-            # pylint: disable-msg=g-import-not-at-top
+            # pylint: disable=g-import-not-at-top
             from google.appengine.ext.appstats.recording import recorder_proxy
-            # pylint: enable-msg=g-import-not-at-top
+            # pylint: enable=g-import-not-at-top
             if recorder_proxy and (
                 recorder_proxy.has_recorder_for_current_request()):
                 recorder_proxy.record_custom_event(label=label, data=data)
-        except Exception:  # pylint: disable-msg=broad-except
+        except Exception:  # pylint: disable=broad-except
             logging.exception('Failed to record Appstats event %s.', label)
 
 

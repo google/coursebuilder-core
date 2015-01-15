@@ -27,7 +27,7 @@ from modules.mapreduce import mapreduce_module
 
 def _generate_display_html(template_renderer, xsrf, app_context,
                            visualizations):
-    # Package-protected: pylint: disable-msg=protected-access
+    # Package-protected: pylint: disable=protected-access
 
     # First, load jobs for all generators required for an visualization.
     # Jobs may directly contain small results, just hold references to
@@ -211,7 +211,7 @@ def _generate_data_source_script(template_renderer, visualizations, xsrf):
 
     # Build list of {data source name, [dependent visualization names]}
     display_rest_sources = {}
-    # pylint: disable-msg=protected-access
+    # pylint: disable=protected-access
     for rdsc in analytics_utils._rest_data_source_classes(visualizations):
         v_names = []
         for v in visualizations:

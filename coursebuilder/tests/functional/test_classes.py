@@ -114,7 +114,7 @@ class InfrastructureTest(actions.TestBase):
     """Test core infrastructure classes agnostic to specific user roles."""
 
     def test_fs_cleaned_up_when_memcache_begin_or_end_asserts(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
         try:
             for method in [
@@ -139,7 +139,7 @@ class InfrastructureTest(actions.TestBase):
             del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
 
     def test_memcache_begin_end_reentrancy(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
         try:
             self.assertEquals(None, models.MemcacheManager._LOCAL_CACHE)
@@ -163,7 +163,7 @@ class InfrastructureTest(actions.TestBase):
             del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
 
     def test_memcache_fails_missmatched_begin_end(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
         models.MemcacheManager.begin_readonly()
         models.MemcacheManager.set('a', 'aaa')
@@ -174,7 +174,7 @@ class InfrastructureTest(actions.TestBase):
         del config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name]
 
     def test_memcache_can_be_cleared_if_end_readonly_is_not_called(self):
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = True
         models.MemcacheManager.begin_readonly()
         models.MemcacheManager.set('a', 'aaa')
@@ -639,7 +639,7 @@ class InfrastructureTest(actions.TestBase):
         # Clean up.
         sites.reset_courses()
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_unit_lesson_not_available(self):
         """Tests that unavailable units and lessons behave correctly."""
 
@@ -807,7 +807,7 @@ class InfrastructureTest(actions.TestBase):
 
             actions.logout()
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_custom_assessments(self):
         """Tests that custom assessments are evaluated correctly."""
 
@@ -1443,7 +1443,7 @@ class AdminAspectTest(actions.TestBase):
 class CourseAuthorAspectTest(actions.TestBase):
     """Tests the site from the Course Author perspective."""
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_dashboard(self):
         """Test course dashboard."""
 
@@ -2389,7 +2389,7 @@ class ActivityTest(actions.TestBase):
         finally:
             namespace_manager.set_namespace(old_namespace)
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_progress(self):
         """Test student activity progress in detail, using the sample course."""
 
@@ -2537,7 +2537,7 @@ class AssessmentTest(actions.TestBase):
         assert_contains('70', response.body)
         assert_contains('100', response.body)
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_assessments(self):
         """Test assessment scores are properly submitted and summarized."""
 
@@ -2631,7 +2631,7 @@ class AssessmentTest(actions.TestBase):
             # pylint: disable=g-explicit-bool-comparison
             assert [] == answers['Mid']
             assert [] == answers['Fin']
-            # pylint: enable-msg=g-explicit-bool-comparison
+            # pylint: enable=g-explicit-bool-comparison
 
             # Check that scores are recorded properly.
             student = models.Student.get_enrolled_student_by_email(email)
@@ -3160,7 +3160,7 @@ class DatastoreBackedCourseTest(actions.TestBase):
 class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
     """Prepares a sample course running on datastore-backed file system."""
 
-    # pylint: disable-msg=too-many-statements
+    # pylint: disable=too-many-statements
     def test_course_import(self):
         """Test importing of the course."""
 

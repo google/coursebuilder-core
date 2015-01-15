@@ -288,7 +288,7 @@ custom_module = None
 def register_module():
     """Registers this module in the registry."""
 
-    from controllers import sites  # pylint: disable-msg=g-import-not-at-top
+    from controllers import sites  # pylint: disable=g-import-not-at-top
 
     yui_handlers = [
         ('/static/inputex-3.1.0/(.*)', sites.make_zip_handler(

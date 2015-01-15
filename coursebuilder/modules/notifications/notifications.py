@@ -165,7 +165,7 @@ COUNTER_SEND_MAIL_TASK_SUCCESS = counters.PerfCounter(
 
 
 # TODO(johncox): remove suppression once stubs are implemented.
-# pylint: disable-msg=unused-argument
+# pylint: disable=unused-argument
 
 
 def _dt_to_epoch_usec(dt):
@@ -277,7 +277,7 @@ class Status(object):
   def from_notification(cls, notification):
     state = cls.PENDING
 
-    # Treating as module-protected. pylint: disable-msg=protected-access
+    # Treating as module-protected. pylint: disable=protected-access
     if notification._fail_date:
       state = cls.FAILED
     elif notification._done_date:
@@ -318,7 +318,7 @@ def _accumulate_statuses(notification, results):
 class Manager(object):
   """Manages state and operation of the notifications subsystem."""
 
-  # Treating access as module-protected. pylint: disable-msg=protected-access
+  # Treating access as module-protected. pylint: disable=protected-access
 
   @classmethod
   def query(cls, to, intent):
@@ -494,7 +494,7 @@ class Manager(object):
             policy=policy
         )
         COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
-      # Must be vague. pylint: disable-msg=broad-except
+      # Must be vague. pylint: disable=broad-except
       except Exception, e:
         _LOG.error(
             cls._get_record_failure_error_message(notification, payload, e)
@@ -512,7 +512,7 @@ class Manager(object):
           payload.body
       )
       sent = True
-    # Must be vague. pylint: disable-msg=broad-except
+    # Must be vague. pylint: disable=broad-except
     except Exception, exception:
       failed_permanently = cls._is_send_mail_error_permanent(exception)
 
@@ -522,7 +522,7 @@ class Manager(object):
           COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_CALLED.inc()
           cls._record_failure(notification, payload, exception)
           COUNTER_SEND_MAIL_TASK_RECORD_FAILURE_SUCCESS.inc()
-        # Must be vague. pylint: disable-msg=broad-except
+        # Must be vague. pylint: disable=broad-except
         except Exception, e:
           _LOG.error(
               cls._get_record_failure_error_message(
@@ -537,7 +537,7 @@ class Manager(object):
         )
         COUNTER_SEND_MAIL_TASK_FAILED.inc()
 
-        # Set by except: clause above. pylint: disable-msg=raising-bad-type
+        # Set by except: clause above. pylint: disable=raising-bad-type
         raise exception
 
     if sent:
@@ -938,7 +938,7 @@ def register_module():
 
   global custom_module
 
-  # Avert circular dependency. pylint: disable-msg=g-import-not-at-top
+  # Avert circular dependency. pylint: disable=g-import-not-at-top
   from modules.notifications import cron
   from modules.notifications import stats
 

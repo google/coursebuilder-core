@@ -169,7 +169,7 @@ class Registry(object):
 
         registry = copy.deepcopy(self)
         def delete_all_but(registry, node):
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             # Copy so deleting does not wreck iterator.
             for prop in copy.copy(registry._properties):
                 if prop.name not in node:
@@ -288,9 +288,9 @@ class FieldArray(SchemaField):
 
     def _get_schema_dict(self, prefix_key):
         dict_list = super(FieldArray, self)._get_schema_dict(prefix_key)
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         dict_list += self._item_type._get_schema_dict(prefix_key + ['items'])
-        # pylint: enable-msg=protected-access
+        # pylint: enable=protected-access
         return dict_list
 
 
@@ -334,20 +334,20 @@ class FieldRegistry(Registry):
         base_key = list(prefix_key)
         base_key.append('properties')
 
-        # pylint: disable-msg=protected-access
+        # pylint: disable=protected-access
         for schema_field in self._properties:
             key = base_key + [schema_field.name]
             schema_dict += schema_field._get_schema_dict(key)
-        # pylint: enable-msg=protected-access
+        # pylint: enable=protected-access
 
         for key in self._sub_registries.keys():
             sub_registry_key_prefix = list(base_key)
             sub_registry_key_prefix.append(key)
             sub_registry = self._sub_registries[key]
-            # pylint: disable-msg=protected-access
+            # pylint: disable=protected-access
             for entry in sub_registry._get_schema_dict(sub_registry_key_prefix):
                 schema_dict.append(entry)
-            # pylint: enable-msg=protected-access
+            # pylint: enable=protected-access
         return schema_dict
 
     def get_schema_dict(self):

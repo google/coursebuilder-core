@@ -293,7 +293,7 @@ class InvokeExistingUnitTest(suite.TestBase):
             courses.deep_dict_merge(real_values, default_values))
 
     def test_app_context_equals(self):
-        # pylint: disable-msg=g-equals-none
+        # pylint: disable=g-equals-none
 
         app_context_a = sites.ApplicationContext(
             'course', '/slug_a', '/', 'ns_a', None)

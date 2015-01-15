@@ -133,7 +133,7 @@ def _build_decorator():
                 'https://www.googleapis.com/auth/userinfo.profile',
             ],
             message='client_secrets.json missing')
-    # Deliberately catch everything. pylint: disable-msg=broad-except
+    # Deliberately catch everything. pylint: disable=broad-except
     except Exception as e:
         display_error = (
             'oauth2 module enabled, but unable to load client_secrets.json. '

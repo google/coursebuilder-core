@@ -885,7 +885,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         return course_list
 
     @classmethod
-    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable-msg=g-bad-name
+    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable=g-bad-name
         """Schema annotations are dynamic and include a list of courses."""
         course_list = cls._get_course_list()
         if not course_list:
@@ -946,7 +946,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         errors = []
         try:
             course.import_from(source, errors)
-        except Exception as e:  # pylint: disable-msg=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             logging.exception(e)
             errors.append('Import failed: %s' % e)
 

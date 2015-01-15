@@ -105,7 +105,7 @@ class MemcacheManager(object):
     def _is_same_app_context_if_set(cls):
         if cls._READONLY_APP_CONTEXT is None:
             return True
-        # pylint: disable-msg=g-import-not-at-top
+        # pylint: disable=g-import-not-at-top
         from controllers import sites
         app_context = sites.get_course_for_current_request()
         return cls._READONLY_APP_CONTEXT == app_context
@@ -118,7 +118,7 @@ class MemcacheManager(object):
 
     @classmethod
     def _fs_begin_readonly(cls):
-        # pylint: disable-msg=g-import-not-at-top
+        # pylint: disable=g-import-not-at-top
         from controllers import sites
         cls._READONLY_APP_CONTEXT = sites.get_course_for_current_request()
         if cls._READONLY_APP_CONTEXT:
@@ -290,7 +290,7 @@ class MemcacheManager(object):
                     _namespace = cls._get_namespace(namespace)
                     memcache.set(key, value, ttl, namespace=_namespace)
                     cls._local_cache_put(key, _namespace, value)
-        except:  # pylint: disable-msg=bare-except
+        except:  # pylint: disable=bare-except
             logging.exception(
                 'Failed to set: %s, %s', key, cls._get_namespace(namespace))
             return None
@@ -312,7 +312,7 @@ class MemcacheManager(object):
                     _namespace = cls._get_namespace(namespace)
                     memcache.set_multi(mapping, time=ttl, namespace=_namespace)
                     cls._local_cache_put_multi(mapping, _namespace)
-        except:  # pylint: disable-msg=bare-except
+        except:  # pylint: disable=bare-except
             logging.exception(
                 'Failed to set_multi: %s, %s',
                 mapping, cls._get_namespace(namespace))
@@ -679,7 +679,7 @@ class StudentProfileDAO(object):
                 course_info is None):
 
             # Defer to avoid circular import.
-            # pylint: disable-msg=g-import-not-at-top
+            # pylint: disable=g-import-not-at-top
             from controllers import sites
             course = sites.get_course_for_current_request()
             course_namespace = course.get_namespace_name()
@@ -776,7 +776,7 @@ class StudentProfileDAO(object):
 
         try:
             cls._send_welcome_notification(handler, student)
-        except Exception, e:  # On purpose. pylint: disable-msg=broad-except
+        except Exception, e:  # On purpose. pylint: disable=broad-except
             logging.error(
                 'Unable to send welcome notification; error was: ' + str(e))
 
@@ -1894,7 +1894,7 @@ class LabelManager(caching.RequestScopedSingleton):
 
     @classmethod
     def get_all(cls):
-      # pylint: disable-msg=protected-access
+      # pylint: disable=protected-access
       return cls.instance()._get_all()
 
 

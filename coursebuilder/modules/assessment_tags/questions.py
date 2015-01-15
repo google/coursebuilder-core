@@ -56,7 +56,7 @@ def render_question(
     """
     try:
         question_dto = m_models.QuestionDAO.load(quid)
-    except Exception:  # pylint: disable-msg=broad-except
+    except Exception:  # pylint: disable=broad-except
         logging.exception('Invalid question: %s', quid)
         return '[Invalid question]'
 

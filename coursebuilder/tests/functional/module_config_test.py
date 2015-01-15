@@ -189,28 +189,28 @@ class ModuleManifestTest(TestWithTempDir):
         with open(self._manifest_path, 'w') as fp:
             fp.write('foo: bar\n')
         with self.assertRaises(KeyError):
-            # pylint: disable-msg=expression-not-assigned
+            # pylint: disable=expression-not-assigned
             yaml_files.ModuleManifest(self._manifest_path).module_name
 
     def test_module_name_must_name_full_python_module(self):
         with open(self._manifest_path, 'w') as fp:
             fp.write('module_name: bar\n')
         with self.assertRaises(ValueError):
-            # pylint: disable-msg=expression-not-assigned
+            # pylint: disable=expression-not-assigned
             yaml_files.ModuleManifest(self._manifest_path).module_name
 
     def test_module_name_must_start_with_modules(self):
         with open(self._manifest_path, 'w') as fp:
             fp.write('module_name: bar.baz\n')
         with self.assertRaises(ValueError):
-            # pylint: disable-msg=expression-not-assigned
+            # pylint: disable=expression-not-assigned
             yaml_files.ModuleManifest(self._manifest_path).module_name
 
     def test_manifest_must_have_container_version(self):
         with open(self._manifest_path, 'w') as fp:
             fp.write('module_name: modules.bar.bar_module\n')
         with self.assertRaises(KeyError):
-            # pylint: disable-msg=expression-not-assigned
+            # pylint: disable=expression-not-assigned
             yaml_files.ModuleManifest(self._manifest_path).module_name
 
     def test_manifest_must_have_tests(self):
@@ -220,7 +220,7 @@ class ModuleManifestTest(TestWithTempDir):
                 'container_version: 1.3\n'
                 )
         with self.assertRaises(KeyError):
-            # pylint: disable-msg=expression-not-assigned
+            # pylint: disable=expression-not-assigned
             yaml_files.ModuleManifest(self._manifest_path).module_name
 
     def test_minimal_manifest(self):
