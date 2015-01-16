@@ -514,12 +514,18 @@ function setUpFiltering() {
 }
 
 function setUpCoursePicker(){
-  $('#gcb-course-picker').bind('change', function () {
-      var url = $(this).val();
-      if (url) {
-          window.location = url;
-      }
-      return false;
+  $('#gcb-course-picker').click(function () {
+    $('#gcb-course-picker-menu')
+        .toggleClass('hidden')
+        .css('top', $('table.gcb-nav-bar tr:first-child').height())
+        .css('min-width',
+            $('table.gcb-nav-bar tr:first-child td:first-child').outerWidth());
+    return false;
+  });
+  $(document.body).click(function(evt) {
+    if ($(evt.target).closest('ol.gcb-course-picker').length == 0) {
+      $('#gcb-course-picker-menu').addClass('hidden');
+    }
   });
 }
 

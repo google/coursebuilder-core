@@ -32,15 +32,30 @@
     {% endif %}
   </head>
   <body>
-  <div id='gcb-user-bar'>
-    {{ user_nav }}
-  </div>
-  <h2>{{ breadcrumbs }}</h2>
-  {% for nav in top_nav %}
-    <div class='gcb-nav-bar gcb-nav-bar-level-{{ loop.index }}'>
-      {{ nav }}
-    </div>
-  {% endfor %}
+  <table class="gcb-nav-bar">
+    {% for nav in top_nav %}
+      <tr class="gcb-nav-bar-level-{{ loop.index }}">
+        {% if loop.index == 1 %}
+          <td class="gcb-nav-bar-extras">
+            {% if course_title %}
+              <a id="gcb-course-picker" href="#">
+                <span>Course Builder: </span>
+                <span class="course-title">{{ course_title }}</span>
+                <span class="down-arrow"></span>
+              </a>
+            {% else %}
+              Course Builder
+            {% endif %}
+          </td>
+          <td class="gcb-nav-bar-links">{{ nav }}</td>
+          <td class="gcb-nav-bar-extras">{{ user_nav }}</td>
+        {% else %}
+          <td class="gcb-nav-bar-links" colspan="3">{{ nav }}</td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+  </table>
+  {{ course_picker }}
   <div id='gcb-main-area'>
     <!-- ButterBar -->
     <div class="gcb-butterbar-container">

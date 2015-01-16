@@ -1021,7 +1021,7 @@ class AdminPage(PageObject):
 
     def click_settings(self):
         sub_nav_bar = self._tester.driver.find_element_by_css_selector(
-            'div.gcb-nav-bar-level-2')
+            '.gcb-nav-bar-level-2')
         sub_nav_bar.find_element_by_link_text('Site Settings').click()
         return AdminSettingsPage(self._tester)
 

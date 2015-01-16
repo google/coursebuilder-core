@@ -46,7 +46,7 @@ class AdminDashboardTabTests(actions.TestBase):
 
     def get_nav_bar(self, dom, level=1):
         return dom.find(
-            './/div[@class="gcb-nav-bar gcb-nav-bar-level-%s"]' % level)
+            './/tr[@class="gcb-nav-bar-level-%s"]' % level)
 
     def test_admin_tab_not_present_for_non_admin(self):
         actions.login(self.ADMIN_EMAIL, is_admin=False)
@@ -74,4 +74,4 @@ class AdminDashboardTabTests(actions.TestBase):
         dom = self.parse_html_string(self.get('admin?action=admin').body)
         self.assertEqual(
             'Site Admin',
-            self.get_nav_bar(dom).find('./a[@class="selected"]').text)
+            self.get_nav_bar(dom).find('.//a[@class="selected"]').text)

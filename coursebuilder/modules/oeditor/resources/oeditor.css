@@ -81,14 +81,13 @@ div.question-group-items a {
   width: auto;
   background-color: #666;
   color: #FFFFFF;
-  padding: 4px;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding: 4px 12px;
   margin-left: 4px;
   margin-right: 4px;
-  font-weight: bold;
+  font-size: 12px;
   text-decoration: none;
   border: none;
+  border-radius: 3px;
   transition: background 200ms;
   -webkit-transition: background 200ms;
   -moz-transition: background 200ms;

@@ -286,6 +286,10 @@ class BaseAdminHandler(ConfigPropertyEditor):
         # Overrides method in DashboardHandler
         return self.can_view(self.ACTION)
 
+    def get_course_picker(self, destination=None):
+        return super(BaseAdminHandler, self).get_course_picker(
+            destination='/admin')
+
     def get_admin(self):
         """The main entry point to the admin console."""
         tab = tabs.Registry.get_tab(

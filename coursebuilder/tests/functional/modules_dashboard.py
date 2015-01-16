@@ -651,14 +651,14 @@ class DashboardAccessTestCase(actions.TestBase):
         return self.parse_html_string(
             self.get('/%s/dashboard' % self.ACCESS_COURSE_NAME).body
         ).findall(
-            './/select[@id="gcb-course-picker"]/option')
+            './/ol[@id="gcb-course-picker-menu"]/li/a')
 
     def test_course_picker(self):
         actions.login(self.USER_EMAIL, is_admin=False)
         picker_options = self._get_all_picker_options()
         self.assertEquals(len(list(picker_options)), 1)
         self.assertEquals(picker_options[0].get(
-            'value'), '/%s/dashboard' % self.ACCESS_COURSE_NAME)
+            'href'), '/%s/dashboard?action=outline' % self.ACCESS_COURSE_NAME)
         actions.logout()
 
         actions.login(self.ADMIN_EMAIL, is_admin=True)

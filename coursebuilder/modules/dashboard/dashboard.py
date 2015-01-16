@@ -375,10 +375,9 @@ class DashboardHandler(
 
     def render_page(self, template_values, in_action=None, in_tab=None):
         """Renders a page using provided template values."""
-        page_title_builder = template_values['page_title']
-        template_values['header_title'] = page_title_builder(False)
-        template_values['breadcrumbs'] = page_title_builder(True)
-
+        template_values['header_title'] = template_values['page_title']
+        template_values['course_picker'] = self.get_course_picker()
+        template_values['course_title'] = self.app_context.get_title()
         template_values['top_nav'] = self._get_top_nav(in_action, in_tab)
         template_values['gcb_course_base'] = self.get_base_href(self)
         template_values['user_nav'] = safe_dom.NodeList().append(
@@ -401,9 +400,16 @@ class DashboardHandler(
         self.response.write(
             self.get_template('view.html', []).render(template_values))
 
-    def get_course_picker(self):
-        destination = '/dashboard'
-        action = self.request.get('action')
+    def get_course_picker(self, destination=None):
+
+        destination = destination or '/dashboard'
+        action = self.request.get('action') or self.default_action
+
+        # disable picker if we are on the well known page; we dont want picked
+        # on pages where edits or creation of new object can get triggered
+        safe_action = action and action in [
+            a for a, _ in self.get_nav_mappings()] + ['admin']
+
         tab = self.request.get('tab')
         if action in self.get_actions:
             tab_group = tabs.Registry.get_tab_group(action)
@@ -411,29 +417,30 @@ class DashboardHandler(
                 tab = '&tab=%s' % tab
             else:
                 tab = ''
-            destination = '/dashboard?action=%s%s' % (action, tab)
+            destination = '%s?action=%s%s' % (destination, action, tab)
 
         current_course = sites.get_course_for_current_request()
         options = []
         for course in sorted(sites.get_all_courses()):
             with Namespace(course.namespace):
                 if self.current_user_has_access(course):
-                    url = course.canonicalize_url(destination)
+                    url = (
+                        course.canonicalize_url(destination) if safe_action
+                        else 'javascript:void(0)')
                     title = '%s (%s)' % (course.get_title(), course.get_slug())
-                    option = safe_dom.Element(
-                        'option', value=url).add_text(title)
+                    option = safe_dom.Element('li')
+                    link = safe_dom.A(url).add_text(title)
                     if current_course == course:
-                        option.set_attribute('selected', '')
+                        link.set_attribute('class', 'selected')
+                    option.add_child(link)
                     options.append((course.get_title(), option))
 
-        picker = safe_dom.Element('select', id='gcb-course-picker')
-
-        # disable picker if we are on the well known page; we dont want picked
-        # on pages where edits or creation of new object can get triggered
-        safe_action = action and action in [
-            action for action, _ in self.get_nav_mappings()] + ['admin']
+        picker_class_name = 'hidden'
         if not safe_action:
-            picker.set_attribute('disabled', 'True')
+            picker_class_name += ' disabled'
+
+        picker = safe_dom.Element(
+            'ol', id='gcb-course-picker-menu', className=picker_class_name)
 
         for title, option in sorted(
             options, key=lambda item: item[0].lower()):
@@ -441,20 +448,12 @@ class DashboardHandler(
         return picker
 
     def format_title(self, text):
-        """Makes a closure of a title, allowing flexible rendering later."""
-        return lambda picker: self.format_title_ex(text, picker=picker)
-
-    def format_title_ex(self, text, picker=False):
         """Formats standard title with or without course picker."""
-        title = self.app_context.get_environ()['course']['title']
         ret = safe_dom.NodeList()
         cb_text = 'Course Builder '
         ret.append(safe_dom.Text(cb_text))
         ret.append(safe_dom.Entity('&gt;'))
-        if picker:
-            ret.append(self.get_course_picker())
-        else:
-            ret.append(safe_dom.Text(' %s ' % title))
+        ret.append(safe_dom.Text(' %s ' % self.app_context.get_title()))
         ret.append(safe_dom.Entity('&gt;'))
         dashboard_text = ' Dashboard '
         ret.append(safe_dom.Text(dashboard_text))
