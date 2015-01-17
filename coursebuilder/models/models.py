@@ -105,7 +105,6 @@ class MemcacheManager(object):
     def _is_same_app_context_if_set(cls):
         if cls._READONLY_APP_CONTEXT is None:
             return True
-        # pylint: disable=g-import-not-at-top
         from controllers import sites
         app_context = sites.get_course_for_current_request()
         return cls._READONLY_APP_CONTEXT == app_context
@@ -118,7 +117,6 @@ class MemcacheManager(object):
 
     @classmethod
     def _fs_begin_readonly(cls):
-        # pylint: disable=g-import-not-at-top
         from controllers import sites
         cls._READONLY_APP_CONTEXT = sites.get_course_for_current_request()
         if cls._READONLY_APP_CONTEXT:
@@ -679,7 +677,6 @@ class StudentProfileDAO(object):
                 course_info is None):
 
             # Defer to avoid circular import.
-            # pylint: disable=g-import-not-at-top
             from controllers import sites
             course = sites.get_course_for_current_request()
             course_namespace = course.get_namespace_name()

@@ -57,7 +57,6 @@ class MockStudent(entities.BaseEntity):
 class BaseEntityTestCase(actions.TestBase):
 
     # Disable complaints about docstrings for self-documenting tests.
-    # pylint: disable=g-missing-docstring
     def test_for_export_returns_populated_export_entity_with_key(self):
         first_kept = 'first_kept'
         second_kept = 'second_kept'
@@ -115,7 +114,6 @@ class BaseEntityTestCase(actions.TestBase):
 
 class ExportEntityTestCase(actions.TestBase):
 
-    # Name determined by parent. pylint: disable=g-bad-name
     def setUp(self):
         super(ExportEntityTestCase, self).setUp()
         self.entity = entities.ExportEntity(safe_key='foo')

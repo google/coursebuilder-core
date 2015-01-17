@@ -28,7 +28,6 @@ class CommonUnitTests(unittest.TestCase):
 
     # --------------------------- String-to-list.
     def test_list_parsing(self):
-        # pylint: disable=protected-access
         self.assertListEqual(['foo'], utils.text_to_list('foo'))
         self.assertListEqual(['foo'], utils.text_to_list(' foo'))
         self.assertListEqual(['foo'], utils.text_to_list('foo '))

@@ -597,7 +597,7 @@ def test_activity_ast():
         current_ast.get('activity') == expected_ast.get('activity') and
         current_ast == expected_ast)
     if not same:
-        import pprint  # # pylint: disable=g-import-not-at-top
+        import pprint
         pprint.pprint(current_ast.get('activity'))
         pprint.pprint(expected_ast.get('activity'))
     assert same
@@ -645,7 +645,7 @@ def test_assessment_ast():
         current_ast.get('assessment') == expected_ast.get('assessment') and
         current_ast == expected_ast)
     if not same:
-        import pprint  # # pylint: disable=g-import-not-at-top
+        import pprint
         pprint.pprint(current_ast.get('assessment'))
         pprint.pprint(expected_ast.get('assessment'))
     assert same

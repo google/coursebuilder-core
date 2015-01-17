@@ -42,9 +42,6 @@ GCB_INCLUDE = (PRE_INCLUDE +
                POST_INCLUDE)
 LESSON_URL = '/test_course/unit?unit=1&lesson=2'
 
-# Allow access to protected code under test.
-# pylint: disable=protected-access
-
 
 class GoogleDriveTestBase(actions.TestBase):
 

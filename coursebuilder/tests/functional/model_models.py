@@ -29,9 +29,6 @@ from tests.functional import actions
 
 from google.appengine.ext import db
 
-# Disable complaints about docstrings for self-documenting tests.
-# pylint: disable=g-missing-docstring
-
 
 class EventEntityTestCase(actions.ExportTestBase):
 
@@ -48,9 +45,6 @@ class EventEntityTestCase(actions.ExportTestBase):
 
 class ContentChunkTestCase(actions.ExportTestBase):
     """Tests ContentChunkEntity|DAO|DTO."""
-
-    # Allow access to protected members under test.
-    # pylint: disable=protected-access
 
     def setUp(self):
         super(ContentChunkTestCase, self).setUp()
@@ -423,7 +417,6 @@ class BaseJsonDaoTestCase(actions.TestBase):
 class QuestionDAOTestCase(actions.TestBase):
     """Functional tests for QuestionDAO."""
 
-    # Name determined by parent. pylint: disable=g-bad-name
     def setUp(self):
         """Sets up datastore contents."""
         super(QuestionDAOTestCase, self).setUp()
@@ -513,8 +506,6 @@ class StudentTestCase(actions.ExportTestBase):
 
 
 class StudentProfileDAOTestCase(actions.ExportTestBase):
-
-    # Allow tests of protected state. pylint: disable=protected-access
 
     def test_can_send_welcome_notifications_false_if_config_value_false(self):
         self.swap(services.notifications, 'enabled', lambda: True)

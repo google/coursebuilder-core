@@ -119,9 +119,7 @@ def webapp_add_wsgi_middleware(app):
     """Enable AppStats if requested."""
     if gcb_appstats_enabled():
         logging.info('Enabling AppStats.')
-        # pylint: disable=g-import-not-at-top
         from google.appengine.ext.appstats import recording
-        # pylint: enable=g-import-not-at-top
         app = recording.appstats_wsgi_middleware(app)
     return app
 
@@ -196,9 +194,7 @@ def timeandlog(name, duration_only=False):
 def log_appstats_event(label, data=None):
     if gcb_appstats_enabled():
         try:
-            # pylint: disable=g-import-not-at-top
             from google.appengine.ext.appstats.recording import recorder_proxy
-            # pylint: enable=g-import-not-at-top
             if recorder_proxy and (
                 recorder_proxy.has_recorder_for_current_request()):
                 recorder_proxy.record_custom_event(label=label, data=data)

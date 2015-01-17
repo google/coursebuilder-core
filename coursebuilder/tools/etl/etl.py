@@ -926,7 +926,6 @@ def _set_env_vars_from_app_yaml():
     appengine_config.import_and_enable_modules() will work properly.
     """
 
-    # pylint: disable=g-import-not-at-top
     from google.appengine.api import appinfo_includes
     import appengine_config  # pylint: disable=redefined-outer-name
     cb_home = os.environ.get(
@@ -945,7 +944,7 @@ def _import_entity_modules():
     does not import all required classes, import them here explicitly.
     """
 
-    # pylint: disable=g-import-not-at-top,global-variable-not-assigned,
+    # pylint: disable=global-variable-not-assigned,
     # pylint: disable=redefined-outer-name,unused-variable
     try:
         import main
@@ -957,7 +956,7 @@ def _import_entity_modules():
 
 def _import_modules_into_global_scope():
     """Import helper; run after _set_up_sys_path() for imports to resolve."""
-    # pylint: disable=g-import-not-at-top,global-variable-not-assigned,
+    # pylint: disable=global-variable-not-assigned,
     # pylint: disable=redefined-outer-name,unused-variable
     global appengine_config
     global memcache

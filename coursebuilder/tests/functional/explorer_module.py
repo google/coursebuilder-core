@@ -33,14 +33,14 @@ from modules.course_explorer import student
 class BaseExplorerTest(actions.TestBase):
     """Base class for testing explorer pages."""
 
-    def setUp(self):  # pylint: disable=g-bad-name
+    def setUp(self):
         super(BaseExplorerTest, self).setUp()
         config.Registry.test_overrides[
             models.CAN_SHARE_STUDENT_PROFILE.name] = True
         config.Registry.test_overrides[
             course_explorer.GCB_ENABLE_COURSE_EXPLORER_PAGE.name] = True
 
-    def tearDown(self):  # pylint: disable=g-bad-name
+    def tearDown(self):
         config.Registry.test_overrides = {}
         super(BaseExplorerTest, self).tearDown()
 
@@ -284,7 +284,6 @@ class GlobalProfileTest(BaseExplorerTest):
         # Change name with overlong name should fail for str.
         response = self.get('/explorer/profile')
         assert_equals(response.status_int, 200)
-        # Constant is module-protected. pylint: disable=protected-access
         new_name = 'a' * (student._STRING_PROPERTY_MAX_BYTES + 1)
         response.form.set('name', new_name)
         response = response.form.submit(expect_errors=True)

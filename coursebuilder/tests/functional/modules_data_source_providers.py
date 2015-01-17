@@ -227,7 +227,6 @@ class StudentsTest(actions.TestBase):
             abs((expected_enrolled_on - actual_enrolled_on).total_seconds()), 1)
 
     def test_modified_blacklist_schema(self):
-        # pylint: disable=protected-access
         save_blacklist = models.Student._PROPERTY_EXPORT_BLACKLIST
         models.Student._PROPERTY_EXPORT_BLACKLIST = [
             'name',
@@ -245,7 +244,6 @@ class StudentsTest(actions.TestBase):
         models.Student._PROPERTY_EXPORT_BLACKLIST = save_blacklist
 
     def test_modified_blacklist_contents(self):
-        # pylint: disable=protected-access
         save_blacklist = models.Student._PROPERTY_EXPORT_BLACKLIST
         models.Student._PROPERTY_EXPORT_BLACKLIST = [
             'name',

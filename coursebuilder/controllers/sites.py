@@ -521,7 +521,7 @@ class CourseIndex(object):
         if path in ['/', '']:
             return None
         _parts = path.split('/')
-        assert _parts[0] == ''  # pylint: disable=g-explicit-bool-comparison
+        assert _parts[0] == ''
         _parts.pop(0)
         return _parts
 
@@ -531,7 +531,7 @@ class CourseIndex(object):
         if path in ['/', '']:
             return True, None
         _parts = path.split('/')
-        if _parts[0] != '':  # pylint: disable=g-explicit-bool-comparison
+        if _parts[0] != '':
             return False, None
         _parts.pop(0)
         return True, _parts
@@ -941,12 +941,10 @@ def _build_course_list_from(rules_text, create_vfs=True):
         # validate folder name
         if parts[2]:
             folder = parts[2]
-            # pylint: disable=g-long-lambda
             create_fs = lambda unused_ns: LocalReadOnlyFileSystem(
                 logical_home_folder=folder)
         else:
             folder = '/'
-            # pylint: disable=g-long-lambda
             create_fs = lambda ns: DatastoreBackedFileSystem(
                 ns=ns,
                 logical_home_folder=appengine_config.BUNDLE_ROOT,

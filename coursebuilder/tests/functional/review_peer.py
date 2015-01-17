@@ -25,9 +25,6 @@ from modules.review import peer
 from tests.functional import actions
 from google.appengine.ext import db
 
-# No docstrings on tests. pylint: disable=g-missing-docstring
-# Use mixedCase names from parent. pylint: disable=g-bad-name
-
 
 class ReviewStepTest(actions.ExportTestBase):
 

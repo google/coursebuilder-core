@@ -62,7 +62,6 @@ class CharacterDataSource(data_sources.AbstractDbTableRestDataSource):
 
 data_sources.Registry.register(CharacterDataSource)
 
-# pylint: disable=g-import-not-at-top,g-bad-import-order
 from tests.functional import actions
 
 

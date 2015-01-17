@@ -1059,7 +1059,7 @@ def register_module():
     """Registers this module in the registry."""
 
     # Avert circular dependency
-    from modules.review import cron  # pylint: disable=g-import-not-at-top
+    from modules.review import cron
 
     stats.register_analytic()
 

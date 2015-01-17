@@ -49,7 +49,6 @@ class TestJob(jobs.DurableJobBase):
     def force_start_job(self, sequence_num):
         with Namespace(self._namespace):
             db.run_in_transaction(
-                # pylint: disable=protected-access
                 jobs.DurableJobEntity._start_job, self._job_name,
                 sequence_num)
 
@@ -57,7 +56,6 @@ class TestJob(jobs.DurableJobBase):
         data = transforms.dumps(data)
         with Namespace(self._namespace):
             db.run_in_transaction(
-                # pylint: disable=protected-access
                 jobs.DurableJobEntity._complete_job, self._job_name,
                 sequence_num, data, duration)
 
@@ -65,7 +63,6 @@ class TestJob(jobs.DurableJobBase):
         data = transforms.dumps(data)
         with Namespace(self._namespace):
             db.run_in_transaction(
-                # pylint: disable=protected-access
                 jobs.DurableJobEntity._fail_job, self._job_name,
                 sequence_num, data, duration)
 

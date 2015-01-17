@@ -129,7 +129,7 @@ class ElementTests(unittest.TestCase):
         element = safe_dom.Element('a', action=None)
         self.assertEqual('<a action=""></a>', element.__str__())
 
-    def test_coerce_className(self):  # pylint: disable=g-bad-name
+    def test_coerce_className(self):
         """Element should replace the 'className' attrib with 'class'."""
         element = safe_dom.Element('p', className='foo')
         self.assertEqual('<p class="foo"></p>', element.__str__())

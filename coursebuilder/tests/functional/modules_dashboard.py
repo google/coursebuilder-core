@@ -484,12 +484,10 @@ class RoleEditorTestCase(actions.TestBase):
         self.old_namespace = namespace_manager.get_namespace()
         namespace_manager.set_namespace('ns_%s' % self.COURSE_NAME)
 
-        # pylint: disable=protected-access
         self.old_registered_permission = Roles._REGISTERED_PERMISSIONS
         Roles._REGISTERED_PERMISSIONS = {}
 
     def tearDown(self):
-        # pylint: disable=protected-access
         Roles._REGISTERED_PERMISSIONS = self.old_registered_permission
         namespace_manager.set_namespace(self.old_namespace)
         super(RoleEditorTestCase, self).tearDown()
@@ -509,7 +507,6 @@ class RoleEditorTestCase(actions.TestBase):
             'dashboard?action=edit_role&key=%s' % role_id))
 
     def test_editor_hooks(self):
-        # pylint: disable=g-long-lambda
         module1 = Module('module1', '', [], [])
         module2 = Module('module2', '', [], [])
         module3 = Module('module3', '', [], [])

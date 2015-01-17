@@ -133,7 +133,7 @@ class TestBase(suite.AppEngineTestBase):
 
     last_request_url = None
 
-    def getApp(self):  # pylint: disable=g-bad-name
+    def getApp(self):
         main.debug = True
         sites.ApplicationRequestHandler.bind(main.namespaced_routes)
         return main.app
@@ -146,7 +146,7 @@ class TestBase(suite.AppEngineTestBase):
     def get_auto_deploy(self):
         return True
 
-    def setUp(self):  # pylint: disable=g-bad-name
+    def setUp(self):
         super(TestBase, self).setUp()
 
         memcache.flush_all()
@@ -163,7 +163,7 @@ class TestBase(suite.AppEngineTestBase):
         # Reload all properties now to flush the values modified in other tests.
         config.Registry.get_overrides(True)
 
-    def tearDown(self):  # pylint: disable=g-bad-name
+    def tearDown(self):
         self.assert_default_namespace()
         sites.ApplicationContext.AUTO_DEPLOY_DEFAULT_COURSE = self.auto_deploy
         super(TestBase, self).tearDown()
@@ -326,7 +326,6 @@ class ExportTestBase(TestBase):
     """
 
     def assert_blacklisted_properties_removed(self, original_model, exported):
-        # Treating as module-protected. pylint: disable=protected-access
         for prop in original_model._get_export_blacklist():
             self.assertFalse(hasattr(exported, prop))
 

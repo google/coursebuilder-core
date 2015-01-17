@@ -25,7 +25,7 @@ import appengine_config
 # Override SERVER_SOFTWARE before doing any App Engine imports so import-time
 # detection of dev mode, done against SERVER_SOFTWARE of 'Development*', fails.
 # Once imports are done, this environment variable can be reset as needed (for
-# tests, etc.). pylint: disable=g-import-not-at-top
+# tests, etc.).
 SERVER_SOFTWARE = 'Production Emulation'
 if appengine_config.PRODUCTION_MODE:
     sys.exit('Running etl/tools/remote.py in production is not supported.')

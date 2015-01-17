@@ -31,12 +31,6 @@ from google.appengine.ext import db
 class TextFileUploadHandlerTestCase(actions.TestBase):
     """Tests for TextFileUploadHandler."""
 
-    # Name inherited from parent.
-    # pylint: disable=g-bad-name
-    # Treating code under test as module-protected.
-    # pylint: disable=protected-access
-    # Don't write repetative docstrings for well-named tests.
-    # pylint: disable=g-missing-docstring
     def setUp(self):
         super(TextFileUploadHandlerTestCase, self).setUp()
         self.contents = 'contents'

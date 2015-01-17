@@ -51,9 +51,7 @@ app_routes = [(r'(.*)', sites.ApplicationRequestHandler)]
 # enable Appstats handlers if requested
 appstats_routes = []
 if appengine_config.gcb_appstats_enabled():
-    # pylint: disable=g-import-not-at-top
     import google.appengine.ext.appstats.ui as appstats_ui
-    # pylint: enable=g-import-not-at-top
 
     # add all Appstats URL's to /admin/stats basepath
     for path, handler in appstats_ui.URLMAP:

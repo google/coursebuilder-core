@@ -51,7 +51,7 @@ class BaseIntegrationTest(suite.TestBase):
 
     LOGIN = 'test@example.com'
 
-    def setUp(self):  # pylint: disable=g-bad-name
+    def setUp(self):
         super(BaseIntegrationTest, self).setUp()
         chrome_options = options.Options()
         chrome_options.add_argument('--disable-extensions')
@@ -79,7 +79,7 @@ class BaseIntegrationTest(suite.TestBase):
         # click actions can be performed correctly.
         self.driver.set_window_size(BROWSER_WIDTH, BROWSER_HEIGHT)
 
-    def tearDown(self):  # pylint: disable=g-bad-name
+    def tearDown(self):
         time.sleep(1)  # avoid broken sockets on the server
         self.driver.quit()
         super(BaseIntegrationTest, self).tearDown()

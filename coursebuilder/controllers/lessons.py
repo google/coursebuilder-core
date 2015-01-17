@@ -564,7 +564,6 @@ class UnitHandler(BaseHandler):
             self.get_course(), unit)
 
         # need 'activity' to be True or False, and not the string 'true' or None
-        # pylint: disable=g-explicit-bool-comparison
         is_activity = (self.request.get('activity') != '' or
                        '/activity' in self.request.path)
         display_content = []

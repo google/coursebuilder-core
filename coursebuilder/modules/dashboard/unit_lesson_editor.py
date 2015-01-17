@@ -885,7 +885,7 @@ class ImportCourseRESTHandler(CommonUnitRESTHandler):
         return course_list
 
     @classmethod
-    def SCHEMA_ANNOTATIONS_DICT(cls):  # pylint: disable=g-bad-name
+    def SCHEMA_ANNOTATIONS_DICT(cls):
         """Schema annotations are dynamic and include a list of courses."""
         course_list = cls._get_course_list()
         if not course_list:

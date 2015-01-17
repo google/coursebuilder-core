@@ -26,10 +26,6 @@ from tests.functional import actions
 from google.appengine.ext import db
 
 
-# Don't require docstrings on tests. pylint: disable=g-missing-docstring
-# setUp is a name chosen by parent. pylint: disable=g-bad-name
-
-
 class ReferencedModel(entities.BaseEntity):
     pass
 
@@ -136,7 +132,6 @@ class ReviewTest(actions.ExportTestBase):
     def test_safe_key_makes_key_names_safe(self):
         safe_review_key = student_work.Review.safe_key(
             self.review_key, self.transform)
-        # Treat as module-protected. pylint: disable=protected-access
         _, safe_unit_id, safe_reviewee_key_str, safe_reviewer_key_str = (
             student_work.Review._split_key(safe_review_key.name()))
         safe_reviewee_key = db.Key(encoded=safe_reviewee_key_str)
@@ -175,7 +170,6 @@ class SubmissionTest(actions.ExportTestBase):
     def test_safe_key_makes_reviewee_key_name_safe(self):
         safe_submission_key = student_work.Submission.safe_key(
             self.submission_key, self.transform)
-        # Treat as module-protected. pylint: disable=protected-access
         _, safe_unit_id, safe_reviewee_key_name = (
             student_work.Submission._split_key(safe_submission_key.name()))
         self.assertEqual(

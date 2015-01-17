@@ -726,7 +726,6 @@ class DatastoreBackedFileSystem(object):
 class VfsTests(unittest.TestCase):
 
     def test_pickling(self):
-        # pylint: disable=g-import-not-at-top
         import pickle
         pickle.dumps(caching.NoopCacheConnection())
         pickle.dumps(caching.AbstractCacheConnection(None))

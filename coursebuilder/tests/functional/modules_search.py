@@ -40,8 +40,6 @@ from google.appengine.api import namespace_manager
 class SearchTest(search_unit_test.SearchTestBase):
     """Tests the search module."""
 
-    # Don't require documentation for self-describing test methods.
-    # pylint: disable=g-missing-docstring
 
     @classmethod
     def enable_module(cls):
@@ -64,7 +62,7 @@ class SearchTest(search_unit_test.SearchTestBase):
                              {'xsrf_token': index_token})
         self.execute_all_deferred_tasks()
 
-    def setUp(self):   # Name set by parent. pylint: disable=g-bad-name
+    def setUp(self):
         super(SearchTest, self).setUp()
         self.enable_module()
 

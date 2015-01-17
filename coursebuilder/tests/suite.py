@@ -167,7 +167,6 @@ class TestBase(unittest.TestCase):
             self._originals[source][symbol] = getattr(source, symbol)
         setattr(source, symbol, new)
 
-    # Allow protected method names. pylint: disable=g-bad-name
     def _unswap_all(self):
         for source, symbol_to_value in self._originals.iteritems():
             for symbol, value in symbol_to_value.iteritems():
@@ -186,11 +185,11 @@ class FunctionalTestBase(TestBase):
 class AppEngineTestBase(FunctionalTestBase):
     """Base class for tests that require App Engine services."""
 
-    def getApp(self):  # pylint: disable=g-bad-namer
+    def getApp(self):
         """Returns the main application to be tested."""
         raise Exception('Not implemented.')
 
-    def setUp(self):  # pylint: disable=g-bad-name
+    def setUp(self):
         super(AppEngineTestBase, self).setUp()
         empty_environ()
 
@@ -221,7 +220,7 @@ class AppEngineTestBase(FunctionalTestBase):
         self.task_dispatcher = task_queue.TaskQueueHandlerDispatcher(
             self.testapp, self.taskq)
 
-    def tearDown(self):  # pylint: disable=g-bad-name
+    def tearDown(self):
         self.testbed.deactivate()
         super(AppEngineTestBase, self).tearDown()
 
@@ -369,7 +368,7 @@ def main():
             ' %s tests run.' % (
                 len(result.errors), len(result.failures), result.testsRun))
 
-    import tests.functional.actions as actions  # pylint: disable=g-import-not-at-top
+    import tests.functional.actions as actions
 
     count = len(actions.UNIQUE_URLS_FOUND.keys())
     result.stream.writeln('INFO: Unique URLs found: %s' % count)

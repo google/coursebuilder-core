@@ -63,7 +63,6 @@ class RolesTest(actions.TestBase):
         super(RolesTest, self).tearDown()
         sites.reset_courses()
         config.Registry.test_overrides.clear()
-        # pylint: disable=protected-access
         roles.Roles._REGISTERED_PERMISSIONS = self.old_registered_permission
         config.Registry.test_overrides[models.CAN_USE_MEMCACHE.name] = False
 
@@ -89,7 +88,6 @@ class RolesTest(actions.TestBase):
         config.Registry.test_overrides[roles.GCB_ADMIN_LIST.name] = (
             '[%s]' % SITE_ADMIN_EMAIL)
 
-        # pylint: disable=protected-access
         self.old_registered_permission = roles.Roles._REGISTERED_PERMISSIONS
         roles.Roles._REGISTERED_PERMISSIONS = {}
 

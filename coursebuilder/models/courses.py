@@ -501,7 +501,6 @@ class Lesson12(object):
 
     @property
     def has_activity(self):
-        # pylint: disable=g-explicit-bool-comparison
         return self.activity != ''
 
     @property

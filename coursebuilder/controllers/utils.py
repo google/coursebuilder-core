@@ -516,7 +516,6 @@ class CourseHandler(ApplicationHandler):
         # we only want to run import if this method is called; most of the
         # it is not; we also have circular import dependencies if we were to
         # put them at the top...
-        # pylint: disable=g-import-not-at-top
         from models import vfs
         from modules.i18n_dashboard import i18n_dashboard
         vfs_items = cls._cache_debug_info(
