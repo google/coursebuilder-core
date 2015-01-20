@@ -17,16 +17,14 @@
 This script runs all functional and units test in the Course Builder project.
 
 Here is how to use the script:
-    - download WebTest Python package from a URL below and put
-      the files in a folder of your choice, for example: tmp/webtest:
-          http://pypi.python.org/packages/source/W/WebTest/WebTest-1.4.2.zip
-    - update your Python path:
-          PYTHONPATH=$PYTHONPATH:/tmp/webtest
+    - if you don't have pip, install it using 'sudo apt-get install python-pip'
+    - install WebTest using: 'sudo pip install WebTest'
+    - make sure your PYTHONPATH contains: google_appengine,
+      google_appengine/lib/jinja2-2.6, google_appengine/lib/webapp2-2.5.1 and
+      the 'coursebuilder' directory itself
     - invoke this test suite from the command line:
           # Automatically find and run all Python tests in tests/*.
-          python tests/suite.py
-          # Run only tests matching shell glob *_functional_test.py in tests/*.
-          python tests/suite.py --pattern *_functional_test.py
+          python tests/suite.py  --pattern test*.py
           # Run test method baz in unittest.TestCase Bar found in tests/foo.py.
           python tests/suite.py --test_class_name tests.foo.Bar.baz
     - review the output to make sure there are no errors or warnings

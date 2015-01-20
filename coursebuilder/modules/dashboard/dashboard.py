@@ -461,9 +461,8 @@ class DashboardHandler(
         ret.append(safe_dom.Text(' %s' % text))
         return ret
 
-    def render_course_outline_to_html(self):
+    def _render_course_outline_to_html(self, course):
         """Renders course outline to HTML."""
-        course = courses.Course(self)
         if not course.get_units():
             return []
         lines = safe_dom.Element(
@@ -666,7 +665,8 @@ class DashboardHandler(
                 'params': {'availability': not self.app_context.now_available},
                 })
 
-        course_info.append('Schema Version: %s' % courses.Course(self).version)
+        currentCourse = courses.Course(self)
+        course_info.append('Schema Version: %s' % currentCourse.version)
         course_info.append('Context Path: %s' % self.app_context.get_slug())
         course_info.append('Datastore Namespace: %s' %
                            self.app_context.get_namespace_name())
@@ -692,7 +692,7 @@ class DashboardHandler(
                 'id': 'edit_unit_lesson',
                 'caption': 'Organize',
                 'href': self.get_action_url('edit_unit_lesson')})
-            all_units = courses.Course(self).get_units()
+            all_units = currentCourse.get_units()
             if any([unit.type == verify.UNIT_TYPE_UNIT for unit in all_units]):
                 outline_actions.append({
                     'id': 'add_lesson',
@@ -724,7 +724,7 @@ class DashboardHandler(
                             extra_args={'unit_type': custom_type.identifier}),
                     'xsrf_token': self.create_xsrf_token('add_custom_unit')})
 
-            if not courses.Course(self).get_units():
+            if not currentCourse.get_units():
                 outline_actions.append({
                     'id': 'import_course',
                     'caption': 'Import',
@@ -748,9 +748,9 @@ class DashboardHandler(
                 'title': 'Course Outline',
                 'description': messages.COURSE_OUTLINE_DESCRIPTION,
                 'actions': outline_actions,
-                'pre': self.render_course_outline_to_html()}]
+                'pre': self._render_course_outline_to_html(currentCourse)}]
 
-        if courses.Course(self).version == courses.COURSE_MODEL_VERSION_1_2:
+        if currentCourse.version == courses.COURSE_MODEL_VERSION_1_2:
             sections.append({
                 'title': 'Data Files',
                 'description': messages.DATA_FILES_DESCRIPTION,
