@@ -374,7 +374,7 @@ class UnitLessonEditor(ApplicationHandler):
             None if lesson.has_activity
             else UnitLessonEditor.HIDE_ACTIVITY_ANNOTATIONS)
         schema = LessonRESTHandler.get_schema(course.get_units())
-        if courses.has_only_new_style_activities(self.get_course()):
+        if courses.has_only_new_style_activities(course):
             schema.get_property('objectives').extra_schema_dict_values[
               'excludedCustomTags'] = set(['gcb-activity'])
         self._render_edit_form_for(
@@ -1249,9 +1249,8 @@ class LessonRESTHandler(BaseRESTHandler):
         return lesson
 
     @classmethod
-    def get_lesson_dict(cls, app_context, lesson):
-        return cls.get_lesson_dict_for(
-            courses.Course(None, app_context=app_context), lesson)
+    def get_lesson_dict(cls, course, lesson):
+        return cls.get_lesson_dict_for(course, lesson)
 
     @classmethod
     def get_lesson_dict_for(cls, course, lesson):
@@ -1290,7 +1289,7 @@ class LessonRESTHandler(BaseRESTHandler):
         course = courses.Course(self)
         lesson = course.find_lesson_by_id(None, key)
         assert lesson
-        payload_dict = self.get_lesson_dict(self.app_context, lesson)
+        payload_dict = self.get_lesson_dict(course, lesson)
 
         message = ['Success.']
         if self.request.get('is_newly_created'):
