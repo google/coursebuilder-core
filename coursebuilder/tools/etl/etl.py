@@ -267,108 +267,112 @@ _ARCHIVE_TYPES = [
 INTERNAL_FLAG_NAME = '--internal'
 
 
-# Command-line argument configuration.
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    'mode', choices=_MODES,
-    help='Indicates the kind of operation we are performing', type=str)
-PARSER.add_argument(
-    'type',
-    help=(
-        'Type of entity to process. If mode is %s or %s, should be one of '
-        '%s or %s. If mode is %s, should be an importable dotted path to your '
-        'etl_lib.Job subclass') % (
-            _MODE_DOWNLOAD, _MODE_UPLOAD, _TYPE_COURSE, _TYPE_DATASTORE,
-            _MODE_RUN),
-    type=str)
-PARSER.add_argument(
-    'course_url_prefix',
-    help=(
-        "URL prefix of the course you want to download (e.g. '/foo' in "
-        "'course:/foo:/directory:namespace'"), type=str)
-PARSER.add_argument(
-    'application_id',
-    help="The id of the application to read from (e.g. 'myapp')", type=str)
-PARSER.add_argument(
-    'server',
-    help=(
-        'The full name of the source application to read from (e.g. '
-        'myapp.appspot.com)'), type=str)
-PARSER.add_argument(
-    '--archive_path',
-    help=(
-        'Absolute path of the archive file to read or write; required if mode '
-        'is %s or %s' % (_MODE_DOWNLOAD, _MODE_UPLOAD)), type=str)
-PARSER.add_argument(
-    '--batch_size',
-    help='Number of results to attempt to retrieve per batch',
-    default=20, type=int)
-PARSER.add_argument(
-    '--datastore_types', default=[],
-    help=(
-        'When type is "%s", comma-separated list of datastore model types to '
-        'process; all models are processed by default' % _TYPE_DATASTORE),
-    type=lambda s: s.split(','))
-PARSER.add_argument(
-    '--exclude_types', default=[],
-    help=(
-        'When type is "%s", comma-separated list of datastore model types to '
-        'exclude from processing' % _TYPE_DATASTORE),
-    type=lambda s: s.split(','))
-PARSER.add_argument(
-    '--disable_remote', action='store_true',
-    help=(
-        'If mode is %s, pass this flag to skip authentication and remote '
-        'environment setup. Should only pass for jobs that run entirely '
-        'locally and do not require RPCs') % _MODE_RUN)
-PARSER.add_argument(
-    '--force_overwrite', action='store_true',
-    help=(
-        'If mode is download, overwriting of local .zip files is permitted.'
-        'If mode is upload,  forces overwrite of entities '
-        'on the target system that are also present in the archive. Note that '
-        'this operation is dangerous and may result in data loss.'))
-PARSER.add_argument(
-    '--resume', action='store_true',
-    help=(
-        'On upload, setting this flag indicates that you are starting or '
-        'resuming an upload.  Only use this flag when you are uploading '
-        'to a course that had no data prior to starting this upload.  This '
-        'flag assumes that the only data present is that provided by the '
-        'upload.  This permits significant time savings if an upload is '
-        'interrupted or otherwise needs to be performed in multiple stages.'))
-PARSER.add_argument(
-    '--job_args', default=[],
-    help=(
-        'If mode is %s, string containing args delegated to etl_lib.Job '
-        'subclass') % _MODE_RUN, type=lambda s: s.split())
-PARSER.add_argument(
-    '--log_level', choices=_LOG_LEVEL_CHOICES,
-    help='Level of logging messages to emit', default='INFO',
-    type=lambda s: s.upper())
-PARSER.add_argument(
-    '--privacy', action='store_true',
-    help=(
-        "When mode is '%s' and type is '%s', passing this flag will strip or "
-        "obfuscate information that can identify a single user" % (
-            _MODE_DOWNLOAD, _TYPE_DATASTORE)))
-PARSER.add_argument(
-    '--privacy_secret',
-    help=(
-        "When mode is '%s', type is '%s', and --privacy is passed,  pass this "
-        "secret to have user ids transformed with it rather than with random "
-        "bits") % (_MODE_DOWNLOAD, _TYPE_DATASTORE), type=str)
-PARSER.add_argument(
-    '--verbose', action='store_true',
-    help='Tell about each item uploaded/downloaded.')
-PARSER.add_argument(
-    INTERNAL_FLAG_NAME, action='store_true',
-    help=('Enable control flags needed only by developers.  '
-          'Use %s --help to see documentation on these extra flags.' %
-          INTERNAL_FLAG_NAME))
+def create_args_parser():
+    # Command-line argument configuration.
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'mode', choices=_MODES,
+        help='Indicates the kind of operation we are performing', type=str)
+    parser.add_argument(
+        'type',
+        help=(
+            'Type of entity to process. If mode is %s or %s, should be one of '
+            '%s or %s. If mode is %s, should be an importable dotted path to '
+            'your etl_lib.Job subclass') % (
+                _MODE_DOWNLOAD, _MODE_UPLOAD, _TYPE_COURSE, _TYPE_DATASTORE,
+                _MODE_RUN),
+        type=str)
+    parser.add_argument(
+        'course_url_prefix',
+        help=(
+            "URL prefix of the course you want to download (e.g. '/foo' in "
+            "'course:/foo:/directory:namespace'"), type=str)
+    parser.add_argument(
+        'application_id',
+        help="The id of the application to read from (e.g. 'myapp')", type=str)
+    parser.add_argument(
+        'server',
+        help=(
+            'The full name of the source application to read from (e.g. '
+            'myapp.appspot.com)'), type=str)
+    parser.add_argument(
+        '--archive_path',
+        help=(
+            'Absolute path of the archive file to read or write; required if '
+            'mode is %s or %s' % (_MODE_DOWNLOAD, _MODE_UPLOAD)), type=str)
+    parser.add_argument(
+        '--batch_size',
+        help='Number of results to attempt to retrieve per batch',
+        default=20, type=int)
+    parser.add_argument(
+        '--datastore_types', default=[],
+        help=(
+            'When type is "%s", comma-separated list of datastore model types '
+            'to process; all models are processed by default' %
+            _TYPE_DATASTORE),
+        type=lambda s: s.split(','))
+    parser.add_argument(
+        '--exclude_types', default=[],
+        help=(
+            'When type is "%s", comma-separated list of datastore model types '
+            'to exclude from processing' % _TYPE_DATASTORE),
+        type=lambda s: s.split(','))
+    parser.add_argument(
+        '--disable_remote', action='store_true',
+        help=(
+            'If mode is %s, pass this flag to skip authentication and remote '
+            'environment setup. Should only pass for jobs that run entirely '
+            'locally and do not require RPCs') % _MODE_RUN)
+    parser.add_argument(
+        '--force_overwrite', action='store_true',
+        help=(
+            'If mode is download, overwriting of local .zip files is permitted.'
+            'If mode is upload,  forces overwrite of entities '
+            'on the target system that are also present in the archive. Note '
+            'that this operation is dangerous and may result in data loss.'))
+    parser.add_argument(
+        '--resume', action='store_true',
+        help=(
+            'On upload, setting this flag indicates that you are starting or '
+            'resuming an upload.  Only use this flag when you are uploading '
+            'to a course that had no data prior to starting this upload.  This '
+            'flag assumes that the only data present is that provided by the '
+            'upload.  This permits significant time savings if an upload is '
+            'interrupted or otherwise needs to be performed in multiple '
+            'stages.'))
+    parser.add_argument(
+        '--job_args', default=[],
+        help=(
+            'If mode is %s, string containing args delegated to etl_lib.Job '
+            'subclass') % _MODE_RUN, type=lambda s: s.split())
+    parser.add_argument(
+        '--log_level', choices=_LOG_LEVEL_CHOICES,
+        help='Level of logging messages to emit', default='INFO',
+        type=lambda s: s.upper())
+    parser.add_argument(
+        '--privacy', action='store_true',
+        help=(
+            "When mode is '%s' and type is '%s', passing this flag will strip "
+            "or obfuscate information that can identify a single user" % (
+                _MODE_DOWNLOAD, _TYPE_DATASTORE)))
+    parser.add_argument(
+        '--privacy_secret',
+        help=(
+            "When mode is '%s', type is '%s', and --privacy is passed,  pass "
+            "this secret to have user ids transformed with it rather than with "
+            "random bits") % (_MODE_DOWNLOAD, _TYPE_DATASTORE), type=str)
+    parser.add_argument(
+        '--verbose', action='store_true',
+        help='Tell about each item uploaded/downloaded.')
+    parser.add_argument(
+        INTERNAL_FLAG_NAME, action='store_true',
+        help=('Enable control flags needed only by developers.  '
+              'Use %s --help to see documentation on these extra flags.' %
+              INTERNAL_FLAG_NAME))
+    return parser
 
 
-def add_internal_args_support():
+def add_internal_args_support(parser):
     """Enable features only suitable for CourseBuilder developers.
 
     This is present as a public function so that functional tests and utilities
@@ -376,7 +380,7 @@ def add_internal_args_support():
     code directly.
     """
 
-    PARSER.add_argument(
+    parser.add_argument(
         '--archive_type', default='zip', choices=_ARCHIVE_TYPES,
         help=(
             'By default, uploads and downloads are done using a single .zip '
@@ -393,7 +397,13 @@ def add_internal_args_support():
             'one may specify --archive_type=directory. This treats the '
             '--archive_path argument as a directory, and stores individual '
             'files in that directory.'))
-
+    parser.add_argument(
+        '--no_static_files', action='store_true',
+        help=(
+            'Do not upload/download static file content, except for special '
+            'files %s and %s containing the course.  Useful for saving space '
+            'when generating test-case data.' % (
+                _COURSE_YAML_PATH_SUFFIX, _COURSE_JSON_PATH_SUFFIX)))
 
 def _init_archive(path, archive_type=ARCHIVE_TYPE_ZIP):
     if archive_type == ARCHIVE_TYPE_ZIP:
@@ -761,6 +771,13 @@ def _download_course(context, course, archive_path, params):
     all_files = set(_filter_filesystem_files(_list_all(
         context, include_inherited=True)))
     filesystem_files = all_files - datastore_files
+
+    if vars(params).get('no_static_files', False):
+        always_allowed_files = set([
+            context.fs.impl._physical_to_logical(_COURSE_JSON_PATH_SUFFIX),
+            context.fs.impl._physical_to_logical(_COURSE_YAML_PATH_SUFFIX)])
+        filesystem_files.intersection_update(always_allowed_files)
+        datastore_files.intersection_update(always_allowed_files)
 
     _LOG.info('Adding files from datastore')
     for external_path in datastore_files:
@@ -1233,11 +1250,20 @@ def _upload_course(context, params):
                 'Cannot upload archive at %s containing malformed '
                 'course.yaml') % params.archive_path)
 
+    files_filter = set()
+    if vars(params).get('no_static_files', False):
+        files_filter.add(_COURSE_JSON_PATH_SUFFIX)
+        files_filter.add(_COURSE_YAML_PATH_SUFFIX)
+
     _LOG.info('Uploading files')
     count = 0
     for entity in archive.manifest.entities:
         if not _can_upload_entity_to_course(entity):
             _LOG.info('Skipping file ' + entity.path)
+            continue
+        if files_filter and entity.path in files_filter and params.verbose:
+            _LOG.info('Skipping file ' + entity.path +
+                      ' due to --no_static_files')
             continue
         external_path = _AbstractArchive.get_external_path(entity.path)
         _put(
@@ -1494,7 +1520,9 @@ def _validate_arguments(parsed_args):
         _die(
             'Cannot download to archive path %s; file already exists' % (
                 parsed_args.archive_path))
-    if parsed_args.disable_remote and parsed_args.mode != _MODE_RUN:
+    if (parsed_args.disable_remote and
+        parsed_args.mode != _MODE_RUN
+        and not parsed_args.internal):
         _die('--disable_remote supported only if mode is ' + _MODE_RUN)
     if (parsed_args.force_overwrite and
         parsed_args.mode not in _FORCE_OVERWRITE_MODES):
@@ -1560,6 +1588,7 @@ def main(parsed_args, environment_class=None):
 
 
 if __name__ == '__main__':
+    arg_parser = create_args_parser()
     if INTERNAL_FLAG_NAME in sys.argv:
-        add_internal_args_support()
-    main(PARSER.parse_args())
+        add_internal_args_support(arg_parser)
+    main(arg_parser.parse_args())

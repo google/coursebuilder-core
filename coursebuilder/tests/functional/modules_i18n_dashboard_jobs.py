@@ -48,7 +48,7 @@ class _JobTestBase(
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn(
@@ -82,7 +82,7 @@ class _JobTestBase(
             args.append(job_args)
 
         etl.main(
-            etl.PARSER.parse_args(args),
+            etl.create_args_parser().parse_args(args),
             environment_class=testing.FakeEnvironment)
 
     def run_delete_job(self, job_args=None):
@@ -217,7 +217,7 @@ class DownloadTranslationsTest(_JobTestBase):
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn('File already exists', self.get_log())
@@ -230,7 +230,7 @@ class DownloadTranslationsTest(_JobTestBase):
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn(
@@ -292,7 +292,7 @@ class UploadTranslationsTest(_JobTestBase):
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn('File does not exist', self.get_log())
@@ -305,7 +305,7 @@ class UploadTranslationsTest(_JobTestBase):
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn('Invalid file extension: ".bad"', self.get_log())
@@ -319,7 +319,7 @@ class UploadTranslationsTest(_JobTestBase):
 
         with self.assertRaises(SystemExit):
             etl.main(
-                etl.PARSER.parse_args(args),
+                etl.create_args_parser().parse_args(args),
                 environment_class=testing.FakeEnvironment)
 
         self.assertIn(

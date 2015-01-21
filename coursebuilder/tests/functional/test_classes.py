@@ -3742,11 +3742,11 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.common_course_args = [etl._TYPE_COURSE] + self.common_command_args
         self.common_datastore_args = [
             etl._TYPE_DATASTORE] + self.common_command_args
-        self.delete_datastore_args = etl.PARSER.parse_args(
+        self.delete_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DELETE, etl._TYPE_DATASTORE] + self.common_args)
-        self.download_course_args = etl.PARSER.parse_args(
+        self.download_course_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args)
-        self.upload_course_args = etl.PARSER.parse_args(
+        self.upload_course_args = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_course_args)
 
         self.make_items_distinct_counter = 0
@@ -3763,7 +3763,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def create_archive(self):
         self.upload_all_sample_course_files([])
         self.import_sample_course()
-        args = etl.PARSER.parse_args(['download'] + self.common_course_args)
+        args = etl.create_args_parser().parse_args(['download'] +
+                                                 self.common_course_args)
         etl.main(args, environment_class=testing.FakeEnvironment)
         sites.reset_courses()
 
@@ -3772,7 +3773,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.import_sample_course()
         question = _add_data_entity(
             sites.get_all_courses()[1], models.QuestionEntity, data)
-        args = etl.PARSER.parse_args(['download'] + self.common_course_args)
+        args = etl.create_args_parser().parse_args(['download'] +
+                                                 self.common_course_args)
         etl.main(args, environment_class=testing.FakeEnvironment)
         sites.reset_courses()
         return question
@@ -3819,7 +3821,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         archive.close()
 
     def test_delete_course_fails(self):
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             [etl._MODE_DELETE, etl._TYPE_COURSE] + self.common_args)
         self.assertRaises(
             NotImplementedError,
@@ -3870,7 +3872,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             environment_class=testing.FakeEnvironment)
 
     def test_disable_remote_cannot_be_passed_for_mode_other_than_run(self):
-        bad_args = etl.PARSER.parse_args(
+        bad_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args +
             ['--disable_remote'])
         self.assertRaises(
@@ -3931,7 +3933,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             environment_class=testing.FakeEnvironment)
 
     def test_download_course_errors_if_course_version_is_pre_1_3(self):
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             ['download', 'course', '/'] + self.common_course_args[2:])
         self.upload_all_sample_course_files([])
         self.import_sample_course()
@@ -3940,7 +3942,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             environment_class=testing.FakeEnvironment)
 
     def test_download_datastore_fails_if_datastore_types_not_in_datastore(self):
-        download_datastore_args = etl.PARSER.parse_args(
+        download_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'missing'])
         self.assertRaises(
@@ -3949,7 +3951,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def test_download_datastore_succeeds(self):
         """Test download of datastore data and archive creation."""
-        download_datastore_args = etl.PARSER.parse_args(
+        download_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'Student,StudentPropertyEntity'])
         context = etl_lib.get_context(download_datastore_args.course_url_prefix)
@@ -3999,7 +4001,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
     def test_download_datastore_with_privacy_maintains_references(self):
         """Test download of datastore data and archive creation."""
         unsafe_user_id = '1'
-        download_datastore_args = etl.PARSER.parse_args(
+        download_datastore_args = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--datastore_types', 'EventEntity,Student', '--privacy',
              '--privacy_secret', 'super_seekrit'])
@@ -4040,12 +4042,12 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertNotEqual(unsafe_user_id, students[0]['user_id'])
 
     def test_privacy_fails_if_not_downloading_datastore(self):
-        wrong_mode = etl.PARSER.parse_args(
+        wrong_mode = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args + ['--privacy'])
         self.assertRaises(
             SystemExit, etl.main, wrong_mode,
             environment_class=testing.FakeEnvironment)
-        wrong_type = etl.PARSER.parse_args(
+        wrong_type = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args + ['--privacy'])
         self.assertRaises(
             SystemExit, etl.main, wrong_type,
@@ -4053,7 +4055,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def test_privacy_secret_fails_if_not_download_datastore_with_privacy(self):
         """Tests invalid flag combinations related to --privacy."""
-        missing_privacy = etl.PARSER.parse_args(
+        missing_privacy = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_datastore_args +
             ['--privacy_secret', 'foo'])
         self.assertRaises(
@@ -4062,13 +4064,13 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertRaises(
             SystemExit, etl.main, missing_privacy,
             environment_class=testing.FakeEnvironment)
-        wrong_mode = etl.PARSER.parse_args(
+        wrong_mode = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args +
             ['--privacy_secret', 'foo', '--privacy'])
         self.assertRaises(
             SystemExit, etl.main, wrong_mode,
             environment_class=testing.FakeEnvironment)
-        wrong_type = etl.PARSER.parse_args(
+        wrong_type = etl.create_args_parser().parse_args(
             [etl._MODE_DOWNLOAD] + self.common_course_args +
             ['--privacy_secret', 'foo', '--privacy'])
         self.assertRaises(
@@ -4076,7 +4078,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             environment_class=testing.FakeEnvironment)
 
     def test_run_fails_when_delegated_argument_parsing_fails(self):
-        bad_args = etl.PARSER.parse_args(
+        bad_args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl_lib.Job'] + self.common_args +
             ['--job_args', "'unexpected_argument'"])
         self.assertRaises(
@@ -4084,12 +4086,12 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
             environment_class=testing.FakeEnvironment)
 
     def test_run_fails_when_if_requested_class_missing_or_invalid(self):
-        bad_args = etl.PARSER.parse_args(
+        bad_args = etl.create_args_parser().parse_args(
             ['run', 'a.missing.class.or.Module'] + self.common_args)
         self.assertRaises(
             SystemExit, etl.main, bad_args,
             environment_class=testing.FakeEnvironment)
-        bad_args = etl.PARSER.parse_args(
+        bad_args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.etl._ZipArchive'] + self.common_args)
         self.assertRaises(
             SystemExit, etl.main, bad_args,
@@ -4097,7 +4099,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def test_run_print_memcache_stats_succeeds(self):
         """Tests examples.WriteStudentEmailsToFile prints stats to stdout."""
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.examples.PrintMemcacheStats'] + self.common_args)
         memcache.get('key')
         memcache.set('key', 1)
@@ -4131,7 +4133,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.assertTrue(expected0 in actual or expected1 in actual)
 
     def test_run_skips_remote_env_setup_when_disable_remote_passed(self):
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.etl_lib.Job'] + self.common_args +
             ['--disable_remote'])
         etl.main(args)
@@ -4146,7 +4148,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         with open(path, 'w') as f:
             f.write(contents)
 
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.examples.UploadFileToCourse'] +
             self.common_args + ['--job_args=%s %s' % (path, target)])
         sites.setup_courses(self.raw)
@@ -4161,7 +4163,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         email1 = 'email1@example.com'
         email2 = 'email2@example.com'
         path = os.path.join(self.test_tempdir, 'emails')
-        args = etl.PARSER.parse_args(
+        args = etl.create_args_parser().parse_args(
             ['run', 'tools.etl.examples.WriteStudentEmailsToFile'] +
             self.common_args + ['--job_args=%s --batch_size 1' % path])
         context = etl_lib.get_context(args.course_url_prefix)
@@ -4219,7 +4221,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def test_upload_course_fails_if_force_overwrite_passed_with_bad_args(self):
         self.create_archive()
-        bad_args = etl.PARSER.parse_args(
+        bad_args = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_datastore_args + [
                 '--force_overwrite'])
         self.assertRaises(
@@ -4298,7 +4300,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         etl.main(
             self.download_course_args,
             environment_class=testing.FakeEnvironment)
-        force_overwrite_args = etl.PARSER.parse_args(
+        force_overwrite_args = etl.create_args_parser().parse_args(
             [etl._MODE_UPLOAD] + self.common_course_args + [
                 '--force_overwrite'])
         etl.main(
@@ -4351,7 +4353,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def _download_archive(self, extra_args=None):
         extra_args = extra_args or []
-        etl.main(etl.PARSER.parse_args([etl._MODE_DOWNLOAD] +
+        etl.main(etl.create_args_parser().parse_args([etl._MODE_DOWNLOAD] +
                                        self.common_datastore_args +
                                        extra_args),
                  environment_class=testing.FakeEnvironment)
@@ -4360,13 +4362,13 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         self.swap(
             etl, '_raw_input',
             lambda x: etl._DELETE_DATASTORE_CONFIRMATION_INPUT)
-        etl.main(etl.PARSER.parse_args([etl._MODE_DELETE] +
+        etl.main(etl.create_args_parser().parse_args([etl._MODE_DELETE] +
                                        self.common_datastore_args),
                  environment_class=testing.FakeEnvironment)
 
     def _upload_archive(self, extra_args=None):
         extra_args = extra_args or []
-        etl.main(etl.PARSER.parse_args([etl._MODE_UPLOAD] +
+        etl.main(etl.create_args_parser().parse_args([etl._MODE_UPLOAD] +
                                        self.common_datastore_args +
                                        extra_args),
                  environment_class=testing.FakeEnvironment)
@@ -4426,12 +4428,12 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
         sites.setup_courses(self.raw)
         with Namespace(self.namespace):
             EtlTestEntityIllegal(score=123).put()
-        etl.main(etl.PARSER.parse_args([etl._MODE_DOWNLOAD] +
+        etl.main(etl.create_args_parser().parse_args([etl._MODE_DOWNLOAD] +
                                        self.common_datastore_args),
                  environment_class=testing.FakeEnvironment)
 
         with self.assertRaises(SystemExit):
-            etl.main(etl.PARSER.parse_args([etl._MODE_UPLOAD] +
+            etl.main(etl.create_args_parser().parse_args([etl._MODE_UPLOAD] +
                                            self.common_datastore_args),
                      environment_class=testing.FakeEnvironment)
 
@@ -4477,7 +4479,7 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def _build_entity_batch(self):
         ret = []
-        for _ in xrange(etl.PARSER.get_default('batch_size')):
+        for _ in xrange(etl.create_args_parser().get_default('batch_size')):
             ret.append(EtlTestEntityPii(score=self.make_items_distinct_counter))
             self.make_items_distinct_counter += 1
         return ret
@@ -4553,7 +4555,8 @@ class EtlMainTestCase(testing.EtlTestBase, DatastoreBackedCourseTest):
 
     def test_is_hmac_sha_2_256_when_privacy_true(self):
         # Must run etl.main() to get crypto module loaded.
-        args = etl.PARSER.parse_args(['download'] + self.common_course_args)
+        args = etl.create_args_parser().parse_args(['download'] +
+                                                 self.common_course_args)
         etl.main(args, environment_class=testing.FakeEnvironment)
         self.assertEqual(
             crypto.hmac_sha_2_256_transform('secret', 'value'),
