@@ -92,7 +92,7 @@ def _generate_visualization_section(template_renderer, xsrf, app_context,
                 any_generator_still_running = True
         generator_status_messages.append(
             get_generator_status_message(generator_class, job).append(
-                _get_pipeline_link(xsrf, app_context, generator_class, job)))
+                get_pipeline_link(xsrf, app_context, generator_class, job)))
 
     # <h3> title block.
     html_sections.append(safe_dom.Element('h3').add_text(visualization.title))
@@ -167,7 +167,7 @@ def get_generator_status_message(generator_class, job):
     return message
 
 
-def _get_pipeline_link(xsrf, app_context, generator_class, job):
+def get_pipeline_link(xsrf, app_context, generator_class, job):
     ret = safe_dom.NodeList()
     if (not issubclass(generator_class, jobs.MapReduceJob) or
         # Don't give access to the pipeline details UI unless someone

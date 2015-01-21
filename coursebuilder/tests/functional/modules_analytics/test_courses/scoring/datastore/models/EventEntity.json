@@ -1,0 +1,47 @@
+{"rows": [
+    {
+      "key.name": "None",
+      "user_id": "124317316405206137111",
+      "recorded_on": "2015-01-14T21:51:44.516517Z",
+      "key.id": 6333186975989760,
+      "source": "tag-assessment",
+      "key": "agxkZXZ-bXljb3Vyc2VyGAsSC0V2ZW50RW50aXR5GICAgICAgKALDKIBDm5zX3Rlc3RfY291cnNl",
+      "data": "{\"type\": \"SaQuestion\", \"loc\": {\"page_locale\": \"en_US\", \"region\": null, \"locale\": \"en_US\", \"language\": \"en-US,en;q=0.8\", \"country\": \"ZZ\", \"city\": null}, \"answer\": \"a\", \"location\": \"http://localhost:8081/test_course/unit?unit=1\", \"score\": 0.25, \"instanceid\": \"bkNmSQ697jkQ\"}"
+    },
+    {
+      "key.name": "None",
+      "user_id": "124317316405206137111",
+      "recorded_on": "2015-01-14T21:51:45.629652Z",
+      "key.id": 4925812092436480,
+      "source": "tag-assessment",
+      "key": "agxkZXZ-bXljb3Vyc2VyGAsSC0V2ZW50RW50aXR5GICAgICAgOAIDKIBDm5zX3Rlc3RfY291cnNl",
+      "data": "{\"type\": \"McQuestion\", \"loc\": {\"page_locale\": \"en_US\", \"region\": null, \"locale\": \"en_US\", \"language\": \"en-US,en;q=0.8\", \"country\": \"ZZ\", \"city\": null}, \"answer\": [0], \"location\": \"http://localhost:8081/test_course/unit?unit=1\", \"score\": 0.25, \"instanceid\": \"R3jFxaGz9HRK\"}"
+    },
+    {
+      "key.name": "None",
+      "user_id": "124317316405206137111",
+      "recorded_on": "2015-01-14T21:51:46.921722Z",
+      "key.id": 6051711999279104,
+      "source": "tag-assessment",
+      "key": "agxkZXZ-bXljb3Vyc2VyGAsSC0V2ZW50RW50aXR5GICAgICAgOAKDKIBDm5zX3Rlc3RfY291cnNl",
+      "data": "{\"type\": \"QuestionGroup\", \"loc\": {\"page_locale\": \"en_US\", \"region\": null, \"locale\": \"en_US\", \"language\": \"en-US,en;q=0.8\", \"country\": \"ZZ\", \"city\": null}, \"answer\": [\"a\", [0]], \"location\": \"http://localhost:8081/test_course/unit?unit=1\", \"score\": 0.25, \"instanceid\": \"ErSNi3vMcoAO\", \"individualScores\": [0.25, 0.25], \"containedTypes\": [\"SaQuestion\", \"McQuestion\"]}"
+    },
+    {
+      "key.name": "None",
+      "user_id": "124317316405206137111",
+      "recorded_on": "2015-01-14T21:51:58.331094Z",
+      "key.id": 4573968371548160,
+      "source": "attempt-lesson",
+      "key": "agxkZXZ-bXljb3Vyc2VyGAsSC0V2ZW50RW50aXR5GICAgICAgJAIDKIBDm5zX3Rlc3RfY291cnNl",
+      "data": "{\"answers\": {\"3Fj8HJyXkcjo\": \"aa\", \"TbtS9u7TOtVB\": [\"aa\", [1]], \"version\": \"1.5\", \"OALRJy8rrGTp\": [1]}, \"type\": \"scored-lesson\", \"loc\": {\"page_locale\": \"en_US\", \"region\": null, \"locale\": \"en_US\", \"language\": \"en-US,en;q=0.8\", \"country\": \"ZZ\", \"city\": null}, \"location\": \"http://localhost:8081/test_course/unit?unit=1&lesson=3\", \"score\": 6, \"individualScores\": {\"TbtS9u7TOtVB\": [0.5, 0.5], \"3Fj8HJyXkcjo\": 0.5, \"OALRJy8rrGTp\": 0.5}, \"containedTypes\": {\"TbtS9u7TOtVB\": [\"SaQuestion\", \"McQuestion\"], \"3Fj8HJyXkcjo\": \"SaQuestion\", \"OALRJy8rrGTp\": \"McQuestion\"}}"
+    },
+    {
+      "key.name": "None",
+      "user_id": "124317316405206137111",
+      "recorded_on": "2015-01-14T21:52:14.267555Z",
+      "key.id": 5981343255101440,
+      "source": "submit-assessment",
+      "key": "agxkZXZ-bXljb3Vyc2VyGAsSC0V2ZW50RW50aXR5GICAgICAgNAKDKIBDm5zX3Rlc3RfY291cnNl",
+      "data": "{\"location\": \"AnswerHandler\", \"type\": \"assessment-4\", \"values\": {\"answers\": {\"XZLBAdEI0e3j\": [\"aaa\", [2]], \"iWD07JpPcgAS\": \"aaa\", \"zbMNompBS6rR\": [2]}, \"zbMNompBS6rR\": [false, false, true], \"iWD07JpPcgAS\": {\"response\": \"aaa\"}, \"individualScores\": {\"XZLBAdEI0e3j\": [1, 1], \"iWD07JpPcgAS\": 1, \"zbMNompBS6rR\": 1}, \"XZLBAdEI0e3j\": {\"XZLBAdEI0e3j.0.5629499534213120\": {\"response\": \"aaa\"}, \"XZLBAdEI0e3j.1.5066549580791808\": [false, false, true]}, \"containedTypes\": {\"XZLBAdEI0e3j\": [\"SaQuestion\", \"McQuestion\"], \"iWD07JpPcgAS\": \"SaQuestion\", \"zbMNompBS6rR\": \"McQuestion\"}, \"version\": \"1.5\"}}"
+    }
+]}

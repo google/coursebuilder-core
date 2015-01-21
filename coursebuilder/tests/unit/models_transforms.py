@@ -20,6 +20,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import datetime
 import unittest
 
+from common import schema_fields
 from models import transforms
 
 
@@ -232,3 +233,249 @@ class JsonParsingTests(unittest.TestCase):
         json_text = '{"foo": "bar", "baz": ["bum",],}'
         _json = transforms.loads(json_text, strict=False)
         assert _json.get('foo') == 'bar'
+
+
+class SchemaValidationTests(unittest.TestCase):
+
+    def test_mandatory_scalar_missing(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Missing mandatory value at Test.a_string'])
+
+    def test_mandatory_scalar_present(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_string': ''},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_optional_scalar_missing(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string', optional=True))
+        complaints = transforms.validate_object_matches_json_schema(
+            {},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_optional_scalar_present(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string', optional=True))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_string': ''},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_non_struct_where_struct_expected(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string'))
+        complaints = transforms.validate_object_matches_json_schema(
+            123,
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Expected a dict at Test, but had <type \'int\'>'])
+
+    def test_malformed_url(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_url', 'A URL', 'url'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_url': 'not really a URL, is it?'},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Value "not really a URL, is it?" '
+             'is not well-formed according to is_valid_url'])
+
+    def test_valid_url(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_url', 'A URL', 'url'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_url': 'http://x.com'},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_malformed_date(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_date', 'A Date', 'date'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_date': 'not really a date string, is it?'},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Value "not really a date string, is it?" '
+             'is not well-formed according to is_valid_date'])
+
+    def test_valid_date(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_date', 'A Date', 'date'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_date': '2014-12-17'},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_malformed_datetime(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_datetime', 'A Datetime', 'datetime'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_datetime': 'not really a datetime string, is it?'},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Value "not really a datetime string, is it?" '
+             'is not well-formed according to is_valid_datetime'])
+
+    def test_valid_datetime(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_datetime', 'A Datetime', 'datetime'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_datetime': '2014-12-17T14:10:09.222333Z'},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_unexpected_member(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.SchemaField(
+            'a_string', 'A String', 'string'))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'a_string': '',
+             'a_number': 456},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, ['Unexpected member "a_number" in Test'])
+
+    def test_arrays_are_implicitly_optional(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array',
+            item_type=schema_fields.SchemaField(
+                'a_string', 'A String', 'string')))
+        complaints = transforms.validate_object_matches_json_schema(
+            {},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_empty_array(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array',
+            item_type=schema_fields.SchemaField(
+                'a_string', 'A String', 'string')))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'scalar_array': []},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_array_with_valid_content(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array',
+            item_type=schema_fields.SchemaField(
+                'a_string', 'A String', 'string')))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'scalar_array': ['foo', 'bar', 'baz']},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_array_with_bad_members(self):
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'scalar_array', 'Scalar Array',
+            item_type=schema_fields.SchemaField(
+                'a_string', 'A String', 'string')))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'scalar_array': ['foo', 123, 'bar', 456, 'baz']},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Expected <type \'basestring\'> at Test.scalar_array[1], '
+             'but instead had <type \'int\'>',
+             'Expected <type \'basestring\'> at Test.scalar_array[3], '
+             'but instead had <type \'int\'>'])
+
+    def test_dicts_implicitly_optional(self):
+        reg = schema_fields.FieldRegistry('Test')
+        sub_registry = schema_fields.FieldRegistry('subregistry')
+        sub_registry.add_property(schema_fields.SchemaField(
+            'name', 'Name', 'string', description='user name'))
+        sub_registry.add_property(schema_fields.SchemaField(
+            'city', 'City', 'string', description='city name'))
+        reg.add_sub_registry('sub_registry', title='Sub Registry',
+                             description='a sub-registry',
+                             registry=sub_registry)
+        complaints = transforms.validate_object_matches_json_schema(
+            {},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_nested_dict(self):
+        reg = schema_fields.FieldRegistry('Test')
+        sub_registry = schema_fields.FieldRegistry('subregistry')
+        sub_registry.add_property(schema_fields.SchemaField(
+            'name', 'Name', 'string', description='user name'))
+        sub_registry.add_property(schema_fields.SchemaField(
+            'city', 'City', 'string', description='city name'))
+        reg.add_sub_registry('sub_registry', title='Sub Registry',
+                             description='a sub-registry',
+                             registry=sub_registry)
+        complaints = transforms.validate_object_matches_json_schema(
+            {'sub_registry': {'name': 'John Smith', 'city': 'Back East'}},
+            reg.get_json_schema_dict())
+        self.assertEqual(complaints, [])
+
+    def test_nested_dict_missing_items(self):
+        reg = schema_fields.FieldRegistry('Test')
+        sub_registry = schema_fields.FieldRegistry('subregistry')
+        sub_registry.add_property(schema_fields.SchemaField(
+            'name', 'Name', 'string', description='user name'))
+        sub_registry.add_property(schema_fields.SchemaField(
+            'city', 'City', 'string', description='city name'))
+        reg.add_sub_registry('sub_registry', title='Sub Registry',
+                             description='a sub-registry',
+                             registry=sub_registry)
+        complaints = transforms.validate_object_matches_json_schema(
+            {'sub_registry': {}},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+          complaints,
+          ['Missing mandatory value at Test.sub_registry.name',
+           'Missing mandatory value at Test.sub_registry.city'])
+
+    def test_array_of_dict(self):
+        sub_registry = schema_fields.FieldRegistry('subregistry')
+        sub_registry.add_property(schema_fields.SchemaField(
+            'name', 'Name', 'string', description='user name'))
+        sub_registry.add_property(schema_fields.SchemaField(
+            'city', 'City', 'string', description='city name'))
+
+        reg = schema_fields.FieldRegistry('Test')
+        reg.add_property(schema_fields.FieldArray(
+            'struct_array', 'Struct Array', item_type=sub_registry))
+        complaints = transforms.validate_object_matches_json_schema(
+            {'struct_array': [
+              {'name': 'One', 'city': 'Two'},
+              None,
+              {'name': 'Three'},
+              {'city': 'Four'}
+              ]},
+            reg.get_json_schema_dict())
+        self.assertEqual(
+            complaints,
+            ['Found None at Test.struct_array[1]',
+             'Missing mandatory value at Test.struct_array[2].city',
+             'Missing mandatory value at Test.struct_array[3].name'])

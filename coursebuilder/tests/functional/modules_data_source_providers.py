@@ -198,7 +198,6 @@ class StudentsTest(actions.TestBase):
         self.assertIn('enrolled_on', response['schema'])
         self.assertIn('user_id', response['schema'])
         self.assertIn('is_enrolled', response['schema'])
-        self.assertIn('scores', response['schema'])
 
     def test_no_students(self):
         response = transforms.loads(self.get(
@@ -239,7 +238,6 @@ class StudentsTest(actions.TestBase):
         self.assertIn('enrolled_on', response['schema'])
         self.assertIn('user_id', response['schema'])
         self.assertIn('is_enrolled', response['schema'])
-        self.assertIn('scores', response['schema'])
         self.assertIn('additional_fields', response['schema'])
         models.Student._PROPERTY_EXPORT_BLACKLIST = save_blacklist
 
@@ -265,7 +263,7 @@ class StudentsTest(actions.TestBase):
                 user_id='123456', additional_fields=additional_fields).put()
             response = transforms.loads(self.get(
                 '/test/rest/data/students/items').body)
-        self.assertEquals(transforms.dumps(permitted_fields),
+        self.assertEquals(permitted_fields,
                           response['data'][0]['additional_fields'])
         models.Student._PROPERTY_EXPORT_BLACKLIST = save_blacklist
 

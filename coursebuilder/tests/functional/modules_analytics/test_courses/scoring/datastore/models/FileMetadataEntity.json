@@ -1,0 +1,4 @@
+{"rows": [
+    {"key.name": "/course.yaml", "key.id": null, "created_on": "2015-01-14T21:22:46.079826Z", "key": "agxkZXZ-bXljb3Vyc2VyJAsSEkZpbGVNZXRhZGF0YUVudGl0eSIML2NvdXJzZS55YW1sDKIBDm5zX3Rlc3RfY291cnNl", "updated_on": "2015-01-14T21:25:04.081359Z", "is_draft": null, "size": 1422},
+    {"key.name": "/data/course.json", "key.id": null, "created_on": "2015-01-14T21:33:27.742135Z", "key": "agxkZXZ-bXljb3Vyc2VyKQsSEkZpbGVNZXRhZGF0YUVudGl0eSIRL2RhdGEvY291cnNlLmpzb24MogEObnNfdGVzdF9jb3Vyc2U", "updated_on": "2015-01-14T21:39:12.595045Z", "is_draft": false, "size": 2592}
+]}

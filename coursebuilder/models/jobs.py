@@ -82,9 +82,9 @@ class DurableJobBase(object):
     def submit(self):
         if self.is_active():
             return -1
-        if not self._pre_transaction_setup():
-            return -1
         with Namespace(self._namespace):
+            if not self._pre_transaction_setup():
+                return -1
             return db.run_in_transaction_options(self.xg_on,
                                                  self.non_transactional_submit)
 
@@ -413,6 +413,7 @@ class MapReduceJob(DurableJobBase):
             'output_writer_spec':
                 'mapreduce.output_writers.BlobstoreRecordsOutputWriter',
             'mapper_params': self.mapper_params,
+            'reducer_params': self.mapper_params,
         }
         mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
                                            kwargs, self._namespace)

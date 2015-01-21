@@ -12,6 +12,7 @@ env_variables:
   GCB_REGISTERED_MODULES:
     modules.activity_tag.activity_tag
     modules.admin.admin
+    modules.analytics.analytics
     modules.announcements.announcements
     modules.assessment_tags.questions
     modules.balancer.balancer

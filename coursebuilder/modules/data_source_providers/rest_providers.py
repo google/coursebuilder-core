@@ -384,6 +384,10 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         return True
 
     @classmethod
+    def get_default_chunk_size(cls):
+        return 100
+
+    @classmethod
     def get_schema(cls, app_context, log):
         """Override default entity-based schema to reflect our upgrades.
 
@@ -414,6 +418,14 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         registry = transforms.get_schema_for_entity(clazz)
         ret = registry.get_json_schema_dict()['properties']
 
+        # Scores are deprecated now that regularized scores are available
+        # in StudentAggregation data source.
+        if 'scores' in ret:
+            del ret['scores']
+
+        # We are replacing the labels string with a version that shows
+        # labels as separate items so that the amount of insanity
+        # required in BigQuery SQL is minimized.
         ret['labels'] = schema_fields.FieldArray(
           'labels', 'Labels',
           description='Labels on students',
@@ -421,6 +433,26 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
             'label', 'Label', 'string',
             description='ID of a LabelEntity applied to a student')
           ).get_json_schema_dict()
+
+        # If a course owner has allowed some or all portions of
+        # 'additional_fields', convert from a flat string into an array
+        # of name/value pairs
+        if 'additional_fields' in ret:
+            additional_field = schema_fields.FieldRegistry('additional_field')
+            additional_field.add_property(schema_fields.SchemaField(
+                'name', 'Name', 'string',
+                description='HTML form field name.  Not necessarily unique.'))
+            additional_field.add_property(schema_fields.SchemaField(
+                'value', 'Value', 'string',
+                description='HTML form field value.'))
+            ret['additional_fields'] = schema_fields.FieldArray(
+                'additional_fields', 'Additional Fields',
+                item_type=additional_field,
+                description='List of name/value pairs entered on the '
+                'course registration form.  Note that for names are not '
+                'necessarily unique.  E.g., a group of checkboxes for '
+                '"select all reasons you are taking this course" may well '
+                'all have the same name.').get_json_schema_dict()
         return ret
 
     @classmethod
@@ -436,6 +468,11 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
             del item['key_by_user_id']
             item['labels'] = (
               [x for x in utils.text_to_list(item['labels'])])
+            if 'scores' in ret:
+              del item['scores']
+            if 'additional_fields' in item:
+                item['additional_fields'] = transforms.loads(
+                    item['additional_fields'])
         return ret
 
 

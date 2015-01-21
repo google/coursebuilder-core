@@ -1,0 +1,3 @@
+{"rows": [
+    {"additional_fields": "[[\"xsrf_token\", \"1421272277/HAecSFLqV4rKDGtEGKvgqg==\"], [\"form01\", \"foo@bar.com\"]]", "key.name": "foo@bar.com", "user_id": "124317316405206137111", "name": "foo@bar.com", "labels": "", "key.id": null, "is_enrolled": true, "key": "agxkZXZ-bXljb3Vyc2VyGAsSB1N0dWRlbnQiC2Zvb0BiYXIuY29tDKIBDm5zX3Rlc3RfY291cnNl", "scores": "{\"8\": 100, \"4\": 100}", "enrolled_on": "2015-01-14T21:51:24.351736Z"}
+]}

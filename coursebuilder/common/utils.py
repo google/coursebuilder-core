@@ -18,10 +18,12 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cStringIO
 import datetime
+import logging
 import random
 import re
 import string
 import sys
+import traceback
 import zipfile
 
 import appengine_config
@@ -119,7 +121,28 @@ class Namespace(object):
         return False  # Don't suppress exceptions
 
 
-def find(predicate, iterable):
+def log_exception_origin():
+    """Log the traceback of the origin of an exception as a critical error.
+
+    When in a try/except block, logging often discards the traceback of the
+    origin of the thrown exception.  This function determines the traceback at
+    the point of exception and sends that to the standard logging library as a
+    critical message.  This is a common idiom, and the boilerplate code is a
+    little verbose, so factored here into a separate function.
+
+    """
+    try:
+        # Log origin of exception to permit troubleshooting.
+        # Do this in try/finally block to conform to Python docs'
+        # recommendation to avoid circular reference to traceback
+        # object.
+        origin_traceback = sys.exc_info()[2]
+        logging.critical(''.join(traceback.format_tb(origin_traceback)))
+    finally:
+        pass
+
+
+def find(predicate, iterable, default=None):
     """Find the first matching item in a list, or None if not found.
 
     This is as a more-usable alternative to filter(), in that it does
@@ -128,6 +151,7 @@ def find(predicate, iterable):
     Args:
       predicate: A function taking one argument: an item from the iterable.
       iterable: A list or generator providing items passed to "predicate".
+      default: Value to return if no item is found.
     Returns:
       The first item in "iterable" where "predicate" returns True, or
       None if no item matches.
@@ -135,7 +159,7 @@ def find(predicate, iterable):
     for item in iterable:
         if predicate(item):
             return item
-    return None
+    return default
 
 
 class ZipAwareOpen(object):

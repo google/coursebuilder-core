@@ -78,6 +78,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.module_config_test.ModuleIncorporationTest': 8,
     'tests.functional.module_config_test.ModuleManifestTest': 7,
     'tests.functional.modules_admin.AdminDashboardTabTests': 4,
+    'tests.functional.modules_analytics.StudentAggregateTest': 5,
     'tests.functional.modules_balancer.ExternalTaskTest': 3,
     'tests.functional.modules_balancer.ManagerTest': 10,
     'tests.functional.modules_balancer.ProjectRestHandlerTest': 5,

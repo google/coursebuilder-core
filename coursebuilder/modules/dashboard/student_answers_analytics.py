@@ -63,8 +63,14 @@ class RawAnswersGenerator(jobs.MapReduceJob):
         return {
             'questions_by_usage_id': (
                 event_transforms.get_questions_by_usage_id(app_context)),
+            'valid_question_ids': (
+                event_transforms.get_valid_question_ids()),
             'group_to_questions': (
-                event_transforms.get_group_to_questions())
+                event_transforms.get_group_to_questions()),
+            'assessment_weights':
+                event_transforms.get_assessment_weights(app_context),
+            'unscored_lesson_ids':
+                event_transforms.get_unscored_lesson_ids(app_context),
             }
 
     @staticmethod
@@ -80,7 +86,9 @@ class RawAnswersGenerator(jobs.MapReduceJob):
         # Fetch global params set up in build_additional_mapper_params(), above.
         params = context.get().mapreduce_spec.mapper.params
         questions_info = params['questions_by_usage_id']
+        valid_question_ids = params['valid_question_ids']
         group_to_questions = params['group_to_questions']
+        assessment_weights = params['assessment_weights']
 
         timestamp = int(
             (event.recorded_on - datetime.datetime(1970, 1, 1)).total_seconds())
@@ -97,18 +105,21 @@ class RawAnswersGenerator(jobs.MapReduceJob):
             version = answer_data.get('version')
             if version == '1.5':
                 answers = event_transforms.unpack_student_answer_1_5(
-                    questions_info, answer_data, timestamp)
+                    questions_info, valid_question_ids, assessment_weights,
+                    group_to_questions, answer_data, timestamp)
 
         elif event.source == 'attempt-lesson':
             # Very odd that the version should be in the answers map....
             version = content.get('answers', {}).get('version')
             if version == '1.5':
                 answers = event_transforms.unpack_student_answer_1_5(
-                    questions_info, content, timestamp)
+                    questions_info, valid_question_ids, assessment_weights,
+                    group_to_questions, content, timestamp)
 
         elif event.source == 'tag-assessment':
             answers = event_transforms.unpack_check_answers(
-                content, questions_info, group_to_questions, timestamp)
+                content, questions_info, valid_question_ids, assessment_weights,
+                group_to_questions, timestamp)
 
         yield (event.user_id, [list(answer) for answer in answers])
 
@@ -250,8 +261,6 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
                     'score': float(answer.score),
                     'tallied': answer.tallied,
                     })
-        for row in ret:
-            print '########### row', row
         return ret
 
 
@@ -490,7 +499,15 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
     def build_additional_mapper_params(self, app_context):
         return {
             'questions_by_usage_id': (
-                event_transforms.get_questions_by_usage_id(app_context))
+                event_transforms.get_questions_by_usage_id(app_context)),
+            'valid_question_ids': (
+                event_transforms.get_valid_question_ids()),
+            'group_to_questions': (
+                event_transforms.get_group_to_questions()),
+            'assessment_weights':
+                event_transforms.get_assessment_weights(app_context),
+            'unscored_lesson_ids':
+                event_transforms.get_unscored_lesson_ids(app_context),
             }
 
     @staticmethod
@@ -506,6 +523,9 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
     def map(student_answers):
         params = context.get().mapreduce_spec.mapper.params
         questions_by_usage_id = params['questions_by_usage_id']
+        valid_question_ids = params['valid_question_ids']
+        group_to_questions = params['group_to_questions']
+        assessment_weights = params['assessment_weights']
         all_answers = transforms.loads(student_answers.data)
         for unit_id, unit_responses in all_answers.items():
 
@@ -513,7 +533,9 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
             if ('containedTypes' in unit_responses and
                 unit_responses['version'] == '1.5'):
                 for answer in event_transforms.unpack_student_answer_1_5(
-                    questions_by_usage_id, unit_responses, timestamp=0):
+                    questions_by_usage_id, valid_question_ids,
+                    assessment_weights, group_to_questions, unit_responses,
+                    timestamp=0):
                     yield (StudentAnswersStatsGenerator.build_key(
                         unit_id, answer.sequence, answer.question_id,
                         answer.question_type), (answer.answers, answer.score))

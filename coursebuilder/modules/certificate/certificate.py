@@ -51,6 +51,7 @@ from models import custom_modules
 from models import data_sources
 from models import jobs
 from models import models
+from modules.analytics import student_aggregate
 from modules.certificate import custom_criteria
 from modules.dashboard import course_settings
 from modules.dashboard import tabs
@@ -340,6 +341,39 @@ def register_analytic():
     tabs.Registry.register('analytics', name, title, [certificates_earned])
 
 
+class CertificateAggregator(
+    student_aggregate.AbstractStudentAggregationComponent):
+
+    @classmethod
+    def get_name(cls):
+        return 'certificate'
+
+    @classmethod
+    def get_event_sources_wanted(cls):
+        return []
+
+    @classmethod
+    def build_static_params(cls, unused_app_context):
+        return None
+
+    @classmethod
+    def process_event(cls, event, static_params):
+        return None
+
+    @classmethod
+    def produce_aggregate(cls, course, student, unused_static_params,
+                          unused_event_items):
+        return {'earned_certificate': student_is_qualified(student, course)}
+
+    @classmethod
+    def get_schema(cls):
+        return schema_fields.SchemaField(
+          'earned_certificate', 'Earned Certificate', 'boolean',
+          description='Whether the student has earned a course completion '
+          'certificate based on the criteria in place when this fact was '
+          'generated.')
+
+
 custom_module = None
 
 
@@ -361,6 +395,8 @@ def register_module():
             'course_settings.js')
         utils.StudentProfileHandler.EXTRA_STUDENT_DATA_PROVIDERS.append(
             get_certificate_table_entry)
+        student_aggregate.StudentAggregateComponentRegistry.register_component(
+            CertificateAggregator)
 
     def on_module_disabled():
         course_settings.CourseSettingsRESTHandler.REQUIRED_MODULES.remove(

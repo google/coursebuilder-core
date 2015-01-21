@@ -922,7 +922,12 @@ class Student(BaseEntity):
     scores = db.TextProperty(indexed=False)
     labels = db.StringProperty(indexed=False)
 
-    _PROPERTY_EXPORT_BLACKLIST = [additional_fields, name]
+    _PROPERTY_EXPORT_BLACKLIST = [
+        additional_fields,  # Suppress all additional_fields items.
+        # Convenience items if not all additional_fields should be suppressed:
+        #'additional_fields.xsrf_token',  # Not PII, but also not useful.
+        #'additional_fields.form01',  # User's name on registration form.
+        name]
 
     @classmethod
     def safe_key(cls, db_key, transform_fn):
@@ -1764,6 +1769,10 @@ class QuestionGroupDTO(object):
     @property
     def question_ids(self):
         return [item['question'] for item in self.dict.get('items', [])]
+
+    @property
+    def items(self):
+        return copy.deepcopy(self.dict.get('items', []))
 
     def add_question(self, question_id, weight):
         self.dict['items'].append({'question': question_id, 'weight': weight})

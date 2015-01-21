@@ -26,8 +26,6 @@ import logging
 import os
 import random
 import re
-import sys
-import traceback
 
 import apiclient
 import httplib2
@@ -471,7 +469,9 @@ class DataPumpJob(jobs.DurableJobBase):
                 item['type'] = 'FLOAT'
             elif structure['type'] in 'boolean':
                 item['type'] = 'BOOLEAN'
-            elif structure['type'] in ('date', 'datetime'):
+            elif structure['type'] in ('date', 'datetime', 'timestamp'):
+                # BigQuery will accept ISO-formatted datetimes as well as
+                # integer seconds-since-epoch as timestamps.
                 item['type'] = 'TIMESTAMP'
             else:
                 raise ValueError(
@@ -877,18 +877,9 @@ class DataPumpJob(jobs.DurableJobBase):
             try:
                 self._send_next_page(sequence_num, job)
             except Exception, ex:
-                try:
-                    # Log origin of exception to permit troubleshooting.
-                    # Do this in try/finally block to conform to Python docs'
-                    # recommendation to avoid circular reference to traceback
-                    # object.
-                    origin_traceback = sys.exc_info()[2]
-                    logging.critical('%s: job abandoned due to fatal error %s',
-                                     self._job_name, str(ex))
-                    logging.critical(''.join(
-                        traceback.format_tb(origin_traceback)))
-                finally:
-                    pass
+                common_utils.log_exception_origin()
+                logging.critical('%s: job abandoned due to fatal error %s',
+                                 self._job_name, str(ex))
 
                 # Log failure in job object as well.
                 if job.output:
@@ -960,7 +951,8 @@ class DataPumpJob(jobs.DurableJobBase):
         ret['any_generator_running'] = False
         required_generators = data_source_class.required_generators()
         if not required_generators:
-            ret['generator_statuses'].append('(No dependencies)')
+            ret['generator_statuses'].append(
+                {'message': '(No dependencies)', 'link': None})
             ret['has_any_generators'] = False
         else:
             ret['has_any_generators'] = True
@@ -968,9 +960,11 @@ class DataPumpJob(jobs.DurableJobBase):
         for generator_class in required_generators:
             generator = generator_class(app_context)
             job = generator.load()
-            ret['generator_statuses'].append(
-                analytics.display.get_generator_status_message(
-                    generator_class, job))
+            message = analytics.display.get_generator_status_message(
+                generator_class, job)
+            link = analytics.display.get_pipeline_link(
+                crypto.XsrfTokenManager, app_context, generator_class, job)
+            ret['generator_statuses'].append({'message': message, 'link': link})
             if not job or job.status_code != jobs.STATUS_CODE_COMPLETED:
                 ret['available'] = False
             if job and not job.has_finished:

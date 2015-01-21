@@ -20,6 +20,7 @@ import datetime
 import itertools
 import json
 import types
+import urlparse
 from xml.etree import ElementTree
 
 import transforms_constants
@@ -54,8 +55,8 @@ _JSON_DATETIME_FORMATS = [
         ('Z', ''),  # Be explicit about Zulu timezone.  Blank implies local.
     )
 ]
-JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html', 'boolean',
-              'integer', 'number', 'array', 'object']
+JSON_TYPES = ['string', 'date', 'datetime', 'text', 'html',
+              'boolean', 'integer', 'number', 'array', 'object', 'timestamp']
 # Prefix to add to all JSON responses to guard against XSSI. Must be kept in
 # sync with modules/oeditor/oeditor.html.
 JSON_XSSI_PREFIX = ")]}'\n"
@@ -90,6 +91,132 @@ def dict_to_json(source_dict, unused_schema):
                 'Failed to encode key \'%s\' with value \'%s\'.' %
                 (key, value))
     return output
+
+
+def validate_object_matches_json_schema(obj, schema, path='', complaints=None):
+    """Check whether the given object matches a schema.
+
+    When building up a dict of contents which is supposed to match a declared
+    schema, human error often creeps in; it is easy to neglect to cast a number
+    to a floating point number, or an object ID to a string.  This function
+    verifies the presence, type, and format of fields.
+
+    Note that it is not effective to verify sub-components that are scalars
+    or arrays, due to the way field names are (or rather, are not) stored
+    in the JSON schema layout.
+
+    Args:
+      obj: A dict containing contents that should match the given schema
+      schema: A dict describing a schema, as obtained from
+        FieldRegistry.get_json_schema_dict().  This parameter can also
+        be the 'properties' member of a JSON schema dict, as that sub-item
+        is commonly used in the REST data source subsystem.
+      path: Do not pass a value for this; it is used for internal recursion.
+      complaints: Either leave this blank or pass in an empty list.  If
+        blank, the list of complaints is available as the return value.
+        If nonblank, the list of complaints will be appended to this list.
+        Either is fine, depending on your preferred style.
+    Returns:
+      Array of verbose complaint strings.  If array is blank, object
+      validated without error.
+    """
+
+    def is_valid_url(obj):
+        url = urlparse.urlparse(obj)
+        return url.scheme and url.netloc
+
+    def is_valid_date(obj):
+        try:
+            datetime.datetime.strptime(obj, ISO_8601_DATE_FORMAT)
+            return True
+        except ValueError:
+            return False
+
+    def is_valid_datetime(obj):
+        try:
+            datetime.datetime.strptime(obj, ISO_8601_DATETIME_FORMAT)
+            return True
+        except ValueError:
+            return False
+
+    if complaints is None:
+        complaints = []
+    if 'properties' in schema or isinstance(obj, dict):
+        if not path:
+            if 'id' in schema:
+                path = schema['id']
+            else:
+                path = '(root)'
+        if obj is None:
+            pass
+        elif not isinstance(obj, dict):
+            complaints.append('Expected a dict at %s, but had %s' % (
+                path, type(obj)))
+        else:
+            if 'properties' in schema:
+                schema = schema['properties']
+            for name, sub_schema in schema.iteritems():
+                validate_object_matches_json_schema(
+                    obj.get(name), sub_schema, path + '.' + name, complaints)
+            for name in obj:
+                if name not in schema:
+                    complaints.append('Unexpected member "%s" in %s' % (
+                        name, path))
+    elif 'items' in schema:
+        if 'items' in schema['items']:
+            complaints.append('Unsupported: array-of-array at ' + path)
+        if obj is None:
+            pass
+        elif not isinstance(obj, (list, tuple)):
+            complaints.append('Expected a list or tuple at %s, but had %s' % (
+                path, type(obj)))
+        else:
+            for index, item in enumerate(obj):
+                item_path = path + '[%d]' % index
+                if item is None:
+                    complaints.append('Found None at %s' % item_path)
+                else:
+                    validate_object_matches_json_schema(
+                        item, schema['items'], item_path, complaints)
+    else:
+        if obj is None:
+            if not schema.get('optional'):
+                complaints.append('Missing mandatory value at ' + path)
+        else:
+            expected_type = None
+            validator = None
+            if schema['type'] in ('string', 'text', 'html', 'file'):
+                expected_type = basestring
+            elif schema['type'] == 'url':
+                expected_type = basestring
+                validator = is_valid_url
+            elif schema['type'] in ('integer', 'timestamp'):
+                expected_type = int
+            elif schema['type'] in 'number':
+                expected_type = float
+            elif schema['type'] in 'boolean':
+                expected_type = bool
+            elif schema['type'] == 'date':
+                expected_type = basestring
+                validator = is_valid_date
+            elif schema['type'] == 'datetime':
+                expected_type = basestring
+                validator = is_valid_datetime
+
+            if expected_type:
+                if not isinstance(obj, expected_type):
+                    complaints.append(
+                        'Expected %s at %s, but instead had %s' % (
+                            expected_type, path, type(obj)))
+                elif validator and not validator(obj):
+                    complaints.append(
+                        'Value "%s" is not well-formed according to %s' % (
+                            str(obj), validator.__name__))
+            else:
+                complaints.append(
+                    'Unrecognized schema scalar type "%s" at %s' % (
+                        schema['type'], path))
+    return complaints
 
 
 def dumps(*args, **kwargs):
@@ -226,7 +353,7 @@ def json_to_dict(source_dict, schema, permit_none_values=False):
                                             attr_type == 'date')
         elif attr_type == 'number':
             output[key] = float(source_dict[key])
-        elif attr_type == 'integer':
+        elif attr_type in ('integer', 'timestamp'):
             output[key] = int(source_dict[key]) if source_dict[key] else 0
         elif attr_type == 'boolean':
             output[key] = convert_bool(source_dict[key], key)

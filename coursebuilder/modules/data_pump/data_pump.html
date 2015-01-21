@@ -49,6 +49,19 @@ div.warning {
 
 </style>
 
+{% macro schema_rows(schema, depth) -%}
+  {% for field in schema %}
+    <tr>
+      <td style="padding-left: {{ 8 + depth * 25 }}px">{{ field }}</td>
+      <td>{{ schema[field].type }}</td>
+      <td>{{ schema[field].description }}</td>
+    </tr>
+    {% if schema[field].type == 'array' %}
+      {{ schema_rows(schema[field]['items']['properties'], depth + 1) }}
+    {% endif %}
+  {% endfor %}
+{%- endmacro %}
+
 <div class="settings-link">
   <p>
     <a href="dashboard?action=settings&tab=data_pump">
@@ -133,8 +146,11 @@ div.warning {
           <form action="dashboard?action=data_pump" method="POST">
             <input type="hidden" name="data_source" value="{{ pump.name }}">
             <input type="hidden" name="xsrf_token" value="{{ xsrf_token }}">
-            {% for message in pump.generator_statuses %}
-              <p>{{ message }}</p>
+            {% for status in pump.generator_statuses %}
+              <p>{{ status.message }}</p>
+              {% if status.link %}
+                <p>{{ status.link }}</p>
+              {% endif %}
             {% endfor %}
             {% if not pump.active and pump.has_any_generators %}
               {% if pump.any_generator_running %}
@@ -153,13 +169,7 @@ div.warning {
         </td>
         <td class="schema-column">
           <table>
-            {% for field in pump.schema %}
-              <tr>
-                <td>{{ field }}</td>
-                <td>{{ pump.schema[field].type }}</td>
-                <td>{{ pump.schema[field].description }}</td>
-              </tr>
-            {% endfor %}
+            {{ schema_rows(pump.schema, 0) }}
           </table>
         </td>
         <td>
