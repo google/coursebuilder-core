@@ -105,26 +105,26 @@ class ProgressPercent(actions.TestBase):
 
         # Zero progress when no unit actions taken.
         with Namespace(NAMESPACE):
-          self.assertEquals(0.0, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.0, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Progress is counted when navigating _on to_ lesson.
         response = self._get_unit_page(self.unit)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.  Verify rounding to 3 decimal places.
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
     def test_progress_pre_assessment_unsubmitted(self):
         self.unit.pre_assessment = self.assessment_one.unit_id
@@ -133,38 +133,38 @@ class ProgressPercent(actions.TestBase):
 
         # Zero progress when no unit actions taken.
         with Namespace(NAMESPACE):
-          self.assertEquals(0.0, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.0, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Zero progress when navigate to pre-assessment
         response = self._get_unit_page(self.unit)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Progress is counted when navigating _on to_ lesson.
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.  Verify rounding to 3 decimal places.
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.667, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Navigate to next lesson.
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Navigate to post-assessment does not change completion
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
     def test_progress_pre_assessment_submitted_but_wrong(self):
         self.unit.pre_assessment = self.assessment_one.unit_id
@@ -180,20 +180,20 @@ class ProgressPercent(actions.TestBase):
 
         # Zero progress because posting the assessment did not score 100%.
         with Namespace(NAMESPACE):
-          self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Still zero progress when take redirect to assessment confirmation.
         response = response.follow()
         with Namespace(NAMESPACE):
-          self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # But have 33% progress when following the link to the 1st lesson
         response = self._click_next_button(response)
         with Namespace(NAMESPACE):
-          self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(0.333, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
     def test_progress_pre_assessment_submitted_and_fully_correct(self):
         self.unit.pre_assessment = self.assessment_one.unit_id
@@ -209,11 +209,11 @@ class ProgressPercent(actions.TestBase):
 
         # 100% progress because pre-assessment was 100% correct.
         with Namespace(NAMESPACE):
-          self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])
 
         # Still 100% after navigating onto a lesson
         response = response.follow()
         with Namespace(NAMESPACE):
-          self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
-              self.student)[self.unit.unit_id])
+            self.assertEquals(1.000, self.tracker.get_unit_percent_complete(
+                self.student)[self.unit.unit_id])

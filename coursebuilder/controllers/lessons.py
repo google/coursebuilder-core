@@ -518,7 +518,8 @@ class UnitHandler(BaseHandler):
         if (not unit.pre_assessment and
             not unit.post_assessment and
             not unit_lessons):
-                return True
+
+            return True
 
         return False
 
@@ -554,7 +555,8 @@ class UnitHandler(BaseHandler):
         if (not unit.pre_assessment and
             not unit.post_assessment and
             not unit_lessons):
-                return True
+
+            return True
 
         return False
 
@@ -569,7 +571,8 @@ class UnitHandler(BaseHandler):
         display_content = []
         if (unit.unit_header and
             self._showing_first_element(unit, lesson, assessment, is_activity)):
-                display_content.append(self._apply_gcb_tags(unit.unit_header))
+
+            display_content.append(self._apply_gcb_tags(unit.unit_header))
         if assessment:
             if 'confirmation' in self.request.params:
                 self.set_confirmation_content(student, unit, assessment,
@@ -595,7 +598,8 @@ class UnitHandler(BaseHandler):
                     self.template_value, 'lesson_common.html'))
         if (unit.unit_footer and
             self._showing_last_element(unit, lesson, assessment, is_activity)):
-                display_content.append(self._apply_gcb_tags(unit.unit_footer))
+
+            display_content.append(self._apply_gcb_tags(unit.unit_footer))
         self.template_value['display_content'] = display_content
 
     def get_assessment_display_content(self, student, unit, assessment,

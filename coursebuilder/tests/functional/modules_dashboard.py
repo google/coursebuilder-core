@@ -717,13 +717,13 @@ class DashboardCustomNavTestCase(actions.TestBase):
 
         class CustomNavHandler(object):
 
-          @classmethod
-          def show_page(cls, dashboard_handler):
-              dashboard_handler.render_page({
-                  'page_title': dashboard_handler.format_title('CustomNav'),
-                  'main_content': 'MainContent'})
+            @classmethod
+            def show_page(cls, dashboard_handler):
+                dashboard_handler.render_page({
+                    'page_title': dashboard_handler.format_title('CustomNav'),
+                    'main_content': 'MainContent'})
         DashboardHandler.add_custom_get_action(
-                        self.ACTION, CustomNavHandler.show_page)
+            self.ACTION, CustomNavHandler.show_page)
 
         dom = self.parse_html_string(self.get('dashboard').body)
         selected_nav_path = ('.//div[@class="gcb-nav-bar gcb-nav-bar-level-1"]'
@@ -740,9 +740,9 @@ class DashboardCustomNavTestCase(actions.TestBase):
         # Add a new tab under the new navigation action
         class CustomTabHandler(object):
 
-          @classmethod
-          def display_html(cls, unused_dashboard_handler):
-             return 'MainTabContent'
+            @classmethod
+            def display_html(cls, unused_dashboard_handler):
+                return 'MainTabContent'
 
         tabs.Registry.register(
             self.ACTION, 'cu_tab', 'CustomTab', CustomTabHandler)

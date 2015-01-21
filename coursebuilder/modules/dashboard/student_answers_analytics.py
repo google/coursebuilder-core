@@ -101,7 +101,7 @@ class RawAnswersGenerator(jobs.MapReduceJob):
             # forms are simply submitted as lists of fields.
             # TODO(mgainer): Handle peer-review scoring
             if not isinstance(answer_data, dict):
-              return
+                return
             version = answer_data.get('version')
             if version == '1.5':
                 answers = event_transforms.unpack_student_answer_1_5(

@@ -32,110 +32,112 @@ _SERIALIZED_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
 class _Result(object):
 
-  # Treating as module-protected. pylint: disable=protected-access
+    # Treating as module-protected. pylint: disable=protected-access
 
-  def __init__(self, now):
-    self.now = now
-    self.last_day = _Bin('day', self.now - datetime.timedelta(days=1))
-    self.last_hour = _Bin('hour', self.now - datetime.timedelta(hours=1))
-    self.last_week = _Bin('week', self.now - datetime.timedelta(days=7))
-    self.bins = [self.last_hour, self.last_day, self.last_week]
-    self._totals = {'all': 0}
-    self._totals.update({state: 0 for state in notifications.Status._STATES})
+    def __init__(self, now):
+        self.now = now
+        self.last_day = _Bin('day', self.now - datetime.timedelta(days=1))
+        self.last_hour = _Bin('hour', self.now - datetime.timedelta(hours=1))
+        self.last_week = _Bin('week', self.now - datetime.timedelta(days=7))
+        self.bins = [self.last_hour, self.last_day, self.last_week]
+        self._totals = {'all': 0}
+        self._totals.update(
+            {state: 0 for state in notifications.Status._STATES})
 
-  def add(self, state, dt):
-    # Datastore values may no longer be found in code; silently discard if so.
-    if state in notifications.Status._STATES:
-      self._totals['all'] += 1
-      self._totals[state] += 1
-      for selected in self.bins:
-        if dt > selected.cutoff:
-          selected.add(state)
+    def add(self, state, dt):
+        # Datastore values may no longer be found in code; silently
+        # discard if so.
+        if state in notifications.Status._STATES:
+            self._totals['all'] += 1
+            self._totals[state] += 1
+            for selected in self.bins:
+                if dt > selected.cutoff:
+                    selected.add(state)
 
-  def failed(self):
-    return self._totals[notifications.Status.FAILED]
+    def failed(self):
+        return self._totals[notifications.Status.FAILED]
 
-  def pending(self):
-    return self._totals[notifications.Status.PENDING]
+    def pending(self):
+        return self._totals[notifications.Status.PENDING]
 
-  def succeeded(self):
-    return self._totals[notifications.Status.SUCCEEDED]
+    def succeeded(self):
+        return self._totals[notifications.Status.SUCCEEDED]
 
-  def total(self):
-    return self._totals['all']
+    def total(self):
+        return self._totals['all']
 
 
 class _Bin(object):
 
-  def __init__(self, name, cutoff):
-    # Treating as module-protected. pylint: disable=protected-access
-    self._data = {state: 0 for state in notifications.Status._STATES}
-    self.cutoff = cutoff
-    self.name = name
+    def __init__(self, name, cutoff):
+        # Treating as module-protected. pylint: disable=protected-access
+        self._data = {state: 0 for state in notifications.Status._STATES}
+        self.cutoff = cutoff
+        self.name = name
 
-  def add(self, state):
-    self._data[state] += 1
+    def add(self, state):
+        self._data[state] += 1
 
-  def failed(self):
-    return self._data[notifications.Status.FAILED]
+    def failed(self):
+        return self._data[notifications.Status.FAILED]
 
-  def pending(self):
-    return self._data[notifications.Status.PENDING]
+    def pending(self):
+        return self._data[notifications.Status.PENDING]
 
-  def succeeded(self):
-    return self._data[notifications.Status.SUCCEEDED]
+    def succeeded(self):
+        return self._data[notifications.Status.SUCCEEDED]
 
-  def total(self):
-    return sum(self._data.values())
+    def total(self):
+        return sum(self._data.values())
 
 
 class CountsGenerator(jobs.MapReduceJob):
 
-  @staticmethod
-  def get_description():
-    return 'notification'
+    @staticmethod
+    def get_description():
+        return 'notification'
 
-  def entity_class(self):
-    return notifications.Notification
+    def entity_class(self):
+        return notifications.Notification
 
-  @staticmethod
-  def map(notification):
-    yield (
-        notifications.Status.from_notification(notification).state,
-        # Treating as module-protected. pylint: disable=protected-access
-        notification._enqueue_date
-    )
+    @staticmethod
+    def map(notification):
+        yield (
+            notifications.Status.from_notification(notification).state,
+            # Treating as module-protected. pylint: disable=protected-access
+            notification._enqueue_date
+            )
 
-  @staticmethod
-  def reduce(key, values):
-    yield key, values
+    @staticmethod
+    def reduce(key, values):
+        yield key, values
 
 
 class NotificationsDataSource(data_sources.SynchronousQuery):
 
-  @staticmethod
-  def fill_values(app_context, template_values, job):
-    now = datetime.datetime.utcnow()
-    result = _Result(now)
+    @staticmethod
+    def fill_values(app_context, template_values, job):
+        now = datetime.datetime.utcnow()
+        result = _Result(now)
 
-    for state_name, create_dates in jobs.MapReduceJob.get_results(job):
-      for create_date in create_dates:
-        result.add(
-            state_name, datetime.datetime.strptime(
-                create_date, _SERIALIZED_DATETIME_FORMAT))
+        for state_name, create_dates in jobs.MapReduceJob.get_results(job):
+            for create_date in create_dates:
+                result.add(
+                    state_name, datetime.datetime.strptime(
+                        create_date, _SERIALIZED_DATETIME_FORMAT))
 
-    template_values.update({'result': result})
+        template_values.update({'result': result})
 
-  @staticmethod
-  def required_generators():
-    return [CountsGenerator]
+    @staticmethod
+    def required_generators():
+        return [CountsGenerator]
 
 
 def register_analytic():
-  data_sources.Registry.register(NotificationsDataSource)
-  name = 'notifications'
-  title = 'Notifications'
-  visualization = analytics.Visualization(
-      name, title, 'stats.html',
-      data_source_classes=[NotificationsDataSource])
-  tabs.Registry.register('analytics', name, title, [visualization])
+    data_sources.Registry.register(NotificationsDataSource)
+    name = 'notifications'
+    title = 'Notifications'
+    visualization = analytics.Visualization(
+        name, title, 'stats.html',
+        data_source_classes=[NotificationsDataSource])
+    tabs.Registry.register('analytics', name, title, [visualization])

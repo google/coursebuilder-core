@@ -138,7 +138,7 @@ class ObjectEditor(object):
         extra_script_tag_urls = []
         for callback in cls.EXTRA_SCRIPT_TAG_URLS:
             for url in callback():
-             extra_script_tag_urls.append(url)
+                extra_script_tag_urls.append(url)
 
         template_values = {
             'enabled': custom_module.enabled,

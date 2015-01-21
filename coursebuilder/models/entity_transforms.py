@@ -143,7 +143,8 @@ def dict_to_entity(entity, source_dict):
     for key, value in source_dict.items():
         if (value and key in properties and
             isinstance(properties[key], db.ReferenceProperty)):
-                setattr(entity, key, string_to_key(value))
+
+            setattr(entity, key, string_to_key(value))
         elif (value is None
               or isinstance(value, transforms_constants.SIMPLE_TYPES)
               or isinstance(value, SUPPORTED_TYPES)):

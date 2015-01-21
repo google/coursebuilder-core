@@ -794,7 +794,7 @@ class DashboardHandler(
             args.update(extra_args)
         url = '/dashboard?%s' % urllib.urlencode(args)
         if fragment:
-          url += '#' + fragment
+            url += '#' + fragment
         return self.canonicalize_url(url)
 
     def get_settings(self):
@@ -1457,10 +1457,11 @@ class DashboardHandler(
                             title='id: %s, type: %s' % (label.id, label_type))
                         if label_type not in (
                             models.LabelDTO.SYSTEM_EDITABLE_LABEL_TYPES):
-                                li.add_child(
-                                    self._create_edit_button(
-                                        'dashboard?action=edit_label&key=%s' %
-                                        label.id,
+
+                            li.add_child(
+                                self._create_edit_button(
+                                    'dashboard?action=edit_label&key=%s' %
+                                    label.id,
                                     ).add_attribute(
                                         id='label_%s' % label.title))
         else:

@@ -1274,7 +1274,7 @@ class CourseModel13(object):
         if verify.UNIT_TYPE_CUSTOM == unit_type:
             assert custom_unit_type
         else:
-           assert not custom_unit_type
+            assert not custom_unit_type
 
         unit = Unit13()
         unit.type = unit_type

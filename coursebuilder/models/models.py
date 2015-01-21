@@ -1234,22 +1234,22 @@ class BaseJsonDao(object):
 
     @classmethod
     def get_all_iter(cls):
-      """Return a generator that will produce all DTOs of a given type.
+        """Return a generator that will produce all DTOs of a given type.
 
-      Yields:
-        A DTO for each row in the Entity type's table.
-      """
+        Yields:
+          A DTO for each row in the Entity type's table.
+        """
 
-      prev_cursor = None
-      any_records = True
-      while any_records:
-        any_records = False
-        query = cls.ENTITY.all().with_cursor(prev_cursor)
-        for entity in query.run():
-          any_records = True
-          yield cls.DTO(entity.key().id_or_name(),
-                        transforms.loads(entity.data))
-        prev_cursor = query.cursor()
+        prev_cursor = None
+        any_records = True
+        while any_records:
+            any_records = False
+            query = cls.ENTITY.all().with_cursor(prev_cursor)
+            for entity in query.run():
+                any_records = True
+                yield cls.DTO(entity.key().id_or_name(),
+                              transforms.loads(entity.data))
+            prev_cursor = query.cursor()
 
     @classmethod
     def _maybe_apply_post_load_hooks(cls, dto_list):
@@ -1900,8 +1900,8 @@ class LabelManager(caching.RequestScopedSingleton):
 
     @classmethod
     def get_all(cls):
-      # pylint: disable=protected-access
-      return cls.instance()._get_all()
+        # pylint: disable=protected-access
+        return cls.instance()._get_all()
 
 
 class LabelDAO(BaseJsonDao):

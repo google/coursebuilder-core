@@ -103,7 +103,7 @@ class Visualization(object):
     def generator_classes(self):
         ret = set()
         for source_class in self.data_source_classes:
-          ret.update(source_class.required_generators())
+            ret.update(source_class.required_generators())
         return ret
 
     @property

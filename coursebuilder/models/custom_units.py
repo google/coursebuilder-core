@@ -26,11 +26,11 @@ class UnitTypeRegistry(object):
 
     @classmethod
     def register_type(cls, custom_type):
-         identifier = custom_type.identifier
-         if identifier in cls.registered_unit_types.keys():
-             logging.fatal(custom_type.identifier + ' already registered')
-             return
-         cls.registered_unit_types[identifier] = custom_type
+        identifier = custom_type.identifier
+        if identifier in cls.registered_unit_types.keys():
+            logging.fatal(custom_type.identifier + ' already registered')
+            return
+        cls.registered_unit_types[identifier] = custom_type
 
     @classmethod
     def get(cls, identifier):

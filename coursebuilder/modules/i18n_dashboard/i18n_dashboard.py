@@ -1399,9 +1399,10 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
 
             for unused in (
                 set(resource_translations) - used_resource_translations):
-                    messages.append(
-                        ('Translation file had %d items for resource "%s", but '
-                         'course had no such resource.') % (
+
+                messages.append(
+                    ('Translation file had %d items for resource "%s", but '
+                     'course had no such resource.') % (
                          len(resource_translations[unused]), unused))
             messages.append(
                 ('For %s, made %d total replacements in %d resources.  '
@@ -1426,9 +1427,10 @@ class TranslationUploadRestHandler(utils.BaseRESTHandler):
         token = request.get('xsrf_token')
         if not token or not crypto.XsrfTokenManager.is_xsrf_token_valid(
             token, self.XSRF_TOKEN_NAME):
-                transforms.send_file_upload_response(
-                    self, 403, 'Missing or invalid XSRF token.')
-                return
+
+            transforms.send_file_upload_response(
+                self, 403, 'Missing or invalid XSRF token.')
+            return
         if 'file' not in self.request.POST:
             transforms.send_file_upload_response(
                 self, 400, 'Must select a .zip or .po file to upload.')
@@ -2356,8 +2358,9 @@ class TranslationConsoleRestHandler(utils.BaseRESTHandler):
                 # consider that to be in-progress.
                 if (item['verb'] == VERB_CHANGED and not item['changed'] and
                     item['target_value']):
-                        any_done = True
-                        all_done = False
+
+                    any_done = True
+                    all_done = False
 
         if all_done:
             progress = I18nProgressDTO.DONE

@@ -560,10 +560,11 @@ class CourseHandler(ApplicationHandler):
         if (Roles.is_course_admin(self.app_context) and
             not appengine_config.PRODUCTION_MODE and
             prefs and prefs.show_jinja_context):
-                @jinja2.contextfunction
-                def get_context(context):
-                    return context
-                self.template_value['context'] = get_context
+
+            @jinja2.contextfunction
+            def get_context(context):
+                return context
+            self.template_value['context'] = get_context
 
         if CAN_PUT_DEBUG_INFO_INTO_PAGES.value:
             self.template_value['debug_info'] = self.debug_info()

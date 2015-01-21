@@ -302,7 +302,7 @@ def _json_to_datetime(value, date_only=False):
             # the old one is) in which case save that, because anything other
             # than DNMF is more useful/informative.
             if not exception or (DNMF not in str(e) and DNMF in str(exception)):
-               exception = e
+                exception = e
 
     # We cannot get here without an exception.
     # The linter thinks we might still have 'None', but is mistaken.

@@ -303,7 +303,7 @@ class TaskThread(threading.Thread):
         assert chunk_size < 256
 
         if runtimes_sec is None:
-          runtimes_sec = []
+            runtimes_sec = []
 
         errors = []
 

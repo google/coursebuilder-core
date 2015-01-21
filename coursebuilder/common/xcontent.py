@@ -513,7 +513,7 @@ class TranslationIO(object):
                 result += line[from_col_num:col_num]
             result += '[%s]' % line[col_num]
             if to_col_num > col_num:
-              result += line[col_num + 1:to_col_num]
+                result += line[col_num + 1:to_col_num]
             return result
         return text
 

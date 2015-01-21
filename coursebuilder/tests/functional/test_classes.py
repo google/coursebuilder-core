@@ -3570,35 +3570,35 @@ class DatastoreBackedCustomCourseTest(DatastoreBackedCourseTest):
         models.MemcacheManager.begin_readonly()
         try:
 
-          # first fetch chould miss local cache, but hit memcache
-          hit_local_before = models.CACHE_HIT_LOCAL.value
-          hit_before = models.CACHE_HIT.value
-          miss_local_before = models.CACHE_MISS_LOCAL.value
-          miss_before = models.CACHE_MISS.value
-          course.fs.impl.get(fn)
-          hit_local_after = models.CACHE_HIT_LOCAL.value
-          hit_after = models.CACHE_HIT.value
-          miss_local_after = models.CACHE_MISS_LOCAL.value
-          miss_after = models.CACHE_MISS.value
-          self.assertEquals(hit_after, hit_before)
-          self.assertEquals(miss_after, miss_before)
-          self.assertEquals(hit_local_after, hit_local_before)
-          self.assertEquals(miss_local_after, miss_local_before)
+            # first fetch chould miss local cache, but hit memcache
+            hit_local_before = models.CACHE_HIT_LOCAL.value
+            hit_before = models.CACHE_HIT.value
+            miss_local_before = models.CACHE_MISS_LOCAL.value
+            miss_before = models.CACHE_MISS.value
+            course.fs.impl.get(fn)
+            hit_local_after = models.CACHE_HIT_LOCAL.value
+            hit_after = models.CACHE_HIT.value
+            miss_local_after = models.CACHE_MISS_LOCAL.value
+            miss_after = models.CACHE_MISS.value
+            self.assertEquals(hit_after, hit_before)
+            self.assertEquals(miss_after, miss_before)
+            self.assertEquals(hit_local_after, hit_local_before)
+            self.assertEquals(miss_local_after, miss_local_before)
 
-          # second fetch must hit local cache, and not hit memcache
-          hit_local_before = models.CACHE_HIT_LOCAL.value
-          hit_before = models.CACHE_HIT.value
-          miss_local_before = models.CACHE_MISS_LOCAL.value
-          miss_before = models.CACHE_MISS.value
-          course.fs.impl.get(fn)
-          hit_local_after = models.CACHE_HIT_LOCAL.value
-          hit_after = models.CACHE_HIT.value
-          miss_local_after = models.CACHE_MISS_LOCAL.value
-          miss_after = models.CACHE_MISS.value
-          self.assertEquals(hit_after, hit_before)
-          self.assertEquals(miss_after, miss_before)
-          self.assertEquals(hit_local_after, hit_local_before)
-          self.assertEquals(miss_local_after, miss_local_before)
+            # second fetch must hit local cache, and not hit memcache
+            hit_local_before = models.CACHE_HIT_LOCAL.value
+            hit_before = models.CACHE_HIT.value
+            miss_local_before = models.CACHE_MISS_LOCAL.value
+            miss_before = models.CACHE_MISS.value
+            course.fs.impl.get(fn)
+            hit_local_after = models.CACHE_HIT_LOCAL.value
+            hit_after = models.CACHE_HIT.value
+            miss_local_after = models.CACHE_MISS_LOCAL.value
+            miss_after = models.CACHE_MISS.value
+            self.assertEquals(hit_after, hit_before)
+            self.assertEquals(miss_after, miss_before)
+            self.assertEquals(hit_local_after, hit_local_before)
+            self.assertEquals(miss_local_after, miss_local_before)
         finally:
             models.MemcacheManager.end_readonly()
 

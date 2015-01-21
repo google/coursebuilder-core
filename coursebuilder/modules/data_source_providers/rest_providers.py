@@ -467,9 +467,9 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
             del item['key']
             del item['key_by_user_id']
             item['labels'] = (
-              [x for x in utils.text_to_list(item['labels'])])
+                [x for x in utils.text_to_list(item['labels'])])
             if 'scores' in ret:
-              del item['scores']
+                del item['scores']
             if 'additional_fields' in item:
                 item['additional_fields'] = transforms.loads(
                     item['additional_fields'])

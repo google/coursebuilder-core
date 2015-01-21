@@ -225,15 +225,15 @@ class UnitLessonEditor(ApplicationHandler):
             extra_args={'is_newly_created': 1}))
 
     def post_add_custom_unit(self):
-          """Adds a custom unit to a course."""
-          course = courses.Course(self)
-          custom_unit_type = self.request.get('unit_type')
-          custom_unit = course.add_custom_unit(custom_unit_type)
-          course.save()
-          self.redirect(self.get_action_url(
-              'edit_custom_unit', key=custom_unit.unit_id,
-              extra_args={'is_newly_created': 1,
-                          'unit_type': custom_unit_type}))
+        """Adds a custom unit to a course."""
+        course = courses.Course(self)
+        custom_unit_type = self.request.get('unit_type')
+        custom_unit = course.add_custom_unit(custom_unit_type)
+        course.save()
+        self.redirect(self.get_action_url(
+            'edit_custom_unit', key=custom_unit.unit_id,
+            extra_args={'is_newly_created': 1,
+                        'unit_type': custom_unit_type}))
 
     def post_set_draft_status(self):
         """Sets the draft status of a course component.
