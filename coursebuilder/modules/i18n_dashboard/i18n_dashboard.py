@@ -3024,7 +3024,7 @@ def register_module():
         (TranslationUploadRestHandler.URL, TranslationUploadRestHandler),
         (IsTranslatableRestHandler.URL, IsTranslatableRestHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'I18N Dashboard Module',
         'A module provide i18n workflow.',

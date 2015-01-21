@@ -1781,7 +1781,7 @@ def register_module():
     dashboard_handlers = [
         ('/dashboard', DashboardHandler),
     ]
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Course Dashboard',
         'A set of pages for managing Course Builder course.',

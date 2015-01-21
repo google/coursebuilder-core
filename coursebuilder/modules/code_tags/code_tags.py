@@ -207,7 +207,7 @@ def register_module():
             appengine_config.BUNDLE_ROOT, 'lib/codemirror-4.5.0.zip')))]
     namespaced_routes = []
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Code Editor and Code Example Display',
         'Allow teacher to use a proper code editor and'

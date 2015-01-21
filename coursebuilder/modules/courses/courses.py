@@ -83,7 +83,7 @@ def register_module():
         ('/student/unenroll', utils.StudentUnenrollHandler),
         ('/unit', lessons.UnitHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Course',
         'A set of pages for delivering an online course.',

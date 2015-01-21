@@ -949,11 +949,7 @@ def legacy_eval_python_expression_for_test(content, scope, unused_root_name):
     restricted_scope.update(scope)
     restricted_scope.update({'__builtins__': {}})
     code = compile(content, '<string>', 'exec')
-
-    # pylint: disable=exec-statement
-    exec code in restricted_scope
-    # pylint: enable=exec-statement
-
+    exec code in restricted_scope  # pylint: disable=exec-used
     return restricted_scope
 
 
@@ -1624,11 +1620,7 @@ foo = [
     restricted_scope = {}
     restricted_scope.update({'__builtins__': {}})
     code = compile(content, '<string>', 'exec')
-
-    # pylint: disable=exec-statement
-    exec code in restricted_scope
-    # pylint: enable=exec-statement
-
+    exec code in restricted_scope  # pylint: disable=exec-used
     assert 'isinstance' in restricted_scope.get('foo')
 
 
@@ -1646,7 +1638,7 @@ def test_sample_assets():
 
 def run_all_unit_tests():
     """Runs all unit tests in this module."""
-    global parse_content
+    global parse_content  # pylint: disable=global-statement
     original = parse_content
     try:
         parse_content = legacy_eval_python_expression_for_test

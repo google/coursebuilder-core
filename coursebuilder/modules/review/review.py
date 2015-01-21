@@ -315,6 +315,7 @@ class Manager(object):
             review_summary_key=summary_key, reviewee_key=reviewee_key,
             reviewer_key=reviewer_key, state=domain.REVIEW_STATE_ASSIGNED,
             submission_key=submission_key, unit_id=unit_id)
+        # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
         step_key, written_summary_key = entities.put([step, summary])
 
         if summary_key != written_summary_key:
@@ -1025,6 +1026,7 @@ class Manager(object):
         review_to_update.contents = review_payload
         updated_step_key = None
         if not mark_completed:
+            # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
             _, updated_step_key = entities.put([review_to_update, step])
         else:
             if step.state == domain.REVIEW_STATE_ASSIGNED:
@@ -1036,6 +1038,7 @@ class Manager(object):
             step.state = domain.REVIEW_STATE_COMPLETED
             summary.increment_count(step.state)
 
+            # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
             _, updated_step_key, _ = entities.put(
                 [review_to_update, step, summary])
 
@@ -1071,7 +1074,7 @@ def register_module():
         '/cron/expire_old_assigned_reviews',
         cron.ExpireOldAssignedReviewsHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Peer Review Engine',
         'A set of classes for managing peer review process.',

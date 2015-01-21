@@ -324,7 +324,7 @@ def register_module():
     global_routes = yui_handlers + codemirror_handler + [
         (os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Object Editor',
         'A visual editor for editing various types of objects.',

@@ -163,6 +163,8 @@ _ENTITY_REGEX = re.compile('(&[a-z]+;)')
 # Items we don't want to change to codes when translating HTML entities in XML.
 _XML_ENTITY_NAMES = frozenset(['quot', 'amp', 'lt', 'gt', 'apos'])
 
+# pylint: disable=protected-access
+
 
 def _get_entity_map():
     mappings = {}

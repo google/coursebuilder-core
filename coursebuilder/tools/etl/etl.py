@@ -773,6 +773,7 @@ def _download_course(context, course, archive_path, params):
     filesystem_files = all_files - datastore_files
 
     if vars(params).get('no_static_files', False):
+        # pylint: disable=protected-access
         always_allowed_files = set([
             context.fs.impl._physical_to_logical(_COURSE_JSON_PATH_SUFFIX),
             context.fs.impl._physical_to_logical(_COURSE_YAML_PATH_SUFFIX)])

@@ -408,7 +408,7 @@ def assert_all_fail(browser, callbacks):
                 'Expected to fail: %s().' % callback.__name__)
         except ShouldHaveFailedByNow as e:
             raise e
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
 

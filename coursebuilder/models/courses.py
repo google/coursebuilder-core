@@ -1757,7 +1757,7 @@ class CourseModel13(object):
             except models.ValidationError as e:
                 errors.append(str(e))
                 return False
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 errors.append('Unable to convert: %s, Error: %s' % (task, e))
                 return False
             return True

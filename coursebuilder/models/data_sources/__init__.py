@@ -16,16 +16,14 @@
 
 __author__ = 'Mike Gainer (mgainer@google.com)'
 
-from models import roles
-from models import transforms
 from models.data_sources import base_types
 from models.data_sources import source_handler
-from models.data_sources import utils as data_source_utils
 from models.data_sources import paginated_table
 from models.data_sources import registry
 
 # Make these types available at models.data_sources so that client
 # code does not have to know about our internal structure.
+# pylint: disable=protected-access
 AbstractDbTableRestDataSource = paginated_table._AbstractDbTableRestDataSource
 AbstractRestDataSource = base_types._AbstractRestDataSource
 AbstractSmallRestDataSource = base_types._AbstractSmallRestDataSource
@@ -34,6 +32,7 @@ DbTableContext = paginated_table._DbTableContext
 NullContextManager = base_types._NullContextManager
 Registry = registry._Registry
 SynchronousQuery = base_types._SynchronousQuery
+# pylint: enable=protected-access
 
 
 def _generate_rest_handler(rest_data_source_class):

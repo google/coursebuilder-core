@@ -185,7 +185,7 @@ def register_module():
     namespaced_routes = [
         (UnsubscribeHandler.URL, UnsubscribeHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Unsubscribe Module',
         'A module to enable unsubscription from emails.',

@@ -200,7 +200,7 @@ module = None
 def register_module():
     """Adds this module to the registry."""
 
-    global module
+    global module    # pylint: disable=global-statement
 
     handlers = [
         ('/oauth2_google_drive', GoogleDriveHandler),

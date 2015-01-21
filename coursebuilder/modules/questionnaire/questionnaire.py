@@ -234,7 +234,7 @@ def register_module():
 
     namespaced_routes = [(QuestionnaireHandler.URL, QuestionnaireHandler)]
 
-    global questionnaire_module
+    global questionnaire_module  # pylint: disable=global-statement
     questionnaire_module = custom_modules.Module(
         'Questionnaire',
         'Can create a questionnaire for students to answer.'

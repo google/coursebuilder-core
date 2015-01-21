@@ -312,7 +312,7 @@ def register_module():
     # Tell map/reduce internals that this is now the base path to use.
     mapreduce_parameters.config.BASE_PATH = '/mapreduce/worker'
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Provides support for analysis jobs based on map/reduce',

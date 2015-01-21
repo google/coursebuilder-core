@@ -69,7 +69,7 @@ def register_module():
         ('/explorer/courses', student.RegisteredCoursesHandler),
         ('/explorer/profile', student.ProfileHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Course Explorer',
         'A set of pages for delivering an online course.',

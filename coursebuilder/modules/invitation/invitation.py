@@ -462,7 +462,7 @@ def register_module():
         ('/' + InvitationHandler.URL, InvitationHandler),
         ('/' + InvitationRESTHandler.URL, InvitationRESTHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Invitation Page',
         'A page to invite others to register.',

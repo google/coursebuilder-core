@@ -302,10 +302,12 @@ class ProcessScopedVfsCache(caching.ProcessScopedSingleton):
 
     @classmethod
     def get_vfs_cache_len(cls):
+        # pylint: disable=protected-access
         return len(ProcessScopedVfsCache.instance()._cache.items.keys())
 
     @classmethod
     def get_vfs_cache_size(cls):
+        # pylint: disable=protected-access
         return ProcessScopedVfsCache.instance()._cache.total_size
 
     def __init__(self):

@@ -182,7 +182,7 @@ def register_module():
         (LessonProgressRESTHandler.URI, LessonProgressRESTHandler),
         ]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Manual marking of unit/lesson progress',

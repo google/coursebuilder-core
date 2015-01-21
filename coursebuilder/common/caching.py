@@ -306,6 +306,7 @@ class AbstractCacheConnection(object):
         if not cls.is_enabled():
             return NoopCacheConnection()
         conn = cls(*args, **kwargs)
+        # pylint: disable=protected-access
         conn.apply_updates(conn._get_incremental_updates())
         return conn
 

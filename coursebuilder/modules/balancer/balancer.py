@@ -587,7 +587,7 @@ class _TaskRestHandler(_BaseRestHandler):
 
         try:
             op = _GetTaskOperation.from_str(self.request.get('request'))
-        except:
+        except:  # pylint: disable=bare-except
             self._send_json_response(400, 'Bad request')
             return
 
@@ -647,7 +647,7 @@ class _TaskRestHandler(_BaseRestHandler):
 
         try:
             op = _CreateTaskOperation.from_str(self.request.get('request'))
-        except:
+        except:  # pylint: disable=bare-except
             self._send_json_response(400, 'Bad request')
             return
 
@@ -685,7 +685,7 @@ custom_module = None
 
 def register_module():
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
 
     global_handlers = [
         (_REST_URL_TASK, _TaskRestHandler),

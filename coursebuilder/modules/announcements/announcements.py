@@ -402,7 +402,7 @@ def register_module():
 
     announcement_handlers = [('/announcements', AnnouncementsHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Course Announcements',
         'A set of pages for managing course announcements.',

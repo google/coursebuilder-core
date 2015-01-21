@@ -81,7 +81,7 @@ def evaluate_python_code(code):
         sys.stdout = results_io
         try:
             compiled_code = compile(code, '<string>', 'exec')
-            exec(compiled_code, globals())  # pylint: disable=exec-statement
+            exec(compiled_code, globals())  # pylint: disable=exec-used
         except Exception as e:  # pylint: disable=broad-except
             results_io.write('Error: %s' % e)
             return results_io.getvalue(), False
@@ -973,7 +973,7 @@ def register_module():
 
     namespaced_handlers = [(AdminHandler.URL, AdminHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Site Admin',
         'A set of pages for Course Builder site administrator.',

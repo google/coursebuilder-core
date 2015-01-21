@@ -41,7 +41,7 @@ def register_module():
         data_sources.Registry.register(
             student_aggregate.StudentAggregateComponentRegistry)
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Analytics', 'Data sources and dashboard analytics pages',
         [], [],

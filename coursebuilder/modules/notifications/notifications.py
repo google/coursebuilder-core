@@ -407,6 +407,7 @@ class Manager(object):
                              str(retention_policy))
 
         try:
+            # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
             notification, payload = cls._make_unsaved_models(
                 audit_trail, body, enqueue_date, intent, retention_policy.NAME,
                 sender, subject, to,
@@ -418,6 +419,7 @@ class Manager(object):
         cls._mark_enqueued(notification, enqueue_date)
 
         try:
+            # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
             notification_key, payload_key = cls._save_notification_and_payload(
                 notification, payload,
                 )
@@ -459,7 +461,9 @@ class Manager(object):
         exception = None
         failed_permanently = False
         now = datetime.datetime.utcnow()
+        # pylint: disable=unbalanced-tuple-unpacking,unpacking-non-sequence
         notification, payload = db.get([notification_key, payload_key])
+        # pylint: enable=unbalanced-tuple-unpacking,unpacking-non-sequence
         send_mail_fn = (
             test_send_mail_fn if test_send_mail_fn else mail.send_mail)
         sent = False
@@ -958,7 +962,7 @@ def register_module():
             dashboard.filer.ALLOWED_ASSET_TEXT_BASES.difference(
                 ['views/notifications']))
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
 
     # Avert circular dependency. pylint: disable=g-import-not-at-top
     from modules.notifications import cron

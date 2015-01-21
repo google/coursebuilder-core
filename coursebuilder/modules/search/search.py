@@ -557,7 +557,7 @@ def register_module():
         ('/search', SearchHandler)
     ]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Provides search capabilities for courses',

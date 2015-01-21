@@ -1735,7 +1735,7 @@ class QuestionImporter(object):
                     'duplicate questions from the question bank in '
                     'order to re-import: %s.' % description)
             return None
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             errors.append('Unable to convert: %s' % ex)
             return None
         return question_dtos

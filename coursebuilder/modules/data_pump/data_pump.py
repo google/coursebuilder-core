@@ -1144,7 +1144,7 @@ def register_module():
                 DATA_PUMP_SETTINGS_SCHEMA_SECTION].remove(field)
         DashboardExtension.unregister()
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Data Pump', 'Pushes DB and generated content to a BigQuery project',
         [], [],

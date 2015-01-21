@@ -46,7 +46,7 @@ def assert_fails(function):
             'Expected to fail: %s().' % function.__name__)
     except ShouldHaveFailedByNow as e:
         raise e
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 

@@ -498,6 +498,7 @@ class QuestionStatsSource(data_sources.SynchronousQuery):
 
     @staticmethod
     def fill_values(app_context, template_values, job):
+        # pylint: disable=unpacking-non-sequence
         accumulated_question_answers, accumulated_assessment_answers = (
             transforms.loads(job.output))
 

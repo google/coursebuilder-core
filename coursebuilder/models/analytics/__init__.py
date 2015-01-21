@@ -18,7 +18,6 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import os
 import re
-import sys
 import jinja2
 
 import appengine_config
@@ -131,6 +130,7 @@ class _TemplateRenderer(object):
         return jinja2.utils.Markup(
             self._handler.get_template(
                 template_name,
+                # pylint: disable=protected-access
                 analytics_utils._get_template_dir_names(visualization)
             ).render(template_values, autoescape=True))
 
@@ -163,6 +163,7 @@ def generate_display_html(handler, xsrf_creator, visualizations):
         and the result of HTML template expansion.
     """
 
+    # pylint: disable=protected-access
     return display._generate_display_html(
         _TemplateRenderer(handler), xsrf_creator, handler.app_context,
         visualizations)
@@ -176,6 +177,7 @@ class AnalyticsHandler(controllers_utils.ReflectiveRequestHandler,
     post_actions = ['run_visualizations', 'cancel_visualizations']
 
     def _get_generator_classes(self):
+        # pylint: disable=protected-access
         return analytics_utils._generators_for_visualizations(
             [by_name[name] for name in self.request.get_all('visualization')])
 

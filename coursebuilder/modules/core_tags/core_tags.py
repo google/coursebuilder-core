@@ -784,7 +784,7 @@ def register_module():
         # Register extra libraries required by GoogleDrive
         GoogleDrive.on_register()
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
 
     global_routes = [(
         os.path.join(RESOURCE_FOLDER, '.*'), tags.ResourcesHandler)]

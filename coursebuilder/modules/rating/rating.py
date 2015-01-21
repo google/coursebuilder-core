@@ -206,7 +206,7 @@ def register_module():
 
     namespaced_routes = [(RatingHandler.URL, RatingHandler)]
 
-    global rating_module
+    global rating_module  # pylint: disable=global-statement
     rating_module = custom_modules.Module(
         'Student rating widget',
         'Provide a widget to record user satisfaction with course content.',

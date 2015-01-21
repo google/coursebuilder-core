@@ -180,7 +180,7 @@ def register_module():
         (_POST_ACTION_SUFFIX, TextFileUploadHandler),
     ]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
 
     custom_module = custom_modules.Module(
         'Student Text File Submission Upload',

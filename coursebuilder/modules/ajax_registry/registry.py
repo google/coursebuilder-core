@@ -34,7 +34,7 @@ def register_module():
         ('/modules/ajax_registry/assets/.*', tags.ResourcesHandler)
     ]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME, 'Provides library to register ajax calls',
         global_routes, [])

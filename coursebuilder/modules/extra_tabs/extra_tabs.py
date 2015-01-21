@@ -156,7 +156,7 @@ def register_module():
     namespaced_routes = [
         ('/' + ExtraTabHandler.URL, ExtraTabHandler)]
 
-    global extra_tabs_module
+    global extra_tabs_module  # pylint: disable=global-statement
     extra_tabs_module = custom_modules.Module(
         'Extra Navbar Tabs',
         'Add tabs to the main navbar.',

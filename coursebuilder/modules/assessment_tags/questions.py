@@ -293,7 +293,7 @@ def register_module():
     global_routes = [(
         os.path.join(RESOURCES_PATH, '.*'), tags.ResourcesHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Question tags',
         'A set of tags for rendering questions within a lesson body.',

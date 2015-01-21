@@ -59,7 +59,7 @@ def _notify_module_disabled():
 
 
 def register_module():
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         MODULE_NAME,
         'Implementations of specific data sources.',

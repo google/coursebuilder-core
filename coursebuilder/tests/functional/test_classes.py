@@ -1826,7 +1826,7 @@ class StudentAspectTest(actions.TestBase):
                     'when registration is closed.')
             except actions.ShouldHaveFailedByNow as e:
                 raise e
-            except:
+            except:  # pylint: disable=bare-except
                 pass
 
             # Verify registration link not present on /course

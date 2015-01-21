@@ -110,7 +110,7 @@ def register_module():
             appengine_config.BUNDLE_ROOT, 'lib', 'mathjax-2.3.0.zip')))]
     namespaced_routes = []
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Mathematical Formula Display',
         'Provides a custom tag to embed mathematical formulas using TeX or MML.'

@@ -419,7 +419,7 @@ def register_module():
     namespaced_routes = [
         ('/' + CERTIFICATE_HANDLER_PATH, ShowCertificateHandler)]
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
     custom_module = custom_modules.Module(
         'Show Certificate',
         'A page to show student certificate.',

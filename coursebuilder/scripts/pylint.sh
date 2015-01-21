@@ -71,8 +71,16 @@ while [[ ${#files[@]} -gt 0 ]] || [[ ${#jobs[@]} -gt 0 ]] ; do
   while [[ ${#jobs[@]} -lt $parallelism ]] && [[ ${#files[@]} -gt 0 ]] ; do
     filename=${files[0]}
     files=(${files[@]:1})  # shift array to drop item at index 0
+    if [[ $filename =~ (^|/)tests/ ]] ; then
+      IGNORE_FOR_TESTS[0]=--disable=protected-access
+      IGNORE_FOR_TESTS[1]=--disable=unbalanced-tuple-unpacking
+      IGNORE_FOR_TESTS[2]=--disable=unpacking-non-sequence
+    else
+      IGNORE_FOR_TESTS=''
+    fi
     python $RUNTIME_HOME/logilab/pylint/lint.py \
       --rcfile=$COURSEBUILDER_HOME/scripts/pylint.rc \
+      ${IGNORE_FOR_TESTS[@]} \
       $filename &
     jobs[$!]=$filename  # Map PID to filename
   done

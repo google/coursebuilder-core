@@ -117,7 +117,7 @@ def register_module():
         tags.EditorBlacklists.register(
             Activity.binding_name, tags.EditorBlacklists.DESCRIPTIVE_SCOPE)
 
-    global custom_module
+    global custom_module  # pylint: disable=global-statement
 
     # Add a static handler for icons shown in the rich text editor.
     global_routes = [(
