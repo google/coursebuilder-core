@@ -36,6 +36,7 @@ env_variables:
     modules.rating.rating
     modules.review.review
     modules.search.search
+    modules.skill_map.skill_map
     modules.unsubscribe.unsubscribe
     modules.upload.upload
     modules.oauth2.oauth2=disabled
