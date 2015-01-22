@@ -580,11 +580,13 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
         def build_reduce_dict(unit_id, sequence, question_id, is_valid,
                               answer, count):
             # NOTE: maintain members in parallel with get_schema() below.
+            if not isinstance(answer, basestring):
+                answer = str(answer)  # Convert numbers to strings.
             return ({'unit_id': str(unit_id),
                      'sequence': sequence,
                      'question_id': str(question_id),
                      'is_valid': is_valid,
-                     'answer': str(answer),
+                     'answer': answer,
                      'count': count})
 
         # Emit tuples for each of the correct answers.
@@ -602,9 +604,14 @@ class StudentAnswersStatsGenerator(jobs.MapReduceJob):
             for count, answer in sorted_incorrect[0:MAX_INCORRECT_REPORT]:
                 yield(build_reduce_dict(unit_id, sequence, question_id, False,
                                         answer, count))
+
+            total_other_incorrect = 0
             for count, _ in sorted_incorrect[MAX_INCORRECT_REPORT:]:
+                total_other_incorrect += count
+            if total_other_incorrect:
                 yield(build_reduce_dict(unit_id, sequence, question_id, False,
-                                        'Other Incorrect Answers', count))
+                                        'Other Incorrect Answers',
+                                        total_other_incorrect))
 
 
 class QuestionAnswersDataSource(data_sources.AbstractSmallRestDataSource):
