@@ -176,7 +176,7 @@ class _AbstractRestDataSource(_DataSource):
             'be returned from this function.')
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, source_context):
         raise NotImplementedError(
             'Classes derived from _AbstractRestDataSource must be able to '
             'statically produce a JSON schema describing their typical '

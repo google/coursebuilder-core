@@ -165,7 +165,8 @@ class RawAnswersDataSource(data_sources.AbstractDbTableRestDataSource):
         return 25
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Raw Student Answers',
             description='Raw data of answers to all uses of all graded '
@@ -290,8 +291,9 @@ class AnswersDataSource(RawAnswersDataSource):
         return 1000
 
     @classmethod
-    def get_schema(cls, app_context, log):
-        schema = super(AnswersDataSource, cls).get_schema(app_context, log)
+    def get_schema(cls, app_context, log, source_context):
+        schema = super(AnswersDataSource, cls).get_schema(app_context, log,
+                                                          source_context)
         schema.pop('user_name')
         return schema
 
@@ -624,7 +626,8 @@ class QuestionAnswersDataSource(data_sources.AbstractSmallRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         # NOTE: maintain members in parallel with build_reduce_dict() above.
         reg = schema_fields.FieldRegistry(
             'Question Answers',
@@ -687,7 +690,8 @@ class CourseQuestionsDataSource(data_sources.AbstractSmallRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Course Questions',
             description='Facts about each usage of each question in a course.')
@@ -745,7 +749,8 @@ class CourseUnitsDataSource(data_sources.AbstractSmallRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         # NOTE: maintain members in parallel with build_reduce_dict() above.
         reg = schema_fields.FieldRegistry(
             'Units',

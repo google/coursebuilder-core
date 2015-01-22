@@ -20,6 +20,7 @@ from common import schema_fields
 from common import utils
 from models import courses
 from models import data_sources
+from models import entity_transforms
 from models import jobs
 from models import models
 from models import transforms
@@ -37,7 +38,8 @@ class AssessmentsDataSource(data_sources.AbstractSmallRestDataSource):
         return 'Assessments'
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Analytics',
             description='Sets of questions determining student skill')
@@ -87,7 +89,8 @@ class UnitsDataSource(data_sources.AbstractSmallRestDataSource):
         return 'Units'
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Units',
             description='Sets of lessons providing course content')
@@ -131,7 +134,8 @@ class LessonsDataSource(data_sources.AbstractSmallRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Lessons',
             description='Sets of lessons providing course content')
@@ -200,7 +204,8 @@ class StudentAssessmentScoresDataSource(
         return True
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry('Unit',
                                           description='Course sub-components')
         reg.add_property(schema_fields.SchemaField(
@@ -312,7 +317,7 @@ class LabelsDataSource(data_sources.AbstractSmallRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, source_context):
         reg = schema_fields.FieldRegistry(
             'Labels',
             description='All labels used in course')
@@ -388,7 +393,7 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         return 100
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, source_context):
         """Override default entity-based schema to reflect our upgrades.
 
         In the entity, labels are stored as a single string property,
@@ -415,7 +420,10 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
           FieldRegistry.get_json_schema_dict().
         """
         clazz = cls.get_entity_class()
-        registry = transforms.get_schema_for_entity(clazz)
+        if source_context.send_uncensored_pii_data:
+            registry = entity_transforms.get_schema_for_entity_unsafe(clazz)
+        else:
+            registry = entity_transforms.get_schema_for_entity(clazz)
         ret = registry.get_json_schema_dict()['properties']
 
         # Scores are deprecated now that regularized scores are available
@@ -464,8 +472,12 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         # (The user_id field is what's valuable for matching to other items
         # such as StudentAnswersEntity records.)
         for item in ret:
-            del item['key']
-            del item['key_by_user_id']
+            if 'key' in item:
+                del item['key']
+            if 'key_by_user_id' in item:
+                del item['key_by_user_id']
+            if 'safe_key' in item:
+                del item['safe_key']
             item['labels'] = (
                 [x for x in utils.text_to_list(item['labels'])])
             if 'scores' in ret:
@@ -515,7 +527,7 @@ class LabelsOnStudentsDataSource(data_sources.AbstractRestDataSource):
         return data_sources.NullContextManager
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, source_context):
         reg = schema_fields.FieldRegistry(
             'Students By Label',
             description='Count of students marked with each label')

@@ -20,7 +20,9 @@ import time
 
 from webtest import app
 
+from common import catch_and_log
 from common import crypto
+from common import utils as common_utils
 from models import data_sources
 from models import entities
 from models import transforms
@@ -65,29 +67,96 @@ data_sources.Registry.register(CharacterDataSource)
 from tests.functional import actions
 
 
-class PaginatedTableTest(actions.TestBase):
-    """Verify operation of paginated access to AppEngine DB tables."""
+class DataSourceTest(actions.TestBase):
 
     def setUp(self):
-        super(PaginatedTableTest, self).setUp()
-        self.characters = [
-            Character(user_id='001', goal='L', rank=4, age=8, name='Charlie'),
-            Character(user_id='002', goal='L', rank=6, age=6, name='Sally'),
-            Character(user_id='003', goal='L', rank=0, age=8, name='Lucy'),
-            Character(user_id='004', goal='G', rank=2, age=7, name='Linus'),
-            Character(user_id='005', goal='G', rank=8, age=8, name='Max'),
-            Character(user_id='006', goal='G', rank=1, age=8, name='Patty'),
-            Character(user_id='007', goal='R', rank=9, age=35, name='Othmar'),
-            Character(user_id='008', goal='R', rank=5, age=2, name='Snoopy'),
-            Character(user_id='009', goal='R', rank=7, age=8, name='Pigpen'),
-            Character(user_id='010', goal='R', rank=3, age=8, name='Violet'),
-        ]
-        for c in self.characters:
-            c.put()
+        super(DataSourceTest, self).setUp()
+        with common_utils.Namespace(self.NAMESPACE):
+            self.characters = [
+                Character(
+                    user_id='001', goal='L', rank=4, age=8, name='Charlie'),
+                Character(
+                    user_id='002', goal='L', rank=6, age=6, name='Sally'),
+                Character(
+                    user_id='003', goal='L', rank=0, age=8, name='Lucy'),
+                Character(
+                    user_id='004', goal='G', rank=2, age=7, name='Linus'),
+                Character(
+                    user_id='005', goal='G', rank=8, age=8, name='Max'),
+                Character(
+                    user_id='006', goal='G', rank=1, age=8, name='Patty'),
+                Character(
+                    user_id='007', goal='R', rank=9, age=35, name='Othmar'),
+                Character(
+                    user_id='008', goal='R', rank=5, age=2, name='Snoopy'),
+                Character(
+                    user_id='009', goal='R', rank=7, age=8, name='Pigpen'),
+                Character(
+                    user_id='010', goal='R', rank=3, age=8, name='Violet'),
+                ]
+            for c in self.characters:
+                c.put()
 
     def tearDown(self):
-        db.delete(Character.all(keys_only=True).run())
-        super(PaginatedTableTest, self).tearDownClass()
+        with common_utils.Namespace(self.NAMESPACE):
+            db.delete(Character.all(keys_only=True).run())
+        super(DataSourceTest, self).tearDown()
+
+
+class PiiExportTest(DataSourceTest):
+
+    COURSE_NAME = 'test_course'
+    ADMIN_EMAIL = 'admin@foo.com'
+    NAMESPACE = 'ns_' + COURSE_NAME
+
+    def setUp(self):
+        super(PiiExportTest, self).setUp()
+
+        self.app_context = actions.simple_add_course(
+            self.COURSE_NAME, self.ADMIN_EMAIL, 'The Course')
+        self.data_source_context = (
+          CharacterDataSource.get_context_class().build_blank_default({}, 20))
+
+    def test_get_non_pii_data(self):
+        data = self._get_page_data(0)
+        self.assertEquals(10, len(data))
+        for item in data:
+            self.assertNotIn('name', item)
+
+    def test_get_non_pii_schema(self):
+        schema = self._get_schema()
+        self.assertNotIn('name', schema)
+
+    def test_get_pii_data(self):
+        self.data_source_context.send_uncensored_pii_data = True
+        data = self._get_page_data(0)
+        self.assertEquals(10, len(data))
+        for item in data:
+            self.assertIn('name', item)
+
+    def test_get_pii_schema(self):
+        self.data_source_context.send_uncensored_pii_data = True
+        schema = self._get_schema()
+        self.assertIn('name', schema)
+
+    def _get_schema(self):
+        log = catch_and_log.CatchAndLog()
+        schema = CharacterDataSource.get_schema(
+            self.app_context, log, self.data_source_context)
+        return schema
+
+    def _get_page_data(self, page_number):
+        log = catch_and_log.CatchAndLog()
+        schema = self._get_schema()
+        data, _ = CharacterDataSource.fetch_values(
+            self.app_context, self.data_source_context, schema, log,
+            page_number)
+        return data
+
+class PaginatedTableTest(DataSourceTest):
+    """Verify operation of paginated access to AppEngine DB tables."""
+
+    NAMESPACE = ''
 
     def test_simple_read(self):
         email = 'admin@google.com'

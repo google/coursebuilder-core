@@ -51,6 +51,7 @@ from controllers.utils import XsrfTokenManager
 from models import config
 from models import courses
 from models import entities
+from models import entity_transforms
 from models import jobs
 from models import models
 from models import student_work
@@ -4624,7 +4625,7 @@ class PiiHolder(entities.BaseEntity):
 class TransformsEntitySchema(actions.TestBase):
 
     def test_schema(self):
-        schema = transforms.get_schema_for_entity(PiiHolder)
+        schema = entity_transforms.get_schema_for_entity(PiiHolder)
         schema = schema.get_json_schema_dict()['properties']
         self.assertNotIn('user_id', schema)
         self.assertNotIn('age', schema)

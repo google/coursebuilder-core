@@ -126,7 +126,8 @@ class DataPumpJob(jobs.DurableJobBase):
         execute_all_deferred_tasks() pass the name of the new queue.
         """
 
-    def __init__(self, app_context, data_source_class_name):
+    def __init__(self, app_context, data_source_class_name,
+                 no_expiration_date=False, send_uncensored_pii_data=False):
         if not _get_data_source_class_by_name(data_source_class_name):
             raise ValueError(
               'No such data source "%s", or data source is not marked '
@@ -136,6 +137,8 @@ class DataPumpJob(jobs.DurableJobBase):
         self._data_source_class_name = data_source_class_name
         self._job_name = 'job-datapump-%s-%s' % (self._data_source_class_name,
                                                  self._namespace)
+        self._no_expiration_date = no_expiration_date
+        self._send_uncensored_pii_data = send_uncensored_pii_data
 
     def non_transactional_submit(self):
         """Callback used when UI gesture indicates this job should start."""
@@ -167,7 +170,10 @@ class DataPumpJob(jobs.DurableJobBase):
         # TODO(mgainer): if we start getting timeout failures, perhaps learn
         # proper chunk size from history, rather than using default.
         default_chunk_size = data_source_class.get_default_chunk_size()
-        return context_class.build_blank_default({}, default_chunk_size)
+        ret = context_class.build_blank_default({}, default_chunk_size)
+        if hasattr(ret, 'send_uncensored_pii_data'):
+            ret.send_uncensored_pii_data = self._send_uncensored_pii_data
+        return ret
 
     def _build_job_context(self, upload_url, pii_secret):
         """Set up context object used to maintain this job's internal state."""
@@ -325,9 +331,11 @@ class DataPumpJob(jobs.DurableJobBase):
         pii_encryption_token = pump_settings.get(PII_ENCRYPTION_TOKEN)
         if (not pii_encryption_token or
             not cls._is_pii_encryption_token_valid(pii_encryption_token)):
-            pii_encryption_token = cls._build_new_pii_encryption_token(
-                pump_settings.get(TABLE_LIFETIME,
-                                  PII_SECRET_DEFAULT_LIFETIME))
+            # If table_lifetime is missing OR is set to the empty string,
+            # prefer the default value.
+            lifetime = (pump_settings.get(TABLE_LIFETIME) or
+                        PII_SECRET_DEFAULT_LIFETIME)
+            pii_encryption_token = cls._build_new_pii_encryption_token(lifetime)
             pump_settings[PII_ENCRYPTION_TOKEN] = pii_encryption_token
             course = courses.Course(None, app_context=app_context)
             course.save_settings(course_settings)
@@ -385,8 +393,11 @@ class DataPumpJob(jobs.DurableJobBase):
                              'BigQuery project does not seem to be well '
                              'formed; either the "private_key" or '
                              '"client_email" field is missing.')
+        # If table_lifetime setting is missing OR is set to the empty string,
+        # prefer the default value.
         table_lifetime_seconds = common_utils.parse_timedelta_string(
-            pump_settings.get(TABLE_LIFETIME, '')).total_seconds()
+            pump_settings.get(TABLE_LIFETIME) or PII_SECRET_DEFAULT_LIFETIME
+            ).total_seconds()
         Settings = collections.namedtuple('Settings', [
             'private_key', 'client_email', PROJECT_ID, 'dataset_id',
             'table_lifetime_seconds'])
@@ -503,8 +514,10 @@ class DataPumpJob(jobs.DurableJobBase):
 
         # If user has requested it, set the time at which table should be
         # reclaimed (as milliseconds since Unix epoch).
-        if bigquery_settings.table_lifetime_seconds:
-            now = datetime.datetime.now()
+        if (bigquery_settings.table_lifetime_seconds and
+            not self._no_expiration_date):
+
+            now = datetime.datetime.utcnow()
             expiration_delta = datetime.timedelta(
                 seconds=bigquery_settings.table_lifetime_seconds)
             unix_epoch = datetime.datetime(year=1970, month=1, day=1)
@@ -568,12 +581,13 @@ class DataPumpJob(jobs.DurableJobBase):
         return location
 
     def _initiate_upload_job(self, bigquery_service, bigquery_settings, http,
-                             app_context):
+                             app_context, data_source_context):
         """Coordinate table cleanup, setup, and initiation of upload job."""
         data_source_class = _get_data_source_class_by_name(
             self._data_source_class_name)
         catch_and_log_ = catch_and_log.CatchAndLog()
-        table_schema = data_source_class.get_schema(app_context, catch_and_log_)
+        table_schema = data_source_class.get_schema(app_context, catch_and_log_,
+                                                    data_source_context)
         schema = self._json_schema_to_bigquery_schema(table_schema)
         tables = bigquery_service.tables()
 
@@ -621,6 +635,8 @@ class DataPumpJob(jobs.DurableJobBase):
     def _send_data_page_to_bigquery(self, data, is_last_chunk, next_page,
                                     http, job, sequence_num, job_context,
                                     data_source_context):
+        if next_page == 0 and is_last_chunk and not data:
+            return jobs.STATUS_CODE_COMPLETED
 
         # BigQuery expects one JSON object per newline-delimed record,
         # not a JSON array containing objects, so convert them individually.
@@ -671,6 +687,7 @@ class DataPumpJob(jobs.DurableJobBase):
                 job_context[LAST_END_OFFSET],
                 (job_context[LAST_END_OFFSET] + 1) if is_last_chunk else '*')
             }
+
         response, _ = http.request(job_context[UPLOAD_URL], method='PUT',
                                    body=payload, headers=headers)
         _, next_state = self._handle_put_response(response, job_context,
@@ -786,7 +803,8 @@ class DataPumpJob(jobs.DurableJobBase):
         catch_and_log_ = catch_and_log.CatchAndLog()
         is_last_page = False
         with catch_and_log_.propagate_exceptions('Loading page of data'):
-            schema = data_source_class.get_schema(app_context, catch_and_log_)
+            schema = data_source_class.get_schema(app_context, catch_and_log_,
+                                                  data_source_context)
             required_jobs = data_sources.utils.get_required_jobs(
                 data_source_class, app_context, catch_and_log_)
             data, _ = data_source_class.fetch_values(
@@ -829,15 +847,18 @@ class DataPumpJob(jobs.DurableJobBase):
         # that we need to start over from scratch), do initial setup.
         # Otherwise, re-load context objects from saved version in job.output
         if job.status_code == jobs.STATUS_CODE_QUEUED:
-            upload_url = self._initiate_upload_job(
-                bigquery_service, bigquery_settings, http, app_context)
-            job_context = self._build_job_context(upload_url, pii_secret)
             data_source_context = self._build_data_source_context()
+            upload_url = self._initiate_upload_job(
+                bigquery_service, bigquery_settings, http, app_context,
+                data_source_context)
+            job_context = self._build_job_context(upload_url, pii_secret)
         else:
             job_context, data_source_context = self._load_state(
                 job, sequence_num)
         if hasattr(data_source_context, 'pii_secret'):
             data_source_context.pii_secret = pii_secret
+        if self._send_uncensored_pii_data:
+            data_source_context.send_uncensored_pii_data = True
         logging.info('Data pump job %s loaded contexts: %s %s',
                      self._job_name, str(job_context), str(data_source_context))
 
@@ -904,6 +925,7 @@ class DataPumpJob(jobs.DurableJobBase):
             'active': False,
             }
 
+        data_source_context = self._build_data_source_context()
         job = self.load()
         if job:
             ret['status'] = jobs.STATUS_CODE_DESCRIPTION[job.status_code]
@@ -925,7 +947,8 @@ class DataPumpJob(jobs.DurableJobBase):
                 bigquery_settings.dataset_id,
                 self._data_source_class_name.replace('DataSource', ''))
             try:
-                job_context, _ = self._load_state(job, job.sequence_num)
+                job_context, data_source_context = self._load_state(
+                    job, job.sequence_num)
                 ret['job_context'] = job_context
                 current_secret = DataPumpJob._get_pii_secret(app_context)
                 if job_context[PII_SECRET] != current_secret:
@@ -944,8 +967,8 @@ class DataPumpJob(jobs.DurableJobBase):
         ret['source_url'] = '%s/rest/data/%s/items?chunk_size=10' % (
             app_context.get_slug(), data_source_class.get_name())
         catch_and_log_ = catch_and_log.CatchAndLog()
-        ret['schema'] = data_source_class.get_schema(app_context,
-                                                     catch_and_log_)
+        ret['schema'] = data_source_class.get_schema(
+            app_context, catch_and_log_, data_source_context)
         ret['generator_statuses'] = []
         ret['available'] = True
         ret['any_generator_running'] = False
@@ -1006,6 +1029,10 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
         template_values['need_settings'] = (
             not pump_settings.has_key(PROJECT_ID) or
             not pump_settings.has_key(JSON_KEY))
+        # If table_lifetime setting is missing OR is set to the empty string,
+        # prefer the default value.
+        template_values['default_lifetime'] = (
+            pump_settings.get(TABLE_LIFETIME) or PII_SECRET_DEFAULT_LIFETIME)
         template_values[DATASET_NAME] = pump_settings.get(DATASET_NAME)
 
 
@@ -1051,8 +1078,11 @@ class DashboardExtension(object):
         source_name = self.handler.request.get('data_source')
         data_source_class = _get_data_source_class_by_name(source_name)
         if data_source_class:
-            data_pump_job = DataPumpJob(self.handler.app_context, source_name)
             action = self.handler.request.get('pump_action')
+            data_pump_job = DataPumpJob(
+                self.handler.app_context, source_name,
+                self.handler.request.get('no_expiration_date') == 'True',
+                self.handler.request.get('send_uncensored_pii_data') == 'True')
             if action == 'start_pump':
                 data_pump_job.submit()
             elif action == 'cancel_pump':
@@ -1103,8 +1133,8 @@ def register_module():
         'After this amount of time, the table will be automatically deleted.  '
         '(This is useful if your data retention or privacy policy mandates  '
         'a limited time for analysis after which personal data must be '
-        'removed.)  Leaving this field blank or setting it to zero will '
-        'cause BigQuery to indefinitely retain data.  Supported units are: '
+        'removed.)  Leaving this field blank will use the default value '
+        'of "' + PII_SECRET_DEFAULT_LIFETIME + '".  Supported units are: '
         '"weeks", "days", "hours", "minutes", "seconds".  Units may be '
         'specified as their first letter, singular, or plural.  Spaces '
         'and commas may be used or omitted.  E.g., both of the following '

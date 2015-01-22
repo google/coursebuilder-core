@@ -137,6 +137,16 @@ div.warning {
                 <input type="submit" value="Cancel BigQuery Data Pump">
               {% else %}
                 <input type="hidden" name="pump_action" value="start_pump">
+                <div>
+                  <input type="checkbox" name="send_uncensored_pii_data"
+                         value="True">
+                  Do not encrypt PII data for this upload
+                </div>
+                <div>
+                  <input type="checkbox" name="no_expiration_date" value="True">
+                  Uploaded data never expires
+                  (default expiration is {{ default_lifetime }})
+                </div>
                 <input type="submit" value="Start BigQuery Data Pump">
               {% endif %}
             {% endif %}

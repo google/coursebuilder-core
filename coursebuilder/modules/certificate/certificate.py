@@ -298,7 +298,8 @@ class CertificatesEarnedDataSource(data_sources.SynchronousQuery):
         return 'Certificates Earned'
 
     @classmethod
-    def get_schema(cls, unused_app_context, unused_catch_and_log):
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
         reg = schema_fields.FieldRegistry(
             'Certificates Earned',
             description='Scalar values aggregated over entire course giving '

@@ -22,6 +22,7 @@ import re
 
 from common import crypto
 from common.utils import Namespace
+from models import entity_transforms
 from models import transforms
 from models.data_sources import base_types
 from models.data_sources import utils as data_sources_utils
@@ -50,9 +51,12 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
         return _DbTableContext
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, source_context):
         clazz = cls.get_entity_class()
-        registry = transforms.get_schema_for_entity(clazz)
+        if source_context.send_uncensored_pii_data:
+            registry = entity_transforms.get_schema_for_entity_unsafe(clazz)
+        else:
+            registry = entity_transforms.get_schema_for_entity(clazz)
         return registry.get_json_schema_dict()['properties']
 
     @classmethod
@@ -100,7 +104,10 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                           schema, unused_log, unused_page_number,
                           rows):
         transform_fn = cls._build_transform_fn(source_context)
-        entities = [row.for_export(transform_fn) for row in rows]
+        if source_context.send_uncensored_pii_data:
+            entities = [row.for_export_unsafe() for row in rows]
+        else:
+            entities = [row.for_export(transform_fn) for row in rows]
         dicts = [transforms.entity_to_dict(entity) for entity in entities]
         return [transforms.dict_to_json(d, schema) for d in dicts]
 
@@ -173,7 +180,7 @@ class _AbstractDbTableRestDataSource(base_types._AbstractRestDataSource):
                     log.info('fetch page %d is partial; not saving end cursor'
                              % page_number)
             else:
-                log.info('fetch_page %d had no end cursor')
+                log.info('fetch_page %d had no end cursor' % page_number)
         return results
 
     @classmethod
@@ -214,7 +221,7 @@ class _DbTableContext(base_types._AbstractContextManager):
     class _TableContext1(object):
 
         def __init__(self, version, chunk_size, filters, orderings, cursors,
-                     pii_secret):
+                     pii_secret, send_uncensored_pii_data=False):
             """Set up a context.
 
             Note: This plain-old-data class is being used in preference over a
@@ -242,6 +249,12 @@ class _DbTableContext(base_types._AbstractContextManager):
             self.orderings = orderings
             self.cursors = cursors
             self.pii_secret = pii_secret
+
+            # This field is present, but normally never set.  In one-off
+            # requests from the Data Pump, where the administrator has checked
+            # a checkbox, un-blacklisted data is available.  Note that setting
+            # this flag will also almost certainly change the reported schema.
+            self.send_uncensored_pii_data = False
 
     @classmethod
     def build_from_web_request(cls, params, default_chunk_size):
@@ -286,6 +299,7 @@ class _DbTableContext(base_types._AbstractContextManager):
         del ret['version']
         del ret['cursors']
         del ret['pii_secret']
+        del ret['send_uncensored_pii_data']
         return ret
 
     @classmethod

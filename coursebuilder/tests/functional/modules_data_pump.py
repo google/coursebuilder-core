@@ -52,11 +52,16 @@ class TrivialDataSource(data_sources.AbstractRestDataSource):
         return True
 
     @classmethod
-    def get_schema(cls, unused_context, unused_log):
+    def get_schema(cls, unused_app_context, unused_log,
+                   data_source_context):
         reg = schema_fields.FieldRegistry('Trivial')
         reg.add_property(schema_fields.SchemaField(
             'thing', 'Thing', 'integer',
             description='stuff'))
+        if data_source_context.send_uncensored_pii_data:
+            reg.add_property(schema_fields.SchemaField(
+                'ssn', 'SSN', 'string',
+                description='Social Security Number'))
         return reg.get_json_schema_dict()['properties']
 
     @classmethod
@@ -68,20 +73,28 @@ class TrivialDataSource(data_sources.AbstractRestDataSource):
         return TrivialDataSourceContext
 
     @classmethod
+    def _make_item(cls, value, source_context):
+        item = {'thing': value}
+        if source_context.send_uncensored_pii_data:
+            ssn = '%d%d%d-%d%d-%d%d%d%d' % ([value] * 9)
+        return item
+
+    @classmethod
     def fetch_values(cls, app_context, source_context, schema, log, page):
         if page in (0, 1, 2):
             ret = []
             for count in range(0, 3):
-                ret.append({'thing': page * 3 + count})
+                ret.append(cls._make_item(page * 3 + count, source_context))
             return ret, page
         else:
-            return [{'thing': 9}], 3
+            return [cls._make_item(9, source_context)], 3
 
 
 class TrivialDataSourceContext(data_sources.AbstractContextManager):
 
     def __init__(self):
         self.chunk_size = 3
+        self.send_uncensored_pii_data = False
 
     @classmethod
     def build_from_web_request(cls, *unused_args, **unused_kwargs):
@@ -332,7 +345,7 @@ class PiiTests(actions.TestBase):
         self.assertTrue(data_pump.DataPumpJob._is_pii_encryption_token_valid(
             new_token))
 
-    def test_pii_data_obscured(self):
+    def _test_student_pii_data(self, send_uncensored_pii_data):
         actions.login(USER_EMAIL)
         actions.register(self, USER_EMAIL, COURSE_NAME)
         actions.logout()
@@ -342,17 +355,38 @@ class PiiTests(actions.TestBase):
                                     rest_providers.StudentsDataSource.__name__)
         data_source_context = job._build_data_source_context()
         data_source_context.pii_secret = job._get_pii_secret(self.app_context)
+        data_source_context.send_uncensored_pii_data = send_uncensored_pii_data
         data, is_last_page = job._fetch_page_data(self.app_context,
                                                   data_source_context, 0)
         self.assertTrue(is_last_page)
         self.assertEqual(len(data), 1)
+        return data[0]
+
+    def test_student_pii_data_obscured(self):
+        student_record = self._test_student_pii_data(
+            send_uncensored_pii_data=False)
 
         with common_utils.Namespace('ns_' + COURSE_NAME):
             student = models.Student.get_by_email(USER_EMAIL)
             self.assertIsNotNone(student.user_id)
-            self.assertIsNotNone(data[0]['user_id'])
-            self.assertNotEqual(student.user_id, data[0]['user_id'])
+            self.assertIsNotNone(student_record['user_id'])
+            self.assertNotEqual(student.user_id, student_record['user_id'])
+            self.assertNotIn('name', student_record)
+            self.assertNotIn('additional_fields', student_record)
 
+    def test_student_pii_data_sent_when_commanded(self):
+        student_record = self._test_student_pii_data(
+            send_uncensored_pii_data=True)
+        with common_utils.Namespace('ns_' + COURSE_NAME):
+            student = models.Student.get_by_email(USER_EMAIL)
+            self.assertIsNotNone(student.user_id)
+            self.assertIsNotNone(student_record['user_id'])
+            self.assertEqual(student.user_id, student_record['user_id'])
+            self.assertEquals('user@foo.com', student_record['name'])
+            self.assertEquals(
+              'user@foo.com',
+              common_utils.find(lambda x: x[0] == 'form01',
+                                student_record['additional_fields'])[1])
 
 class MockResponse(object):
 
@@ -400,6 +434,8 @@ class MockServiceClient(object):
     def __init__(self, mock_http):
         self.mock_http = mock_http
         self.calls = []
+        self.insert_args = None
+        self.insert_kwargs = None
 
     def datasets(self, *unused_args, **unused_kwargs):
         self.calls.append('datasets')
@@ -413,8 +449,10 @@ class MockServiceClient(object):
         self.calls.append('get')
         return self
 
-    def insert(self, *unused_args, **unused_kwargs):
+    def insert(self, *args, **kwargs):
         self.calls.append('insert')
+        self.insert_args = args
+        self.insert_kwargs = kwargs
         return self
 
     def delete(self, *unused_args, **unused_kwargs):
@@ -462,8 +500,14 @@ class InteractionTests(actions.TestBase):
             data_pump.DataPumpJob._get_bigquery_service)
         data_pump.DataPumpJob._get_bigquery_service = (
             lambda slf, set: (self.mock_service_client, self.mock_http))
-        self.job = data_pump.DataPumpJob(self.app_context,
-                                         TrivialDataSource.__name__)
+        self._set_up_job(no_expiration_date=False,
+                         send_uncensored_pii_data=False)
+
+    def _set_up_job(self, no_expiration_date=False,
+                    send_uncensored_pii_data=False):
+        self.job = data_pump.DataPumpJob(
+            self.app_context, TrivialDataSource.__name__,
+            no_expiration_date, send_uncensored_pii_data)
         self.bigquery_settings = self.job._get_bigquery_settings(
             self.app_context)
 
@@ -556,14 +600,80 @@ class BigQueryInteractionTests(InteractionTests):
         with self.assertRaises(Exception):
             self.job._create_upload_job(self.mock_http, self.bigquery_settings)
 
-    def test_initiate_upload_job(self):
+    def _initiate_upload_job(self):
         self.mock_http.add_response({'status': 200})
         self.mock_http.add_response({'status': 200})
         self.mock_http.add_response({'status': 200})
         self.mock_http.add_response({'status': 200, 'location': 'there'})
-        location = self.job._initiate_upload_job(
+        return self.job._initiate_upload_job(
             self.mock_service_client, self.bigquery_settings, self.mock_http,
-            self.app_context)
+            self.app_context, self.job._build_data_source_context())
+
+    def test_create_data_table_makes_non_pii_schema(self):
+        self._initiate_upload_job()
+        fields = (
+            self.mock_service_client.insert_kwargs['body']['schema']['fields'])
+        self.assertIsNotNone(
+            common_utils.find(lambda f: f['name'] == 'thing', fields))
+        self.assertIsNone(
+            common_utils.find(lambda f: f['name'] == 'ssn', fields))
+
+    def test_create_data_table_makes_pii_schema(self):
+        self._set_up_job(no_expiration_date=False,
+                         send_uncensored_pii_data=True)
+        self._initiate_upload_job()
+        fields = (
+            self.mock_service_client.insert_kwargs['body']['schema']['fields'])
+        self.assertIsNotNone(
+            common_utils.find(lambda f: f['name'] == 'thing', fields))
+        self.assertIsNotNone(
+            common_utils.find(lambda f: f['name'] == 'ssn', fields))
+
+    def test_create_data_table_sends_default_expiration(self):
+        self._initiate_upload_job()
+        utc_now = datetime.datetime.utcnow()
+        utc_epoch = datetime.datetime.utcfromtimestamp(0)
+        expected = ((utc_now - utc_epoch).total_seconds() +
+                    self.bigquery_settings.table_lifetime_seconds) * 1000
+
+        # Ensure we have default value (not zero)
+        self.assertEquals(30 * 24 * 60 *60,
+                          self.bigquery_settings.table_lifetime_seconds)
+        # Ensure table expiration timestamp sent to BigQuery matches setting.
+        actual = (
+            self.mock_service_client.insert_kwargs['body']['expirationTime'])
+        self.assertAlmostEqual(expected, actual, delta=2000)
+
+    def test_create_data_table_sends_configured_expiration(self):
+        course_settings = self.app_context.get_environ()
+        course_settings[data_pump.DATA_PUMP_SETTINGS_SCHEMA_SECTION][
+            data_pump.TABLE_LIFETIME] = '10 s'
+        course = courses.Course(None, app_context=self.app_context)
+        course.save_settings(course_settings)
+        self._set_up_job(no_expiration_date=False,
+                         send_uncensored_pii_data=False)
+        self._initiate_upload_job()
+        utc_now = datetime.datetime.utcnow()
+        utc_epoch = datetime.datetime.utcfromtimestamp(0)
+        expected = ((utc_now - utc_epoch).total_seconds() +
+                    self.bigquery_settings.table_lifetime_seconds) * 1000
+
+        # Ensure we have override from default value.
+        self.assertEquals(10, self.bigquery_settings.table_lifetime_seconds)
+        # Ensure table expiration timestamp sent to BigQuery matches setting.
+        actual = (
+            self.mock_service_client.insert_kwargs['body']['expirationTime'])
+        self.assertAlmostEqual(expected, actual, delta=2000)
+
+    def test_table_expiration_suppressed(self):
+        self._set_up_job(no_expiration_date=True,
+                         send_uncensored_pii_data=False)
+        self._initiate_upload_job()
+        self.assertNotIn('expirationTime',
+                         self.mock_service_client.insert_kwargs['body'])
+
+    def test_initiate_upload_job(self):
+        location = self._initiate_upload_job()
         self.assertEqual(location, 'there')
 
     def test_check_state_just_started(self):
@@ -1045,8 +1155,11 @@ class UserInteractionTests(InteractionTests):
         return text
 
     def test_full_job_lifecycle(self):
-        self.assertEquals('TrivialDataSource Has Never Run',
-                          self._get_status_text())
+        self.assertEquals(
+            'TrivialDataSource Has Never Run '
+            'Do not encrypt PII data for this upload '
+            'Uploaded data never expires (default expiration is 30 days)',
+            self._get_status_text())
 
         response = self.get(self.URL)
         self.submit(response.forms['data_pump_form_TrivialDataSource'],
@@ -1115,12 +1228,19 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 200, 'range': '786432-786444'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertEquals('TrivialDataSource Completed '
-                          'Uploaded 10 items', status_text)
+        self.assertEquals(
+            'TrivialDataSource Completed '
+            'Uploaded 10 items '
+            'Do not encrypt PII data for this upload '
+            'Uploaded data never expires (default expiration is 30 days)',
+            status_text)
 
     def test_cancellation(self):
-        self.assertEquals('TrivialDataSource Has Never Run',
-                          self._get_status_text())
+        self.assertEquals(
+            'TrivialDataSource Has Never Run '
+            'Do not encrypt PII data for this upload '
+            'Uploaded data never expires (default expiration is 30 days)',
+            self._get_status_text())
 
         response = self.get(self.URL)
         self.submit(response.forms['data_pump_form_TrivialDataSource'],
@@ -1184,5 +1304,7 @@ class UserInteractionTests(InteractionTests):
             'source will not be correlatable with other data sources '
             'uploaded using the latest secret. You may wish to re-upload '
             'this data. '
-            'Uploaded 10 items',
+            'Uploaded 10 items '
+            'Do not encrypt PII data for this upload '
+            'Uploaded data never expires (default expiration is 1 s)',
             self._get_status_text())

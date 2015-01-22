@@ -79,10 +79,21 @@ def _get_schema_field(property_type):
 
 
 def get_schema_for_entity(clazz):
+    """Get schema matching entity returned by BaseEntity.for_export()."""
+
     assert issubclass(clazz, entities.BaseEntity)  # Must have blacklist.
-    available_properties = clazz.properties()
     # Treating as module-protected. pylint: disable=protected-access
-    suppressed = clazz._get_export_blacklist()
+    return _get_schema_for_entity(clazz, clazz._get_export_blacklist())
+
+
+def get_schema_for_entity_unsafe(clazz):
+    """Get schema matching entity returned by BaseEntity.for_export_unsafe()."""
+
+    return _get_schema_for_entity(clazz, {})
+
+
+def _get_schema_for_entity(clazz, suppressed):
+    available_properties = clazz.properties()
     registry = schema_fields.FieldRegistry(clazz.__name__)
     for property_type in available_properties.values():
         if property_type.name not in suppressed:

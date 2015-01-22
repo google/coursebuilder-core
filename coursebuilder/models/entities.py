@@ -173,7 +173,7 @@ class BaseEntity(db.Model):
         DB_DELETE.inc()
         super(BaseEntity, self).delete()
 
-    def for_export(self, transform_fn):
+    def _properties_for_export(self, transform_fn):
         """Creates an ExportEntity populated from this entity instance.
 
         This method is called during export via tools/etl.py to make an entity
@@ -219,6 +219,10 @@ class BaseEntity(db.Model):
                     properties[name] = str(safe_key)
             else:
                 properties[name] = getattr(self, name)
+        return properties
+
+    def for_export(self, transform_fn):
+        properties = self._properties_for_export(transform_fn)
 
         # Blacklist may contain db.Property, or names as strings.  If string,
         # the name may be a dotted list of containers.  This is useful for
@@ -228,6 +232,33 @@ class BaseEntity(db.Model):
         # (the student's goal for the course), which is not PII.
         for item in  self._get_export_blacklist():
             self._remove_named_component(item, properties)
+        return ExportEntity(**properties)
+
+    def for_export_unsafe(self):
+        """Get properties for entity ignoring blacklist, and without encryption.
+
+        Using this function is strongly discouraged.  The only situation in
+        which this function is merited is for the export of data for analysis,
+        where that analysis:
+
+        - Requires PII (e.g., gender, age, detailed locale, income level, etc.)
+        - Will be aggregated such that individuals' PII is not retained
+        - Subject to a data retention policy with a maximum age.
+
+        In particular, the Data Pump will not infrequently need to send
+        per-Student data.  This will often contain user-supplied PII in the
+        'additional_fields' member.  This function permits the use of BigQuery
+        for analyses not shipped with base CourseBuilder.
+
+        (Note that BigQuery permits specification of a maximum data retention
+        period, and the Data Pump sets this age by default to 30 days.
+        This is overridable, but only on individual requests)
+
+        Returns:
+          An ExportEntity (db.Expando) containing the entity's properties.
+        """
+
+        properties = self._properties_for_export(lambda x: x)
         return ExportEntity(**properties)
 
     @classmethod
