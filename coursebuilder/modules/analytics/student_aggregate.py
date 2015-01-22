@@ -342,7 +342,7 @@ class StudentAggregateComponentRegistry(
         return 100
 
     @classmethod
-    def get_schema(cls, app_context, log):
+    def get_schema(cls, app_context, log, data_source_context):
         ret = schema_fields.FieldRegistry('student_aggregation')
         for component in cls._components:
             ret.add_property(component.get_schema())
