@@ -42,6 +42,7 @@ from common import tags
 from controllers.utils import BaseRESTHandler
 from controllers.utils import XsrfTokenManager
 from models import custom_modules
+from models import data_sources
 from models import models
 from models import transforms
 
@@ -216,6 +217,80 @@ class QuestionnaireHandler(BaseRESTHandler):
         transforms.send_json_response(self, 200, 'Response submitted.')
 
 
+class QuestionnaireDataSource(data_sources.AbstractDbTableRestDataSource):
+    """Data source to export all questions responses for all students."""
+
+    @classmethod
+    def get_name(cls):
+        return 'questionnaire_responses'
+
+    @classmethod
+    def get_title(cls):
+        return 'Questionnaire Responses'
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
+        reg = schema_fields.FieldRegistry('Questionnaire Response',
+                                          description='Course sub-components')
+        reg.add_property(schema_fields.SchemaField(
+            'user_id', 'User ID', 'string',
+            description='Student ID encrypted with a session-specific key'))
+        reg.add_property(schema_fields.SchemaField(
+            'questionnaire_id', 'Questionnaire ID', 'string',
+            description='ID of questionnaire.'))
+
+        form_data = schema_fields.FieldRegistry(None, 'form_data')
+        form_data.add_property(schema_fields.SchemaField(
+            'name', 'Field Name', 'string', optional=True,
+            description='The questionnaire field name.'))
+        form_data.add_property(schema_fields.SchemaField(
+            'value', 'Field Value', 'string', optional=True,
+            description='The student response in the questionnaire field.'))
+
+        reg.add_property(schema_fields.FieldArray(
+            'form_data', 'Form Data', item_type=form_data))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def get_entity_class(cls):
+        return StudentFormEntity
+
+    @classmethod
+    def _postprocess_rows(cls, unused_app_context, source_context,
+            unused_schema, unused_log, unused_page_number, form_entities):
+
+        def to_string(value):
+            if value is None or isinstance(value, basestring):
+                return value
+            else:
+                return str(value)
+
+        transform_fn = cls._build_transform_fn(source_context)
+
+        response_list = []
+
+        for entity in form_entities:
+            student_id, questionnaire_id = entity.key().name().split('-', 1)
+            form_data = [
+                {
+                    'name': to_string(item.get('name')),
+                    'value': to_string(item.get('value'))
+                } for item in (
+                    transforms.loads(entity.value).get('form_data', []))]
+            response_list.append({
+                'user_id': transform_fn(student_id),
+                'questionnaire_id': questionnaire_id,
+                'form_data': form_data
+            })
+
+        return response_list
+
+
 questionnaire_module = None
 
 
@@ -224,9 +299,7 @@ def register_module():
     def on_module_enabled():
         tags.Registry.add_tag_binding(
             QuestionnaireTag.binding_name, QuestionnaireTag)
-
-    def on_module_disabled():
-        tags.Registry.remove_tag_binding(QuestionnaireTag.binding_name)
+        data_sources.Registry.register(QuestionnaireDataSource)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
@@ -241,7 +314,6 @@ def register_module():
         'The responses submitted by students will be saved as a form which can'
         'be reviewed at a later date.',
         global_routes, namespaced_routes,
-        notify_module_enabled=on_module_enabled,
-        notify_module_disabled=on_module_disabled)
+        notify_module_enabled=on_module_enabled)
 
     return questionnaire_module

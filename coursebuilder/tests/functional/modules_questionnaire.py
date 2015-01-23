@@ -21,6 +21,8 @@ from controllers import sites
 from models import courses
 from models import models
 from models import transforms
+from models.data_sources import utils as data_sources_utils
+from modules.questionnaire.questionnaire import QuestionnaireDataSource
 from modules.questionnaire.questionnaire import StudentFormEntity
 from tests.functional import actions
 
@@ -84,6 +86,12 @@ class BaseQuestionnaireTests(actions.TestBase):
             self.unit_id, self.lesson_id)).body)
         return dom.find('.//button[@class="gcb-button questionnaire-button"]')
 
+    def register(self):
+        actions.login(STUDENT_EMAIL, is_admin=False)
+        actions.register(self, STUDENT_NAME)
+        return models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
+
+
 
 class QuestionnaireTagTests(BaseQuestionnaireTests):
 
@@ -115,11 +123,6 @@ class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):
             {u'course_name': u'course_name'},
             {u'unit_name': u'unit_name'}]}
 
-    def _register(self):
-        actions.login(STUDENT_EMAIL, is_admin=False)
-        actions.register(self, STUDENT_NAME)
-        return models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
-
     def _post_form_to_rest_handler(self, request_dict):
         return transforms.loads(self.post(
             self.REST_URL,
@@ -140,7 +143,7 @@ class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):
         return data.value
 
     def test_rest_handler_right_data_retrieved(self):
-        self._register()
+        self.register()
         response = self._post_form_to_rest_handler(
             self._get_rest_request(self.PAYLOAD_DICT))
         self.assertEquals(200, response['status'])
@@ -153,18 +156,90 @@ class QuestionnaireRESTHandlerTests(BaseQuestionnaireTests):
         response = self._post_form_to_rest_handler(self._get_rest_request({}))
         self.assertEquals(401, response['status'])
 
-        self._register()
+        self.register()
         response = self._post_form_to_rest_handler(self._get_rest_request({}))
         self.assertEquals(200, response['status'])
 
     def test_form_data_in_datastore(self):
-        student = self._register()
+        student = self.register()
         self._put_data_in_datastore(student)
         response = StudentFormEntity.load_or_create(student, UNIQUE_FORM_ID)
         self.assertNotEqual(None, response)
 
     def test_form_data_can_be_retrieved(self):
-        student = self._register()
+        student = self.register()
         self._put_data_in_datastore(student)
         response = self._get_rest_request(self.PAYLOAD_DICT)
         self.assertEquals(self.PAYLOAD_DICT, response['payload'])
+
+
+class QuestionnaireDataSourceTests(BaseQuestionnaireTests):
+    FORM_0_DATA = [
+        {u'name': u'title', u'value': u'War and Peace'},
+        {u'name': u'rating', u'value': u'Long'}]
+    FORM_1_DATA = [
+        {u'name': u'country', u'value': u'Greece'},
+        {u'name': u'lang', u'value': u'el_EL'},
+        {u'name': u'tld', u'value': u'el'}]
+
+    # Form 2 tests malformed data
+    FORM_2_DATA = [
+        {u'value': u'value without name'},  # missing 'name' field
+        {u'name': u'name without value'},  # missing 'value' field
+        {u'name': u'numeric', u'value': 3.14}]  # non-string value
+    FORM_2_DATA_OUT = [
+        {u'name': None, u'value': u'value without name'},
+        {u'name': u'name without value', u'value': None},
+        {u'name': u'numeric', u'value': u'3.14'}]
+
+
+    def test_data_extraction(self):
+
+        # Register a student and save some form values for that student
+        student = self.register()
+
+        entity = StudentFormEntity.load_or_create(student, 'form-0')
+        entity.value = transforms.dumps({
+            u'form_data': self.FORM_0_DATA})
+        entity.put()
+
+        entity = StudentFormEntity.load_or_create(student, u'form-1')
+        entity.value = transforms.dumps({
+            u'form_data': self.FORM_1_DATA})
+        entity.put()
+
+        entity = StudentFormEntity.load_or_create(student, u'form-2')
+        entity.value = transforms.dumps({
+            u'form_data': self.FORM_2_DATA})
+        entity.put()
+
+        # Log in as admin for the data query
+        actions.logout()
+        actions.login(ADMIN_EMAIL, is_admin=True)
+
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            data_sources_utils.DATA_SOURCE_ACCESS_XSRF_ACTION)
+
+        pii_secret = crypto.generate_transform_secret_from_xsrf_token(
+            xsrf_token, data_sources_utils.DATA_SOURCE_ACCESS_XSRF_ACTION)
+
+        safe_user_id = crypto.hmac_sha_2_256_transform(
+            pii_secret, student.user_id)
+
+        response = self.get(
+            'rest/data/questionnaire_responses/items?'
+            'data_source_token=%s&page_number=0' % xsrf_token)
+        data = transforms.loads(response.body)['data']
+
+        self.assertEqual(3, len(data))
+
+        for index in range(3):
+            self.assertIn(safe_user_id, data[index]['user_id'])
+            self.assertEqual('form-%s' % index, data[index]['questionnaire_id'])
+
+        self.assertEqual(self.FORM_0_DATA, data[0]['form_data'])
+        self.assertEqual(self.FORM_1_DATA, data[1]['form_data'])
+        self.assertEqual(self.FORM_2_DATA_OUT, data[2]['form_data'])
+
+    def test_exportable(self):
+        self.assertTrue(QuestionnaireDataSource.exportable())

@@ -142,6 +142,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_notifications.SerializedPropertyTest': 2,
     'tests.functional.modules_notifications.StatsTest': 2,
     'tests.functional.modules_oeditor.ObjectEditorTest': 4,
+    'tests.functional.modules_questionnaire.QuestionnaireDataSourceTests': 2,
     'tests.functional.modules_questionnaire.QuestionnaireTagTests': 3,
     'tests.functional.modules_questionnaire.QuestionnaireRESTHandlerTests': 5,
     'tests.functional.modules_rating.ExtraContentProvideTests': 4,
