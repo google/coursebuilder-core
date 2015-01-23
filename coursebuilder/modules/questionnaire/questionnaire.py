@@ -189,6 +189,13 @@ class QuestionnaireHandler(BaseRESTHandler):
     def post(self):
         """POST method called when the student submits answers."""
 
+        # I18N: Message to show the user was not allowed to access to resource
+        access_denied = self.gettext('Access denied.')
+
+        # I18N: Message to acknowledge successful submission of the
+        # questionnaire
+        response_submitted = self.gettext('Response submitted.')
+
         request = transforms.loads(self.request.get('request'))
 
         key = request.get('key')
@@ -199,12 +206,12 @@ class QuestionnaireHandler(BaseRESTHandler):
 
         user = self.get_user()
         if user is None:
-            transforms.send_json_response(self, 401, 'Access Denied.', {})
+            transforms.send_json_response(self, 401, access_denied, {})
             return
 
         student = models.Student.get_enrolled_student_by_email(user.email())
         if student is None:
-            transforms.send_json_response(self, 401, 'Access Denied.', {})
+            transforms.send_json_response(self, 401, access_denied, {})
             return
 
         payload_json = request.get('payload')
@@ -214,7 +221,7 @@ class QuestionnaireHandler(BaseRESTHandler):
         form_data.value = transforms.dumps(payload_dict)
         form_data.put()
 
-        transforms.send_json_response(self, 200, 'Response submitted.')
+        transforms.send_json_response(self, 200, response_submitted)
 
 
 class QuestionnaireDataSource(data_sources.AbstractDbTableRestDataSource):
