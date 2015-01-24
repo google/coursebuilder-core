@@ -800,6 +800,15 @@ class Unit13(object):
     def needs_human_grader(self):
         return self.workflow.get_grader() == HUMAN_GRADER
 
+    def scored(self):
+        """Is this unit used for scoring. This does not take into account of
+        lessons contained in the unit."""
+        if self.is_assessment():
+            return True
+        if self.is_custom_unit():
+            cu = custom_units.UnitTypeRegistry.get(self.custom_unit_type)
+            return cu and cu.is_graded
+        return False
 
 class Lesson13(object):
     """An object to represent a Lesson (version 1.3)."""
