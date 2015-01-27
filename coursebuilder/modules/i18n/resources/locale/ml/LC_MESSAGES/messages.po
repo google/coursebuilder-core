@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-12-08 08:51-0800\n"
+"POT-Creation-Date: 2015-01-26 10:55-0800\n"
 "PO-Revision-Date: 2014-12-08 08:51-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ml <LL@li.org>\n"
@@ -69,10 +69,12 @@ msgstr " ഈ ചോദ്യം ഗ്രേഡുചെയ്യുന്നത
 #: experimental/coursebuilder/views/macros.html:62
 #: experimental/coursebuilder/views/macros.html:107
 #: experimental/coursebuilder/views/macros.html:108
-#: experimental/coursebuilder/views/macros.html:218
-#: experimental/coursebuilder/views/macros.html:219
-#: experimental/coursebuilder/views/macros.html:267
-#: experimental/coursebuilder/views/macros.html:268
+#: experimental/coursebuilder/views/macros.html:162
+#: experimental/coursebuilder/views/macros.html:163
+#: experimental/coursebuilder/views/macros.html:252
+#: experimental/coursebuilder/views/macros.html:253
+#: experimental/coursebuilder/views/macros.html:301
+#: experimental/coursebuilder/views/macros.html:302
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
@@ -83,14 +85,14 @@ msgstr "പൂര്‍‌ത്തിയായി"
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:36
 #: experimental/coursebuilder/views/macros.html:119
 #: experimental/coursebuilder/views/macros.html:120
-#: experimental/coursebuilder/views/macros.html:230
-#: experimental/coursebuilder/views/macros.html:231
-#: experimental/coursebuilder/views/macros.html:279
-#: experimental/coursebuilder/views/macros.html:280
-#: experimental/coursebuilder/views/macros.html:315
-#: experimental/coursebuilder/views/macros.html:316
-#: experimental/coursebuilder/views/macros.html:343
-#: experimental/coursebuilder/views/macros.html:344
+#: experimental/coursebuilder/views/macros.html:264
+#: experimental/coursebuilder/views/macros.html:265
+#: experimental/coursebuilder/views/macros.html:313
+#: experimental/coursebuilder/views/macros.html:314
+#: experimental/coursebuilder/views/macros.html:349
+#: experimental/coursebuilder/views/macros.html:350
+#: experimental/coursebuilder/views/macros.html:377
+#: experimental/coursebuilder/views/macros.html:378
 msgid "Not yet started"
 msgstr "ഇതുവരെ ആരംഭിച്ചിട്ടില്ല"
 
@@ -123,17 +125,17 @@ msgid " Hint "
 msgstr " സൂചന "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:180
+#: experimental/coursebuilder/modules/certificate/certificate.py:183
 msgid "Certificate"
 msgstr "സര്‍ട്ടിഫിക്കറ്റ്"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:187
+#: experimental/coursebuilder/modules/certificate/certificate.py:190
 msgid "Click for certificate"
 msgstr "സർട്ടിഫിക്കറ്റിനായി ക്ലിക്കുചെയ്യുക"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:193
+#: experimental/coursebuilder/modules/certificate/certificate.py:196
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -264,7 +266,7 @@ msgid "Change Name"
 msgstr "പേര് മാറ്റുക"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:262
+#: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
 msgstr "പിശക്: ഇമെയിൽ ലിസ്‌റ്റ് ശൂന്യമാണ്"
 
@@ -274,7 +276,7 @@ msgstr "പിശക്: ഇമെയിൽ ലിസ്‌റ്റ് ശൂ�
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:276
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -284,66 +286,66 @@ msgstr ""
 " %s. സന്ദേശങ്ങളൊന്നും അയയ്‌ച്ചിട്ടില്ല."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:285
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "പിശക്: \"%s\" എന്ന ഇമെയിൽ അസാധുവാണ്"
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "പിശക്: നിങ്ങൾ ഇതിനകം തന്നെ \"%s\" എന്നതിലേക്ക് ഒരു ക്ഷണം അയച്ചു"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:306
+#: experimental/coursebuilder/modules/invitation/invitation.py:319
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "എല്ലാ സന്ദേശങ്ങളും അയച്ചില്ല (%s / %s):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:314
+#: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "ശരി, %s സന്ദേശങ്ങൾ അയച്ചു"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:367
+#: experimental/coursebuilder/modules/invitation/invitation.py:380
 msgid "Invite Friends"
 msgstr "സുഹൃത്തുക്കളെ ക്ഷണിക്കുക"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:372
+#: experimental/coursebuilder/modules/invitation/invitation.py:385
 msgid "Click to send invitations to family and friends"
 msgstr "കുടുംബാഗങ്ങൾക്കും സുഹൃത്തുക്കൾക്കും ക്ഷണങ്ങൾ അയയ്‌ക്കാൻ ക്ലിക്കുചെയ്യുക"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:376
+#: experimental/coursebuilder/modules/invitation/invitation.py:389
 msgid "Invitations not currently available"
 msgstr "ക്ഷണങ്ങൾ നിലവിൽ ലഭ്യമല്ല"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:401
 msgid "Subscribe/Unsubscribe"
 msgstr "സബ്‌സ്‌ക്രൈബുചെയ്യുക/ഒഴിവാക്കുക"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:395
+#: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from invitations."
 msgstr "നിങ്ങൾ നിലവിൽ ക്ഷണങ്ങൾ ഒഴിവാക്കിയിരിക്കുന്നു."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:399
+#: experimental/coursebuilder/modules/invitation/invitation.py:412
 msgid "Click here to re-subscribe."
 msgstr "വീണ്ടും സബ്‌സ്ക്രൈബ് ചെയ്യുന്നതിന് ഇവിടെ ക്ലിക്കുചെയ്യുക."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:404
+#: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You can currently receive invitations. "
 msgstr "നിങ്ങൾക്ക് നിലവിൽ ക്ഷണങ്ങൾ നേടാനാകും. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:407
+#: experimental/coursebuilder/modules/invitation/invitation.py:420
 msgid "Click here to unsubscribe."
 msgstr "ഒഴിവാക്കുന്നതിന് ഇവിടെ ക്ലിക്കുചെയ്യുക."
 
@@ -394,15 +396,23 @@ msgstr "സാമ്പിൾ ഇമെയിൽ"
 msgid "Subject:"
 msgstr "വിഷയം:"
 
+#. Message to show the user was not allowed to access to resource
+#. Message displayed to non-logged in user
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
+#: experimental/coursebuilder/modules/rating/rating.py:93
+msgid "Access denied."
+msgstr "ആക്‌സസ്സ് നിരസിച്ചു."
+
+#. Message to acknowledge successful submission of the
+#. questionnaire
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
+msgid "Response submitted."
+msgstr ""
+
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
 msgstr "ഉത്തരങ്ങൾ സമർപ്പിക്കുക"
-
-#. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/rating/rating.py:93
-msgid "Access denied."
-msgstr "ആക്‌സസ്സ് നിരസിച്ചു."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
@@ -757,28 +767,28 @@ msgstr " സമർപ്പിച്ച് കഴിഞ്ഞാൽ നിങ്
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:244
+#: experimental/coursebuilder/views/base.html:233
 msgid "Not registered"
 msgstr "രജിസ്റ്റർ ചെയ്‌തിട്ടില്ല"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:249
+#: experimental/coursebuilder/views/base.html:238
 msgid "Logout"
 msgstr "ലോഗ്ഔട്ട് ചെയ്യുക"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:255
+#: experimental/coursebuilder/views/base.html:244
 msgid "Login"
 msgstr "ലോഗിൻ ചെയ്യുക"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:292
+#: experimental/coursebuilder/views/base.html:281
 msgid "Privacy & Terms"
 msgstr "സ്വകാര്യതയും നിബന്ധനകളും"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:287
 msgid "Locale:"
 msgstr "ലൊക്കേല്‍:"
 
@@ -911,6 +921,8 @@ msgstr "ഈ പാഠം ലഭ്യമല്ല."
 #: experimental/coursebuilder/views/macros.html:36
 #: experimental/coursebuilder/views/macros.html:73
 #: experimental/coursebuilder/views/macros.html:74
+#: experimental/coursebuilder/views/macros.html:174
+#: experimental/coursebuilder/views/macros.html:175
 msgid "Not yet submitted"
 msgstr "ഇതുവരെ സമർപ്പിച്ചിട്ടില്ല"
 
@@ -919,10 +931,12 @@ msgstr "ഇതുവരെ സമർപ്പിച്ചിട്ടില്�
 #: experimental/coursebuilder/views/macros.html:68
 #: experimental/coursebuilder/views/macros.html:113
 #: experimental/coursebuilder/views/macros.html:114
-#: experimental/coursebuilder/views/macros.html:224
-#: experimental/coursebuilder/views/macros.html:225
-#: experimental/coursebuilder/views/macros.html:273
-#: experimental/coursebuilder/views/macros.html:274
+#: experimental/coursebuilder/views/macros.html:168
+#: experimental/coursebuilder/views/macros.html:169
+#: experimental/coursebuilder/views/macros.html:258
+#: experimental/coursebuilder/views/macros.html:259
+#: experimental/coursebuilder/views/macros.html:307
+#: experimental/coursebuilder/views/macros.html:308
 msgid "In progress"
 msgstr "പുരോഗതിയിലാണ്"
 
@@ -937,9 +951,9 @@ msgstr "സഹപാഠിയുടെ അസ്സൈൻമെന്റുക�
 
 #. Menu item.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:296
-#: experimental/coursebuilder/views/macros.html:300
-#: experimental/coursebuilder/views/macros.html:358
+#: experimental/coursebuilder/views/macros.html:330
+#: experimental/coursebuilder/views/macros.html:334
+#: experimental/coursebuilder/views/macros.html:392
 #: experimental/coursebuilder/views/unit.html:76
 msgid "Activity"
 msgstr "പ്രവർത്തനം"

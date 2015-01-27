@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-12-08 08:51-0800\n"
+"POT-Creation-Date: 2015-01-26 10:55-0800\n"
 "PO-Revision-Date: 2014-12-08 08:51-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: ko <LL@li.org>\n"
@@ -69,10 +69,12 @@ msgstr " 이 질문에 점수를 매기려면 자바스크립트를 사용 설�
 #: experimental/coursebuilder/views/macros.html:62
 #: experimental/coursebuilder/views/macros.html:107
 #: experimental/coursebuilder/views/macros.html:108
-#: experimental/coursebuilder/views/macros.html:218
-#: experimental/coursebuilder/views/macros.html:219
-#: experimental/coursebuilder/views/macros.html:267
-#: experimental/coursebuilder/views/macros.html:268
+#: experimental/coursebuilder/views/macros.html:162
+#: experimental/coursebuilder/views/macros.html:163
+#: experimental/coursebuilder/views/macros.html:252
+#: experimental/coursebuilder/views/macros.html:253
+#: experimental/coursebuilder/views/macros.html:301
+#: experimental/coursebuilder/views/macros.html:302
 #: experimental/coursebuilder/views/review_dashboard.html:58
 #: experimental/coursebuilder/views/student_data_table.html:40
 msgid "Completed"
@@ -83,14 +85,14 @@ msgstr "완료"
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:36
 #: experimental/coursebuilder/views/macros.html:119
 #: experimental/coursebuilder/views/macros.html:120
-#: experimental/coursebuilder/views/macros.html:230
-#: experimental/coursebuilder/views/macros.html:231
-#: experimental/coursebuilder/views/macros.html:279
-#: experimental/coursebuilder/views/macros.html:280
-#: experimental/coursebuilder/views/macros.html:315
-#: experimental/coursebuilder/views/macros.html:316
-#: experimental/coursebuilder/views/macros.html:343
-#: experimental/coursebuilder/views/macros.html:344
+#: experimental/coursebuilder/views/macros.html:264
+#: experimental/coursebuilder/views/macros.html:265
+#: experimental/coursebuilder/views/macros.html:313
+#: experimental/coursebuilder/views/macros.html:314
+#: experimental/coursebuilder/views/macros.html:349
+#: experimental/coursebuilder/views/macros.html:350
+#: experimental/coursebuilder/views/macros.html:377
+#: experimental/coursebuilder/views/macros.html:378
 msgid "Not yet started"
 msgstr "시작하지 않음"
 
@@ -123,17 +125,17 @@ msgid " Hint "
 msgstr " 힌트 "
 
 #. Title of section on page showing certificates for course completion.
-#: experimental/coursebuilder/modules/certificate/certificate.py:180
+#: experimental/coursebuilder/modules/certificate/certificate.py:183
 msgid "Certificate"
 msgstr "수료증"
 
 #. Label on control to navigate to page showing certificate.
-#: experimental/coursebuilder/modules/certificate/certificate.py:187
+#: experimental/coursebuilder/modules/certificate/certificate.py:190
 msgid "Click for certificate"
 msgstr "수료증을 보려면 클릭"
 
 #. Text indicating student has not yet completed a course.
-#: experimental/coursebuilder/modules/certificate/certificate.py:193
+#: experimental/coursebuilder/modules/certificate/certificate.py:196
 msgid ""
 "You have not yet met the course requirements for a certificate of "
 "completion."
@@ -262,7 +264,7 @@ msgid "Change Name"
 msgstr "이름 변경"
 
 #. Error indicating no email addresses were submitted.
-#: experimental/coursebuilder/modules/invitation/invitation.py:262
+#: experimental/coursebuilder/modules/invitation/invitation.py:275
 msgid "Error: Empty email list"
 msgstr "오류: 비어 있는 이메일 목록"
 
@@ -272,7 +274,7 @@ msgstr "오류: 비어 있는 이메일 목록"
 #. than any single user is allowed to send.  No email addresses
 #. were added to the list to send, and no further email messages
 #. were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:276
+#: experimental/coursebuilder/modules/invitation/invitation.py:289
 #, python-format
 msgid ""
 "This exceeds your email cap. Number of remaining invitations: %s. No "
@@ -280,66 +282,66 @@ msgid ""
 msgstr "이메일 전송 한도를 초과하여 메시지를 보내지 못했습니다. 초대장 전송 잔여 개수는 %s개입니다."
 
 #. Error indicating an email addresses is not well-formed.
-#: experimental/coursebuilder/modules/invitation/invitation.py:285
+#: experimental/coursebuilder/modules/invitation/invitation.py:298
 #, python-format
 msgid "Error: Invalid email \"%s\""
 msgstr "오류: 잘못된 이메일 주소 - '%s'"
 
 #. Error indicating an email addresses is already known.
-#: experimental/coursebuilder/modules/invitation/invitation.py:289
+#: experimental/coursebuilder/modules/invitation/invitation.py:302
 #, python-format
 msgid "Error: You have already sent an invitation email to \"%s\""
 msgstr "오류: 이미 '%s' 주소로 초대 이메일을 전송함"
 
 #. Error indicating not all email messages were sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:306
+#: experimental/coursebuilder/modules/invitation/invitation.py:319
 #, python-format
 msgid "Not all messages were sent (%s / %s):"
 msgstr "일부 메일이 전송되지 않음(%s개/%s개):"
 
 #. Success message indicating number of emails sent.
-#: experimental/coursebuilder/modules/invitation/invitation.py:314
+#: experimental/coursebuilder/modules/invitation/invitation.py:327
 #, python-format
 msgid "OK, %s messages sent"
 msgstr "메일 %s개 전송 완료"
 
 #. Title encouraging user to invite friends to join a course
-#: experimental/coursebuilder/modules/invitation/invitation.py:367
+#: experimental/coursebuilder/modules/invitation/invitation.py:380
 msgid "Invite Friends"
 msgstr "친구 초대"
 
 #. Label on control asking user to invite friends to join.
-#: experimental/coursebuilder/modules/invitation/invitation.py:372
+#: experimental/coursebuilder/modules/invitation/invitation.py:385
 msgid "Click to send invitations to family and friends"
 msgstr "가족 및 친구에게 초대장을 전송하려면 클릭"
 
 #. Inviting friends to join a course is not currently enabled.
-#: experimental/coursebuilder/modules/invitation/invitation.py:376
+#: experimental/coursebuilder/modules/invitation/invitation.py:389
 msgid "Invitations not currently available"
 msgstr "현재 초대장을 사용할 수 없음"
 
 #. Control allowing user to subscribe/unsubscribe from email invitation
-#: experimental/coursebuilder/modules/invitation/invitation.py:388
+#: experimental/coursebuilder/modules/invitation/invitation.py:401
 msgid "Subscribe/Unsubscribe"
 msgstr "수신허용/거부"
 
 #. Message - user has unsubscribed from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:395
+#: experimental/coursebuilder/modules/invitation/invitation.py:408
 msgid "You are currently unsubscribed from invitations."
 msgstr "현재 초대장을 수신거부하고 있습니다."
 
 #. Control allowing user to re-subscribe to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:399
+#: experimental/coursebuilder/modules/invitation/invitation.py:412
 msgid "Click here to re-subscribe."
 msgstr "다시 수신하려면 여기를 클릭하세요."
 
 #. Text indicating user has opted in to email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:404
+#: experimental/coursebuilder/modules/invitation/invitation.py:417
 msgid "You can currently receive invitations. "
 msgstr "현재 초대장을 받을 수 있습니다. "
 
 #. Control allowing user to unsubscribe from email invitations.
-#: experimental/coursebuilder/modules/invitation/invitation.py:407
+#: experimental/coursebuilder/modules/invitation/invitation.py:420
 msgid "Click here to unsubscribe."
 msgstr "수신거부하려면 여기를 클릭하세요."
 
@@ -386,15 +388,23 @@ msgstr "샘플 이메일"
 msgid "Subject:"
 msgstr "제목:"
 
+#. Message to show the user was not allowed to access to resource
+#. Message displayed to non-logged in user
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:193
+#: experimental/coursebuilder/modules/rating/rating.py:93
+msgid "Access denied."
+msgstr "액세스가 거부되었습니다."
+
+#. Message to acknowledge successful submission of the
+#. questionnaire
+#: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
+msgid "Response submitted."
+msgstr ""
+
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
 msgid "Submit answers"
 msgstr "답변 제출"
-
-#. Message displayed to non-logged in user
-#: experimental/coursebuilder/modules/rating/rating.py:93
-msgid "Access denied."
-msgstr "액세스가 거부되었습니다."
 
 #. Message displayed when user submits written comments
 #: experimental/coursebuilder/modules/rating/rating.py:153
@@ -731,28 +741,28 @@ msgstr " 제출을 완료한 후에는 수정하거나 삭제할 수 없습니�
 #. Text shown in parentheses next to the student's email address at the
 #. top-right of all course pages, if the student is logged in but not
 #. registered for the course he/she is currently browsing.
-#: experimental/coursebuilder/views/base.html:244
+#: experimental/coursebuilder/views/base.html:233
 msgid "Not registered"
 msgstr "미등록"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:249
+#: experimental/coursebuilder/views/base.html:238
 msgid "Logout"
 msgstr "로그아웃"
 
 #. Navbar text.
-#: experimental/coursebuilder/views/base.html:255
+#: experimental/coursebuilder/views/base.html:244
 msgid "Login"
 msgstr "로그인"
 
 #. Link at the bottom of each page to the privacy and 'Terms and Conditions'
 #. pages.
-#: experimental/coursebuilder/views/base.html:292
+#: experimental/coursebuilder/views/base.html:281
 msgid "Privacy & Terms"
 msgstr "개인정보 보호 및 약관"
 
 #. Text describing the locale selector.
-#: experimental/coursebuilder/views/base.html:298
+#: experimental/coursebuilder/views/base.html:287
 msgid "Locale:"
 msgstr "언어:"
 
@@ -873,6 +883,8 @@ msgstr "이 강의는 사용할 수 없습니다."
 #: experimental/coursebuilder/views/macros.html:36
 #: experimental/coursebuilder/views/macros.html:73
 #: experimental/coursebuilder/views/macros.html:74
+#: experimental/coursebuilder/views/macros.html:174
+#: experimental/coursebuilder/views/macros.html:175
 msgid "Not yet submitted"
 msgstr "제출하지 않음"
 
@@ -881,10 +893,12 @@ msgstr "제출하지 않음"
 #: experimental/coursebuilder/views/macros.html:68
 #: experimental/coursebuilder/views/macros.html:113
 #: experimental/coursebuilder/views/macros.html:114
-#: experimental/coursebuilder/views/macros.html:224
-#: experimental/coursebuilder/views/macros.html:225
-#: experimental/coursebuilder/views/macros.html:273
-#: experimental/coursebuilder/views/macros.html:274
+#: experimental/coursebuilder/views/macros.html:168
+#: experimental/coursebuilder/views/macros.html:169
+#: experimental/coursebuilder/views/macros.html:258
+#: experimental/coursebuilder/views/macros.html:259
+#: experimental/coursebuilder/views/macros.html:307
+#: experimental/coursebuilder/views/macros.html:308
 msgid "In progress"
 msgstr "진행 중"
 
@@ -899,9 +913,9 @@ msgstr "과제 검토"
 
 #. Menu item.
 #. Navigation breadcrumb.
-#: experimental/coursebuilder/views/macros.html:296
-#: experimental/coursebuilder/views/macros.html:300
-#: experimental/coursebuilder/views/macros.html:358
+#: experimental/coursebuilder/views/macros.html:330
+#: experimental/coursebuilder/views/macros.html:334
+#: experimental/coursebuilder/views/macros.html:392
 #: experimental/coursebuilder/views/unit.html:76
 msgid "Activity"
 msgstr "활동"
