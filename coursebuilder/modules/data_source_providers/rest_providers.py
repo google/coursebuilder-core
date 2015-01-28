@@ -482,7 +482,7 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
                 [x for x in utils.text_to_list(item['labels'])])
             if 'scores' in ret:
                 del item['scores']
-            if 'additional_fields' in item:
+            if item.get('additional_fields'):
                 item['additional_fields'] = transforms.loads(
                     item['additional_fields'])
         return ret
