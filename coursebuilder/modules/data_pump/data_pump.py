@@ -371,7 +371,7 @@ class DataPumpJob(jobs.DurableJobBase):
             DATA_PUMP_SETTINGS_SCHEMA_SECTION, {})
         dataset_id = (
             pump_settings.get(DATASET_NAME) or
-            re.sub('[^a-z_:-]', '', app_context.get_slug().lower()) or
+            re.sub('[^0-9a-z_:-]', '_', app_context.get_slug().lower()) or
             'course')
         project_id = pump_settings.get(PROJECT_ID)
         if not project_id:
@@ -1033,7 +1033,10 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
         # prefer the default value.
         template_values['default_lifetime'] = (
             pump_settings.get(TABLE_LIFETIME) or PII_SECRET_DEFAULT_LIFETIME)
-        template_values[DATASET_NAME] = pump_settings.get(DATASET_NAME)
+        template_values[DATASET_NAME] = (
+            pump_settings.get(DATASET_NAME) or
+            re.sub('[^0-9a-z_:-]', '_', app_context.get_slug().lower()) or
+            'course')
 
 
 custom_module = None
