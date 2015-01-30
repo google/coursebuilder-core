@@ -422,6 +422,10 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
         clazz = cls.get_entity_class()
         if source_context.send_uncensored_pii_data:
             registry = entity_transforms.get_schema_for_entity_unsafe(clazz)
+            registry.add_property(schema_fields.SchemaField(
+                'email', 'Email', 'string',
+                optional=True,
+                description='Email address for this Student.'))
         else:
             registry = entity_transforms.get_schema_for_entity(clazz)
         ret = registry.get_json_schema_dict()['properties']
@@ -478,13 +482,26 @@ class StudentsDataSource(data_sources.AbstractDbTableRestDataSource):
                 del item['key_by_user_id']
             if 'safe_key' in item:
                 del item['safe_key']
+            if 'scores' in item:
+                del item['scores']
             item['labels'] = (
                 [x for x in utils.text_to_list(item['labels'])])
             if 'scores' in ret:
                 del item['scores']
             if item.get('additional_fields'):
-                item['additional_fields'] = transforms.loads(
-                    item['additional_fields'])
+                additional_fields = transforms.loads(item['additional_fields'])
+                item['additional_fields'] = [
+                    {'name': l[0], 'value': l[1]} for l in additional_fields]
+
+        # Here, run through the Student entities to pick up the email address.
+        # Since the email is not stored as an actual property in the entity, but
+        # instead is just part of the key, we have to manually extract it.  Note
+        # that here we are making the entirely reasonable assumption that the
+        # cardinality of the list of Student entity and the dict-of-properties
+        # list in 'ret' is the same.
+        if source_context.send_uncensored_pii_data:
+            for student, output_dict in zip(rows, ret):
+                output_dict['email'] = student.email
         return ret
 
 

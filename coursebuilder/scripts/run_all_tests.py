@@ -99,6 +99,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_dashboard.DashboardAccessTestCase': 3,
     'tests.functional.modules_dashboard.RoleEditorTestCase': 3,
     'tests.functional.modules_data_pump.SchemaConversionTests': 1,
+    'tests.functional.modules_data_pump.StudentSchemaValidationTests': 2,
     'tests.functional.modules_data_pump.PiiTests': 7,
     'tests.functional.modules_data_pump.BigQueryInteractionTests': 36,
     'tests.functional.modules_data_pump.UserInteractionTests': 4,

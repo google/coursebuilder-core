@@ -811,6 +811,24 @@ class DataPumpJob(jobs.DurableJobBase):
                 app_context, data_source_context, schema, catch_and_log_,
                 next_page, *required_jobs)
 
+            # BigQuery has a somewhat unfortunate design: It does not attempt
+            # to parse/validate the data we send until all data has been
+            # uploaded and the upload has been declared a "success".  Rather
+            # than having to poll for an indefinite amount of time until the
+            # upload is parsed, we validate that the sent items exactly match
+            # the declared schema.  Somewhat expensive, but better than having
+            # completely unreported hidden failures.
+            for index, item in enumerate(data):
+                complaints = transforms.validate_object_matches_json_schema(
+                    item, schema)
+                if complaints:
+                    raise ValueError(
+                        'Data in item to pump does not match schema!  ' +
+                        'Item is item number %d ' % index +
+                        'on data page %d. ' % next_page +
+                        'Problems for this item are:\n' +
+                        '\n'.join(complaints))
+
             if (data_source_class.get_default_chunk_size() == 0 or
                 not hasattr(data_source_context, 'chunk_size') or
                 len(data) < data_source_context.chunk_size):

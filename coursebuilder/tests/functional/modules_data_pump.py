@@ -21,12 +21,14 @@ import time
 
 import actions
 import apiclient
+from common import catch_and_log
 from common import schema_fields
 from common import utils as common_utils
 from models import courses
 from models import data_sources
 from models import jobs
 from models import models
+from models import transforms
 from modules.data_pump import data_pump
 from modules.data_source_providers import rest_providers
 
@@ -35,6 +37,7 @@ from google.appengine.ext import deferred
 COURSE_NAME = 'data_pump'
 ADMIN_EMAIL = 'admin@foo.com'
 USER_EMAIL = 'user@foo.com'
+USER_NAME = 'Some User'
 
 
 class TrivialDataSource(data_sources.AbstractRestDataSource):
@@ -123,6 +126,44 @@ class TrivialDataSourceContext(data_sources.AbstractContextManager):
     @classmethod
     def _build_secret(cls, params):
         return None
+
+
+class StudentSchemaValidationTests(actions.TestBase):
+    """Verify that Student schema (with/without PII) is correctly validated."""
+
+    def setUp(self):
+        super(StudentSchemaValidationTests, self).setUp()
+        self.app_context = actions.simple_add_course(
+            COURSE_NAME, ADMIN_EMAIL, 'Data Pump')
+        actions.login(USER_EMAIL, is_admin=False)
+        actions.register(self, USER_NAME, COURSE_NAME)
+        actions.login(ADMIN_EMAIL, is_admin=True)
+
+    def _build_student_fetch_params(self, with_pii):
+        ctx_class = rest_providers.StudentsDataSource.get_context_class()
+        data_source_context = ctx_class.build_blank_default(
+            params={'data_source_token': 'xyzzy'},
+            default_chunk_size=1)
+        data_source_context.send_uncensored_pii_data = with_pii
+        catch_and_log_ = catch_and_log.CatchAndLog()
+        schema = rest_providers.StudentsDataSource.get_schema(
+            self.app_context, catch_and_log_, data_source_context)
+        return data_source_context, schema, catch_and_log_
+
+    def _test_student_schema(self, with_pii):
+        source_ctx, schema, log_ = self._build_student_fetch_params(with_pii)
+        values, _ = rest_providers.StudentsDataSource.fetch_values(
+            self.app_context, source_ctx, schema, log_, 0)
+        self.assertEquals(1, len(values))
+        complaints = transforms.validate_object_matches_json_schema(
+            values[0], schema)
+        self.assertEquals(0, len(complaints))
+
+    def test_student_schema_without_pii(self):
+        self._test_student_schema(with_pii=False)
+
+    def test_student_schema_including_pii(self):
+        self._test_student_schema(with_pii=True)
 
 
 class SchemaConversionTests(actions.TestBase):
@@ -385,8 +426,8 @@ class PiiTests(actions.TestBase):
             self.assertEquals('user@foo.com', student_record['name'])
             self.assertEquals(
               'user@foo.com',
-              common_utils.find(lambda x: x[0] == 'form01',
-                                student_record['additional_fields'])[1])
+              common_utils.find(lambda x: x['name'] == 'form01',
+                                student_record['additional_fields'])['value'])
 
 class MockResponse(object):
 

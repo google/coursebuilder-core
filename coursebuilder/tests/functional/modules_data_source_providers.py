@@ -248,22 +248,22 @@ class StudentsTest(actions.TestBase):
             'additional_fields.age',
             'additional_fields.gender',
         ]
-        blacklisted_fields = [
-            ['age', 22],
-            ['gender', 'female'],
+        blacklisted = [
+            {'name': 'age', 'value': '22'},
+            {'name': 'gender', 'value': 'female'},
         ]
-        permitted_fields = [
-            ['goal', 'complete_course'],
-            ['timezone', 'America/Los_Angeles']
+        permitted = [
+            {'name': 'goal', 'value': 'complete_course'},
+            {'name': 'timezone', 'value': 'America/Los_Angeles'},
         ]
-        additional_fields = transforms.dumps(blacklisted_fields +
-                                             permitted_fields)
+        additional_fields = transforms.dumps(
+            [[x['name'], x['value']] for x in blacklisted + permitted])
         with utils.Namespace('ns_test'):
             models.Student(
                 user_id='123456', additional_fields=additional_fields).put()
             response = transforms.loads(self.get(
                 '/test/rest/data/students/items').body)
-        self.assertEquals(permitted_fields,
+        self.assertEquals(permitted,
                           response['data'][0]['additional_fields'])
         models.Student._PROPERTY_EXPORT_BLACKLIST = save_blacklist
 

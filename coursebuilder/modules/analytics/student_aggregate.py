@@ -346,16 +346,24 @@ class StudentAggregateComponentRegistry(
         ret = schema_fields.FieldRegistry('student_aggregation')
         for component in cls._components:
             ret.add_property(component.get_schema())
+        if data_source_context.send_uncensored_pii_data:
+            obfuscation = 'Un-Obfuscated'
+        else:
+            obfuscation = 'Obfuscated'
+        description = (obfuscation + ' version of user ID.  Usable to join '
+                       'to other tables also keyed on obfuscated user ID.')
+
         ret.add_property(schema_fields.SchemaField(
-            'user_id', 'User ID', 'string',
-            description='Obfuscated version of user ID.  Usable to join '
-            'to other tables also keyed on obfuscated user ID.'))
+            'user_id', 'User ID', 'string', description=description))
         return ret.get_json_schema_dict()['properties']
 
     @classmethod
-    def _postprocess_rows(cls, app_context, source_context, schema,
+    def _postprocess_rows(cls, app_context, data_source_context, schema,
                           log, page_number, rows):
-        transform_fn = cls._build_transform_fn(source_context)
+        if data_source_context.send_uncensored_pii_data:
+            transform_fn = lambda x: x
+        else:
+            transform_fn = cls._build_transform_fn(data_source_context)
         ret = []
         for row in rows:
             item = transforms.loads(zlib.decompress(row.data))
