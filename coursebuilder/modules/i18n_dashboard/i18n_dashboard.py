@@ -2077,7 +2077,10 @@ class I18nDashboardHandler(BaseDashboardExtension):
                 'id': 'edit_18n_settings',
                 'caption': 'Edit I18N Settings',
                 'href': self.handler.get_action_url(
-                    'settings', extra_args={'tab': 'i18n'})
+                    'settings', extra_args={
+                        'tab': 'i18n',
+                        'exit_url': 'dashboard?action=i18n_dashboard',
+                    })
                 },
             ]
         self.handler.render_page({

@@ -79,7 +79,7 @@ class CourseSettingsHandler(ApplicationHandler):
         """Handles editing of course.yaml."""
         filer.create_course_file_if_not_exists(self)
         extra_args = {}
-        for name in ('section_names', 'tab', 'tab_title'):
+        for name in ('section_names', 'tab', 'tab_title', 'exit_url'):
             value = self.request.get(name)
             if value:
                 extra_args[name] = value
@@ -103,8 +103,9 @@ class CourseSettingsHandler(ApplicationHandler):
             registry = registry.clone_only_items_named(section_names.split(','))
 
         tab = self.request.get('tab')
-        exit_url = self.canonicalize_url('/dashboard?action=settings&tab=%s' %
-                                         tab)
+        exit_url = (
+            self.request.get('exit_url') or
+            self.canonicalize_url('/dashboard?action=settings&tab=%s' % tab))
         rest_url = self.canonicalize_url(CourseSettingsRESTHandler.URI)
         form_html = oeditor.ObjectEditor.get_html_for(
             self, registry.get_json_schema(), registry.get_schema_dict(),

@@ -26,6 +26,7 @@ import logging
 import os
 import random
 import re
+import urllib
 
 import apiclient
 import httplib2
@@ -1032,6 +1033,10 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
     def fill_values(app_context, template_values):
         template_values['xsrf_token'] = (
             crypto.XsrfTokenManager.create_xsrf_token(XSRF_ACTION_NAME))
+        template_values['exit_url'] = urllib.urlencode({
+            'exit_url': 'dashboard?%s' % urllib.urlencode({
+                'action': 'analytics',
+                'tab': 'data_pump'})})
         source_classes = [
           ds for ds in data_sources.Registry.get_rest_data_source_classes()
           if ds.exportable()]

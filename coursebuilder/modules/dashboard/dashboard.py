@@ -807,12 +807,12 @@ class DashboardHandler(
         if tab.name == 'admin_prefs':
             self.get_settings_admin_prefs(template_values, tab)
         elif tab.name == 'advanced':
-            self.get_settings_advanced(template_values, tab)
+            self._get_settings_advanced(template_values, tab)
         else:
-            self.get_settings_section(template_values, tab)
+            self._get_settings_section(template_values, tab)
         self.render_page(template_values)
 
-    def get_settings_section(self, template_values, tab):
+    def _get_settings_section(self, template_values, tab):
         html_parser = HTMLParser.HTMLParser()
 
         def get_environ_value(environ, name):
@@ -867,6 +867,7 @@ class DashboardHandler(
                         'section_names': tab.contents,
                         'tab': tab.name,
                         'tab_title': tab.title,
+                        'exit_url': self.request.get('exit_url'),
                         }),
                 'xsrf_token': self.create_xsrf_token('edit_course_settings')})
         template_values['sections'] = [{
@@ -937,7 +938,7 @@ class DashboardHandler(
         else:
             return content_if_empty
 
-    def get_settings_advanced(self, template_values, tab):
+    def _get_settings_advanced(self, template_values, tab):
         """Renders course settings view."""
 
         actions = []

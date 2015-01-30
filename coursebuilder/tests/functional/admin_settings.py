@@ -18,6 +18,7 @@ __author__ = 'Mike Gainer (mgainer@google.com)'
 
 import cgi
 import re
+import urllib
 
 from common import crypto
 from common import utils as common_utils
@@ -436,3 +437,23 @@ class JinjaContextTest(actions.TestBase):
             models.StudentPreferencesDAO.save(prefs)
         self.assertNotIn('is_read_write_course:',
                          self._get_jinja_context_text(self.get(BASE_URL)))
+
+
+class ExitUrlTest(actions.TestBase):
+
+    def setUp(self):
+        super(ExitUrlTest, self).setUp()
+        actions.simple_add_course(COURSE_NAME, ADMIN_EMAIL, COURSE_TITLE)
+        actions.login(ADMIN_EMAIL, is_admin=True)
+
+    def test_exit_url(self):
+        base_url = '/%s/dashboard?action=settings&tab=data_pump' % COURSE_NAME
+        url = base_url + '&' + urllib.urlencode({
+            'exit_url': 'dashboard?%s' % urllib.urlencode({
+                'action': 'analytics',
+                'tab': 'data_pump'})})
+        response = self.get(url)
+        response = response.forms['edit_course_settings'].submit().follow()
+        self.assertIn(
+            'cb_global.exit_url = \'dashboard?action=analytics&tab=data_pump\'',
+            response.body)
