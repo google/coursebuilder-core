@@ -100,12 +100,14 @@ div.warning {
             <input type="hidden" name="data_source" value="{{ pump.name }}">
             <input type="hidden" name="xsrf_token" value="{{ xsrf_token }}">
             <p>
-              {{ pump.status }}
-              {% if pump.duration and pump.last_updated %}
-                ran for {{ pump.duration }}
-                at {{ pump.last_updated }}
-              {% endif %}
+              Pump status: {{ pump.status }}
             </p>
+            {% if pump.duration and pump.last_updated %}
+              <p>
+                The pump ran for {{ pump.duration }}
+                at {{ pump.last_updated }}
+              </p>
+            {% endif %}
             {% if pump.status == 'Completed' %}
               {% if pump.pii_secret_is_out_of_date %}
                  <div class="warning">
@@ -117,8 +119,11 @@ div.warning {
                  </div>
               {% endif %}
             {% endif %}
+
             {% if pump.status == 'Started' or pump.status == 'Completed' %}
-              <p>Uploaded {{ pump.job_context.items_uploaded }} items</p>
+              <p>
+                Uploaded {{ pump.job_context.items_uploaded }} items.
+              </p>
             {% endif %}
             {% if pump.status == 'Failed' %}
               <p>{{ pump.job_context.failure_reason }}</p>

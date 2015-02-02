@@ -592,16 +592,16 @@ class BigQueryInteractionTests(InteractionTests):
     def test_delete_table_ignores_404(self):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 404}), ''))
-        self.job._maybe_delete_previous_table(self.mock_service_client,
-                                              self.bigquery_settings)
+        self.job._maybe_delete_previous_table(
+            self.mock_service_client, self.bigquery_settings, TrivialDataSource)
         self.assertEqual(
             ['delete', 'execute'],
             self.mock_service_client.calls)
 
     def test_delete_table_accepts_200(self):
         self.mock_http.add_response({'status': 200})
-        self.job._maybe_delete_previous_table(self.mock_service_client,
-                                              self.bigquery_settings)
+        self.job._maybe_delete_previous_table(
+            self.mock_service_client, self.bigquery_settings, TrivialDataSource)
         self.assertEqual(
             ['delete', 'execute'],
             self.mock_service_client.calls)
@@ -610,36 +610,41 @@ class BigQueryInteractionTests(InteractionTests):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 500}), ''))
         with self.assertRaises(apiclient.errors.HttpError):
-            self.job._maybe_delete_previous_table(self.mock_service_client,
-                                                  self.bigquery_settings)
+            self.job._maybe_delete_previous_table(
+                self.mock_service_client, self.bigquery_settings,
+                TrivialDataSource)
 
     def test_create_data_table_accepts_200(self):
         self.mock_http.add_response({'status': 200})
-        self.job._create_data_table(self.mock_service_client,
-                                    self.bigquery_settings, None)
+        self.job._create_data_table(
+            self.mock_service_client, self.bigquery_settings, None,
+            TrivialDataSource)
 
     def test_create_data_table_raises_404(self):
         self.mock_http.add_response(apiclient.errors.HttpError(
             MockResponse({'status': 404}), ''))
         with self.assertRaises(apiclient.errors.HttpError):
-            self.job._create_data_table(self.mock_service_client,
-                                        self.bigquery_settings, None)
+            self.job._create_data_table(
+                self.mock_service_client, self.bigquery_settings, None,
+                TrivialDataSource)
 
     def test_create_upload_job_accepts_200(self):
         self.mock_http.add_response({'status': 200, 'location': 'there'})
-        location = self.job._create_upload_job(self.mock_http,
-                                               self.bigquery_settings)
+        location = self.job._create_upload_job(
+            self.mock_http, self.bigquery_settings, TrivialDataSource)
         self.assertEqual(location, 'there')
 
     def test_create_upload_receiving_response_without_location_is_error(self):
         self.mock_http.add_response({'status': 200})
         with self.assertRaises(Exception):
-            self.job._create_upload_job(self.mock_http, self.bigquery_settings)
+            self.job._create_upload_job(
+                self.mock_http, self.bigquery_settings, TrivialDataSource)
 
     def test_create_upload_receiving_non_200_response_is_error(self):
         self.mock_http.add_response({'status': 204, 'location': 'there'})
         with self.assertRaises(Exception):
-            self.job._create_upload_job(self.mock_http, self.bigquery_settings)
+            self.job._create_upload_job(
+                self.mock_http, self.bigquery_settings, TrivialDataSource)
 
     def _initiate_upload_job(self):
         self.mock_http.add_response({'status': 200})
@@ -1197,7 +1202,8 @@ class UserInteractionTests(InteractionTests):
 
     def test_full_job_lifecycle(self):
         self.assertEquals(
-            'TrivialDataSource Has Never Run '
+            'TrivialDataSource '
+            'Pump status: Has Never Run '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 30 days)',
             self._get_status_text())
@@ -1216,8 +1222,9 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308})
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
-        self.assertEqual('TrivialDataSource Started '
-                         'Uploaded 3 items',
+        self.assertEqual('TrivialDataSource '
+                         'Pump status: Started '
+                         'Uploaded 3 items.',
                          self._get_status_text())
 
         # Re-check on re-entry to main function; still have bytes [0..38]
@@ -1226,8 +1233,9 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertIn('TrivialDataSource Started', status_text)
-        self.assertIn('Uploaded 3 items', status_text)
+        self.assertIn('TrivialDataSource', status_text)
+        self.assertIn('Pump status: Started', status_text)
+        self.assertIn('Uploaded 3 items.', status_text)
         self.assertIn('Incomplete upload detected - 0 of 262144 bytes '
                       'received for page 1', status_text)
 
@@ -1239,8 +1247,9 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 500})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertIn('TrivialDataSource Started', status_text)
-        self.assertIn('Uploaded 3 items', status_text)
+        self.assertIn('TrivialDataSource', status_text)
+        self.assertIn('Pump status: Started', status_text)
+        self.assertIn('Uploaded 3 items.', status_text)
         self.assertIn('Incomplete upload detected - 0 of 262144 bytes '
                       'received for page 1', status_text)
         self.assertIn('Retryable server error 500', status_text)
@@ -1251,16 +1260,18 @@ class UserInteractionTests(InteractionTests):
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
         # Here note that transient failure messages are now gone.
-        self.assertEquals('TrivialDataSource Started '
-                          'Uploaded 6 items', status_text)
+        self.assertEquals('TrivialDataSource '
+                          'Pump status: Started '
+                          'Uploaded 6 items.', status_text)
 
         # OK, server is now well, and accepts page #2 successfully.
         self.mock_http.add_response({'status': 308, 'range': '262144-524287'})
         self.mock_http.add_response({'status': 308, 'range': '524288-786431'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertEquals('TrivialDataSource Started '
-                          'Uploaded 9 items', status_text)
+        self.assertEquals('TrivialDataSource '
+                          'Pump status: Started '
+                          'Uploaded 9 items.', status_text)
 
         # OK, server is now well, and accepts page #3 successfully.  Here,
         # server acknowledges receipt of last page w/ a 200 rather than a 308;
@@ -1270,15 +1281,17 @@ class UserInteractionTests(InteractionTests):
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
         self.assertEquals(
-            'TrivialDataSource Completed '
-            'Uploaded 10 items '
+            'TrivialDataSource '
+            'Pump status: Completed '
+            'Uploaded 10 items. '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 30 days)',
             status_text)
 
     def test_cancellation(self):
         self.assertEquals(
-            'TrivialDataSource Has Never Run '
+            'TrivialDataSource '
+            'Pump status: Has Never Run '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 30 days)',
             self._get_status_text())
@@ -1298,8 +1311,9 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308})
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
-        self.assertEqual('TrivialDataSource Started '
-                         'Uploaded 3 items',
+        self.assertEqual('TrivialDataSource '
+                         'Pump status: Started '
+                         'Uploaded 3 items.',
                          self._get_status_text())
 
         response = self.get(self.URL)
@@ -1307,7 +1321,8 @@ class UserInteractionTests(InteractionTests):
                     response)
 
         self.execute_all_deferred_tasks()
-        self.assertIn('TrivialDataSource Failed '
+        self.assertIn('TrivialDataSource '
+                      'Pump status: Failed '
                       'Canceled by admin@foo.com',
                       self._get_status_text())
 
@@ -1339,13 +1354,14 @@ class UserInteractionTests(InteractionTests):
 
         time.sleep(1)
         self.assertEquals(
-            'TrivialDataSource Completed '
+            'TrivialDataSource '
+            'Pump status: Completed '
             'WARNING: This data source was last uploaded when a different '
             'secret for encoding personal data was in use. Data from this '
             'source will not be correlatable with other data sources '
             'uploaded using the latest secret. You may wish to re-upload '
             'this data. '
-            'Uploaded 10 items '
+            'Uploaded 10 items. '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 1 s)',
             self._get_status_text())

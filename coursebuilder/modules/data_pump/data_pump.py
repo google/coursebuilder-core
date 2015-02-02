@@ -372,7 +372,7 @@ class DataPumpJob(jobs.DurableJobBase):
             DATA_PUMP_SETTINGS_SCHEMA_SECTION, {})
         dataset_id = (
             pump_settings.get(DATASET_NAME) or
-            re.sub('[^0-9a-z_:-]', '_', app_context.get_slug().lower()) or
+            re.sub('[^0-9a-z_:-]', '', app_context.get_slug().lower()) or
             'course')
         project_id = pump_settings.get(PROJECT_ID)
         if not project_id:
@@ -431,7 +431,8 @@ class DataPumpJob(jobs.DurableJobBase):
                                     'datasetId': bigquery_settings.dataset_id
                                     }}).execute()
 
-    def _maybe_delete_previous_table(self, tables, bigquery_settings):
+    def _maybe_delete_previous_table(self, tables, bigquery_settings,
+                                     data_source_class):
         """Delete previous version of table for data source, if it exists."""
 
         # TODO(mgainer): Make clobbering old table and replacing optional.
@@ -440,7 +441,7 @@ class DataPumpJob(jobs.DurableJobBase):
         # their queries all the time if we add a timestamp to the table
         # name.  And no, AFAICT, the BigQuery API does not permit renaming
         # of tables, just creation and deletion.
-        table_name = self._data_source_class_name.replace('DataSource', '')
+        table_name = data_source_class.get_name()
         try:
             tables.delete(projectId=bigquery_settings.project_id,
                           datasetId=bigquery_settings.dataset_id,
@@ -499,10 +500,11 @@ class DataPumpJob(jobs.DurableJobBase):
                 name, structure))
         return fields
 
-    def _create_data_table(self, tables, bigquery_settings, schema):
+    def _create_data_table(self, tables, bigquery_settings, schema,
+                           data_source_class):
         """Instantiate and provide schema for new BigQuery table."""
 
-        table_name = self._data_source_class_name.replace('DataSource', '')
+        table_name = data_source_class.get_name()
         request = {
             'kind': 'bigquery#table',
             'tableReference': {
@@ -533,7 +535,7 @@ class DataPumpJob(jobs.DurableJobBase):
             datasetId=bigquery_settings.dataset_id,
             body=request).execute()
 
-    def _create_upload_job(self, http, bigquery_settings):
+    def _create_upload_job(self, http, bigquery_settings, data_source_class):
         """Before uploading, we must create a job to handle the upload.
 
         Args:
@@ -552,7 +554,7 @@ class DataPumpJob(jobs.DurableJobBase):
             'Content-Type': 'application/json',
             'X-Upload-Content-Type': 'application/octet-stream',
             }
-        table_name = self._data_source_class_name.replace('DataSource', '')
+        table_name = data_source_class.get_name()
         body = transforms.dumps({
             'kind': 'bigquery#job',
             'configuration': {
@@ -593,9 +595,12 @@ class DataPumpJob(jobs.DurableJobBase):
         tables = bigquery_service.tables()
 
         self._maybe_create_course_dataset(bigquery_service, bigquery_settings)
-        self._maybe_delete_previous_table(tables, bigquery_settings)
-        self._create_data_table(tables, bigquery_settings, schema)
-        upload_url = self._create_upload_job(http, bigquery_settings)
+        self._maybe_delete_previous_table(tables, bigquery_settings,
+                                          data_source_class)
+        self._create_data_table(tables, bigquery_settings, schema,
+                                data_source_class)
+        upload_url = self._create_upload_job(http, bigquery_settings,
+                                             data_source_class)
         return upload_url
 
     def _note_retryable_failure(self, message, job_context):
@@ -945,6 +950,8 @@ class DataPumpJob(jobs.DurableJobBase):
             }
 
         data_source_context = self._build_data_source_context()
+        data_source_class = _get_data_source_class_by_name(
+            self._data_source_class_name)
         job = self.load()
         if job:
             ret['status'] = jobs.STATUS_CODE_DESCRIPTION[job.status_code]
@@ -963,8 +970,7 @@ class DataPumpJob(jobs.DurableJobBase):
             bigquery_settings = self._get_bigquery_settings(app_context)
             ret['bigquery_url'] = '%s%s:%s.%s' % (
                 BIGQUERY_UI_URL_PREFIX, bigquery_settings.project_id,
-                bigquery_settings.dataset_id,
-                self._data_source_class_name.replace('DataSource', ''))
+                bigquery_settings.dataset_id, data_source_class.get_name())
             try:
                 job_context, data_source_context = self._load_state(
                     job, job.sequence_num)
@@ -981,8 +987,6 @@ class DataPumpJob(jobs.DurableJobBase):
                 # object.
                 ret['message'] = job.output
 
-        data_source_class = _get_data_source_class_by_name(
-            self._data_source_class_name)
         ret['source_url'] = '%s/rest/data/%s/items?chunk_size=10' % (
             app_context.get_slug(), data_source_class.get_name())
         catch_and_log_ = catch_and_log.CatchAndLog()
@@ -1058,7 +1062,7 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
             pump_settings.get(TABLE_LIFETIME) or PII_SECRET_DEFAULT_LIFETIME)
         template_values[DATASET_NAME] = (
             pump_settings.get(DATASET_NAME) or
-            re.sub('[^0-9a-z_:-]', '_', app_context.get_slug().lower()) or
+            re.sub('[^0-9a-z_:-]', '', app_context.get_slug().lower()) or
             'course')
 
 
@@ -1129,9 +1133,18 @@ class DashboardExtension(object):
 def register_module():
     """Adds this module to the registry.  Called once at startup."""
 
+    def validate_project_id(value, errors):
+        if not value:
+            return
+        if not re.match('^[a-z][-a-z0-9]{4,61}[a-z0-9]$', value):
+            errors.append(
+                'Project IDs must contain 6-63 lowercase letters, digits, '
+                'or dashes. IDs must start with a letter and may not end '
+                'with a dash.')
+
     project_id = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PROJECT_ID,
-        'Project ID', 'string',
+        'Project ID', 'string', validator=validate_project_id,
         description='The ID (not the name!) of the Project to which to '
         'send data.  See the list of projects and their IDs at '
         'https://console.developers.google.com/project',
@@ -1142,19 +1155,54 @@ def register_module():
         description='Name of the BigQuery dataset to which to pump tables.  '
         'If not set, this will default to the name of the course.',
         optional=True, i18n=False)
+
+    def validate_json_key(json_key, errors):
+        if not json_key:
+            return
+        try:
+            json_key = transforms.loads(json_key or '')
+            if 'private_key' not in json_key or 'client_email' not in json_key:
+                errors.append(
+                    'The JSON client key for allowing access to push data '
+                    'to BigQuery is missing either the "private_key" or '
+                    '"client_email" field (or both).  Please check that you '
+                    'have copied the entire contents of the JSON key file '
+                    'you downloaded using the Credentials screen in the '
+                    'Google Developers Console.')
+        except ValueError, ex:
+            errors.append(
+                'The JSON key field doesn\'t seem to contain valid JSON.  '
+                'Please check that you have copied all of the content of the '
+                'JSON file you downloaded using the Credentials screen in the '
+                'Google Developers Console.  Also, be sure that you are '
+                'pasting in the JSON version, not the .p12 (PKCS12) file.' +
+                str(ex))
+
     json_key = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + JSON_KEY,
         'JSON Key', 'text',
-        i18n=False,
+        i18n=False, validator=validate_json_key,
         description='Contents of a JSON key created in the Developers Console '
         'for the instance where BigQuery is to be run.  See '
         # TODO(mgainer): Get CB location of instructions to get client key
         # for destination application.
         'the instructions at ')
+
+    def validate_table_lifetime(value, errors):
+        if not value:
+            return
+        seconds = common_utils.parse_timedelta_string(value).total_seconds()
+        if not seconds:
+            errors.append(
+                'The string "%s" ' % value +
+                'has some problems; please check the instructions below '
+                'the field for instructions on accepted formats.')
+
     table_lifetime = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + TABLE_LIFETIME,
         'Table Lifetime', 'string',
         optional=True, i18n=False,
+        validator=validate_table_lifetime,
         description='Amount of time a table pushed to BigQuery will last.  '
         'After this amount of time, the table will be automatically deleted.  '
         '(This is useful if your data retention or privacy policy mandates  '
@@ -1165,6 +1213,7 @@ def register_module():
         'specified as their first letter, singular, or plural.  Spaces '
         'and commas may be used or omitted.  E.g., both of the following '
         'are equivalent: "3w1d7h", "3 weeks, 1 day, 7 hours"')
+
     pii_encryption_token = schema_fields.SchemaField(
         DATA_PUMP_SETTINGS_SCHEMA_SECTION + ':' + PII_ENCRYPTION_TOKEN,
         'PII Encryption Token', 'string',
