@@ -21,11 +21,11 @@ class AllJavaScriptTests(unittest.TestCase):
     def test_activity_generic(self):
         self.karma_test('assets_lib_activity_generic')
 
-    def test_butterbar(self):
-        self.karma_test('assets_lib_butterbar')
-
     def test_assessment_tags(self):
         self.karma_test('modules_assessment_tags')
+
+    def test_butterbar(self):
+        self.karma_test('assets_lib_butterbar')
 
     def test_certificate(self):
         self.karma_test('modules_certificate')
@@ -41,3 +41,6 @@ class AllJavaScriptTests(unittest.TestCase):
 
     def test_questionnaire(self):
         self.karma_test('modules_questionnaire')
+
+    def test_skill_map(self):
+        self.karma_test('modules_skill_map')

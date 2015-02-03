@@ -270,10 +270,10 @@ class FieldArray(SchemaField):
 
     def __init__(
         self, name, label, description=None, item_type=None,
-        extra_schema_dict_values=None):
+        optional=False, extra_schema_dict_values=None):
 
         super(FieldArray, self).__init__(
-            name, label, 'array', description=description,
+            name, label, 'array', description=description, optional=optional,
             extra_schema_dict_values=extra_schema_dict_values)
         self._item_type = item_type
 

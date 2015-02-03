@@ -1,0 +1,137 @@
+/*
+ * Styles for SkillDisplay
+ */
+ol.skill-display-root {
+  list-style-type: none;
+  padding: 0px;
+}
+ol.skill-display-root > li.skill {
+  display: inline-block;
+  background-color: #5cb85c;
+  color: white;
+  font-weight: bold;
+  border-radius: 0.2em;
+  padding: 0.1em 0.4em;
+  margin: 0 0.2em !important;
+}
+ol.skill-display-root > li.skill > button.close {
+  background: inherit;
+  color: inherit;
+  border: none;
+}
+
+
+/*
+ * Styles for SkillSelector
+ */
+div.skill-selector-root {
+  position: relative;
+}
+div.skill-selector-root button.add {
+  background-color: #F44336;
+  color: #fff;
+  border: none;
+  outline: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 22px;
+  box-shadow: 0 0 4px rgba(0,0,0,.14),0 4px 8px rgba(0,0,0,.28);
+  cursor: pointer;
+}
+div.skill-selector-root button.add:after {
+  content: '+';
+}
+div.skill-selector-root div.selector {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  width: 20em;
+  background-color: #fff;
+  border: solid 1px #ccc;
+  border-radius: 0.2em;
+  z-index: 20;
+}
+div.skill-selector-root ol.skill-list {
+  max-height: 15em;
+  overflow-y: scroll;
+  list-style-type: none;
+  padding: 0px;
+  border-top: solid 1px #ccc;
+  border-bottom: solid 1px #ccc;
+  margin: 0;
+}
+div.skill-selector-root input {
+  width: inherit !important;
+}
+div.skill-selector-root input.search {
+  width: 18em !important;
+  margin: 1em;
+}
+div.skill-selector-root a.create {
+  display: inline-block;
+  margin: 0 0 10px 5px;
+  text-decoration: none;
+  color: #00f;
+}
+div.skill-selector-root a.create:hover {
+  text-decoration: underline;
+}
+div.skill-selector-root button.action,
+div.skill-selector-root button[disabled].action:hover {
+  background: none;
+  border: none;
+  width: 100%;
+  height: 2em;
+}
+div.skill-selector-root button.action:hover {
+  background: #f0f0f0;
+}
+
+
+/*
+ * Styles for Lightbox
+ */
+div.lightbox > div.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  opacity: 0.5;
+  filter: alpha(opacity=50);
+  z-index: 1000;
+}
+div.lightbox > div.content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1001;
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+
+/*
+ * Styles for CreateSkillPopup
+ */
+div.lightbox > div.content h2 {
+  margin-left: 0;
+}
+div.lightbox > div.content div.form-row {
+  margin: 10px 0;
+}
+div.lightbox > div.content div.form-row > label {
+  font-weight: bold;
+  display: inline-block;
+  width: 90px;
+  vertical-align: top;
+}
+div.lightbox > div.content div.form-row > input, div.form-row > textarea {
+  width: 350px;
+}
+div.lightbox > div.content div.form-row > textarea {
+  height: 5em;
+}

@@ -287,7 +287,7 @@ class UnitLessonEditor(ApplicationHandler):
     def _render_edit_form_for(
         self, rest_handler_cls, title, schema=None, annotations_dict=None,
         delete_xsrf_token='delete-unit', page_description=None,
-        extra_js_files=None):
+        additional_dirs=None, extra_js_files=None, extra_css_files=None):
         """Renders an editor form for a given REST handler class."""
         annotations_dict = annotations_dict or []
         if schema:
@@ -314,6 +314,15 @@ class UnitLessonEditor(ApplicationHandler):
                     self.create_xsrf_token(delete_xsrf_token))
                 }))
 
+        def extend_list(target_list, ext_name):
+            # Extend the optional arg lists such as extra_js_files by an
+            # optional list field on the REST handler class. Used to provide
+            # seams for modules to add js files, etc. See LessonRESTHandler
+            if hasattr(rest_handler_cls, ext_name):
+                target_list = target_list or []
+                return (target_list or []) + getattr(rest_handler_cls, ext_name)
+            return target_list
+
         form_html = oeditor.ObjectEditor.get_html_for(
             self,
             schema_json,
@@ -323,7 +332,9 @@ class UnitLessonEditor(ApplicationHandler):
             delete_url=delete_url, delete_method='delete',
             read_only=not self.app_context.is_editable_fs(),
             required_modules=rest_handler_cls.REQUIRED_MODULES,
-            extra_js_files=extra_js_files)
+            additional_dirs=extend_list(additional_dirs, 'ADDITIONAL_DIRS'),
+            extra_css_files=extend_list(extra_css_files, 'EXTRA_CSS_FILES'),
+            extra_js_files=extend_list(extra_js_files, 'EXTRA_JS_FILES'))
 
         template_values = {}
         template_values['page_title'] = self.format_title('Edit %s' % title)
@@ -381,8 +392,7 @@ class UnitLessonEditor(ApplicationHandler):
             LessonRESTHandler, 'Lessons and Activities',
             schema=schema,
             annotations_dict=annotations_dict,
-            delete_xsrf_token='delete-lesson',
-            extra_js_files=None)
+            delete_xsrf_token='delete-lesson')
 
 
 class UnitTools(object):
@@ -1182,6 +1192,33 @@ class LessonRESTHandler(BaseRESTHandler):
         'inputex-string', 'gcb-rte', 'inputex-select', 'inputex-textarea',
         'inputex-uneditable', 'inputex-checkbox', 'inputex-hidden']
 
+    # Enable modules to specify locations to load JS and CSS files
+    ADDITIONAL_DIRS = []
+    # Enable modules to add css files to be shown in the editor page.
+    EXTRA_CSS_FILES = []
+    # Enable modules to add js files to be shown in the editor page.
+    EXTRA_JS_FILES = []
+
+    # Enable other modules to add transformations to the schema.Each member must
+    # be a function of the form:
+    #     callback(lesson_field_registry)
+    # where the argument is the root FieldRegistry for the schema
+    SCHEMA_LOAD_HOOKS = []
+
+    # Enable other modules to add transformations to the load. Each member must
+    # be a function of the form:
+    #     callback(lesson, lesson_dict)
+    # and the callback should update fields of the lesson_dict, which will be
+    # returned to the caller of a GET request.
+    PRE_LOAD_HOOKS = []
+
+    # Enable other modules to add transformations to the save. Each member must
+    # be a function of the form:
+    #     callback(lesson, lesson_dict)
+    # and the callback should update fields of the lesson with values read from
+    # the dict which was the payload of a PUT request.
+    PRE_SAVE_HOOKS = []
+
     # These functions are called with an updated lesson object whenever a
     # change is saved.
     POST_SAVE_HOOKS = []
@@ -1246,6 +1283,9 @@ class LessonRESTHandler(BaseRESTHandler):
             select_data=[(True, DRAFT_TEXT), (False, PUBLISHED_TEXT)],
             extra_schema_dict_values={
                 'className': 'split-from-main-group'}))
+
+        common_utils.run_hooks(cls.SCHEMA_LOAD_HOOKS, lesson)
+
         return lesson
 
     @classmethod
@@ -1262,7 +1302,7 @@ class LessonRESTHandler(BaseRESTHandler):
         else:
             activity = ''
 
-        return {
+        lesson_dict = {
             'key': lesson.lesson_id,
             'title': lesson.title,
             'unit_id': lesson.unit_id,
@@ -1277,6 +1317,8 @@ class LessonRESTHandler(BaseRESTHandler):
             'manual_progress': lesson.manual_progress or False,
             'is_draft': not lesson.now_available
             }
+        common_utils.run_hooks(cls.PRE_LOAD_HOOKS, lesson, lesson_dict)
+        return lesson_dict
 
     def get(self):
         """Handles GET REST verb and returns lesson object as JSON payload."""
@@ -1354,6 +1396,7 @@ class LessonRESTHandler(BaseRESTHandler):
                 fs.delete(path)
 
         if not errors:
+            common_utils.run_hooks(self.PRE_SAVE_HOOKS, lesson, updates_dict)
             assert course.update_lesson(lesson)
             course.save()
             common_utils.run_hooks(self.POST_SAVE_HOOKS, lesson)
