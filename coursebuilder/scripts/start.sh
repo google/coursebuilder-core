@@ -35,6 +35,7 @@ gnome-terminal -e "python $GOOGLE_APP_ENGINE_HOME/dev_appserver.py \
     --clear_datastore=$CLEAR_DATASTORE \
     --datastore_consistency_policy=consistent \
     --max_module_instances=1 \
+    --skip_sdk_update_check \
     \"$SOURCE_DIR\""
 
 echo Waiting for server startup

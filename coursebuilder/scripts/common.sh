@@ -25,7 +25,7 @@ elif [[ $OSTYPE == darwin* ]] ; then
   NODE_DOWNLOAD_FOLDER=node-v0.10.1-darwin-x64
   CHROMEDRIVER_ZIP=chromedriver_mac32.zip
 else
-  echo "TARGET_OS must be one of linux or macos"
+  echo "Target OS '$TARGET_OS' must start with 'linux' or 'darwin'."
   exit -1
 fi
 
@@ -144,10 +144,20 @@ fi
 
 if need_install phantomjs ChangeLog Version 1.9.0 ; then
   echo Installing PhantomJs
-  curl --location --silent https://phantomjs.googlecode.com/files/phantomjs-1.9.0-linux-x86_64.tar.bz2 -o phantomjs-download.bz2
-  tar xjf phantomjs-download.bz2 --directory $RUNTIME_HOME
-  mv $RUNTIME_HOME/phantomjs-1.9.0-linux-x86_64 $RUNTIME_HOME/phantomjs
-  rm phantomjs-download.bz2
+  if [[ $OSTYPE == linux* ]] ; then
+    curl --location --silent https://phantomjs.googlecode.com/files/phantomjs-1.9.0-linux-x86_64.tar.bz2 -o phantomjs-download.bz2
+    tar xjf phantomjs-download.bz2 --directory $RUNTIME_HOME
+    mv $RUNTIME_HOME/phantomjs-1.9.0-linux-x86_64 $RUNTIME_HOME/phantomjs
+    rm phantomjs-download.bz2
+  elif [[ $OSTYPE == darwin* ]] ; then
+    curl --location --silent https://phantomjs.googlecode.com/files/phantomjs-1.9.0-macosx.zip -o phantomjs-download.zip
+    unzip phantomjs-download.zip -d $RUNTIME_HOME
+    mv $RUNTIME_HOME/phantomjs-1.9.0-macosx $RUNTIME_HOME/phantomjs
+    rm phantomjs-download.zip
+  else
+    echo "Target OS '$OSTYPE' must start with 'linux' or 'darwin'."
+    exit -1
+  fi
 fi
 
 if need_install karma_lib 'jasmine-jquery*.js' Version 1.5.2 ; then

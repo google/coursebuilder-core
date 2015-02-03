@@ -160,7 +160,9 @@ def _infer_method_from_location(location):
 
     # For testing, and/or pulling in not-really-third party stuff from
     # elsewhere in a local work environment.
-    if location.startswith('/tmp/') or location.startswith('../'):
+    if (location.startswith('/tmp/') or
+        location.startswith('/var/folders/') or
+        location.startswith('../')):
         return 'cp-r'
 
     return 'unknown'

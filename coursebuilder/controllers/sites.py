@@ -1647,16 +1647,19 @@ def test_url_to_handler_mapping_for_course_type():
     class FakeHandler2(zipserve.ZipHandler):
 
         def __init__(self):
+            super(FakeHandler2, self).__init__()
             self.app_context = None
 
     class FakeHandler3(zipserve.ZipHandler):
 
         def __init__(self):
+            super(FakeHandler3, self).__init__()
             self.app_context = None
 
     class FakeHandler4(zipserve.ZipHandler):
 
         def __init__(self):
+            super(FakeHandler4, self).__init__()
             self.app_context = None
 
     # Setup handler.

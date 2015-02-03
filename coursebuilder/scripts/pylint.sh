@@ -93,7 +93,7 @@ while [[ ${#files[@]} -gt 0 ]] || [[ ${#jobs[@]} -gt 0 ]] ; do
     set +e
     kill -0 $pid >/dev/null 2>&1
     if [[ $? -ne 0 ]] ; then
-      wait -n $pid  # Child is dead; this should be instantaneous
+      wait $pid  # Child is dead; this should be instantaneous
       job_status=$?
       if [[ $job_status -ne 0 ]] ; then
         failures=$(( failures + 1 ))
