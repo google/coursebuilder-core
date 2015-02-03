@@ -105,6 +105,15 @@ class DashboardHandler(
     """Handles all pages and actions required for managing a course."""
 
     default_tab_action = 'outline'
+    # This dictionary allows the dashboard module to optionally nominate a
+    # specific sub-tab within each major tab group as the default sub-tab to
+    # open when first navigating to that major tab.  The default may be
+    # explicitly specified here so that sub-tab registrations from other
+    # modules do not inadvertently take over the first position due to order
+    # of module registration.
+    default_subtab_action = collections.defaultdict(
+        lambda: None,
+        {'analytics': 'students'})
     get_actions = [
         default_tab_action, 'assets', 'settings', 'analytics', 'search',
         'edit_basic_settings', 'edit_settings', 'edit_unit_lesson',
@@ -358,7 +367,9 @@ class DashboardHandler(
                     exclude_tabs.append('Activities')
                     tab_group = [
                         t for t in tab_group if t.title not in exclude_tabs]
-            tab_name = in_tab or self.request.get('tab') or tab_group[0].name
+            tab_name = (in_tab or self.request.get('tab') or
+                        self.default_subtab_action[current_action]
+                        or tab_group[0].name)
             sub_nav = safe_dom.NodeList()
             for tab in tab_group:
                 href = tab.href or 'dashboard?action=%s&tab=%s' % (
@@ -1560,7 +1571,8 @@ class DashboardHandler(
     def get_analytics(self):
         """Renders course analytics view."""
         tab = tabs.Registry.get_tab('analytics',
-                                    self.request.get('tab') or 'students')
+                                    (self.request.get('tab') or
+                                     self.default_subtab_action['analytics']))
         title_text = 'Analytics > %s' % tab.title
         template_values = {
             'page_title': self.format_title(title_text),

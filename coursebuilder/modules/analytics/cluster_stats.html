@@ -1,0 +1,125 @@
+<style type="text/css">
+#gcb-clustering-stats {
+    margin-top: 20px;
+}
+
+#distance-buttons {
+    margin: 10px;
+}
+</style>
+
+<p>
+  All the following statistics where calculated using the Hamming distance between the students and the clusters. In the table you can choose how far the student vector is from the cluster vector, and also see how different vectors overlap.
+</p>
+
+<div id="distance-buttons">
+Select a distance:
+</div>
+
+<table id="gcb-clustering-stats">
+  <thead>
+    <tr></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+
+<script>
+function createTitles(countData) {
+  // Add columns and titles
+  var theadTr = $('#gcb-clustering-stats > thead').children()[0];
+  var th = document.createElement('th');
+  th.appendChild(document.createTextNode(''));
+  theadTr.appendChild(th);
+  for (cluster in countData) {
+    var name = countData[cluster].name;
+    var th = document.createElement('th');
+    th.appendChild(document.createTextNode(name));
+    theadTr.appendChild(th);
+  }
+  var th = document.createElement('th');
+  th.appendChild(document.createTextNode('Total'));
+  theadTr.appendChild(th);
+}
+
+function getIndexOrLast(iterable, position) {
+  if (position >= iterable.length) {
+    return iterable[iterable.length - 1];
+  }
+  return iterable[position];
+}
+
+function createRows(countData, intersectionData, distance) {
+  var tbody = $('#gcb-clustering-stats > tbody');
+  tbody.empty();
+  tbody = tbody[0];
+  for (cluster in countData) {
+    var name = countData[cluster].name;
+    var tr = document.createElement('tr');
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(name));
+    tr.appendChild(td);
+    // Add the intersections
+    for (cluster2 in countData) {
+      var td = document.createElement('td');
+      var intersection = 0;
+      if (cluster2 in intersectionData &&
+        cluster in intersectionData[cluster2]) {
+        intersection = getIndexOrLast(
+            intersectionData[cluster2][cluster], distance
+        );
+      } else if (cluster in intersectionData &&
+                 cluster2 in intersectionData[cluster]) {
+        intersection = getIndexOrLast(
+            intersectionData[cluster][cluster2], distance
+        );
+      } else if (cluster == cluster2) {
+        intersection = '-';
+      }
+      td.appendChild(document.createTextNode(intersection));
+      tr.appendChild(td);
+    }
+
+    // Add the totals
+    var total = getIndexOrLast(countData[cluster].vectors, distance);
+    var td = document.createElement('td');
+    td.appendChild(document.createTextNode(total));
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+}
+
+function createDistanceButtons(maxDistance, call_back) {
+  var buttonsDiv = $('#distance-buttons')[0];
+  for (var i = 0; i <= maxDistance; i++) {
+    var button = document.createElement('input');
+    button.type = 'radio';
+    button.name = 'distance_button';
+    button.id = 'distance-button-' + i;
+    button.distance = i;
+    button.onclick = function () {call_back(this.distance)};
+    buttonsDiv.appendChild(document.createTextNode(i));
+    buttonsDiv.appendChild(button);
+  };
+  // Check first one by default
+  $('#distance-button-0')[0].checked = true;
+}
+
+function clustering_stats(data) {
+  // TODO: mgainer: ensure that clustering_stats declares itself as a
+  // data source that only ever generates one page of content.
+  function changeDistance(distance) {
+    createRows(countData, intersectionData, distance);
+  }
+  var countData = data.cluster_statistics.data[0];
+  var intersectionData = data.cluster_statistics.data[1];
+  var maxDistance = data.cluster_statistics.data[2]['max_distance'];
+  if (!maxDistance) {
+    maxDistance = 0;
+  }
+  createTitles(countData);
+  createRows(countData, intersectionData, 0);
+  createDistanceButtons(maxDistance, changeDistance);
+}
+
+</script>

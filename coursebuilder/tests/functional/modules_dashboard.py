@@ -726,8 +726,8 @@ class DashboardCustomNavTestCase(actions.TestBase):
             self.ACTION, CustomNavHandler.show_page)
 
         dom = self.parse_html_string(self.get('dashboard').body)
-        selected_nav_path = ('.//div[@class="gcb-nav-bar gcb-nav-bar-level-1"]'
-                             '/a[@class="selected"]')
+        selected_nav_path = ('.//tr[@class="gcb-nav-bar-level-1"]'
+                             '//a[@class="selected"]')
         self.assertEquals('Outline', dom.find(selected_nav_path).text)
         dom = self.parse_html_string(self.get(self.URL).body)
 
@@ -752,6 +752,13 @@ class DashboardCustomNavTestCase(actions.TestBase):
         self.assertEquals(
             'MainTabContent', dom.find(self.CONTENT_PATH).text.strip())
 
-        selected_tab_path = ('.//div[@class="gcb-nav-bar gcb-nav-bar-level-2"]'
-                             '/a[@class="selected"]')
+        selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
+                             '//a[@class="selected"]')
         self.assertEquals('CustomTab', dom.find(selected_tab_path).text)
+
+    def test_first_tab(self):
+        url = 'dashboard?action=analytics'
+        dom = self.parse_html_string(self.get(url).body)
+        selected_tab_path = ('.//*[@class="gcb-nav-bar-level-2"]'
+                             '//a[@class="selected"]')
+        self.assertEquals('Students', dom.find(selected_tab_path).text)

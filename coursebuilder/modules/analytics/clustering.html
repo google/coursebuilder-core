@@ -1,0 +1,37 @@
+<style>
+#gcb-clustering {
+  width: initial;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+</style>
+
+<p style="margin-top:0px">
+  A cluster is a category that groups students according to their behavior within the course. For example, a cluster can be used to identify how many students have passed the first 10 lessons with a score higher than 80%. A dimension is each of the behaviors included in the cluster. The above example has 10 dimensions, one for each lesson.
+</p>
+<p>
+  Clusters can also be used to find relationships between behavior patterns and make predictions. For example, two clusters can be used to identify how many students who passed Lesson 1 with more than 80% obtained a good score on question 5 in Lesson 2.
+</p>
+
+<a href="dashboard?action=add_cluster" class="gcb-button gcb-pull-right">
+  Create new cluster
+</a>
+<table id="gcb-clustering">
+  <thead>
+    <th>Cluster name</th>
+    <th>Description</th>
+  </thead>
+  <tbody>
+    {% for cluster in clusters %}
+      <tr>
+        <td>
+          <!-- For loop starts with index 1 -->
+          <a href="{{ edit_urls[loop.index - 1] }}">{{ cluster.name }}</a>
+        </td>
+        <td>
+          {{ cluster.description }}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

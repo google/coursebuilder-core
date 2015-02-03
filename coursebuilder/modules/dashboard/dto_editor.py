@@ -34,7 +34,7 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
 
     def get_form(
             self, rest_handler, key, exit_url, deletable=True,
-            auto_return=False):
+            auto_return=False, app_context=None):
         """Build the Jinja template for the editor form."""
         rest_url = self.canonicalize_url(rest_handler.URI)
         exit_url = self.canonicalize_url(exit_url)
@@ -49,7 +49,10 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
         else:
             delete_url = None
 
-        schema = rest_handler.get_schema()
+        if app_context:
+            schema = rest_handler.get_schema(app_context)
+        else:
+            schema = rest_handler.get_schema()
 
         return oeditor.ObjectEditor.get_html_for(
             self,
@@ -59,7 +62,9 @@ class BaseDatastoreAssetEditor(utils.ApplicationHandler):
             auto_return=auto_return,
             delete_url=delete_url, delete_method='delete',
             required_modules=rest_handler.REQUIRED_MODULES,
-            extra_js_files=rest_handler.EXTRA_JS_FILES)
+            extra_js_files=rest_handler.EXTRA_JS_FILES,
+            extra_css_files=getattr(rest_handler, 'EXTRA_CSS_FILES', None),
+            additional_dirs=getattr(rest_handler, 'ADDITIONAL_DIRS', None),)
 
 
 class BaseDatastoreRestHandler(utils.BaseRESTHandler):
