@@ -283,10 +283,6 @@ class AnswersDataSource(RawAnswersDataSource):
         return 'Answers'
 
     @classmethod
-    def exportable(cls):
-        return True
-
-    @classmethod
     def get_default_chunk_size(cls):
         return 1000
 
@@ -627,10 +623,6 @@ class QuestionAnswersDataSource(data_sources.AbstractSmallRestDataSource):
     @classmethod
     def get_title(cls):
         return 'Question Answers'
-
-    @classmethod
-    def exportable(cls):
-        return True
 
     @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log,

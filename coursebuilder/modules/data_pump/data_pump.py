@@ -943,15 +943,16 @@ class DataPumpJob(jobs.DurableJobBase):
 
     def get_display_dict(self, app_context):
         """Set up dict for Jinja rendering on data_pump.html."""
+        data_source_context = self._build_data_source_context()
+        data_source_class = _get_data_source_class_by_name(
+            self._data_source_class_name)
         ret = {
             'name': self._data_source_class_name,
+            'title': data_source_class.get_title(),
             'status': 'Has Never Run',
             'active': False,
             }
 
-        data_source_context = self._build_data_source_context()
-        data_source_class = _get_data_source_class_by_name(
-            self._data_source_class_name)
         job = self.load()
         if job:
             ret['status'] = jobs.STATUS_CODE_DESCRIPTION[job.status_code]
@@ -1044,7 +1045,7 @@ class DataPumpJobsDataSource(data_sources.SynchronousQuery):
         source_classes = [
           ds for ds in data_sources.Registry.get_rest_data_source_classes()
           if ds.exportable()]
-        source_classes.sort(key=lambda c: c.__name__)
+        source_classes.sort(key=lambda c: c.get_title())
         # pylint: disable=protected-access
         template_values['pumps'] = []
         for source_class in source_classes:

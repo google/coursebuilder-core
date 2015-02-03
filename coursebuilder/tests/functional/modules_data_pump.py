@@ -44,11 +44,11 @@ class TrivialDataSource(data_sources.AbstractRestDataSource):
 
     @classmethod
     def get_name(cls):
-        return 'trivial'
+        return 'trivial_data_source'
 
     @classmethod
     def get_title(cls):
-        return 'Trivial'
+        return 'Trivial Data Source'
 
     @classmethod
     def exportable(cls):
@@ -1202,7 +1202,7 @@ class UserInteractionTests(InteractionTests):
 
     def test_full_job_lifecycle(self):
         self.assertEquals(
-            'TrivialDataSource '
+            'Trivial Data Source '
             'Pump status: Has Never Run '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 30 days)',
@@ -1222,7 +1222,7 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308})
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
-        self.assertEqual('TrivialDataSource '
+        self.assertEqual('Trivial Data Source '
                          'Pump status: Started '
                          'Uploaded 3 items.',
                          self._get_status_text())
@@ -1233,7 +1233,7 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertIn('TrivialDataSource', status_text)
+        self.assertIn('Trivial Data Source', status_text)
         self.assertIn('Pump status: Started', status_text)
         self.assertIn('Uploaded 3 items.', status_text)
         self.assertIn('Incomplete upload detected - 0 of 262144 bytes '
@@ -1247,7 +1247,7 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 500})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertIn('TrivialDataSource', status_text)
+        self.assertIn('Trivial Data Source', status_text)
         self.assertIn('Pump status: Started', status_text)
         self.assertIn('Uploaded 3 items.', status_text)
         self.assertIn('Incomplete upload detected - 0 of 262144 bytes '
@@ -1260,7 +1260,7 @@ class UserInteractionTests(InteractionTests):
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
         # Here note that transient failure messages are now gone.
-        self.assertEquals('TrivialDataSource '
+        self.assertEquals('Trivial Data Source '
                           'Pump status: Started '
                           'Uploaded 6 items.', status_text)
 
@@ -1269,7 +1269,7 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308, 'range': '524288-786431'})
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
-        self.assertEquals('TrivialDataSource '
+        self.assertEquals('Trivial Data Source '
                           'Pump status: Started '
                           'Uploaded 9 items.', status_text)
 
@@ -1281,7 +1281,7 @@ class UserInteractionTests(InteractionTests):
         self.execute_all_deferred_tasks(iteration_limit=1)
         status_text = self._get_status_text()
         self.assertEquals(
-            'TrivialDataSource '
+            'Trivial Data Source '
             'Pump status: Completed '
             'Uploaded 10 items. '
             'Do not encrypt PII data for this upload '
@@ -1290,7 +1290,7 @@ class UserInteractionTests(InteractionTests):
 
     def test_cancellation(self):
         self.assertEquals(
-            'TrivialDataSource '
+            'Trivial Data Source '
             'Pump status: Has Never Run '
             'Do not encrypt PII data for this upload '
             'Uploaded data never expires (default expiration is 30 days)',
@@ -1311,7 +1311,7 @@ class UserInteractionTests(InteractionTests):
         self.mock_http.add_response({'status': 308})
         self.mock_http.add_response({'status': 308, 'range': '0-262143'})
         self.execute_all_deferred_tasks(iteration_limit=1)
-        self.assertEqual('TrivialDataSource '
+        self.assertEqual('Trivial Data Source '
                          'Pump status: Started '
                          'Uploaded 3 items.',
                          self._get_status_text())
@@ -1321,7 +1321,7 @@ class UserInteractionTests(InteractionTests):
                     response)
 
         self.execute_all_deferred_tasks()
-        self.assertIn('TrivialDataSource '
+        self.assertIn('Trivial Data Source '
                       'Pump status: Failed '
                       'Canceled by admin@foo.com',
                       self._get_status_text())
@@ -1354,7 +1354,7 @@ class UserInteractionTests(InteractionTests):
 
         time.sleep(1)
         self.assertEquals(
-            'TrivialDataSource '
+            'Trivial Data Source '
             'Pump status: Completed '
             'WARNING: This data source was last uploaded when a different '
             'secret for encoding personal data was in use. Data from this '

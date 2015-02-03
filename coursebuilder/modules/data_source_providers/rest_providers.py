@@ -200,10 +200,6 @@ class StudentAssessmentScoresDataSource(
         return data_sources.DbTableContext
 
     @classmethod
-    def exportable(cls):
-        return True
-
-    @classmethod
     def get_schema(cls, unused_app_context, unused_catch_and_log,
                    unused_source_context):
         reg = schema_fields.FieldRegistry('Unit',
