@@ -178,7 +178,7 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
             key=lambda x: (x['name'], x.get('id'), x.get('start')))
         self.assertEqual(expected, actual['page_views'])
 
-    def test_location_locale(self):
+    def test_location_locale_user_agent(self):
         self.load_course('simple_questions')
         self.load_datastore('location_locale')
         self.run_aggregator_job()
@@ -193,6 +193,7 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         actual['location_frequencies'].sort(
             key=lambda x: (x['country'], x['frequency']))
         self.assertEqual(expected, actual['location_frequencies'])
+
         # This verifies the following cases:
         # - Multiple different locales (4 en_US, 2 es_AR, 1 de_DE, 1 es_ES)
         #   and that these are reported with their correct fractional weights.
@@ -202,6 +203,16 @@ class StudentAggregateTest(AbstractModulesAnalyticsTest):
         actual['locale_frequencies'].sort(
             key=lambda x: (x['locale'], x['frequency']))
         self.assertEqual(expected, actual['locale_frequencies'])
+
+        # This verifies the following cases:
+        # - Multiple different user agents at 50%, 25%, 12.5%, 12.5%
+        #   and that these are reported with their correct fractional weights.
+        expected = self.load_expected_data('location_locale',
+                                           'user_agent_frequencies.json')
+        expected.sort(key=lambda x: (x['user_agent'], x['frequency']))
+        actual['user_agent_frequencies'].sort(
+            key=lambda x: (x['user_agent'], x['frequency']))
+        self.assertEqual(expected, actual['user_agent_frequencies'])
 
     def test_scoring(self):
         self.load_course('simple_questions')

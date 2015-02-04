@@ -1208,7 +1208,7 @@ class EventsRESTHandler(BaseRESTHandler):
         self.error(404)
         return
 
-    def _add_location_facts(self, payload_json):
+    def _add_request_facts(self, payload_json):
         payload_dict = transforms.loads(payload_json)
         if 'loc' not in payload_dict:
             payload_dict['loc'] = {}
@@ -1223,6 +1223,9 @@ class EventsRESTHandler(BaseRESTHandler):
             latitude, longitude = lat_long.split(',')
             loc['lat'] = float(latitude)
             loc['long'] = float(longitude)
+        user_agent = self.request.headers.get('User-Agent')
+        if user_agent:
+            payload_dict['user_agent'] = user_agent
         payload_json = transforms.dumps(payload_dict).lstrip(
             models.transforms.JSON_XSSI_PREFIX)
         return payload_json
@@ -1248,7 +1251,7 @@ class EventsRESTHandler(BaseRESTHandler):
 
         source = request.get('source')
         payload_json = request.get('payload')
-        payload_json = self._add_location_facts(payload_json)
+        payload_json = self._add_request_facts(payload_json)
         models.EventEntity.record(source, user, payload_json)
         COURSE_EVENTS_RECORDED.inc()
 

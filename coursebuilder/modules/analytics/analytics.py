@@ -20,10 +20,11 @@ from models import analytics
 from models import custom_modules
 from models import data_sources
 from modules.analytics import answers_aggregator
+from modules.analytics import clustering
 from modules.analytics import location_aggregator
 from modules.analytics import page_event_aggregator
 from modules.analytics import student_aggregate
-from modules.analytics import clustering
+from modules.analytics import user_agent_aggregator
 from modules.dashboard import tabs
 from modules.dashboard.dashboard import DashboardHandler
 
@@ -83,6 +84,8 @@ def register_module():
             location_aggregator.LocationAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             location_aggregator.LocaleAggregator)
+        student_aggregate.StudentAggregateComponentRegistry.register_component(
+            user_agent_aggregator.UserAgentAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
             answers_aggregator.AnswersAggregator)
         student_aggregate.StudentAggregateComponentRegistry.register_component(
