@@ -1,15 +1,15 @@
 # Swahili translations for PROJECT.
-# Copyright (C) 2014 ORGANIZATION
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-01-26 10:55-0800\n"
-"PO-Revision-Date: 2014-12-08 08:51-0800\n"
+"POT-Creation-Date: 2015-02-09 08:30-0800\n"
+"PO-Revision-Date: 2015-02-09 08:30-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: sw <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -28,7 +28,7 @@ msgstr "Somo %s -%s"
 #: experimental/coursebuilder/controllers/utils.py:231
 #, python-format
 msgid "Unit %s"
-msgstr "Somo %s"
+msgstr "Somo la %s"
 
 #. Confirmation text for the answer given to a question by a student.
 #: experimental/coursebuilder/modules/assessment_tags/templates/base_assessment_tag.html:8
@@ -404,7 +404,7 @@ msgstr "Huna idhini ya kufikia."
 #. questionnaire
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
 msgid "Response submitted."
-msgstr ""
+msgstr "Jibu limewasilishwa."
 
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
@@ -562,7 +562,7 @@ msgstr "Faili yako imepakiwa bila tatizo."
 #. Shown to tell the user an error occurred during submission.
 #: experimental/coursebuilder/modules/upload/templates/result.html:10
 msgid "An error occurred."
-msgstr "Hitilafu imetokea."
+msgstr "Hitilafu fulani imetokea."
 
 #. Text of the link to take the user back to the previous page.
 #: experimental/coursebuilder/modules/upload/templates/result.html:15

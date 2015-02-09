@@ -1,15 +1,15 @@
 # Polish translations for PROJECT.
-# Copyright (C) 2014 ORGANIZATION
+# Copyright (C) 2015 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-01-26 10:55-0800\n"
-"PO-Revision-Date: 2014-12-08 08:51-0800\n"
+"POT-Creation-Date: 2015-02-09 08:30-0800\n"
+"PO-Revision-Date: 2015-02-09 08:30-0800\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: pl <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && "
@@ -407,7 +407,7 @@ msgstr "Odmowa dostępu."
 #. questionnaire
 #: experimental/coursebuilder/modules/questionnaire/questionnaire.py:197
 msgid "Response submitted."
-msgstr ""
+msgstr "Odpowiedź przesłana."
 
 #. Button label to submit the responses to a questionnaire.
 #: experimental/coursebuilder/modules/questionnaire/templates/questionnaire.html:14
