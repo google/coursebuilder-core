@@ -20,11 +20,13 @@
 {% if rest_sources %}
   <div id="gcb_rest_source_errors">
   </div>
-  <h3>Data Navigation</h3>
-  <p>The statistics on this page use data sources that are too big
-    to show all at once.  Use the page navigation buttons below to
-    select which parts of the data to view.  These controls affect all
-    statistics on this page.</p>
+  {% if has_pagination %}
+    <h3>Data Navigation</h3>
+    <p>The statistics on this page use data sources that are too big
+      to show all at once.  Use the page navigation buttons below to
+      select which parts of the data to view.  These controls affect all
+      statistics on this page.</p>
+  {% endif %}
   {% for rest_source in rest_sources|sort(attribute='title') %}
     <p>
     {{ rest_source.title }}

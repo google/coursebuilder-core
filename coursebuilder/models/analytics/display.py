@@ -57,11 +57,15 @@ def _generate_display_html(template_renderer, xsrf, app_context,
     for visualization in visualizations:
         if analytics_utils._generators_for_visualizations([visualization]):
             names_of_visualizations_with_generators.append(visualization.name)
-    rest_sources = [{
-        'name': rdsc.get_name(),
-        'title': rdsc.get_title(),
-        'chunk_size': rdsc.get_default_chunk_size(),
-        } for rdsc in analytics_utils._rest_data_source_classes(visualizations)]
+    rest_sources = []
+    has_pagination = False  # True if any data_source has chunk size > 0
+    for rdsc in analytics_utils._rest_data_source_classes(visualizations):
+        rest_sources.append({
+            'name': rdsc.get_name(),
+            'title': rdsc.get_title(),
+            'chunk_size': rdsc.get_default_chunk_size(),
+        })
+        has_pagination = has_pagination or rdsc.get_default_chunk_size()
     return template_renderer.render(
         None, 'models/analytics/display.html',
         {
@@ -71,6 +75,7 @@ def _generate_display_html(template_renderer, xsrf, app_context,
             'visualizations': names_of_visualizations_with_generators,
             'rest_sources': rest_sources,
             'r': template_renderer.get_current_url(),
+            'has_pagination': has_pagination
         })
 
 
