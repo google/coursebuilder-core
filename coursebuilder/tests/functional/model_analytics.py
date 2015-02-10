@@ -34,6 +34,7 @@ from controllers import sites
 from controllers import utils
 from models import config
 from models import courses
+from models import entities
 from models import jobs
 from models import models
 from models import transforms
@@ -823,3 +824,124 @@ class CronCleanupTest(actions.TestBase):
 
         self.execute_all_deferred_tasks(iteration_limit=1)
         self.assertEquals(0, self._get_num_root_jobs(COURSE_ONE))
+
+
+class DummyEntity(entities.BaseEntity):
+
+    NUM_ENTITIES = 1000
+
+    data = db.TextProperty(indexed=False)
+
+
+class DummyDTO(object):
+
+    def __init__(self, the_id, the_dict):
+        self.id = the_id
+        self.dict = the_dict
+
+class DummyDAO(models.BaseJsonDao):
+    DTO = DummyDTO
+    ENTITY = DummyEntity
+    ENTITY_KEY_TYPE = models.BaseJsonDao.EntityKeyTypeId
+    CURRENT_VERSION = '1.0'
+
+    @classmethod
+    def upsert(cls, the_id, the_dict):
+        dto = cls.load(the_id)
+        if not dto:
+            dto = DummyDTO(the_id, the_dict)
+            cls.save(dto)
+
+
+class DummyMapReduceJob(jobs.MapReduceJob):
+
+    NUM_SHARDS = 10
+    BOGUS_VALUE_ADDED_IN_COMBINE_STEP = 3
+    TOTAL_AGGREGATION_KEY = 'total'
+
+    def entity_class(self):
+        return DummyEntity
+
+    @staticmethod
+    def map(item):
+        # Count up by 1 for this shard.
+        yield item.key().id() % DummyMapReduceJob.NUM_SHARDS, 1
+
+        # Count up by 1 for the total number of items processed by M/R job.
+        yield DummyMapReduceJob.TOTAL_AGGREGATION_KEY, 1
+
+    @staticmethod
+    def combine(key, values, prev_combine_results=None):
+        if key != DummyMapReduceJob.TOTAL_AGGREGATION_KEY:
+            # Here, we are pretending that the individual key/values
+            # other than 'total' are not combine-able.  We thus pass
+            # through the individual values for each item unchanged.
+            # Note that this verifies that it is supported that
+            # combine() may yield multiple values for a single key.
+            for value in values:
+                yield value
+            if prev_combine_results:
+                for value in prev_combine_results:
+                    yield value
+        else:
+            # Aggregate values for 'total' here in combine step.
+            ret = 0
+            for value in values:
+                ret += int(value)
+            if prev_combine_results:
+                for value in prev_combine_results:
+                    ret += int(value)
+
+            # Add a weird value to prove that combine() has been called.
+            ret += DummyMapReduceJob.BOGUS_VALUE_ADDED_IN_COMBINE_STEP
+            yield ret
+
+    @staticmethod
+    def reduce(key, values):
+        ret = 0
+        for value in values:
+            ret += int(value)
+        yield key, ret
+
+
+class MapReduceSimpleTest(actions.TestBase):
+
+    def setUp(self):
+        super(MapReduceSimpleTest, self).setUp()
+        admin_email = 'admin@foo.com'
+        self.context = actions.simple_add_course('mr_test', admin_email, 'Test')
+        actions.login(admin_email, is_admin=True)
+        with common_utils.Namespace('ns_mr_test'):
+            # Start range at 1 because 0 is a reserved ID.
+            for key in range(1, DummyEntity.NUM_ENTITIES + 1):
+                DummyDAO.upsert(key, {})
+
+    def test_basic_operation(self):
+        job = DummyMapReduceJob(self.context)
+        job.submit()
+        self.execute_all_deferred_tasks()
+        results = jobs.MapReduceJob.get_results(job.load())
+
+        # Expect to see a quantity of results equal to the number of shards,
+        # plus one for the 'total' result.
+        self.assertEquals(DummyMapReduceJob.NUM_SHARDS + 1, len(results))
+        for key, value in results:
+            if key == DummyMapReduceJob.TOTAL_AGGREGATION_KEY:
+                # Here, we are making the entirely unwarranted assumption that
+                # combine() will be called exactly once.  However, given that
+                # the entire m/r is being done on a chunk of values that's
+                # within the library's single-chunk size, and given that it's
+                # running all on one host, etc., it turns out to be reliably
+                # true that combine() is called exactly once.
+                self.assertEquals(
+                    DummyEntity.NUM_ENTITIES +
+                    DummyMapReduceJob.BOGUS_VALUE_ADDED_IN_COMBINE_STEP,
+                    value)
+            else:
+                # Here, check that each shard has been correctly aggregated by
+                # the reduce step (and implicitly that the values for the
+                # indivdual shards made it through the combine() step
+                # unchanged)
+                self.assertEquals(
+                    DummyEntity.NUM_ENTITIES / DummyMapReduceJob.NUM_SHARDS,
+                    value)

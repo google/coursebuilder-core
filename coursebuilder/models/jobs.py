@@ -336,6 +336,36 @@ class MapReduceJob(DurableJobBase):
         raise NotImplementedError('Classes derived from MapReduceJob must '
                                   'implement map as a @staticmethod.')
 
+    @staticmethod
+    def combine(unused_key, values, previously_combined_values):
+        """Optional.  Performs reduce task on mappers to minimize shuffling.
+
+        After the map() function, each job-host has a chunk of yield()-ed
+        results, often for the same key.  Rather than send all of those
+        separate results over to the appropriate reducer task, it would be
+        nice to be able to pre-combine these items within the mapper job,
+        so as to minimize the amount of data that needs to be shuffled and
+        piped out to reducers.
+
+        If your reduce step is strictly aggregative in nature (specifically,
+        if the reduce:
+        1.) does not need to have the entire universe of mapped-values for
+            the same key in order to operate correctly
+        2.) can meaningfully combine partial results into another partial
+            result, which can itself later be combined (either in another
+            collect() call, or in the final reduce() call)
+        then you're OK to implement this function.
+
+        NOTE that since this function can't make up any new keys, the framework
+        expects the yield() from this function to yield only a single combined
+        value, not a key/value pair.
+
+        See the example below in AbstractCountingMapReduceJob.
+        """
+        raise NotImplementedError('Classes derived from MapReduceJob may '
+                                  'optionally implement combine() as a static '
+                                  'method.')
+
     def build_additional_mapper_params(self, unused_app_context):
         """Build a dict of additional parameters to make available to mappers.
 
@@ -415,6 +445,10 @@ class MapReduceJob(DurableJobBase):
             'mapper_params': self.mapper_params,
             'reducer_params': self.mapper_params,
         }
+        if (getattr(self.__class__, 'combine') !=
+            getattr(MapReduceJob, 'combine')):
+            kwargs['combiner_spec'] = '%s.%s.combine' % (
+                self.__class__.__module__, self.__class__.__name__)
         mr_pipeline = MapReduceJobPipeline(self._job_name, sequence_num,
                                            kwargs, self._namespace)
         mr_pipeline.start(base_path='/mapreduce/worker/pipeline')
