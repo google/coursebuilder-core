@@ -149,7 +149,7 @@ ALL_TEST_CLASSES = {
     'tests.functional.modules_questionnaire.QuestionnaireTagTests': 3,
     'tests.functional.modules_questionnaire.QuestionnaireRESTHandlerTests': 5,
     'tests.functional.modules_rating.ExtraContentProvideTests': 4,
-    'tests.functional.modules_rating.RatingHandlerTests': 13,
+    'tests.functional.modules_rating.RatingHandlerTests': 15,
     'tests.functional.modules_search.SearchTest': 12,
     'tests.functional.modules_skill_map.SkillGraphTests': 11,
     'tests.functional.modules_skill_map.SkillMapTests': 2,
