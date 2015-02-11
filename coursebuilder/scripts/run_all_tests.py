@@ -432,15 +432,17 @@ def chunk_list(l, n):
 def run_all_tests(skip_expensive_tests, verbose, setup_deps=True):
     """Runs all functional tests concurrently."""
 
-    start = time.time()
-
-    # Prepare tasks.
-    task_to_test = {}
-    tasks = []
     test_classes = {}
     test_classes.update(ALL_TEST_CLASSES)
     test_classes.update(all_third_party_tests())
+    run_tests(test_classes, skip_expensive_tests, verbose, setup_deps)
 
+def run_tests(test_classes, skip_expensive_tests, verbose, setup_deps=True):
+    start = time.time()
+    task_to_test = {}
+    tasks = []
+
+    # Prepare tasks
     for test_class_name in test_classes:
         if skip_expensive_tests and test_class_name in EXPENSIVE_TESTS:
             continue

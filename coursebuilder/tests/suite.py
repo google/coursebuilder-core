@@ -329,6 +329,27 @@ def fix_sys_path():
     # so that our classes come first.
     sys.path += dev_appserver.EXTRA_PATHS[:]
 
+    # This is to work around an issue with the __import__ builtin.  The
+    # problem seems to be that if the sys.path list contains an item that
+    # partially matches a package name to import, __import__ will get
+    # confused, and report an error message (which removes the first path
+    # element from the module it's complaining about, which does not help
+    # efforts to diagnose the problem at all).
+    #
+    # The specific case where this causes an issue is between
+    # $COURSEBUILDER_HOME/tests/internal and $COURSEBUILDER_HOME/internal
+    # Since the former exists, __import__ will ignore the second, and so
+    # things like .../internal/experimental/autoregister/autoregister
+    # cannot be loaded.
+    #
+    # To address this issue, we ensure that COURSEBUILDER_HOME is on sys.path
+    # before anything else, and do it before appengine_config's module
+    # importation starts running.  (And we have to do it here, because if we
+    # try to do this within appengine_config, AppEngine will throw an error)
+    if appengine_config.BUNDLE_ROOT in sys.path:
+        sys.path.remove(appengine_config.BUNDLE_ROOT)
+    sys.path.insert(0, appengine_config.BUNDLE_ROOT)
+
 
 def main():
     """Starts in-process server and runs all test cases in this module."""

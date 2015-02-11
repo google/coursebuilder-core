@@ -25,10 +25,8 @@ import urllib
 from xml.etree import cElementTree
 
 import html5lib
-import yaml
 
 import appengine_config
-from common import utils as common_utils
 from controllers import sites
 from controllers import utils
 import main
@@ -915,11 +913,8 @@ def update_course_config(name, settings):
     context = sites.get_all_courses(rule)[0]
     environ = courses.deep_dict_merge(settings,
                                       courses.Course.get_environ(context))
-    content = yaml.safe_dump(environ)
-    with common_utils.Namespace(namespace):
-        context.fs.put(
-            context.get_config_filename(),
-            vfs.string_to_stream(unicode(content)))
+    course = courses.Course(handler=None, app_context=context)
+    course.save_settings(environ)
     course_config = config.Registry.test_overrides.get(
         sites.GCB_COURSES_CONFIG.name, 'course:/:/')
     if rule not in course_config:
