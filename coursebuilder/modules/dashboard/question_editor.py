@@ -21,6 +21,7 @@ import copy
 import messages
 
 from common import schema_fields
+from common import tags
 from models import roles
 from models import transforms
 from models.models import CollisionError
@@ -32,6 +33,9 @@ from modules.assessment_tags import gift
 from modules.dashboard import dto_editor
 from modules.dashboard import utils as dashboard_utils
 
+
+TAGS_EXCLUDED_FROM_QUESTIONS = set(
+    ['question', 'question-group', 'gcb-questionnaire', 'text-file-upload-tag'])
 
 class QuestionManagerAndEditor(dto_editor.BaseDatastoreAssetEditor):
     """An editor for editing and managing questions."""
@@ -142,7 +146,10 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
             'version', '', 'string', optional=True, hidden=True))
         mc_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={'className': 'mc-question'}))
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'mc-question'}))
         mc_question.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
             extra_schema_dict_values={'className': 'mc-description'},
@@ -166,10 +173,16 @@ class McQuestionRESTHandler(BaseQuestionRESTHandler):
                 'className': 'mc-choice-score', 'value': '0'}))
         choice_type.add_property(schema_fields.SchemaField(
             'text', 'Text', 'html', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-text'}))
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'mc-choice-text'}))
         choice_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={'className': 'mc-choice-feedback'}))
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'mc-choice-feedback'}))
 
         choices_array = schema_fields.FieldArray(
             'choices', '', item_type=choice_type,
@@ -269,7 +282,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             'version', '', 'string', optional=True, hidden=True))
         sa_question.add_property(schema_fields.SchemaField(
             'question', 'Question', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-question'}))
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'sa-question'}))
         sa_question.add_property(schema_fields.SchemaField(
             'description', 'Description', 'string', optional=True,
             extra_schema_dict_values={'className': 'sa-description'},
@@ -279,7 +295,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             extra_schema_dict_values={'className': 'sa-hint'}))
         sa_question.add_property(schema_fields.SchemaField(
             'defaultFeedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-feedback'},
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'sa-feedback'},
             description=messages.INCORRECT_ANSWER_FEEDBACK))
 
         sa_question.add_property(schema_fields.SchemaField(
@@ -312,7 +331,10 @@ class SaQuestionRESTHandler(BaseQuestionRESTHandler):
             extra_schema_dict_values={'className': 'sa-grader-text'}))
         grader_type.add_property(schema_fields.SchemaField(
             'feedback', 'Feedback', 'html', optional=True,
-            extra_schema_dict_values={'className': 'sa-grader-feedback'}))
+            extra_schema_dict_values={
+                'supportCustomTags': tags.CAN_USE_DYNAMIC_TAGS.value,
+                'excludedCustomTags': TAGS_EXCLUDED_FROM_QUESTIONS,
+                'className': 'sa-grader-feedback'}))
 
         graders_array = schema_fields.FieldArray(
             'graders', '', item_type=grader_type,
