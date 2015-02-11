@@ -405,6 +405,16 @@ def add_internal_args_support(parser):
             'when generating test-case data.' % (
                 _COURSE_YAML_PATH_SUFFIX, _COURSE_JSON_PATH_SUFFIX)))
 
+
+def create_configured_args_parser(argv):
+    """Creates a parser and configures it for internal use if needed."""
+    parser = create_args_parser()
+    if INTERNAL_FLAG_NAME in argv:
+        add_internal_args_support(parser)
+
+    return parser
+
+
 def _init_archive(path, archive_type=ARCHIVE_TYPE_ZIP):
     if archive_type == ARCHIVE_TYPE_ZIP:
         return _ZipArchive(path)
@@ -1589,7 +1599,4 @@ def main(parsed_args, environment_class=None):
 
 
 if __name__ == '__main__':
-    arg_parser = create_args_parser()
-    if INTERNAL_FLAG_NAME in sys.argv:
-        add_internal_args_support(arg_parser)
-    main(arg_parser.parse_args())
+    main(create_configured_args_parser(sys.argv).parse_args())
