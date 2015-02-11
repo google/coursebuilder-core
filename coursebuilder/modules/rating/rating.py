@@ -17,6 +17,7 @@
 __author__ = 'John Orr (jorr@google.com)'
 
 import os
+import urlparse
 
 import jinja2
 
@@ -27,6 +28,7 @@ from controllers import lessons
 from controllers import utils
 from models import courses
 from models import custom_modules
+from models import data_sources
 from models import models
 from models import transforms
 
@@ -78,7 +80,8 @@ class StudentRatingEvent(models.EventEntity):
         data_dict = transforms.loads(model.data)
         model.data = transforms.dumps({
             'key': data_dict['key'],
-            'rating': data_dict['rating']})
+            'rating': data_dict['rating'],
+            'additional_comments': data_dict['additional_comments']})
 
         return model
 
@@ -155,6 +158,103 @@ class RatingHandler(utils.BaseRESTHandler):
         transforms.send_json_response(self, 200, thank_you_msg, {})
 
 
+class RatingEventDataSource(data_sources.AbstractDbTableRestDataSource):
+    """Data source to export all rating responses."""
+
+    @classmethod
+    def get_name(cls):
+        return 'rating_events'
+
+    @classmethod
+    def get_title(cls):
+        return 'Rating Events'
+
+    @classmethod
+    def get_entity_class(cls):
+        return StudentRatingEvent
+
+    @classmethod
+    def exportable(cls):
+        return True
+
+    @classmethod
+    def get_schema(cls, unused_app_context, unused_catch_and_log,
+                   unused_source_context):
+        reg = schema_fields.FieldRegistry('Rating Responses',
+            description='Student satisfaction ratings of content')
+        reg.add_property(schema_fields.SchemaField(
+            'user_id', 'User ID', 'string',
+            description='Student ID encrypted with a session-specific key'))
+        reg.add_property(schema_fields.SchemaField(
+            'recorded_on', 'Recorded On', 'datetime',
+            description='Timestamp of the rating'))
+        reg.add_property(schema_fields.SchemaField(
+            'content_url', 'Content URL', 'string',
+            description='The URL for the content being rated'))
+        reg.add_property(schema_fields.SchemaField(
+            'rating', 'Rating', 'string',
+            description='The rating of the content'))
+        reg.add_property(schema_fields.SchemaField(
+            'unit_id', 'Unit ID', 'string', optional=True,
+            description='The unit the content belongs to'))
+        reg.add_property(schema_fields.SchemaField(
+            'lesson_id', 'Lesson ID', 'string', optional=True,
+            description='The lesson the content belongs to'))
+        reg.add_property(schema_fields.SchemaField(
+            'additional_comments', 'Additional Comments', 'string',
+            optional=True,
+            description='Optional extra comments provided by the student.'))
+        return reg.get_json_schema_dict()['properties']
+
+    @classmethod
+    def _parse_content_url(cls, content_url):
+        unit_id = None
+        lesson_id = None
+        url = urlparse.urlparse(content_url)
+        query = urlparse.parse_qs(url.query)
+
+        if 'unit' in query:
+            unit_id = query['unit'][0]
+        elif 'assessment' in query:
+            # Rating is not currently shown in assessments, but may as well be
+            # future-proof
+            unit_id = query['assessment'][0]
+
+        if 'lesson' in query:
+            lesson_id = query['lesson'][0]
+
+        return unit_id, lesson_id
+
+    @classmethod
+    def _postprocess_rows(cls, unused_app_context, source_context,
+            unused_schema, unused_log, unused_page_number, rows):
+
+        transform_fn = cls._build_transform_fn(source_context)
+        if source_context.send_uncensored_pii_data:
+            entities = [row.for_export_unsafe() for row in rows]
+        else:
+            entities = [row.for_export(transform_fn) for row in rows]
+
+        data_list = []
+        for entity in entities:
+            entity_dict = transforms.loads(entity.data)
+            content_url = entity_dict.get('key')
+            unit_id, lesson_id = cls._parse_content_url(content_url)
+
+            data_list.append({
+                'user_id': entity.user_id,
+                'recorded_on': entity.recorded_on.strftime(
+                    transforms.ISO_8601_DATETIME_FORMAT),
+                'content_url': content_url,
+                'unit_id': unit_id,
+                'lesson_id': lesson_id,
+                'rating': str(entity_dict.get('rating')),
+                'additional_comments': entity_dict.get('additional_comments'),
+            })
+
+        return data_list
+
+
 def _rating__is_enabled_in_course_settings(app_context):
     env = app_context.get_environ()
     return env .get('unit', {}).get('ratings_module', {}).get('enabled')
@@ -193,12 +293,7 @@ def register_module():
             courses.Course.SCHEMA_SECTION_UNITS_AND_LESSONS
         ].append(get_course_settings_fields)
         lessons.UnitHandler.EXTRA_CONTENT.append(extra_content)
-
-    def on_module_disabled():
-        courses.Course.OPTIONS_SCHEMA_PROVIDERS[
-            courses.Course.SCHEMA_SECTION_UNITS_AND_LESSONS
-        ].remove(get_course_settings_fields)
-        lessons.UnitHandler.EXTRA_CONTENT.remove(extra_content)
+        data_sources.Registry.register(RatingEventDataSource)
 
     global_routes = [
         (os.path.join(RESOURCES_PATH, 'js', '.*'), tags.JQueryHandler),
@@ -211,7 +306,6 @@ def register_module():
         'Student rating widget',
         'Provide a widget to record user satisfaction with course content.',
         global_routes, namespaced_routes,
-        notify_module_enabled=on_module_enabled,
-        notify_module_disabled=on_module_disabled)
+        notify_module_enabled=on_module_enabled)
 
     return rating_module

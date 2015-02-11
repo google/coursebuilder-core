@@ -19,9 +19,11 @@ __author__ = 'John Orr (jorr@google.com)'
 import urllib
 
 from controllers import utils
+from common import crypto
 from models import courses
 from models import models
 from models import transforms
+from models.data_sources import utils as data_sources_utils
 from modules.rating import rating
 from tests.functional import actions
 
@@ -239,7 +241,7 @@ class RatingHandlerTests(BaseRatingsTests):
         self.assertEquals('Good lesson', event_data['additional_comments'])
         self.assertEquals(self.key, event_data['key'])
 
-    def test_for_export_scrubs_all_data_event_data_except_rating(self):
+    def test_for_export_scrubs_extraneous_data(self):
         def transform_fn(s):
             return s.upper()
 
@@ -249,7 +251,7 @@ class RatingHandlerTests(BaseRatingsTests):
         event.data = transforms.dumps({
             'key': self.key,
             'rating': 1,
-            'additional_comments': 'I, Anastasia Watergreen, say "Good lesson"',
+            'additional_comments': 'Good lesson',
             'bizarre_unforeseen_extra_field': 'odd...'
         })
         event.put()
@@ -258,4 +260,54 @@ class RatingHandlerTests(BaseRatingsTests):
         self.assertEquals('rating-event', event.source)
         self.assertEquals('A_USER', event.user_id)
         self.assertEquals(
-            {'key': self.key, 'rating': 1}, transforms.loads(event.data))
+            {
+                'key': self.key,
+                'rating': 1,
+                'additional_comments': 'Good lesson'},
+            transforms.loads(event.data))
+
+    def test_data_source(self):
+
+        # Register a student and give some feedback
+        self.register_student()
+        student = models.Student.get_enrolled_student_by_email(STUDENT_EMAIL)
+        response = self.post_data(
+            rating_int=2, additional_comments='Good lesson')
+        self.assertEquals(200, response['status'])
+        self.assertIn('Thank you for your feedback', response['message'])
+
+        # Log in as admin for the data query
+        actions.logout()
+        actions.login(ADMIN_EMAIL, is_admin=True)
+
+        xsrf_token = crypto.XsrfTokenManager.create_xsrf_token(
+            data_sources_utils.DATA_SOURCE_ACCESS_XSRF_ACTION)
+
+        pii_secret = crypto.generate_transform_secret_from_xsrf_token(
+            xsrf_token, data_sources_utils.DATA_SOURCE_ACCESS_XSRF_ACTION)
+
+        safe_user_id = crypto.hmac_sha_2_256_transform(
+            pii_secret, student.user_id)
+
+        response = self.get(
+            'rest/data/rating_events/items?'
+            'data_source_token=%s&page_number=0' % xsrf_token)
+        data = transforms.loads(response.body)['data']
+
+        self.assertEqual(1, len(data))
+        record = data[0]
+
+        self.assertEqual(7, len(record))
+        self.assertEqual(safe_user_id, record['user_id'])
+        self.assertEqual('2', record['rating'])
+        self.assertEqual('Good lesson', record['additional_comments'])
+        self.assertEqual(
+            '/rating_course/unit?unit=%s&lesson=%s' % (
+                self.unit.unit_id, self.lesson.lesson_id),
+            record['content_url'])
+        self.assertEqual(str(self.unit.unit_id), record['unit_id'])
+        self.assertEqual(str(self.lesson.lesson_id), record['lesson_id'])
+        self.assertIn('recorded_on', record)
+
+    def test_data_source_is_exportable(self):
+        self.assertTrue(rating.RatingEventDataSource.exportable())
