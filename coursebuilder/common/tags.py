@@ -20,6 +20,7 @@ __author__ = 'John Orr (jorr@google.com)'
 import logging
 import mimetypes
 import os
+import re
 from xml.etree import cElementTree
 
 import html5lib
@@ -343,6 +344,12 @@ def html_to_safe_dom(html_string, handler, render_custom_tags=True):
             node_list.append(safe_dom.Text(elt.tail))
         return node_list
 
+    def _remove_namespace(tag_name):
+        # Remove any namespacing which html5lib may have introduced. Html5lib
+        # namespacing is of the form, e.g.,
+        #     {http://www.w3.org/2000/svg}svg
+        return re.sub(r'^\{[^\}]+\}', '', tag_name, count=1)
+
     def _process_html_tree(elt):
         """Recursively parses an HTML tree into a safe_dom.NodeList()."""
         # Return immediately with an error message if a duplicate instanceid is
@@ -378,7 +385,7 @@ def html_to_safe_dom(html_string, handler, render_custom_tags=True):
             elif elt.tag.lower() == 'script':
                 out_elt = safe_dom.ScriptElement()
             else:
-                out_elt = safe_dom.Element(elt.tag)
+                out_elt = safe_dom.Element(_remove_namespace(elt.tag))
             out_elt.add_attribute(**elt.attrib)
 
             if elt.text:

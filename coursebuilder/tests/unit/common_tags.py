@@ -95,6 +95,11 @@ class CustomTagTests(unittest.TestCase):
         safe_dom = tags.html_to_safe_dom(html, self.mock_handler)
         self.assertEquals(html, str(safe_dom))
 
+    def test_svg_tag_is_accepted(self):
+        html = '<svg></svg>'
+        safe_dom = tags.html_to_safe_dom(html, self.mock_handler)
+        self.assertEquals(html, str(safe_dom))
+
     def test_simple_tag_is_replaced(self):
         html = '<div><simple></simple></div>'
         safe_dom = tags.html_to_safe_dom(html, self.mock_handler)
