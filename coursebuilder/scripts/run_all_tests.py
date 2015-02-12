@@ -214,7 +214,7 @@ ALL_TEST_CLASSES = {
     'tests.unit.common_safe_dom.ElementTests': 17,
     'tests.unit.common_safe_dom.ScriptElementTests': 3,
     'tests.unit.common_safe_dom.EntityTests': 11,
-    'tests.unit.common_tags.CustomTagTests': 12,
+    'tests.unit.common_tags.CustomTagTests': 13,
     'tests.unit.common_utils.CommonUnitTests': 11,
     'tests.unit.common_utils.ZipAwareOpenTests': 2,
     'tests.unit.javascript_tests.AllJavaScriptTests': 9,
