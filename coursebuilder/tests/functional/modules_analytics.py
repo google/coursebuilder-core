@@ -1236,9 +1236,9 @@ class ClusteringGeneratorTests(actions.TestBase):
 
     def _add_entities(self):
         """Creates the entities in the db needed to run the job."""
-        sv_number = 20
+        self.sv_number = 20
         # Add StudentVectors
-        for index in range(sv_number):
+        for index in range(self.sv_number):
             values = range(index + 1, index + self.dim_number + 1)
             self._add_student_vector(str(index), values)
         # Add cluster
@@ -1288,9 +1288,10 @@ class ClusteringGeneratorTests(actions.TestBase):
         element of the tuple is going to be the metric name and the
         second a dictionary. The values of the dictionary are lists.
         [
-            ('count', ['1', [2, 3, 4, ...]]),
-            ('count', ['2', [2, 2, 2, ...]]),
+            ('count', ['1', [2, 1, 1, ...]]),
+            ('count', ['2', [2, 0, 0, ...]]),
             ('intersection', [('1', '2'), [2, 2, 2, ...]]),
+            ('student_count', 20)
             ...
         ]
         """
@@ -1298,13 +1299,14 @@ class ClusteringGeneratorTests(actions.TestBase):
         self.run_generator_job()
         job = clustering.ClusteringGenerator(self.app_context).load()
         result = jobs.MapReduceJob.get_results(job)
-        self.assertEqual(len(result), 3, msg='Wrong response number')
+        self.assertEqual(len(result), 4, msg='Wrong response number')
 
         # All tuples are converted to lists after map reduce.
-        self.assertIn(['count', [cluster1_key, [2, 3, 4]]], result)
+        self.assertIn(['count', [cluster1_key, [2, 1, 1]]], result)
         self.assertIn(['count', [cluster2_key, [2]]], result)
         self.assertIn(['intersection', [[cluster1_key, cluster2_key], [2]]],
                       result)
+        self.assertIn(['student_count', self.sv_number], result)
 
     def _check_hamming(self, cluster_vector, student_vector, value):
         self.assertEqual(clustering.hamming_distance(
@@ -1373,3 +1375,94 @@ class ClusteringGeneratorTests(actions.TestBase):
              clustering.DIM_LOW: 3},
         ]
         self._check_hamming(cluster_vector, [], 1)
+
+
+class TestClusterStatisticsDataSource(actions.TestBase):
+
+    def _add_clusters(self):
+        self.clusters_map = {}
+        n_clusters = 4
+        for i in range(n_clusters):
+            name = 'Cluster {}'.format(i)
+            new_cluster = clustering.ClusterDTO(None,
+                {'name': name, 'vector': []})
+            key = clustering.ClusterDAO.save(new_cluster)
+            self.clusters_map[key] = name
+
+    def _add_student_vectors(self):
+        self.n_students = 6
+        for i in range(self.n_students):
+            clustering.StudentVector().put()
+
+    def test_fetch_values_count(self):
+        """Tests the result of the count statistics"""
+        self._add_clusters()
+        keys = self.clusters_map.keys()
+        job_result = [
+            ('count', (keys[0], [1, 1, 2])),
+            ('count', (keys[1], [0])),
+            ('count', (keys[2], [0, 1]))
+        ]
+        expected_result = [
+            [self.clusters_map[keys[0]], 1, 1, 2],
+            [self.clusters_map[keys[1]], 0, 0, 0],
+            [self.clusters_map[keys[2]], 0, 1, 0],
+            [self.clusters_map[keys[3]], 0, 0, 0],
+        ]
+        result = clustering.ClusterStatisticsDataSource._process_job_result(
+            job_result)
+        self.assertEqual(result[0], expected_result)
+
+    def test_fetch_values_intersection(self):
+        """Tests the result of the count statistics"""
+        self._add_clusters()
+        self._add_student_vectors()
+        keys = self.clusters_map.keys()
+        job_result = [
+            ('count', (keys[0], [1, 1, 2])),  # [1, 2, 4]
+            ('count', (keys[1], [2])),  # [2, 2, 2]
+            ('count', (keys[2], [2, 1])),  # [2, 3, 3]
+            ('count', (keys[3], [1, 1])),  # [1, 2, 2]
+            ('intersection', ((keys[0], keys[1]), [1, 1, 2])),
+            ('intersection', ((keys[1], keys[2]), [1, 2])),
+            ('intersection', ((keys[3], keys[2]), [0])),
+            ('student_count', self.n_students)
+        ]
+        expected_mapping = [self.clusters_map[k] for k in keys]  # names
+        expected0 = {
+            'count': {0: {1: 1},
+                      1: {2: 1},
+                      3: {2: 0}},
+            'percentage': {0: {1: 16.67},
+                           1: {2: 16.67},
+                           3: {2: 0.00}},
+            'probability': {0: {1: 1.0}, 1: {0: 0.5, 2: 0.5},
+                            2: {1: 0.5, 3: 0.0},
+                            3: {2: 0.0}}
+        }
+        expected1 = {
+            'count': {0: {1: 1},
+                      1: {2: 2},
+                      3: {2: 0}},
+            'percentage': {0: {1: 16.67},
+                           1: {2: 33.33},
+                           3: {2: 0.00}},
+            'probability': {0: {1: 0.5}, 1: {0: 0.5, 2: 1.0},
+                            2: {1: 0.67, 3: 0},
+                            3: {2: 0.0}}
+        }
+        expected2 = {
+            'count': {0: {1: 2},
+                      1: {2: 2},
+                      3: {2: 0}},
+            'percentage': {0: {1: 33.33},
+                           1: {2: 33.33},
+                           3: {2: 0.00}},
+            'probability': {0: {1: 0.5}, 1: {0: 1.0, 2: 1.0},
+                            2: {1: 0.67, 3: 0.0},
+                            3: {2: 0.0}}
+        }
+        result = clustering.ClusterStatisticsDataSource._process_job_result(
+            job_result)
+        self.assertEqual(result[1], [expected0, expected1, expected2])
+        self.assertEqual(result[2], expected_mapping)

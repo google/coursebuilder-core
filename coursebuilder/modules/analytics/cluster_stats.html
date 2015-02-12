@@ -1,125 +1,412 @@
 <style type="text/css">
+
 #gcb-clustering-stats {
     margin-top: 20px;
 }
 
-#distance-buttons {
-    margin: 10px;
+#analitycs-options {
+  background-color: #f5f5f5;
+  border-color: gray;
+  margin: 20px;
+  overflow: hidden;
+  align-items: center;
+  padding: 10px;
+}
+
+.selected {
+  background-color: #ccc !important;
+}
+
+.option-button {
+    background-color: #fff;
+    border: 1px solid;
+    border-color: #ccc;
+    font-size: 11px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 3px;
+    position:relative;
+    padding: 5px;
+    margin-left: -1px;
+    display: inline-block;
+}
+
+.small-text {
+  margin-left: 20px;
+  margin-top: 5px;
+  font-size: 11px;
+  font-style: italic;
+}
+
+no-backgroud {
+  background-color: #FFF !important;
 }
 </style>
 
+<script type="text/javascript" src="//www.google.com/jsapi"></script>
+
 <p>
-  All the following statistics where calculated using the Hamming distance between the students and the clusters. In the table you can choose how far the student vector is from the cluster vector, and also see how different vectors overlap.
+  All the following statistics where calculated using the Hamming distance between the students and the clusters.
 </p>
 
-<div id="distance-buttons">
-Select a distance:
+<h4>Quick Overview</h4>
+<p>
+  The following graphic shows the number of students included in each cluster. The distance of the students shows how well they fit into the cluster.
+</p>
+<div id="visualization2" class="chart-container"></div>
+
+<h4>Advanced statistics</h4>
+<p>
+  The following graphics show aggregated information about students that belong to two clusters at the same time, the one on the horizontal axis and one on the vertical axis. Use the selectors to choose what kind of information you want to see.
+</p>
+<div id="advanced-statistics">
+  <div id="analitycs-options">
+    <div id="distance-buttons-div">
+      Select a distance:
+    </div>
+    <div class="small-text">
+      To choose how far the student vector can be from the cluster.
+    </div>
+    <div id="content-buttons-div" style="margin-top: 20px">
+      Select a content mode:
+    </div>
+    <div id="content-description" class="small-text">
+    </div>
+    <div id="display-buttons-div" style="margin-top: 20px">
+    </div>
+  </div>
+  <div id="intersectionTable-container" class="chart-container"></div>
+  <div id="bubbleChart-container" class="chart-container"></div>
 </div>
 
-<table id="gcb-clustering-stats">
-  <thead>
-    <tr></tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-
 <script>
-function createTitles(countData) {
-  // Add columns and titles
-  var theadTr = $('#gcb-clustering-stats > thead').children()[0];
-  var th = document.createElement('th');
-  th.appendChild(document.createTextNode(''));
-  theadTr.appendChild(th);
-  for (cluster in countData) {
-    var name = countData[cluster].name;
-    var th = document.createElement('th');
-    th.appendChild(document.createTextNode(name));
-    theadTr.appendChild(th);
-  }
-  var th = document.createElement('th');
-  th.appendChild(document.createTextNode('Total'));
-  theadTr.appendChild(th);
-}
+google.load('visualization', '1', {packages: ['corechart']});
+google.load('visualization', '1', {packages:['table']});
 
-function getIndexOrLast(iterable, position) {
-  if (position >= iterable.length) {
-    return iterable[iterable.length - 1];
-  }
-  return iterable[position];
-}
 
-function createRows(countData, intersectionData, distance) {
-  var tbody = $('#gcb-clustering-stats > tbody');
-  tbody.empty();
-  tbody = tbody[0];
-  for (cluster in countData) {
-    var name = countData[cluster].name;
-    var tr = document.createElement('tr');
-    var td = document.createElement('td');
-    td.appendChild(document.createTextNode(name));
-    tr.appendChild(td);
-    // Add the intersections
-    for (cluster2 in countData) {
-      var td = document.createElement('td');
-      var intersection = 0;
-      if (cluster2 in intersectionData &&
-        cluster in intersectionData[cluster2]) {
-        intersection = getIndexOrLast(
-            intersectionData[cluster2][cluster], distance
-        );
-      } else if (cluster in intersectionData &&
-                 cluster2 in intersectionData[cluster]) {
-        intersection = getIndexOrLast(
-            intersectionData[cluster][cluster2], distance
-        );
-      } else if (cluster == cluster2) {
-        intersection = '-';
-      }
-      td.appendChild(document.createTextNode(intersection));
-      tr.appendChild(td);
-    }
-
-    // Add the totals
-    var total = getIndexOrLast(countData[cluster].vectors, distance);
-    var td = document.createElement('td');
-    td.appendChild(document.createTextNode(total));
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-  }
-}
-
+/**
+ * Adds dinamically the distance buttons to the display pannel for advanced
+ * visualizations.
+ * @param {number} maxDistance The number of buttons.
+ * @param {function} call_back The function to be called when the event
+ *      onclick of the button is triggered. The fuction receives the distance
+ *      selected.
+ */
 function createDistanceButtons(maxDistance, call_back) {
-  var buttonsDiv = $('#distance-buttons')[0];
+  var buttonsDiv = $('#distance-buttons-div')[0];
   for (var i = 0; i <= maxDistance; i++) {
-    var button = document.createElement('input');
-    button.type = 'radio';
-    button.name = 'distance_button';
+    var button = document.createElement('div');
+    //button.type = 'button';
+    button.className += 'option-button';
     button.id = 'distance-button-' + i;
     button.distance = i;
     button.onclick = function () {call_back(this.distance)};
-    buttonsDiv.appendChild(document.createTextNode(i));
+    button.appendChild(document.createTextNode(i));
     buttonsDiv.appendChild(button);
   };
   // Check first one by default
-  $('#distance-button-0')[0].checked = true;
+  $('#distance-button-0').addClass('selected')
 }
 
+
+/**
+ * Adds dinamically the content buttons to the display pannel for advanced
+ * visualizations.
+ * @param {function} call_back The function to be called when the event
+ *     onclick of the button is triggered. The fuction receives the content
+ *     type selected.
+ */
+function createContentButtons(call_back) {
+  var contents = {
+    'count': ['Counts', 'Shows how many students belongs to both clusters.'],
+    'percentage': ['Percentages', ('Shows the percentage of students that ' +
+                   'belongs to both clusters over the total number of ' +
+                   'students in the course.')],
+    'probability': ['Probabilities', ('In the intersection of two clusters ' +
+                    'A and B, where A ' +
+                    'is in the horizontal axis and B is in the vertical ' +
+                    'axis, shows the conditional probability of a student ' +
+                    'been in the cluster B given that we know is in the ' +
+                    'cluster A.')]
+  }
+  var buttonsDiv = $('#content-buttons-div')[0];
+  for (contentOption in contents) {
+    var button = document.createElement('div');
+    button.className += 'option-button';
+    button.id = 'content-button-' + contentOption;
+    button.name = contentOption;
+    button.description = contents[contentOption][1]
+    button.onclick = function () {call_back(this.name, this.description)};
+    button.appendChild(document.createTextNode(contents[contentOption][0]));
+    buttonsDiv.appendChild(button);
+  }
+  // Check counts by default
+  $('#content-button-count').addClass('selected')
+  $('#content-description').text(contents['count'])
+}
+
+
+/**
+ * Adds dinamically the display buttons to the display pannel for advanced
+ * visualizations.
+ * @param {function} call_back The function to be called when the event
+ *     onclick of the button is triggered. The fuction receives the display
+ *     selected and toogle its value.
+ */
+function createDisplayButtons(call_back) {
+  var buttonsDiv = $('#display-buttons-div')[0];
+  var button = document.createElement('div');
+  button.className += 'option-button';
+  button.id = 'display-button-color';
+  button.name = 'color';
+  button.onclick = function () {call_back(this.name)};
+  button.appendChild(document.createTextNode('Color'));
+  buttonsDiv.appendChild(button);
+  $('#display-button-color').addClass('selected')
+}
+
+
+/**
+ * Generates a Google Visualization BarChart with the content according to
+ * options.
+ * @param {object} countData An array, the rows have the format
+ *     [cluster_name, #students_distance0, ... #students_distanceX]
+ * @param {number} maxDistance Tha number of distances in countData.
+ */
+function drawCountVisualization(countData, maxDistance) {
+  table = new google.visualization.DataTable();
+  table.addColumn('string', 'Cluster');
+  for (var i = 0; i <= maxDistance; i++) {
+    table.addColumn('number', 'Students at distance ' + i);
+  }
+  table.addRows(countData);
+
+  new google.visualization.BarChart(
+    document.getElementById('visualization2')).
+  draw(table, {title: "Students count per cluster", width: 800, height: 400,
+               hAxis: {title: "Students"}, vAxis: {title: "Clusters"},
+               isStacked: true});
+}
+
+
+/**
+ * Adds color and numbers formatters to the data.
+ */
+function drawTableWithOptions(data, options, max) {
+  var cssClassNames = {}
+  var formatters = []
+  if ('color' in options.display && options.display.color) {
+    var formatter = new google.visualization.ColorFormat();
+    formatter.addGradientRange(0, max + 1, 'black', 'white', '#6baed6');
+    formatters.push(formatter);
+    cssClassNames = {hoverTableRow: 'no-backgroud',
+                     selectedTableRow: 'no-backgroud'};
+  }
+  if (options.content == 'percentage') {
+    formatters.push(new google.visualization.NumberFormat({prefix: '%'}));
+  } else if (options.content == 'probability') {
+    formatters.push(new google.visualization.NumberFormat());
+  }
+  // Apply all formatters to data
+  for (var index = 1; index < data.getNumberOfColumns(); index++) {
+    for (var form_index = 0; form_index < formatters.length; form_index++) {
+      formatters[form_index].format(data, index);
+    }
+  }
+  new google.visualization.Table(document.getElementById(
+      'intersectionTable-container')).draw(data, {allowHtml: true,
+                                     cssClassNames: cssClassNames});
+}
+
+
+/**
+ * Generates a Google Visualization Table with the content according to
+ * options.
+ * @param {object} intersectionData A two level dictionary where the
+ *     keys are the number of the clusters and the values the numbers to be
+ *     diplayed in each cell of the table. If the value for the keys
+ *     [cluster1][cluster2] is not present in this object, the cell will be
+ *     completed with the value in [cluster2][cluster1] or null if no present.
+ * @param {array} nameMapping Contains the names of the clusters. The position
+ *     of the cluster in the list indicates the cluster number in
+ *     intersectionData.
+ * @param {object} options Contains the visualization options given by
+ *     the user. Must have attributes distance, content and display. Display
+ *     is also an object, for example {color: true}.
+ */
+function drawColoredTable(intersectionData, nameMapping, options) {
+  var data = new google.visualization.DataTable();
+  data.addColumn('string', 'Cluster');
+  var rows = [];
+  var totals = [];
+  var max = 0;
+  for (i in nameMapping) {
+    var name = nameMapping[i];
+    data.addColumn('number', name);
+    var new_row = [name];
+    for (i2 in nameMapping) {
+      var value = null;
+      if (i in intersectionData && i2 in intersectionData[i]) {
+        value = intersectionData[i][i2];
+      } else if (i2 in intersectionData && i in intersectionData[i2]) {
+        value = intersectionData[i2][i];
+      }
+      new_row.push(value);
+      max = Math.max(max, value);
+    }
+    rows.push(new_row)
+  }
+  data.addRows(rows);
+  drawTableWithOptions(data, options, max);
+}
+
+
+/**
+ * Generates a Google Visualization BubbleChart with the content according to
+ * options.
+ * @param {object} intersectionData A two level dictionary where the
+ *     keys are the number of the clusters and the values the numbers to be
+ *     diplayed as the size of the bubble. If the value for the keys
+ *     [cluster1][cluster2] is not present in this object, the size will be
+ *     the value in [cluster2][cluster1] or 0 if no present.
+ * @param {array} nameMapping Contains the names of the clusters. The position
+ *     of the cluster in the list indicates the cluster number in
+ *     intersectionData.
+ * @param {object} options Contains the visualization options given by
+ *     the user. Must have attributes distance, content and display. Display
+ *     is also an object, for example {color: true}.
+ */
+function drawBubbleChart(intersectionData, nameMapping, options) {
+  var data = new google.visualization.DataTable();
+  var chart = new google.visualization.BubbleChart(document.getElementById(
+    'bubbleChart-container'));
+  data.addColumn('string', 'ID');
+  data.addColumn('number', 'Cluster');
+  data.addColumn('number', 'Cluster');
+  data.addColumn('string', 'Cluster Name');
+  data.addColumn('number', options.content);
+  var rows = [];
+  var index = 0.5;
+  var isEmpty = true;
+  for (i in intersectionData) {
+    var name = nameMapping[i];
+    for (i2 in intersectionData[i]) {
+      var name2 = nameMapping[i2]
+      var new_row = ['', parseInt(i) + 1, parseInt(i2) + 1,
+                     name + ' - ' + name2];
+      var value = intersectionData[i][i2];
+      if (value) {
+        new_row.push(value);
+        rows.push(new_row);
+      }
+    }
+  }
+  var xticks = [];
+  var yticks = [];
+  for (i in nameMapping) {
+    var name = nameMapping[i]
+    yticks.push({v:parseInt(i) + 1, f:name})
+    xticks.push({v:parseInt(i) + 1, f:name})
+  }
+
+  data.addRows(rows);
+  var chartOptions = {
+    bubble: {textStyle: {fontSize: 9}},
+    hAxis: {ticks: xticks, minValue: 0, gridlines: {color: '#f5f5f5'},
+            maxValue: nameMapping.length + 1},
+    vAxis: {ticks: yticks, minValue: 0, gridlines: {color: '#f5f5f5'},
+            maxValue: nameMapping.length + 1},
+    colors: ['#6baed6'],
+    sizeAxis: {maxSize: 20},
+    height: '500',
+    legend: {position: 'none'},
+  };
+  chart.draw(data, chartOptions);
+}
+
+
+/**
+ * This function will be called by the framework after loading the page.
+ * @param {list} data The list returned by the datasources of the
+ *     clustering_stats visualization. It must have at least three arguments:
+ *     <ul>
+ *     <li> The countData is a matrix (array of array). The rows have the
+ *     following format: [cluster_name, #student_dist0, ... #student_distN]
+ *     where #student_distX is the number of students at distance X of the
+ *     cluster.
+ *     <li> The intersectionData is a list of objects. The index of the list is
+ *     the distance to the clusters, and the key of the objects is the type of
+ *     the content. For example, the percentages of students at distance 3 or
+ *     less of all intersection are in intersectionData[3]['percentage'].
+ *     The values of the objects are two level python dictionaries where the
+ *     keys are clusters numbers. For example the probability of the cluster 50
+ *     given the cluster 70 at distance 2 or less is in
+ *         intersectionData[2]['probability'][70][50]
+ *     For simetrical values as counts, the data can be accessed by [id1][id2]
+ *     or by [id2][id1].
+ *     <li> The nameMapping, a list of clusters names. The position of the
+ *     names in the list are the numbers of the clusters in intersectionData.
+ *     <li> An object with one attributes: max_distance, the maximum
+ *     distance considered during the clustering.
+ *     </ul>
+ */
 function clustering_stats(data) {
   // TODO: mgainer: ensure that clustering_stats declares itself as a
   // data source that only ever generates one page of content.
-  function changeDistance(distance) {
-    createRows(countData, intersectionData, distance);
+  function drawAdvancedCharts() {
+    var data = intersectionData[userOptions.distance][userOptions.content]
+    drawColoredTable(data, nameMapping, userOptions);
+    drawBubbleChart(data, nameMapping, userOptions);
   }
+
+  // The following functions are trigered when the user switches a
+  // visualization option. They change the DOM elements to the new option,
+  // change the userOptions and redraw the charts.
+  function changeDistance(distance) {
+    // Remove selection
+    $('#distance-buttons-div div').toggleClass('selected', false)
+    // Select the current button
+    $('#distance-button-' + distance).addClass('selected')
+    userOptions.distance = distance;
+    drawAdvancedCharts();
+  }
+
+  function changeContent(contentOption, contentDescription) {
+    // Remove selection
+    $('#content-buttons-div div').toggleClass('selected', false);
+    // Select the current button
+    $('#content-button-' + contentOption).addClass('selected');
+    // Add the description
+    $('#content-description').text(contentDescription);
+    userOptions.content = contentOption;
+    drawAdvancedCharts();
+  }
+
+  function changeDisplay(displayOption) {
+    $('#display-button-' + displayOption).toggleClass('selected');
+    userOptions.display[displayOption] = !userOptions.display[displayOption]
+    drawAdvancedCharts();
+  }
+
   var countData = data.cluster_statistics.data[0];
   var intersectionData = data.cluster_statistics.data[1];
-  var maxDistance = data.cluster_statistics.data[2]['max_distance'];
+  var nameMapping = data.cluster_statistics.data[2]
+  var maxDistance = data.cluster_statistics.data[3]['max_distance'];
   if (!maxDistance) {
     maxDistance = 0;
   }
-  createTitles(countData);
-  createRows(countData, intersectionData, 0);
+  // userOptions is a variable that holds the options the user.
+  var userOptions = {content: 'count', display: {color: true}, distance: 0}
+  drawCountVisualization(countData, maxDistance);
+
+  // Creates the elements in the selector of visualization options for
+  // advanced statistics.
   createDistanceButtons(maxDistance, changeDistance);
+  createContentButtons(changeContent);
+  createDisplayButtons(changeDisplay);
+  drawAdvancedCharts();
 }
 
 </script>

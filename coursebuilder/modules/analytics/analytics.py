@@ -34,7 +34,7 @@ custom_module = None
 def register_tabs():
     clusters_visualization = analytics.Visualization(
         'clusters',
-        'Clusters',
+        'Cluster Manager',
         'clustering.html',
         data_source_classes=[clustering.ClusterDataSource])
     student_vectors_visualization = analytics.Visualization(

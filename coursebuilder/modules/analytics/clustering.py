@@ -92,6 +92,8 @@ class ClusterEntity(BaseEntity):
     that case, we consider all usages as a single question dimension for
     compatibility with the information in StudentAggregateEntity.
     """
+    # TODO(milit): Add an active/inactive property to exclude the cluster
+    # from calculations and visualizations without having to delete it.
     data = db.TextProperty(indexed=False)
 
 
@@ -413,7 +415,8 @@ class StudentVector(BaseEntity):
             vector attribute unpacked.
         """
         candidates = [dim[DIM_VALUE] for dim in vector
-                      if dim[DIM_ID] == dim_id and dim[DIM_TYPE] == dim_type]
+                      if str(dim[DIM_ID]) == str(dim_id) and
+                      dim[DIM_TYPE] == dim_type]
         if candidates:
             return candidates[0]
 
@@ -502,7 +505,7 @@ class StudentVectorGenerator(jobs.MapReduceJob):
             mapper_params['possible_dimensions'], raw_data)
         vector = []
         for dim in mapper_params['possible_dimensions']:
-            data_for_dimension = data[dim[DIM_TYPE], dim[DIM_ID]]
+            data_for_dimension = data[dim[DIM_TYPE], str(dim[DIM_ID])]
             value = StudentVectorGenerator.get_function_for_dimension(
                         dim[DIM_TYPE])(data_for_dimension, dim)
             new_dim = {
@@ -577,7 +580,7 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         """The score of a lesson is its last score."""
         for submission in data:
             if ('lesson_id' in submission and 'last_score' in submission
-                and submission['lesson_id'] == dimension[DIM_ID]):
+                and submission['lesson_id'] == str(dimension[DIM_ID])):
                 return submission['last_score']
         return 0
 
@@ -599,7 +602,7 @@ class StudentVectorGenerator(jobs.MapReduceJob):
         score = 0
         for submission in data:
             if ('unit_id' in submission and 'last_score' in submission
-                and submission['unit_id'] == dimension[DIM_ID]):
+                and submission['unit_id'] == str(dimension[DIM_ID])):
                 score += submission['last_score']
         return score/float(scored_lessons)
 
@@ -617,6 +620,9 @@ def hamming_distance(vector, student_vector):
         vector: the vector field of a ClusterEntity instance.
         student_vector: the vector field of a StudentVector instance.
     """
+    # TODO(milit): As we are discarding all distances greater than
+    # ClusteringGenerator.MAX_DISTANCE, add it as a parameter so we stop
+    # calculating the distance once this limit is reached.
     def fits_left_side(dim, value):
         """_has_left_side(dim) -> dim[DIM_LOW] <= value"""
         return not _has_left_side(dim) or dim[DIM_LOW] <= value
@@ -652,7 +658,6 @@ class ClusteringGenerator(jobs.MapReduceJob):
     In the reduce step it returns calculated two statistics: the number of
     students in each cluster and the intersection of pairs of clusters.
     """
-    MIN_DISTANCE = 0
     MAX_DISTANCE = 2
 
     # TODO(milit): Add settings to disable heavy statistics.
@@ -687,6 +692,7 @@ class ClusteringGenerator(jobs.MapReduceJob):
                     distance1 is the distance from the student vector to the
                     cluster with the first id of the tuple and distance2 is
                     the distance to the second cluster in the tuple.
+                3.  A string 'student_count' with value 1.
             One result is yielded for every cluster id and pair of clusters
             ids. If (cluster1_id, cluster2_id) is yielded, then
             (cluster2_id, cluster1_id) won't be yielded.
@@ -708,6 +714,21 @@ class ClusteringGenerator(jobs.MapReduceJob):
             yield(cluster['id'], transforms.dumps(to_yield))
         clusters = transforms.dumps(clusters)
         StudentClusters(key_name=item.key().name(), clusters=clusters).put()
+        yield ('student_count', 1)
+
+    @staticmethod
+    def combine(key, values, previously_combined_outputs=None):
+        if key != 'student_count':
+            if previously_combined_outputs:
+                yield values + previously_combined_outputs
+            else:
+                yield values
+        else:
+            total = sum([int(value) for value in values])
+            if previously_combined_outputs is not None:
+                total += sum([int(value) for value in
+                              previously_combined_outputs])
+            yield total
 
     @staticmethod
     def reduce(item_id, values):
@@ -718,36 +739,51 @@ class ClusteringGenerator(jobs.MapReduceJob):
             A list: the item_id holds the IDs of two clusters and the value
             corresponds to 3-uple (student_id, distance1, distance2). The value
             is used to calculate an intersection stats.
+            A string 'student_count': The values is going to be a list of
+            partial sums of numbers.
 
         Yields:
-            A json string representing a tuple ('stat_name', {item_id:
-            distances}). The i-th number in the distances list corresponds to
-            the number of students with distance less or equal to i to
-            the vector (or vectors). item_id is the same item_id received as
+            A json string representing a tuple ('stat_name', (item_id,
+            distances)). For count stats, the i-th number in the distances
+            list corresponds to the number of students with distance equal to
+            i to the vector. For intersection, the i-th number in the distance
+            list corresponds to the students with distance less or equal than
+            i to both clusters. item_id is the same item_id received as
             a parameter, but converted from the json string.
+            For the stat student_count the value is a single number
+            representing the total number of StudentVector
         """
-        item_id = transforms.loads(item_id)
-        distances = collections.defaultdict(lambda: 0)
-        if isinstance(item_id, list):
-            stat_name = 'intersection'
-            for value in values:
-                value = transforms.loads(value)
-                min_distance = max(value[1], value[2])
-                distances[min_distance] += 1
-            item_id = tuple(item_id)
+        if item_id == 'student_count':
+            yield (item_id, sum(int(value) for value in values))
         else:
-            stat_name = 'count'
-            for value in values:
-                value = transforms.loads(value)
-                distances[value[1]] += 1
-        distances = dict(distances)
-        list_distances = [0] * (max([int(k) for k in distances]) + 1)
-        for distance, count in distances.items():
-            list_distances[int(distance)] = count
-        # Accumulate the distances.
-        for index in range(1, len(list_distances)):
-            list_distances[index] += list_distances[index - 1]
-        yield transforms.dumps((stat_name, (item_id, list_distances)))
+            item_id = transforms.loads(item_id)
+            distances = collections.defaultdict(lambda: 0)
+            if isinstance(item_id, list):
+                stat_name = 'intersection'
+                for chunk in values:
+                    for value in chunk:
+                        value = transforms.loads(value)
+                        # Is a student vector has a distance 1 to cluster A
+                        # and distance 3 to cluster B, then it has a
+                        # distance of 3 (the greater) to the intersection
+                        intersection_distance = max(value[1], value[2])
+                        distances[intersection_distance] += 1
+                item_id = tuple(item_id)
+            else:
+                stat_name = 'count'
+                for chunk in values:
+                    for value in chunk:
+                        value = transforms.loads(value)
+                        distances[value[1]] += 1
+            distances = dict(distances)
+            list_distances = [0] * (max([int(k) for k in distances]) + 1)
+            for distance, count in distances.items():
+                list_distances[int(distance)] = count
+            if stat_name == 'intersection':
+                # Accumulate the distances.
+                for index in range(1, len(list_distances)):
+                    list_distances[index] += list_distances[index - 1]
+            yield transforms.dumps((stat_name, (item_id, list_distances)))
 
 
 class TentpoleStudentVectorDataSource(data_sources.SynchronousQuery):
@@ -806,46 +842,120 @@ class ClusterStatisticsDataSource(data_sources.AbstractSmallRestDataSource):
         # Without schema the fetch_values function won't be called.
         return 'List with dummy objects'.split()
 
-    @classmethod
-    def fetch_values(cls, app_context, unused_source_context, unused_schema,
-                     unused_catch_and_log, unused_page_number,
-                     clustering_generator_job):
-        """Returns the statistics calculated by clustering_generator_job.
+    @staticmethod
+    def _process_job_result(results):
+        def add_zeros(iterable, length):
+            return iterable + [0] * (length - len(iterable))
 
-        Returns:
-            A list of dictionaries and the page number, always 0. The list
-            has three elements:
-                1.  The results of the count statistic: A list with one entry
-                    per cluster. Each entry is a dictionary like:
-                        {'name': cluster_name, 'vectors': list_with_counts}
-                2.  The results of the intersection statistics: A two level
-                    dictionary with the ids of pairs of clusters. For example:
-                        {1: {2: list_with_counts, 3: list_with_counts}, ... }
-                    No all pairs are included in this intersection. If an entry
-                    is missing is safe to assume that the intersection is 0.
-                3.  A dictionary with the maximum distance used
-                    in the classification. For example: {'max_distance': 2}
-            The i-th number in list_with_counts represents the number of
-            students that have a distance less or equal than i to the
-            cluster or clusters. For a distance grater than the list lenght,
-            then the number of students in equal to the last entry on the
-            list.
+        def process_count(value, count):
+            if value[0] not in count:
+                return
+            count[value[0]][1:] = add_zeros(value[1], max_distance + 1)
 
-        """
-        results = list(jobs.MapReduceJob.get_results(clustering_generator_job))
-        count = {}
-        intersection = collections.defaultdict(lambda: {})
+        max_distance = ClusteringGenerator.MAX_DISTANCE
+        student_count = 1
+        count = {cluster.id: [cluster.name] + [0] * (max_distance + 1)
+                 for cluster in ClusterDAO.get_all()}
+        id_mapping = count.keys()
+        name_mapping = [count[cid][0] for cid in id_mapping]
+
+        l = lambda: collections.defaultdict(l)
+        inter = [{'count': l(), 'percentage': l(), 'probability': l()}
+                 for _ in range(max_distance + 1)]
+
+        # Process all counts first
         for result in results:
             stat, value = result
             if stat == 'count':
-                cluster = ClusterDAO.load(value[0])
-                count[value[0]] = {'vectors': value[1], 'name': cluster.name}
-            elif stat == 'intersection':
-                cluster1, cluster2 = value[0]
-                intersection[cluster1].update({cluster2: value[1]})
-        # Update missing clusters
-        for cluster in ClusterDAO.get_all():
-            if cluster.id not in count:
-                count[cluster.id] = {'vectors': [0], 'name': cluster.name}
-        distances = {'max_distance': ClusteringGenerator.MAX_DISTANCE}
-        return [count, dict(intersection), distances], 0  # data, page_number
+                process_count(value, count)
+            elif stat == 'student_count':
+                student_count = value
+
+        # Once counting is complete, process the intersections
+        for result in results:
+            stat, value = result
+            if stat != 'intersection':
+                continue
+            cluster1, cluster2 = value[0]
+            if not (cluster2 in count and cluster1 in count):
+                continue
+            map1 = id_mapping.index(cluster1)
+            map2 = id_mapping.index(cluster2)
+            for dist in range(max_distance + 1):  # Include the last one
+                c1_count = sum(count[cluster1][1:dist + 2])
+                c2_count = sum(count[cluster2][1:dist + 2])
+                if dist >= len(value[1]):  # Complete missing values
+                    int_count = value[1][-1]
+                else:
+                    int_count = value[1][dist]  # We know is not empty
+                inter[dist]['count'][map1][map2] = int_count
+
+                percentage = round(int_count*100/float(student_count), 2)
+                inter[dist]['percentage'][map1][map2] = percentage
+                # P(c2 | c1) = count(c1 and c2) / count(c1)
+                probability = 0
+                if c1_count:
+                    probability = round(int_count/float(c1_count), 2)
+                inter[dist]['probability'][map1][map2] = probability
+                # P(c1 | c2) = count(c1 and c2) / count(c2)
+                probability = 0
+                if c2_count:
+                    probability = round(int_count/float(c2_count), 2)
+                inter[dist]['probability'][map2][map1] = probability
+
+        extra_info = {'max_distance': max_distance}
+        return [count.values(), inter, name_mapping, extra_info]
+
+    @classmethod
+    def fetch_values(cls, unused_app_context, unused_source_context,
+                     unused_schema, unused_catch_and_log, unused_page_number,
+                     clustering_generator_job):
+        """Returns the statistics calculated by clustering_generator_job.
+
+        The information extracted from the intersection data can be of three
+        types:
+            1.  'count' is the number of students in the intersection
+            2.  'percentage' is the percentage of students in the intersection
+                 over the total of StudentVector entities in the db.
+            3.  'probability' of the cluster B given the cluster A is the count
+                of students in the intersection divided by the number of
+                students in A.
+        Returns:
+            A list of dictionaries and the page number, always 0. The list
+            has four elements:
+            1.  The results of the count statistic: A matrix with the
+                format
+                    [cluster_name, distance0, distance1, ... distanceN]
+                where distanceX is the number of students at distance X of
+                the cluster.
+            2.  The results of the intersection statistics: A list of
+                dictionaries. The dictionary in position i contains the
+                infomation of students at distance less or equal than i.
+                The keys of the dictionaries are the types of data in the
+                values: 'count', 'percentage' or 'probability'.
+                The values are two level dictionary with the numbers of pairs
+                of clusters. The clusters are mapped with secuential numbers.
+                For example:
+                    {'count': {0: {1: 1},
+                              1: {2: 1},
+                              3: {2: 0}},
+                     'percentage': {0: {1: 16.67},
+                                   1: {2: 16.67},
+                                   3: {2: 0.00}},
+                     'probability': {0: {1: 1.0}, 1: {0: 0.5, 2: 0.5},
+                                    2: {1: 0.5, 3: 0.0},
+                                    3: {2: 0.0}}}
+                Not all pairs are included in this intersection. If
+                an entry pair [a][b] is missing is safe to assume that the
+                intersection is in the entry [b][a] or is 0.
+            3.  The mapping from cluster number to cluster name. A list where
+                the index indicate the number of the cluster in that position.
+            4.  A dictionary with extra information. It has a key max_distance
+                and a numeric value.
+        """
+        # This function is long and complicated, but it is so to send the data
+        # as much processed as possible to the javascript in the page.
+        # The information is adjusted to fit the graphics easily.
+        results = list(jobs.MapReduceJob.get_results(clustering_generator_job))
+        # data, page_number
+        return ClusterStatisticsDataSource._process_job_result(results), 0
