@@ -75,6 +75,7 @@ class Registry(object):
 
     @classmethod
     def unregister_group(cls, group_name):
+        # This method is deprecated.
         if group_name in cls._tabs_by_group:
             del cls._tabs_by_group[group_name]
 

@@ -30,6 +30,7 @@ import appengine_config
 from common import jinja_utils
 from common import safe_dom
 from common import tags
+from common import utils as common_utils
 from controllers import sites
 from controllers.utils import ApplicationHandler
 from controllers.utils import ReflectiveRequestHandler
@@ -94,6 +95,11 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
     default_action = 'welcome'
     get_actions = [default_action]
     post_actions = ['explore_sample', 'add_first_course']
+
+    # Enable other modules to make changes to sample course import.
+    # Each member must be a function of the form:
+    #     callback(course, errors)
+    COPY_SAMPLE_COURSE_HOOKS = []
 
     def get_template(self, template_name):
         return jinja_utils.get_template(template_name, [TEMPLATE_DIR])
@@ -162,6 +168,9 @@ class WelcomeHandler(ApplicationHandler, ReflectiveRequestHandler):
         dst_course = courses.Course(None, dst_app_context)
         dst_course.import_from(src_app_context, errors)
         dst_course.save()
+        if not errors:
+            common_utils.run_hooks(
+                self.COPY_SAMPLE_COURSE_HOOKS, dst_app_context, errors)
         if errors:
             raise Exception(errors)
         return dst_app_context

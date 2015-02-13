@@ -1,0 +1,83 @@
+<script>
+  $(function() {
+    var skills = $("#skills_autocomplete").data("skills");
+
+    function log( message ) {
+      $("<div>").text( message ).prependTo( "#log" );
+      $("#log").scrollTop( 0 );
+    }
+
+    $("#skills_autocomplete").autocomplete({
+      source: skills,
+      minLength: 2,
+      select: function( event, ui ) {
+        log( ui.item ?
+          "Selected: " + ui.item.label + " : " + ui.item.id :
+          "Nothing selected, input was " + this.value );
+      }
+    });
+  });
+</script>
+
+<div class="ui-widget">
+  <input id="skills_autocomplete" style="width: 300px; height: 30px;" data-skills="{{ skills_autocomplete }}">
+</div>
+
+<div class="ui-widget" style="margin-top:2em; font-family:Arial">
+  Results:
+  <div id="log" style="height: 200px; width: 300px; overflow: auto;" class="ui-widget-content"></div>
+</div>
+
+
+
+<link rel="stylesheet" type="text/css" href="/modules/skill_map/resources/css/skill_map.css">
+<script src="/modules/skill_map/resources/js/skill_map_lib.js"></script>
+<script src="/modules/skill_map/resources/js/skill_map.js"></script>
+
+<table class="skill-map-table">
+  <thead>
+    <tr>
+      <th width="15%">
+        Skill
+        {% if skill_count > 0 %}
+          <span class="skill_count">({{ skill_count }})</span>
+        {% endif %}
+      </th>
+      <th width="35%">Description</th>
+      <th width="45%">Prerequisites</th>
+      <th width="5%">Lessons</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>
+          <span class="skill">
+            {{ row.name }}
+          </span>
+        </td>
+        <td><span class="description">{{ row.description }}</span></td>
+        <td class="prerequisites" style="text-align: right;">
+          {% for p in row.prerequisites %}
+            {% if loop.index <= 3 %}
+              <span class="prerequisite">
+                {{ p.name }}
+              </span>
+            {% elif loop.index == 4 %}
+              <span class="hellip">&hellip;</span>
+            {% else %}
+            {% endif %}
+          {% endfor %}
+        </td>
+        <td>
+          {% for loc in row.locations %}
+            <a href="{{ loc.href }}"
+              title="{{ loc.unit.title }} {{ loc.lesson.title }}">
+            {{ loc.label }}
+            </a>&nbsp;
+          {% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
